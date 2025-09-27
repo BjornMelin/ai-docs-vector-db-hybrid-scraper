@@ -7,7 +7,7 @@ complexity levels.
 
 import os
 from enum import Enum
-from typing import Any
+from typing import Any, cast
 
 from pydantic import BaseModel, Field
 
@@ -177,11 +177,6 @@ def detect_mode_from_environment() -> ApplicationMode:
     """Detect application mode from environment variables."""
     mode_env = os.getenv("AI_DOCS_MODE", "simple").lower()
 
-    # Legacy environment variable support
-    if not mode_env:
-        deployment_tier = os.getenv("AI_DOCS_DEPLOYMENT__TIER", "simple").lower()
-        mode_env = "enterprise" if deployment_tier == "enterprise" else "simple"
-
     try:
         return ApplicationMode(mode_env)
     except ValueError:
@@ -239,12 +234,14 @@ def is_service_enabled(service_name: str) -> bool:
 def get_feature_setting(feature_name: str, default: Any = False) -> Any:
     """Get a feature setting value for the current mode."""
     config = get_mode_config()
-    features: dict[str, Any] = config.max_complexity_features
+    config_dump = config.model_dump()
+    features = cast(dict[str, Any], config_dump["max_complexity_features"])
     return features.get(feature_name, default)
 
 
 def get_resource_limit(resource_name: str, default: int = 0) -> int:
     """Get a resource limit for the current mode."""
     config = get_mode_config()
-    limits: dict[str, int] = config.resource_limits
+    config_dump = config.model_dump()
+    limits = cast(dict[str, int], config_dump["resource_limits"])
     return limits.get(resource_name, default)

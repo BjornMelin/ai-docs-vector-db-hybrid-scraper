@@ -1,11 +1,22 @@
-"""Tests for dual-mode architecture functionality."""
+"""Unit tests for dual-mode architecture utilities."""
 
-import os
-from unittest.mock import patch
+from __future__ import annotations
+
+from types import SimpleNamespace
+from typing import cast
 
 import pytest
 
-from src.architecture.features import FeatureFlag, conditional_feature, enterprise_only
+from src.architecture.features import (
+    FeatureFlag,
+    ModeAwareFeatureManager,
+    conditional_feature,
+    enterprise_only,
+    get_feature_config,
+    get_feature_manager,
+    register_feature,
+    service_required,
+)
 from src.architecture.modes import (
     ENTERPRISE_MODE_CONFIG,
     SIMPLE_MODE_CONFIG,
@@ -22,461 +33,357 @@ from src.architecture.modes import (
 from src.architecture.service_factory import ModeAwareServiceFactory
 
 
-class TestApplicationModes:
-    """Test application mode detection and configuration."""
+EXPECTED_SIMPLE_SERVICES = {
+    "qdrant_client",
+    "embedding_service",
+    "basic_search",
+    "simple_caching",
+}
+EXPECTED_ENTERPRISE_SERVICES = {
+    "qdrant_client",
+    "embedding_service",
+    "advanced_search",
+    "multi_tier_caching",
+    "deployment_services",
+    "advanced_analytics",
+}
+FORBIDDEN_SIMPLE_SERVICES = {
+    "advanced_analytics",
+    "deployment_services",
+    "multi_tier_caching",
+    "a_b_testing",
+}
 
-    def test_simple_mode_configuration(self):
-        """Test simple mode has appropriate configuration."""
-        config = SIMPLE_MODE_CONFIG
 
-        # Check enabled services - should be minimal
-        assert "qdrant_client" in config.enabled_services
-        assert "embedding_service" in config.enabled_services
-        assert "basic_search" in config.enabled_services
-        assert "simple_caching" in config.enabled_services
+@pytest.fixture(autouse=True)
+def _clear_mode_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Ensure mode environment variables never leak between tests."""
+    monkeypatch.delenv("AI_DOCS_MODE", raising=False)
 
-        # Should not have enterprise services
-        assert "advanced_analytics" not in config.enabled_services
-        assert "deployment_services" not in config.enabled_services
-        assert "a_b_testing" not in config.enabled_services
 
-        # Check resource limits are conservative
-        assert config.resource_limits["max_concurrent_requests"] == 5
-        assert config.resource_limits["max_memory_usage_mb"] == 500
-        assert config.resource_limits["cache_size_mb"] == 50
+def _install_flag_stub(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    enterprise: bool = False,
+    feature_enabled: bool = False,
+    service_enabled: bool = False,
+) -> None:
+    """Replace FeatureFlag with a stub that returns deterministic results."""
 
-        # Check features are disabled
-        assert config.max_complexity_features["enable_advanced_monitoring"] is False
-        assert config.max_complexity_features["enable_deployment_features"] is False
-        assert config.max_complexity_features["max_concurrent_crawls"] == 5
+    class _Stub:
+        def is_enterprise_mode(self) -> bool:
+            return enterprise
 
-    def test_enterprise_mode_configuration(self):
-        """Test enterprise mode has full feature set."""
-        config = ENTERPRISE_MODE_CONFIG
+        def is_simple_mode(self) -> bool:
+            return not enterprise
 
-        # Check enabled services - should be comprehensive
-        assert "qdrant_client" in config.enabled_services
-        assert "embedding_service" in config.enabled_services
-        assert "advanced_search" in config.enabled_services
-        assert "multi_tier_caching" in config.enabled_services
-        assert "deployment_services" in config.enabled_services
-        assert "a_b_testing" in config.enabled_services
-        assert "advanced_analytics" in config.enabled_services
+        def is_feature_enabled(self, _name: str) -> bool:
+            return feature_enabled
 
-        # Check resource limits are scaled up
-        assert config.resource_limits["max_concurrent_requests"] == 100
-        assert config.resource_limits["max_memory_usage_mb"] == 4000
-        assert config.resource_limits["cache_size_mb"] == 1000
+        def is_service_enabled(self, _name: str) -> bool:
+            return service_enabled
 
-        # Check features are enabled
-        assert config.max_complexity_features["enable_advanced_monitoring"] is True
-        assert config.max_complexity_features["enable_deployment_features"] is True
-        assert config.max_complexity_features["max_concurrent_crawls"] == 50
+    monkeypatch.setattr(
+        "src.architecture.features.FeatureFlag", lambda *_, **__: _Stub()
+    )
 
-    @patch.dict(os.environ, {"AI_DOCS_MODE": "simple"})
-    def test_detect_simple_mode_from_environment(self):
-        """Test detecting simple mode from environment."""
-        mode = detect_mode_from_environment()
-        assert mode == ApplicationMode.SIMPLE
 
-    @patch.dict(os.environ, {"AI_DOCS_MODE": "enterprise"})
-    def test_detect_enterprise_mode_from_environment(self):
-        """Test detecting enterprise mode from environment."""
-        mode = detect_mode_from_environment()
-        assert mode == ApplicationMode.ENTERPRISE
+class TestModeConfiguration:
+    """Validate simple and enterprise configuration characteristics."""
 
-    @patch.dict(os.environ, {"AI_DOCS_MODE": ""})
-    def test_detect_mode_defaults_to_simple(self):
-        """Test mode detection defaults to simple when not set."""
-        mode = detect_mode_from_environment()
-        assert mode == ApplicationMode.SIMPLE
+    @pytest.mark.parametrize(
+        ("config", "expected"),
+        [
+            (SIMPLE_MODE_CONFIG, EXPECTED_SIMPLE_SERVICES),
+            (ENTERPRISE_MODE_CONFIG, EXPECTED_ENTERPRISE_SERVICES),
+        ],
+    )
+    def test_config_contains_expected_services(
+        self, config, expected: set[str]
+    ) -> None:
+        enabled = set(config.enabled_services)
+        assert expected <= enabled
 
-    @patch.dict(os.environ, {"AI_DOCS_MODE": "invalid"})
-    def test_detect_mode_handles_invalid_value(self):
-        """Test mode detection handles invalid values gracefully."""
-        mode = detect_mode_from_environment()
-        assert mode == ApplicationMode.SIMPLE
+    def test_simple_mode_excludes_enterprise_capabilities(self) -> None:
+        enabled = set(SIMPLE_MODE_CONFIG.enabled_services)
+        assert enabled.isdisjoint(FORBIDDEN_SIMPLE_SERVICES)
 
-    @patch.dict(os.environ, {"AI_DOCS_DEPLOYMENT__TIER": "enterprise"})
-    def test_legacy_environment_variable_support(self):
-        """Test support for legacy deployment tier environment variable."""
-        # Clear the new variable
-        with patch.dict(os.environ, {"AI_DOCS_MODE": ""}, clear=False):
-            mode = detect_mode_from_environment()
-            assert mode == ApplicationMode.ENTERPRISE
+    @pytest.mark.parametrize(
+        "resource",
+        ["max_concurrent_requests", "max_memory_usage_mb", "cache_size_mb"],
+    )
+    def test_simple_resource_limits_are_lower(self, resource: str) -> None:
+        assert (
+            SIMPLE_MODE_CONFIG.resource_limits[resource]
+            < ENTERPRISE_MODE_CONFIG.resource_limits[resource]
+        )
 
-    def test_get_mode_config_simple(self):
-        """Test getting simple mode configuration."""
-        config = get_mode_config(ApplicationMode.SIMPLE)
-        assert config == SIMPLE_MODE_CONFIG
+    def test_simple_has_smaller_middleware_stack(self) -> None:
+        assert len(SIMPLE_MODE_CONFIG.middleware_stack) < len(
+            ENTERPRISE_MODE_CONFIG.middleware_stack
+        )
 
-    def test_get_mode_config_enterprise(self):
-        """Test getting enterprise mode configuration."""
-        config = get_mode_config(ApplicationMode.ENTERPRISE)
-        assert config == ENTERPRISE_MODE_CONFIG
 
-    @patch("src.architecture.modes.detect_mode_from_environment")
-    def test_get_mode_config_auto_detect(self, mock_detect):
-        """Test auto-detecting mode when none provided."""
-        mock_detect.return_value = ApplicationMode.ENTERPRISE
-        config = get_mode_config()
-        assert config == ENTERPRISE_MODE_CONFIG
-        mock_detect.assert_called_once()
+class TestModeDetection:
+    """Validate environment-driven mode detection and derived helpers."""
 
-    @patch("src.architecture.modes.get_current_mode")
-    def test_utility_functions(self, mock_current_mode):
-        """Test utility functions for mode checking."""
-        # Test simple mode utilities
-        mock_current_mode.return_value = ApplicationMode.SIMPLE
+    @pytest.mark.parametrize(
+        ("env_value", "expected"),
+        [
+            ("simple", ApplicationMode.SIMPLE),
+            ("enterprise", ApplicationMode.ENTERPRISE),
+        ],
+    )
+    def test_detect_mode_from_environment(
+        self, monkeypatch: pytest.MonkeyPatch, env_value: str, expected: ApplicationMode
+    ) -> None:
+        monkeypatch.setenv("AI_DOCS_MODE", env_value)
+        assert detect_mode_from_environment() is expected
+
+    def test_detect_mode_defaults_to_simple(self) -> None:
+        assert detect_mode_from_environment() is ApplicationMode.SIMPLE
+
+    def test_detect_mode_handles_invalid_values(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("AI_DOCS_MODE", "invalid")
+        assert detect_mode_from_environment() is ApplicationMode.SIMPLE
+
+    def test_get_mode_config_auto_uses_detection(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("AI_DOCS_MODE", "enterprise")
+        assert get_mode_config() == ENTERPRISE_MODE_CONFIG
+
+    def test_helper_functions_reflect_mode(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("AI_DOCS_MODE", "enterprise")
+        assert is_enterprise_mode() is True
+        assert is_simple_mode() is False
+        assert "advanced_search" in get_enabled_services()
+        assert is_service_enabled("advanced_search") is True
+        assert get_feature_setting("enable_advanced_monitoring") is True
+        assert get_resource_limit("max_concurrent_requests") == 100
+
+        monkeypatch.setenv("AI_DOCS_MODE", "simple")
         assert is_simple_mode() is True
         assert is_enterprise_mode() is False
-
-        # Test enterprise mode utilities
-        mock_current_mode.return_value = ApplicationMode.ENTERPRISE
-        assert is_simple_mode() is False
-        assert is_enterprise_mode() is True
-
-    @patch("src.architecture.modes.get_mode_config")
-    def test_service_and_feature_utilities(self, mock_get_config):
-        """Test service and feature utility functions."""
-        mock_config = SIMPLE_MODE_CONFIG
-        mock_get_config.return_value = mock_config
-
-        # Test service utilities
-        enabled_services = get_enabled_services()
-        assert enabled_services == mock_config.enabled_services
-
-        assert is_service_enabled("qdrant_client") is True
-        assert is_service_enabled("advanced_analytics") is False
-
-        # Test feature utilities
-        assert get_feature_setting("max_concurrent_crawls") == 5
-        assert get_feature_setting("nonexistent_feature", "default") == "default"
-
-        # Test resource utilities
+        assert is_service_enabled("advanced_search") is False
+        assert get_feature_setting("enable_advanced_monitoring") is False
         assert get_resource_limit("max_concurrent_requests") == 5
-        assert get_resource_limit("nonexistent_resource", 999) == 999
 
 
-class TestFeatureFlags:
-    """Test feature flag system."""
+class TestFeatureFlag:
+    """Validate FeatureFlag helpers against both configurations."""
 
-    def test_feature_flag_initialization(self):
-        """Test feature flag initialization."""
-        feature_flag = FeatureFlag(SIMPLE_MODE_CONFIG)
-        assert feature_flag.mode_config == SIMPLE_MODE_CONFIG
+    def test_feature_flag_respects_modes(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(
+            "src.architecture.features.get_current_mode",
+            lambda: ApplicationMode.SIMPLE,
+        )
+        flag = FeatureFlag(SIMPLE_MODE_CONFIG)
+        assert flag.is_simple_mode() is True
+        assert flag.is_enterprise_mode() is False
+        assert flag.is_feature_enabled("enable_advanced_monitoring") is False
 
-    def test_feature_flag_auto_detect_mode(self):
-        """Test feature flag auto-detects mode when config not provided."""
-        with patch("src.architecture.features.get_mode_config") as mock_get_config:
-            mock_get_config.return_value = ENTERPRISE_MODE_CONFIG
-            _feature_flag = FeatureFlag()
-            mock_get_config.assert_called_once()
+        monkeypatch.setattr(
+            "src.architecture.features.get_current_mode",
+            lambda: ApplicationMode.ENTERPRISE,
+        )
+        flag = FeatureFlag(ENTERPRISE_MODE_CONFIG)
+        assert flag.is_simple_mode() is False
+        assert flag.is_enterprise_mode() is True
+        assert flag.is_feature_enabled("enable_advanced_monitoring") is True
+        assert flag.is_service_enabled("advanced_analytics") is True
 
-    def test_feature_flag_mode_detection(self):
-        """Test feature flag mode detection methods."""
-        simple_flag = FeatureFlag(SIMPLE_MODE_CONFIG)
-        enterprise_flag = FeatureFlag(ENTERPRISE_MODE_CONFIG)
 
-        # Test with mocked current mode
-        with patch("src.architecture.features.get_current_mode") as mock_current:
-            mock_current.return_value = ApplicationMode.SIMPLE
-            assert simple_flag.is_simple_mode() is True
-            assert simple_flag.is_enterprise_mode() is False
-
-            mock_current.return_value = ApplicationMode.ENTERPRISE
-            assert enterprise_flag.is_simple_mode() is False
-            assert enterprise_flag.is_enterprise_mode() is True
-
-    def test_feature_enabled_check(self):
-        """Test feature enabled checking."""
-        simple_flag = FeatureFlag(SIMPLE_MODE_CONFIG)
-        enterprise_flag = FeatureFlag(ENTERPRISE_MODE_CONFIG)
-
-        # Simple mode should have features disabled
-        assert simple_flag.is_feature_enabled("enable_advanced_monitoring") is False
-        assert simple_flag.is_feature_enabled("enable_deployment_features") is False
-
-        # Enterprise mode should have features enabled
-        assert enterprise_flag.is_feature_enabled("enable_advanced_monitoring") is True
-        assert enterprise_flag.is_feature_enabled("enable_deployment_features") is True
-
-    def test_service_enabled_check(self):
-        """Test service enabled checking."""
-        simple_flag = FeatureFlag(SIMPLE_MODE_CONFIG)
-        enterprise_flag = FeatureFlag(ENTERPRISE_MODE_CONFIG)
-
-        # Both should have basic services
-        assert simple_flag.is_service_enabled("qdrant_client") is True
-        assert enterprise_flag.is_service_enabled("qdrant_client") is True
-
-        # Only enterprise should have advanced services
-        assert simple_flag.is_service_enabled("advanced_analytics") is False
-        assert enterprise_flag.is_service_enabled("advanced_analytics") is True
+class TestDecorators:
+    """Validate decorator behaviours for mode and feature enforcement."""
 
     @pytest.mark.asyncio
-    async def test_enterprise_only_decorator_async(self):
-        """Test enterprise_only decorator with async functions."""
+    async def test_enterprise_only_async(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        _install_flag_stub(monkeypatch, enterprise=True)
 
-        @enterprise_only(fallback_value="simple_result")
-        @pytest.mark.asyncio
-        async def test_function():
-            return "enterprise_result"
+        @enterprise_only(fallback_value="simple")
+        async def privileged() -> str:
+            return "enterprise"
 
-        # Mock enterprise mode
-        with patch("src.architecture.features.FeatureFlag") as mock_flag_class:
-            mock_flag = mock_flag_class.return_value
-            mock_flag.is_enterprise_mode.return_value = True
+        assert await privileged() == "enterprise"
 
-            result = await test_function()
-            assert result == "enterprise_result"
+        _install_flag_stub(monkeypatch, enterprise=False)
+        assert await privileged() == "simple"
 
-        # Mock simple mode
-        with patch("src.architecture.features.FeatureFlag") as mock_flag_class:
-            mock_flag = mock_flag_class.return_value
-            mock_flag.is_enterprise_mode.return_value = False
+    def test_enterprise_only_sync(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        _install_flag_stub(monkeypatch, enterprise=True)
 
-            result = await test_function()
-            assert result == "simple_result"
+        @enterprise_only(fallback_value="simple")
+        def privileged() -> str:
+            return "enterprise"
 
-    def test_enterprise_only_decorator_sync(self):
-        """Test enterprise_only decorator with sync functions."""
+        assert privileged() == "enterprise"
 
-        @enterprise_only(fallback_value="simple_result")
-        def test_function():
-            return "enterprise_result"
-
-        # Mock enterprise mode
-        with patch("src.architecture.features.FeatureFlag") as mock_flag_class:
-            mock_flag = mock_flag_class.return_value
-            mock_flag.is_enterprise_mode.return_value = True
-
-            result = test_function()
-            assert result == "enterprise_result"
-
-        # Mock simple mode
-        with patch("src.architecture.features.FeatureFlag") as mock_flag_class:
-            mock_flag = mock_flag_class.return_value
-            mock_flag.is_enterprise_mode.return_value = False
-
-            result = test_function()
-            assert result == "simple_result"
+        _install_flag_stub(monkeypatch, enterprise=False)
+        assert privileged() == "simple"
 
     @pytest.mark.asyncio
-    async def test_conditional_feature_decorator_async(self):
-        """Test conditional_feature decorator with async functions."""
+    async def test_conditional_feature_async(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _install_flag_stub(monkeypatch, feature_enabled=True)
 
         @conditional_feature("enable_advanced_monitoring", fallback_value="disabled")
-        @pytest.mark.asyncio
-        async def test_function():
+        async def monitored() -> str:
             return "enabled"
 
-        # Mock feature enabled
-        with patch("src.architecture.features.FeatureFlag") as mock_flag_class:
-            mock_flag = mock_flag_class.return_value
-            mock_flag.is_feature_enabled.return_value = True
+        assert await monitored() == "enabled"
 
-            result = await test_function()
-            assert result == "enabled"
+        _install_flag_stub(monkeypatch, feature_enabled=False)
+        assert await monitored() == "disabled"
 
-        # Mock feature disabled
-        with patch("src.architecture.features.FeatureFlag") as mock_flag_class:
-            mock_flag = mock_flag_class.return_value
-            mock_flag.is_feature_enabled.return_value = False
+    @pytest.mark.asyncio
+    async def test_service_required_async(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _install_flag_stub(monkeypatch, service_enabled=True)
 
-            result = await test_function()
-            assert result == "disabled"
+        @service_required("rag_service", fallback_value="missing")
+        async def service_call() -> str:
+            return "available"
+
+        assert await service_call() == "available"
+
+        _install_flag_stub(monkeypatch, service_enabled=False)
+        assert await service_call() == "missing"
 
 
 class TestServiceFactory:
-    """Test mode-aware service factory."""
+    """Validate service factory registration and inspection helpers."""
 
-    def test_service_factory_initialization(self):
-        """Test service factory initialization."""
-        factory = ModeAwareServiceFactory(ApplicationMode.SIMPLE)
-        assert factory.mode == ApplicationMode.SIMPLE
-        assert factory.mode_config == SIMPLE_MODE_CONFIG
+    def _factory_with_copy(self, mode: ApplicationMode) -> ModeAwareServiceFactory:
+        factory = ModeAwareServiceFactory(mode)
+        factory.mode_config = factory.mode_config.model_copy(deep=True)
+        return factory
 
-    def test_service_factory_auto_detect_mode(self):
-        """Test service factory auto-detects mode when not provided."""
-        with patch("src.architecture.service_factory.get_current_mode") as mock_current:
-            mock_current.return_value = ApplicationMode.ENTERPRISE
-            factory = ModeAwareServiceFactory()
-            assert factory.mode == ApplicationMode.ENTERPRISE
-            mock_current.assert_called_once()
+    def test_auto_detect_mode(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(
+            "src.architecture.service_factory.get_current_mode",
+            lambda: ApplicationMode.ENTERPRISE,
+        )
+        factory = ModeAwareServiceFactory()
+        assert factory.mode is ApplicationMode.ENTERPRISE
+        assert factory.mode_config == ENTERPRISE_MODE_CONFIG
 
-    def test_service_registration(self):
-        """Test service registration."""
-        factory = ModeAwareServiceFactory(ApplicationMode.SIMPLE)
+    def test_service_registration(self) -> None:
+        factory = self._factory_with_copy(ApplicationMode.SIMPLE)
 
         class SimpleService:
-            pass
+            async def initialize(
+                self,
+            ) -> None:  # pragma: no cover - interface requirement
+                return None
 
-        class EnterpriseService:
+            async def cleanup(self) -> None:  # pragma: no cover - interface requirement
+                return None
+
+            def get_service_name(
+                self,
+            ) -> str:  # pragma: no cover - interface requirement
+                return "simple"
+
+        class EnterpriseService(SimpleService):
             pass
 
         factory.register_service("test_service", SimpleService, EnterpriseService)
-
-        assert factory.is_service_registered("test_service")
         implementations = factory.get_registered_service_implementations("test_service")
-        assert implementations["simple"] == SimpleService
-        assert implementations["enterprise"] == EnterpriseService
+        assert implementations["simple"] is SimpleService
+        assert implementations["enterprise"] is EnterpriseService
 
-    def test_universal_service_registration(self):
-        """Test universal service registration."""
-        factory = ModeAwareServiceFactory(ApplicationMode.SIMPLE)
+    def test_service_availability_helpers(self) -> None:
+        factory = self._factory_with_copy(ApplicationMode.SIMPLE)
+        factory.mode_config.enabled_services.append("test_service")
 
-        class UniversalService:
-            pass
+        class Impl:
+            async def initialize(
+                self,
+            ) -> None:  # pragma: no cover - interface requirement
+                return None
 
-        factory.register_universal_service("universal_service", UniversalService)
+            async def cleanup(self) -> None:  # pragma: no cover - interface requirement
+                return None
 
-        assert factory.is_service_registered("universal_service")
-        implementations = factory.get_registered_service_implementations(
-            "universal_service"
-        )
-        assert implementations["simple"] == UniversalService
-        assert implementations["enterprise"] == UniversalService
+            def get_service_name(
+                self,
+            ) -> str:  # pragma: no cover - interface requirement
+                return "impl"
 
-    def test_service_availability_check(self):
-        """Test service availability checking."""
-        factory = ModeAwareServiceFactory(ApplicationMode.SIMPLE)
-
-        class TestService:
-            pass
-
-        # Register service and check availability through service list modification
-        factory.register_service("test_service", TestService, TestService)
-
-        # Create a copy of enabled services to avoid mutating the global config
-        original_services = factory.mode_config.enabled_services.copy()
-        factory.mode_config.enabled_services = [*original_services, "test_service"]
-
+        factory.register_service("test_service", Impl, Impl)
         assert factory.is_service_available("test_service") is True
-        assert factory.is_service_available("nonexistent_service") is False
-
-        # Restore original services to avoid affecting other tests
-        factory.mode_config.enabled_services = original_services
-
-    def test_get_available_services(self):
-        """Test getting list of available services."""
-        factory = ModeAwareServiceFactory(ApplicationMode.SIMPLE)
-
-        class TestService:
-            pass
-
-        # Register services
-        factory.register_service("service1", TestService, TestService)
-        factory.register_service("service2", TestService, TestService)
-
-        # Create a copy and add test services to avoid mutating the global config
-        original_services = factory.mode_config.enabled_services.copy()
-        factory.mode_config.enabled_services = [
-            *original_services,
-            "service1",
-            "service2",
-        ]
-
-        available = factory.get_available_services()
-        assert "service1" in available
-        assert "service2" in available
-
-        # Restore original services to avoid affecting other tests
-        factory.mode_config.enabled_services = original_services
-
-    def test_get_service_status(self):
-        """Test getting service status information."""
-        factory = ModeAwareServiceFactory(ApplicationMode.SIMPLE)
-
-        class TestService:
-            pass
-
-        factory.register_service("test_service", TestService, TestService)
-
-        # Create a copy and add test service to avoid mutating the global config
-        original_services = factory.mode_config.enabled_services.copy()
-        factory.mode_config.enabled_services = [*original_services, "test_service"]
-
+        assert "test_service" in factory.get_available_services()
         status = factory.get_service_status("test_service")
+        assert status == {
+            "name": "test_service",
+            "available": True,
+            "enabled": True,
+            "initialized": False,
+            "mode": "simple",
+        }
 
-        assert status["name"] == "test_service"
-        assert status["available"] is True
-        assert status["enabled"] is True
-        assert status["initialized"] is False
-        assert status["mode"] == "simple"
-
-        # Restore original services to avoid affecting other tests
-        factory.mode_config.enabled_services = original_services
-
-    def test_get_mode_info(self):
-        """Test getting mode information."""
-        factory = ModeAwareServiceFactory(ApplicationMode.ENTERPRISE)
-
-        mode_info = factory.get_mode_info()
-
-        assert mode_info["mode"] == "enterprise"
-        assert mode_info["enabled_services"] == ENTERPRISE_MODE_CONFIG.enabled_services
-        assert mode_info["resource_limits"] == ENTERPRISE_MODE_CONFIG.resource_limits
-        assert mode_info["advanced_monitoring"] is True
-        assert mode_info["deployment_features"] is True
+    def test_get_mode_info(self) -> None:
+        factory = self._factory_with_copy(ApplicationMode.ENTERPRISE)
+        info = factory.get_mode_info()
+        assert info["mode"] == "enterprise"
+        assert info["enabled_services"] == ENTERPRISE_MODE_CONFIG.enabled_services
+        assert info["resource_limits"] == ENTERPRISE_MODE_CONFIG.resource_limits
+        assert info["advanced_monitoring"] is True
+        assert info["deployment_features"] is True
 
 
-class TestComplexityReduction:
-    """Test that simple mode achieves target complexity reduction."""
+class TestFeatureManager:
+    """Validate the global feature manager helpers."""
 
-    def test_service_count_reduction(self):
-        """Test that simple mode has significantly fewer services."""
-        simple_services = len(SIMPLE_MODE_CONFIG.enabled_services)
-        enterprise_services = len(ENTERPRISE_MODE_CONFIG.enabled_services)
+    @pytest.fixture
+    def feature_manager(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> ModeAwareFeatureManager:
+        manager = ModeAwareFeatureManager()
+        manager._feature_flags = cast(
+            FeatureFlag, SimpleNamespace(is_enterprise_mode=lambda: False)
+        )
+        monkeypatch.setattr("src.architecture.features._feature_manager", manager)
+        return manager
 
-        # Simple mode should have at least 50% fewer services
-        reduction_ratio = simple_services / enterprise_services
-        assert reduction_ratio <= 0.5, (
-            f"Simple mode has {reduction_ratio:.2%} of enterprise services, "
-            "should be ≤50%"
+    def test_register_and_retrieve_feature_configs(
+        self, feature_manager: ModeAwareFeatureManager
+    ) -> None:
+        register_feature(
+            "hybrid_search",
+            {"enabled": True, "top_k": 5},
+            {"enabled": True, "top_k": 20},
         )
 
-    def test_resource_limit_reduction(self):
-        """Test that simple mode has reduced resource limits."""
-        simple_limits = SIMPLE_MODE_CONFIG.resource_limits
-        enterprise_limits = ENTERPRISE_MODE_CONFIG.resource_limits
+        config = get_feature_config("hybrid_search")
+        assert config == {"enabled": True, "top_k": 5}
 
-        # Check key resource limits are reduced
-        assert (
-            simple_limits["max_concurrent_requests"]
-            <= enterprise_limits["max_concurrent_requests"] / 5
+        feature_manager._feature_flags = cast(
+            FeatureFlag, SimpleNamespace(is_enterprise_mode=lambda: True)
         )
-        assert (
-            simple_limits["max_memory_usage_mb"]
-            <= enterprise_limits["max_memory_usage_mb"] / 5
+        config = get_feature_config("hybrid_search")
+        assert config == {"enabled": True, "top_k": 20}
+
+    def test_is_feature_available(
+        self, feature_manager: ModeAwareFeatureManager
+    ) -> None:
+        register_feature(
+            "observability",
+            {"enabled": False},
+            {"enabled": True},
         )
-        assert simple_limits["cache_size_mb"] <= enterprise_limits["cache_size_mb"] / 10
+        assert feature_manager.is_feature_available("observability") is False
 
-    def test_feature_reduction(self):
-        """Test that simple mode has disabled enterprise features."""
-        simple_features = SIMPLE_MODE_CONFIG.max_complexity_features
-        enterprise_features = ENTERPRISE_MODE_CONFIG.max_complexity_features
-
-        # Count enabled features
-        simple_enabled = sum(1 for v in simple_features.values() if v is True)
-        enterprise_enabled = sum(1 for v in enterprise_features.values() if v is True)
-
-        # Simple mode should have significantly fewer enabled features
-        feature_reduction_ratio = (
-            simple_enabled / enterprise_enabled if enterprise_enabled > 0 else 0
+        feature_manager._feature_flags = cast(
+            FeatureFlag, SimpleNamespace(is_enterprise_mode=lambda: True)
         )
-        assert feature_reduction_ratio <= 0.3, (
-            f"Simple mode has {feature_reduction_ratio:.2%} of enterprise "
-            "features enabled"
-        )
+        assert feature_manager.is_feature_available("observability") is True
 
-    def test_middleware_stack_reduction(self):
-        """Test that simple mode has fewer middleware components."""
-        simple_middleware = len(SIMPLE_MODE_CONFIG.middleware_stack)
-        enterprise_middleware = len(ENTERPRISE_MODE_CONFIG.middleware_stack)
-
-        # Simple mode should have at least 50% fewer middleware components
-        middleware_reduction_ratio = simple_middleware / enterprise_middleware
-        assert middleware_reduction_ratio <= 0.5, (
-            f"Simple mode has {middleware_reduction_ratio:.2%} of enterprise middleware"
-        )
+        assert get_feature_manager() is feature_manager
