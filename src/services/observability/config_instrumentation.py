@@ -12,7 +12,7 @@ import time
 from collections.abc import Callable
 from contextlib import asynccontextmanager, contextmanager
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any, TypeVar, cast
 from uuid import uuid4
 
 from opentelemetry import baggage, trace
@@ -134,7 +134,7 @@ def instrument_config_operation(
         operation_id = correlation_id or str(uuid4())
 
         @functools.wraps(func)
-        async def async_wrapper(*args, **kwargs):
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
             tracer = get_config_tracer()
 
             with tracer.start_as_current_span(effective_operation_name) as span:
@@ -152,8 +152,8 @@ def instrument_config_operation(
                 # Extract configuration source information if available
                 _extract_config_source_info(span, args, kwargs)
 
+                start_time = time.time()
                 try:
-                    start_time = time.time()
                     result = await func(*args, **kwargs)
 
                     # Extract result metrics
@@ -201,7 +201,7 @@ def instrument_config_operation(
                         )
 
         @functools.wraps(func)
-        def sync_wrapper(*args, **kwargs):
+        def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
             tracer = get_config_tracer()
 
             with tracer.start_as_current_span(effective_operation_name) as span:
@@ -219,8 +219,8 @@ def instrument_config_operation(
                 # Extract configuration source information
                 _extract_config_source_info(span, args, kwargs)
 
+                start_time = time.time()
                 try:
-                    start_time = time.time()
                     result = func(*args, **kwargs)
 
                     # Extract result metrics
@@ -265,7 +265,9 @@ def instrument_config_operation(
                             ConfigAttributes.LOAD_TIME_MS, duration * 1000
                         )
 
-        return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
+        if asyncio.iscoroutinefunction(func):
+            return cast(F, async_wrapper)
+        return cast(F, sync_wrapper)
 
     return decorator
 
@@ -287,7 +289,7 @@ def instrument_config_validation(
 
     def decorator(func: F) -> F:
         @functools.wraps(func)
-        async def async_wrapper(*args, **kwargs):
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
             tracer = get_config_tracer()
             attributes = {
                 ConfigAttributes.OPERATION_TYPE: ConfigOperationType.VALIDATE,
@@ -327,7 +329,7 @@ def instrument_config_validation(
                 return result
 
         @functools.wraps(func)
-        def sync_wrapper(*args, **kwargs):
+        def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
             tracer = get_config_tracer()
             attributes = {
                 ConfigAttributes.OPERATION_TYPE: ConfigOperationType.VALIDATE,
@@ -366,7 +368,9 @@ def instrument_config_validation(
 
                 return result
 
-        return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
+        if asyncio.iscoroutinefunction(func):
+            return cast(F, async_wrapper)
+        return cast(F, sync_wrapper)
 
     return decorator
 
@@ -388,7 +392,7 @@ def instrument_auto_detection(
 
     def decorator(func: F) -> F:
         @functools.wraps(func)
-        async def async_wrapper(*args, **kwargs):
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
             tracer = get_config_tracer()
 
             with tracer.start_as_current_span("config.auto_detection") as span:
@@ -401,8 +405,8 @@ def instrument_auto_detection(
                     "auto_detect.confidence_threshold", confidence_threshold
                 )
 
+                start_time = time.time()
                 try:
-                    start_time = time.time()
                     result = await func(*args, **kwargs)
 
                     # Extract auto-detection result metrics
@@ -448,7 +452,7 @@ def instrument_auto_detection(
                     span.set_attribute("auto_detect.duration_ms", duration * 1000)
 
         @functools.wraps(func)
-        def sync_wrapper(*args, **kwargs):
+        def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
             tracer = get_config_tracer()
 
             with tracer.start_as_current_span("config.auto_detection") as span:
@@ -460,8 +464,8 @@ def instrument_auto_detection(
                     "auto_detect.confidence_threshold", confidence_threshold
                 )
 
+                start_time = time.time()
                 try:
-                    start_time = time.time()
                     result = func(*args, **kwargs)
 
                     # Extract auto-detection result metrics
@@ -491,7 +495,9 @@ def instrument_auto_detection(
                     duration = time.time() - start_time
                     span.set_attribute("auto_detect.duration_ms", duration * 1000)
 
-        return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
+        if asyncio.iscoroutinefunction(func):
+            return cast(F, async_wrapper)
+        return cast(F, sync_wrapper)
 
     return decorator
 
@@ -728,7 +734,10 @@ def get_current_config_correlation_id() -> str | None:
         Correlation ID if available
 
     """
-    return baggage.get_baggage("config.operation_id")
+    value = baggage.get_baggage("config.operation_id")
+    if isinstance(value, str):
+        return value
+    return None
 
 
 def set_config_context(
