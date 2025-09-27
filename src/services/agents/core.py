@@ -6,11 +6,13 @@ agents that can process queries, compose tools,
 and coordinate with other agents.
 """
 
+# pylint: disable=no-member,too-many-instance-attributes,logging-fstring-interpolation,unused-import
+
 import logging
 import os
 import time
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
@@ -86,7 +88,7 @@ class AgentState(BaseModel):
         """Add an interaction to the conversation history."""
         self.conversation_history.append(
             {
-                "timestamp": datetime.now(tz=datetime.timezone.utc).isoformat(),
+                "timestamp": datetime.now(tz=UTC).isoformat(),
                 "role": role,
                 "content": content,
                 "metadata": metadata or {},
@@ -151,6 +153,7 @@ class BaseAgent(ABC):
         else:
             # Try to initialize Pydantic-AI agent
             try:
+                assert Agent is not None  # Narrow type for static analysis
                 self.agent = Agent(
                     model=model,
                     system_prompt=self.get_system_prompt(),

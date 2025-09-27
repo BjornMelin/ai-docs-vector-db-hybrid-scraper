@@ -14,7 +14,6 @@ from unittest.mock import AsyncMock, MagicMock
 
 import numpy as np
 import pytest
-from hypothesis import strategies as st
 
 
 class EmbeddingTestUtils:
@@ -209,11 +208,11 @@ class EmbeddingTestUtils:
             sample_embeddings = embeddings[: min(10, len(embeddings))]
             similarities = []
 
-            for i in range(len(sample_embeddings)):
-                for j in range(i + 1, len(sample_embeddings)):
+            for index, first_embedding in enumerate(sample_embeddings):
+                for second_embedding in sample_embeddings[index + 1 :]:
                     try:
                         sim = EmbeddingTestUtils.cosine_similarity(
-                            sample_embeddings[i], sample_embeddings[j]
+                            first_embedding, second_embedding
                         )
                         similarities.append(sim)
                     except ValueError:
@@ -481,7 +480,11 @@ class RAGTestUtils:
             "information_density": 0.2,
         }
 
-        overall_score = sum(metrics[key] * weights[key] for key in weights)
+        overall_score = sum(
+            metric_value * weights[name]
+            for name, metric_value in metrics.items()
+            if name in weights
+        )
         metrics["overall_quality"] = overall_score
 
         return metrics
@@ -516,6 +519,7 @@ class PerformanceTestUtils:
         tracemalloc.stop()
 
         self.monitoring_active = False
+        assert self.start_time is not None  # Narrow type for type checkers
 
         return {
             "duration_seconds": end_time - self.start_time,
@@ -533,6 +537,7 @@ class PerformanceTestUtils:
         if not self.monitoring_active:
             return
 
+        assert self.start_time is not None  # Ensure monitoring started
         current, _ = tracemalloc.get_traced_memory()
         snapshot = {
             "timestamp": time.time() - self.start_time,
@@ -610,102 +615,6 @@ class PerformanceTestUtils:
             "max_time_seconds": float(np.max(all_times)),
             "total_calls": len(all_times),
         }
-
-
-# Hypothesis strategies for AI/ML testing
-class AITestStrategies:
-    """Hypothesis strategies for AI/ML property-based testing."""
-
-    @staticmethod
-    def embeddings(min_dim: int = 128, max_dim: int = 1536, normalized: bool = True):
-        """Generate embedding vectors for property-based testing.
-
-        Args:
-            min_dim: Minimum embedding dimension
-            max_dim: Maximum embedding dimension
-            normalized: Whether to generate normalized vectors
-
-        Returns:
-            Hypothesis strategy for embedding vectors
-        """
-
-        def generate_embedding(draw):
-            dim = draw(st.integers(min_value=min_dim, max_value=max_dim))
-            # Generate random floats in reasonable range
-            values = draw(
-                st.lists(
-                    st.floats(
-                        min_value=-2.0,
-                        max_value=2.0,
-                        allow_nan=False,
-                        allow_infinity=False,
-                    ),
-                    min_size=dim,
-                    max_size=dim,
-                )
-            )
-
-            if normalized and values:
-                # Normalize to unit vector
-                norm = sum(x**2 for x in values) ** 0.5
-                if norm > 0:
-                    values = [x / norm for x in values]
-
-            return values
-
-        return st.deferred(generate_embedding)
-
-    @staticmethod
-    def document_chunks(
-        min_length: int = 50,
-        max_length: int = 2000,
-        min_chunks: int = 1,
-        max_chunks: int = 10,
-    ):
-        """Generate document chunks for testing.
-
-        Args:
-            min_length: Minimum chunk length
-            max_length: Maximum chunk length
-            min_chunks: Minimum number of chunks
-            max_chunks: Maximum number of chunks
-
-        Returns:
-            Hypothesis strategy for document chunks
-        """
-
-        chunk_content = st.text(
-            min_size=min_length,
-            max_size=max_length,
-            alphabet=st.characters(whitelist_categories=("Lu", "Ll", "Nd", "Zs")),
-        )
-
-        return st.lists(chunk_content, min_size=min_chunks, max_size=max_chunks)
-
-    @staticmethod
-    def search_queries():
-        """Generate realistic search queries for testing.
-
-        Returns:
-            Hypothesis strategy for search queries
-        """
-
-        # Common query patterns
-        simple_queries = st.text(
-            min_size=1,
-            max_size=100,
-            alphabet=st.characters(whitelist_categories=("Lu", "Ll", "Nd", "Zs")),
-        )
-
-        question_queries = st.builds(
-            lambda text: f"What is {text}?", st.text(min_size=3, max_size=50)
-        )
-
-        how_queries = st.builds(
-            lambda text: f"How to {text}?", st.text(min_size=3, max_size=50)
-        )
-
-        return st.one_of(simple_queries, question_queries, how_queries)
 
 
 # Test decorators and markers

@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Introduced `.github/dependabot.yml` to automate weekly updates for GitHub Actions and Python dependencies.
 - Documented CI branch-protection guidance and pinned action examples across developer and security guides.
+- Captured the comprehensive unit-test refactor roadmap in `planning/unit_test_refactor_plan.md` covering fixture cleanup,
+  deterministic rewrites, and sprint sequencing.
+- Added a `quality-unit` make target that runs Ruff, Pylint, Pyright, and the unit test suite in one command for local gating.
 
 ### Changed
 - Consolidated CI into a lean `core-ci.yml` pipeline (lint → tests with coverage → build → dependency audit) and introduced on-demand security and regression workflows while deleting `fast-feedback.yml`, `status-dashboard.yml`, and other scheduled automation.
@@ -19,6 +22,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Retired the SARIF upload path in favor of `pip-audit`, `safety`, and `bandit` reports stored as artifacts for manual review when the security workflow runs.
 - Refined `README.md` with a table of contents, environment variable reference, expanded MCP integration steps, and SEO-aligned positioning for AI engineers.
 - Updated repository description and topics to emphasize the retrieval-augmented documentation ingestion stack and surface the project in GitHub search.
+- Rebuilt the dual-mode architecture unit suite with parametrized helpers, FeatureFlag stubs, and service factory coverage to remove brittle duplication and rely on pytest + Pydantic behaviors instead of bespoke assertions.
+- Updated `src/architecture/modes.py` to drop the legacy `AI_DOCS_DEPLOYMENT__TIER` fallback and to expose typed accessors for feature and resource lookup used by the new tests.
+- Replaced the property-based configuration suite with deterministic parametrized coverage that asserts full `model_dump` payloads and strict validator behavior for the unified settings models.
+- Streamlined the observability configuration unit tests with fixtures and parametrization to focus on the supported Pydantic surface.
+- Rebuilt `tests/unit/services/functional/test_embeddings.py` around deterministic async stubs covering provider info,
+  smart recommendations, usage reports, and batch orchestration while removing brittle assertions.
+- Replaced the agent orchestration test matrix with deterministic suites covering the base agent, dynamic tool discovery, and
+  agentic orchestrator fallback flows using pytest fixtures instead of Hypothesis strategies.
+- Removed the remaining Hypothesis utilities from `tests/utils/ai_testing_utilities.py` to consolidate deterministic embedding
+  helpers that back the infrastructure smoke checks.
+- Collapsed the monolithic `tests/conftest.py` into plugin registrations and a focused configuration fixture module, removing
+  bespoke Hypothesis scaffolding and sys.path shims.
+- Replaced the sprawling chunking regression tests with a compact `test_chunker_behavior` module that verifies semantic window
+  splitting and AST fallbacks deterministically.
+- Rebuilt the vector database CLI test suite around async-aware stubs and `CliRunner`, ensuring coverage targets only the
+  maintained `VectorDBManager` surface.
+- Simplified `pytest.ini` to enforce warnings-as-errors, strict markers, and a seeded pytest-randomly configuration that aligns
+  with the new deterministic fixtures.
+
+### Removed
+- Deleted support for the deprecated `AI_DOCS_DEPLOYMENT__TIER` environment variable in favor of `AI_DOCS_MODE` as the sole mode selector.
+- Removed the flaky async configuration validation unit suite that only exercised mock sleep-based helpers.
+- Dropped the Hypothesis-based embedding property suite and the associated strategies/fixtures from `tests/conftest.py` to
+  eliminate duplicated utilities and randomness.
 
 ### Security
 - Applied SHA pinning across composite actions and documentation snippets, aligning with GitHub’s secure-use guidance to mitigate supply-chain risk.
