@@ -13,7 +13,7 @@ from typing import Any
 from pydantic import BaseModel, Field, ValidationError, field_validator
 from qdrant_client import models
 
-from .base import BaseFilter, FilterError, FilterResult
+from .base import BaseFilter, FilterResult
 
 
 logger = logging.getLogger(__name__)
@@ -276,39 +276,22 @@ class ContentTypeFilter(BaseFilter):
         """
         try:
             criteria = ContentTypeCriteria.model_validate(filter_criteria)
-        except Exception as e:
-            error_msg = f"Failed to validate content type criteria: {e}"
-            self._logger.exception(error_msg)
-            raise FilterError(
-                error_msg,
-                filter_name=self.name,
-                filter_criteria=filter_criteria,
-                underlying_error=e,
-            ) from e
+        except ValidationError as exc:
+            self._raise_filter_error(
+                f"Failed to validate content type criteria: {exc}",
+                filter_criteria,
+                exc,
+            )
 
         try:
             conditions, metadata = self._build_all_filter_conditions(criteria, context)
-        except Exception as e:
-            error_msg = f"Failed to apply content type filter: {e}"
-            self._logger.exception(error_msg)
-            raise FilterError(
-                error_msg,
-                filter_name=self.name,
-                filter_criteria=filter_criteria,
-                underlying_error=e,
-            ) from e
-
-        try:
             return self._create_filter_result(conditions, metadata, criteria)
-        except Exception as e:
-            error_msg = f"Failed to apply content type filter: {e}"
-            self._logger.exception(error_msg)
-            raise FilterError(
-                error_msg,
-                filter_name=self.name,
-                filter_criteria=filter_criteria,
-                underlying_error=e,
-            ) from e
+        except Exception as exc:  # noqa: BLE001 - propagate after wrapping
+            self._raise_filter_error(
+                f"Failed to apply content type filter: {exc}",
+                filter_criteria,
+                exc,
+            )
 
     def _build_all_filter_conditions(
         self, criteria: ContentTypeCriteria, context: dict[str, Any] | None = None
@@ -389,16 +372,15 @@ class ContentTypeFilter(BaseFilter):
                 "quality_filtering": criteria.min_quality_score is not None,
             }
 
-        self._logger.info(
-            f"Applied content type filter with {len(conditions)} conditions: "
-            f"{metadata['applied_filters']}"
-        )
-
-        return FilterResult(
-            filter_conditions=final_filter,
+        return self._finalize_result(
+            final_filter=final_filter,
             metadata=metadata,
-            confidence_score=0.90,
+            confidence=0.90,
             performance_impact=performance_impact,
+            log_message=(
+                f"Applied content type filter with {len(conditions)} conditions: "
+                f"{metadata['applied_filters']}"
+            ),
         )
 
     def _build_document_type_filters(
@@ -672,9 +654,7 @@ class ContentTypeFilter(BaseFilter):
         try:
             ContentTypeCriteria.model_validate(filter_criteria)
         except ValidationError as e:
-            self._logger.warning(
-                f"Invalid content type criteria: {e}"
-            )  # TODO: Convert f-string to logging format
+            self._logger.warning("Invalid content type criteria: %s", e)
             return False
         else:
             return True
