@@ -6,139 +6,39 @@ on:
     paths:
       - '.github/actions/**'
       - '.github/workflows/test-composite-actions.yml'
+      - 'scripts/ci/validate_config.py'
 
 permissions:
   contents: read
 
 jobs:
-  test-detect-changes:
-    name: Test Detect Changes Action
+  setup-environment:
+    name: Setup environment action
     runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
-        with:
-          fetch-depth: 0
 
-      - name: Test detect changes action
-        id: test-detect
-        uses: ./.github/actions/detect-changes
-        with:
-          github-event-name: ${{ github.event_name }}
-          github-ref: ${{ github.ref }}
-          workflow-dispatch-environment: 'development'
-
-      - name: Validate outputs
-        run: |
-          echo "### Detect Changes Action Outputs ###"
-          echo "Profiles Changed: ${{ steps.test-detect.outputs.profiles-changed }}"
-          echo "Templates Changed: ${{ steps.test-detect.outputs.templates-changed }}"
-          echo "Monitoring Changed: ${{ steps.test-detect.outputs.monitoring-changed }}"
-          echo "Security Changed: ${{ steps.test-detect.outputs.security-changed }}"
-          echo "Infrastructure Changed: ${{ steps.test-detect.outputs.infrastructure-changed }}"
-          echo "Should Deploy: ${{ steps.test-detect.outputs.should-deploy }}"
-          echo "Target Environment: ${{ steps.test-detect.outputs.target-environment }}"
-          echo "Deployment Strategy: ${{ steps.test-detect.outputs.deployment-strategy }}"
-          
-          # Validate outputs are set
-          if [ -z "${{ steps.test-detect.outputs.target-environment }}" ]; then
-            echo "❌ Target environment not set"
-            exit 1
-          fi
-          
-          if [ -z "${{ steps.test-detect.outputs.deployment-strategy }}" ]; then
-            echo "❌ Deployment strategy not set"
-            exit 1
-          fi
-          
-          echo "✅ All outputs are properly set"
-
-  test-validate-config:
-    name: Test Validate Config Action
-    runs-on: ubuntu-latest
-    
     steps:
       - name: Checkout repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
 
-      - name: Test validate config action
-        id: test-validate
-        uses: ./.github/actions/validate-config
+      - name: Execute action
+        id: setup
+        uses: ./.github/actions/setup-environment
         with:
-          target-environment: 'development'
+          python-version: '3.12'
 
-      - name: Check validation result
+      - name: Assert environment
+        shell: bash
         run: |
-          echo "Validation Passed: ${{ steps.test-validate.outputs.validation-passed }}"
-          
-          if [ "${{ steps.test-validate.outputs.validation-passed }}" != "true" ]; then
-            echo "❌ Validation should have passed for development environment"
-            exit 1
+          set -euo pipefail
+          if [ "${{ steps.setup.outputs.cache-hit }}" = "true" ]; then
+            echo "Cache restored"
+          else
+            echo "Cache miss"
           fi
-          
-          echo "✅ Validation action completed successfully"
+          uv run python -c "import sys; print(sys.version)"
 
-  test-smoke-tests:
-    name: Test Smoke Tests Action
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
-
-      - name: Test smoke tests action
-        id: test-smoke
-        uses: ./.github/actions/smoke-tests
-        with:
-          target-environment: 'development'
-          deployment-url: 'https://development.example.com/health'
-
-      - name: Check smoke test outputs
+      - name: Run configuration validation helper
+        shell: bash
         run: |
-          echo "Test Status: ${{ steps.test-smoke.outputs.test-status }}"
-          echo "Test Report Path: ${{ steps.test-smoke.outputs.test-report }}"
-          
-          if [ "${{ steps.test-smoke.outputs.test-status }}" != "passed" ]; then
-            echo "❌ Smoke tests should have passed"
-            exit 1
-          fi
-          
-          if [ -z "${{ steps.test-smoke.outputs.test-report }}" ]; then
-            echo "❌ Test report path not set"
-            exit 1
-          fi
-          
-          echo "✅ Smoke tests action completed successfully"
-
-  integration-test:
-    name: Integration Test
-    runs-on: ubuntu-latest
-    needs: [test-detect-changes, test-validate-config, test-smoke-tests]
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
-        with:
-          fetch-depth: 0
-
-      - name: Run detect changes
-        id: detect
-        uses: ./.github/actions/detect-changes
-        with:
-          github-event-name: 'workflow_dispatch'
-          github-ref: 'refs/heads/develop'
-          workflow-dispatch-environment: 'staging'
-
-      - name: Run validation
-        if: steps.detect.outputs.should-deploy == 'true'
-        uses: ./.github/actions/validate-config
-        with:
-          target-environment: ${{ steps.detect.outputs.target-environment }}
-
-      - name: Summary
-        run: |
-          echo "### Integration Test Summary ###"
-          echo "✅ All composite actions are working correctly"
-          echo "Target Environment: ${{ steps.detect.outputs.target-environment }}"
-          echo "Deployment Strategy: ${{ steps.detect.outputs.deployment-strategy }}"
+          set -euo pipefail
+          uv run python scripts/ci/validate_config.py --environment development

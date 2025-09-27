@@ -49,6 +49,7 @@ runs:
     - name: Install dependencies
       shell: bash
       run: |
+        set -euo pipefail
         if [ "${{ inputs.install-dev }}" == "true" ]; then
           uv sync --dev --frozen
         else
@@ -58,5 +59,11 @@ runs:
     - name: Verify installation
       shell: bash
       run: |
+        set -euo pipefail
+        if ! command -v uv >/dev/null 2>&1; then
+          echo "uv is not available after setup" >&2
+          exit 1
+        fi
+
         uv run python --version
         uv run python -c "import sys; print(f'Python {sys.version}')"
