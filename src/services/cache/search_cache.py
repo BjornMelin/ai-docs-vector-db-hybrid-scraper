@@ -61,18 +61,18 @@ class SearchResultCache:
         try:
             cached = await self.cache.get(key)
             if cached:
-                logger.debug(f"Search cache hit for query: {query[:50]}...")
+                logger.debug("Search cache hit for query: %s...", query[:50])
 
                 # Track popularity for cache optimization
                 await self._increment_query_popularity(query)
 
                 return cached
 
-            logger.debug(f"Search cache miss for query: {query[:50]}...")
+            logger.debug("Search cache miss for query: %s...", query[:50])
             return None
 
         except (ConnectionError, RuntimeError, TimeoutError) as e:
-            logger.error(f"Error retrieving search results from cache: {e}")
+            logger.error("Error retrieving search results from cache: %s", e)
             return None
 
     async def set_search_results(
@@ -113,14 +113,14 @@ class SearchResultCache:
                 if popularity > 10:
                     # Popular queries get shorter TTL for fresher results
                     cache_ttl = self.default_ttl // 2
-                    logger.debug(f"Popular query ({popularity} hits): shorter TTL")
+                    logger.debug("Popular query (%s hits): shorter TTL", popularity)
                 elif popularity > 5:
                     # Moderately popular queries get normal TTL
                     cache_ttl = self.default_ttl
                 else:
                     # Unpopular queries get longer TTL
                     cache_ttl = self.default_ttl * 2
-                    logger.debug(f"Unpopular query ({popularity} hits): longer TTL")
+                    logger.debug("Unpopular query (%s hits): longer TTL", popularity)
             else:
                 cache_ttl = ttl
 
@@ -128,8 +128,10 @@ class SearchResultCache:
 
             if success:
                 logger.debug(
-                    f"Cached {len(results)} search results for query: {query[:50]}... "
-                    f"(TTL: {cache_ttl}s)"
+                    "Cached %s search results for query: %s... (TTL: %ss)",
+                    len(results),
+                    query[:50],
+                    cache_ttl,
                 )
 
                 # Track query for popularity statistics
@@ -138,7 +140,7 @@ class SearchResultCache:
             return success
 
         except (ConnectionError, OSError, PermissionError) as e:
-            logger.error(f"Error caching search results: {e}")
+            logger.error("Error caching search results: %s", e)
             return False
 
     async def invalidate_by_collection(self, collection_name: str) -> int:
@@ -169,15 +171,16 @@ class SearchResultCache:
                     deleted_count += sum(results.values())
 
                 logger.info(
-                    f"Invalidated {deleted_count} search cache entries for collection: "
-                    f"{collection_name}"
+                    "Invalidated %s search cache entries for collection: %s",
+                    deleted_count,
+                    collection_name,
                 )
                 return deleted_count
 
             return 0
 
         except (ConnectionError, OSError, PermissionError) as e:
-            logger.error(f"Error invalidating collection cache: {e}")
+            logger.error("Error invalidating collection cache: %s", e)
             return 0
 
     async def invalidate_by_query_pattern(self, query_pattern: str) -> int:
@@ -201,15 +204,16 @@ class SearchResultCache:
                 deleted_count = sum(results.values())
 
                 logger.info(
-                    f"Invalidated {deleted_count} search cache entries matching: "
-                    f"{query_pattern}"
+                    "Invalidated %s search cache entries matching: %s",
+                    deleted_count,
+                    query_pattern,
                 )
                 return deleted_count
 
             return 0
 
         except (ConnectionError, RuntimeError, TimeoutError) as e:
-            logger.error(f"Error invalidating query pattern cache: {e}")
+            logger.error("Error invalidating query pattern cache: %s", e)
             return 0
 
     async def get_popular_queries(self, limit: int = 10) -> list[tuple[str, int]]:
@@ -245,7 +249,7 @@ class SearchResultCache:
             return []
 
         except (ConnectionError, RuntimeError, TimeoutError) as e:
-            logger.error(f"Error getting popular queries: {e}")
+            logger.error("Error getting popular queries: %s", e)
             return []
 
     async def cleanup_expired_popularity(self) -> int:
@@ -268,16 +272,16 @@ class SearchResultCache:
                 results = await self.cache.delete_many(expired_keys)
                 deleted_count = sum(results.values())
 
-                logger.info(f"Cleaned up {deleted_count} expired popularity counters")
+                logger.info("Cleaned up %s expired popularity counters", deleted_count)
                 return deleted_count
 
             return 0
 
         except (ConnectionError, RuntimeError, TimeoutError) as e:
-            logger.error(f"Error cleaning up expired popularity: {e}")
+            logger.error("Error cleaning up expired popularity: %s", e)
             return 0
 
-    async def get_cache_stats(self) -> dict:
+    async def get_cache_stats(self) -> dict[str, Any]:
         """Get search cache statistics.
 
         Returns:
@@ -288,7 +292,7 @@ class SearchResultCache:
             search_keys = await self.cache.scan_keys("search:*")
             popularity_keys = await self.cache.scan_keys("popular:*")
 
-            stats = {
+            stats: dict[str, Any] = {
                 "total_search_results": len(search_keys),
                 "popularity_counters": len(popularity_keys),
                 "cache_size": await self.cache.size(),
@@ -317,10 +321,10 @@ class SearchResultCache:
             return stats
 
         except (ConnectionError, RuntimeError, TimeoutError) as e:
-            logger.error(f"Error getting cache stats: {e}")
+            logger.error("Error getting cache stats: %s", e)
             return {"error": str(e)}
 
-    async def get_stats(self) -> dict:
+    async def get_stats(self) -> dict[str, Any]:
         """Alias for get_cache_stats for compatibility."""
         return await self.get_cache_stats()
 
@@ -379,7 +383,7 @@ class SearchResultCache:
             return int(count) if count else 0
 
         except (ConnectionError, OSError, PermissionError) as e:
-            logger.debug(f"Error getting query popularity: {e}")
+            logger.debug("Error getting query popularity: %s", e)
             return 0
 
     async def _increment_query_popularity(self, query: str) -> None:
@@ -400,7 +404,7 @@ class SearchResultCache:
                 await client.expire(key, 86400)  # 24 hours
 
         except (ConnectionError, OSError, TimeoutError) as e:
-            logger.debug(f"Error tracking query popularity: {e}")
+            logger.debug("Error tracking query popularity: %s", e)
 
     async def warm_popular_searches(
         self,
@@ -438,16 +442,18 @@ class SearchResultCache:
                                 query, results, collection_name
                             )
                             warmed_count += 1
-                            logger.debug(f"Warmed search cache for: {query[:50]}...")
+                            logger.debug("Warmed search cache for: %s...", query[:50])
 
                     except (ConnectionError, OSError, PermissionError) as e:
-                        logger.warning(f"Failed to warm search for '{query}': {e}")
+                        logger.warning("Failed to warm search for '%s': %s", query, e)
 
             logger.info(
-                f"Search cache warming completed: {warmed_count}/{len(queries)} queries"
+                "Search cache warming completed: %s/%s queries",
+                warmed_count,
+                len(queries),
             )
             return warmed_count
 
         except (ConnectionError, RuntimeError, TimeoutError) as e:
-            logger.error(f"Error in search cache warming: {e}")
+            logger.error("Error in search cache warming: %s", e)
             return warmed_count
