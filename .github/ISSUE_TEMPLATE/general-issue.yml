@@ -1,0 +1,174 @@
+name: General Issue
+description: Streamlined issue form for bug reports, enhancements, documentation, CI/CD, performance, and ML updates.
+title: "[{{ inputs.issue_type }}]: "
+labels:
+  - needs-triage
+assignees: []
+body:
+  - type: dropdown
+    id: issue_type
+    attributes:
+      label: Issue type
+      description: What kind of change are you proposing?
+      options:
+        - label: Bug report
+          value: bug
+          description: Something is not working as expected.
+          actions:
+            - type: add_labels
+              labels:
+                - bug
+        - label: Enhancement
+          value: enhancement
+          description: Suggest a new feature or improvement.
+          actions:
+            - type: add_labels
+              labels:
+                - enhancement
+        - label: Documentation
+          value: documentation
+          description: Update or improve documentation and onboarding materials.
+          actions:
+            - type: add_labels
+              labels:
+                - documentation
+        - label: CI/CD
+          value: ci-cd
+          description: Pipeline configuration, automation, or deployment workflows.
+          actions:
+            - type: add_labels
+              labels:
+                - ci-cd
+        - label: Performance
+          value: performance
+          description: Latency, throughput, or resource regression investigations.
+          actions:
+            - type: add_labels
+              labels:
+                - performance
+        - label: ML model
+          value: ml-model
+          description: Model training, evaluation, or deployment updates.
+          actions:
+            - type: add_labels
+              labels:
+                - ml-model
+        - label: Other
+          value: needs-triage
+          description: Anything else that does not fit the categories above.
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Provide a clear and concise description of the problem or idea.
+      placeholder: e.g., "Service X fails to start after upgrading dependency Y."
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce / Background
+      description: For bugs, list exact steps to reproduce. For other requests, provide relevant context or background research.
+      placeholder: |
+        1. Go to ...
+        2. Run ...
+        3. Observe ...
+    validations:
+      required: false
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs. actual behaviour
+      description: Describe what you expected to happen and what actually occurred. For non-bug issues, outline the desired outcome or success criteria.
+      placeholder: |
+        Expected: ...
+        Actual: ...
+    validations:
+      required: false
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution or notes
+      description: Share any ideas, implementation notes, or resources that could help resolve this issue.
+      placeholder: |
+        - Potential fix or approach
+        - Related commands, benchmarks, or design notes
+    validations:
+      required: false
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact and urgency
+      description: Explain who is affected, how severe the issue is, and any deadlines or release blockers.
+      placeholder: |
+        - Impacted components or teams
+        - Severity (critical/high/medium/low)
+        - Deadlines or release considerations
+    validations:
+      required: false
+  - type: textarea
+    id: attachments
+    attributes:
+      label: Logs, metrics, or screenshots
+      description: Paste links or snippets that provide supporting evidence.
+      placeholder: |
+        ```
+        Relevant log snippet
+        ```
+    validations:
+      required: false
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues to avoid duplicates.
+          required: true
+        - label: I provided enough context for someone else to act on this.
+          required: true
+        - label: I understand maintainers may follow up for more detail.
+          required: false
+  - type: textarea
+    id: cicd_scope
+    attributes:
+      label: CI/CD context
+      description: Detail the affected pipeline(s), environments, and recent configuration changes.
+      placeholder: |-
+        - Pipeline name and stage(s)
+        - Trigger conditions (manual, schedule, commit)
+        - Relevant configuration snippets or Terraform modules
+    validations:
+      required: true
+    if:
+      field: issue_type
+      equals: ci-cd
+  - type: textarea
+    id: performance_metrics
+    attributes:
+      label: Performance evidence
+      description: Share the metrics, baselines, and timeframes that demonstrate the regression.
+      placeholder: |-
+        - Metric(s) impacted and measurement tooling
+        - Baseline vs. current values (include units)
+        - Workload details (dataset, concurrency, hardware)
+    validations:
+      required: true
+    if:
+      field: issue_type
+      equals: performance
+  - type: textarea
+    id: ml_model_details
+    attributes:
+      label: ML model specifics
+      description: Provide training data, evaluation metrics, and deployment considerations for the model change.
+      placeholder: |-
+        - Model/version and hosting target
+        - Dataset characteristics and preprocessing steps
+        - Evaluation metrics (baseline vs. proposed)
+    validations:
+      required: true
+    if:
+      field: issue_type
+      equals: ml-model
