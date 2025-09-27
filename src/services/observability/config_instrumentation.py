@@ -18,6 +18,13 @@ from uuid import uuid4
 from opentelemetry import baggage, trace
 from opentelemetry.trace import Status, StatusCode
 
+from .span_utils import (
+    instrumented_span,
+    instrumented_span_async,
+    span_context,
+    span_context_async,
+)
+
 
 logger = logging.getLogger(__name__)
 F = TypeVar("F", bound=Callable[..., Any])
@@ -282,113 +289,82 @@ def instrument_config_validation(
         @functools.wraps(func)
         async def async_wrapper(*args, **kwargs):
             tracer = get_config_tracer()
+            attributes = {
+                ConfigAttributes.OPERATION_TYPE: ConfigOperationType.VALIDATE,
+                "validation.level": validation_level,
+            }
+            if schema_version:
+                attributes[ConfigAttributes.SCHEMA_VERSION] = schema_version
 
-            with tracer.start_as_current_span("config.validation") as span:
-                # Set validation-specific attributes
-                span.set_attribute(
-                    ConfigAttributes.OPERATION_TYPE, ConfigOperationType.VALIDATE
-                )
-                span.set_attribute("validation.level", validation_level)
+            async with instrumented_span_async(
+                tracer,
+                "config.validation",
+                attributes=attributes,
+                duration_attribute=ConfigAttributes.VALIDATION_TIME_MS,
+            ) as span:
+                result = await func(*args, **kwargs)
 
-                if schema_version:
-                    span.set_attribute(ConfigAttributes.SCHEMA_VERSION, schema_version)
+                if isinstance(result, dict):
+                    if "errors" in result:
+                        error_count = len(result["errors"]) if result["errors"] else 0
+                        span.set_attribute(
+                            ConfigAttributes.VALIDATION_ERRORS, error_count
+                        )
 
-                try:
-                    start_time = time.time()
-                    result = await func(*args, **kwargs)
+                    if "warnings" in result:
+                        warning_count = (
+                            len(result["warnings"]) if result["warnings"] else 0
+                        )
+                        span.set_attribute(
+                            ConfigAttributes.VALIDATION_WARNINGS, warning_count
+                        )
 
-                    # Extract validation result metrics
-                    if isinstance(result, dict):
-                        if "errors" in result:
-                            error_count = (
-                                len(result["errors"]) if result["errors"] else 0
-                            )
-                            span.set_attribute(
-                                ConfigAttributes.VALIDATION_ERRORS, error_count
-                            )
+                    if "status" in result:
+                        span.set_attribute(
+                            ConfigAttributes.VALIDATION_STATUS, result["status"]
+                        )
 
-                        if "warnings" in result:
-                            warning_count = (
-                                len(result["warnings"]) if result["warnings"] else 0
-                            )
-                            span.set_attribute(
-                                ConfigAttributes.VALIDATION_WARNINGS, warning_count
-                            )
-
-                        if "status" in result:
-                            span.set_attribute(
-                                ConfigAttributes.VALIDATION_STATUS, result["status"]
-                            )
-
-                    span.set_status(Status(StatusCode.OK))
-
-                except Exception as e:
-                    span.record_exception(e)
-                    span.set_status(Status(StatusCode.ERROR, str(e)))
-                    raise
-
-                else:
-                    return result
-                finally:
-                    duration = time.time() - start_time
-                    span.set_attribute(
-                        ConfigAttributes.VALIDATION_TIME_MS, duration * 1000
-                    )
+                return result
 
         @functools.wraps(func)
         def sync_wrapper(*args, **kwargs):
             tracer = get_config_tracer()
+            attributes = {
+                ConfigAttributes.OPERATION_TYPE: ConfigOperationType.VALIDATE,
+                "validation.level": validation_level,
+            }
+            if schema_version:
+                attributes[ConfigAttributes.SCHEMA_VERSION] = schema_version
 
-            with tracer.start_as_current_span("config.validation") as span:
-                span.set_attribute(
-                    ConfigAttributes.OPERATION_TYPE, ConfigOperationType.VALIDATE
-                )
-                span.set_attribute("validation.level", validation_level)
+            with instrumented_span(
+                tracer,
+                "config.validation",
+                attributes=attributes,
+                duration_attribute=ConfigAttributes.VALIDATION_TIME_MS,
+            ) as span:
+                result = func(*args, **kwargs)
 
-                if schema_version:
-                    span.set_attribute(ConfigAttributes.SCHEMA_VERSION, schema_version)
+                if isinstance(result, dict):
+                    if "errors" in result:
+                        error_count = len(result["errors"]) if result["errors"] else 0
+                        span.set_attribute(
+                            ConfigAttributes.VALIDATION_ERRORS, error_count
+                        )
 
-                try:
-                    start_time = time.time()
-                    result = func(*args, **kwargs)
+                    if "warnings" in result:
+                        warning_count = (
+                            len(result["warnings"]) if result["warnings"] else 0
+                        )
+                        span.set_attribute(
+                            ConfigAttributes.VALIDATION_WARNINGS, warning_count
+                        )
 
-                    # Extract validation result metrics
-                    if isinstance(result, dict):
-                        if "errors" in result:
-                            error_count = (
-                                len(result["errors"]) if result["errors"] else 0
-                            )
-                            span.set_attribute(
-                                ConfigAttributes.VALIDATION_ERRORS, error_count
-                            )
+                    if "status" in result:
+                        span.set_attribute(
+                            ConfigAttributes.VALIDATION_STATUS, result["status"]
+                        )
 
-                        if "warnings" in result:
-                            warning_count = (
-                                len(result["warnings"]) if result["warnings"] else 0
-                            )
-                            span.set_attribute(
-                                ConfigAttributes.VALIDATION_WARNINGS, warning_count
-                            )
-
-                        if "status" in result:
-                            span.set_attribute(
-                                ConfigAttributes.VALIDATION_STATUS, result["status"]
-                            )
-
-                    span.set_status(Status(StatusCode.OK))
-
-                except Exception as e:
-                    span.record_exception(e)
-                    span.set_status(Status(StatusCode.ERROR, str(e)))
-                    raise
-
-                else:
-                    return result
-                finally:
-                    duration = time.time() - start_time
-                    span.set_attribute(
-                        ConfigAttributes.VALIDATION_TIME_MS, duration * 1000
-                    )
+                return result
 
         return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
 
@@ -543,27 +519,24 @@ def trace_config_operation(
     operation_id = correlation_id or str(uuid4())
     span_name = operation_name or f"config.{operation_type}"
 
-    with tracer.start_as_current_span(span_name) as span:
-        # Set core attributes
-        span.set_attribute(ConfigAttributes.OPERATION, span_name)
-        span.set_attribute(ConfigAttributes.OPERATION_ID, operation_id)
-        span.set_attribute(ConfigAttributes.OPERATION_TYPE, operation_type)
+    base_attributes = {
+        ConfigAttributes.OPERATION: span_name,
+        ConfigAttributes.OPERATION_ID: operation_id,
+        ConfigAttributes.OPERATION_TYPE: operation_type,
+    }
+    merged_attributes = {**base_attributes, **attributes}
+    baggage_entries = {
+        "config.operation_id": operation_id,
+        "config.operation_type": operation_type,
+    }
 
-        # Set correlation in baggage
-        baggage.set_baggage("config.operation_id", operation_id)
-        baggage.set_baggage("config.operation_type", operation_type)
-
-        # Set additional attributes
-        for key, value in attributes.items():
-            span.set_attribute(key, value)
-
-        try:
-            yield span
-            span.set_status(Status(StatusCode.OK))
-        except Exception as e:
-            span.record_exception(e)
-            span.set_status(Status(StatusCode.ERROR, str(e)))
-            raise
+    with span_context(
+        tracer,
+        span_name,
+        attributes=merged_attributes,
+        baggage_entries=baggage_entries,
+    ) as span:
+        yield span
 
 
 @asynccontextmanager
@@ -589,27 +562,24 @@ async def trace_async_config_operation(
     operation_id = correlation_id or str(uuid4())
     span_name = operation_name or f"config.{operation_type}"
 
-    with tracer.start_as_current_span(span_name) as span:
-        # Set core attributes
-        span.set_attribute(ConfigAttributes.OPERATION, span_name)
-        span.set_attribute(ConfigAttributes.OPERATION_ID, operation_id)
-        span.set_attribute(ConfigAttributes.OPERATION_TYPE, operation_type)
+    base_attributes = {
+        ConfigAttributes.OPERATION: span_name,
+        ConfigAttributes.OPERATION_ID: operation_id,
+        ConfigAttributes.OPERATION_TYPE: operation_type,
+    }
+    merged_attributes = {**base_attributes, **attributes}
+    baggage_entries = {
+        "config.operation_id": operation_id,
+        "config.operation_type": operation_type,
+    }
 
-        # Set correlation in baggage
-        baggage.set_baggage("config.operation_id", operation_id)
-        baggage.set_baggage("config.operation_type", operation_type)
-
-        # Set additional attributes
-        for key, value in attributes.items():
-            span.set_attribute(key, value)
-
-        try:
-            yield span
-            span.set_status(Status(StatusCode.OK))
-        except Exception as e:
-            span.record_exception(e)
-            span.set_status(Status(StatusCode.ERROR, str(e)))
-            raise
+    async with span_context_async(
+        tracer,
+        span_name,
+        attributes=merged_attributes,
+        baggage_entries=baggage_entries,
+    ) as span:
+        yield span
 
 
 def _extract_config_source_info(span: trace.Span, args: tuple, kwargs: dict) -> None:
@@ -656,9 +626,7 @@ def _extract_config_source_info(span: trace.Span, args: tuple, kwargs: dict) -> 
 
     except (OSError, FileNotFoundError, PermissionError) as e:
         # Don't fail the operation due to instrumentation issues
-        logger.debug(
-            f"Failed to extract config source info: {e}"
-        )  # TODO: Convert f-string to logging format
+        logger.debug("Failed to extract config source info: %s", e)
 
 
 def _extract_config_content_metrics(span: trace.Span, result: Any) -> None:
@@ -711,9 +679,7 @@ def _extract_config_content_metrics(span: trace.Span, result: Any) -> None:
 
     except (ValueError, TypeError, UnicodeDecodeError) as e:
         # Don't fail the operation due to instrumentation issues
-        logger.debug(
-            f"Failed to extract config content metrics: {e}"
-        )  # TODO: Convert f-string to logging format
+        logger.debug("Failed to extract config content metrics: %s", e)
 
 
 def record_config_change(

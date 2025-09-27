@@ -263,8 +263,9 @@ class AgenticVectorManager:
             raise
         else:
             logger.info(
-                f"Created agent collection {collection_name} for agent "
-                f"{config.agent_id}"
+                "Created agent collection %s for agent %s",
+                collection_name,
+                config.agent_id,
             )
 
             return collection_name
@@ -291,7 +292,9 @@ class AgenticVectorManager:
         optimization_id = str(uuid4())
 
         logger.info(
-            f"Starting optimization {optimization_id} for collection {collection_name}"
+            "Starting optimization %s for collection %s",
+            optimization_id,
+            collection_name,
         )
 
         try:
@@ -375,7 +378,9 @@ class AgenticVectorManager:
             }
         else:
             logger.info(
-                f"Optimization {optimization_id} completed in {optimization_time:.2f}s"
+                "Optimization %s completed in %.2fs",
+                optimization_id,
+                optimization_time,
             )
 
             return optimization_result
@@ -542,7 +547,7 @@ class AgenticVectorManager:
                 cleanup_results["collections_deleted"].append(collection_name)
 
                 logger.info(
-                    f"Deleted collection {collection_name} for agent {agent_id}"
+                    "Deleted collection %s for agent %s", collection_name, agent_id
                 )
 
             except Exception as e:
@@ -636,7 +641,7 @@ class AgenticVectorManager:
                         self.circuit_breakers[collection.name] = CircuitBreakerPattern()
 
             logger.info(
-                f"Discovered {len(self.agent_collections)} existing agent collections"
+                "Discovered %d existing agent collections", len(self.agent_collections)
             )
 
         except (ConnectionError, ValueError, AttributeError, RuntimeError) as e:
@@ -682,11 +687,13 @@ class AgenticVectorManager:
                 # Check for performance issues
                 if metrics.avg_query_latency_ms > 5000:  # >5 seconds
                     logger.warning(
-                        f"High latency detected for collection {collection_name}"
+                        "High latency detected for collection %s", collection_name
                     )
 
             except Exception:
-                logger.exception("Health check failed for collection : {e}")
+                logger.exception(
+                    "Health check failed for collection : %s", collection_name
+                )
 
     async def _run_periodic_optimization(self) -> None:
         """Run periodic optimization on collections that need it."""

@@ -9,18 +9,15 @@ import asyncio
 import hashlib
 import logging
 from collections.abc import Callable
-from typing import Any, Optional, TypeVar
+from typing import Any, cast
 
-from aiocache import Cache, cached, multi_cached
-from aiocache.backends.redis import RedisBackend
+from aiocache import Cache, cached, caches
 from aiocache.serializers import JsonSerializer, PickleSerializer
 
 from src.config import CacheType, Config
 
 
 logger = logging.getLogger(__name__)
-
-T = TypeVar("T")
 
 
 class ModernCacheManager:
@@ -50,51 +47,42 @@ class ModernCacheManager:
         self.enable_compression = enable_compression
         self.config = config
 
-        # Configure cache backends
-        self.cache_config = {
-            Cache.REDIS: {
+        # Configure cache backends using global registry
+        cache_configs = {
+            "embeddings": {
+                "cache": "aiocache.RedisCache",
                 "endpoint": redis_url,
-                "serializer": PickleSerializer()
-                if enable_compression
-                else JsonSerializer(),
-                "namespace": key_prefix,
-                "timeout": 1,  # Connection timeout
+                "serializer": PickleSerializer(),
+                "namespace": f"{key_prefix}embeddings:",
+                "timeout": 1,
                 "retry_on_timeout": True,
-            }
+            },
+            "search": {
+                "cache": "aiocache.RedisCache",
+                "endpoint": redis_url,
+                "serializer": JsonSerializer(),
+                "namespace": f"{key_prefix}search:",
+                "timeout": 1,
+                "retry_on_timeout": True,
+            },
+            "crawl": {
+                "cache": "aiocache.RedisCache",
+                "endpoint": redis_url,
+                "serializer": JsonSerializer(),
+                "namespace": f"{key_prefix}crawl:",
+                "timeout": 1,
+                "retry_on_timeout": True,
+            },
+            "hyde": {
+                "cache": "aiocache.RedisCache",
+                "endpoint": redis_url,
+                "serializer": JsonSerializer(),
+                "namespace": f"{key_prefix}hyde:",
+                "timeout": 1,
+                "retry_on_timeout": True,
+            },
         }
-
-        # Set up different cache instances for different purposes
-        self.embedding_cache = Cache(
-            Cache.REDIS,
-            endpoint=redis_url,
-            serializer=PickleSerializer(),
-            namespace=f"{key_prefix}embeddings:",
-            timeout=1,
-        )
-
-        self.search_cache = Cache(
-            Cache.REDIS,
-            endpoint=redis_url,
-            serializer=JsonSerializer(),
-            namespace=f"{key_prefix}search:",
-            timeout=1,
-        )
-
-        self.crawl_cache = Cache(
-            Cache.REDIS,
-            endpoint=redis_url,
-            serializer=JsonSerializer(),
-            namespace=f"{key_prefix}crawl:",
-            timeout=1,
-        )
-
-        self.hyde_cache = Cache(
-            Cache.REDIS,
-            endpoint=redis_url,
-            serializer=JsonSerializer(),
-            namespace=f"{key_prefix}hyde:",
-            timeout=1,
-        )
+        caches.set_config(cache_configs)
 
         # TTL settings from config or defaults
         if config and hasattr(config, "cache"):
@@ -112,7 +100,7 @@ class ModernCacheManager:
             CacheType.HYDE: self.ttl_settings.get(CacheType.HYDE, 3600),  # 1 hour
         }
 
-        logger.info(f"ModernCacheManager initialized with Redis: {redis_url}")
+        logger.info("ModernCacheManager initialized with Redis: %s", redis_url)
 
     def get_cache_for_type(self, cache_type: CacheType) -> Cache:
         """Get the appropriate cache instance for a cache type.
@@ -123,13 +111,14 @@ class ModernCacheManager:
         Returns:
             Cache instance for the specified type
         """
-        cache_map = {
-            CacheType.EMBEDDINGS: self.embedding_cache,
-            CacheType.SEARCH: self.search_cache,
-            CacheType.CRAWL: self.crawl_cache,
-            CacheType.HYDE: self.hyde_cache,
+        alias_map = {
+            CacheType.EMBEDDINGS: "embeddings",
+            CacheType.SEARCH: "search",
+            CacheType.CRAWL: "crawl",
+            CacheType.HYDE: "hyde",
         }
-        return cache_map.get(cache_type, self.search_cache)
+        alias = alias_map.get(cache_type, "search")
+        return cast(Cache, caches.get(alias))
 
     def cache_embeddings(
         self,
@@ -148,8 +137,8 @@ class ModernCacheManager:
         effective_ttl = ttl or self.default_ttls[CacheType.EMBEDDINGS]
 
         return cached(
+            alias="embeddings",
             ttl=effective_ttl,
-            cache=self.embedding_cache,
             key_builder=key_builder or self._embedding_key_builder,
         )
 
@@ -170,8 +159,8 @@ class ModernCacheManager:
         effective_ttl = ttl or self.default_ttls[CacheType.SEARCH]
 
         return cached(
+            alias="search",
             ttl=effective_ttl,
-            cache=self.search_cache,
             key_builder=key_builder or self._search_key_builder,
         )
 
@@ -192,8 +181,8 @@ class ModernCacheManager:
         effective_ttl = ttl or self.default_ttls[CacheType.CRAWL]
 
         return cached(
+            alias="crawl",
             ttl=effective_ttl,
-            cache=self.crawl_cache,
             key_builder=key_builder or self._crawl_key_builder,
         )
 
@@ -214,8 +203,8 @@ class ModernCacheManager:
         effective_ttl = ttl or self.default_ttls[CacheType.HYDE]
 
         return cached(
+            alias="hyde",
             ttl=effective_ttl,
-            cache=self.hyde_cache,
             key_builder=key_builder or self._hyde_key_builder,
         )
 
@@ -237,10 +226,10 @@ class ModernCacheManager:
         """
         try:
             cache = self.get_cache_for_type(cache_type)
-            value = await cache.get(key)
+            value = await cache.get(key)  # type: ignore
             return value if value is not None else default
         except Exception as e:
-            logger.warning(f"Cache get error for key {key}: {e}")
+            logger.warning("Cache get error for key %s: %s", key, e)
             return default
 
     async def set(
@@ -264,10 +253,10 @@ class ModernCacheManager:
         try:
             cache = self.get_cache_for_type(cache_type)
             effective_ttl = ttl or self.default_ttls[cache_type]
-            await cache.set(key, value, ttl=effective_ttl)
+            await cache.set(key, value, ttl=effective_ttl)  # type: ignore
             return True
         except Exception as e:
-            logger.error(f"Cache set error for key {key}: {e}")
+            logger.error("Cache set error for key %s: %s", key, e)
             return False
 
     async def delete(
@@ -286,10 +275,10 @@ class ModernCacheManager:
         """
         try:
             cache = self.get_cache_for_type(cache_type)
-            await cache.delete(key)
+            await cache.delete(key)  # type: ignore
             return True
         except Exception as e:
-            logger.error(f"Cache delete error for key {key}: {e}")
+            logger.error("Cache delete error for key %s: %s", key, e)
             return False
 
     async def clear(self, cache_type: CacheType | None = None) -> bool:
@@ -307,16 +296,14 @@ class ModernCacheManager:
                 await self._clear_cache_namespace(cache)
             else:
                 # Clear all caches - use delete_many with pattern matching
-                await asyncio.gather(
-                    self._clear_cache_namespace(self.embedding_cache),
-                    self._clear_cache_namespace(self.search_cache),
-                    self._clear_cache_namespace(self.crawl_cache),
-                    self._clear_cache_namespace(self.hyde_cache),
-                    return_exceptions=True,
-                )
+                tasks = [
+                    self._clear_cache_namespace(cast(Cache, caches.get(alias)))
+                    for alias in ("embeddings", "search", "crawl", "hyde")
+                ]
+                await asyncio.gather(*tasks, return_exceptions=True)
             return True
         except Exception as e:
-            logger.error(f"Cache clear error: {e}")
+            logger.error("Cache clear error: %s", e)
             return False
 
     async def _clear_cache_namespace(self, cache: Cache) -> None:
@@ -324,16 +311,24 @@ class ModernCacheManager:
         try:
             # For aiocache, we can try to clear using the backend directly
             if hasattr(cache, "clear"):
-                await cache.clear()
-            elif hasattr(cache, "_backend") and hasattr(cache._backend, "clear"):
-                await cache._backend.clear(namespace=cache.namespace)
+                await cache.clear()  # type: ignore
             else:
-                # Fallback: no-op for now - V2 will have proper implementation
-                logger.warning(
-                    f"Cannot clear cache {cache.namespace} - no clear method available"
-                )
+                backend = cast(Any, getattr(cache, "_backend", None))
+                namespace = getattr(cache, "namespace", None)
+                if backend is not None and hasattr(backend, "clear"):
+                    await backend.clear(namespace=namespace)  # type: ignore
+                else:
+                    # Fallback: no-op for now - V2 will have proper implementation
+                    logger.warning(
+                        "Cannot clear cache %s - no clear method available",
+                        namespace or cache,
+                    )
         except Exception as e:
-            logger.warning(f"Failed to clear cache namespace {cache.namespace}: {e}")
+            logger.warning(
+                "Failed to clear cache namespace %s: %s",
+                getattr(cache, "namespace", cache),
+                e,
+            )
 
     async def invalidate_pattern(
         self,
@@ -354,11 +349,11 @@ class ModernCacheManager:
             # This would require extending aiocache or using Redis directly
             # For now, we'll implement a basic version
             if hasattr(cache, "delete_pattern"):
-                return await cache.delete_pattern(pattern)
-            logger.warning(f"Pattern invalidation not supported for {cache_type}")
+                return await cache.delete_pattern(pattern)  # type: ignore
+            logger.warning("Pattern invalidation not supported for %s", cache_type)
             return 0
         except Exception as e:
-            logger.error(f"Cache pattern invalidation error for {pattern}: {e}")
+            logger.error("Cache pattern invalidation error for %s: %s", pattern, e)
             return 0
 
     async def get_stats(self) -> dict[str, Any]:
@@ -384,72 +379,68 @@ class ModernCacheManager:
             }
 
             # Try to get cache-specific stats if available
-            for cache_type, cache in [
-                ("embeddings", self.embedding_cache),
-                ("search", self.search_cache),
-                ("crawl", self.crawl_cache),
-                ("hyde", self.hyde_cache),
-            ]:
+            for cache_alias in ["embeddings", "search", "crawl", "hyde"]:
                 try:
+                    cache = caches.get(cache_alias)
                     if hasattr(cache, "get_stats"):
-                        stats["cache_types"][cache_type][
+                        stats["cache_types"][cache_alias][
                             "stats"
-                        ] = await cache.get_stats()
-                except (ConnectionError, OSError, PermissionError) as e:
+                        ] = await cache.get_stats()  # type: ignore
+                except (ConnectionError, OSError, PermissionError):
                     pass  # Stats not available for this cache type
 
             return stats
         except Exception as e:
-            logger.error(f"Error getting cache stats: {e}")
+            logger.error("Error getting cache stats: %s", e)
             return {"error": str(e)}
 
     async def close(self) -> None:
         """Clean up cache resources."""
-        try:
-            # Close all cache connections
-            await asyncio.gather(
-                self._close_cache(self.embedding_cache),
-                self._close_cache(self.search_cache),
-                self._close_cache(self.crawl_cache),
-                self._close_cache(self.hyde_cache),
-                return_exceptions=True,
-            )
-            logger.info("ModernCacheManager closed successfully")
-        except Exception as e:
-            logger.error(f"Error closing ModernCacheManager: {e}")
-
-    async def _close_cache(self, cache: Cache) -> None:
-        """Close a single cache instance."""
-        try:
-            if hasattr(cache, "close"):
-                await cache.close()
-            elif hasattr(cache, "_pool") and hasattr(cache._pool, "disconnect"):
-                await cache._pool.disconnect()
-        except Exception as e:
-            logger.debug(f"Error closing cache: {e}")
+        # Global caches handle their own cleanup
+        logger.info("ModernCacheManager closed (global caches handle cleanup)")
 
     # Key builder functions for different cache types
-    def _embedding_key_builder(self, func, *args, **kwargs) -> str:
+    def _embedding_key_builder(
+        self,
+        _func: Callable[..., Any],
+        *args: Any,
+        **kwargs: Any,
+    ) -> str:
         """Build cache key for embedding functions."""
         text = args[0] if args else kwargs.get("text", "")
         model = kwargs.get("model", "default")
         text_hash = hashlib.sha256(text.encode()).hexdigest()[:12]
         return f"embed:{model}:{text_hash}"
 
-    def _search_key_builder(self, func, *args, **kwargs) -> str:
+    def _search_key_builder(
+        self,
+        _func: Callable[..., Any],
+        *args: Any,
+        **kwargs: Any,
+    ) -> str:
         """Build cache key for search functions."""
         query = args[0] if args else kwargs.get("query", "")
         filters = kwargs.get("filters", {})
         query_hash = hashlib.sha256(f"{query}:{filters}".encode()).hexdigest()[:12]
         return f"search:{query_hash}"
 
-    def _crawl_key_builder(self, func, *args, **kwargs) -> str:
+    def _crawl_key_builder(
+        self,
+        _func: Callable[..., Any],
+        *args: Any,
+        **kwargs: Any,
+    ) -> str:
         """Build cache key for crawl functions."""
         url = args[0] if args else kwargs.get("url", "")
         url_hash = hashlib.sha256(url.encode()).hexdigest()[:12]
         return f"crawl:{url_hash}"
 
-    def _hyde_key_builder(self, func, *args, **kwargs) -> str:
+    def _hyde_key_builder(
+        self,
+        _func: Callable[..., Any],
+        *args: Any,
+        **kwargs: Any,
+    ) -> str:
         """Build cache key for HyDE functions."""
         query = args[0] if args else kwargs.get("query", "")
         query_hash = hashlib.sha256(query.encode()).hexdigest()[:12]
