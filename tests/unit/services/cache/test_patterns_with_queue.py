@@ -3,6 +3,7 @@
 from unittest.mock import AsyncMock
 
 import pytest
+
 from src.services.cache.dragonfly_cache import DragonflyCache
 from src.services.cache.patterns import CachePatterns
 

@@ -27,6 +27,8 @@ class TestOWASPTop10Compliance:
         """OWASP compliance checker."""
 
         class OWASPComplianceChecker:
+            """Test class for security testing."""
+
             def __init__(self):
                 self.compliance_results = {}
 
@@ -562,6 +564,8 @@ class TestOWASPTop10Compliance:
         """Test security regression prevention measures."""
 
         class SecurityRegressionChecker:
+            """Test class for security testing."""
+
             def __init__(self):
                 self.baseline_security_score = 95
                 self.security_metrics = {}
@@ -602,6 +606,8 @@ class TestOWASPTop10Compliance:
         """Test continuous compliance monitoring."""
 
         class ContinuousComplianceMonitor:
+            """Test class for security testing."""
+
             def __init__(self, checker):
                 self.checker = checker
                 self.monitoring_enabled = True
@@ -669,6 +675,8 @@ class TestOWASPTop10Compliance:
         """Test compliance reporting capabilities."""
 
         class ComplianceReporter:
+            """Test class for security testing."""
+
             def __init__(self, checker):
                 self.checker = checker
 
@@ -728,6 +736,8 @@ class TestOWASPTop10Compliance:
         """Test compliance automation integration."""
 
         class ComplianceAutomation:
+            """Test class for security testing."""
+
             def __init__(self):
                 self.automated_checks = []
                 self.integration_points = []

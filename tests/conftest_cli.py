@@ -9,6 +9,7 @@ import re
 import sys
 import time
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from click.testing import CliRunner
@@ -108,6 +109,8 @@ def performance_timer():
     """Timer for performance testing."""
 
     class Timer:
+        """Simple timer for performance testing."""
+
         def __init__(self):
             self.start_time = None
             self.end_time = None
@@ -224,6 +227,8 @@ def cli_command_tester():
     """Helper for testing CLI commands."""
 
     class CLICommandTester:
+        """Helper class for testing CLI commands."""
+
         def __init__(self):
             self.runner = CliRunner()
 
@@ -253,6 +258,8 @@ def rich_testing_utils():
     """Utilities for testing Rich console output."""
 
     class RichTestingUtils:
+        """Utilities for testing Rich console output."""
+
         @staticmethod
         def extract_text_content(rich_output):
             """Extract plain text from Rich output."""
@@ -289,6 +296,8 @@ def questionary_testing_utils():
     """Utilities for testing questionary interactions."""
 
     class QuestionaryTestingUtils:
+        """Utilities for testing questionary interactions."""
+
         @staticmethod
         def simulate_user_flow(responses_dict):
             """Simulate a complete user interaction flow."""

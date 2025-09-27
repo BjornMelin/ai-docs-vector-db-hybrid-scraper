@@ -19,6 +19,223 @@ class BrowserTestError(Exception):
         self.message = message
 
 
+class MockPage:
+    """Mock page for testing."""
+
+    def __init__(self):
+        self.url = ""
+        self._title = ""
+        self._content = ""
+        self.navigation_history = []
+        self.performance_metrics = {}
+
+    async def goto(self, url: str, **kwargs):
+        """Navigate to URL."""
+        # Simulate timeout errors for invalid domains or very short timeouts
+        timeout = kwargs.get("timeout", 30000)
+        if "this-domain-does-not-exist" in url:
+            error_msg = f"net::ERR_NAME_NOT_RESOLVED at {url}"
+            raise BrowserTestError(error_msg)
+        if "delay" in url and timeout < 3000:  # delay endpoint with short timeout
+            timeout_msg = f"Navigation timeout of {timeout}ms exceeded"
+            raise BrowserTestError(timeout_msg)
+
+        self.url = url
+        self._title = f"Test Page - {url}"
+        self._content = (
+            f"<html><body><h1>Test Page</h1><p>Content for {url}. "
+            "This is a longer mock content that ensures the content length is above "
+            "the minimum threshold required by the multi-page crawling test. "
+            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. "
+            "Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+            "</p><div>Additional content section</div><footer>Footer content</footer></body></html>"  # noqa: E501
+        )
+        self.navigation_history.append(
+            {
+                "url": url,
+                "load_time_ms": 500,
+                "timestamp": kwargs.get("timestamp", 0),
+            }
+        )
+        return {"success": True, "load_time_ms": 500}
+
+    async def click(self, selector: str, **kwargs):
+        """Click element."""
+        return {"success": True, "selector": selector}
+
+    async def fill(self, selector: str, value: str):
+        """Fill form field."""
+        return {"success": True, "selector": selector, "value": value}
+
+    async def screenshot(self, **kwargs):
+        """Take screenshot."""
+        return b"mock_screenshot_data"
+
+    async def content(self):
+        """Get page content."""
+        return self._content
+
+    async def title(self):
+        """Get page title."""
+        return self._title
+
+    async def evaluate(self, script: str):
+        """Evaluate JavaScript."""
+        if (
+            "contentLength" in script and "document.body.innerHTML.length" in script
+        ) or ("textLength" in script and "linkCount" in script):
+            # Mock for multi-page crawling test that needs specific
+            # page info structure - PRIORITIZE THIS
+
+            # Calculate realistic text length based on content
+            text_content = (
+                f"Test Page Content for {self.url}. "
+                "This is a longer mock text content that ensures "
+                "the text length is above the minimum threshold required by the "
+                "multi-page crawling test. Lorem ipsum dolor sit amet, consectetur "
+                "adipiscing elit. Sed do eiusmod tempor incididunt ut "
+                "labore et dolore magna aliqua. Additional content section. "
+                "Footer content."
+            )
+            return {
+                "title": self._title,
+                "url": self.url,
+                "contentLength": len(self._content),
+                "textLength": len(text_content),
+                "linkCount": 5,
+                "loadTime": 500,
+            }
+        if "performance.timing" in script and "contentLength" not in script:
+            return {"loadEventEnd": 1500, "navigationStart": 1000}
+        if "document.title" in script and "window.location.href" in script:
+            # This matches the complex metadata extraction script in the test
+            return {
+                "meta_tags": {
+                    "description": f"Description for {self.url}",
+                    "keywords": "test, mock, browser, automation",
+                    "author": "Test Author",
+                    "og:title": self._title,
+                    "og:description": f"Open Graph description for {self.url}",
+                },
+                "title": self._title,
+                "url": self.url,
+                "links_count": 5,
+                "images_count": 2,
+                "forms_count": 1,
+            }
+        if "document.title" in script:
+            return self._title
+        if "document.querySelectorAll" in script and "meta" in script:
+            # Mock metadata extraction
+            return {
+                "title": self._title,
+                "description": f"Description for {self.url}",
+                "keywords": "test, mock, browser, automation",
+                "author": "Test Author",
+                "url": self.url,
+            }
+        if "window.location.href" in script and "status: 'loaded'" in script:
+            # Mock for error handling test that checks page status
+            return {"status": "loaded", "url": self.url}
+        if "window.location.href" in script:
+            return self.url
+        if "document.body.innerText" in script:
+            return f"Text content from {self.url}"
+        if "Array.from(document.querySelectorAll('a[href]'))" in script:
+            # Mock link extraction for search simulation
+            return [
+                {"text": "Home", "href": f"{self.url}/home"},
+                {"text": "About", "href": f"{self.url}/about"},
+                {"text": "Contact", "href": f"{self.url}/contact"},
+                {"text": "Documentation", "href": f"{self.url}/docs"},
+                {"text": "API", "href": f"{self.url}/api"},
+            ]
+        if "performance.getEntriesByType" in script:
+            # Mock performance metrics for performance monitoring test
+            return {
+                "navigation": {
+                    "domContentLoaded": 250,
+                    "loadComplete": 500,
+                    "dns": 10,
+                    "tcp": 20,
+                    "request": 100,
+                    "response": 150,
+                    "_total": 800,
+                },
+                "paint": {
+                    "first-paint": 300,
+                    "first-contentful-paint": 400,
+                },
+                "memory": {
+                    "used": 10485760,  # 10MB
+                    "_total": 52428800,  # 50MB
+                    "limit": 1073741824,  # 1GB
+                },
+            }
+        if "FormData" in script and "form" in script:
+            # Mock form data extraction
+            return {
+                "hasForm": True,
+                "formData": {
+                    "custname": "Test Customer",
+                    "custtel": "555-0123",
+                    "custemail": "test@example.com",
+                    "delivery": "fedex",
+                },
+                "inputCount": 4,
+            }
+        # Default metadata for tests that extract page metadata
+        return {
+            "title": self._title,
+            "url": self.url,
+            "content_length": len(self._content),
+            "links_count": 5,
+            "images_count": 2,
+        }
+
+    async def wait_for_selector(self, selector: str, **kwargs):
+        """Wait for selector and return mock element."""
+
+        class MockElement:
+            """Mock element for testing."""
+
+            def __init__(self, selector):
+                self.selector = selector
+
+            async def fill(self, value: str):
+                """Fill element with value."""
+                return {"filled": True, "value": value}
+
+            async def click(self):
+                """Click element."""
+                return {"clicked": True}
+
+            async def text_content(self):
+                """Get element text content."""
+                return f"Mock text for {self.selector}"
+
+            async def inner_text(self):
+                """Get element inner text."""
+                return f"Mock inner text for {self.selector}"
+
+            async def is_enabled(self):
+                """Check if element is enabled."""
+                return True
+
+            async def select_option(self, value: str):
+                """Select option in dropdown."""
+                return {"selected": True, "value": value}
+
+        return MockElement(selector)
+
+    async def close(self):
+        """Close page."""
+
+    def url_property(self):
+        """Get current URL."""
+        return self.url
+
+
 @pytest.fixture
 def mock_browser_config():
     """Browser configuration for testing."""
@@ -62,7 +279,7 @@ def mock_browser_config():
                 ]
             )
 
-    elif system == "darwin" or system == "windows":  # macOS
+    elif system in ("darwin", "windows"):  # macOS
         config["args"].extend(
             [
                 "--disable-web-security",
@@ -78,14 +295,16 @@ def browser_context():
     """Mock browser context for testing."""
 
     class MockBrowserContext:
+        """Mock browser context for testing."""
+
         def __init__(self):
             self.pages = []
-            self.cookies = []
+            self._cookies = []
             self.local_storage = {}
             self.session_storage = {}
 
         async def page(self):
-            """Create a  page."""
+            """Create a page."""
             page = MockPage()
             self.pages.append(page)
             return page
@@ -98,11 +317,11 @@ def browser_context():
 
         async def add_cookies(self, cookies):
             """Add cookies to context."""
-            self.cookies.extend(cookies)
+            self._cookies.extend(cookies)
 
-        async def cookies(self, urls=None):
+        async def cookies(self, urls=None):  # pylint: disable=method-hidden
             """Get cookies from context."""
-            return self.cookies.copy()
+            return self._cookies.copy()
 
     return MockBrowserContext()
 
@@ -111,11 +330,13 @@ def browser_context():
 def page():
     """Mock page for testing."""
 
-    class MockPage:
+    class MockPageSimple:
+        """Mock page for testing."""
+
         def __init__(self):
             self.url = ""
-            self.title = ""
-            self.content = ""
+            self._title = ""
+            self._content = ""
             self.elements = {}
             self.form_data = {}
             self.navigation_history = []
@@ -125,7 +346,7 @@ def page():
             """Navigate to URL."""
             self.url = url
             self._title = f"Test Page - {url}"
-            self.content = (
+            self._content = (
                 f"<html><body><h1>Test Page</h1><p>Content for {url}</p></body></html>"
             )
             self.navigation_history.append(
@@ -141,7 +362,7 @@ def page():
             """Click an element."""
             return {"success": True, "selector": selector}
 
-        async def fill(self, selector: str, value: str, **kwargs):
+        async def fill(self, selector: str, value: str):
             """Fill a form field."""
             self.form_data[selector] = value
             return {"success": True, "selector": selector, "value": value}
@@ -168,29 +389,29 @@ def page():
             """Evaluate JavaScript."""
             # Mock common JavaScript evaluations
             if "document.title" in script:
-                return self.title
+                return self._title
             if "document.location.href" in script:
                 return self.url
             if "document.body.innerHTML" in script:
-                return self.content
+                return self._content
             return {"result": "mock_eval_result"}
 
         async def content(self):
             """Get page content."""
-            return self.content
+            return self._content
 
-        async def title(self):
+        async def title(self) -> str:
             """Get page title."""
             return self._title
 
-        async def close(self):
+        async def close(self) -> None:
             """Close page."""
 
-        def url_property(self):
+        def url_property(self) -> str:
             """Get current URL."""
             return self.url
 
-    return MockPage()
+    return MockPageSimple()
 
 
 @pytest.fixture
@@ -269,29 +490,14 @@ def browser_test_data():
 async def mock_browser_setup(mock_browser_config):
     """Mock browser setup to avoid Playwright dependency in tests."""
 
-    class MockBrowser:
-        def __init__(self, config):
-            self.config = config
-            self.contexts = []
-
-        async def context(self, **kwargs):
-            """Create  browser context."""
-            context = MockBrowserContext()
-            self.contexts.append(context)
-            return context
-
-        async def close(self):
-            """Close browser and all contexts."""
-            for context in self.contexts:
-                await context.close()
-            self.contexts.clear()
-
     class MockBrowserContext:
+        """Mock browser context for testing."""
+
         def __init__(self):
             self.pages = []
 
         async def page(self):
-            """Create  page."""
+            """Create a page."""
             page = MockPage()
             self.pages.append(page)
             return page
@@ -302,210 +508,24 @@ async def mock_browser_setup(mock_browser_config):
                 await page.close()
             self.pages.clear()
 
-    class MockPage:
-        def __init__(self):
-            self.url = ""
-            self._title = ""
-            self._content = ""
-            self.navigation_history = []
-            self.performance_metrics = {}
+    class MockBrowser:
+        """Mock browser for testing."""
 
-        async def goto(self, url: str, **kwargs):
-            """Navigate to URL."""
-            # Simulate timeout errors for invalid domains or very short timeouts
-            timeout = kwargs.get("timeout", 30000)
-            if "this-domain-does-not-exist" in url:
-                error_msg = f"net::ERR_NAME_NOT_RESOLVED at {url}"
-                raise BrowserTestError(error_msg)
-            if "delay" in url and timeout < 3000:  # delay endpoint with short timeout
-                timeout_msg = f"Navigation timeout of {timeout}ms exceeded"
-                raise BrowserTestError(timeout_msg)
+        def __init__(self, config):
+            self.config = config
+            self.contexts = []
 
-            self.url = url
-            self._title = f"Test Page - {url}"
-            self._content = f"<html><body><h1>Test Page</h1><p>Content for {url}. This is a longer mock content that ensures the content length is above the minimum threshold required by the multi-page crawling test. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p><div>Additional content section</div><footer>Footer content</footer></body></html>"  # noqa: E501
-            self.navigation_history.append(
-                {
-                    "url": url,
-                    "load_time_ms": 500,
-                    "timestamp": kwargs.get("timestamp", 0),
-                }
-            )
-            return {"success": True, "load_time_ms": 500}
-
-        async def click(self, selector: str, **kwargs):
-            """Click element."""
-            return {"success": True, "selector": selector}
-
-        async def fill(self, selector: str, value: str, **kwargs):
-            """Fill form field."""
-            return {"success": True, "selector": selector, "value": value}
-
-        async def screenshot(self, **kwargs):
-            """Take screenshot."""
-            return b"mock_screenshot_data"
-
-        async def content(self):
-            """Get page content."""
-            return self._content
-
-        async def title(self):
-            """Get page title."""
-            return self._title
-
-        async def evaluate(self, script: str):
-            """Evaluate JavaScript."""
-            if (
-                "contentLength" in script and "document.body.innerHTML.length" in script
-            ) or ("textLength" in script and "linkCount" in script):
-                # Mock for multi-page crawling test that needs specific
-                # page info structure - PRIORITIZE THIS
-
-                # Calculate realistic text length based on content
-                text_content = (
-                    f"Test Page Content for {self.url}. "
-                    "This is a longer mock text content that ensures "
-                    "the text length is above the minimum threshold required by the "
-                    "multi-page crawling test. Lorem ipsum dolor sit amet, consectetur "
-                    "adipiscing elit. Sed do eiusmod tempor incididunt ut "
-                    "labore et dolore magna aliqua. Additional content section. "
-                    "Footer content."
-                )
-                return {
-                    "title": self._title,
-                    "url": self.url,
-                    "contentLength": len(self._content),
-                    "textLength": len(text_content),
-                    "linkCount": 5,
-                    "loadTime": 500,
-                }
-            if "performance.timing" in script and "contentLength" not in script:
-                return {"loadEventEnd": 1500, "navigationStart": 1000}
-            if "document.title" in script and "window.location.href" in script:
-                # This matches the complex metadata extraction script in the test
-                return {
-                    "meta_tags": {
-                        "description": f"Description for {self.url}",
-                        "keywords": "test, mock, browser, automation",
-                        "author": "Test Author",
-                        "og:title": self._title,
-                        "og:description": f"Open Graph description for {self.url}",
-                    },
-                    "title": self._title,
-                    "url": self.url,
-                    "links_count": 5,
-                    "images_count": 2,
-                    "forms_count": 1,
-                }
-            if "document.title" in script:
-                return self._title
-            if "document.querySelectorAll" in script and "meta" in script:
-                # Mock metadata extraction
-                return {
-                    "title": self._title,
-                    "description": f"Description for {self.url}",
-                    "keywords": "test, mock, browser, automation",
-                    "author": "Test Author",
-                    "url": self.url,
-                }
-            if "window.location.href" in script and "status: 'loaded'" in script:
-                # Mock for error handling test that checks page status
-                return {"status": "loaded", "url": self.url}
-            if "window.location.href" in script:
-                return self.url
-            if "document.body.innerText" in script:
-                return f"Text content from {self.url}"
-            if "Array.from(document.querySelectorAll('a[href]'))" in script:
-                # Mock link extraction for search simulation
-                return [
-                    {"text": "Home", "href": f"{self.url}/home"},
-                    {"text": "About", "href": f"{self.url}/about"},
-                    {"text": "Contact", "href": f"{self.url}/contact"},
-                    {"text": "Documentation", "href": f"{self.url}/docs"},
-                    {"text": "API", "href": f"{self.url}/api"},
-                ]
-            if "performance.getEntriesByType" in script:
-                # Mock performance metrics for performance monitoring test
-                return {
-                    "navigation": {
-                        "domContentLoaded": 250,
-                        "loadComplete": 500,
-                        "dns": 10,
-                        "tcp": 20,
-                        "request": 100,
-                        "response": 150,
-                        "_total": 800,
-                    },
-                    "paint": {
-                        "first-paint": 300,
-                        "first-contentful-paint": 400,
-                    },
-                    "memory": {
-                        "used": 10485760,  # 10MB
-                        "_total": 52428800,  # 50MB
-                        "limit": 1073741824,  # 1GB
-                    },
-                }
-            if "FormData" in script and "form" in script:
-                # Mock form data extraction
-                return {
-                    "hasForm": True,
-                    "formData": {
-                        "custname": "Test Customer",
-                        "custtel": "555-0123",
-                        "custemail": "test@example.com",
-                        "delivery": "fedex",
-                    },
-                    "inputCount": 4,
-                }
-            # Default metadata for tests that extract page metadata
-            return {
-                "title": self._title,
-                "url": self.url,
-                "content_length": len(self._content),
-                "links_count": 5,
-                "images_count": 2,
-            }
-
-        async def wait_for_selector(self, selector: str, **kwargs):
-            """Wait for selector and return mock element."""
-
-            class MockElement:
-                def __init__(self, selector):
-                    self.selector = selector
-
-                async def fill(self, value: str):
-                    """Fill element with value."""
-                    return {"filled": True, "value": value}
-
-                async def click(self):
-                    """Click element."""
-                    return {"clicked": True}
-
-                async def text_content(self):
-                    """Get element text content."""
-                    return f"Mock text for {self.selector}"
-
-                async def inner_text(self):
-                    """Get element inner text."""
-                    return f"Mock inner text for {self.selector}"
-
-                async def is_enabled(self):
-                    """Check if element is enabled."""
-                    return True
-
-                async def select_option(self, value: str):
-                    """Select option in dropdown."""
-                    return {"selected": True, "value": value}
-
-            return MockElement(selector)
+        async def context(self, **kwargs):
+            """Create browser context."""
+            context = MockBrowserContext()
+            self.contexts.append(context)
+            return context
 
         async def close(self):
-            """Close page."""
-
-        def url_property(self):
-            """Get current URL."""
-            return self.url
+            """Close browser and all contexts."""
+            for context in self.contexts:
+                await context.close()
+            self.contexts.clear()
 
     browser = MockBrowser(mock_browser_config)
     yield browser
@@ -531,6 +551,8 @@ def journey_data_manager():
     """Data manager for browser journey testing."""
 
     class JourneyDataManager:
+        """Data manager for browser journey testing."""
+
         def __init__(self):
             self.artifacts = {}
             self.session_data = {}

@@ -3,18 +3,17 @@
 import asyncio  # noqa: PLC0415
 import json  # noqa: PLC0415
 import time  # noqa: PLC0415
-from unittest.mock import AsyncMock
-import respx
-import httpx
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
+
 from src.services.cache.base import CacheInterface
-from src.services.cache.browser_cache import BrowserCache
-from src.services.cache.browser_cache import BrowserCacheEntry
+from src.services.cache.browser_cache import BrowserCache, BrowserCacheEntry
 
 
 class MockCache(CacheInterface[str]):
+    """Test class."""
+
     """Mock cache implementation for testing."""
 
     def __init__(self):
@@ -89,6 +88,8 @@ def sample_cache_entry():
 
 
 class TestBrowserCacheEntry:
+    """Test class."""
+
     """Test BrowserCacheEntry functionality."""
 
     def test_cache_entry_initialization(self):
@@ -136,6 +137,8 @@ class TestBrowserCacheEntry:
 
 
 class TestBrowserCache:
+    """Test class."""
+
     """Test BrowserCache functionality."""
 
     def test_initialization(self, browser_cache):
@@ -435,6 +438,8 @@ class TestBrowserCache:
 
 
 class TestBrowserCacheIntegration:
+    """Test class."""
+
     """Test browser cache integration scenarios."""
 
     @pytest.mark.asyncio

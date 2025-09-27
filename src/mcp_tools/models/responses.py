@@ -1,5 +1,3 @@
-
-
 """Response models for MCP server tools."""
 
 from datetime import UTC, datetime
@@ -296,6 +294,12 @@ class DocumentBatchResponse(BaseModel):
 
 
 class HyDEConfig(BaseModel):
+    """Configuration parameters for HyDE (Hypothetical Document Embedding) search.
+
+    Defines the settings used for generating hypothetical documents and controlling
+    the search behavior in advanced HyDE operations.
+    """
+
     domain: str | None = None
     num_generations: int
     temperature: float
@@ -304,6 +308,12 @@ class HyDEConfig(BaseModel):
 
 
 class SearchMetrics(BaseModel):
+    """Metrics collected during search operations.
+
+    Captures performance and behavioral data from search executions to enable
+    monitoring, optimization, and debugging of search functionality.
+    """
+
     search_time_ms: float
     results_found: int
     reranking_applied: bool | None = None

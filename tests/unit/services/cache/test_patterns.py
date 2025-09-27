@@ -1,15 +1,32 @@
 """Tests for cache patterns module."""
 
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
 from src.services.cache.patterns import CachePatterns
 
 
 class TestCachePatterns:
     """Test the CachePatterns class."""
+
+    class TestFetchError(Exception):
+        """Custom exception for test fetch failures."""
+
+        def __init__(self, message="Fetch failed"):
+            super().__init__(message)
+
+    class TestPersistError(Exception):
+        """Custom exception for test persist failures."""
+
+        def __init__(self, message="Persist failed"):
+            super().__init__(message)
+
+    class TestCacheError(Exception):
+        """Custom exception for test cache failures."""
+
+        def __init__(self, message="Cache operation failed"):
+            super().__init__(message)
 
     @pytest.fixture
     def mock_dragonfly_cache(self):
@@ -224,7 +241,7 @@ class TestCachePatterns:
         mock_dragonfly_cache.get.side_effect = mock_get_for_error
 
         def failing_fetch():
-            raise Exception("Fetch failed")
+            raise TestCachePatterns.TestFetchError()
 
         result = await cache_patterns._refresh_cache("test_key", failing_fetch, 3600)
 
@@ -241,9 +258,9 @@ class TestCachePatterns:
         mock_dragonfly_cache.delete.return_value = True
 
         def failing_fetch():
-            raise Exception("Fetch failed")
+            raise TestCachePatterns.TestFetchError()
 
-        with pytest.raises(Exception, match="Fetch failed"):
+        with pytest.raises(TestCachePatterns.TestFetchError):
             await cache_patterns._refresh_cache("test_key", failing_fetch, 3600)
 
         mock_dragonfly_cache.delete.assert_called_once_with("lock:test_key")
@@ -348,7 +365,7 @@ class TestCachePatterns:
         mock_dragonfly_cache.mget.return_value = ["value1", None]
 
         def failing_fetch(missing_keys):
-            raise Exception("Fetch failed")
+            raise TestCachePatterns.TestFetchError()
 
         result = await cache_patterns.batch_cache(
             keys=keys,
@@ -452,7 +469,7 @@ class TestCachePatterns:
         # Verify key generation
         get_call = mock_dragonfly_cache.get.call_args[0][0]
         assert get_call.startswith("compute:")
-        assert len(get_call.split(":")[1]) == 32  # MD5 hash length
+        assert len(get_call.split(":")[1]) == 64  # SHA256 hash length
 
     @pytest.mark.asyncio
     async def test_cached_computation_with_async_func(
@@ -534,7 +551,7 @@ class TestCachePatterns:
         """Test write-through pattern with persist error."""
 
         def failing_persist(key, value):
-            raise Exception("Persist failed")
+            raise TestCachePatterns.TestPersistError()
 
         value = {"data": "test_value"}
 
@@ -667,7 +684,7 @@ class TestCachePatterns:
             "key1": "value1",
             "key2": "value2",
         }
-        mock_dragonfly_cache.mset.side_effect = Exception("MSET failed")
+        mock_dragonfly_cache.mset.side_effect = TestCachePatterns.TestCacheError()
 
         result = await cache_patterns.cache_warming(
             keys_and_data=keys_and_data,

@@ -9,8 +9,6 @@ from typing import Any
 
 import pytest
 
-from src.security import SecurityError
-
 
 @pytest.mark.security
 @pytest.mark.authorization
@@ -22,6 +20,8 @@ class TestAccessControl:
         """Mock role-based access control system."""
 
         class RBACSystem:
+            """Test class for security testing."""
+
             def __init__(self):
                 self.roles = {
                     "guest": {
@@ -315,6 +315,8 @@ class TestAccessControl:
         """Test context-based access control (time, location, etc.)."""
 
         class ContextualAccessControl:
+            """Test class for security testing."""
+
             def __init__(self, rbac_system):
                 self.rbac = rbac_system
 
@@ -387,6 +389,8 @@ class TestAccessControl:
         """Test API key-based authorization."""
 
         class APIKeyAuthz:
+            """Test class for security testing."""
+
             def __init__(self):
                 self.api_keys = {
                     "read_only_key": {
@@ -454,6 +458,8 @@ class TestAccessControl:
         """Test resource-based permission validation."""
 
         class ResourcePermissions:
+            """Test class for security testing."""
+
             def __init__(self):
                 self.resource_acl = {
                     "sensitive_docs": {
@@ -529,6 +535,8 @@ class TestAccessControl:
         """Test permission delegation mechanisms."""
 
         class PermissionDelegation:
+            """Test class for security testing."""
+
             def __init__(self):
                 self.delegations = {}
 
@@ -627,7 +635,7 @@ class TestAccessControl:
             """Validate and normalize role input."""
             if not isinstance(role_input, str):
                 msg = "Role must be a string"
-                raise SecurityError(msg)
+                raise ValueError(msg)
 
             # Remove null bytes and control characters
             role = "".join(c for c in role_input if ord(c) >= 32)
@@ -646,7 +654,7 @@ class TestAccessControl:
             }
             if role not in valid_roles:
                 msg = f"Invalid role: {role}"
-                raise SecurityError(msg)
+                raise ValueError(msg)
 
             return role
 
@@ -664,7 +672,7 @@ class TestAccessControl:
                     "admin",
                     "api_service",
                 }
-            except (SecurityError, TypeError, AttributeError):
+            except (ValueError, TypeError, AttributeError):
                 # Expected for malicious inputs
                 pass
 
@@ -672,6 +680,8 @@ class TestAccessControl:
         """Test session-based authorization mechanisms."""
 
         class SessionAuthz:
+            """Test class for security testing."""
+
             def __init__(self):
                 self.sessions = {}
 
@@ -730,6 +740,8 @@ class TestAccessControl:
         """Test attribute-based access control (ABAC)."""
 
         class ABACEngine:
+            """Test class for security testing."""
+
             def __init__(self):
                 self.policies = []
 
@@ -819,5 +831,7 @@ class TestAccessControl:
         assert abac.evaluate_access(finance_user, public_doc, "read", {}) is False
 
         # Admin should have admin access
+        admin_user = {"role": "admin", "department": "it"}
+        assert abac.evaluate_access(admin_user, financial_doc, "admin", {}) is True
         admin_user = {"role": "admin", "department": "it"}
         assert abac.evaluate_access(admin_user, financial_doc, "admin", {}) is True

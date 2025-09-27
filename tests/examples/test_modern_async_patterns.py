@@ -115,6 +115,8 @@ class TestModernAsyncPatterns:
         """Demonstrate proper async context manager usage."""
 
         class AsyncService:
+            """Async service used to demonstrate context manager patterns."""
+
             def __init__(self):
                 self.initialized = False
                 self.closed = False
@@ -276,6 +278,8 @@ class TestModernAsyncPatterns:
         cleanup_called = []
 
         class AsyncResource:
+            """Test async resource for cleanup pattern demonstration."""
+
             def __init__(self, name: str):
                 self.name = name
                 self.active = True

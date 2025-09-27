@@ -1,10 +1,9 @@
 """Tests for cache manager module."""
 
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
 from src.config import CacheType
 from src.services.cache.manager import CacheManager
 
@@ -29,6 +28,8 @@ class TestCacheType:
 
 
 class TestCacheManager:
+    """Test class."""
+
     """Test the CacheManager class."""
 
     @pytest.fixture
@@ -562,9 +563,9 @@ class TestCacheManager:
             assert "search_cache" in stats
             assert "metrics" in stats
 
-            assert stats["manager"]["enabled_layers"] == ["local", "dragonfly"]
-            assert stats["local"]["size"] == 100
-            assert stats["dragonfly"]["size"] == 500
+            assert stats["manager"]["enabled_layers"] == ["local", "dragonfly"]  # type: ignore
+            assert stats["local"]["size"] == 100  # type: ignore
+            assert stats["dragonfly"]["size"] == 500  # type: ignore
 
     @pytest.mark.asyncio
     async def test_close_operation(self):
