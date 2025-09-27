@@ -1,7 +1,8 @@
 name: General Issue
-description: Use this form to report bugs, request enhancements, or suggest documentation updates.
-title: "[Issue]: "
-labels: []
+description: Streamlined issue form for bug reports, enhancements, documentation, CI/CD, performance, and ML updates.
+title: "[{{ inputs.issue_type }}]: "
+labels:
+  - needs-triage
 assignees: []
 body:
   - type: dropdown
@@ -10,11 +11,51 @@ body:
       label: Issue type
       description: What kind of change are you proposing?
       options:
-        - Bug report
-        - Enhancement
-        - Documentation
-        - Question
-        - Other
+        - label: Bug report
+          value: bug
+          description: Something is not working as expected.
+          actions:
+            - type: add_labels
+              labels:
+                - bug
+        - label: Enhancement
+          value: enhancement
+          description: Suggest a new feature or improvement.
+          actions:
+            - type: add_labels
+              labels:
+                - enhancement
+        - label: Documentation
+          value: documentation
+          description: Update or improve documentation and onboarding materials.
+          actions:
+            - type: add_labels
+              labels:
+                - documentation
+        - label: CI/CD
+          value: ci-cd
+          description: Pipeline configuration, automation, or deployment workflows.
+          actions:
+            - type: add_labels
+              labels:
+                - ci-cd
+        - label: Performance
+          value: performance
+          description: Latency, throughput, or resource regression investigations.
+          actions:
+            - type: add_labels
+              labels:
+                - performance
+        - label: ML model
+          value: ml-model
+          description: Model training, evaluation, or deployment updates.
+          actions:
+            - type: add_labels
+              labels:
+                - ml-model
+        - label: Other
+          value: needs-triage
+          description: Anything else that does not fit the categories above.
     validations:
       required: true
   - type: textarea
@@ -89,3 +130,45 @@ body:
           required: true
         - label: I understand maintainers may follow up for more detail.
           required: false
+  - type: textarea
+    id: cicd_scope
+    attributes:
+      label: CI/CD context
+      description: Detail the affected pipeline(s), environments, and recent configuration changes.
+      placeholder: |-
+        - Pipeline name and stage(s)
+        - Trigger conditions (manual, schedule, commit)
+        - Relevant configuration snippets or Terraform modules
+    validations:
+      required: true
+    if:
+      field: issue_type
+      equals: ci-cd
+  - type: textarea
+    id: performance_metrics
+    attributes:
+      label: Performance evidence
+      description: Share the metrics, baselines, and timeframes that demonstrate the regression.
+      placeholder: |-
+        - Metric(s) impacted and measurement tooling
+        - Baseline vs. current values (include units)
+        - Workload details (dataset, concurrency, hardware)
+    validations:
+      required: true
+    if:
+      field: issue_type
+      equals: performance
+  - type: textarea
+    id: ml_model_details
+    attributes:
+      label: ML model specifics
+      description: Provide training data, evaluation metrics, and deployment considerations for the model change.
+      placeholder: |-
+        - Model/version and hosting target
+        - Dataset characteristics and preprocessing steps
+        - Evaluation metrics (baseline vs. proposed)
+    validations:
+      required: true
+    if:
+      field: issue_type
+      equals: ml-model
