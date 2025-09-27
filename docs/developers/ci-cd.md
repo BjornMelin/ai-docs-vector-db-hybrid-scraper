@@ -1,7 +1,7 @@
 # CI/CD Overview
 
-This repository now relies on four GitHub Actions workflows that cover pull request
-validation, documentation checks, release automation, and triage labelling. Each
+This repository now relies on six GitHub Actions workflows that cover pull request
+validation, documentation checks, release automation, and triage labeling. Each
 workflow is scoped to the minimum set of triggers and permissions required to keep
 maintenance low while preserving prior functionality such as Docker image builds and
 security reporting.
