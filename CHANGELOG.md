@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Documented manual triggers for the security and regression workflows in `CONTRIBUTING.md` so contributors can opt into deeper validation without slowing default CI.
 - Standardized workflow environment setup on the shared `.github/actions/setup-environment` composite and ensured all referenced actions remain pinned to immutable SHAs.
 - Retired the SARIF upload path in favor of `pip-audit`, `safety`, and `bandit` reports stored as artifacts for manual review when the security workflow runs.
+- Refined `README.md` with a table of contents, environment variable reference, expanded MCP integration steps, and SEO-aligned positioning for AI engineers.
+- Updated repository description and topics to emphasize the retrieval-augmented documentation ingestion stack and surface the project in GitHub search.
 
 ### Security
 - Applied SHA pinning across composite actions and documentation snippets, aligning with GitHub’s secure-use guidance to mitigate supply-chain risk.
