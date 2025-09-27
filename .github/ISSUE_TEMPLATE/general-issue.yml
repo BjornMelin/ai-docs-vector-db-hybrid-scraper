@@ -1,0 +1,91 @@
+name: General Issue
+description: Use this form to report bugs, request enhancements, or suggest documentation updates.
+title: "[Issue]: "
+labels: []
+assignees: []
+body:
+  - type: dropdown
+    id: issue_type
+    attributes:
+      label: Issue type
+      description: What kind of change are you proposing?
+      options:
+        - Bug report
+        - Enhancement
+        - Documentation
+        - Question
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Provide a clear and concise description of the problem or idea.
+      placeholder: e.g., "Service X fails to start after upgrading dependency Y."
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce / Background
+      description: For bugs, list exact steps to reproduce. For other requests, provide relevant context or background research.
+      placeholder: |
+        1. Go to ...
+        2. Run ...
+        3. Observe ...
+    validations:
+      required: false
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs. actual behaviour
+      description: Describe what you expected to happen and what actually occurred. For non-bug issues, outline the desired outcome or success criteria.
+      placeholder: |
+        Expected: ...
+        Actual: ...
+    validations:
+      required: false
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution or notes
+      description: Share any ideas, implementation notes, or resources that could help resolve this issue.
+      placeholder: |
+        - Potential fix or approach
+        - Related commands, benchmarks, or design notes
+    validations:
+      required: false
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact and urgency
+      description: Explain who is affected, how severe the issue is, and any deadlines or release blockers.
+      placeholder: |
+        - Impacted components or teams
+        - Severity (critical/high/medium/low)
+        - Deadlines or release considerations
+    validations:
+      required: false
+  - type: textarea
+    id: attachments
+    attributes:
+      label: Logs, metrics, or screenshots
+      description: Paste links or snippets that provide supporting evidence.
+      placeholder: |
+        ```
+        Relevant log snippet
+        ```
+    validations:
+      required: false
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues to avoid duplicates.
+          required: true
+        - label: I provided enough context for someone else to act on this.
+          required: true
+        - label: I understand maintainers may follow up for more detail.
+          required: false
