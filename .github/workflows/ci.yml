@@ -77,11 +77,8 @@ jobs:
       needs.changes.outputs.dependencies == 'true' ||
       needs.changes.outputs.workflows == 'true'
     steps:
-      - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-
-      - name: Setup Python environment
-        uses: ./.github/actions/setup-environment
+      - name: Prepare workspace
+        uses: ./.github/actions/checkout-and-setup
         with:
           python-version: "3.12"
           cache-suffix: "-lint"
@@ -116,11 +113,8 @@ jobs:
         needs.changes.outputs.dependencies == 'true'
       )
     steps:
-      - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-
-      - name: Setup Python environment
-        uses: ./.github/actions/setup-environment
+      - name: Prepare workspace
+        uses: ./.github/actions/checkout-and-setup
         with:
           python-version: "3.12"
           cache-suffix: "-tests"
@@ -167,11 +161,8 @@ jobs:
         needs.changes.outputs.dependencies == 'true'
       )
     steps:
-      - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-
-      - name: Setup Python environment
-        uses: ./.github/actions/setup-environment
+      - name: Prepare workspace
+        uses: ./.github/actions/checkout-and-setup
         with:
           python-version: "3.12"
           cache-suffix: "-build"
@@ -206,11 +197,8 @@ jobs:
         needs.changes.outputs.dependencies == 'true'
       )
     steps:
-      - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-
-      - name: Setup Python environment
-        uses: ./.github/actions/setup-environment
+      - name: Prepare workspace
+        uses: ./.github/actions/checkout-and-setup
         with:
           python-version: "3.12"
           cache-suffix: "-audit"

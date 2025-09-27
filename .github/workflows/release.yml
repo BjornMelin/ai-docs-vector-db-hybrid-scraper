@@ -68,15 +68,10 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Prepare workspace
+        uses: ./.github/actions/checkout-and-setup
         with:
-          fetch-depth: 0
           ref: ${{ needs.prepare.outputs.version }}
-
-      - name: Setup Python environment
-        uses: ./.github/actions/setup-environment
-        with:
           python-version: "3.12"
           cache-suffix: "-release-quality"
 
@@ -106,15 +101,10 @@ jobs:
     env:
       VERSION: ${{ needs.prepare.outputs.version }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Prepare workspace
+        uses: ./.github/actions/checkout-and-setup
         with:
-          fetch-depth: 0
           ref: ${{ env.VERSION }}
-
-      - name: Setup Python environment
-        uses: ./.github/actions/setup-environment
-        with:
           python-version: "3.12"
           cache-suffix: "-release-build"
 
@@ -212,13 +202,8 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-        with:
-          fetch-depth: 0
-
-      - name: Setup Python environment
-        uses: ./.github/actions/setup-environment
+      - name: Prepare workspace
+        uses: ./.github/actions/checkout-and-setup
         with:
           python-version: "3.12"
           cache-suffix: "-release-security"
@@ -234,23 +219,47 @@ jobs:
 
       - name: Run dependency and code scans
         run: |
-          echo "# Security scan" > security-report.md
-          echo >> security-report.md
-          echo "## Dependency vulnerabilities" >> security-report.md
+          set -euo pipefail
+
+          pip_audit_status=0
+          bandit_status=0
+
+          {
+            echo "# Security scan"
+            echo
+            echo "## Dependency vulnerabilities"
+          } > security-report.md
+
           if uv tool run pip-audit --format=markdown >> security-report.md; then
-            echo "No dependency vulnerabilities detected." >> security-report.md
-          else
             echo >> security-report.md
+            echo "_No dependency vulnerabilities detected._" >> security-report.md
+          else
+            pip_audit_status=$?
+            echo >> security-report.md
+            echo "_pip-audit exited with status ${pip_audit_status}. Review the output above._" >> security-report.md
           fi
-          echo >> security-report.md
-          echo "## Code security issues" >> security-report.md
+
+          {
+            echo
+            echo "## Code security issues"
+          } >> security-report.md
+
           if uv tool run bandit -r src -f txt >> security-report.md; then
-            echo "No code security issues detected." >> security-report.md
-          else
             echo >> security-report.md
+            echo "_No code security issues detected._" >> security-report.md
+          else
+            bandit_status=$?
+            echo >> security-report.md
+            echo "_Bandit exited with status ${bandit_status}. Review the output above._" >> security-report.md
+          fi
+
+          if [ "$pip_audit_status" -ne 0 ] || [ "$bandit_status" -ne 0 ]; then
+            echo "Security tooling reported failures. See security-report.md for details." >&2
+            exit 1
           fi
 
       - name: Upload security report
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: security-report
@@ -295,13 +304,27 @@ jobs:
 
       - name: Collect release assets
         run: |
+          set -euo pipefail
           mkdir -p assets
-          cp release/dist/* assets/
+          shopt -s nullglob
+
+          dist_files=(release/dist/*)
+          if [ "${#dist_files[@]}" -eq 0 ]; then
+            echo "::error::No distribution artifacts were downloaded." >&2
+            exit 1
+          fi
+          cp "${dist_files[@]}" assets/
+
           if [ -f release/security/security-report.md ]; then
             cp release/security/security-report.md assets/security-report.md
+          else
+            echo "::warning::security-report.md not found; security report will be omitted." >&2
           fi
+
           if [ -f release/sbom/sbom.spdx.json ]; then
             cp release/sbom/sbom.spdx.json assets/sbom.spdx.json
+          else
+            echo "::notice::SBOM artifact not present; skipping attachment." >&2
           fi
 
       - name: Create release
@@ -331,7 +354,7 @@ jobs:
           path: dist
 
       - name: Publish package
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # release/v1
         with:
           packages-dir: dist
           password: ${{ secrets.PYPI_API_TOKEN }}

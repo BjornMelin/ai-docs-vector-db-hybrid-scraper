@@ -46,8 +46,9 @@ CI, or simulated deployments:
 **Key settings**
 
 - Concurrency is limited to one run per ref with cancellation for fast feedback.
-- Composite action `.github/actions/setup-environment` handles uv installation and
-  caching for consistent environments.
+- Composite actions `.github/actions/checkout-and-setup` and
+  `.github/actions/setup-environment` handle checkout plus uv installation and caching
+  for consistent environments.
 - Artifacts (coverage, distributions, and security reports) are retained for 7 days.
 - Conditional job execution avoids rerunning expensive jobs for doc-only changes.
 
@@ -55,7 +56,7 @@ CI, or simulated deployments:
 
 - `detect-config-changes` uses `dorny/paths-filter` to short-circuit when no configuration files move.
 - `validate-config` reuses the shared environment setup, invokes the composite config validator, and verifies docker compose manifests when templates change.
-- Manual dispatch accepts an optional environment input to prioritise template validation during incident response.
+- Manual dispatch accepts an optional environment input to prioritize template validation during incident response.
 
 ## Documentation workflow (`docs.yml`)
 
