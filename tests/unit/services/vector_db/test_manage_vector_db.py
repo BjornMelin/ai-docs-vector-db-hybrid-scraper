@@ -13,7 +13,13 @@ from src.manage_vector_db import VectorDBManager, cli
 
 @pytest.fixture()
 def client_manager_stub() -> AsyncMock:
-    """Provide a client manager with the minimal async surface used by the CLI."""
+    """Provide a focused client manager stub for CLI exercises.
+
+    The stub exposes only the async interface that CLI commands rely on so test
+    failures reveal missing behaviours whenever the surface evolves. It keeps
+    initialization state, basic lifecycle hooks, and minimal service accessors
+    used by the commands without mocking unrelated functionality.
+    """
     manager = AsyncMock()
     manager.is_initialized = False
     manager.initialize = AsyncMock()

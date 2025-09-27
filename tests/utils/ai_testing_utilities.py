@@ -481,9 +481,8 @@ class RAGTestUtils:
         }
 
         overall_score = sum(
-            metric_value * weights[name]
-            for name, metric_value in metrics.items()
-            if name in weights
+            metrics.get(metric_name, 0.0) * weight
+            for metric_name, weight in weights.items()
         )
         metrics["overall_quality"] = overall_score
 
