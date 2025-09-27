@@ -16,14 +16,23 @@ documentation assets live in `docs/`.
 - `python scripts/dev.py test --profile quick` — run the fast unit/integration
   subset.
 - `python scripts/dev.py quality` — execute format, lint, type-check, and full
-  test gate.
+  test gate (Ruff format/check, Pylint, Pyright).
+- `uv run pylint src tests` — run static analysis; keep the global score ≥9.5.
+
+## Quality Gate Checklist
+1. Run `python scripts/dev.py quality` and resolve every Ruff, Pylint, and
+   Pyright finding (no TODO ignores).
+2. Execute targeted pytest suites for the areas you touched (for example,
+   `python scripts/dev.py test --profile quick` plus `uv run pytest tests/services/vector_db/`).
+3. Update documentation/CHANGELOG when behaviour changes.
 
 ## Coding Style & Naming Conventions
 Python code follows Ruff formatting (`ruff format .`) and linting (`ruff check . --fix`)
-plus MyPy/PyLint checks invoked through the quality gate. Stick to type-annotated
-functions, Google-style docstrings, and descriptive module names (`snake_case.py`).
-Configuration objects and Pydantic models live under `src/config/` and
-`src/models/` and should follow PascalCase class naming.
+plus Pyright static analysis via the quality gate. Maintain descriptive, typed
+functions; use Google-style docstrings (module, class, function) with succinct
+summaries and parameter/return sections. Keep comments technical and avoid
+marketing language. Modules should expose `snake_case.py`, classes use
+`PascalCase`, and constants remain uppercase.
 
 ## Testing Guidelines
 Pytest drives all suites. New tests belong beside the feature under `tests/` and
@@ -46,3 +55,12 @@ Load sensitive settings (such as `OPENAI_API_KEY`, `AI_DOCS__FIRECRAWL__API_KEY`
 credentials. For MCP HTTP transport, configure `FASTMCP_TRANSPORT`,
 `FASTMCP_HOST`, and `FASTMCP_PORT` consistently between the environment and
 Claude configuration templates.
+
+## Error Handling & Observability
+Prefer precise exception classes (`ValueError`, `HTTPStatusError`, etc.) over
+generic `Exception`. When suppression is unavoidable, justify it with targeted
+`# pylint: disable=` or `# pyright: ignore` comments. Inject structured logging
+and tracing where it improves operability—import the helpers from
+`src/services/logging_config.py` and emit actionable messages (context, impact,
+next steps). Use existing OpenTelemetry utilities under `src/services/monitoring`
+to attach spans/metrics when expanding service boundaries.
