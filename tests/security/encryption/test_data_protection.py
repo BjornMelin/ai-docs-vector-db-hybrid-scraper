@@ -30,6 +30,8 @@ class TestDataProtection:
         """Mock encryption service for testing."""
 
         class EncryptionService:
+            """Test class for security testing."""
+
             def __init__(self):
                 self.symmetric_key = Fernet.generate_key()
                 self.fernet = Fernet(self.symmetric_key)
@@ -117,6 +119,8 @@ class TestDataProtection:
         """Mock key management service."""
 
         class KeyManagementService:
+            """Test class for security testing."""
+
             def __init__(self):
                 self.keys = {}
                 self.key_versions = {}
@@ -395,11 +399,14 @@ class TestDataProtection:
 
         # Verify HSTS header
         hsts_header = security_headers.get("Strict-Transport-Security")
+        assert hsts_header is not None
         assert "max-age=" in hsts_header
         assert "includeSubDomains" in hsts_header
 
         # Test certificate validation (mock)
         class TLSValidator:
+            """Test class for security testing."""
+
             def validate_certificate_chain(self, certificate_chain: list[str]) -> bool:
                 """Validate TLS certificate chain."""
                 # In real implementation, this would validate:
@@ -452,10 +459,12 @@ class TestDataProtection:
         key_metadata = key_management_service.generate_key("security_test", "AES-256")
 
         # Key material should never be logged or exposed
-        key_metadata["key_material"]
+        _ = key_metadata["key_material"]
 
         # Test key access controls
         class KeyAccessControl:
+            """Test class for security testing."""
+
             def __init__(self):
                 self.authorized_services = [
                     "encryption_service",
@@ -700,6 +709,8 @@ class TestDataProtection:
             keys_to_backup.append(key)
 
         class KeyBackupService:
+            """Test class for security testing."""
+
             def __init__(self):
                 self.backup_storage = {}
                 self.recovery_log = []

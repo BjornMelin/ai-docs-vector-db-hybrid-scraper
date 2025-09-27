@@ -53,7 +53,7 @@ dependencies = [
     "fastembed>=0.7.3,<0.8.0",
     "FlagEmbedding>=1.3.5,<2.0.0",
     # Data processing & ML
-    "numpy>=2.3.3,<3.0.0",
+    "numpy>=1.24,<2.3",
     "scipy>=1.16.2,<2.0.0",
     "defusedxml>=0.7.1,<0.8.0",
     # HTTP & async
@@ -97,6 +97,8 @@ dependencies = [
     "opentelemetry-instrumentation-fastapi>=0.58b0,<0.59.0",
     # Development and utility tools
     "ruff>=0.13.1,<0.14.0",
+    "pylint>=3.3.8,<4.0.0",
+    "pyright>=1.1.379,<2.0.0",
     "taskipy>=1.14.1,<2.0.0",
     "dependency-injector>=4.48.2",
     "pydeps>=3.0.1",
@@ -120,7 +122,8 @@ dev = [
     "fakeredis>=2.31.3,<3.0.0",
     "coverage>=7.6.0,<8.0.0",
     "ruff>=0.13.1,<0.14.0",
-    "mypy>=1.16.1,<2.0.0",
+    "pylint>=3.3.8,<4.0.0",
+    "pyright>=1.1.379,<2.0.0",
     "locust>=2.37.10,<3.0.0",
     "pyjwt>=2.10.1,<3.0.0",
 ]
@@ -293,61 +296,46 @@ section-order = [
 ]
 lines-after-imports = 2
 
-[tool.mypy]
-python_version = "3.12"
-# Gradual adoption - start permissive, enable stricter checking over time
-strict = false
-warn_return_any = true
-warn_unused_configs = true
-ignore_missing_imports = true
-show_error_codes = true
-pretty = true
-
-# Per-module overrides for gradual type adoption
-[[tool.mypy.overrides]]
-module = ["tests.*", "examples.*", "scripts.*"]
-ignore_errors = true
-
-[[tool.mypy.overrides]]
-module = ["docs.*"]
-ignore_errors = true
-
-# Core modules - stricter checking
-[[tool.mypy.overrides]]
-module = ["src.core.*", "src.models.*", "src.config.*"]
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-
-# Service modules - medium strictness
-[[tool.mypy.overrides]]
-module = ["src.services.*", "src.infrastructure.*"]
-disallow_incomplete_defs = true
-
-# Third-party libraries that are commonly untyped
-[[tool.mypy.overrides]]
-module = [
-    "crawl4ai.*",
-    "firecrawl.*",
-    "qdrant_client.*",
-    "fastembed.*",
-    "browser_use.*",
-    "playwright.*",
-    "uvicorn.*",
-    "arq.*",
-    "slowapi.*",
-    "tenacity.*",
-    "cachetools.*",
-    "prometheus_client.*",
-    "psutil.*",
-    "httpx.*",
-    "respx.*",
-    "aiofiles.*",
-    "aiohttp.*",
-    "redis.*",
-    "dependency_injector.*",
-    "opentelemetry.*",
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "standard"
+include = ["src", "tests", "scripts", "examples"]
+exclude = [
+    "build",
+    "dist",
+    "docs",
+    "site",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".mypy_cache",
+    ".venv",
 ]
-ignore_missing_imports = true
+reportMissingImports = "warning"
+reportMissingTypeStubs = false
+
+[[tool.pyright.executionEnvironments]]
+root = "src/core"
+typeCheckingMode = "strict"
+
+[[tool.pyright.executionEnvironments]]
+root = "src/models"
+typeCheckingMode = "strict"
+
+[[tool.pyright.executionEnvironments]]
+root = "src/config"
+typeCheckingMode = "strict"
+
+[[tool.pyright.executionEnvironments]]
+root = "src/services"
+typeCheckingMode = "standard"
+
+[[tool.pyright.executionEnvironments]]
+root = "tests"
+typeCheckingMode = "basic"
+
+[[tool.pyright.executionEnvironments]]
+root = "examples"
+typeCheckingMode = "basic"
 
 [tool.pytest.ini_options]
 # Modern asyncio configuration - essential for async testing
@@ -483,7 +471,30 @@ dev = [
     "mutmut>=2.5.1,<4.0.0",
     "locust>=2.37.10,<3.0.0",
     "pyjwt>=2.10.1,<3.0.0",
-    "mypy>=1.16.1,<2.0.0",
+    "pyright>=1.1.379,<2.0.0",
     "pytest-timeout>=2.4.0,<3.0.0",
     "pytest-env>=1.1.5,<2.0.0",
+]
+
+[tool.pylint]
+[tool.pylint.main]
+# Basic configuration
+extension-pkg-allow-list = ["pydantic"]
+reports = false
+score = true
+
+[tool.pylint.messages_control]
+# Conservative disable list - only genuinely problematic rules
+disable = [
+    "too-few-public-methods",  # Common in test classes with just __init__
+    "missing-class-docstring", # Test classes often don't need docstrings
+    "missing-function-docstring", # Test functions often don't need docstrings
+    "invalid-name", # Test functions/methods often use unconventional names
+    "protected-access", # Tests often need to access protected members
+    "broad-except", # Tests may use broad exception handling for mocking
+    # Test-specific rules that are commonly problematic
+    "unused-argument", # W0613 - Fixtures and mocks often have unused parameters
+    "redefined-outer-name", # W0621 - Common when fixtures redefine names
+    "pointless-string-statement", # W0105 - Duplicate docstrings in test classes
+    "line-too-long", # C0301 - Test code often has long lines due to complex setup
 ]

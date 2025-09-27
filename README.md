@@ -1,472 +1,254 @@
 # AI Documentation Vector Database Hybrid Scraper
 
-<div align="center">
+![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)
+![Vector DB: Qdrant](https://img.shields.io/badge/vector%20db-Qdrant-f24e1e.svg)
+![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)
 
-![AI Docs Banner](https://img.shields.io/badge/AI%20Documentation-Vector%20Database-blue?style=for-the-badge&logo=openai&logoColor=white)
+AI-focused documentation ingestion and retrieval stack that combines Firecrawl and
+Crawl4AI powered scraping with a Qdrant vector database. The project exposes both
+FastAPI and MCP interfaces, offers mode-aware configuration (solo developer vs
+enterprise feature sets), and ships with tooling for embeddings, hybrid search,
+retrieval-augmented generation (RAG) workflows, and operational monitoring.
 
-[![Production Ready](https://img.shields.io/badge/Production-Ready-green.svg?style=flat-square)](https://shields.io/)
-[![Performance](https://img.shields.io/badge/Performance-887%25_Improvement-blue.svg?style=flat-square)](#performance-benchmarks)
-[![Code Quality](https://img.shields.io/badge/Code_Quality-91.3%25-brightgreen.svg?style=flat-square)](docs/portfolio/performance-analysis.md)
-[![Zero Violations](https://img.shields.io/badge/Security-Zero_High_Severity-green.svg?style=flat-square)](SECURITY_FIXES_FINAL_REPORT.md)
-[![Tech Stack](https://img.shields.io/badge/Tech-Python_3.11_3.13_|_Pydantic_2.0_|_DI_Container-orange.svg?style=flat-square)](pyproject.toml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
+## Overview
 
-**Enterprise-grade AI RAG system with Portfolio ULTRATHINK transformation achievements**  
-**94% configuration reduction • 87.7% architectural simplification • Zero-maintenance infrastructure**
+The system ingests documentation sources, generates dense and sparse embeddings,
+stores them in Qdrant, and serves hybrid search and RAG building blocks. It is
+built for AI engineers who need reliable documentation ingestion pipelines,
+reproducible retrieval quality, and integration points for agents or
+applications.
 
-🚀 [**Live Demo**](https://ai-docs-demo.railway.app) | 📖 [**API Docs**](https://ai-docs-demo.railway.app/docs) | 🎥 [**Video Overview**](docs/portfolio/demo-video.md)
+## Highlights
 
-</div>
+- Multi-tier crawling orchestration (`src/services/browser/unified_manager.py`)
+  covering lightweight HTTP, Crawl4AI, browser-use, Playwright, and Firecrawl,
+  plus a resumable bulk embedder CLI (`src/crawl4ai_bulk_embedder.py`).
+- Hybrid retrieval stack leveraging OpenAI and FastEmbed embeddings, SPLADE
+  sparse vectors, reranking, and HyDE augmentation through the modular Qdrant
+  service (`src/services/vector_db/` and `src/services/hyde/`).
+- Dual interfaces: REST endpoints in FastAPI (`src/api/routers/simple/`) and a
+  FastMCP server (`src/unified_mcp_server.py`) that registers search, document
+  management, analytics, and content intelligence tools for Claude Desktop /
+  Code.
+- Observability built in: Prometheus instrumentation, structured logging,
+  health checks, optional Dragonfly cache + ARQ worker, and configuration-driven
+  monitoring (`src/services/monitoring/`).
+- Developer ergonomics with uv-managed environments, dependency-injector driven
+  service wiring, Ruff + pytest quality gates, and a unified developer CLI
+  (`scripts/dev.py`).
 
-## 🎯 Portfolio ULTRATHINK Transformation Achievements
+## Table of Contents
 
-| Achievement | Before | After | Improvement |
-|------------|--------|-------|-------------|
-| **Configuration Architecture** | 18 files | 1 Pydantic Settings file | 94% reduction |
-| **ClientManager Complexity** | 2,847 lines | 350 lines | 87.7% reduction |
-| **Code Quality Score** | 72.1% | 91.3% | +19.2% improvement |
-| **Circular Dependencies** | 47 violations | 2 remaining | 95% elimination |
-| **Security Vulnerabilities** | Multiple high-severity | ZERO high-severity | 100% elimination |
-| **Type Safety** | 23 F821 violations | ZERO violations | 100% resolution |
-| **System Architecture** | Monolithic | Dual-mode (Simple/Enterprise) | Modern scalability |
+- [Overview](#overview)
+- [Highlights](#highlights)
+- [Architecture](#architecture)
+- [Core Components](#core-components)
+- [Quick Start](#quick-start)
+  - [Prerequisites](#prerequisites)
+  - [Environment variables](#environment-variables)
+  - [Clone & Install](#clone--install)
+  - [Run the FastAPI application](#run-the-fastapi-application)
+  - [Run the MCP server](#run-the-mcp-server)
+  - [Bulk ingestion CLI](#bulk-ingestion-cli)
+  - [Docker Compose](#docker-compose)
+- [Configuration](#configuration)
+- [Testing & Quality](#testing--quality)
+- [Documentation & Resources](#documentation--resources)
+- [Contributing](#contributing)
+- [License](#license)
 
-## ⚡ Performance & Architecture Excellence
-
-| Metric | Achievement | Portfolio Value |
-|--------|-------------|-----------------|
-| **Throughput** | 887.9% increase | Advanced performance engineering |
-| **Latency (P95)** | 50.9% reduction | Database connection pool optimization |
-| **Memory Usage** | 83% reduction via quantization | Efficiency-focused engineering |
-| **Configuration Management** | 18 → 1 file (94% reduction) | Architectural simplification mastery |
-| **Dependency Injection** | Clean DI container with 95% circular dependency elimination | Modern design patterns |
-| **Zero-Maintenance** | Self-healing infrastructure with drift detection | Enterprise automation |
-
-## 🏗️ Architecture Overview
+## Architecture
 
 ```mermaid
-architecture-beta
-    group frontend(cloud)[User Interface]
-    group api(cloud)[FastAPI Server] 
-    group services(cloud)[AI/ML Services]
-    group data(database)[Data Layer]
-    
-    service webapp(internet)[Demo Interface] in frontend
-    service docs(disk)[Interactive API Docs] in frontend
-    
-    service fastapi(server)[FastAPI + Security] in api
-    service mcp(server)[MCP Server (25+ Tools)] in api
-    
-    service embeddings(internet)[Multi-Provider Embeddings] in services
-    service search(database)[Hybrid Vector Search] in services
-    service crawling(server)[5-Tier Browser Automation] in services
-    service rag(internet)[RAG Pipeline] in services
-    
-    service qdrant(database)[Qdrant Vector DB] in data
-    service dragonfly(disk)[DragonflyDB Cache] in data
-    service monitoring(shield)[Observability Stack] in data
-    
-    webapp:R --> fastapi:L
-    docs:R --> fastapi:L
-    fastapi:R --> mcp:L
-    mcp:B --> embeddings:T
-    mcp:B --> search:T
-    mcp:B --> crawling:T
-    mcp:B --> rag:T
-    search:R --> qdrant:L
-    embeddings:R --> dragonfly:L
-    rag:R --> dragonfly:L
-    search:B --> monitoring:T
+flowchart LR
+    subgraph clients["Clients"]
+        mcp["Claude Desktop / MCP"]
+        rest["REST / CLI clients"]
+    end
+
+    subgraph api["FastAPI application"]
+        router["Mode-aware routers"]
+        factory["Service factory"]
+    end
+
+    subgraph processing["Processing layer"]
+        crawl["Unified crawling manager"]
+        embed["Embedding manager"]
+        search["Hybrid retrieval"]
+        queue["ARQ task queue"]
+    end
+
+    subgraph data["Storage & caching"]
+        qdrant[("Qdrant vector DB")]
+        redis[("Redis / Dragonfly cache")]
+        storage["Local docs & artifacts"]
+    end
+
+    subgraph observability["Observability"]
+        metrics["Prometheus exporter"]
+        health["Health & diagnostics"]
+    end
+
+    mcp --> api
+    rest --> api
+    api --> processing
+    processing --> crawl
+    processing --> embed
+    processing --> search
+    processing --> queue
+    crawl --> firecrawl["Firecrawl API"]
+    crawl --> crawl4ai["Crawl4AI"]
+    crawl --> browseruse["browser-use / Playwright"]
+    embed --> openai["OpenAI"]
+    embed --> fastembed["FastEmbed / FlagEmbedding"]
+    search --> qdrant
+    queue --> redis
+    processing --> redis
+    api --> metrics
+    metrics --> observability
+    processing --> health
+    health --> observability
 ```
 
-## 🔥 Key Technical Achievements
+## Core Components
 
-### Advanced AI/ML Engineering
-- **Hybrid Vector Search**: Dense + sparse vectors with BGE reranking
-- **Query Enhancement**: HyDE (Hypothetical Document Embeddings) 
-- **Multi-Provider Embeddings**: OpenAI, FastEmbed with intelligent routing
-- **Intent Classification**: 14-category system with Matryoshka embeddings
+### Crawling & Ingestion
 
-### Production-Grade Architecture  
-- **5-Tier Browser Automation**: Intelligent routing from HTTP → Playwright
-- **Circuit Breaker Patterns**: Adaptive thresholds with ML-based optimization
-- **Multi-Level Caching**: DragonflyDB + LRU with 86% hit rate
-- **Predictive Scaling**: RandomForest-based load prediction
+- UnifiedBrowserManager selects the right automation tier and tracks quality metrics.
+- Firecrawl and Crawl4AI adapters plus browser-use / Playwright integrations cover static and dynamic sites.
+- `src/crawl4ai_bulk_embedder.py` streams bulk ingestion, chunking, and embedding into Qdrant with resumable state and progress reporting.
+- `docs/users/web-scraping.md` and `docs/users/examples-and-recipes.md` include tier selection guidance and code samples.
 
-### Enterprise Capabilities
-- **Dual-Mode Architecture**: Simple (25K lines) + Enterprise (70K lines)
-- **Comprehensive Monitoring**: OpenTelemetry + Prometheus + Grafana
-- **A/B Testing Framework**: Statistical significance testing
-- **Zero-Maintenance**: Self-healing infrastructure with 90% automation
+### Vector Search & Retrieval
 
-## 🚀 Quick Start
+- `src/services/vector_db/` wraps collection management, hybrid search orchestration, adaptive fusion, and payload indexing.
+- Dense embeddings via OpenAI or FastEmbed, optional sparse vectors via SPLADE, and reranking hooks are configurable through Pydantic settings (`src/config/settings.py`).
+- HyDE augmentation and caching live under `src/services/hyde/`, enabling query expansion for RAG pipelines.
+- Search responses return timing, scoring metadata, and diagnostics suitable for observability dashboards.
 
-### Development Environment Setup
+### Interfaces & Tooling
+
+- FastAPI routes (`/api/v1/search`, `/api/v1/documents`, `/api/v1/collections`) expose the core ingestion and retrieval capabilities.
+- The FastMCP server (`src/unified_mcp_server.py`) registers search, document, embedding, scraping, analytics, cache, and content intelligence tool modules (`src/mcp_tools/`).
+- Developer CLI (`scripts/dev.py`) manages services, testing profiles, benchmarks, linting, and type checking.
+- Example notebooks and scripts under `examples/` demonstrate agentic RAG flows and advanced search orchestration.
+
+### Observability & Operations
+
+- Prometheus metrics and health endpoints instrument both the API and MCP servers; see `config/prometheus.yml` and `docs/operators/monitoring.md`.
+- Optional Dragonfly cache, PostgreSQL, ARQ workers, and Grafana dashboards are provisioned via `docker-compose.yml` profiles.
+- Structured logging and rate limiting middleware are wired through the service factory and CORS/middleware managers (`src/services/fastapi/middleware/`).
+
+## Quick Start
+
+### Prerequisites
+
+- Python 3.11 (or 3.12) and [uv](https://github.com/astral-sh/uv) for dependency management.
+- A running Qdrant instance (local Docker welcome: `docker compose --profile simple up -d qdrant`).
+- API keys for the providers you plan to use (e.g., `OPENAI_API_KEY`, `AI_DOCS__FIRECRAWL__API_KEY`).
+
+### Environment variables
+
+| Variable | Purpose | Example |
+| --- | --- | --- |
+| `AI_DOCS__MODE` | Selects simple or enterprise service wiring. | `AI_DOCS__MODE=enterprise` |
+| `AI_DOCS__QDRANT__URL` | Points services at your Qdrant instance. | `http://localhost:6333` |
+| `OPENAI_API_KEY` | Enables OpenAI embeddings and HyDE prompts. | `sk-...` |
+| `AI_DOCS__FIRECRAWL__API_KEY` | Authenticates Firecrawl API usage. | `fc-...` |
+| `AI_DOCS__CACHE__REDIS_URL` | Enables Dragonfly/Redis caching layers. | `redis://localhost:6379` |
+| `FASTMCP_TRANSPORT` | Chooses MCP transport (`streamable-http` or `stdio`). | `streamable-http` |
+| `FASTMCP_HOST` / `FASTMCP_PORT` | Hostname and port for MCP HTTP transport. | `0.0.0.0` / `8001` |
+| `FASTMCP_BUFFER_SIZE` | Tunes MCP stream buffer size (bytes). | `8192` |
+
+Store secrets in a `.env` file or your secrets manager and export them before
+running the services.
+
+### Clone & Install
+
 ```bash
-# Clone and setup
 git clone https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper
 cd ai-docs-vector-db-hybrid-scraper
-
-# One-command setup
 uv sync --dev
+```
 
-# Start development server (Simple Mode)
-python scripts/dev.py services start
+### Run the FastAPI application
+
+```bash
+# Ensure Qdrant is reachable at http://localhost:6333
+export OPENAI_API_KEY="sk-..."                 # optional if using OpenAI
+export AI_DOCS__FIRECRAWL__API_KEY="fc-..."    # optional but recommended
 uv run python -m src.api.main
-
-# Start with full enterprise features
-DEPLOYMENT_TIER=production uv run python -m src.api.main
 ```
 
-### Production Deployment
-```bash
-# Deploy to Railway (Free tier)
-railway deploy
+Visit `http://localhost:8000/docs` for interactive OpenAPI docs. Default mode is `simple`; set `AI_DOCS__MODE=enterprise` to enable the enterprise service stack.
 
-# Or deploy with Docker
-docker-compose up -d
-```
-
-## 📊 Benchmarks & Performance
-
-<details>
-<summary><strong>Click to view detailed performance analysis</strong></summary>
-
-### Search Performance
-```
-Metric                  | Before    | After     | Improvement
------------------------ | --------- | --------- | -----------
-P50 Latency            | 245ms     | 120ms     | 51.0%
-P95 Latency            | 680ms     | 334ms     | 50.9%
-P99 Latency            | 1.2s      | 456ms     | 62.0%
-Throughput (RPS)       | 45        | 444       | 887.9%
-Memory Usage           | 2.1GB     | 356MB     | 83.0%
-```
-
-### AI/ML Pipeline Performance
-```
-Component              | Latency   | Accuracy  | Optimization
----------------------- | --------- | --------- | ------------
-Embedding Generation   | 15ms      | -         | Batch processing
-Vector Search          | 8ms       | 94.2%     | HNSW tuning
-Reranking              | 25ms      | 96.1%     | BGE-reranker-v2-m3
-RAG Generation         | 180ms     | 92.8%     | Context optimization
-```
-
-</details>
-
-## 🛠️ Technology Stack
-
-### Core AI/ML Technologies
-- **🧠 Vector Database**: Qdrant with HNSW optimization
-- **🔤 Embeddings**: OpenAI Ada-002, FastEmbed BGE models
-- **🔍 Search**: Hybrid dense+sparse with reciprocal rank fusion
-- **🤖 LLM Integration**: OpenAI GPT-4, Anthropic Claude
-- **📊 Reranking**: BGE-reranker-v2-m3 for accuracy optimization
-
-### Backend & Infrastructure
-- **⚡ API Framework**: FastAPI with async/await patterns
-- **🏗️ Architecture**: Modular microservices with dependency injection
-- **💾 Caching**: DragonflyDB (Redis-compatible, 3x faster)
-- **🔒 Security**: Rate limiting, circuit breakers, input validation
-- **📊 Monitoring**: OpenTelemetry + Prometheus + Grafana
-
-### Development & Quality
-- **🧪 Testing**: pytest + Hypothesis (property-based testing)
-- **🔍 Code Quality**: Ruff, mypy, pre-commit hooks
-- **📦 Package Management**: uv for fast dependency resolution
-- **🐳 Containerization**: Docker with multi-stage builds
-- **🚀 Deployment**: Railway, Render, Fly.io support
-
-## 🚀 Usage Examples
-
-### Multi-Tier Web Crawling
-```python
-from src.services.browser import UnifiedBrowserManager
-
-async def intelligent_crawling():
-    async with UnifiedBrowserManager() as browser:
-        # Automatic tier selection based on complexity
-        result = await browser.scrape_url(
-            "https://docs.complex-site.com",
-            tier_preference="auto",  # AI-powered tier selection
-            enable_javascript=True,
-            wait_for_content=True
-        )
-        return result
-```
-
-### Hybrid Vector Search
-```python
-from src.services.vector_db import QdrantService
-
-async def advanced_search():
-    async with QdrantService() as qdrant:
-        results = await qdrant.hybrid_search(
-            collection_name="knowledge_base",
-            query_text="vector database optimization",
-            dense_weight=0.7,
-            sparse_weight=0.3,
-            enable_reranking=True,
-            limit=10
-        )
-        return results
-```
-
-### ML-Enhanced Database Connection Pool
-```python
-from src.infrastructure.database import AsyncConnectionManager
-
-async def optimized_database_access():
-    # ML-based predictive scaling
-    async with AsyncConnectionManager() as conn_mgr:
-        async with conn_mgr.get_connection() as conn:
-            # Automatic connection affinity optimization
-            result = await conn.execute(
-                "SELECT * FROM documents WHERE similarity > ?", 
-                [0.8]
-            )
-            return result
-```
-
-## 📋 API Reference
-
-### Core MCP Tools (25+ Available)
-
-```python
-# Available via Claude Desktop/Code MCP protocol
-tools = [
-    "search_documents",          # Hybrid search with reranking
-    "add_document",             # Single document ingestion
-    "add_documents_batch",      # Batch processing
-    "lightweight_scrape",       # Multi-tier web crawling
-    "generate_embeddings",      # Multi-provider embeddings
-    "create_project",           # Project management
-    "get_server_stats",         # Performance monitoring
-    # ... and 18+ more specialized tools
-]
-```
-
-### REST API Endpoints
+### Run the MCP server
 
 ```bash
-# Search with hybrid vectors
-POST /api/v1/search
-{
-  "query": "machine learning optimization",
-  "max_results": 10,
-  "enable_reranking": true
-}
-
-# Intelligent web scraping
-POST /api/v1/scrape
-{
-  "url": "https://example.com",
-  "tier_preference": "auto",
-  "extract_metadata": true
-}
-
-# Batch document processing
-POST /api/v1/documents/batch
-{
-  "documents": [...],
-  "enable_chunking": true,
-  "generate_embeddings": true
-}
+uv run python src/unified_mcp_server.py
 ```
 
-## 🧪 Testing & Quality Assurance
+The server validates configuration on startup and registers the available MCP tools. Configure Claude Desktop / Code with the generated transport details (see `config/claude-mcp-config.example.json`).
+1. Copy `config/claude-mcp-config.example.json` to your Claude settings directory
+   and update the `command` field if you use a virtual environment wrapper.
+2. If you prefer HTTP transport, export `FASTMCP_TRANSPORT=streamable-http` and
+   set `FASTMCP_HOST`/`FASTMCP_PORT` to match the values referenced in the
+   Claude config.
+3. Restart Claude Desktop / Code so it reloads the MCP manifest and tool list.
 
-### Comprehensive Test Coverage
-
-```plaintext
-Test Coverage Report:
-┌─────────────────────┬───────────┬─────────────┬─────────────┐
-│ Module Category     │ Tests     │ Coverage    │ Status      │
-├─────────────────────┼───────────┼─────────────┼─────────────┤
-│ Configuration       │ 380+      │ 94-100%     │ ✅ Complete  │
-│ API Contracts       │ 67        │ 100%        │ ✅ Complete  │
-│ Document Processing │ 33        │ 95%         │ ✅ Complete  │
-│ Vector Search       │ 51        │ 92%         │ ✅ Complete  │
-│ Security            │ 33        │ 98%         │ ✅ Complete  │
-│ MCP Tools           │ 136+      │ 90%+        │ ✅ Complete  │
-│ Infrastructure      │ 87        │ 80%+        │ ✅ Complete  │
-│ Browser Services    │ 120+      │ 85%+        │ ✅ Complete  │
-│ Cache Services      │ 90+       │ 88%+        │ ✅ Complete  │
-│ Total               │ 1000+     │ 90%+        │ ✅ Production │
-└─────────────────────┴───────────┴─────────────┴─────────────┘
-```
-
-### Modern Testing Patterns
+### Bulk ingestion CLI
 
 ```bash
-# Property-based testing with Hypothesis
-uv run pytest tests/property/
-
-# Performance benchmarks
-uv run pytest tests/benchmarks/ --benchmark-only
-
-# Chaos engineering tests
-uv run pytest tests/chaos/
-
-# Security vulnerability scanning
-uv run pytest tests/security/
-
-# Full test suite with coverage
-uv run pytest --cov=src --cov-report=html
+uv run python src/crawl4ai_bulk_embedder.py --help
 ```
 
-## 📊 Performance Metrics
+Use CSV/JSON/TXT URL lists to scrape, chunk, embed, and upsert into Qdrant with resumable checkpoints.
 
-### Enhanced Database Connection Pool Performance
+### Docker Compose
 
-| Metric                     | Baseline | Enhanced | Improvement           |
-| -------------------------- | -------- | -------- | --------------------- |
-| **P95 Latency**            | 820ms    | 402ms    | **50.9% reduction**   |
-| **P50 Latency**            | 450ms    | 198ms    | **56.0% reduction**   |
-| **Throughput**             | 85 ops/s | 839 ops/s| **887.9% increase**   |
-| **Connection Utilization** | 65%      | 92%      | **41.5% improvement** |
-| **Failure Recovery Time**  | 12s      | 3.2s     | **73.3% faster**      |
+- Simple profile (API + Qdrant): `docker compose --profile simple up -d`
+- Enterprise profile (adds Dragonfly, PostgreSQL, worker, Prometheus, Grafana): `docker compose --profile enterprise up -d`
 
-### Multi-Tier Crawling Performance
+Stop with `docker compose down` when finished.
 
-| Metric              | This System | Firecrawl   | Beautiful Soup | Improvement        |
-| ------------------- | ----------- | ----------- | -------------- | ------------------ |
-| **Average Latency** | 0.4s        | 2.5s        | 1.8s           | **6.25x faster**   |
-| **Success Rate**    | 97%         | 92%         | 85%            | **5.4% better**    |
-| **Memory Usage**    | 120MB       | 200MB       | 150MB          | **40% less**       |
-| **JS Rendering**    | ✅          | ✅          | ❌             | **Feature parity** |
+## Configuration
 
-## 🚀 Deployment
+- Configuration is defined with Pydantic models in `src/config/settings.py` and can be overridden via environment variables (`AI_DOCS__*`) or YAML files in `config/templates/`.
+- Mode-aware settings enable or disable services such as advanced caching, A/B testing, and observability.
+- Detailed configuration guidance lives in `docs/developers/configuration.md` and operator runbooks under `docs/operators/`.
 
-### Production Configuration
-
-```yaml
-# docker-compose.production.yml
-version: "3.8"
-services:
-  api:
-    image: ai-docs-system:latest
-    environment:
-      - DEPLOYMENT_TIER=production
-      - ENABLE_MONITORING=true
-      - ENABLE_CACHING=true
-    deploy:
-      replicas: 3
-      resources:
-        limits:
-          memory: 2G
-          cpus: "1.0"
-
-  qdrant:
-    image: qdrant/qdrant:v1.12.0
-    environment:
-      - QDRANT__STORAGE__QUANTIZATION__ALWAYS_RAM=true
-      - QDRANT__STORAGE__PERFORMANCE__MAX_SEARCH_THREADS=8
-    deploy:
-      resources:
-        limits:
-          memory: 8G
-          cpus: "4"
-
-  dragonfly:
-    image: docker.dragonflydb.io/dragonflydb/dragonfly:v1.23.0
-    command: >
-      --logtostderr
-      --cache_mode
-      --maxmemory_policy=allkeys-lru
-      --compression=zstd
-    deploy:
-      resources:
-        limits:
-          memory: 4G
-          cpus: "2"
-```
-
-### Health Monitoring
+## Testing & Quality
 
 ```bash
-# System health validation
-curl -s http://localhost:8000/health | jq
+# Quick unit + fast integration tests
+python scripts/dev.py test --profile quick
 
-# Performance monitoring
-curl -s http://localhost:8000/metrics
+# Full suite with coverage
+python scripts/dev.py test --profile full --coverage
 
-# Service dependencies
-curl -s http://localhost:6333/health  # Qdrant
-redis-cli -p 6379 ping              # DragonflyDB
+# Lint, format, type-check, and tests in one pass
+python scripts/dev.py quality
 ```
 
-## 📚 Documentation
+Performance and benchmark suites are available via `python scripts/dev.py benchmark`, and chaos/security suites live under `tests/` with dedicated markers.
 
-### Role-Based Documentation
+## Documentation & Resources
 
-#### 📖 For End Users
-- **[Quick Start Guide](docs/users/quick-start.md)** - Get running in minutes
-- **[Search & Retrieval](docs/users/search-and-retrieval.md)** - Complete search guide
-- **[Web Scraping](docs/users/web-scraping.md)** - Multi-tier browser automation
-- **[Examples & Recipes](docs/users/examples-and-recipes.md)** - Practical usage examples
+- User guides: `docs/users/` (quick start, search, scraping recipes, troubleshooting).
+- Developer deep dives: `docs/developers/` (API reference, integration, architecture).
+- Operator handbook: `docs/operators/` (deployment, monitoring, security).
+- Research notes and experiments: `docs/research/`.
 
-#### 👩‍💻 For Developers
-- **[API Reference](docs/developers/api-reference.md)** - Complete API documentation
-- **[Integration Guide](docs/developers/integration-guide.md)** - SDK and framework integration
-- **[Architecture Guide](docs/developers/architecture.md)** - System design details
-- **[Configuration Reference](docs/developers/configuration.md)** - Complete configuration docs
+Publishable MkDocs output is generated under `site/` when running the documentation pipeline.
 
-#### 🚀 For Operators
-- **[Operations Guide](docs/operators/operations.md)** - Production deployment and day-to-day procedures
-- **[Monitoring & Observability](docs/operators/monitoring.md)** - Comprehensive monitoring and alerting
-- **[Configuration Management](docs/operators/configuration.md)** - System configuration and tuning
-- **[Security Guide](docs/operators/security.md)** - Security implementation and best practices
+## Contributing
 
-#### 🔬 Research & Development
-- **[Research Documentation](docs/research/)** - System enhancement research and analysis
-- **[Browser-Use Integration](docs/research/browser-use/)** - V3 Solo Developer browser automation enhancement
-- **[Portfolio ULTRATHINK Transformation](docs/research/transformation/)** - 85% complete system modernization
+Contributions are welcome. Read the [CONTRIBUTING.md](CONTRIBUTING.md) guide for
+development workflow, coding standards, and review expectations. Please include
+tests and documentation updates with feature changes. If this stack accelerates
+your RAG pipelines, consider starring the repository so other developers can
+discover it.
 
-## 🤝 Contributing
+## License
 
-We welcome contributions! See our comprehensive [Contributing Guide](CONTRIBUTING.md) for:
-
-- Development setup and workflow
-- Code style and testing requirements
-- Performance benchmarking procedures
-- Documentation standards
-
-## 📜 Citation
-
-If you use this system in research or production, please cite:
-
-```bibtex
-@software{ai_docs_vector_db_2024,
-  title={AI Documentation Vector Database Hybrid Scraper},
-  author={Melin, Bjorn and Contributors},
-  year={2024},
-  url={https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper},
-  version={1.0},
-  note={Production-grade AI RAG system with 887.9% performance improvement}
-}
-```
-
-### Research Foundations
-
-This implementation builds upon established research in:
-
-- **Hybrid Search**: Dense-sparse vector fusion with reciprocal rank fusion
-- **Vector Quantization**: Binary and scalar quantization techniques  
-- **Cross-Encoder Reranking**: BGE reranker architecture
-- **Memory-Adaptive Processing**: Dynamic concurrency control
-- **HyDE Query Enhancement**: Hypothetical document embedding generation
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-<div align="center">
-
-[![GitHub stars](https://img.shields.io/github/stars/BjornMelin/ai-docs-vector-db-hybrid-scraper?style=social)](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/stargazers)
-
-**Built for the AI developer community with research-backed best practices and production-grade reliability.**
-
-</div>
+Released under the [MIT License](LICENSE).

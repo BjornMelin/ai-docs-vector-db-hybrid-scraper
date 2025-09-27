@@ -4,8 +4,8 @@ import asyncio  # noqa: PLC0415
 import time  # noqa: PLC0415
 
 import pytest
-from src.services.cache.local_cache import CacheEntry
-from src.services.cache.local_cache import LocalCache
+
+from src.services.cache.local_cache import CacheEntry, LocalCache
 
 
 class TestCacheEntry:
@@ -54,6 +54,8 @@ class TestCacheEntry:
 
 
 class TestLocalCache:
+    """Test class."""
+
     """Test the LocalCache class."""
 
     @pytest.fixture

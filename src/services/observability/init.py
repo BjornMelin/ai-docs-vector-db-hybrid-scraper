@@ -1,127 +1,134 @@
-"""OpenTelemetry initialization and setup for the AI documentation system.
+"""OpenTelemetry initialization and setup for the AI documentation system."""
 
-Provides clean initialization patterns that integrate with the existing
-service architecture while following OpenTelemetry best practices.
-"""
+from __future__ import annotations
 
 import logging
+from collections.abc import Callable
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-
-# Optional OpenTelemetry imports - handled at runtime
-try:
-    from opentelemetry import metrics, trace
-    from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-    from opentelemetry.sdk.metrics import MeterProvider
-    from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-    from opentelemetry.sdk.resources import Resource
-    from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.sdk.trace.export import BatchSpanProcessor
-
-    OPENTELEMETRY_AVAILABLE = True
-except ImportError:
-    from .mock_telemetry import create_mock_telemetry
-
-    (
-        OTLPSpanExporter,
-        MeterProvider,
-        PeriodicExportingMetricReader,
-        Resource,
-        TracerProvider,
-        BatchSpanProcessor,
-        metrics,
-        trace,
-    ) = create_mock_telemetry()
-
-    OPENTELEMETRY_AVAILABLE = False
-
-# Additional OpenTelemetry imports - also optional
-try:
-    from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
-        OTLPMetricExporter,
-    )
-    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-    from opentelemetry.sdk.trace.export import ConsoleSpanExporter
-except ImportError:
-
-    class OTLPMetricExporter:
-        def __init__(self, *args, **kwargs):
-            pass
-
-    class ConsoleSpanExporter:
-        def __init__(self, *args, **kwargs):
-            pass
-
-    class FastAPIInstrumentor:
-        @staticmethod
-        def instrument_app(*args, **kwargs):
-            pass
+from . import telemetry_helpers as _telemetry_helpers
 
 
-# Additional instrumentation imports - also optional
-try:
-    from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
-    from opentelemetry.instrumentation.redis import RedisInstrumentor
-    from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-except ImportError:
-
-    class HTTPXClientInstrumentor:
-        @staticmethod
-        def instrument(*args, **kwargs):
-            pass
-
-    class RedisInstrumentor:
-        @staticmethod
-        def instrument(*args, **kwargs):
-            pass
-
-    class SQLAlchemyInstrumentor:
-        @staticmethod
-        def instrument(*args, **kwargs):
-            pass
-
-
-if TYPE_CHECKING:
-    from .config import ObservabilityConfig
-
-# Optional imports for OpenTelemetry config - handled at runtime
 try:
     from . import config as observability_config
-except ImportError:
+except ImportError:  # pragma: no cover - optional dependency wiring
     observability_config = None
 
-# Telemetry helper imports
-try:
-    from .telemetry_helpers import (
-        _create_resource,
-        _initialize_metrics,
-        _initialize_tracing,
-        _setup_fastapi_instrumentation,
-        _setup_httpx_instrumentation,
-        _setup_redis_instrumentation,
-        _setup_sqlalchemy_instrumentation,
-        _validate_telemetry_components,
-    )
-except ImportError:
-    # Mock functions for when telemetry helpers aren't available
-    _create_resource = None
-    _initialize_metrics = None
-    _initialize_tracing = None
-    _setup_fastapi_instrumentation = None
-    _setup_httpx_instrumentation = None
-    _setup_redis_instrumentation = None
-    _setup_sqlalchemy_instrumentation = None
-    _validate_telemetry_components = None
+if TYPE_CHECKING:  # pragma: no cover - typing aids only
+    from .config import ObservabilityConfig
 
 
 logger = logging.getLogger(__name__)
 
-# Global references for cleanup
-_tracer_provider: Any = None
-_meter_provider: Any = None
+
+@dataclass
+class _ObservabilityState:
+    """Mutable module-local state for telemetry providers."""
+
+    tracer_provider: Any | None = None
+    meter_provider: Any | None = None
 
 
-def initialize_observability(config: "ObservabilityConfig" = None) -> bool:
+_STATE = _ObservabilityState()
+
+
+_validate_telemetry_components: Callable[[], bool] | None = getattr(
+    _telemetry_helpers, "_validate_telemetry_components", None
+)
+_create_resource: Callable[[ObservabilityConfig], Any] | None = getattr(
+    _telemetry_helpers, "_create_resource", None
+)
+_initialize_tracing: Callable[[ObservabilityConfig, Any], Any] | None = getattr(
+    _telemetry_helpers, "_initialize_tracing", None
+)
+_initialize_metrics: Callable[[ObservabilityConfig, Any], Any] | None = getattr(
+    _telemetry_helpers, "_initialize_metrics", None
+)
+_setup_fastapi_instrumentation: Callable[[ObservabilityConfig], bool] | None = getattr(
+    _telemetry_helpers, "_setup_fastapi_instrumentation", None
+)
+_setup_httpx_instrumentation: Callable[[ObservabilityConfig], bool] | None = getattr(
+    _telemetry_helpers, "_setup_httpx_instrumentation", None
+)
+_setup_redis_instrumentation: Callable[[ObservabilityConfig], bool] | None = getattr(
+    _telemetry_helpers, "_setup_redis_instrumentation", None
+)
+_setup_sqlalchemy_instrumentation: Callable[[ObservabilityConfig], bool] | None = (
+    getattr(_telemetry_helpers, "_setup_sqlalchemy_instrumentation", None)
+)
+
+
+class ObservabilityInitError(RuntimeError):
+    """Raised when OpenTelemetry initialization cannot proceed."""
+
+
+def _resolve_config(
+    provided_config: ObservabilityConfig | None,
+) -> ObservabilityConfig:
+    """Resolve configuration or raise if unavailable."""
+
+    if provided_config is not None:
+        return provided_config
+
+    if observability_config is None or not hasattr(
+        observability_config, "get_observability_config"
+    ):
+        msg = "Config system not available"
+        logger.error(msg)
+        raise ObservabilityInitError(msg)
+
+    return observability_config.get_observability_config()
+
+
+def _perform_initialization(config: ObservabilityConfig) -> None:
+    """Execute initialization steps for observability."""
+
+    if _validate_telemetry_components is None:
+        raise ObservabilityInitError("Telemetry validation helper unavailable")
+
+    if not _validate_telemetry_components():
+        raise ObservabilityInitError("OpenTelemetry components unavailable")
+
+    if _create_resource is None:
+        raise ObservabilityInitError("Resource creation helper unavailable")
+
+    resource = _create_resource(config)
+    if resource is None:
+        raise ObservabilityInitError("Failed to create OpenTelemetry resource")
+
+    if _initialize_tracing is None:
+        raise ObservabilityInitError("Tracing initialization helper unavailable")
+
+    tracer_provider = _initialize_tracing(config, resource)
+    if tracer_provider is None:
+        raise ObservabilityInitError("Failed to initialize tracing provider")
+
+    trace_api = getattr(_telemetry_helpers, "trace", None)
+    provider = None
+    if trace_api and hasattr(trace_api, "get_tracer_provider"):
+        provider = trace_api.get_tracer_provider()
+
+    _STATE.tracer_provider = provider or tracer_provider
+
+    if _initialize_metrics is None:
+        raise ObservabilityInitError("Metrics initialization helper unavailable")
+
+    meter_provider = _initialize_metrics(config, resource)
+    if meter_provider is None:
+        raise ObservabilityInitError("Failed to initialize meter provider")
+
+    metrics_api = getattr(_telemetry_helpers, "metrics", None)
+    provider = None
+    if metrics_api and hasattr(metrics_api, "get_meter_provider"):
+        provider = metrics_api.get_meter_provider()
+
+    _STATE.meter_provider = provider or meter_provider
+
+    _setup_auto_instrumentation(config)
+
+
+def initialize_observability(config: ObservabilityConfig | None = None) -> bool:
     """Initialize OpenTelemetry observability infrastructure.
 
     Sets up distributed tracing, metrics collection, and AI-specific monitoring
@@ -134,86 +141,36 @@ def initialize_observability(config: "ObservabilityConfig" = None) -> bool:
         True if initialization succeeded, False otherwise
 
     """
-    global _tracer_provider, _meter_provider
+    try:
+        resolved_config = _resolve_config(config)
+    except ObservabilityInitError:
+        return False
 
-    if config is None:
-        if observability_config is None or not hasattr(
-            observability_config, "get_observability_config"
-        ):
-            logger.error("Config system not available")
-            return False
-        config = observability_config.get_observability_config()
-
-    if not config.enabled:
+    if not resolved_config.enabled:
         logger.info("OpenTelemetry observability disabled by configuration")
         return False
 
     try:
-        if not _validate_telemetry_components or not _validate_telemetry_components():
-            logger.warning("OpenTelemetry components unavailable")
-            logger.error("Failed to initialize OpenTelemetry components")
-            return False
-
-        logger.info("Initializing OpenTelemetry observability...")
-
-        resource = _create_resource(config) if _create_resource else None
-        if resource is None:
-            return False
-
-        if not _initialize_tracing:
-            logger.warning("Tracing initialization helper missing")
-            return False
-
-        tracer_provider = _initialize_tracing(config, resource)
-        if tracer_provider is None:
-            logger.warning("Failed to initialize tracing provider")
-            return False
-
-        # Store the tracer provider reference for shutdown
-        provider = None
-        if trace and hasattr(trace, "get_tracer_provider"):
-            provider = trace.get_tracer_provider()
-
-        _tracer_provider = provider or tracer_provider
-
-        if not _initialize_metrics:
-            logger.warning("Metrics initialization helper missing")
-            return False
-
-        meter_provider = _initialize_metrics(config, resource)
-        if meter_provider is None:
-            logger.warning("Failed to initialize meter provider")
-            return False
-
-        # Store the meter provider reference for shutdown
-        provider = None
-        if metrics and hasattr(metrics, "get_meter_provider"):
-            provider = metrics.get_meter_provider()
-
-        _meter_provider = provider or meter_provider
-
-        _setup_auto_instrumentation(config)
-
-        logger.info(
-            f"OpenTelemetry initialized successfully - "
-            f"Service: {config.service_name}, "
-            f"Endpoint: {config.otlp_endpoint}"
-        )
-
+        _perform_initialization(resolved_config)
+    except ObservabilityInitError as exc:
+        logger.error("Failed to initialize OpenTelemetry: %s", exc)
+        return False
     except ImportError:
         logger.warning("OpenTelemetry packages not available")
         return False
-    except (OSError, AttributeError, ModuleNotFoundError):
+    except (AttributeError, OSError, RuntimeError, ValueError):
         logger.exception("Failed to initialize OpenTelemetry")
         return False
-    except Exception:  # pragma: no cover - safety net
-        logger.exception("Failed to initialize OpenTelemetry")
-        return False
-    else:
-        return True
+
+    logger.info(
+        "OpenTelemetry initialized successfully - Service: %s, Endpoint: %s",
+        resolved_config.service_name,
+        resolved_config.otlp_endpoint,
+    )
+    return True
 
 
-def _setup_auto_instrumentation(config: "ObservabilityConfig") -> None:
+def _setup_auto_instrumentation(config: ObservabilityConfig) -> None:
     """Setup automatic instrumentation based on configuration.
 
     Args:
@@ -237,9 +194,14 @@ def _setup_auto_instrumentation(config: "ObservabilityConfig") -> None:
         if sqlalchemy_setup and not sqlalchemy_setup(config):
             logger.warning("Auto-instrumentation setup failed: sqlalchemy")
 
-    except (OSError, PermissionError) as exc:
-        logger.warning("Auto-instrumentation setup failed: %s", exc)
-    except Exception as exc:  # noqa: BLE001 - instrumentation should not crash startup
+    except (
+        ConnectionError,
+        ImportError,
+        OSError,
+        PermissionError,
+        RuntimeError,
+        ValueError,
+    ) as exc:
         logger.warning("Auto-instrumentation setup failed: %s", exc)
 
 
@@ -249,44 +211,43 @@ def shutdown_observability() -> None:
     Should be called on application shutdown to ensure all telemetry
     data is properly exported.
     """
-    global _tracer_provider, _meter_provider
+    tracer_provider = _STATE.tracer_provider
 
-    # Shutdown tracer provider
-    if _tracer_provider:
+    if tracer_provider:
         tracer_shutdown_error: str | None = None
         try:
             logger.info("Shutting down OpenTelemetry tracer provider...")
-            _tracer_provider.shutdown()
+            tracer_provider.shutdown()
         except (OSError, PermissionError) as exc:
             logger.exception("Error during tracer provider shutdown")
             tracer_shutdown_error = str(exc)
-        except Exception as exc:  # pragma: no cover - safety net
+        except (RuntimeError, ValueError) as exc:  # pragma: no cover - safety net
             logger.exception("Unexpected tracer shutdown failure")
             tracer_shutdown_error = str(exc)
         finally:
-            _tracer_provider = None
+            _STATE.tracer_provider = None
             if tracer_shutdown_error:
                 logger.error(
-                    f"Error during tracer provider shutdown: {tracer_shutdown_error}"
+                    "Error during tracer provider shutdown: %s", tracer_shutdown_error
                 )
 
-    # Shutdown meter provider
-    if _meter_provider:
+    meter_provider = _STATE.meter_provider
+    if meter_provider:
         meter_shutdown_error: str | None = None
         try:
             logger.info("Shutting down OpenTelemetry meter provider...")
-            _meter_provider.shutdown()
+            meter_provider.shutdown()
         except (OSError, PermissionError) as exc:
             logger.exception("Error during meter provider shutdown")
             meter_shutdown_error = str(exc)
-        except Exception as exc:  # pragma: no cover - safety net
+        except (RuntimeError, ValueError) as exc:  # pragma: no cover - safety net
             logger.exception("Unexpected meter shutdown failure")
             meter_shutdown_error = str(exc)
         finally:
-            _meter_provider = None
+            _STATE.meter_provider = None
             if meter_shutdown_error:
                 logger.error(
-                    f"Error during meter provider shutdown: {meter_shutdown_error}"
+                    "Error during meter provider shutdown: %s", meter_shutdown_error
                 )
 
     logger.info("OpenTelemetry shutdown completed")
@@ -299,4 +260,4 @@ def is_observability_enabled() -> bool:
         True if observability is enabled and initialized
 
     """
-    return _tracer_provider is not None
+    return _STATE.tracer_provider is not None

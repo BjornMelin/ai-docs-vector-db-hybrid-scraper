@@ -78,7 +78,7 @@ class VisualComparisonResult:
 class ResponsiveTestConfig:
     """Configuration for responsive visual testing."""
 
-    viewports: list[dict[str, int]] = field(
+    viewports: list[dict[str, int | str]] = field(
         default_factory=lambda: [
             {"width": 320, "height": 568, "name": "mobile"},
             {"width": 768, "height": 1024, "name": "tablet"},
@@ -148,6 +148,8 @@ def screenshot_manager():
     """Screenshot capture and management utilities."""
 
     class ScreenshotManager:
+        """Test class for visual regression testing."""
+
         def __init__(self):
             self.screenshots = {}
             self.baseline_dir = Path("tests/visual_regression/baseline")
@@ -300,6 +302,8 @@ def visual_comparator():
     """Visual comparison utilities."""
 
     class VisualComparator:
+        """Test class for visual regression testing."""
+
         def __init__(self):
             self.comparison_results = []
 
@@ -410,6 +414,8 @@ def responsive_tester():
     """Responsive design testing utilities."""
 
     class ResponsiveTester:
+        """Test class for visual regression testing."""
+
         def __init__(self):
             self.test_results = []
 
@@ -457,7 +463,9 @@ def responsive_tester():
                     }
 
                     # Check for layout issues
-                    layout_issues = await self._check_layout_issues(page, width, height)
+                    layout_issues = await self._check_layout_issues(
+                        page, int(width), int(height)
+                    )
                     viewport_result["layout_issues"].extend(layout_issues)
 
                     # Test interactions if enabled

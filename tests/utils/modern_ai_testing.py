@@ -1,11 +1,13 @@
-"""Modern AI testing utilities for 2025 standards.
+"""Modern AI Testing Utilities.
 
-This module provides standardized testing utilities for AI/ML components,
-following modern testing patterns and best practices.
+This module provides utilities for integration testing of AI components,
+including service mocking, test data generation, and test decorators.
 """
 
 import asyncio
+import random
 import time
+from collections.abc import Awaitable, Callable
 from typing import Any
 from unittest.mock import AsyncMock
 
@@ -22,6 +24,7 @@ class AITestHelper:
         usage: dict[str, int] | None = None,
     ) -> dict[str, Any]:
         """Create a standardized mock embedding response."""
+
         if vectors is None:
             vectors = [[0.1, 0.2, 0.3] * 512]  # 1536 dimensions
 
@@ -41,6 +44,7 @@ class AITestHelper:
         query: str | None = None,
     ) -> dict[str, Any]:
         """Create a standardized mock search response."""
+
         if results is None:
             results = []
 
@@ -59,6 +63,7 @@ class AITestHelper:
         confidence: float = 0.9,
     ) -> dict[str, Any]:
         """Create a standardized mock RAG response."""
+
         if sources is None:
             sources = [
                 {
@@ -87,7 +92,7 @@ class AsyncTestHelper:
 
     @staticmethod
     async def wait_for_condition(
-        condition_func: callable,
+        condition_func: Callable[..., Awaitable[bool]],
         timeout_seconds: float = 5.0,
         interval: float = 0.1,
     ) -> bool:
@@ -116,7 +121,9 @@ class PerformanceTestHelper:
     """Helper class for performance testing patterns."""
 
     @staticmethod
-    def measure_execution_time(func: callable, *args, **kwargs) -> tuple[Any, float]:
+    def measure_execution_time(
+        func: Callable[..., Any], *args, **kwargs
+    ) -> tuple[Any, float]:
         """Measure execution time of a function."""
         start_time = time.perf_counter()
         result = func(*args, **kwargs)
@@ -125,7 +132,7 @@ class PerformanceTestHelper:
 
     @staticmethod
     async def measure_async_execution_time(
-        func: callable, *args, **kwargs
+        func: Callable[..., Awaitable[Any]], *args, **kwargs
     ) -> tuple[Any, float]:
         """Measure execution time of an async function."""
         start_time = time.perf_counter()
@@ -140,15 +147,83 @@ class PerformanceTestHelper:
         operation_name: str = "operation",
     ) -> None:
         """Assert that execution time is within acceptable limits."""
+
         assert execution_time <= max_time, (
             f"{operation_name} took {execution_time:.3f}s, "
             f"exceeding limit of {max_time:.3f}s"
         )
 
 
+class IntegrationTestingPatterns:
+    """Patterns for setting up integration test mocks."""
+
+    @staticmethod
+    async def setup_mock_services(mock):
+        """Set up mock services for integration testing."""
+        # Placeholder for setting up mocks; customize as needed
+
+    @staticmethod
+    def create_test_documents(count: int) -> list[dict[str, Any]]:
+        """Create a list of test documents."""
+
+        documents = []
+        for i in range(count):
+            documents.append(
+                {
+                    "id": f"doc_{i}",
+                    "title": f"Test Document {i}",
+                    "content": f"This is the content of test document {i}.",
+                    "url": f"https://example.com/doc{i}",
+                    "metadata": {"author": f"Author {i}", "date": "2023-01-01"},
+                }
+            )
+        return documents
+
+
+class ModernAITestingUtils:
+    """Utilities for generating mock AI-related data."""
+
+    @staticmethod
+    def generate_mock_embeddings(dim: int, count: int) -> list[list[float]]:
+        """Generate mock embeddings."""
+
+        return [[random.uniform(-1, 1) for _ in range(dim)] for _ in range(count)]
+
+    @staticmethod
+    def create_mock_qdrant_response(vector: list[float], count: int) -> dict[str, Any]:
+        """Create a mock Qdrant search response."""
+
+        results = []
+        for i in range(count):
+            results.append(
+                {
+                    "payload": {"text": f"Mock context {i}"},
+                    "score": random.uniform(0.5, 1.0),
+                }
+            )
+        return {"result": results}
+
+    @staticmethod
+    def assert_valid_embedding(embedding: list[float], expected_dim: int):
+        """Assert that an embedding is valid."""
+
+        assert isinstance(embedding, list), "Embedding must be a list"
+        assert len(embedding) == expected_dim, f"Embedding dim must be {expected_dim}"
+        assert all(isinstance(x, (int, float)) for x in embedding), (
+            "Embedding values must be numbers"
+        )
+
+
+def integration_test(func):
+    """Decorator for integration tests."""
+    # Simple decorator; can be enhanced with logging or setup
+    return pytest.mark.integration(func)
+
+
 # Convenience functions for common testing patterns
 def create_mock_openai_client() -> AsyncMock:
     """Create a mock OpenAI client with standard responses."""
+
     client = AsyncMock()
     client.embeddings.create.return_value = (
         AITestHelper.create_mock_embedding_response()
@@ -162,6 +237,7 @@ def create_mock_openai_client() -> AsyncMock:
 
 def create_mock_qdrant_client() -> AsyncMock:
     """Create a mock Qdrant client with standard responses."""
+
     client = AsyncMock()
     client.search.return_value = AITestHelper.create_mock_search_response()
     client.upsert.return_value = {"status": "completed", "operation_id": "test-op"}
@@ -170,6 +246,7 @@ def create_mock_qdrant_client() -> AsyncMock:
 
 def create_mock_firecrawl_client() -> AsyncMock:
     """Create a mock Firecrawl client with standard responses."""
+
     client = AsyncMock()
     client.scrape_url.return_value = {
         "success": True,
@@ -182,28 +259,33 @@ def create_mock_firecrawl_client() -> AsyncMock:
 @pytest.fixture
 def mock_openai_client() -> AsyncMock:
     """Fixture for mock OpenAI client."""
+
     return create_mock_openai_client()
 
 
 @pytest.fixture
 def mock_qdrant_client() -> AsyncMock:
     """Fixture for mock Qdrant client."""
+
     return create_mock_qdrant_client()
 
 
 @pytest.fixture
 def mock_firecrawl_client() -> AsyncMock:
     """Fixture for mock Firecrawl client."""
+
     return create_mock_firecrawl_client()
 
 
 @pytest.fixture
 def performance_helper() -> PerformanceTestHelper:
     """Fixture for performance testing helper."""
+
     return PerformanceTestHelper()
 
 
 @pytest.fixture
 def ai_test_helper() -> AITestHelper:
     """Fixture for AI testing helper."""
+
     return AITestHelper()

@@ -479,7 +479,13 @@ def cmd_quality(args: argparse.Namespace) -> int:
     lint_cmd = ["uv", "run", "ruff", "check", "."]
     if args.fix_lint:
         lint_cmd.append("--fix")
-    commands.extend((lint_cmd, ["uv", "run", "pyright"]))
+    commands.extend(
+        (
+            lint_cmd,
+            ["uv", "run", "pylint", "src", "tests"],
+            ["uv", "run", "pyright"],
+        )
+    )
 
     exit_code = 0
     for command in commands:

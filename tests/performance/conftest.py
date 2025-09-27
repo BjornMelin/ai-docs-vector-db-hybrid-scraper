@@ -97,6 +97,8 @@ def system_monitor():
     """System resource monitoring utilities."""
 
     class SystemMonitor:
+        """Test class for performance testing."""
+
         def __init__(self):
             self.process = psutil.Process()
             self.baseline_metrics = None
@@ -206,6 +208,8 @@ def memory_profiler():
     """Memory profiling utilities."""
 
     class MemoryProfiler:
+        """Test class for performance testing."""
+
         def __init__(self):
             self.snapshots = []
             self.baseline = None
@@ -276,6 +280,8 @@ def performance_timer():
     """High-precision performance timing utilities."""
 
     class PerformanceTimer:
+        """Test class for performance testing."""
+
         def __init__(self):
             self.timings = {}
             self.active_timers = {}
@@ -340,6 +346,8 @@ def throughput_calculator():
     """Throughput calculation utilities."""
 
     class ThroughputCalculator:
+        """Test class for performance testing."""
+
         def __init__(self):
             self.operation_counts = {}
             self.start_times = {}
@@ -383,6 +391,8 @@ def database_performance_monitor():
     """Database performance monitoring utilities."""
 
     class DatabasePerformanceMonitor:
+        """Test class for performance testing."""
+
         def __init__(self):
             self.query_times = {}
             self.connection_pool_stats = {}
@@ -390,12 +400,12 @@ def database_performance_monitor():
         async def monitor_query(self, query_name: str, query_func):
             """Monitor database query performance."""
             start_time = time.perf_counter()
+            success = False
             try:
                 result = await query_func()
                 success = True
             except Exception:
                 result = None
-                success = False
                 raise
             finally:
                 duration = time.perf_counter() - start_time
@@ -461,6 +471,8 @@ def network_latency_monitor():
     """Network latency monitoring utilities."""
 
     class NetworkLatencyMonitor:
+        """Test class for performance testing."""
+
         def __init__(self):
             self.latency_measurements = {}
 
@@ -540,6 +552,8 @@ def resource_limit_monitor():
     """Monitor system resource limits."""
 
     class ResourceLimitMonitor:
+        """Test class for performance testing."""
+
         def __init__(self):
             self.initial_limits = self._get_current_limits()
 

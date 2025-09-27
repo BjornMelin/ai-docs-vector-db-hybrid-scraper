@@ -70,7 +70,7 @@ class MockFactory:
         return_value: Any = None,
         delay_range: tuple = (0.01, 0.1),
         failure_rate: float = 0.0,
-        exception_type: type = Exception,
+        exception_type: type = CustomError,
     ) -> AsyncMock:
         """Create an async mock with simulated delay and optional failures.
 

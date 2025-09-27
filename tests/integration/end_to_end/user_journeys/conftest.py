@@ -11,15 +11,12 @@ import hashlib
 import shutil
 import tempfile
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import pytest
-
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
 
 
 @dataclass
@@ -74,6 +71,7 @@ class JourneyResult:
 @pytest.fixture(scope="session")
 def journey_test_config():
     """Configuration for user journey testing."""
+
     return {
         "timeouts": {
             "short_action": 5.0,
@@ -228,7 +226,7 @@ def journey_executor():
             start_time = time.perf_counter()
 
             # Check dependencies
-            for dep in step.dependencies:
+            for dep in step.dependencies or []:
                 if dep not in context:
                     msg = f"Missing dependency: {dep}"
                     raise ValueError(msg)
@@ -269,7 +267,8 @@ def journey_executor():
                         await asyncio.sleep(1.0 * (attempt + 1))  # Exponential backoff
                         continue
                     raise
-            return None
+            # This should never be reached due to the exception handling above
+            return None  # type: ignore[return-value]
 
         async def _perform_action(
             self,
@@ -599,8 +598,9 @@ def journey_executor():
             success_rate = successful_steps / len(step_results)
 
             # Check against journey success criteria
-            min_success_rate = journey.success_criteria.get("min_success_rate", 0.8)
-            max_errors = journey.success_criteria.get("max_errors", 2)
+            criteria = journey.success_criteria or {}
+            min_success_rate = criteria.get("min_success_rate", 0.8)
+            max_errors = criteria.get("max_errors", 2)
 
             return success_rate >= min_success_rate and len(errors) <= max_errors
 
@@ -896,7 +896,7 @@ def journey_data_manager():
             """Retrieve stored test artifact."""
             return self.test_artifacts.get(key)
 
-        def register_cleanup(self, cleanup_func: callable) -> None:
+        def register_cleanup(self, cleanup_func: Callable[[], None]) -> None:
             """Register cleanup function to run after tests."""
             self.cleanup_tasks.append(cleanup_func)
 

@@ -12,9 +12,6 @@ from typing import Any
 import pytest
 
 
-# Mock comprehensive integration test functionality
-
-
 class IntegrationTestManager:
     """Manager for coordinating complex integration tests."""
 
@@ -64,8 +61,8 @@ class IntegrationTestManager:
             scenario_result["overall_success"] = False
             scenario_result["errors"].append(f"Scenario execution failed: {e!s}")
             return scenario_result
-        else:
-            return scenario_result
+
+        return scenario_result
 
     def get_test_summary(self) -> dict[str, Any]:
         """Get summary of all integration tests executed."""
@@ -88,11 +85,14 @@ def integration_test_manager():
 def journey_data_manager():
     """Mock journey data manager for storing test artifacts."""
 
-    class MockJourneyDataManager:
+    class MockJourneyDataManager:  # pylint: disable=too-few-public-methods
+        """Test class."""
+
         def __init__(self):
             self.artifacts = {}
 
         def store_artifact(self, name: str, data: Any):
+            """Store an artifact with the given name and data."""
             self.artifacts[name] = data
 
     return MockJourneyDataManager()
@@ -100,8 +100,8 @@ def journey_data_manager():
 
 @pytest.mark.asyncio
 async def test_complete_system_integration_scenario(
-    integration_test_manager,
-    journey_data_manager,
+    manager,
+    data_manager,
 ):
     """Test complete end-to-end system integration scenario."""
     # Define comprehensive integration scenario
@@ -118,12 +118,12 @@ async def test_complete_system_integration_scenario(
     }
 
     # Execute complete integration scenario
-    result = await integration_test_manager.execute_integration_scenario(
+    result = await manager.execute_integration_scenario(
         "complete_system_integration", scenario_config
     )
 
     # Store comprehensive results
-    journey_data_manager.store_artifact("complete_system_integration", result)
+    data_manager.store_artifact("complete_system_integration", result)
 
     # Validate integration scenario
     assert result["overall_success"], (
@@ -139,15 +139,15 @@ async def test_complete_system_integration_scenario(
 
 @pytest.mark.asyncio
 async def test_integration_test_summary(
-    integration_test_manager,
-    journey_data_manager,
+    manager,
+    data_manager,
 ):
     """Generate and validate integration test summary."""
     # Get test summary
-    test_summary = integration_test_manager.get_test_summary()
+    test_summary = manager.get_test_summary()
 
     # Store summary
-    journey_data_manager.store_artifact("integration_test_summary", test_summary)
+    data_manager.store_artifact("integration_test_summary", test_summary)
 
     # Validate that integration testing was comprehensive
     assert test_summary["_total_performance_data_points"] >= 0, (
