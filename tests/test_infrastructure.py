@@ -249,16 +249,14 @@ class TestPerformanceFixtures:
 class TestPropertyBasedInfrastructure:
     """Test property-based testing infrastructure."""
 
-    def test_embedding_strategy_available(self):
-        """Test that embedding strategy is available."""
-        module = importlib.import_module("tests.conftest")
-        embedding_strategy = module.embedding_strategy
+    def test_embedding_helper_available(self):
+        """Test that deterministic embedding helper is exposed."""
+        module = importlib.import_module("tests.utils.ai_testing_utilities")
+        generate_embeddings = module.EmbeddingTestUtils.generate_test_embeddings
 
-        strategy_or_embedding = embedding_strategy(max_dim=128)
-        if hasattr(strategy_or_embedding, "example"):
-            embedding = strategy_or_embedding.example()
-        else:
-            embedding = strategy_or_embedding
+        embeddings = generate_embeddings(count=1, dim=128, seed=7)
+        assert len(embeddings) == 1
 
+        embedding = embeddings[0]
         assert len(embedding) == 128
-        assert all(isinstance(x, (int, float)) for x in embedding)
+        assert all(isinstance(value, (int, float)) for value in embedding)

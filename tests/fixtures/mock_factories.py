@@ -9,8 +9,6 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from tests.conftest import CollectionInfo, CollectionStatus
-
 
 try:
     from redis.exceptions import ConnectionError as RedisConnectionError
@@ -77,13 +75,13 @@ class ExternalServiceMockFactory:
         client.delete_collection = AsyncMock()
         client.recreate_collection = AsyncMock()
 
-        collection_info = CollectionInfo(
-            status=CollectionStatus(status="green"),
-            vectors_count=100 if collection_exists else 0,
-            points_count=100 if collection_exists else 0,
+        client.get_collection = AsyncMock(
+            return_value=MagicMock(
+                status="green",
+                vectors_count=100 if collection_exists else 0,
+                points_count=100 if collection_exists else 0,
+            )
         )
-
-        client.get_collection = AsyncMock(return_value=collection_info)
         client.collection_exists = AsyncMock(return_value=collection_exists)
 
         # Point operations with realistic responses

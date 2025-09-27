@@ -1,246 +1,392 @@
-"""Tests for the batch command module.
+"""Focused tests for the batch CLI command surface."""
 
-This module tests batch processing operations including file processing,
-progress tracking, confirmations, and Rich console output.
-"""
+from __future__ import annotations
 
-from dataclasses import dataclass
-from pathlib import Path
-from unittest.mock import MagicMock
+import asyncio
+from collections.abc import Callable
+from types import SimpleNamespace
+from typing import Any, cast
 
-from rich.progress import Progress, SpinnerColumn, TextColumn
+import click
+import pytest
+from rich.panel import Panel
 
-from src.cli.commands.batch import batch, complete_collection_name
+from src.cli.commands import batch as batch_module
 
 
-# Mock data for testing
-MOCK_COLLECTIONS = ["batch_collection", "test_batch", "other_collection"]
-MOCK_DOCUMENTS = [
-    {"id": "doc1", "score": 0.95, "payload": {"title": "Document 1"}},
-    {"id": "doc2", "score": 0.88, "payload": {"title": "Document 2"}},
-]
+def _client_manager_stub() -> object:
+    """Return a unique placeholder client manager instance."""
 
+    return object()
 
-class TestBatchCommandGroup:
-    """Test the batch command group."""
 
-    def test_batch_group_help(self, cli_runner):
-        """Test batch command group help output."""
-        result = cli_runner.invoke(batch, ["--help"])
+def _always_true(*_args: Any, **_kwargs: Any) -> bool:
+    """Return ``True`` regardless of inputs."""
 
-        assert result.exit_code == 0
-        assert "Batch operations" in result.output
-        assert "📦" in result.output
+    return True
 
 
-class TestBatchCollectionAutoCompletion:
-    """Test collection name auto-completion for batch operations."""
+def _always_false(*_args: Any, **_kwargs: Any) -> bool:
+    """Return ``False`` regardless of inputs."""
 
-    def test_complete_collection_name_no_config(self):
-        """Test collection name completion with no config."""
-        mock_ctx = MagicMock()
-        mock_ctx.obj = {}  # No config
+    return False
 
-        result = complete_collection_name(mock_ctx, None, "test")
 
-        assert result == []
+@pytest.fixture
+def rich_cli_stub() -> SimpleNamespace:
+    """Provide a RichCLI-like object that records console output."""
 
+    class _Console:
+        def __init__(self, sink: list[Any]):
+            self._sink = sink
 
-class TestIndexDocumentsCommand:
-    """Test the index-documents batch command."""
+        def print(self, value: Any) -> None:
+            self._sink.append(value)
 
-    def test_index_documents_help(self, cli_runner):
-        """Test index-documents command help."""
-        result = cli_runner.invoke(batch, ["index-documents", "--help"])
+    printed: list[Any] = []
+    return SimpleNamespace(console=_Console(printed), printed=printed)
 
-        assert result.exit_code == 0
-        assert "Batch index documents" in result.output
 
-    def test_index_documents_parameters(self, cli_runner):
-        """Test index-documents command parameters."""
-        result = cli_runner.invoke(batch, ["index-documents", "--help"])
+@pytest.fixture
+def cli_context(rich_cli_stub: SimpleNamespace) -> click.Context:
+    """Create a click context that exposes the Rich CLI helper."""
 
-        assert result.exit_code == 0
-        assert "COLLECTION_NAME" in result.output
-        assert "DOCUMENTS" in result.output
-        assert "--batch-size" in result.output
-        assert "--parallel" in result.output
-        assert "--dry-run" in result.output
+    return click.Context(batch_module.batch, obj={"rich_cli": rich_cli_stub})
 
-    def test_index_documents_missing_args(self, cli_runner):
-        """Test index-documents with missing arguments."""
-        result = cli_runner.invoke(batch, ["index-documents"])
 
-        assert result.exit_code == 2  # Missing required arguments
+def test_complete_collection_name_returns_filtered_items(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Completion helper should expose matching collections from the manager."""
 
-    def test_index_documents_dry_run_flag(self, cli_runner):
-        """Test index-documents dry-run flag."""
-        result = cli_runner.invoke(batch, ["index-documents", "--help"])
+    class _VectorDBStub:
+        async def list_collections(self) -> list[str]:
+            return ["alpha", "beta", "docs"]
 
-        assert result.exit_code == 0
-        assert "dry-run" in result.output
-        assert "Show what would be indexed" in result.output
+        async def cleanup(self) -> None:  # pragma: no cover - nothing to clean
+            return None
 
+    monkeypatch.setattr(batch_module, "ClientManager", _client_manager_stub)
 
-class TestCreateCollectionsCommand:
-    """Test the create-collections batch command."""
+    def _vector_manager(_client: object) -> _VectorDBStub:
+        return _VectorDBStub()
 
-    def test_create_collections_help(self, cli_runner):
-        """Test create-collections command help."""
-        result = cli_runner.invoke(batch, ["create-collections", "--help"])
+    monkeypatch.setattr(batch_module, "VectorDBManager", _vector_manager)
+    ctx = click.Context(batch_module.batch, obj={"config": object()})
+    param = cast(click.Parameter, None)
 
-        assert result.exit_code == 0
-        assert "Create multiple collections" in result.output
+    completions = batch_module.complete_collection_name(ctx, param, "a")
 
-    def test_create_collections_parameters(self, cli_runner):
-        """Test create-collections command parameters."""
-        result = cli_runner.invoke(batch, ["create-collections", "--help"])
+    assert [item.value for item in completions] == ["alpha"]
 
-        assert result.exit_code == 0
-        assert "COLLECTIONS" in result.output
-        assert "--dimension" in result.output
-        assert "--distance" in result.output
 
+def test_complete_collection_name_handles_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Completion helper must return an empty list when the lookup fails."""
 
-class TestDeleteCollectionsCommand:
-    """Test the delete-collections batch command."""
+    class _VectorDBStub:
+        async def list_collections(self) -> list[str]:
+            raise RuntimeError("boom")
 
-    def test_delete_collections_help(self, cli_runner):
-        """Test delete-collections command help."""
-        result = cli_runner.invoke(batch, ["delete-collections", "--help"])
+        async def cleanup(self) -> None:  # pragma: no cover - nothing to clean
+            return None
 
-        assert result.exit_code == 0
-        assert "Delete multiple collections" in result.output
+    monkeypatch.setattr(batch_module, "ClientManager", _client_manager_stub)
 
-    def test_delete_collections_parameters(self, cli_runner):
-        """Test delete-collections command parameters."""
-        result = cli_runner.invoke(batch, ["delete-collections", "--help"])
+    def _vector_manager(_client: object) -> _VectorDBStub:
+        return _VectorDBStub()
 
-        assert result.exit_code == 0
-        assert "COLLECTIONS" in result.output
+    monkeypatch.setattr(batch_module, "VectorDBManager", _vector_manager)
+    ctx = click.Context(batch_module.batch, obj={"config": object()})
+    param = cast(click.Parameter, None)
 
+    completions = batch_module.complete_collection_name(ctx, param, "a")
 
-class TestBackupCollectionsCommand:
-    """Test the backup-collections batch command."""
+    assert completions == []
 
-    def test_backup_collections_help(self, cli_runner):
-        """Test backup-collections command help."""
-        result = cli_runner.invoke(batch, ["backup-collections", "--help"])
 
-        assert result.exit_code == 0
-        assert "Backup collections" in result.output
+def test_operation_queue_execute_runs_all_operations(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`OperationQueue.execute` should invoke queued operations and report success."""
 
-    def test_backup_collections_parameters(self, cli_runner):
-        """Test backup-collections command parameters."""
-        result = cli_runner.invoke(batch, ["backup-collections", "--help"])
+    queue = batch_module.OperationQueue()
+    executed: list[str] = []
+    queue.add(
+        batch_module.BatchOperation("first", "", lambda: executed.append("first"))
+    )
+    queue.add(
+        batch_module.BatchOperation("second", "", lambda: executed.append("second"))
+    )
 
-        assert result.exit_code == 0
-        assert "COLLECTIONS" in result.output
-        assert "--output-dir" in result.output
-        assert "--format" in result.output
+    assert queue.execute(confirm=False) is True
+    assert executed == ["first", "second"]
 
 
-class TestProgressTracking:
-    """Test Rich progress tracking in batch operations."""
+def test_operation_queue_execute_stops_on_error() -> None:
+    """A failing operation should short-circuit execution and return ``False``."""
 
-    def test_progress_imports_available(self):
-        """Test that progress tracking modules can be imported."""
+    queue = batch_module.OperationQueue()
 
-        assert Progress is not None
-        assert SpinnerColumn is not None
-        assert TextColumn is not None
+    def _fail() -> None:
+        raise ValueError("unexpected failure")
 
+    queue.add(batch_module.BatchOperation("fail", "", _fail))
 
-class TestBatchOperationQueue:
-    """Test batch operation queuing and processing."""
+    assert queue.execute(confirm=False) is False
 
-    def test_batch_module_structure(self):
-        """Test that batch module has expected structure."""
 
-        assert batch is not None
-        assert hasattr(batch, "commands")
-        assert len(batch.commands) > 0
+def test_operation_queue_clear_removes_operations() -> None:
+    """`clear` should empty the operation list."""
 
+    queue = batch_module.OperationQueue()
+    queue.add(batch_module.BatchOperation("noop", "", lambda: None))
 
-class TestErrorHandling:
-    """Test error handling in batch operations."""
+    queue.clear()
 
-    def test_missing_arguments(self, cli_runner):
-        """Test handling of missing arguments."""
-        result = cli_runner.invoke(batch, ["index-documents"])
+    assert not queue.operations
 
-        # Should require collection name and documents
-        assert result.exit_code == 2
 
-    def test_invalid_command(self, cli_runner):
-        """Test handling of invalid commands."""
-        result = cli_runner.invoke(batch, ["nonexistent-command"])
+def test_show_indexing_preview_emits_panel(rich_cli_stub: SimpleNamespace) -> None:
+    """The dry-run preview should render a Rich panel to the console."""
 
-        assert result.exit_code == 2
-        assert "No such command" in result.output
+    batch_module._show_indexing_preview(["a", "b", "c"], "collection", 2, rich_cli_stub)
 
+    assert any(isinstance(item, Panel) for item in rich_cli_stub.printed)
 
-class TestBatchIntegration:
-    """Integration tests for batch commands."""
 
-    def test_batch_command_help(self, cli_runner):
-        """Test batch command help output."""
-        result = cli_runner.invoke(batch, ["--help"])
+def test_index_documents_dry_run_invokes_preview(
+    monkeypatch: pytest.MonkeyPatch,
+    cli_context: click.Context,
+    rich_cli_stub: SimpleNamespace,
+) -> None:
+    """Dry-run invocations must call the preview helper instead of performing work."""
 
-        assert result.exit_code == 0
-        assert "Batch operations" in result.output
+    captured: dict[str, Any] = {}
 
-    def test_batch_imports(self):
-        """Test that batch module can be imported."""
-
-        assert batch is not None
-        assert complete_collection_name is not None
-        assert hasattr(batch, "commands")
-
-
-class TestFileProcessing:
-    """Test file processing functionality in batch operations."""
-
-    def test_file_validation(self, sample_batch_files):
-        """Test file validation before processing."""
-        # All sample files should exist
-        for file_path in sample_batch_files:
-            assert Path(file_path).exists()
-            assert Path(file_path).is_file()
-
-    def test_file_content_reading(self, sample_batch_files):
-        """Test reading file content for processing."""
-        # Test that files can be read
-        for file_path in sample_batch_files:
-            path_obj = Path(file_path)
-            with path_obj.open() as f:
-                content = f.read()
-                assert len(content) > 0
-                assert "test content" in content.lower()
-
-
-class TestDataStructures:
-    """Test data structures used in batch operations."""
-
-    def test_batch_operation_data_structure(self):
-        """Test batch operation data structure."""
-
-        # Test that we can create batch operation data structures
-        @dataclass
-        class BatchOperation:
-            operation_type: str
-            collection_name: str
-            file_paths: list[str]
-            options: dict
-
-        operation = BatchOperation(
-            operation_type="add_documents",
-            collection_name="test_collection",
-            file_paths=["/path/to/file.txt"],
-            options={"format": "json"},
+    def _capture(
+        documents: list[str],
+        collection_name: str,
+        batch_size: int,
+        rich_cli: SimpleNamespace,
+    ) -> None:
+        captured.update(
+            {
+                "documents": documents,
+                "collection": collection_name,
+                "batch_size": batch_size,
+                "rich_cli": rich_cli,
+            }
         )
 
-        assert operation.operation_type == "add_documents"
-        assert operation.collection_name == "test_collection"
-        assert len(operation.file_paths) == 1
-        assert operation.options["format"] == "json"
+    monkeypatch.setattr(batch_module, "_show_indexing_preview", _capture)
+
+    index_callback = batch_module.index_documents.callback
+    assert index_callback is not None
+
+    with cli_context:
+        index_callback(
+            "target",
+            ("doc1", "doc2"),
+            batch_size=5,
+            _parallel=1,
+            dry_run=True,
+        )
+
+    assert captured == {
+        "documents": ["doc1", "doc2"],
+        "collection": "target",
+        "batch_size": 5,
+        "rich_cli": rich_cli_stub,
+    }
+
+
+def test_create_collections_aborts_without_confirmation(
+    monkeypatch: pytest.MonkeyPatch, cli_context: click.Context
+) -> None:
+    """If the operator declines, no queue should be instantiated."""
+
+    monkeypatch.setattr(batch_module, "Confirm", SimpleNamespace(ask=_always_false))
+
+    def _queue_factory() -> None:
+        raise AssertionError("Queue should not be constructed when confirmation fails")
+
+    monkeypatch.setattr(batch_module, "OperationQueue", _queue_factory)
+
+    create_callback = batch_module.create_collections.callback
+    assert create_callback is not None
+
+    with cli_context:
+        create_callback(
+            ("alpha",),
+            dimension=256,
+            distance="cosine",
+            _force=False,
+        )
+
+
+def test_create_collections_enqueues_operations(
+    monkeypatch: pytest.MonkeyPatch, cli_context: click.Context
+) -> None:
+    """Confirmed requests should enqueue batch operations and execute them."""
+
+    monkeypatch.setattr(batch_module, "Confirm", SimpleNamespace(ask=_always_true))
+    monkeypatch.setattr(batch_module, "ClientManager", _client_manager_stub)
+
+    db_instances: list[_VectorDBStub] = []
+
+    class _VectorDBStub:
+        def __init__(self, _client: object):
+            self.calls: list[tuple[str, int]] = []
+            db_instances.append(self)
+
+        async def create_collection(self, name: str, dimension: int) -> bool:
+            self.calls.append((name, dimension))
+            return True
+
+    monkeypatch.setattr(batch_module, "VectorDBManager", _VectorDBStub)
+
+    queue_instances: list[_QueueStub] = []
+
+    class _QueueStub:
+        def __init__(self) -> None:
+            self.operations: list[batch_module.BatchOperation] = []
+            self.confirm_flag: bool | None = None
+            queue_instances.append(self)
+
+        def add(self, operation: batch_module.BatchOperation) -> None:
+            self.operations.append(operation)
+
+        def execute(self, confirm: bool = True) -> bool:
+            self.confirm_flag = confirm
+            for operation in self.operations:
+                assert callable(operation.function)
+                operation_fn = cast(Callable[[], Any], operation.function)
+                operation_fn()
+            return True
+
+    monkeypatch.setattr(batch_module, "OperationQueue", _QueueStub)
+
+    def _run(coro: Any) -> Any:
+        loop = asyncio.new_event_loop()
+        try:
+            return loop.run_until_complete(coro)
+        finally:
+            loop.close()
+
+    monkeypatch.setattr(batch_module.asyncio, "run", _run)
+
+    create_callback = batch_module.create_collections.callback
+    assert create_callback is not None
+
+    with cli_context:
+        create_callback(
+            ("alpha", "beta"),
+            dimension=128,
+            distance="cosine",
+            _force=False,
+        )
+
+    queue = queue_instances[0]
+    assert [operation.name for operation in queue.operations] == [
+        "Create alpha",
+        "Create beta",
+    ]
+    assert queue.confirm_flag is False
+    assert db_instances[0].calls == [("alpha", 128), ("beta", 128)]
+
+
+def test_delete_collections_aborts_without_double_confirmation(
+    monkeypatch: pytest.MonkeyPatch, cli_context: click.Context
+) -> None:
+    """Declining the destructive prompts should avoid queue creation."""
+
+    responses = iter([False])
+
+    def _ask(_prompt: str) -> bool:
+        return next(responses)
+
+    monkeypatch.setattr(batch_module, "Confirm", SimpleNamespace(ask=_ask))
+
+    def _queue_factory() -> None:
+        raise AssertionError("Queue should not be constructed when confirmation fails")
+
+    monkeypatch.setattr(batch_module, "OperationQueue", _queue_factory)
+
+    delete_callback = batch_module.delete_collections.callback
+    assert delete_callback is not None
+
+    with cli_context:
+        delete_callback(
+            ("alpha", "beta"),
+            yes=False,
+        )
+
+
+def test_delete_collections_enqueues_deletions(
+    monkeypatch: pytest.MonkeyPatch, cli_context: click.Context
+) -> None:
+    """The delete command should enqueue operations when confirmation is bypassed."""
+
+    monkeypatch.setattr(batch_module, "ClientManager", _client_manager_stub)
+
+    class _VectorDBStub:
+        def __init__(self, _client: object):
+            self.deleted: list[str] = []
+
+        async def delete_collection(self, name: str) -> bool:
+            self.deleted.append(name)
+            return True
+
+    db_instance = _VectorDBStub(object())
+
+    def _vector_manager(_client: object) -> _VectorDBStub:
+        return db_instance
+
+    monkeypatch.setattr(batch_module, "VectorDBManager", _vector_manager)
+
+    queue_instances: list[_QueueStub] = []
+
+    class _QueueStub:
+        def __init__(self) -> None:
+            self.operations: list[batch_module.BatchOperation] = []
+            queue_instances.append(self)
+
+        def add(self, operation: batch_module.BatchOperation) -> None:
+            self.operations.append(operation)
+
+        def execute(self, confirm: bool = True) -> bool:
+            for operation in self.operations:
+                assert callable(operation.function)
+                operation_fn = cast(Callable[[], Any], operation.function)
+                operation_fn()
+            return True
+
+    monkeypatch.setattr(batch_module, "OperationQueue", _QueueStub)
+    monkeypatch.setattr(batch_module, "Confirm", SimpleNamespace(ask=_always_true))
+
+    def _run(coro: Any) -> Any:
+        loop = asyncio.new_event_loop()
+        try:
+            return loop.run_until_complete(coro)
+        finally:
+            loop.close()
+
+    monkeypatch.setattr(batch_module.asyncio, "run", _run)
+
+    delete_callback = batch_module.delete_collections.callback
+    assert delete_callback is not None
+
+    with cli_context:
+        delete_callback(
+            ("alpha", "beta"),
+            yes=True,
+        )
+
+    queue = queue_instances[0]
+    assert [operation.name for operation in queue.operations] == [
+        "Delete alpha",
+        "Delete beta",
+    ]
+    assert db_instance.deleted == ["alpha", "beta"]
