@@ -1,13 +1,13 @@
 """Base cache interface for all cache implementations."""
 
 from abc import ABC, abstractmethod
-from typing import Generic, TypeVar
+from typing import TypeVar
 
 
 T = TypeVar("T")
 
 
-class CacheInterface(ABC, Generic[T]):
+class CacheInterface[T](ABC):
     """Abstract base class for cache implementations."""
 
     @abstractmethod
