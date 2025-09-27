@@ -2,29 +2,90 @@
 
 This module provides a modernized caching implementation that replaces
 custom caching patterns with the battle-tested aiocache library.
-Provides zero-boilerplate caching with automatic serialization and TTL management.
+It isolates cache aliases per manager instance, defaults to safe JSON
+serialization, and centralizes TTL management with configuration overrides.
 """
+
+# pylint: disable=too-many-return-statements
+
+from __future__ import annotations
 
 import asyncio
 import hashlib
+import inspect
+import json
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass
+from enum import Enum
 from typing import Any, cast
+from urllib.parse import urlparse
 
-from aiocache import Cache, cached, caches
-from aiocache.serializers import JsonSerializer, PickleSerializer
+from aiocache import cached, caches
+from aiocache.base import BaseCache
+from aiocache.serializers import BaseSerializer, JsonSerializer, PickleSerializer
 
 from src.config import CacheType, Config
 
 
 logger = logging.getLogger(__name__)
 
+_KEY_HASH_LENGTH = 12
+_LOG_KEY_HASH_LENGTH = 8
 
-class ModernCacheManager:
+
+@dataclass(frozen=True)
+class CacheAliasConfig:
+    """Configuration metadata for a cache alias."""
+
+    cache_type: CacheType
+    alias: str
+    namespace: str
+    serializer: BaseSerializer
+
+
+def _hash_text(value: str, length: int = _KEY_HASH_LENGTH) -> str:
+    """Return a stable truncated SHA-256 hash for the given text."""
+
+    digest = hashlib.sha256(value.encode("utf-8")).hexdigest()
+    return digest[:length]
+
+
+def _json_default(value: Any) -> Any:
+    """Best-effort serializer for non-JSON-native types."""
+
+    if isinstance(value, Enum):
+        return value.value
+    if isinstance(value, set):
+        return sorted(value)
+    if isinstance(value, (bytes, bytearray)):
+        return value.decode("utf-8", errors="ignore")
+    if hasattr(value, "dict"):
+        return value.dict()
+    if hasattr(value, "_asdict"):
+        return value._asdict()  # type: ignore[no-any-return]
+    if hasattr(value, "__dict__"):
+        return value.__dict__
+    return str(value)
+
+
+def _canonical_json(value: Any) -> str:
+    """Serialize value into canonical JSON for hashing / key generation."""
+
+    return json.dumps(
+        value,
+        sort_keys=True,
+        default=_json_default,
+        separators=(",", ":"),
+    )
+
+
+class ModernCacheManager:  # pylint: disable=too-many-instance-attributes,too-many-arguments
     """Modern cache manager using aiocache.
 
     Provides declarative caching with decorators and automatic
-    serialization, TTL management, and cache invalidation.
+    serialization, TTL management, and cache invalidation while ensuring
+    per-instance alias isolation and sanitized logging.
     """
 
     def __init__(
@@ -33,76 +94,197 @@ class ModernCacheManager:
         key_prefix: str = "aidocs:",
         enable_compression: bool = True,
         config: Config | None = None,
+        *,
+        serializer_map: Mapping[str | CacheType, BaseSerializer] | None = None,
+        use_pickle_for_embeddings: bool = False,
+        command_timeout: float = 1.0,
     ):
         """Initialize modern cache manager.
 
         Args:
-            redis_url: Redis connection URL
-            key_prefix: Prefix for all cache keys
-            enable_compression: Enable compression for cached values
-            config: Application configuration for cache settings
+            redis_url: Redis connection URL or DSN.
+            key_prefix: Prefix for all cache keys.
+            enable_compression: Retained for compatibility; no-op for now.
+            config: Application configuration for cache settings.
+            serializer_map: Optional map overriding serializers per cache type.
+            use_pickle_for_embeddings: Enable legacy Pickle serializer for
+                embeddings (default is JSON for safety).
+            command_timeout: Timeout for cache commands in seconds.
         """
+
         self.redis_url = redis_url
         self.key_prefix = key_prefix
         self.enable_compression = enable_compression
         self.config = config
+        self.command_timeout = command_timeout
+        self._serializer_overrides = serializer_map or {}
+        self._closed = False
 
-        # Configure cache backends using global registry
-        cache_configs = {
-            "embeddings": {
-                "cache": "aiocache.RedisCache",
-                "endpoint": redis_url,
-                "serializer": PickleSerializer(),
-                "namespace": f"{key_prefix}embeddings:",
-                "timeout": 1,
-                "retry_on_timeout": True,
-            },
-            "search": {
-                "cache": "aiocache.RedisCache",
-                "endpoint": redis_url,
-                "serializer": JsonSerializer(),
-                "namespace": f"{key_prefix}search:",
-                "timeout": 1,
-                "retry_on_timeout": True,
-            },
-            "crawl": {
-                "cache": "aiocache.RedisCache",
-                "endpoint": redis_url,
-                "serializer": JsonSerializer(),
-                "namespace": f"{key_prefix}crawl:",
-                "timeout": 1,
-                "retry_on_timeout": True,
-            },
-            "hyde": {
-                "cache": "aiocache.RedisCache",
-                "endpoint": redis_url,
-                "serializer": JsonSerializer(),
-                "namespace": f"{key_prefix}hyde:",
-                "timeout": 1,
-                "retry_on_timeout": True,
-            },
-        }
-        caches.set_config(cache_configs)
+        self._backend_options, self._backend_cache_path = self._build_backend_options(
+            redis_url
+        )
+        self._alias_suffix = self._generate_alias_suffix(key_prefix)
 
-        # TTL settings from config or defaults
-        if config and hasattr(config, "cache"):
-            self.ttl_settings = getattr(config.cache, "cache_ttl_seconds", {})
-        else:
-            self.ttl_settings = {}
+        self.ttl_settings = (
+            getattr(getattr(config, "cache", None), "cache_ttl_seconds", {})
+            if config is not None
+            else {}
+        )
 
-        # Default TTLs
         self.default_ttls = {
-            CacheType.EMBEDDINGS: self.ttl_settings.get(
-                CacheType.EMBEDDINGS, 86400 * 7
-            ),  # 7 days
-            CacheType.SEARCH: self.ttl_settings.get(CacheType.SEARCH, 3600),  # 1 hour
-            CacheType.CRAWL: self.ttl_settings.get(CacheType.CRAWL, 3600),  # 1 hour
-            CacheType.HYDE: self.ttl_settings.get(CacheType.HYDE, 3600),  # 1 hour
+            CacheType.EMBEDDINGS: self._resolve_ttl(CacheType.EMBEDDINGS, 86400 * 7),
+            CacheType.SEARCH: self._resolve_ttl(CacheType.SEARCH, 3600),
+            CacheType.CRAWL: self._resolve_ttl(CacheType.CRAWL, 3600),
+            CacheType.HYDE: self._resolve_ttl(CacheType.HYDE, 3600),
         }
 
-        logger.info("ModernCacheManager initialized with Redis: %s", redis_url)
+        self._alias_order = (
+            CacheType.EMBEDDINGS,
+            CacheType.SEARCH,
+            CacheType.CRAWL,
+            CacheType.HYDE,
+        )
+        self._alias_configs: dict[CacheType, CacheAliasConfig] = {}
 
-    def get_cache_for_type(self, cache_type: CacheType) -> Cache:
+        for cache_type in self._alias_order:
+            serializer = self._select_serializer(cache_type, use_pickle_for_embeddings)
+            alias_config = self._register_alias(cache_type, serializer)
+            self._alias_configs[cache_type] = alias_config
+
+        logger.info(
+            "ModernCacheManager initialized with Redis host %s (aliases suffix=%s)",
+            self._backend_options.get("endpoint")
+            or self._backend_options.get("host")
+            or self.redis_url,
+            self._alias_suffix,
+        )
+
+    def _build_backend_options(self, redis_url: str) -> tuple[dict[str, Any], str]:
+        """Build backend configuration for aiocache."""
+
+        parsed = urlparse(redis_url)
+        options: dict[str, Any]
+
+        if parsed.scheme in {"memory", "simple"}:
+            options = {}
+            backend = "aiocache.SimpleMemoryCache"
+        elif parsed.scheme in {"redis", "rediss", ""}:
+            options = {"url": redis_url} if parsed.scheme else {"endpoint": redis_url}
+            backend = "aiocache.RedisCache"
+        else:
+            # Unknown scheme - delegate to aiocache; assume DSN-compatible backend
+            options = {"url": redis_url}
+            backend = "aiocache.RedisCache"
+
+        if backend == "aiocache.RedisCache":
+            options.setdefault("timeout", self.command_timeout)
+            options.setdefault("retry_on_timeout", True)
+        else:
+            options.setdefault("timeout", self.command_timeout)
+        return options, backend
+
+    def _generate_alias_suffix(self, key_prefix: str) -> str:
+        """Create a deterministic alias suffix to avoid global collisions."""
+
+        base = key_prefix or "aidocs"
+        environment = getattr(getattr(self.config, "environment", None), "value", None)
+        if environment:
+            base = f"{base}:{environment}"
+        return _hash_text(base, length=_KEY_HASH_LENGTH)
+
+    def _resolve_ttl(self, cache_type: CacheType, fallback: int) -> int:
+        """Determine TTL for a cache type using config overrides."""
+
+        search_keys = (
+            cache_type.value,
+            cache_type.name,
+        )
+        for key in search_keys:
+            ttl_value = self.ttl_settings.get(key)
+            if ttl_value is not None:
+                try:
+                    return int(ttl_value)
+                except (TypeError, ValueError):
+                    logger.debug(
+                        "Invalid TTL override for %s=%s; falling back to %s",
+                        key,
+                        ttl_value,
+                        fallback,
+                    )
+                    break
+        return fallback
+
+    def _serializer_override_for(self, cache_type: CacheType) -> BaseSerializer | None:
+        """Look up serializer override for a cache type."""
+
+        if cache_type in self._serializer_overrides:
+            return self._serializer_overrides[cache_type]  # type: ignore[index]
+        return cast(
+            BaseSerializer | None,
+            self._serializer_overrides.get(cache_type.value),
+        )
+
+    def _select_serializer(
+        self,
+        cache_type: CacheType,
+        use_pickle_for_embeddings: bool,
+    ) -> BaseSerializer:
+        """Choose serializer for cache type honoring overrides and safety."""
+
+        override = self._serializer_override_for(cache_type)
+        if override is not None:
+            return override
+
+        if cache_type is CacheType.EMBEDDINGS and use_pickle_for_embeddings:
+            return PickleSerializer()
+
+        return JsonSerializer()
+
+    def _register_alias(
+        self,
+        cache_type: CacheType,
+        serializer: BaseSerializer,
+    ) -> CacheAliasConfig:
+        """Register cache alias safely within aiocache registry."""
+
+        alias_name = f"{cache_type.value}:{self._alias_suffix}"
+        namespace = f"{self.key_prefix}{cache_type.value}:"
+        cache_config = {
+            "cache": self._backend_cache_path,
+            **self._backend_options,
+            "serializer": self._serializer_to_config(serializer),
+            "namespace": namespace,
+            "timeout": self.command_timeout,
+        }
+        caches.add(alias_name, cache_config)
+        return CacheAliasConfig(
+            cache_type=cache_type,
+            alias=alias_name,
+            namespace=namespace,
+            serializer=serializer,
+        )
+
+    def _resolve_alias(self, cache_type: CacheType) -> CacheAliasConfig:
+        """Resolve alias config for cache type with sensible default."""
+
+        if cache_type in self._alias_configs:
+            return self._alias_configs[cache_type]
+        return self._alias_configs[CacheType.SEARCH]
+
+    def _mask_key(self, key: str) -> str:
+        """Produce a short hash representation for logging sensitive keys."""
+
+        if not key:
+            return "empty"
+        return _hash_text(key, length=_LOG_KEY_HASH_LENGTH)
+
+    @staticmethod
+    def _serializer_to_config(serializer: BaseSerializer) -> dict[str, Any]:
+        """Convert serializer instance into aiocache configuration mapping."""
+
+        return {"class": f"{serializer.__module__}.{serializer.__class__.__name__}"}
+
+    def get_cache_for_type(self, cache_type: CacheType) -> BaseCache:
         """Get the appropriate cache instance for a cache type.
 
         Args:
@@ -111,14 +293,7 @@ class ModernCacheManager:
         Returns:
             Cache instance for the specified type
         """
-        alias_map = {
-            CacheType.EMBEDDINGS: "embeddings",
-            CacheType.SEARCH: "search",
-            CacheType.CRAWL: "crawl",
-            CacheType.HYDE: "hyde",
-        }
-        alias = alias_map.get(cache_type, "search")
-        return cast(Cache, caches.get(alias))
+        return cast(BaseCache, caches.get(self._resolve_alias(cache_type).alias))
 
     def cache_embeddings(
         self,
@@ -137,7 +312,7 @@ class ModernCacheManager:
         effective_ttl = ttl or self.default_ttls[CacheType.EMBEDDINGS]
 
         return cached(
-            alias="embeddings",
+            alias=self._alias_configs[CacheType.EMBEDDINGS].alias,
             ttl=effective_ttl,
             key_builder=key_builder or self._embedding_key_builder,
         )
@@ -159,7 +334,7 @@ class ModernCacheManager:
         effective_ttl = ttl or self.default_ttls[CacheType.SEARCH]
 
         return cached(
-            alias="search",
+            alias=self._alias_configs[CacheType.SEARCH].alias,
             ttl=effective_ttl,
             key_builder=key_builder or self._search_key_builder,
         )
@@ -181,7 +356,7 @@ class ModernCacheManager:
         effective_ttl = ttl or self.default_ttls[CacheType.CRAWL]
 
         return cached(
-            alias="crawl",
+            alias=self._alias_configs[CacheType.CRAWL].alias,
             ttl=effective_ttl,
             key_builder=key_builder or self._crawl_key_builder,
         )
@@ -203,7 +378,7 @@ class ModernCacheManager:
         effective_ttl = ttl or self.default_ttls[CacheType.HYDE]
 
         return cached(
-            alias="hyde",
+            alias=self._alias_configs[CacheType.HYDE].alias,
             ttl=effective_ttl,
             key_builder=key_builder or self._hyde_key_builder,
         )
@@ -224,12 +399,18 @@ class ModernCacheManager:
         Returns:
             Cached value or default
         """
+        alias = self._resolve_alias(cache_type)
         try:
             cache = self.get_cache_for_type(cache_type)
-            value = await cache.get(key)  # type: ignore
+            value = await cache.get(key)
             return value if value is not None else default
-        except Exception as e:
-            logger.warning("Cache get error for key %s: %s", key, e)
+        except Exception as exc:
+            logger.warning(
+                "Cache get error (alias=%s, key=%s): %s",
+                alias.alias,
+                self._mask_key(key),
+                exc,
+            )
             return default
 
     async def set(
@@ -250,13 +431,19 @@ class ModernCacheManager:
         Returns:
             True if successful, False otherwise
         """
+        alias = self._resolve_alias(cache_type)
         try:
             cache = self.get_cache_for_type(cache_type)
             effective_ttl = ttl or self.default_ttls[cache_type]
-            await cache.set(key, value, ttl=effective_ttl)  # type: ignore
+            await cache.set(key, value, ttl=effective_ttl)
             return True
-        except Exception as e:
-            logger.error("Cache set error for key %s: %s", key, e)
+        except Exception as exc:
+            logger.error(
+                "Cache set error (alias=%s, key=%s): %s",
+                alias.alias,
+                self._mask_key(key),
+                exc,
+            )
             return False
 
     async def delete(
@@ -273,12 +460,18 @@ class ModernCacheManager:
         Returns:
             True if successful, False otherwise
         """
+        alias = self._resolve_alias(cache_type)
         try:
             cache = self.get_cache_for_type(cache_type)
-            await cache.delete(key)  # type: ignore
+            await cache.delete(key)
             return True
-        except Exception as e:
-            logger.error("Cache delete error for key %s: %s", key, e)
+        except Exception as exc:
+            logger.error(
+                "Cache delete error (alias=%s, key=%s): %s",
+                alias.alias,
+                self._mask_key(key),
+                exc,
+            )
             return False
 
     async def clear(self, cache_type: CacheType | None = None) -> bool:
@@ -292,42 +485,47 @@ class ModernCacheManager:
         """
         try:
             if cache_type:
-                cache = self.get_cache_for_type(cache_type)
-                await self._clear_cache_namespace(cache)
+                alias = self._resolve_alias(cache_type)
+                await self._clear_cache_namespace(
+                    self.get_cache_for_type(cache_type), alias
+                )
             else:
-                # Clear all caches - use delete_many with pattern matching
                 tasks = [
-                    self._clear_cache_namespace(cast(Cache, caches.get(alias)))
-                    for alias in ("embeddings", "search", "crawl", "hyde")
+                    self._clear_cache_namespace(
+                        self.get_cache_for_type(ct), self._alias_configs[ct]
+                    )
+                    for ct in self._alias_order
                 ]
                 await asyncio.gather(*tasks, return_exceptions=True)
             return True
-        except Exception as e:
-            logger.error("Cache clear error: %s", e)
+        except Exception as exc:
+            logger.error("Cache clear error: %s", exc)
             return False
 
-    async def _clear_cache_namespace(self, cache: Cache) -> None:
+    async def _clear_cache_namespace(
+        self, cache: BaseCache, alias: CacheAliasConfig
+    ) -> None:
         """Clear all keys in a cache namespace."""
+
         try:
-            # For aiocache, we can try to clear using the backend directly
             if hasattr(cache, "clear"):
-                await cache.clear()  # type: ignore
+                await cache.clear(namespace=alias.namespace)
+                return
+
+            backend = cast(Any, getattr(cache, "_backend", None))
+            if backend is not None and hasattr(backend, "clear"):
+                await backend.clear(namespace=alias.namespace)  # type: ignore
             else:
-                backend = cast(Any, getattr(cache, "_backend", None))
-                namespace = getattr(cache, "namespace", None)
-                if backend is not None and hasattr(backend, "clear"):
-                    await backend.clear(namespace=namespace)  # type: ignore
-                else:
-                    # Fallback: no-op for now - V2 will have proper implementation
-                    logger.warning(
-                        "Cannot clear cache %s - no clear method available",
-                        namespace or cache,
-                    )
-        except Exception as e:
+                logger.warning(
+                    "Cannot clear cache alias=%s namespace=%s - no clear method",
+                    alias.alias,
+                    alias.namespace,
+                )
+        except Exception as exc:
             logger.warning(
-                "Failed to clear cache namespace %s: %s",
-                getattr(cache, "namespace", cache),
-                e,
+                "Failed to clear cache namespace alias=%s: %s",
+                alias.alias,
+                exc,
             )
 
     async def invalidate_pattern(
@@ -344,16 +542,31 @@ class ModernCacheManager:
         Returns:
             Number of keys invalidated
         """
+        alias = self._resolve_alias(cache_type)
+        full_pattern = (
+            pattern
+            if pattern.startswith(alias.namespace)
+            else f"{alias.namespace}{pattern}"
+        )
         try:
             cache = self.get_cache_for_type(cache_type)
-            # This would require extending aiocache or using Redis directly
-            # For now, we'll implement a basic version
+            if hasattr(cache, "delete_matched"):
+                result = await cache.delete_matched(full_pattern)  # type: ignore
+                return int(result or 0)
             if hasattr(cache, "delete_pattern"):
-                return await cache.delete_pattern(pattern)  # type: ignore
-            logger.warning("Pattern invalidation not supported for %s", cache_type)
+                result = await cache.delete_pattern(full_pattern)  # type: ignore
+                return int(result or 0)
+            logger.warning(
+                "Pattern invalidation not supported for alias=%s", alias.alias
+            )
             return 0
-        except Exception as e:
-            logger.error("Cache pattern invalidation error for %s: %s", pattern, e)
+        except Exception as exc:
+            logger.error(
+                "Cache pattern invalidation error for alias=%s pattern=%s: %s",
+                alias.alias,
+                pattern,
+                exc,
+            )
             return 0
 
     async def get_stats(self) -> dict[str, Any]:
@@ -363,41 +576,75 @@ class ModernCacheManager:
             Dictionary with cache statistics
         """
         try:
-            stats = {
+            stats: dict[str, Any] = {
                 "manager": {
                     "redis_url": self.redis_url,
                     "key_prefix": self.key_prefix,
                     "compression_enabled": self.enable_compression,
+                    "aliases": {
+                        ct.value: cfg.alias for ct, cfg in self._alias_configs.items()
+                    },
                 },
                 "ttl_settings": self.default_ttls,
                 "cache_types": {
-                    "embeddings": {"namespace": f"{self.key_prefix}embeddings:"},
-                    "search": {"namespace": f"{self.key_prefix}search:"},
-                    "crawl": {"namespace": f"{self.key_prefix}crawl:"},
-                    "hyde": {"namespace": f"{self.key_prefix}hyde:"},
+                    cfg.cache_type.value: {"namespace": cfg.namespace}
+                    for cfg in self._alias_configs.values()
                 },
             }
 
-            # Try to get cache-specific stats if available
-            for cache_alias in ["embeddings", "search", "crawl", "hyde"]:
+            for cache_type, alias in self._alias_configs.items():
                 try:
-                    cache = caches.get(cache_alias)
-                    if hasattr(cache, "get_stats"):
-                        stats["cache_types"][cache_alias][
-                            "stats"
-                        ] = await cache.get_stats()  # type: ignore
-                except (ConnectionError, OSError, PermissionError):
-                    pass  # Stats not available for this cache type
+                    cache_obj = caches.get(alias.alias)
+                    if cache_obj is None:
+                        continue
+                    cache = cast(BaseCache, cache_obj)
+                    cache_any = cast(Any, cache)
+                    stats_value = None
+                    if hasattr(cache_any, "get_stats"):
+                        stats_result = cache_any.get_stats()
+                        if inspect.isawaitable(stats_result):
+                            stats_value = await stats_result
+                        else:
+                            stats_value = stats_result
+                    if stats_value is not None:
+                        stats["cache_types"][cache_type.value]["stats"] = stats_value
+                except (ConnectionError, OSError, PermissionError) as exc:
+                    logger.debug(
+                        "Cache stats unavailable for alias=%s: %s",
+                        alias.alias,
+                        exc,
+                    )
 
             return stats
-        except Exception as e:
-            logger.error("Error getting cache stats: %s", e)
-            return {"error": str(e)}
+        except Exception as exc:
+            logger.error("Error getting cache stats: %s", exc)
+            return {"error": str(exc)}
 
     async def close(self) -> None:
         """Clean up cache resources."""
-        # Global caches handle their own cleanup
-        logger.info("ModernCacheManager closed (global caches handle cleanup)")
+        if self._closed:
+            return
+
+        for cache_type in self._alias_order:
+            alias = self._alias_configs[cache_type]
+            cache_obj = caches.get(alias.alias)
+            if cache_obj is None:
+                continue
+            cache = cast(BaseCache, cache_obj)
+            try:
+                if hasattr(cache, "close"):
+                    await cache.close()
+                elif hasattr(cache, "disconnect"):
+                    await cache.disconnect()  # type: ignore[call-arg]
+            except Exception as exc:
+                logger.debug(
+                    "Error closing cache alias=%s: %s",
+                    alias.alias,
+                    exc,
+                )
+
+        self._closed = True
+        logger.info("ModernCacheManager closed (aliases suffix=%s)", self._alias_suffix)
 
     # Key builder functions for different cache types
     def _embedding_key_builder(
@@ -409,7 +656,8 @@ class ModernCacheManager:
         """Build cache key for embedding functions."""
         text = args[0] if args else kwargs.get("text", "")
         model = kwargs.get("model", "default")
-        text_hash = hashlib.sha256(text.encode()).hexdigest()[:12]
+        payload = {"text": text, "model": model}
+        text_hash = _hash_text(_canonical_json(payload))
         return f"embed:{model}:{text_hash}"
 
     def _search_key_builder(
@@ -421,7 +669,8 @@ class ModernCacheManager:
         """Build cache key for search functions."""
         query = args[0] if args else kwargs.get("query", "")
         filters = kwargs.get("filters", {})
-        query_hash = hashlib.sha256(f"{query}:{filters}".encode()).hexdigest()[:12]
+        payload = {"query": query, "filters": filters}
+        query_hash = _hash_text(_canonical_json(payload))
         return f"search:{query_hash}"
 
     def _crawl_key_builder(
@@ -432,7 +681,7 @@ class ModernCacheManager:
     ) -> str:
         """Build cache key for crawl functions."""
         url = args[0] if args else kwargs.get("url", "")
-        url_hash = hashlib.sha256(url.encode()).hexdigest()[:12]
+        url_hash = _hash_text(url)
         return f"crawl:{url_hash}"
 
     def _hyde_key_builder(
@@ -443,16 +692,20 @@ class ModernCacheManager:
     ) -> str:
         """Build cache key for HyDE functions."""
         query = args[0] if args else kwargs.get("query", "")
-        query_hash = hashlib.sha256(query.encode()).hexdigest()[:12]
+        query_hash = _hash_text(query)
         return f"hyde:{query_hash}"
 
 
 # Convenience function for creating cache manager
-def create_modern_cache_manager(
+def create_modern_cache_manager(  # pylint: disable=too-many-arguments
     redis_url: str = "redis://localhost:6379",
     key_prefix: str = "aidocs:",
     enable_compression: bool = True,
     config: Config | None = None,
+    *,
+    serializer_map: Mapping[str | CacheType, BaseSerializer] | None = None,
+    use_pickle_for_embeddings: bool = False,
+    command_timeout: float = 1.0,
 ) -> ModernCacheManager:
     """Create a modern cache manager instance.
 
@@ -461,8 +714,19 @@ def create_modern_cache_manager(
         key_prefix: Prefix for all cache keys
         enable_compression: Enable compression for cached values
         config: Application configuration
+        serializer_map: Optional serializer overrides per cache type
+        use_pickle_for_embeddings: Use Pickle serializer for embeddings cache
+        command_timeout: Timeout for cache commands in seconds
 
     Returns:
         ModernCacheManager instance
     """
-    return ModernCacheManager(redis_url, key_prefix, enable_compression, config)
+    return ModernCacheManager(
+        redis_url=redis_url,
+        key_prefix=key_prefix,
+        enable_compression=enable_compression,
+        config=config,
+        serializer_map=serializer_map,
+        use_pickle_for_embeddings=use_pickle_for_embeddings,
+        command_timeout=command_timeout,
+    )
