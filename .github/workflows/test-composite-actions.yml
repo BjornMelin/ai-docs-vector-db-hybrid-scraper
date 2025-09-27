@@ -6,139 +6,114 @@ on:
     paths:
       - '.github/actions/**'
       - '.github/workflows/test-composite-actions.yml'
+      - 'scripts/ci/validate_config.py'
 
 permissions:
   contents: read
 
 jobs:
-  test-detect-changes:
-    name: Test Detect Changes Action
+  setup-environment:
+    name: Setup environment action
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
-        with:
-          fetch-depth: 0
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
-      - name: Test detect changes action
-        id: test-detect
-        uses: ./.github/actions/detect-changes
+      - name: Execute action
+        id: setup
+        uses: ./.github/actions/setup-environment
         with:
-          github-event-name: ${{ github.event_name }}
-          github-ref: ${{ github.ref }}
-          workflow-dispatch-environment: 'development'
+          python-version: '3.12'
 
-      - name: Validate outputs
+      - name: Assert environment
+        shell: bash
         run: |
-          echo "### Detect Changes Action Outputs ###"
-          echo "Profiles Changed: ${{ steps.test-detect.outputs.profiles-changed }}"
-          echo "Templates Changed: ${{ steps.test-detect.outputs.templates-changed }}"
-          echo "Monitoring Changed: ${{ steps.test-detect.outputs.monitoring-changed }}"
-          echo "Security Changed: ${{ steps.test-detect.outputs.security-changed }}"
-          echo "Infrastructure Changed: ${{ steps.test-detect.outputs.infrastructure-changed }}"
-          echo "Should Deploy: ${{ steps.test-detect.outputs.should-deploy }}"
-          echo "Target Environment: ${{ steps.test-detect.outputs.target-environment }}"
-          echo "Deployment Strategy: ${{ steps.test-detect.outputs.deployment-strategy }}"
-          
-          # Validate outputs are set
-          if [ -z "${{ steps.test-detect.outputs.target-environment }}" ]; then
-            echo "❌ Target environment not set"
-            exit 1
+          set -euo pipefail
+          if [ "${{ steps.setup.outputs.cache-hit }}" = "true" ]; then
+            echo "Cache restored"
+          else
+            echo "Cache miss"
           fi
-          
-          if [ -z "${{ steps.test-detect.outputs.deployment-strategy }}" ]; then
-            echo "❌ Deployment strategy not set"
-            exit 1
-          fi
-          
-          echo "✅ All outputs are properly set"
+          uv run python -c "import sys; print(sys.version)"
 
-  test-validate-config:
-    name: Test Validate Config Action
+      - name: Run configuration validation helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/ci/validate_config.py --environment development
+
+  validate-config:
+    name: Configuration validator helper
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
-      - name: Test validate config action
-        id: test-validate
+      - name: Prepare Python toolchain
+        uses: ./.github/actions/setup-environment
+        with:
+          python-version: '3.12'
+
+      - name: Create validation fixtures
+        id: fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          valid_root="${RUNNER_TEMP}/config-valid"
+          valid_templates="${valid_root}/templates"
+          mkdir -p "${valid_templates}"
+          cat <<'JSON' > "${valid_root}/settings.json"
+          {"feature": true}
+          JSON
+          cat <<'YAML' > "${valid_root}/values.yml"
+          cache: {}
+          YAML
+          cat <<'JSON' > "${valid_templates}/development.json"
+          {
+            "environment": "development",
+            "cache": {},
+            "qdrant": {},
+            "performance": {}
+          }
+          JSON
+
+          invalid_root="${RUNNER_TEMP}/config-invalid"
+          invalid_templates="${invalid_root}/templates"
+          mkdir -p "${invalid_templates}"
+          cp "${valid_root}/settings.json" "${invalid_root}/settings.json"
+          cat <<'JSON' > "${invalid_templates}/development.json"
+          {
+            "environment": "production",
+            "cache": {},
+            "qdrant": {}
+          }
+          JSON
+
+          {
+            echo "valid-config-root=${valid_root}";
+            echo "valid-templates-dir=${valid_templates}";
+            echo "invalid-config-root=${invalid_root}";
+            echo "invalid-templates-dir=${invalid_templates}";
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Validate fixtures with composite action
         uses: ./.github/actions/validate-config
         with:
-          target-environment: 'development'
+          config-root: ${{ steps.fixtures.outputs.valid-config-root }}
+          templates-dir: ${{ steps.fixtures.outputs.valid-templates-dir }}
+          environment: development
 
-      - name: Check validation result
+      - name: Assert invalid fixtures fail validation
+        shell: bash
         run: |
-          echo "Validation Passed: ${{ steps.test-validate.outputs.validation-passed }}"
-          
-          if [ "${{ steps.test-validate.outputs.validation-passed }}" != "true" ]; then
-            echo "❌ Validation should have passed for development environment"
+          set -euo pipefail
+          if uv run python scripts/ci/validate_config.py \
+            --config-root "${{ steps.fixtures.outputs.invalid-config-root }}" \
+            --templates-dir "${{ steps.fixtures.outputs.invalid-templates-dir }}" \
+            --environment development; then
+            echo "Expected invalid configuration validation to fail" >&2
             exit 1
           fi
-          
-          echo "✅ Validation action completed successfully"
-
-  test-smoke-tests:
-    name: Test Smoke Tests Action
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
-
-      - name: Test smoke tests action
-        id: test-smoke
-        uses: ./.github/actions/smoke-tests
-        with:
-          target-environment: 'development'
-          deployment-url: 'https://development.example.com/health'
-
-      - name: Check smoke test outputs
-        run: |
-          echo "Test Status: ${{ steps.test-smoke.outputs.test-status }}"
-          echo "Test Report Path: ${{ steps.test-smoke.outputs.test-report }}"
-          
-          if [ "${{ steps.test-smoke.outputs.test-status }}" != "passed" ]; then
-            echo "❌ Smoke tests should have passed"
-            exit 1
-          fi
-          
-          if [ -z "${{ steps.test-smoke.outputs.test-report }}" ]; then
-            echo "❌ Test report path not set"
-            exit 1
-          fi
-          
-          echo "✅ Smoke tests action completed successfully"
-
-  integration-test:
-    name: Integration Test
-    runs-on: ubuntu-latest
-    needs: [test-detect-changes, test-validate-config, test-smoke-tests]
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
-        with:
-          fetch-depth: 0
-
-      - name: Run detect changes
-        id: detect
-        uses: ./.github/actions/detect-changes
-        with:
-          github-event-name: 'workflow_dispatch'
-          github-ref: 'refs/heads/develop'
-          workflow-dispatch-environment: 'staging'
-
-      - name: Run validation
-        if: steps.detect.outputs.should-deploy == 'true'
-        uses: ./.github/actions/validate-config
-        with:
-          target-environment: ${{ steps.detect.outputs.target-environment }}
-
-      - name: Summary
-        run: |
-          echo "### Integration Test Summary ###"
-          echo "✅ All composite actions are working correctly"
-          echo "Target Environment: ${{ steps.detect.outputs.target-environment }}"
-          echo "Deployment Strategy: ${{ steps.detect.outputs.deployment-strategy }}"

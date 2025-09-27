@@ -1,188 +1,39 @@
-name: 'Validate Configuration'
-description: 'Validates all configuration files including JSON, YAML, Docker Compose, and security checks'
+name: 'Validate configuration assets'
+description: 'Runs the configuration validation helper with consistent ergonomics'
+
 inputs:
-  target-environment:
-    description: 'Target environment to validate'
-    required: true
-  python-version:
-    description: 'Python version to use'
+  config-root:
+    description: 'Directory containing configuration assets'
     required: false
-    default: '3.12'
-outputs:
-  validation-passed:
-    description: 'Whether all validation checks passed'
-    value: ${{ steps.final-status.outputs.passed }}
+    default: 'config'
+  templates-dir:
+    description: 'Directory containing environment templates'
+    required: false
+    default: 'config/templates'
+  environment:
+    description: 'Optional environment template to prioritise'
+    required: false
+    default: ''
 
 runs:
-  using: "composite"
+  using: 'composite'
   steps:
-    - name: Set up Python
-      uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6
-      with:
-        python-version: ${{ inputs.python-version }}
-
-    - name: Install uv
-      uses: astral-sh/setup-uv@b75a909f75acd358c2196fb9a5f1299a9a8868a4 # v6.7.0
-      with:
-        version: "0.8.19"
-        enable-cache: true
-        cache-dependency-glob: "**/uv.lock"
-
-    - name: Cache configuration validation
-      uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
-      with:
-        path: |
-          ~/.cache/uv
-          .venv
-          config/.validation_cache
-        key: config-validation-${{ runner.os }}-${{ hashFiles('config/**', 'src/config/**', 'pyproject.toml') }}
-        restore-keys: |
-          config-validation-${{ runner.os }}-
-
-    - name: Install dependencies
+    - name: Execute configuration validation
       shell: bash
+      env:
+        CONFIG_ROOT: ${{ inputs.config-root }}
+        TEMPLATES_DIR: ${{ inputs.templates-dir }}
+        REQUESTED_ENVIRONMENT: ${{ inputs.environment }}
       run: |
-        uv sync --dev --frozen
-
-    - name: Validate JSON configuration files
-      shell: bash
-      run: |
-        echo "🔍 Validating JSON configuration files..."
-        find config -name "*.json" -type f | while read -r file; do
-          echo "Validating: $file"
-          if ! uv run python -m json.tool "$file" > /dev/null; then
-            echo "❌ Invalid JSON: $file"
-            exit 1
-          else
-            echo "✅ Valid JSON: $file"
-          fi
-        done
-
-    - name: Validate YAML configuration files
-      shell: bash
-      run: |
-        echo "🔍 Validating YAML configuration files..."
-        uv run python -c "
-        import yaml
-        import sys
-        from pathlib import Path
-        
-        yaml_files = list(Path('config').rglob('*.yml')) + list(Path('config').rglob('*.yaml'))
-        errors = []
-        
-        for file in yaml_files:
-          try:
-            with open(file, 'r') as f:
-              yaml.safe_load(f)
-            print(f'✅ Valid YAML: {file}')
-          except yaml.YAMLError as e:
-            error_msg = f'❌ Invalid YAML: {file} - {e}'
-            print(error_msg)
-            errors.append(error_msg)
-        
-        if errors:
-          print(f'\\n❌ {len(errors)} YAML validation errors found')
-          sys.exit(1)
-        else:
-          print(f'\\n✅ All {len(yaml_files)} YAML files are valid')
-        "
-
-    - name: Validate configuration schema
-      shell: bash
-      run: |
-        echo "🔍 Validating configuration schema..."
-        if [ -f "src/config/validators.py" ]; then
-          uv run python -c "
-          import sys
-          sys.path.append('src')
-          from config.validators import validate_all_configs
-          try:
-            validate_all_configs('config/')
-            print('✅ All configuration schemas are valid')
-          except Exception as e:
-            print(f'❌ Configuration validation failed: {e}')
-            sys.exit(1)
-          "
-        else
-          echo "⚠️ No schema validator found, skipping schema validation"
+        set -euo pipefail
+        if ! command -v uv >/dev/null 2>&1; then
+          echo '::error::uv is required to run configuration validation but was not found on PATH.' >&2
+          exit 1
         fi
 
-    - name: Test configuration templates
-      shell: bash
-      run: |
-        echo "🔍 Testing configuration template rendering..."
-        TARGET_ENV="${{ inputs.target-environment }}"
-        
-        # Test template rendering for target environment
-        if [ -f "config/templates/${TARGET_ENV}.json" ]; then
-          echo "Testing template: config/templates/${TARGET_ENV}.json"
-          uv run python -c "
-          import json
-          import sys
-          
-          try:
-            with open('config/templates/${TARGET_ENV}.json', 'r') as f:
-              config = json.load(f)
-            
-            # Basic template validation
-            required_sections = ['environment', 'cache', 'qdrant', 'performance']
-            missing = [s for s in required_sections if s not in config]
-            
-            if missing:
-              print(f'❌ Missing required sections: {missing}')
-              sys.exit(1)
-            
-            print('✅ Configuration template is valid')
-          except Exception as e:
-            print(f'❌ Template validation failed: {e}')
-            sys.exit(1)
-          "
-        else
-          echo "⚠️ No template found for environment: ${TARGET_ENV}"
+        args=("--config-root" "${CONFIG_ROOT}" "--templates-dir" "${TEMPLATES_DIR}")
+        if [ -n "${REQUESTED_ENVIRONMENT}" ]; then
+          args+=("--environment" "${REQUESTED_ENVIRONMENT}")
         fi
 
-    - name: Validate Docker Compose configuration
-      shell: bash
-      run: |
-        echo "🔍 Validating Docker Compose configuration..."
-        
-        # Validate main docker-compose.yml
-        if [ -f "docker-compose.yml" ]; then
-          docker compose -f docker-compose.yml config --quiet
-          echo "✅ docker-compose.yml is valid"
-        fi
-        
-        # Validate environment-specific overrides
-        TARGET_ENV="${{ inputs.target-environment }}"
-        OVERRIDE_FILE="docker-compose.${TARGET_ENV}.yml"
-        
-        if [ -f "$OVERRIDE_FILE" ]; then
-          docker compose -f docker-compose.yml -f "$OVERRIDE_FILE" config --quiet
-          echo "✅ $OVERRIDE_FILE is valid"
-        else
-          echo "ℹ️ No override file found: $OVERRIDE_FILE"
-        fi
-
-    - name: Security configuration scan
-      shell: bash
-      run: |
-        echo "🔒 Scanning configuration for security issues..."
-        
-        # Check for exposed secrets or keys
-        if grep -r -i "password\|secret\|key" config/ --include="*.json" --include="*.yml" | grep -v "_template_placeholder_" | grep -v "example"; then
-          echo "⚠️ Potential secrets found in configuration files"
-          echo "Please ensure all secrets are properly externalized"
-        else
-          echo "✅ No hardcoded secrets detected"
-        fi
-        
-        # Check for insecure defaults
-        if grep -r "debug.*true\|DEBUG.*true" config/ --include="*.json"; then
-          echo "⚠️ Debug mode enabled in configuration"
-        fi
-
-    - name: Set final validation status
-      id: final-status
-      shell: bash
-      run: |
-        echo "passed=true" >> $GITHUB_OUTPUT
+        uv run python scripts/ci/validate_config.py "${args[@]}"

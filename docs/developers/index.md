@@ -27,6 +27,8 @@ sections below link to the key guides and reference material that engineers rely
 - **[Configuration](./configuration.md)** – Environment variables, service defaults, and tuning knobs
 - **[Deployment Strategies](./deployment-strategies.md)** – Blue/green, canary, and feature flag rollout
   practices
+- **[CI/CD Workflows](./ci-cd.md)** – Automation inventory, triggers, and required validation gates
+- **[GitHub Composite Actions](./github-actions.md)** – Reusable workflow building blocks for local automation
 
 ## What You'll Find Here
 
@@ -35,7 +37,7 @@ sections below link to the key guides and reference material that engineers rely
 - Supported runtimes (Python 3.11–3.12) and prerequisite tooling
 - Local development via Docker and helper scripts
 - Test suite layout and quality gates
-- CI/CD workflow across Linux, Windows, and macOS
+- CI/CD workflow across Linux, Windows, and macOS (see [CI/CD Workflows](./ci-cd.md))
 
 ### API Integration
 
