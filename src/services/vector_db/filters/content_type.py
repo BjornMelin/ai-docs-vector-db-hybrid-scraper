@@ -295,9 +295,9 @@ class ContentTypeFilter(BaseFilter):
 
     def _build_all_filter_conditions(
         self, criteria: ContentTypeCriteria, context: dict[str, Any] | None = None
-    ) -> tuple[list[models.FieldCondition], dict[str, Any]]:
+    ) -> tuple[list[models.Condition], dict[str, Any]]:
         """Build all filter conditions and metadata."""
-        conditions = []
+        conditions: list[models.Condition] = []
         metadata = {"applied_filters": [], "classification_info": {}}
 
         # Process document type filters
@@ -352,7 +352,7 @@ class ContentTypeFilter(BaseFilter):
 
     def _create_filter_result(
         self,
-        conditions: list[models.FieldCondition],
+        conditions: list[models.Condition],
         metadata: dict[str, Any],
         criteria: ContentTypeCriteria,
     ) -> FilterResult:
@@ -385,9 +385,9 @@ class ContentTypeFilter(BaseFilter):
 
     def _build_document_type_filters(
         self, criteria: ContentTypeCriteria
-    ) -> list[models.FieldCondition]:
+    ) -> list[models.Condition]:
         """Build filters for document types."""
-        conditions = []
+        conditions: list[models.Condition] = []
 
         # Include specific document types
         if criteria.document_types:
@@ -413,9 +413,9 @@ class ContentTypeFilter(BaseFilter):
 
     def _build_category_filters(
         self, criteria: ContentTypeCriteria
-    ) -> list[models.FieldCondition]:
+    ) -> list[models.Condition]:
         """Build filters for content categories."""
-        conditions = []
+        conditions: list[models.Condition] = []
 
         # Include specific categories
         if criteria.categories:
@@ -441,9 +441,9 @@ class ContentTypeFilter(BaseFilter):
 
     def _build_intent_filters(
         self, criteria: ContentTypeCriteria
-    ) -> list[models.FieldCondition]:
+    ) -> list[models.Condition]:
         """Build filters for content intents."""
-        conditions = []
+        conditions: list[models.Condition] = []
 
         # Include specific intents
         if criteria.intents:
@@ -469,9 +469,9 @@ class ContentTypeFilter(BaseFilter):
 
     def _build_language_filters(
         self, criteria: ContentTypeCriteria
-    ) -> list[models.FieldCondition]:
+    ) -> list[models.Condition]:
         """Build filters for programming languages and frameworks."""
-        conditions = []
+        conditions: list[models.Condition] = []
 
         # Programming language filters
         if criteria.programming_languages:
@@ -495,9 +495,9 @@ class ContentTypeFilter(BaseFilter):
 
     def _build_quality_filters(
         self, criteria: ContentTypeCriteria
-    ) -> list[models.FieldCondition]:
+    ) -> list[models.Condition]:
         """Build filters for content quality."""
-        conditions = []
+        conditions: list[models.Condition] = []
 
         # Minimum quality score
         if criteria.min_quality_score is not None:
@@ -521,9 +521,9 @@ class ContentTypeFilter(BaseFilter):
 
     def _build_characteristic_filters(
         self, criteria: ContentTypeCriteria
-    ) -> list[models.FieldCondition]:
+    ) -> list[models.Condition]:
         """Build filters for content characteristics."""
-        conditions = []
+        conditions: list[models.Condition] = []
 
         # Word count filters
         if criteria.min_word_count is not None:
@@ -580,9 +580,9 @@ class ContentTypeFilter(BaseFilter):
 
     def _build_site_filters(
         self, criteria: ContentTypeCriteria
-    ) -> list[models.FieldCondition]:
+    ) -> list[models.Condition]:
         """Build filters for sites and sources."""
-        conditions = []
+        conditions: list[models.Condition] = []
 
         # Include specific sites
         if criteria.site_names:
@@ -615,9 +615,9 @@ class ContentTypeFilter(BaseFilter):
 
     def _build_semantic_filters(
         self, criteria: ContentTypeCriteria, _context: dict[str, Any] | None = None
-    ) -> list[models.FieldCondition]:
+    ) -> list[models.Condition]:
         """Build semantic similarity filters."""
-        conditions = []
+        conditions: list[models.Condition] = []
 
         # Note: Semantic filtering typically requires vector similarity search
         # rather than payload filtering. This would be handled at a higher level
@@ -635,7 +635,7 @@ class ContentTypeFilter(BaseFilter):
 
             # Use OR logic for keywords (should match at least one)
             if keyword_conditions:
-                conditions.append(models.Filter(should=keyword_conditions))
+                conditions.append(models.Filter(should=keyword_conditions))  # pyright: ignore[reportArgumentType]
 
         return conditions
 
@@ -653,11 +653,24 @@ class ContentTypeFilter(BaseFilter):
         """Validate content type filter criteria."""
         try:
             ContentTypeCriteria.model_validate(filter_criteria)
-        except ValidationError as e:
-            self._logger.warning("Invalid content type criteria: %s", e)
+        except ValidationError as exc:
+            self._logger.warning("Invalid content type criteria: %s", exc)
             return False
-        else:
-            return True
+        return True
+
+    @staticmethod
+    def _has_code_snippets(content: str) -> bool:
+        """Detect whether content includes code-like patterns."""
+        code_patterns = (
+            (r"```|<code>|<pre>", 0),
+            (r"\bdef\s+\w+\s*\(|function\s+\w+\s*\(|class\s+\w+\s*[:\{]", 0),
+            (r"import\s+\w+|from\s+\w+\s+import|#include\s*<", 0),
+            (r"return\s+[^;]*;?\s*$|if\s*\([^)]*\)\s*[:\{]", re.MULTILINE),
+        )
+
+        return any(
+            re.search(pattern, content, flags) for pattern, flags in code_patterns
+        )
 
     def get_supported_operators(self) -> list[str]:
         """Get supported content type operators."""
@@ -720,21 +733,7 @@ class ContentTypeFilter(BaseFilter):
         features.update(
             {
                 "word_count": len(content.split()),
-                "has_code": bool(
-                    re.search(r"```|<code>|<pre>", content)
-                    or re.search(
-                        r"\bdef\s+\w+\s*\(|function\s+\w+\s*\(|class\s+\w+\s*[:\{]",
-                        content,
-                    )
-                    or re.search(
-                        r"import\s+\w+|from\s+\w+\s+import|#include\s*<", content
-                    )
-                    or re.search(
-                        r"return\s+[^;]*;?\s*$|if\s*\([^)]*\)\s*[:\{]",
-                        content,
-                        re.MULTILINE,
-                    )
-                ),
+                "has_code": self._has_code_snippets(content),
                 "has_links": bool(re.search(r"http[s]?://|www\.", content)),
                 "programming_languages": self._detect_languages(content_lower),
             }
@@ -764,29 +763,33 @@ class ContentTypeFilter(BaseFilter):
 
         content_lower = content.lower()
 
-        # Pattern-based classification
-        # Look for code patterns first (most specific)
-        if (
-            re.search(r"```|<code>|<pre>", content)
-            or re.search(
-                r"\bdef\s+\w+\s*\(|function\s+\w+\s*\(|class\s+\w+\s*[:\{]", content
-            )
-            or re.search(r"import\s+\w+|from\s+\w+\s+import|#include\s*<", content)
-            or re.search(
-                r"return\s+[^;]*;?\s*$|if\s*\([^)]*\)\s*[:\{]", content, re.MULTILINE
-            )
-        ):
-            return DocumentType.CODE
-        if re.search(r"#+\s+|^\*\s+|\[.*\]\(.*\)", content, re.MULTILINE):
-            return DocumentType.MARKDOWN
-        if re.search(r"<html>|<body>|<div>", content):
-            return DocumentType.HTML
-        if re.search(r"# getting started|# installation|# tutorial", content_lower):
-            return DocumentType.TUTORIAL
-        if re.search(r"# api|# reference|# documentation", content_lower):
-            return DocumentType.REFERENCE
-        if re.search(r"readme|read me", content_lower):
-            return DocumentType.README
+        detection_checks = (
+            (self._has_code_snippets(content), DocumentType.CODE),
+            (
+                re.search(r"#+\s+|^\*\s+|\[.*\]\(.*\)", content, re.MULTILINE)
+                is not None,
+                DocumentType.MARKDOWN,
+            ),
+            (re.search(r"<html>|<body>|<div>", content) is not None, DocumentType.HTML),
+            (
+                re.search(r"# getting started|# installation|# tutorial", content_lower)
+                is not None,
+                DocumentType.TUTORIAL,
+            ),
+            (
+                re.search(r"# api|# reference|# documentation", content_lower)
+                is not None,
+                DocumentType.REFERENCE,
+            ),
+            (
+                re.search(r"readme|read me", content_lower) is not None,
+                DocumentType.README,
+            ),
+        )
+
+        for matches, doc_type in detection_checks:
+            if matches:
+                return doc_type
 
         return DocumentType.UNKNOWN
 

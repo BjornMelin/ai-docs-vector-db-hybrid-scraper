@@ -7,6 +7,9 @@ import pytest
 from src.services.observability.ai_tracking import (
     AIOperationMetrics,
     AIOperationTracker,
+    OperationContext,
+    OperationOutcome,
+    OperationUsage,
     get_ai_tracker,
     track_embedding_generation,
     track_llm_call,
@@ -25,18 +28,17 @@ class TestAIOperationMetrics:
             provider="openai",
             model="text-embedding-ada-002",
             duration_ms=150.5,
-            tokens_used=100,
-            cost_usd=0.002,
-            success=True,
+            usage=OperationUsage(tokens_used=100, cost_usd=0.002),
+            outcome=OperationOutcome(success=True),
         )
 
         assert metrics.operation_type == "embedding_generation"
         assert metrics.provider == "openai"
         assert metrics.model == "text-embedding-ada-002"
         assert metrics.duration_ms == 150.5
-        assert metrics.tokens_used == 100
-        assert metrics.cost_usd == 0.002
-        assert metrics.success is True
+        assert metrics.usage.tokens_used == 100
+        assert metrics.usage.cost_usd == 0.002
+        assert metrics.outcome.success is True
 
     def test_ai_operation_metrics_defaults(self):
         """Test default values in AI operation metrics."""
@@ -47,13 +49,13 @@ class TestAIOperationMetrics:
             duration_ms=500.0,
         )
 
-        assert metrics.tokens_used is None
-        assert metrics.cost_usd is None
-        assert metrics.success is True
-        assert metrics.error_message is None
-        assert metrics.input_size is None
-        assert metrics.output_size is None
-        assert metrics.quality_score is None
+        assert metrics.usage.tokens_used is None
+        assert metrics.usage.cost_usd is None
+        assert metrics.outcome.success is True
+        assert metrics.outcome.error_message is None
+        assert metrics.usage.input_size is None
+        assert metrics.usage.output_size is None
+        assert metrics.outcome.quality_score is None
 
 
 class TestAIOperationTracker:
@@ -64,11 +66,11 @@ class TestAIOperationTracker:
         tracker = AIOperationTracker()
 
         assert tracker.meter is not None
-        assert tracker.ai_cost_counter is not None
-        assert tracker.token_counter is not None
-        assert tracker.operation_duration is not None
-        assert tracker.quality_gauge is not None
-        assert tracker.cache_hit_rate is not None
+        assert tracker._instruments.cost_counter is not None
+        assert tracker._instruments.token_counter is not None
+        assert tracker._instruments.duration_histogram is not None
+        assert tracker._instruments.quality_gauge is not None
+        assert tracker._instruments.cache_hit_gauge is not None
 
     def test_record_operation(self):
         """Test recording AI operation metrics."""
@@ -79,9 +81,8 @@ class TestAIOperationTracker:
             provider="openai",
             model="text-embedding-ada-002",
             duration_ms=120.0,
-            tokens_used=50,
-            cost_usd=0.001,
-            success=True,
+            usage=OperationUsage(tokens_used=50, cost_usd=0.001),
+            outcome=OperationOutcome(success=True),
         )
 
         # Should not raise any exceptions
@@ -96,7 +97,7 @@ class TestAIOperationTracker:
             provider="qdrant",
             model="test_collection",
             duration_ms=50.0,
-            success=True,
+            outcome=OperationOutcome(success=True),
         )
 
         # Should not raise any exceptions
@@ -400,9 +401,11 @@ class TestModelPerformanceTracking:
         tracker = AIOperationTracker()
 
         tracker.record_model_performance(
-            provider="openai",
-            model="gpt-4",
-            operation_type="completion",
+            OperationContext(
+                operation_type="completion",
+                provider="openai",
+                model="gpt-4",
+            ),
             success_rate=0.98,
             avg_latency_ms=1200.0,
             cost_per_operation=0.03,
@@ -413,9 +416,11 @@ class TestModelPerformanceTracking:
         tracker = AIOperationTracker()
 
         tracker.record_model_performance(
-            provider="fastembed",
-            model="BAAI/bge-small-en",
-            operation_type="embedding",
+            OperationContext(
+                operation_type="embedding",
+                provider="fastembed",
+                model="BAAI/bge-small-en",
+            ),
             success_rate=0.99,
             avg_latency_ms=45.0,
         )
@@ -515,9 +520,8 @@ class TestAITrackingIntegration:
             provider="test_provider",
             model="test_model",
             duration_ms=100.0,
-            tokens_used=50,
-            cost_usd=0.01,
-            quality_score=0.9,
+            usage=OperationUsage(tokens_used=50, cost_usd=0.01),
+            outcome=OperationOutcome(quality_score=0.9),
         )
 
         tracker.record_operation(metrics)

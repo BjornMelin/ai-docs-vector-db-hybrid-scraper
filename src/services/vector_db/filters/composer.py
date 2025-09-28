@@ -8,6 +8,7 @@ and result merging for complex filtering scenarios.
 import asyncio
 import logging
 import time
+from dataclasses import dataclass, fields, replace
 from enum import Enum
 from typing import Any
 
@@ -130,36 +131,47 @@ class CompositionResult(BaseModel):
     )
 
 
+@dataclass(slots=True)
+class FilterComposerConfig:
+    """Configuration options for the filter composer."""
+
+    name: str = "filter_composer"
+    description: str = "Compose multiple filters using boolean logic and optimization"
+    enabled: bool = True
+    priority: int = 50
+    max_cache_size: int = 1000
+
+
 class FilterComposer(BaseFilter):
     """Advanced filter composer for combining multiple filters with boolean logic."""
 
     def __init__(
         self,
-        name: str = "filter_composer",
-        description: str = (
-            "Compose multiple filters using boolean logic and optimization"
-        ),
-        enabled: bool = True,
-        priority: int = 50,
-        max_cache_size: int = 1000,
+        *,
+        config: FilterComposerConfig | None = None,
+        **overrides: Any,
     ):
         """Initialize filter composer.
 
         Args:
-            name: Filter name
-            description: Filter description
-            enabled: Whether filter is enabled
-            priority: Filter priority (higher = earlier execution)
-            max_cache_size: Maximum number of items in execution cache
+            config: Optional configuration object.
+            **overrides: Keyword overrides applied to the configuration.
 
         """
-        super().__init__(name, description, enabled, priority)
+        resolved_config = self._resolve_config(config, overrides)
+        super().__init__(
+            resolved_config.name,
+            resolved_config.description,
+            resolved_config.enabled,
+            resolved_config.priority,
+        )
 
         # Execution tracking with LRU cache to prevent memory leaks
-        self.execution_cache = LRUCache(maxsize=max_cache_size)
-        self.performance_stats = {}
+        self.execution_cache = LRUCache(maxsize=resolved_config.max_cache_size)
+        self.performance_stats: dict[str, Any] = {}
         self.optimization_enabled = True
-        self.max_cache_size = max_cache_size
+        self.max_cache_size = resolved_config.max_cache_size
+        self._config = resolved_config
 
         # Filter execution strategies
         self.execution_strategies = {
@@ -185,13 +197,17 @@ class FilterComposer(BaseFilter):
 
         """
         try:
-            # Validate and parse criteria
             criteria = FilterCompositionCriteria.model_validate(filter_criteria)
+        except ValidationError as exc:
+            self._raise_filter_error(
+                f"Failed to validate filter composition criteria: {exc}",
+                filter_criteria,
+                exc,
+            )
 
-            # Execute composition
+        try:
             composition_result = await self._execute_composition(criteria, context)
 
-            # Build final filter result
             metadata = {
                 "composition_info": {
                     "operator": criteria.composition_rule.operator.value,
@@ -206,33 +222,27 @@ class FilterComposer(BaseFilter):
                 },
             }
 
-            # Calculate performance impact
             performance_impact = self._estimate_composition_performance(
                 composition_result
             )
 
-            self._logger.info(
-                f"Applied filter composition with "
-                f"{len(criteria.composition_rule.filters)} filters "
-                f"using {criteria.composition_rule.operator.value} operator"
-            )
-
-            return FilterResult(
-                filter_conditions=composition_result.final_filter,
+            return self._finalize_result(
+                final_filter=composition_result.final_filter,
                 metadata=metadata,
-                confidence_score=composition_result.composition_confidence,
+                confidence=composition_result.composition_confidence,
                 performance_impact=performance_impact,
+                log_message=(
+                    f"Applied filter composition with "
+                    f"{len(criteria.composition_rule.filters)} filters "
+                    f"using {criteria.composition_rule.operator.value} operator"
+                ),
             )
-
-        except Exception as e:
-            error_msg = "Failed to apply filter composition"
-            self._logger.exception(error_msg)
-            raise FilterError(
-                error_msg,
-                filter_name=self.name,
-                filter_criteria=filter_criteria,
-                underlying_error=e,
-            ) from e
+        except Exception as exc:  # noqa: BLE001 - propagate after wrapping
+            self._raise_filter_error(
+                "Failed to apply filter composition",
+                filter_criteria,
+                exc,
+            )
 
     async def _execute_composition(
         self, criteria: FilterCompositionCriteria, context: dict[str, Any] | None = None
@@ -359,9 +369,7 @@ class FilterComposer(BaseFilter):
                         if criteria.fail_fast:
                             raise
                 else:
-                    self._logger.warning(
-                        f"Filter {name} timed out"
-                    )  # TODO: Convert f-string to logging format
+                    self._logger.warning("Filter %s timed out", name)
 
         except TimeoutError as e:
             self._logger.exception("Filter composition timed out")
@@ -478,17 +486,16 @@ class FilterComposer(BaseFilter):
 
             return await filter_ref.filter_instance.apply(filter_ref.criteria, context)
 
-        except Exception as e:
-            self._logger.exception(
-                "Filter {filter_ref.filter_instance.name} execution failed"
-            )
-            msg = f"Filter {filter_ref.filter_instance.name} failed"
+        except Exception as exc:
+            filter_name = filter_ref.filter_instance.name
+            self._logger.exception("Filter %s execution failed", filter_name)
+            msg = f"Filter {filter_name} failed"
             raise FilterError(
                 msg,
-                filter_name=filter_ref.filter_instance.name,
+                filter_name=filter_name,
                 filter_criteria=filter_ref.criteria,
-                underlying_error=e,
-            ) from e
+                underlying_error=exc,
+            ) from exc
 
     def _compose_filters(
         self, rule: CompositionRule, filter_results: dict[str, FilterResult]
@@ -503,9 +510,9 @@ class FilterComposer(BaseFilter):
 
     def _collect_filter_conditions(
         self, rule: CompositionRule, filter_results: dict[str, FilterResult]
-    ) -> list[models.Filter]:
+    ) -> list[models.Condition]:
         """Collect valid filter conditions from rule and nested rules."""
-        conditions = []
+        conditions: list[models.Condition] = []
 
         # Collect valid filter conditions
         for filter_ref in rule.filters:
@@ -513,19 +520,37 @@ class FilterComposer(BaseFilter):
             if filter_name in filter_results:
                 result = filter_results[filter_name]
                 if result.filter_conditions:
-                    conditions.append(result.filter_conditions)
+                    if isinstance(result.filter_conditions, models.Filter):
+                        must_cond = result.filter_conditions.must
+                        if must_cond is not None:
+                            if isinstance(must_cond, list):
+                                for cond in must_cond:
+                                    conditions.append(cond)
+                            else:
+                                conditions.append(must_cond)
+                    else:
+                        conditions.append(result.filter_conditions)
 
         # Handle nested rules
         if rule.nested_rules:
             for nested_rule in rule.nested_rules:
                 nested_filter = self._compose_filters(nested_rule, filter_results)
                 if nested_filter:
-                    conditions.append(nested_filter)
+                    if isinstance(nested_filter, models.Filter):
+                        must_cond = nested_filter.must
+                        if must_cond is not None:
+                            if isinstance(must_cond, list):
+                                for cond in must_cond:
+                                    conditions.append(cond)
+                            else:
+                                conditions.append(must_cond)
+                    else:
+                        conditions.append(nested_filter)
 
         return conditions
 
     def _apply_composition_operator(
-        self, operator: CompositionOperator, conditions: list[models.Filter]
+        self, operator: CompositionOperator, conditions: list[models.Condition]
     ) -> models.Filter | None:
         """Apply boolean operator to conditions."""
         if not conditions:
@@ -537,7 +562,10 @@ class FilterComposer(BaseFilter):
             return models.Filter(must_not=conditions)
 
         if len(conditions) == 1 and operator != CompositionOperator.NOT:
-            return conditions[0]
+            # If single condition, wrap in Filter if necessary
+            if isinstance(conditions[0], models.Filter):
+                return conditions[0]
+            return models.Filter(must=conditions)
 
         if operator == CompositionOperator.AND:
             return self._create_and_filter(conditions)
@@ -546,13 +574,25 @@ class FilterComposer(BaseFilter):
 
         return None
 
-    def _create_and_filter(self, conditions: list[models.Filter]) -> models.Filter:
+    def _create_and_filter(self, conditions: list[models.Condition]) -> models.Filter:
         """Create AND filter from conditions."""
-        all_must_conditions = []
+        all_must_conditions: list[models.Condition] = []
         for condition in conditions:
             if isinstance(condition, models.Filter):
-                if condition.must:
-                    all_must_conditions.extend(condition.must)
+                must_cond = condition.must
+                if must_cond is not None:
+                    if isinstance(must_cond, list):
+                        for cond in must_cond:
+                            all_must_conditions.append(cond)
+                    else:
+                        all_must_conditions.append(must_cond)
+                should_cond = condition.should
+                if should_cond is not None:
+                    if isinstance(should_cond, list):
+                        for cond in should_cond:
+                            all_must_conditions.append(cond)
+                    else:
+                        all_must_conditions.append(should_cond)
                 else:
                     all_must_conditions.append(condition)
             else:
@@ -646,10 +686,9 @@ class FilterComposer(BaseFilter):
         try:
             FilterCompositionCriteria.model_validate(filter_criteria)
         except ValidationError as e:
-            self._logger.warning(f"Invalid composition criteria: {e}")
+            self._logger.warning("Invalid composition criteria: %s", e)
             return False
-        else:
-            return True
+        return True
 
     def get_supported_operators(self) -> list[str]:
         """Get supported composition operators."""
@@ -684,7 +723,11 @@ class FilterComposer(BaseFilter):
                 )
             )
 
-        composition_rule = CompositionRule(operator=operator, filters=filter_refs)
+        composition_rule = CompositionRule(
+            operator=operator,
+            filters=filter_refs,
+            nested_rules=None,
+        )
 
         return {
             "composition_rule": composition_rule,
@@ -762,9 +805,25 @@ class FilterComposer(BaseFilter):
         """Clear the execution cache to free memory."""
         cache_size = len(self.execution_cache)
         self.execution_cache.clear()
-        logger.info(
-            f"Cleared execution cache ({cache_size} items)"
-        )  # TODO: Convert f-string to logging format
+        logger.info("Cleared execution cache (%d items)", cache_size)
+
+    @staticmethod
+    def _resolve_config(
+        config: FilterComposerConfig | None, overrides: dict[str, Any]
+    ) -> FilterComposerConfig:
+        """Resolve final configuration from base and overrides."""
+        base_config = config or FilterComposerConfig()
+
+        if not overrides:
+            return base_config
+
+        allowed_fields = {field_.name for field_ in fields(FilterComposerConfig)}
+        unexpected = set(overrides) - allowed_fields
+        if unexpected:
+            msg = f"Unexpected configuration keys: {sorted(unexpected)}"
+            raise TypeError(msg)
+
+        return replace(base_config, **overrides)
 
     def cleanup(self) -> None:
         """Cleanup resources and clear caches."""

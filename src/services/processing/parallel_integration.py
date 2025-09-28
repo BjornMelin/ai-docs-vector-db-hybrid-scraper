@@ -8,14 +8,9 @@ import asyncio
 import logging
 import time
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
-from src.services.cache.intelligent import (
-    CacheConfig,
-    EmbeddingCache,
-    IntelligentCache,
-    SearchResultCache,
-)
+from src.services.cache import CacheManager, EmbeddingCache
 from src.services.embeddings.parallel import (
     ParallelConfig,
     ParallelEmbeddingProcessor,
@@ -37,7 +32,7 @@ PARALLEL_TASK_INCREMENT = 10
 
 
 @dataclass
-class SystemPerformanceMetrics:
+class SystemPerformanceMetrics:  # pylint: disable=too-many-instance-attributes
     """System-wide performance metrics."""
 
     total_requests: int = 0
@@ -51,19 +46,21 @@ class SystemPerformanceMetrics:
 
 
 @dataclass
-class OptimizationConfig:
+class OptimizationConfig:  # pylint: disable=too-many-instance-attributes
     """Configuration for the optimization system."""
 
     enable_parallel_processing: bool = True
-    enable_intelligent_caching: bool = True
+    enable_caching: bool = True
     enable_optimized_algorithms: bool = True
+    enable_content_classification: bool = True
+    enable_metadata_extraction: bool = True
     parallel_config: ParallelConfig | None = None
-    cache_config: CacheConfig | None = None
+    cache_manager: CacheManager | None = None
     performance_monitoring: bool = True
     auto_optimization: bool = True
 
 
-class ParallelProcessingSystem:
+class ParallelProcessingSystem:  # pylint: disable=too-many-instance-attributes
     """Unified parallel processing system for ML operations."""
 
     def __init__(
@@ -106,34 +103,32 @@ class ParallelProcessingSystem:
                 performance_monitoring=True,
             )
 
-        # Cache configuration
-        if self.config.cache_config is None:
-            self.config.cache_config = CacheConfig(
-                max_memory_mb=256,
-                enable_compression=True,
-                enable_cache_warming=True,
-                enable_persistence=True,
-            )
-
         # Initialize optimized text analyzer
         if self.config.enable_optimized_algorithms:
             self.text_analyzer = OptimizedTextAnalyzer()
 
-        # Initialize content processing components
-        # These are placeholder implementations - can be replaced with actual ML models
-        if self.config.enable_content_classification:
-            self.content_classifier = (
-                None  # Placeholder for content classification model
-            )
+        # Initialize optional content processing components
+        self.content_classifier = None
+        if getattr(self.config, "enable_content_classification", False):
+            self.content_classifier = None  # Placeholder for classifier implementation
 
-        if self.config.enable_metadata_extraction:
-            self.metadata_extractor = None  # Placeholder for metadata extraction model
+        self.metadata_extractor = None
+        if getattr(self.config, "enable_metadata_extraction", False):
+            self.metadata_extractor = None  # Placeholder for metadata extractor
 
         # Initialize caching systems
-        if self.config.enable_intelligent_caching:
-            self.embedding_cache = EmbeddingCache(self.config.cache_config)
-            self.search_cache = SearchResultCache(self.config.cache_config)
-            self.general_cache = IntelligentCache[str, Any](self.config.cache_config)
+        self.cache_manager: CacheManager | None = None
+        if self.config.enable_caching:
+            if self.config.cache_manager is not None:
+                self.cache_manager = self.config.cache_manager
+            elif getattr(self.embedding_manager, "cache_manager", None) is not None:
+                self.cache_manager = self.embedding_manager.cache_manager
+            else:
+                self.cache_manager = CacheManager()
+
+        self.embedding_cache: EmbeddingCache | None = None
+        if self.cache_manager is not None:
+            self.embedding_cache = self.cache_manager.embedding_cache
 
         # Initialize parallel embedding processor
         if self.config.enable_parallel_processing:
@@ -142,7 +137,22 @@ class ParallelProcessingSystem:
                 self.config.parallel_config,
             )
 
-    async def _create_processing_tasks(
+    def _embedding_cache_metadata(self) -> tuple[str, str, int | None]:
+        """Return provider, model, and dimensions used for embedding cache keys."""
+        provider = "openai"
+        model = "default"
+        dimensions: int | None = None
+
+        config = getattr(self.embedding_manager, "config", None)
+        if config is not None:
+            openai_config = getattr(config, "openai", None)
+            if openai_config is not None:
+                model = getattr(openai_config, "model", model)
+                dimensions = getattr(openai_config, "dimensions", None)
+
+        return provider, model, dimensions
+
+    async def _create_processing_tasks(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         self,
         texts: list[str],
         urls: list[str],
@@ -208,7 +218,7 @@ class ParallelProcessingSystem:
 
         return task_results
 
-    async def process_documents_parallel(
+    async def process_documents_parallel(  # pylint: disable=too-many-locals
         self,
         documents: list[dict[str, Any]],
         enable_classification: bool = True,
@@ -219,8 +229,6 @@ class ParallelProcessingSystem:
 
         Args:
             documents: List of document dictionaries with 'content' and 'url'
-            enable_classification: Whether to perform content classification
-            enable_metadata_extraction: Whether to extract metadata
             enable_embedding_generation: Whether to generate embeddings
 
         Returns:
@@ -236,7 +244,7 @@ class ParallelProcessingSystem:
                 "performance_metrics": {},
                 "optimization_enabled": {
                     "parallel_processing": self.config.enable_parallel_processing,
-                    "intelligent_caching": self.config.enable_intelligent_caching,
+                    "caching": self.config.enable_caching,
                     "optimized_algorithms": self.config.enable_optimized_algorithms,
                 },
             }
@@ -304,17 +312,14 @@ class ParallelProcessingSystem:
             await self._update_system_metrics(processing_time_ms, success=True)
 
         except Exception:
-            logger.exception(
-                "Parallel document processing failed: ",
-            )  # TODO: Convert f-string to logging format
+            logger.exception("Parallel document processing failed")
             await self._update_system_metrics(
                 (time.time() - request_start) * 1000,
                 success=False,
             )
             raise
 
-        else:
-            return results
+        return results
 
     async def _parallel_text_analysis(self, texts: list[str]) -> list[Any]:
         """Perform parallel text analysis using optimized algorithms.
@@ -333,24 +338,34 @@ class ParallelProcessingSystem:
         self,
         texts: list[str],
     ) -> tuple[list[tuple[int, Any]], list[str], list[int]]:
-        """Check cache for existing embeddings and return cached/uncached items."""
-        cached_embeddings = []
-        uncached_texts = []
-        uncached_indices = []
+        """Return cached embeddings along with uncached inputs.
 
-        for i, text in enumerate(texts):
+        Args:
+            texts: Text inputs to check.
+
+        Returns:
+            Tuple of cached entries, uncached texts, and their indices.
+        """
+        if not texts or not self.embedding_cache:
+            return [], texts, list(range(len(texts)))
+
+        provider, model, dimensions = self._embedding_cache_metadata()
+        cached_embeddings: list[tuple[int, Any]] = []
+        uncached_texts: list[str] = []
+        uncached_indices: list[int] = []
+
+        for index, text in enumerate(texts):
             cached = await self.embedding_cache.get_embedding(
                 text=text,
-                provider="default",
-                model="default",
-                dimensions=384,
+                provider=provider,
+                model=model,
+                dimensions=dimensions,
             )
-
             if cached is not None:
-                cached_embeddings.append((i, cached))
+                cached_embeddings.append((index, cached))
             else:
                 uncached_texts.append(text)
-                uncached_indices.append(i)
+                uncached_indices.append(index)
 
         return cached_embeddings, uncached_texts, uncached_indices
 
@@ -360,15 +375,21 @@ class ParallelProcessingSystem:
         new_embeddings: dict[str, Any],
     ) -> None:
         """Cache newly generated embeddings."""
-        for j, text in enumerate(uncached_texts):
-            if "embeddings" in new_embeddings and j < len(new_embeddings["embeddings"]):
-                await self.embedding_cache.set_embedding(
-                    text=text,
-                    provider="default",
-                    model="default",
-                    dimensions=384,
-                    embedding=new_embeddings["embeddings"][j],
-                )
+        if not self.embedding_cache:
+            return
+
+        embeddings = new_embeddings.get("embeddings", [])
+        provider, model, dimensions = self._embedding_cache_metadata()
+        for index, text in enumerate(uncached_texts):
+            if index >= len(embeddings):
+                break
+            await self.embedding_cache.set_embedding(
+                text=text,
+                provider=provider,
+                model=model,
+                dimensions=dimensions,
+                embedding=embeddings[index],
+            )
 
     async def _combine_embeddings(
         self,
@@ -407,7 +428,7 @@ class ParallelProcessingSystem:
 
         """
         # Check cache for existing embeddings
-        if self.config.enable_intelligent_caching:
+        if self.config.enable_caching and self.embedding_cache:
             (
                 cached_embeddings,
                 uncached_texts,
@@ -504,15 +525,22 @@ class ParallelProcessingSystem:
                         "cache_hits": embed_results["cache_hits"],
                         "cache_misses": embed_results["cache_misses"],
                     }
+                    self.metrics.cache_hit_rate = cache_hit_rate
 
         # System cache performance
-        if self.config.enable_intelligent_caching:
-            embedding_cache_stats = self.embedding_cache.get_stats()
+        if self.config.enable_caching and self.cache_manager:
+            cache_snapshot = cast(dict[str, Any], await self.cache_manager.get_stats())
+            embedding_snapshot = cast(
+                dict[str, Any], cache_snapshot.get("embedding_cache", {})
+            )
             metrics["cache_performance"]["system"] = {
-                "hit_rate": embedding_cache_stats.hit_rate,
-                "memory_usage_mb": embedding_cache_stats.memory_usage_mb,
-                "item_count": embedding_cache_stats.item_count,
+                "total_embeddings": embedding_snapshot.get("total_embeddings", 0),
+                "cache_size": embedding_snapshot.get("cache_size", 0),
+                "providers": embedding_snapshot.get("by_provider", {}),
+                "models": embedding_snapshot.get("by_model", {}),
             }
+            cache_size = float(embedding_snapshot.get("cache_size", 0))
+            self.metrics.memory_usage_mb = cache_size
 
         return metrics
 
@@ -557,11 +585,7 @@ class ParallelProcessingSystem:
         # Update uptime
         self.metrics.uptime_seconds = time.time() - self.start_time
 
-        # Update cache hit rate
-        if self.config.enable_intelligent_caching:
-            cache_stats = self.embedding_cache.get_stats()
-            self.metrics.cache_hit_rate = cache_stats.hit_rate
-            self.metrics.memory_usage_mb = cache_stats.memory_usage_mb
+        # Cache metrics updated in _calculate_performance_metrics
 
     async def get_system_status(self) -> dict[str, Any]:
         """Get comprehensive system status and performance metrics.
@@ -587,7 +611,7 @@ class ParallelProcessingSystem:
             },
             "optimization_status": {
                 "parallel_processing": self.config.enable_parallel_processing,
-                "intelligent_caching": self.config.enable_intelligent_caching,
+                "caching": self.config.enable_caching,
                 "optimized_algorithms": self.config.enable_optimized_algorithms,
                 "auto_optimization": self.config.auto_optimization,
             },
@@ -600,18 +624,20 @@ class ParallelProcessingSystem:
 
         if self.config.enable_optimized_algorithms:
             # Get text analyzer cache info
-            cache_info = self.text_analyzer.analyze_text_optimized.cache_info()
-            status["text_analysis"] = {
-                "cache_hits": cache_info.hits,
-                "cache_misses": cache_info.misses,
-                "hit_rate": cache_info.hits
-                / max(cache_info.hits + cache_info.misses, 1),
-                "algorithm_complexity": "O(n)",
-            }
+            analysis_fn = getattr(self.text_analyzer, "analyze_text_optimized", None)
+            if analysis_fn and hasattr(analysis_fn, "cache_info"):
+                cache_info = analysis_fn.cache_info()
+                status["text_analysis"] = {
+                    "cache_hits": cache_info.hits,
+                    "cache_misses": cache_info.misses,
+                    "hit_rate": cache_info.hits
+                    / max(cache_info.hits + cache_info.misses, 1),
+                    "algorithm_complexity": "O(n)",
+                }
 
-        if self.config.enable_intelligent_caching:
-            cache_memory = self.embedding_cache.get_memory_usage()
-            status["caching_system"] = cache_memory
+        if self.config.enable_caching and self.cache_manager:
+            cache_snapshot = cast(dict[str, Any], await self.cache_manager.get_stats())
+            status["caching_system"] = cache_snapshot
 
         return status
 
@@ -630,10 +656,10 @@ class ParallelProcessingSystem:
         # Clear caches if hit rate is low
         if (
             self.metrics.cache_hit_rate < LOW_CACHE_HIT_RATE_THRESHOLD
-            and self.config.enable_intelligent_caching
+            and self.config.enable_caching
+            and self.cache_manager
         ):
-            await self.embedding_cache.clear()
-            await self.search_cache.clear()
+            await self.cache_manager.clear()
             optimizations_applied.append("cache_cleared_low_hit_rate")
 
         # Clear text analyzer cache periodically
@@ -646,15 +672,17 @@ class ParallelProcessingSystem:
         if (
             self.config.enable_parallel_processing
             and self.metrics.avg_response_time_ms > HIGH_RESPONSE_TIME_THRESHOLD_MS
+            and self.config.parallel_config is not None
+            and self.config.parallel_config.max_concurrent_tasks
+            < MAX_CONCURRENT_TASKS_LIMIT
         ):  # > 5 seconds
             # Increase concurrent tasks for better parallelization
             current_config = self.config.parallel_config
-            if current_config.max_concurrent_tasks < MAX_CONCURRENT_TASKS_LIMIT:
-                current_config.max_concurrent_tasks = min(
-                    current_config.max_concurrent_tasks + PARALLEL_TASK_INCREMENT,
-                    MAX_CONCURRENT_TASKS_LIMIT,
-                )
-                optimizations_applied.append("increased_parallelization")
+            current_config.max_concurrent_tasks = min(
+                current_config.max_concurrent_tasks + PARALLEL_TASK_INCREMENT,
+                MAX_CONCURRENT_TASKS_LIMIT,
+            )
+            optimizations_applied.append("increased_parallelization")
 
         return {
             "status": "completed",
@@ -670,10 +698,9 @@ class ParallelProcessingSystem:
                 task.cancel()
 
             # Clear caches
-            if self.config.enable_intelligent_caching:
-                await self.embedding_cache.clear()
-                await self.search_cache.clear()
-                await self.general_cache.clear()
+            if self.config.enable_caching and self.cache_manager:
+                await self.cache_manager.clear()
+                await self.cache_manager.close()
 
             # Clear algorithm caches
             if self.config.enable_optimized_algorithms:
@@ -682,9 +709,7 @@ class ParallelProcessingSystem:
             logger.info("ParallelProcessingSystem cleanup completed")
 
         except Exception:
-            logger.exception(
-                "Error during cleanup: ",
-            )  # TODO: Convert f-string to logging format
+            logger.exception("Error during parallel system cleanup")
 
 
 # Factory function for easy initialization
@@ -707,7 +732,7 @@ def create_optimized_system(
     if custom_config is None:
         config = OptimizationConfig(
             enable_parallel_processing=enable_all_optimizations,
-            enable_intelligent_caching=enable_all_optimizations,
+            enable_caching=enable_all_optimizations,
             enable_optimized_algorithms=enable_all_optimizations,
             performance_monitoring=True,
             auto_optimization=enable_all_optimizations,

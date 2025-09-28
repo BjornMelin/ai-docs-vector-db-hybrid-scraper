@@ -7,9 +7,10 @@ Provides simple cache operations with circuit breaker patterns.
 import logging
 from typing import Annotated, Any
 
-from fastapi import Depends
+from fastapi import Depends  # pyright: ignore
 
 from src.config import CacheType
+from src.services.cache import CacheManager
 
 from .circuit_breaker import CircuitBreakerConfig, circuit_breaker
 from .dependencies import get_cache_client
@@ -23,7 +24,7 @@ async def cache_get(
     key: str,
     cache_type: CacheType = CacheType.LOCAL,
     default: Any = None,
-    cache_client: Annotated[object, Depends(get_cache_client)] = None,
+    cache_client: Annotated[CacheManager | None, Depends(get_cache_client)] = None,  # pyright: ignore
 ) -> Any:
     """Get value from cache with L1 -> L2 fallback.
 
@@ -37,11 +38,8 @@ async def cache_get(
 
     Returns:
         Cached value or default
-
-    Raises:
-        HTTPException: If cache operation fails critically
-
     """
+
     try:
         if not cache_client:
             logger.warning("Cache client not available, returning default")
@@ -50,20 +48,16 @@ async def cache_get(
         result = await cache_client.get(key, cache_type, default)
 
         if result != default:
-            logger.debug(
-                f"Cache hit for key: {key}",
-            )  # TODO: Convert f-string to logging format
+            logger.debug("Cache hit for key: %s", key)
         else:
-            logger.debug(
-                f"Cache miss for key: {key}",
-            )  # TODO: Convert f-string to logging format
+            logger.debug("Cache miss for key: %s", key)
 
     except (AttributeError, ConnectionError, OSError):
-        logger.exception(f"Cache get failed for key {key}")
+        logger.exception("Cache get failed for key: %s", key)
         # Return default on cache failure (graceful degradation)
         return default
-    else:
-        return result
+
+    return result  # Return cached value or default
 
 
 @circuit_breaker(CircuitBreakerConfig.simple_mode())
@@ -72,7 +66,7 @@ async def cache_set(
     value: Any,
     cache_type: CacheType = CacheType.LOCAL,
     ttl: int | None = None,
-    cache_client: Annotated[object, Depends(get_cache_client)] = None,
+    cache_client: Annotated[CacheManager | None, Depends(get_cache_client)] = None,
 ) -> bool:
     """Set value in both cache layers.
 
@@ -87,11 +81,9 @@ async def cache_set(
 
     Returns:
         True if successful in at least one cache layer
-
-    Raises:
-        HTTPException: If cache operation fails critically
-
     """
+
+    success = False
     try:
         if not cache_client:
             logger.warning("Cache client not available, skipping cache set")
@@ -100,27 +92,23 @@ async def cache_set(
         success = await cache_client.set(key, value, cache_type, ttl)
 
         if success:
-            logger.debug(
-                f"Cache set successful for key: {key}",
-            )  # TODO: Convert f-string to logging format
+            logger.debug("Cache set successful for key: %s", key)
         else:
-            logger.warning(
-                f"Cache set failed for key: {key}",
-            )  # TODO: Convert f-string to logging format
+            logger.warning("Cache set failed for key: %s", key)
+
+        return success
 
     except (ConnectionError, OSError, PermissionError):
-        logger.exception(f"Cache set failed for key {key}")
+        logger.exception("Cache set failed for key: %s", key)
         # Don't raise exception for cache failures
         return False
-    else:
-        return success
 
 
 @circuit_breaker(CircuitBreakerConfig.simple_mode())
 async def cache_delete(
     key: str,
     cache_type: CacheType = CacheType.LOCAL,
-    cache_client: Annotated[object, Depends(get_cache_client)] = None,
+    cache_client: Annotated[CacheManager | None, Depends(get_cache_client)] = None,  # pyright: ignore
 ) -> bool:
     """Delete value from both cache layers.
 
@@ -133,11 +121,9 @@ async def cache_delete(
 
     Returns:
         True if successful
-
-    Raises:
-        HTTPException: If cache operation fails critically
-
     """
+
+    success = False
     try:
         if not cache_client:
             logger.warning("Cache client not available, skipping cache delete")
@@ -146,25 +132,21 @@ async def cache_delete(
         success = await cache_client.delete(key, cache_type)
 
         if success:
-            logger.debug(
-                f"Cache delete successful for key: {key}",
-            )  # TODO: Convert f-string to logging format
+            logger.debug("Cache delete successful for key: %s", key)
         else:
-            logger.warning(
-                f"Cache delete failed for key: {key}",
-            )  # TODO: Convert f-string to logging format
+            logger.warning("Cache delete failed for key: %s", key)
 
     except (ConnectionError, OSError, PermissionError):
-        logger.exception(f"Cache delete failed for key {key}")
+        logger.exception("Cache delete failed for key: %s", key)
         return False
-    else:
-        return success
+
+    return success  # Return success status
 
 
 @circuit_breaker(CircuitBreakerConfig.simple_mode())
 async def cache_clear(
     cache_type: CacheType | None = None,
-    cache_client: Annotated[object, Depends(get_cache_client)] = None,
+    cache_client: Annotated[CacheManager | None, Depends(get_cache_client)] = None,  # pyright: ignore
 ) -> bool:
     """Clear cache layers.
 
@@ -176,11 +158,9 @@ async def cache_clear(
 
     Returns:
         True if successful
-
-    Raises:
-        HTTPException: If cache operation fails critically
-
     """
+
+    success = False
     try:
         if not cache_client:
             logger.warning("Cache client not available, skipping cache clear")
@@ -191,22 +171,24 @@ async def cache_clear(
         if success:
             scope = cache_type.value if cache_type else "all"
             logger.info(
-                f"Cache clear successful for scope: {scope}",
-            )  # TODO: Convert f-string to logging format
+                "Cache clear successful for scope: %s",
+                scope,
+            )
         else:
             logger.warning(
-                f"Cache clear failed for cache_type: {cache_type}",
-            )  # TODO: Convert f-string to logging format
+                "Cache clear failed for cache_type: %s",
+                cache_type,
+            )
 
     except (ConnectionError, OSError, PermissionError):
         logger.exception("Cache clear failed")
         return False
-    else:
-        return success
+
+    return success  # Return success status
 
 
 async def get_cache_stats(
-    cache_client: Annotated[object, Depends(get_cache_client)] = None,
+    cache_client: Annotated[CacheManager | None, Depends(get_cache_client)] = None,  # pyright: ignore
 ) -> dict[str, Any]:
     """Get comprehensive cache statistics.
 
@@ -217,11 +199,8 @@ async def get_cache_stats(
 
     Returns:
         Cache statistics dictionary
-
-    Raises:
-        HTTPException: If stats retrieval fails
-
     """
+
     try:
         if not cache_client:
             return {
@@ -238,27 +217,21 @@ async def get_cache_stats(
             "manager": {"enabled_layers": []},
             "error": f"Stats retrieval failed: {e!s}",
         }
-    else:
-        return stats
+    return stats  # Return stats dictionary
 
 
 async def get_performance_stats(
-    cache_client: Annotated[object, Depends(get_cache_client)] = None,
+    cache_client: Annotated[CacheManager | None, Depends(get_cache_client)] = None,  # pyright: ignore
 ) -> dict[str, Any]:
     """Get performance-focused cache statistics.
-
-    Pure function replacement for CacheManager.get_performance_stats().
 
     Args:
         cache_client: Injected cache manager
 
     Returns:
         Performance metrics dictionary
-
-    Raises:
-        HTTPException: If performance stats retrieval fails
-
     """
+
     try:
         if not cache_client:
             return {}
@@ -269,8 +242,8 @@ async def get_performance_stats(
     except (ConnectionError, OSError, PermissionError):
         logger.exception("Cache performance stats retrieval failed")
         return {}
-    else:
-        return stats
+
+    return stats  # Return perf stats dictionary
 
 
 # Specialized cache functions
@@ -278,7 +251,7 @@ async def cache_embedding(
     content_hash: str,
     model: str,
     embedding: list[float],
-    cache_client: Annotated[object, Depends(get_cache_client)] = None,
+    cache_client: Annotated[CacheManager | None, Depends(get_cache_client)] = None,  # pyright: ignore
 ) -> bool:
     """Cache an embedding vector.
 
@@ -292,36 +265,41 @@ async def cache_embedding(
 
     Returns:
         True if successfully cached
-
     """
+
+    success = False
     try:
         if not cache_client or not hasattr(cache_client, "embedding_cache"):
             return False
 
         if cache_client.embedding_cache:
             success = await cache_client.embedding_cache.set_embedding(
-                content_hash,
-                model,
-                embedding,
+                text=content_hash,
+                provider="default",
+                model=model,
+                dimensions=0,
+                embedding=embedding,
             )
             if success:
                 logger.debug(
-                    f"Cached embedding for model {model}",
-                )  # TODO: Convert f-string to logging format
+                    "Cached embedding for model %s",
+                    model,
+                )
 
     except (OSError, AttributeError, ConnectionError, ImportError):
         logger.exception("Embedding cache failed")
         return False
-    else:
-        if cache_client.embedding_cache:
-            return success
-        return False
+
+    # Return success status
+    if cache_client.embedding_cache:
+        return success
+    return False
 
 
 async def get_cached_embedding(
     content_hash: str,
     model: str,
-    cache_client: Annotated[object, Depends(get_cache_client)] = None,
+    cache_client: Annotated[CacheManager | None, Depends(get_cache_client)] = None,
 ) -> list[float] | None:
     """Get cached embedding vector.
 
@@ -334,21 +312,25 @@ async def get_cached_embedding(
 
     Returns:
         Cached embedding vector or None if not found
-
     """
+
     try:
         if not cache_client or not hasattr(cache_client, "embedding_cache"):
             return None
 
+        embedding: list[float] | None = None
         if cache_client.embedding_cache:
             embedding = await cache_client.embedding_cache.get_embedding(
-                content_hash,
-                model,
+                text=content_hash,
+                provider="default",
+                model=model,
+                dimensions=0,
             )
             if embedding:
                 logger.debug(
-                    f"Retrieved cached embedding for model {model}",
-                )  # TODO: Convert f-string to logging format
+                    "Retrieved cached embedding for model %s",
+                    model,
+                )
 
     except (OSError, AttributeError, ConnectionError, ImportError):
         logger.exception("Cached embedding retrieval failed")
@@ -364,7 +346,7 @@ async def cache_search_results(
     collection: str,
     results: list[dict[str, Any]],
     ttl: int | None = None,
-    cache_client: Annotated[object, Depends(get_cache_client)] = None,
+    cache_client: Annotated[CacheManager | None, Depends(get_cache_client)] = None,  # pyright: ignore
 ) -> bool:
     """Cache search results.
 
@@ -379,75 +361,36 @@ async def cache_search_results(
 
     Returns:
         True if successfully cached
-
     """
+
+    success = False
     try:
         if not cache_client or not hasattr(cache_client, "search_cache"):
             return False
 
-        if cache_client.search_cache:
+        if cache_client.search_cache:  # pyright: ignore
             success = await cache_client.search_cache.set_search_results(
                 query_hash,
-                collection,
-                results,
-                ttl,
+                collection,  # pyright: ignore
+                results,  # pyright: ignore
+                ttl,  # pyright: ignore
             )
             if success:
                 logger.debug(
-                    f"Cached search results for collection {collection}",
-                )  # TODO: Convert f-string to logging format
-
-    except (ConnectionError, OSError, PermissionError):
-        logger.exception("Search results cache failed")
-        return False
-    else:
-        if cache_client.search_cache:
-            return success
-        return False
-
-
-async def get_cached_search_results(
-    query_hash: str,
-    collection: str,
-    cache_client: Annotated[object, Depends(get_cache_client)] = None,
-) -> list[dict[str, Any]] | None:
-    """Get cached search results.
-
-    Specialized function for search result cache retrieval.
-
-    Args:
-        query_hash: Hash of the search query
-        collection: Name of the collection searched
-        cache_client: Injected cache manager
-
-    Returns:
-        Cached search results or None if not found
-
-    """
-    try:
-        if not cache_client or not hasattr(cache_client, "search_cache"):
-            return None
-
-        if cache_client.search_cache:
-            results = await cache_client.search_cache.get_search_results(
-                query_hash,
-                collection,
-            )
-            if results:
-                logger.debug(
-                    f"Retrieved cached search results for collection {collection}",
+                    "Cached search results for collection %s",
+                    collection,
                 )
 
     except (ConnectionError, OSError, PermissionError):
-        logger.exception("Cached search results retrieval failed")
-        return None
-    else:
-        if cache_client.search_cache:
-            return results
-        return None
+        logger.exception("Search results cache failed")
+    if cache_client.search_cache:  # pyright: ignore
+        return success
+    return False
 
 
-async def _execute_cache_operation(op: dict[str, Any], cache_client: object) -> bool:
+async def _execute_cache_operation(
+    op: dict[str, Any], cache_client: CacheManager
+) -> bool:
     """Execute a single cache operation.
 
     Args:
@@ -456,8 +399,8 @@ async def _execute_cache_operation(op: dict[str, Any], cache_client: object) -> 
 
     Returns:
         True if operation succeeded, False otherwise
-
     """
+
     op_type = op.get("op")
     key = op.get("key")
 
@@ -502,8 +445,8 @@ def _create_error_result(
 
     Returns:
         Error result dictionary
-
     """
+
     return {
         "total": len(operations),
         "successful": 0,
@@ -515,7 +458,7 @@ def _create_error_result(
 # Bulk operations function (new functionality)
 async def bulk_cache_operations(
     operations: list[dict[str, Any]],
-    cache_client: Annotated[object, Depends(get_cache_client)] = None,
+    cache_client: Annotated[CacheManager | None, Depends(get_cache_client)] = None,  # pyright: ignore
 ) -> dict[str, Any]:
     """Perform multiple cache operations in batch.
 
@@ -527,8 +470,8 @@ async def bulk_cache_operations(
 
     Returns:
         Results summary with success/failure counts
-
     """
+
     try:
         if not cache_client:
             return _create_error_result(operations, "Cache client not available")
@@ -550,8 +493,9 @@ async def bulk_cache_operations(
                 results["errors"].append(f"Operation {i} failed: {e!s}")
 
         logger.info(
-            f"Bulk cache operations completed: "
-            f"{results['successful']}/{results['total']} successful",
+            "Bulk cache operations completed: %d/%d successful",
+            results["successful"],
+            results["total"],
         )
 
     except Exception as e:

@@ -64,12 +64,22 @@ class OperationInstruments:
     cache_hit_gauge: Any
 
 
+@dataclass(slots=True)
+class OperationContext:
+    """Core identifiers for an AI operation."""
+
+    operation_type: str
+    provider: str
+    model: str
+
+
 class AIOperationTracker:
     """Tracks AI/ML operations with detailed metrics and cost attribution."""
 
     def __init__(self):
         """Initialize AI operation tracker with metrics instruments."""
         meter = metrics.get_meter(__name__)
+        self.meter = meter
         self._instruments = OperationInstruments(
             cost_counter=meter.create_counter(
                 "ai_operation_cost_total_usd",
@@ -127,35 +137,19 @@ class AIOperationTracker:
     def _create_metrics(
         self,
         *,
-        operation_type: str,
-        provider: str,
-        model: str,
+        context: OperationContext,
         duration_ms: float,
-        tokens_used: int | None = None,
-        cost_usd: float | None = None,
-        input_size: int | None = None,
-        output_size: int | None = None,
-        success: bool = True,
-        error_message: str | None = None,
-        quality_score: float | None = None,
+        usage: OperationUsage | None = None,
+        outcome: OperationOutcome | None = None,
     ) -> AIOperationMetrics:
         """Factory for consolidated operation metrics."""
 
-        usage = OperationUsage(
-            tokens_used=tokens_used,
-            cost_usd=cost_usd,
-            input_size=input_size,
-            output_size=output_size,
-        )
-        outcome = OperationOutcome(
-            success=success,
-            error_message=error_message,
-            quality_score=quality_score,
-        )
+        usage = usage or OperationUsage()
+        outcome = outcome or OperationOutcome()
         return AIOperationMetrics(
-            operation_type=operation_type,
-            provider=provider,
-            model=model,
+            operation_type=context.operation_type,
+            provider=context.provider,
+            model=context.model,
             duration_ms=duration_ms,
             usage=usage,
             outcome=outcome,
@@ -168,7 +162,7 @@ class AIOperationTracker:
         model: str,
         input_texts: list[str] | str,
         expected_dimensions: int | None = None,
-    ):
+    ):  # pylint: disable=too-many-locals
         """Context manager for tracking embedding generation operations.
 
         Args:
@@ -242,12 +236,13 @@ class AIOperationTracker:
                 # Record error metrics
                 duration_ms = (time.time() - start_time) * 1000
                 error_metrics = self._create_metrics(
-                    operation_type="embedding_generation",
-                    provider=provider,
-                    model=model,
+                    context=OperationContext(
+                        operation_type="embedding_generation",
+                        provider=provider,
+                        model=model,
+                    ),
                     duration_ms=duration_ms,
-                    success=False,
-                    error_message=str(e),
+                    outcome=OperationOutcome(success=False, error_message=str(e)),
                 )
                 self.record_operation(error_metrics)
                 raise
@@ -258,14 +253,19 @@ class AIOperationTracker:
                 span.set_attribute("ai.duration_ms", duration_ms)
 
                 embeddings = operation_result.get("embeddings")
-                metrics = self._create_metrics(
-                    operation_type="embedding_generation",
-                    provider=provider,
-                    model=model,
-                    duration_ms=duration_ms,
+                usage = OperationUsage(
                     cost_usd=operation_result.get("cost"),
                     input_size=len(input_texts) if isinstance(input_texts, list) else 1,
                     output_size=len(embeddings) if embeddings else 0,
+                )
+                metrics = self._create_metrics(
+                    context=OperationContext(
+                        operation_type="embedding_generation",
+                        provider=provider,
+                        model=model,
+                    ),
+                    duration_ms=duration_ms,
+                    usage=usage,
                 )
                 self.record_operation(metrics)
 
@@ -276,7 +276,7 @@ class AIOperationTracker:
         model: str,
         operation: str = "completion",
         expected_max_tokens: int | None = None,
-    ):
+    ):  # pylint: disable=too-many-locals
         """Context manager for tracking LLM API calls.
 
         Args:
@@ -329,12 +329,13 @@ class AIOperationTracker:
             except Exception as exc:  # noqa: BLE001 - propagate after metrics
                 duration_ms = (time.time() - start_time) * 1000
                 error_metrics = self._create_metrics(
-                    operation_type="llm_call",
-                    provider=provider,
-                    model=model,
+                    context=OperationContext(
+                        operation_type="llm_call",
+                        provider=provider,
+                        model=model,
+                    ),
                     duration_ms=duration_ms,
-                    success=False,
-                    error_message=str(exc),
+                    outcome=OperationOutcome(success=False, error_message=str(exc)),
                 )
                 self.record_operation(error_metrics)
                 raise
@@ -349,13 +350,18 @@ class AIOperationTracker:
                     else None
                 )
 
-                metrics = self._create_metrics(
-                    operation_type="llm_call",
-                    provider=provider,
-                    model=model,
-                    duration_ms=duration_ms,
+                usage_metrics = OperationUsage(
                     tokens_used=total_tokens,
                     cost_usd=operation_result.get("cost"),
+                )
+                metrics = self._create_metrics(
+                    context=OperationContext(
+                        operation_type="llm_call",
+                        provider=provider,
+                        model=model,
+                    ),
+                    duration_ms=duration_ms,
+                    usage=usage_metrics,
                 )
                 self.record_operation(metrics)
 
@@ -365,7 +371,7 @@ class AIOperationTracker:
         collection_name: str,
         query_type: str = "semantic",
         top_k: int | None = None,
-    ):
+    ):  # pylint: disable=too-many-locals
         """Context manager for tracking vector search operations.
 
         Args:
@@ -425,12 +431,13 @@ class AIOperationTracker:
                 # Record error metrics
                 duration_ms = (time.time() - start_time) * 1000
                 error_metrics = self._create_metrics(
-                    operation_type="vector_search",
-                    provider="qdrant",
-                    model=collection_name,
+                    context=OperationContext(
+                        operation_type="vector_search",
+                        provider="qdrant",
+                        model=collection_name,
+                    ),
                     duration_ms=duration_ms,
-                    success=False,
-                    error_message=str(e),
+                    outcome=OperationOutcome(success=False, error_message=str(e)),
                 )
                 self.record_operation(error_metrics)
                 raise
@@ -444,14 +451,20 @@ class AIOperationTracker:
                 scores = operation_result.get("scores", [])
                 quality_score = max(scores) if scores else None
 
-                metrics = self._create_metrics(
-                    operation_type="vector_search",
-                    provider="qdrant",
-                    model=collection_name,
-                    duration_ms=duration_ms,
+                usage = OperationUsage(
                     input_size=1,
                     output_size=len(results) if results else 0,
-                    quality_score=quality_score,
+                )
+                outcome = OperationOutcome(quality_score=quality_score)
+                metrics = self._create_metrics(
+                    context=OperationContext(
+                        operation_type="vector_search",
+                        provider="qdrant",
+                        model=collection_name,
+                    ),
+                    duration_ms=duration_ms,
+                    usage=usage,
+                    outcome=outcome,
                 )
                 self.record_operation(metrics)
 
@@ -461,7 +474,7 @@ class AIOperationTracker:
         query: str,
         retrieval_method: str = "hybrid",
         generation_model: str = "default",
-    ):
+    ):  # pylint: disable=too-many-locals
         """Context manager for tracking end-to-end RAG pipeline operations.
 
         Args:
@@ -539,12 +552,13 @@ class AIOperationTracker:
                 # Record error metrics
                 duration_ms = (time.time() - start_time) * 1000
                 error_metrics = self._create_metrics(
-                    operation_type="rag_pipeline",
-                    provider="combined",
-                    model=generation_model,
+                    context=OperationContext(
+                        operation_type="rag_pipeline",
+                        provider="combined",
+                        model=generation_model,
+                    ),
                     duration_ms=duration_ms,
-                    success=False,
-                    error_message=str(e),
+                    outcome=OperationOutcome(success=False, error_message=str(e)),
                 )
                 self.record_operation(error_metrics)
                 raise
@@ -555,14 +569,19 @@ class AIOperationTracker:
                 span.set_attribute("ai.duration_ms", duration_ms)
 
                 answer = pipeline_result.get("generated_answer", "")
-                metrics = self._create_metrics(
-                    operation_type="rag_pipeline",
-                    provider="combined",
-                    model=generation_model,
-                    duration_ms=duration_ms,
+                usage = OperationUsage(
                     cost_usd=pipeline_result.get("total_cost"),
                     input_size=len(query),
                     output_size=len(answer) if answer else 0,
+                )
+                metrics = self._create_metrics(
+                    context=OperationContext(
+                        operation_type="rag_pipeline",
+                        provider="combined",
+                        model=generation_model,
+                    ),
+                    duration_ms=duration_ms,
+                    usage=usage,
                 )
                 self.record_operation(metrics)
 
@@ -592,9 +611,7 @@ class AIOperationTracker:
 
     def record_model_performance(
         self,
-        provider: str,
-        model: str,
-        operation_type: str,
+        context: OperationContext,
         *,
         success_rate: float,
         avg_latency_ms: float,
@@ -615,9 +632,9 @@ class AIOperationTracker:
         add_span_event(
             "model_performance_summary",
             {
-                "provider": provider,
-                "model": model,
-                "operation_type": operation_type,
+                "provider": context.provider,
+                "model": context.model,
+                "operation_type": context.operation_type,
                 "success_rate": success_rate,
                 "avg_latency_ms": avg_latency_ms,
                 "cost_per_operation": cost_per_operation,
