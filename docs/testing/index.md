@@ -5,6 +5,7 @@ Modern test practices and infrastructure for the AI Documentation Vector DB syst
 ## Essential Testing Documents
 
 - [Testing Guide](testing-guide.md) - Modern test practices, patterns, and commands for developers
+- [Unit Test Suite Overview](unit-suite-overview.md) - Coverage map, decision scorecards, and outstanding debt for the unit suites
 
 ## Quick Test Commands
 
