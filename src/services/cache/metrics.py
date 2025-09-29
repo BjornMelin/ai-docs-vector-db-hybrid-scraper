@@ -1,6 +1,6 @@
 """Cache metrics shim exposing the unified :class:`CacheStats` dataclass."""
 
-from .intelligent import CacheStats
+from .persistent_cache import CacheStats
 
 
 __all__ = ["CacheStats"]

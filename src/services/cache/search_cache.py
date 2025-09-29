@@ -1,11 +1,10 @@
 """Specialized cache for search results with invalidation."""
 
-import hashlib
-import json
 import logging
 from typing import Any
 
 from .dragonfly_cache import DragonflyCache
+from .persistent_cache import PersistentCacheManager
 
 
 logger = logging.getLogger(__name__)
@@ -39,7 +38,7 @@ class SearchResultCache:
         filters: dict | None = None,
         limit: int = 10,
         search_type: str = "hybrid",
-        **params: Any,
+        params: dict | None = None,
     ) -> list[dict] | None:
         """Get cached search results.
 
@@ -49,13 +48,13 @@ class SearchResultCache:
             filters: Search filters
             limit: Number of results
             search_type: Type of search (dense, sparse, hybrid)
-            **params: Additional search parameters
+            params: Additional search parameters
 
         Returns:
             Cached search results or None if not found
         """
-        key = self._get_search_key(
-            query, collection_name, filters, limit, search_type, **params
+        key = self._build_search_key(
+            query, collection_name, filters, limit, search_type, params or {}
         )
 
         try:
@@ -84,7 +83,7 @@ class SearchResultCache:
         limit: int = 10,
         search_type: str = "hybrid",
         ttl: int | None = None,
-        **params: Any,
+        params: dict | None = None,
     ) -> bool:
         """Cache search results with TTL adjustment.
 
@@ -96,13 +95,13 @@ class SearchResultCache:
             limit: Number of results
             search_type: Type of search
             ttl: Custom TTL (uses popularity-adjusted default if None)
-            **params: Additional search parameters
+            params: Additional search parameters
 
         Returns:
             Success status
         """
-        key = self._get_search_key(
-            query, collection_name, filters, limit, search_type, **params
+        key = self._build_search_key(
+            query, collection_name, filters, limit, search_type, params or {}
         )
 
         try:
@@ -194,8 +193,9 @@ class SearchResultCache:
         """
         try:
             # Create hash pattern for query matching
-            pattern_hash = hashlib.sha256(query_pattern.encode()).hexdigest()
-            pattern = f"search:*:{pattern_hash}*"
+            base_key = PersistentCacheManager.search_key(query_pattern)
+            digest = base_key.partition(":")[2]
+            pattern = f"search:*:{digest}*"
 
             keys = await self.cache.scan_keys(pattern)
 
@@ -328,6 +328,28 @@ class SearchResultCache:
         """Alias for get_cache_stats for compatibility."""
         return await self.get_cache_stats()
 
+    def _build_search_key(
+        self,
+        query: str,
+        collection_name: str,
+        filters: dict | None,
+        limit: int,
+        search_type: str,
+        params: dict | None,
+    ) -> str:
+        """Return deterministic key for search cache entries."""
+
+        payload = {
+            "collection": collection_name,
+            "filters": filters or {},
+            "limit": limit,
+            "search_type": search_type,
+            "params": params or {},
+        }
+        base_key = PersistentCacheManager.search_key(query, payload)
+        digest = base_key.partition(":")[2]
+        return f"search:{collection_name}:{digest}"
+
     def _get_search_key(
         self,
         query: str,
@@ -337,36 +359,11 @@ class SearchResultCache:
         search_type: str,
         **params: Any,
     ) -> str:
-        """Generate deterministic cache key for search.
+        """Backward-compatible wrapper for key generation."""
 
-        Args:
-            query: Search query text
-            collection_name: Collection name
-            filters: Search filters
-            limit: Result limit
-            search_type: Type of search
-            **params: Additional parameters
-
-        Returns:
-            Cache key
-        """
-        # Normalize query
-        normalized_query = query.lower().strip()
-
-        # Sort filters for consistency
-        sorted_filters = json.dumps(filters or {}, sort_keys=True)
-
-        # Sort additional parameters
-        sorted_params = json.dumps(params, sort_keys=True)
-
-        # Combine all parameters
-        key_data = (
-            f"{normalized_query}|{collection_name}|{sorted_filters}|{limit}|"
-            f"{search_type}|{sorted_params}"
+        return self._build_search_key(
+            query, collection_name, filters, limit, search_type, params or {}
         )
-        key_hash = hashlib.sha256(key_data.encode()).hexdigest()
-
-        return f"search:{collection_name}:{key_hash}"
 
     async def _get_query_popularity(self, query: str) -> int:
         """Get query popularity count.
@@ -378,7 +375,8 @@ class SearchResultCache:
             Number of times query was accessed
         """
         try:
-            key = f"popular:{hashlib.sha256(query.encode()).hexdigest()}"
+            digest = PersistentCacheManager.search_key(query)
+            key = f"popular:{digest.partition(':')[2]}"
             count = await self.cache.get(key)
             return int(count) if count else 0
 
@@ -393,7 +391,8 @@ class SearchResultCache:
             query: Query text
         """
         try:
-            key = f"popular:{hashlib.sha256(query.encode()).hexdigest()}"
+            digest = PersistentCacheManager.search_key(query)
+            key = f"popular:{digest.partition(':')[2]}"
 
             # Use atomic increment
             client = await self.cache.client
@@ -430,7 +429,9 @@ class SearchResultCache:
         try:
             for query in queries:
                 # Check if already cached
-                key = self._get_search_key(query, collection_name, None, 10, "hybrid")
+                key = self._build_search_key(
+                    query, collection_name, None, 10, "hybrid", None
+                )
                 exists = await self.cache.exists(key)
 
                 if not exists:

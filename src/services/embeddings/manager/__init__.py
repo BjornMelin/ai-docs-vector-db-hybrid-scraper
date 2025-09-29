@@ -86,6 +86,8 @@ class EmbeddingManager:
             local_max_size = getattr(config.cache, "local_max_size", 1000)
             local_max_memory_mb = getattr(config.cache, "local_max_memory_mb", 512)
             cache_ttl_seconds = getattr(config.cache, "cache_ttl_seconds", {})
+            cache_root = Path(getattr(config, "cache_dir", Path("cache")))
+            memory_threshold = getattr(config.cache, "memory_pressure_threshold", None)
             cache_manager = CacheManager(
                 dragonfly_url=dragonfly_url,
                 enable_local_cache=enable_local_cache,
@@ -93,6 +95,8 @@ class EmbeddingManager:
                 local_max_size=local_max_size,
                 local_max_memory_mb=local_max_memory_mb,
                 distributed_ttl_seconds=cache_ttl_seconds,
+                local_cache_path=cache_root / "embeddings",
+                memory_pressure_threshold=memory_threshold,
             )
             self.cache_manager = cast(CacheManagerType, cache_manager)
 
