@@ -1,6 +1,7 @@
 """Database manager for Qdrant and cache operations."""
 
 import logging
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
 
 import redis
@@ -20,18 +21,19 @@ if TYPE_CHECKING:
 # Imports to avoid circular dependencies
 try:
     from src.config import get_config
-    from src.services.cache.manager import CacheManager
-    from src.services.vector_db.service import QdrantService
+    from src.services.cache.manager import CacheManager as _CacheManager
+    from src.services.vector_db.service import QdrantService as _QdrantService
 except ImportError:
     get_config = None
-    CacheManager = None
-    QdrantService = None
+    _QdrantService = None
+    _CacheManager = None
 
 logger = logging.getLogger(__name__)
 
 
 def _raise_required_services_not_available() -> None:
     """Raise ImportError for required services not available."""
+
     msg = "Required services not available"
     raise ImportError(msg)
 
@@ -57,15 +59,15 @@ class DatabaseManager:
         qdrant_client: "AsyncQdrantClient" = Provide[
             ApplicationContainer.qdrant_client
         ],
-        redis_client: "redis.Redis" = Provide[ApplicationContainer.redis_client],
+        redis_client: redis.Redis = Provide[ApplicationContainer.redis_client],
     ) -> None:
         """Initialize database clients using dependency injection.
 
         Args:
             qdrant_client: Qdrant client from DI container
             redis_client: Redis client from DI container
-
         """
+
         if self._initialized:
             return
 
@@ -73,32 +75,38 @@ class DatabaseManager:
         self._redis_client = redis_client
 
         # Initialize cache manager
-        if CacheManager is None:
+        if _CacheManager is None:
             msg = "CacheManager not available"
             raise ImportError(msg)
 
-        self._cache_manager = CacheManager(
+        cache_root = Path("cache") / "database_manager"
+        self._cache_manager = _CacheManager(
             enable_local_cache=True,
             enable_distributed_cache=True,
             enable_specialized_caches=True,
+            local_cache_path=cache_root,
         )
 
         # Initialize Qdrant service
-        try:
-            if get_config is None or QdrantService is None:
-                _raise_required_services_not_available()
-
-            config = get_config()
-            self._qdrant_service = QdrantService(config)
-            await self._qdrant_service.initialize()
-        except ImportError:
-            logger.warning("QdrantService not available")
+        if get_config is None or _QdrantService is None:
+            _raise_required_services_not_available()
+        else:
+            try:
+                config = get_config()
+                self._qdrant_service = _QdrantService(config)
+                if self._qdrant_service is not None:
+                    await self._qdrant_service.initialize()
+            except Exception as e:
+                logger.exception("Failed to initialize Qdrant service")
+                msg = f"Failed to initialize Qdrant service: {e}"
+                raise APIError(msg) from e
 
         self._initialized = True
         logger.info("DatabaseManager initialized with DI clients")
 
     async def cleanup(self) -> None:
         """Cleanup database resources."""
+
         if self._cache_manager:
             await self._cache_manager.close()
             self._cache_manager = None
@@ -114,15 +122,8 @@ class DatabaseManager:
 
     # Qdrant Operations
     async def get_collections(self) -> list[str]:
-        """Get list of Qdrant collections.
+        """Get list of Qdrant collections."""
 
-        Returns:
-            List of collection names
-
-        Raises:
-            APIError: If Qdrant client not available
-
-        """
         if not self._qdrant_client:
             msg = "Qdrant client not available"
             raise APIError(msg)
@@ -148,11 +149,8 @@ class DatabaseManager:
 
         Returns:
             True if successful
-
-        Raises:
-            APIError: If storage fails
-
         """
+
         if not self._qdrant_service:
             msg = "Qdrant service not available"
             raise APIError(msg)
@@ -164,8 +162,7 @@ class DatabaseManager:
             msg = f"Failed to store embeddings: {e}"
             raise APIError(msg) from e
 
-        else:
-            return True
+        return True
 
     async def search_similar(
         self,
@@ -184,11 +181,8 @@ class DatabaseManager:
 
         Returns:
             List of search results
-
-        Raises:
-            APIError: If search fails
-
         """
+
         if not self._qdrant_service:
             msg = "Qdrant service not available"
             raise APIError(msg)
@@ -221,8 +215,8 @@ class DatabaseManager:
 
         Returns:
             Cached value or default
-
         """
+
         if not self._cache_manager:
             return default
 
@@ -249,8 +243,8 @@ class DatabaseManager:
 
         Returns:
             True if successful
-
         """
+
         if not self._cache_manager:
             return False
 
@@ -273,8 +267,8 @@ class DatabaseManager:
 
         Returns:
             True if successful
-
         """
+
         if not self._cache_manager:
             return False
 
@@ -290,21 +284,18 @@ class DatabaseManager:
 
         Returns:
             True if Redis is responsive
-
         """
+
         if not self._redis_client:
             return False
 
         try:
             await self._redis_client.ping()
         except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
-            logger.warning(
-                f"Redis ping failed: {e}",
-            )  # TODO: Convert f-string to logging format
+            logger.warning("Redis ping failed: %s", e)
             return False
 
-        else:
-            return True
+        return True
 
     async def redis_set(self, key: str, value: str, ex: int | None = None) -> bool:
         """Set value in Redis.
@@ -316,41 +307,29 @@ class DatabaseManager:
 
         Returns:
             True if successful
-
         """
+
         if not self._redis_client:
             return False
 
         try:
             await self._redis_client.set(key, value, ex=ex)
         except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
-            logger.warning(
-                f"Redis set failed for {key}: {e}",
-            )  # TODO: Convert f-string to logging format
+            logger.warning("Redis set failed for %s: %s", key, e)
             return False
 
-        else:
-            return True
+        return True
 
     async def redis_get(self, key: str) -> str | None:
-        """Get value from Redis.
+        """Get value from Redis."""
 
-        Args:
-            key: Redis key
-
-        Returns:
-            Value or None if not found
-
-        """
         if not self._redis_client:
             return None
 
         try:
             return await self._redis_client.get(key)
         except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
-            logger.warning(
-                f"Redis get failed for {key}: {e}",
-            )  # TODO: Convert f-string to logging format
+            logger.warning("Redis get failed for %s: %s", key, e)
             return None
 
     # Status and Metrics
@@ -359,8 +338,8 @@ class DatabaseManager:
 
         Returns:
             Status information for all components
-
         """
+
         status = {
             "initialized": self._initialized,
             "qdrant": {
@@ -399,19 +378,11 @@ class DatabaseManager:
         return status
 
     async def get_cache_manager(self) -> Optional["CacheManager"]:
-        """Get cache manager instance.
+        """Get cache manager instance."""
 
-        Returns:
-            CacheManager instance or None
-
-        """
         return self._cache_manager
 
     async def get_qdrant_service(self) -> Optional["QdrantService"]:
-        """Get Qdrant service instance.
+        """Get Qdrant service instance."""
 
-        Returns:
-            QdrantService instance or None
-
-        """
         return self._qdrant_service
