@@ -1,25 +1,11 @@
 """Query Processing Pipeline Factory for MCP server."""
 
 import logging
-from typing import TYPE_CHECKING
 
-from src.services.query_processing.orchestrator import SearchOrchestrator
-
-
-if TYPE_CHECKING:
-    from fastmcp import Context
-else:
-    # Use a protocol for testing to avoid FastMCP import issues
-    from typing import Protocol
-
-    class Context(Protocol):
-        async def info(self, msg: str) -> None: ...
-        async def debug(self, msg: str) -> None: ...
-        async def warning(self, msg: str) -> None: ...
-        async def error(self, msg: str) -> None: ...
-
+from fastmcp import Context
 
 from src.infrastructure.client_manager import ClientManager
+from src.services.query_processing.orchestrator import SearchOrchestrator
 from src.services.query_processing.pipeline import QueryProcessingPipeline
 
 
@@ -34,7 +20,7 @@ class QueryProcessingPipelineFactory:
         self.client_manager = client_manager
 
     async def create_pipeline(
-        self, ctx: "Context | None" = None
+        self, ctx: Context | None = None
     ) -> QueryProcessingPipeline:
         """Create and initialize query processing pipeline."""
         try:

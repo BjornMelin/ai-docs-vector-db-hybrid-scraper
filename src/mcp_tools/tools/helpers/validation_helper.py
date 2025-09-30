@@ -1,26 +1,6 @@
 """Validation helpers for query processing MCP tools."""
 
-from typing import TYPE_CHECKING
-
-
-if TYPE_CHECKING:
-    from fastmcp import Context
-else:
-    # Use a protocol for testing to avoid FastMCP import issues
-    from typing import Protocol
-
-    class Context(Protocol):
-        """Mock Context protocol for testing when FastMCP is not available.
-
-        Provides a minimal interface compatible with FastMCP Context for logging
-        operations during testing scenarios.
-        """
-
-        async def info(self, msg: str) -> None: ...
-        async def debug(self, msg: str) -> None: ...
-        async def warning(self, msg: str) -> None: ...
-        async def error(self, msg: str) -> None: ...
-
+from fastmcp import Context
 
 from src.security import MLSecurityValidator
 from src.services.query_processing.models import MatryoshkaDimension, SearchStrategy

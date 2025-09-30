@@ -1,22 +1,9 @@
 """Additional tool registration functions for query processing MCP tools."""
 
 import logging
-from typing import TYPE_CHECKING
 from uuid import uuid4
 
-
-if TYPE_CHECKING:
-    from fastmcp import Context
-else:
-    # Use a protocol for testing to avoid FastMCP import issues
-    from typing import Protocol
-
-    class Context(Protocol):
-        async def info(self, msg: str) -> None: ...
-        async def debug(self, msg: str) -> None: ...
-        async def warning(self, msg: str) -> None: ...
-        async def error(self, msg: str) -> None: ...
-
+from fastmcp import Context
 
 from .pipeline_factory import QueryProcessingPipelineFactory
 
@@ -34,6 +21,7 @@ def register_pipeline_health_tool(mcp, factory: QueryProcessingPipelineFactory):
         Returns health information for all pipeline components including
         orchestrator, intent classifier, preprocessor, and strategy selector.
         """
+
         request_id = str(uuid4())
         await ctx.info(f"Starting pipeline health check {request_id}")
 
@@ -57,8 +45,7 @@ def register_pipeline_health_tool(mcp, factory: QueryProcessingPipelineFactory):
                 "error": str(e),
                 "components": {"health_check": "failed"},
             }
-        else:
-            return health_status
+        return health_status
 
 
 def register_pipeline_metrics_tool(mcp, factory: QueryProcessingPipelineFactory):
@@ -71,6 +58,7 @@ def register_pipeline_metrics_tool(mcp, factory: QueryProcessingPipelineFactory)
         Returns performance statistics including processing times,
         strategy usage, success rates, and fallback utilization.
         """
+
         request_id = str(uuid4())
         await ctx.info(f"Starting pipeline metrics collection {request_id}")
 
@@ -87,8 +75,7 @@ def register_pipeline_metrics_tool(mcp, factory: QueryProcessingPipelineFactory)
             await ctx.error("Pipeline metrics collection {request_id} failed")
             logger.exception("Pipeline metrics collection failed")
             return {"error": str(e), "metrics_available": False}
-        else:
-            return metrics
+        return metrics
 
 
 def register_pipeline_warmup_tool(mcp, factory: QueryProcessingPipelineFactory):
@@ -101,6 +88,7 @@ def register_pipeline_warmup_tool(mcp, factory: QueryProcessingPipelineFactory):
         Pre-loads models and caches by processing test queries to ensure
         performance for subsequent real queries.
         """
+
         request_id = str(uuid4())
         await ctx.info(f"Starting pipeline warm-up {request_id}")
 
@@ -120,5 +108,4 @@ def register_pipeline_warmup_tool(mcp, factory: QueryProcessingPipelineFactory):
                 "status": "partial_success",
                 "message": "Pipeline warm-up completed with issues",
             }
-        else:
-            return {"status": "success", "message": "Pipeline warmed up successfully"}
+        return {"status": "success", "message": "Pipeline warmed up successfully"}
