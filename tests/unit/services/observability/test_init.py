@@ -15,6 +15,8 @@ from src.services.observability.init import (
 
 
 def _otel_modules(resource_factory: MagicMock | None = None) -> dict[str, object]:
+    """Build mock modules for OpenTelemetry imports."""
+    # pylint: disable=too-many-locals
     resource_factory = resource_factory or MagicMock(
         create=MagicMock(return_value=MagicMock())
     )
@@ -74,14 +76,20 @@ def _otel_modules(resource_factory: MagicMock | None = None) -> dict[str, object
 
 class TestInitializeObservability:
     def setup_method(self) -> None:
+        """Reset the observability state between test cases."""
+
         init_module._STATE.tracer_provider = None
         init_module._STATE.meter_provider = None
 
     def test_disabled_config_short_circuits(self) -> None:
+        """Verify disabled configurations skip initialisation logic."""
+
         assert initialize_observability(ObservabilityConfig(enabled=False)) is False
         assert is_observability_enabled() is False
 
     def test_successful_initialisation(self) -> None:
+        """Ensure a valid configuration wires OpenTelemetry components."""
+
         config = ObservabilityConfig(service_name="tests", enabled=True)
         resource_mock = MagicMock()
         resource_mock.create.return_value = MagicMock()
@@ -98,11 +106,15 @@ class TestInitializeObservability:
             configure.assert_called_once_with(config.instrumentations)
 
     def test_reinitialisation_is_idempotent(self) -> None:
+        """Confirm repeated initialisation calls keep state stable."""
+
         with patch.dict("sys.modules", _otel_modules()):
             initialize_observability(ObservabilityConfig())
             initialize_observability(ObservabilityConfig())
 
     def test_shutdown_resets_state(self) -> None:
+        """Check shutdown clears providers and invokes resource cleanup."""
+
         tracer_provider = MagicMock()
         meter_provider = MagicMock()
         init_module._STATE.tracer_provider = tracer_provider
