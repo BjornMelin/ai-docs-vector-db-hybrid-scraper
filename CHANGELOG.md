@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Captured the comprehensive unit-test refactor roadmap in `planning/unit_test_refactor_plan.md` covering fixture cleanup,
   deterministic rewrites, and sprint sequencing.
 - Added a `quality-unit` make target that runs Ruff, Pylint, Pyright, and the unit test suite in one command for local gating.
+- Published the consolidated MCP test strategy doc (`docs/testing/mcp-unit-tests.md`) capturing the coverage map, decision
+  record, and technical debt register for the new suites.
 
 ### Changed
 - Consolidated CI into a lean `core-ci.yml` pipeline (lint → tests with coverage → build → dependency audit) and introduced on-demand security and regression workflows while deleting `fast-feedback.yml`, `status-dashboard.yml`, and other scheduled automation.
@@ -42,6 +44,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   destructive-operation confirmations using asyncio-backed stubs.
 - Simplified `pytest.ini` to enforce warnings-as-errors, strict markers, and a seeded pytest-randomly configuration that aligns
   with the new deterministic fixtures.
+- Rebuilt `tests/unit/mcp_tools` and `tests/unit/mcp_services` around async-aware stubs, shared MCP decorators, and focused
+  validation coverage while deleting the legacy duplicated suites.
+- Centralized the MCP config and tool-module builders in `tests/unit/conftest.py`, parameterized streaming guard checks, and
+  added coverage for empty hybrid-search results plus orchestrator partial-initialization guard rails.
+- Pinned the regression workflow `uv` dependency to `0.2.37` to stabilize CI setup.
 
 ### Removed
 - Deleted support for the deprecated `AI_DOCS_DEPLOYMENT__TIER` environment variable in favor of `AI_DOCS_MODE` as the sole mode selector.

@@ -40,6 +40,11 @@ jobs:
           python-version: '3.12'
           cache-suffix: '-full-tests'
 
+      - name: Ensure uv is available
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install uv==0.2.37
+
       - name: Prepare directories
         run: |
           mkdir -p tests/fixtures/{cache,data,logs}
@@ -47,6 +52,8 @@ jobs:
 
       - name: Run full pytest suite
         run: uv run python scripts/dev.py test --profile full --workers 0 --coverage --verbose
+        env:
+          PYTEST_ADDOPTS: --disable-plugin pytest_benchmark
 
       - name: Upload coverage
         if: always()
@@ -71,6 +78,11 @@ jobs:
         with:
           python-version: '3.12'
           cache-suffix: '-benchmarks'
+
+      - name: Ensure uv is available
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install uv==0.2.37
 
       - name: Install benchmark extras
         run: uv pip install pytest-benchmark
