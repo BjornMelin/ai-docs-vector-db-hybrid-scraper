@@ -1,10 +1,11 @@
 """Specialized cache for embedding vectors with DragonflyDB optimizations."""
 
-import hashlib
 import logging
 from typing import Any
 
+from ._bulk_delete import delete_in_batches
 from .dragonfly_cache import DragonflyCache
+from .persistent_cache import PersistentCacheManager
 
 
 logger = logging.getLogger(__name__)
@@ -48,7 +49,7 @@ class EmbeddingCache:
         Returns:
             Cached embedding vector or None if not found
         """
-        key = self._get_key(text, model, provider, dimensions)
+        key = PersistentCacheManager.embedding_key(text, model, provider, dimensions)
 
         try:
             cached = await self.cache.get(key)
@@ -71,6 +72,7 @@ class EmbeddingCache:
             logger.error("Error retrieving embedding from cache: %s", e)
             return None
 
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     async def set_embedding(
         self,
         text: str,
@@ -93,7 +95,7 @@ class EmbeddingCache:
         Returns:
             Success status
         """
-        key = self._get_key(text, model, provider, dimensions)
+        key = PersistentCacheManager.embedding_key(text, model, provider, dimensions)
         cache_ttl = ttl or self.default_ttl
 
         try:
@@ -121,6 +123,27 @@ class EmbeddingCache:
             logger.error("Error caching embedding: %s", e)
             return False
 
+    def _get_key(
+        self,
+        text: str,
+        model: str,
+        provider: str,
+        dimensions: int | None = None,
+    ) -> str:
+        """Return deterministic embedding cache key.
+
+        Args:
+            text: Raw text used to generate the embedding.
+            model: Embedding model identifier.
+            provider: Provider backing the embedding request.
+            dimensions: Optional embedding dimensionality when the backend
+                exposes multiple sizes for the same model.
+
+        Returns:
+            Deterministic cache key compatible with ``PersistentCacheManager``.
+        """
+        return PersistentCacheManager.embedding_key(text, model, provider, dimensions)
+
     async def get_batch_embeddings(
         self,
         texts: list[str],
@@ -145,7 +168,10 @@ class EmbeddingCache:
             return {}, []
 
         # Generate cache keys
-        keys = [self._get_key(text, model, provider, dimensions) for text in texts]
+        keys = [
+            PersistentCacheManager.embedding_key(text, model, provider, dimensions)
+            for text in texts
+        ]
 
         try:
             # Use DragonflyDB's optimized MGET
@@ -184,6 +210,7 @@ class EmbeddingCache:
             # Return all as missing on error
             return {}, texts
 
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     async def set_batch_embeddings(
         self,
         embeddings: dict[str, list[float]],
@@ -232,7 +259,9 @@ class EmbeddingCache:
                     )
                     continue
 
-                key = self._get_key(text, model, provider, dimensions)
+                key = PersistentCacheManager.embedding_key(
+                    text, model, provider, dimensions
+                )
                 mapping[key] = [float(x) for x in embedding]
 
             if not mapping:
@@ -282,7 +311,9 @@ class EmbeddingCache:
 
             # Check which queries are not cached
             for query in common_queries:
-                key = self._get_key(query, model, provider, dimensions)
+                key = PersistentCacheManager.embedding_key(
+                    query, model, provider, dimensions
+                )
                 exists = await self.cache.exists(key)
                 if not exists:
                     missing_texts.append(query)
@@ -328,26 +359,17 @@ class EmbeddingCache:
 
             # Use cache scan to find matching keys
             keys = await self.cache.scan_keys(pattern)
+            deleted_count = await delete_in_batches(self.cache, keys)
 
-            if keys:
-                # Delete in batches for efficiency
-                batch_size = 100
-                deleted_count = 0
-
-                for i in range(0, len(keys), batch_size):
-                    batch = keys[i : i + batch_size]
-                    results = await self.cache.delete_many(batch)
-                    deleted_count += sum(results.values())
-
+            if deleted_count:
                 logger.info(
                     "Invalidated %s cached embeddings for %s (%s)",
                     deleted_count,
                     model,
                     provider,
                 )
-                return deleted_count
 
-            return 0
+            return deleted_count
 
         except (AttributeError, ConnectionError, ImportError, RuntimeError) as e:
             logger.error("Error invalidating model cache: %s", e)
@@ -401,32 +423,3 @@ class EmbeddingCache:
     async def get_stats(self) -> dict:
         """Alias for get_cache_stats for compatibility."""
         return await self.get_cache_stats()
-
-    def _get_key(
-        self,
-        text: str,
-        model: str,
-        provider: str,
-        dimensions: int | None = None,
-    ) -> str:
-        """Generate cache key for embedding.
-
-        Uses content-based hashing to ensure deduplication.
-
-        Args:
-            text: Text content
-            model: Model name
-            provider: Embedding provider
-            dimensions: Embedding dimensions
-
-        Returns:
-            Cache key
-        """
-        # Normalize text for consistent hashing (using SHA256 for security)
-        normalized_text = text.lower().strip()
-        text_hash = hashlib.sha256(normalized_text.encode()).hexdigest()
-
-        # Include dimensions in key if provided
-        if dimensions is not None:
-            return f"emb:{provider}:{model}:{dimensions}:{text_hash}"
-        return f"emb:{provider}:{model}:{text_hash}"

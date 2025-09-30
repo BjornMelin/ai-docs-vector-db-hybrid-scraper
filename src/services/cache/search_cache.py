@@ -3,6 +3,7 @@
 import logging
 from typing import Any
 
+from ._bulk_delete import delete_in_batches
 from .dragonfly_cache import DragonflyCache
 from .persistent_cache import PersistentCacheManager
 
@@ -31,6 +32,7 @@ class SearchResultCache:
         self.cache = cache
         self.default_ttl = default_ttl
 
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     async def get_search_results(
         self,
         query: str,
@@ -59,12 +61,9 @@ class SearchResultCache:
 
         try:
             cached = await self.cache.get(key)
-            if cached:
+            if cached is not None:
                 logger.debug("Search cache hit for query: %s...", query[:50])
-
-                # Track popularity for cache optimization
                 await self._increment_query_popularity(query)
-
                 return cached
 
             logger.debug("Search cache miss for query: %s...", query[:50])
@@ -74,6 +73,7 @@ class SearchResultCache:
             logger.error("Error retrieving search results from cache: %s", e)
             return None
 
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     async def set_search_results(
         self,
         query: str,
@@ -158,25 +158,16 @@ class SearchResultCache:
 
             # Use DragonflyDB's efficient SCAN for pattern matching
             keys = await self.cache.scan_keys(pattern)
+            deleted_count = await delete_in_batches(self.cache, keys)
 
-            if keys:
-                # Delete in batches for efficiency
-                batch_size = 100
-                deleted_count = 0
-
-                for i in range(0, len(keys), batch_size):
-                    batch = keys[i : i + batch_size]
-                    results = await self.cache.delete_many(batch)
-                    deleted_count += sum(results.values())
-
+            if deleted_count:
                 logger.info(
                     "Invalidated %s search cache entries for collection: %s",
                     deleted_count,
                     collection_name,
                 )
-                return deleted_count
 
-            return 0
+            return deleted_count
 
         except (ConnectionError, OSError, PermissionError) as e:
             logger.error("Error invalidating collection cache: %s", e)
@@ -328,6 +319,7 @@ class SearchResultCache:
         """Alias for get_cache_stats for compatibility."""
         return await self.get_cache_stats()
 
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     def _build_search_key(
         self,
         query: str,
@@ -405,6 +397,7 @@ class SearchResultCache:
         except (ConnectionError, OSError, TimeoutError) as e:
             logger.debug("Error tracking query popularity: %s", e)
 
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     async def warm_popular_searches(
         self,
         queries: list[str],

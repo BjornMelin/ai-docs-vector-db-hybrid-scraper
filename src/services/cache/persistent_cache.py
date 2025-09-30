@@ -17,6 +17,8 @@ Behavioural guarantees provided by this module:
 * ``warm_one_key`` provides an opt-in loader hook with sampled logging.
 """
 
+# pylint: disable=too-many-instance-attributes,too-many-arguments
+
 from __future__ import annotations
 
 import asyncio
@@ -35,6 +37,10 @@ from typing import Any, Final, Literal
 
 
 logger = logging.getLogger(__name__)
+
+
+class CachePersistenceError(Exception):
+    """Raised when disk persistence operations fail."""
 
 
 SERIALIZATION_VERSION: Final[int] = 1
@@ -152,6 +158,7 @@ def cache_path_for_key(base_dir: Path, key: str) -> Path:
     return base_dir / digest[:2] / f"{digest}.cache"
 
 
+# pylint: disable=too-many-instance-attributes,too-many-arguments
 class PersistentCacheManager:
     """Cache with an in-memory hot set and optional disk persistence."""
 
@@ -214,7 +221,15 @@ class PersistentCacheManager:
         return self._stats
 
     async def get(self, key: str, default: Any | None = None) -> Any | None:
-        """Retrieve value from cache if present and unexpired."""
+        """Retrieve a cached value when present and unexpired.
+
+        Args:
+            key: Cache key to look up.
+            default: Fallback value returned when the cache miss occurs.
+
+        Returns:
+            Cached value if available; otherwise ``default``.
+        """
 
         start = time.perf_counter()
         now = time.time()
@@ -239,7 +254,14 @@ class PersistentCacheManager:
             self._stats.record_miss()
             return default
 
-        disk_entry = await asyncio.to_thread(self._read_from_disk, key, now)
+        try:
+            disk_entry = await asyncio.to_thread(self._read_from_disk, key, now)
+        except CachePersistenceError as exc:  # pragma: no cover - defensive guard
+            self._stats.record_error()
+            logger.warning("Failed to hydrate key=%s from disk: %s", key, exc)
+            self._stats.record_miss()
+            return default
+
         if disk_entry is None:
             self._stats.record_miss()
             return default
@@ -261,34 +283,58 @@ class PersistentCacheManager:
         ttl: int | None = None,
         ttl_seconds: int | None = None,
     ) -> bool:
-        """Store ``value`` with optional TTL.
+        """Store a value in the cache with optional expiry handling.
 
-        Both ``ttl`` and ``ttl_seconds`` are accepted for compatibility; when
-        both are provided ``ttl_seconds`` wins.
+        Args:
+            key: Cache key to populate.
+            value: Serializable payload to cache.
+            ttl: Optional TTL in seconds (deprecated alias for ``ttl_seconds``).
+            ttl_seconds: Preferred TTL override in seconds.
+
+        Returns:
+            True if the value was stored successfully across configured layers.
         """
 
         effective_ttl = ttl_seconds if ttl_seconds is not None else ttl
+        if effective_ttl is not None and effective_ttl <= 0:
+            await self.delete(key)
+            return True
+
         now = time.time()
         expires_at = now + effective_ttl if effective_ttl is not None else None
         try:
             entry = self._serialize(value, expires_at, now)
-        except Exception as exc:  # pragma: no cover - defensive guard
+        except Exception:  # pragma: no cover - defensive guard
             self._stats.record_error()
             logger.exception("Failed to serialize cache value for key=%s", key)
-            raise RuntimeError("Cache serialization failed") from exc
+            return False
 
         async with self._lock:
             self._insert_entry_locked(key, entry)
 
+        persistence_success = True
         if self.persistence_enabled:
-            await asyncio.to_thread(self._write_to_disk, key, entry)
-            self._stats.record_disk_write()
+            try:
+                await asyncio.to_thread(self._write_to_disk, key, entry)
+            except OSError as exc:  # pragma: no cover - defensive guard
+                self._stats.record_error()
+                logger.warning("Failed to persist key=%s: %s", key, exc)
+                persistence_success = False
+            else:
+                self._stats.record_disk_write()
 
         self._stats.record_set()
-        return True
+        return persistence_success
 
     async def delete(self, key: str) -> bool:
-        """Delete key from cache and attempt persistence delete."""
+        """Remove a cached entry from memory and disk.
+
+        Args:
+            key: Cache key to delete.
+
+        Returns:
+            True when the key was removed from any layer, False on miss.
+        """
 
         removed = False
         async with self._lock:
@@ -298,7 +344,12 @@ class PersistentCacheManager:
                 removed = True
 
         if self.persistence_enabled:
-            deleted = await asyncio.to_thread(self._delete_from_disk, key)
+            try:
+                deleted = await asyncio.to_thread(self._delete_from_disk, key)
+            except CachePersistenceError as exc:  # pragma: no cover - defensive guard
+                self._stats.record_error()
+                logger.warning("Failed to delete persisted key=%s: %s", key, exc)
+                deleted = False
             if deleted:
                 self._stats.record_disk_delete()
             removed = removed or deleted
@@ -308,7 +359,7 @@ class PersistentCacheManager:
         return removed
 
     async def clear(self) -> None:
-        """Remove all in-memory entries and wipe persistence if enabled."""
+        """Remove all in-memory entries and wipe persisted artifacts."""
 
         async with self._lock:
             self._entries.clear()
@@ -488,17 +539,22 @@ class PersistentCacheManager:
             with path.open("rb") as fh:
                 record = pickle.load(fh)  # noqa: S301 - trusted persistence files
         except (OSError, pickle.PickleError) as exc:
-            self._stats.record_error()
-            logger.warning("Failed to read cache entry key=%s: %s", key, exc)
-            return None
+            raise CachePersistenceError("failed to read cache entry") from exc
 
         if record.get("version") != self.serialization_version:
             logger.debug("Cache entry version mismatch for key=%s", key)
+            try:
+                self._delete_from_disk(key)
+            except CachePersistenceError:
+                logger.debug("Unable to remove mismatched entry for key=%s", key)
             return None
 
         expires_at = record.get("expires_at")
         if expires_at is not None and now >= expires_at:
-            self._delete_from_disk(key)
+            try:
+                self._delete_from_disk(key)
+            except CachePersistenceError:
+                logger.debug("Failed to delete expired entry for key=%s", key)
             return None
 
         payload = record["payload"]
@@ -523,9 +579,7 @@ class PersistentCacheManager:
             path.unlink(missing_ok=True)
             return True
         except OSError as exc:
-            self._stats.record_error()
-            logger.warning("Failed to delete cache file for key=%s: %s", key, exc)
-            return False
+            raise CachePersistenceError("failed to delete cache entry") from exc
 
     def _clear_disk(self) -> None:
         """Clear the persistence directory."""
