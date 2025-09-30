@@ -31,12 +31,14 @@ class QdrantClientProvider:
     @property
     def client(self) -> AsyncQdrantClient | None:
         """Get the Qdrant client if available and healthy."""
+
         if not self._healthy:
             return None
         return self._client
 
     async def health_check(self) -> bool:
         """Check Qdrant client health."""
+
         try:
             if not self._client:
                 return False
@@ -47,20 +49,17 @@ class QdrantClientProvider:
             logger.warning("Qdrant health check failed: %s", e)
             self._healthy = False
             return False
-        else:
-            self._healthy = True
-            return True
+        # If no exceptions, consider healthy
+        self._healthy = True
+        return True
 
     async def get_collections(self) -> list[CollectionInfo]:
         """Get all collections.
 
         Returns:
             List of collection info
-
-        Raises:
-            RuntimeError: If client is unhealthy
-
         """
+
         if not self.client:
             msg = "Qdrant client is not available or unhealthy"
             raise RuntimeError(msg)
@@ -76,11 +75,8 @@ class QdrantClientProvider:
 
         Returns:
             True if collection exists
-
-        Raises:
-            RuntimeError: If client is unhealthy
-
         """
+
         if not self.client:
             msg = "Qdrant client is not available or unhealthy"
             raise RuntimeError(msg)
@@ -89,8 +85,7 @@ class QdrantClientProvider:
             await self.client.get_collection(collection_name)
         except (ValueError, ConnectionError, TimeoutError):
             return False
-        else:
-            return True
+        return True
 
     async def search(
         self, collection_name: str, query_vector: list[float], limit: int = 10, **kwargs
@@ -105,11 +100,8 @@ class QdrantClientProvider:
 
         Returns:
             Search results
-
-        Raises:
-            RuntimeError: If client is unhealthy
-
         """
+
         if not self.client:
             msg = "Qdrant client is not available or unhealthy"
             raise RuntimeError(msg)

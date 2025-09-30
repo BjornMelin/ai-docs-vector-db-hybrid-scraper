@@ -33,12 +33,14 @@ class RedisClientProvider:
     @property
     def client(self) -> redis.Redis | None:
         """Get the Redis client if available and healthy."""
+
         if not self._healthy:
             return None
         return self._client
 
     async def health_check(self) -> bool:
         """Check Redis client health."""
+
         try:
             if not self._client:
                 return False
@@ -49,9 +51,9 @@ class RedisClientProvider:
             logger.warning("Redis health check failed: %s", e)
             self._healthy = False
             return False
-        else:
-            self._healthy = True
-            return True
+        # If no exceptions, consider healthy
+        self._healthy = True
+        return True
 
     async def get(self, key: str) -> Any | None:
         """Get value by key.
@@ -61,10 +63,6 @@ class RedisClientProvider:
 
         Returns:
             Cached value or None
-
-        Raises:
-            RuntimeError: If client is unhealthy
-
         """
         if not self.client:
             msg = "Redis client is not available or unhealthy"
@@ -82,10 +80,6 @@ class RedisClientProvider:
 
         Returns:
             True if successful
-
-        Raises:
-            RuntimeError: If client is unhealthy
-
         """
         if not self.client:
             msg = "Redis client is not available or unhealthy"
@@ -101,10 +95,6 @@ class RedisClientProvider:
 
         Returns:
             Number of keys deleted
-
-        Raises:
-            RuntimeError: If client is unhealthy
-
         """
         if not self.client:
             msg = "Redis client is not available or unhealthy"
@@ -120,10 +110,6 @@ class RedisClientProvider:
 
         Returns:
             Number of existing keys
-
-        Raises:
-            RuntimeError: If client is unhealthy
-
         """
         if not self.client:
             msg = "Redis client is not available or unhealthy"

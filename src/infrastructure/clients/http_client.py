@@ -17,12 +17,14 @@ class HTTPClientProvider:
         http_client: aiohttp.ClientSession,
     ):
         """Initialize the HTTP client provider."""
+
         self._client = http_client
         self._healthy = True
 
     @property
     def client(self) -> aiohttp.ClientSession | None:
         """Get the HTTP client if available and healthy."""
+
         if not self._healthy:
             return None
         return self._client
@@ -42,9 +44,10 @@ class HTTPClientProvider:
             logger.warning("HTTP client health check failed: %s", e)
             self._healthy = False
             return False
-        else:
-            self._healthy = True
-            return True
+
+        # If no exceptions, consider healthy
+        self._healthy = True
+        return True
 
     async def get(
         self, url: str, headers: dict[str, str] | None = None, **kwargs
@@ -58,11 +61,8 @@ class HTTPClientProvider:
 
         Returns:
             HTTP response
-
-        Raises:
-            RuntimeError: If client is unhealthy
-
         """
+
         if not self.client:
             msg = "HTTP client is not available or unhealthy"
             raise RuntimeError(msg)
@@ -88,11 +88,8 @@ class HTTPClientProvider:
 
         Returns:
             HTTP response
-
-        Raises:
-            RuntimeError: If client is unhealthy
-
         """
+
         if not self.client:
             msg = "HTTP client is not available or unhealthy"
             raise RuntimeError(msg)
@@ -120,11 +117,8 @@ class HTTPClientProvider:
 
         Returns:
             HTTP response
-
-        Raises:
-            RuntimeError: If client is unhealthy
-
         """
+
         if not self.client:
             msg = "HTTP client is not available or unhealthy"
             raise RuntimeError(msg)
@@ -145,11 +139,8 @@ class HTTPClientProvider:
 
         Returns:
             HTTP response
-
-        Raises:
-            RuntimeError: If client is unhealthy
-
         """
+
         if not self.client:
             msg = "HTTP client is not available or unhealthy"
             raise RuntimeError(msg)
@@ -169,11 +160,8 @@ class HTTPClientProvider:
 
         Returns:
             HTTP response
-
-        Raises:
-            RuntimeError: If client is unhealthy
-
         """
+
         if not self.client:
             msg = "HTTP client is not available or unhealthy"
             raise RuntimeError(msg)

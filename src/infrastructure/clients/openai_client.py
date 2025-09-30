@@ -27,12 +27,14 @@ class OpenAIClientProvider:
     @property
     def client(self) -> AsyncOpenAI | None:
         """Get the OpenAI client if available and healthy."""
+
         if not self._healthy:
             return None
         return self._client
 
     async def health_check(self) -> bool:
         """Check OpenAI client health."""
+
         try:
             if not self._client:
                 return False
@@ -43,9 +45,9 @@ class OpenAIClientProvider:
             logger.warning("OpenAI health check failed: %s", e)
             self._healthy = False
             return False
-        else:
-            self._healthy = True
-            return True
+        # If no exceptions, consider healthy
+        self._healthy = True
+        return True
 
     async def get_embedding(
         self, text: str, model: str = "text-embedding-3-small"
@@ -58,11 +60,8 @@ class OpenAIClientProvider:
 
         Returns:
             Embedding vector
-
-        Raises:
-            RuntimeError: If client is unhealthy
-
         """
+
         if not self.client:
             msg = "OpenAI client is not available or unhealthy"
             raise RuntimeError(msg)
@@ -82,11 +81,8 @@ class OpenAIClientProvider:
 
         Returns:
             Response text
-
-        Raises:
-            RuntimeError: If client is unhealthy
-
         """
+
         if not self.client:
             msg = "OpenAI client is not available or unhealthy"
             raise RuntimeError(msg)

@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
-"""
-Configuration Drift Detection Demo
+"""Configuration drift detection example.
 
-This script demonstrates the configuration drift detection capabilities
-implemented in the AI Documentation Vector DB system. It shows how to:
+Demonstrates configuration drift detection capabilities:
 1. Initialize the drift detection system
 2. Take configuration snapshots
 3. Detect drift between configurations
 4. Generate alerts and remediation suggestions
-5. Integrate with existing Task 20 monitoring infrastructure
+5. Monitor configuration changes over time
 
 Usage:
     python examples/config_drift_demo.py
@@ -22,9 +20,9 @@ from typing import Any
 
 import aiofiles
 
-from src.config.drift_detection import (
+from src.config import (
+    ConfigDriftDetector,
     DriftDetectionConfig,
-    DriftDetector,
     DriftSeverity,
     get_drift_summary,
     initialize_drift_detector,
@@ -85,10 +83,10 @@ def create_sample_configs():
     return configs
 
 
-def _setup_demo_environment() -> tuple[dict[str, Any], DriftDetector]:
+def _setup_demo_environment() -> tuple[dict[str, Any], ConfigDriftDetector]:
     """Set up the demo environment and return configs and detector."""
     print("=" * 60)
-    print("🔍 Configuration Drift Detection Demo")
+    print("Configuration Drift Detection Demo")
     print("=" * 60)
 
     configs = create_sample_configs()
@@ -111,7 +109,7 @@ def _setup_demo_environment() -> tuple[dict[str, Any], DriftDetector]:
 
     detector = initialize_drift_detector(drift_config)
     paths_count = len(drift_config.monitored_paths)
-    print(f"✅ Initialized drift detector with {paths_count} monitored paths")
+    print(f"Initialized drift detector with {paths_count} monitored paths")
 
     return configs, detector
 
@@ -132,150 +130,113 @@ def _create_temp_config_files(configs: dict[str, Any]) -> list[Path]:
     return temp_files
 
 
-def _take_initial_snapshot(detector: DriftDetector, config_file: Path) -> None:
+def _take_initial_snapshot(detector: ConfigDriftDetector, config_file: Path) -> None:
     """Take and display initial configuration snapshot."""
     print("\n" + "=" * 60)
-    print("🔄 Taking Initial Configuration Snapshots")
+    print("Taking Initial Configuration Snapshot")
     print("=" * 60)
 
-    snapshot = detector.take_snapshot(str(config_file))
-    print(f"📸 Snapshot taken for {config_file.name}")
-    print(f"   📊 Config hash: {snapshot.config_hash[:16]}...")
-    print(f"   🕐 Timestamp: {snapshot.timestamp.strftime('%H:%M:%S')}")
-    print(f"   📂 Keys: {list(snapshot.config_data.keys())}")
+    snapshot = detector.take_snapshot()
+    print(f"Snapshot taken for {config_file.name}")
+    print(f"   Config hash: {snapshot.config_hash[:16]}...")
+    print(f"   Timestamp: {snapshot.timestamp.strftime('%H:%M:%S')}")
+    print(f"   Keys: {list(snapshot.config_data.keys())}")
 
 
 async def _simulate_drift_scenarios(
-    detector: DriftDetector, configs: dict[str, Any], original_file: Path
+    detector: ConfigDriftDetector, configs: dict[str, Any], original_file: Path
 ) -> None:
     """Simulate different drift scenarios and detect changes."""
     print("\n" + "=" * 60)
-    print("🚨 Simulating Configuration Changes")
+    print("Simulating Configuration Changes")
     print("=" * 60)
 
     drift_scenarios = [
-        (configs["security_drift"], "Security API Key Change", "🔐"),
-        (configs["env_drift"], "Environment Drift", "🌍"),
-        (configs["schema_drift"], "Schema Violation", "⚠️"),
+        (configs["security_drift"], "Security API Key Change"),
+        (configs["env_drift"], "Environment Drift"),
+        (configs["schema_drift"], "Schema Violation"),
     ]
 
-    for config_data, scenario_name, emoji in drift_scenarios:
-        print(f"\n{emoji} {scenario_name}")
+    for config_data, scenario_name in drift_scenarios:
+        print(f"\n{scenario_name}")
         print("-" * 40)
 
-        async with aiofiles.open(original_file, "w") as f:
+        async with aiofiles.open(original_file, "w", encoding="utf-8") as f:
             await f.write(json.dumps(config_data, indent=2))
 
-        detector.take_snapshot(str(original_file))
-        events = detector.compare_snapshots(str(original_file))
+        detector.take_snapshot()
+        events = detector.detect_drift()
 
         _display_drift_events(detector, events)
 
 
-def _display_drift_events(detector: DriftDetector, events: list) -> None:
+def _display_drift_events(detector: ConfigDriftDetector, events: list) -> None:
     """Display detected drift events with formatting."""
     if events:
-        print(f"🔍 Detected {len(events)} drift events:")
+        print(f"Detected {len(events)} drift events:")
         for event in events:
-            severity_emoji = {
-                "low": "💚",
-                "medium": "💛",
-                "high": "🧡",
-                "critical": "🔴",
-            }.get(event.severity.value, "❔")
-
             severity_text = event.severity.value.upper()
-            print(f"   {severity_emoji} {severity_text}: {event.description}")
-            print(f"      📍 Type: {event.drift_type.value}")
-            print(
-                f"      🔧 Auto-remediable: {'Yes' if event.auto_remediable else 'No'}"
-            )
+            print(f"   {severity_text}: {event.description}")
+            print(f"      Type: {event.drift_type.value}")
+            print(f"      Auto-remediable: {'Yes' if event.auto_remediable else 'No'}")
 
             if event.remediation_suggestion:
-                print(f"      💡 Suggestion: {event.remediation_suggestion}")
-
-            should_alert = detector.should_alert(event)
-            alert_msg = (
-                "🚨 Alert triggered!"
-                if should_alert
-                else "🔇 Alert suppressed (severity/rate limit)"
-            )
-            print(f"      {alert_msg}")
+                print(f"      Suggestion: {event.remediation_suggestion}")
     else:
-        print("✅ No drift detected")
+        print("No drift detected")
 
 
-def _display_drift_summary(detector: DriftDetector) -> None:
+def _display_drift_summary(detector: ConfigDriftDetector) -> None:
     """Display comprehensive drift detection summary."""
     print("\n" + "=" * 60)
-    print("📊 Drift Detection Summary")
+    print("Drift Detection Summary")
     print("=" * 60)
 
     summary = detector.get_drift_summary()
 
-    status = "Enabled" if summary["detection_enabled"] else "Disabled"
-    print(f"🟢 Detection Status: {status}")
-    print(f"📁 Monitored Sources: {summary['monitored_sources']}")
-    print(f"📸 Snapshots Stored: {summary['snapshots_stored']}")
-    print(f"⚡ Recent Events (24h): {summary['recent_events_24h']}")
-    print(f"🔧 Auto-remediable Events: {summary['auto_remediable_events']}")
+    print(f"Total Events: {summary['total_events']}")
+    print(f"Total Snapshots: {summary['total_snapshots']}")
 
-    print("\n📈 Severity Breakdown:")
-    for severity, count in summary["severity_breakdown"].items():
+    print("\nSeverity Breakdown:")
+    for severity, count in summary["by_severity"].items():
         if count > 0:
-            severity_emoji = {
-                "low": "💚",
-                "medium": "💛",
-                "high": "🧡",
-                "critical": "🔴",
-            }.get(severity, "❔")
-            print(f"   {severity_emoji} {severity.title()}: {count}")
+            print(f"   {severity.title()}: {count}")
 
-    if summary.get("recent_alerts"):
-        print("\n🚨 Recent Alerts:")
-        for alert in summary["recent_alerts"][-3:]:
-            print(f"   • {alert}")
-    else:
-        print("\n🔇 No recent alerts")
+    print("\nType Breakdown:")
+    for drift_type, count in summary["by_type"].items():
+        if count > 0:
+            print(f"   {drift_type.title()}: {count}")
 
 
 def _demonstrate_global_functions() -> None:
     """Demonstrate global drift detection functions."""
     print("\n" + "=" * 60)
-    print("🔄 Global Detection Functions Demo")
+    print("Global Detection Functions Demo")
     print("=" * 60)
 
-    print("🌍 Running global drift detection...")
+    print("Running global drift detection...")
     global_events = run_drift_detection()
-    print(f"   📊 Found {len(global_events)} events via global function")
+    print(f"   Found {len(global_events)} events via global function")
 
     global_summary = get_drift_summary()
-    print(f"   📈 Global summary: {global_summary['recent_events_24h']} events in 24h")
+    print(f"   Global summary: {global_summary['total_events']} total events")
 
 
 def _cleanup_and_summary(temp_files: list[Path]) -> None:
     """Clean up temporary files and display demo summary."""
-    print(f"\n🧹 Cleaning up {len(temp_files)} temporary files...")
+    print(f"\nCleaning up {len(temp_files)} temporary files...")
     for temp_file in temp_files:
         temp_file.unlink(missing_ok=True)
 
     print("\n" + "=" * 60)
-    print("✅ Configuration Drift Detection Demo Complete!")
+    print("Configuration Drift Detection Demo Complete")
     print("=" * 60)
-    print("\n💡 Key Features Demonstrated:")
+    print("\nKey Features Demonstrated:")
     print("   • Configuration snapshot management")
-    print("   • Multi-type drift detection (security, environment, schema)")
+    print("   • Drift detection across snapshots")
     print("   • Severity-based classification")
     print("   • Auto-remediation suggestions")
-    print("   • Alert rate limiting")
-    print("   • Integration with existing Task 20 infrastructure")
     print("   • Comprehensive drift reporting")
-    print("\n🔗 Integration Points:")
-    print("   • Task 20 Performance Monitoring")
-    print("   • Task 20 Anomaly Detection")
-    print("   • Observability Metrics Bridge")
-    print("   • RESTful API endpoints")
-    print("   • Background task processing")
 
 
 async def demo_basic_drift_detection():
