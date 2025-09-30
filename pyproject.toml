@@ -359,9 +359,6 @@ addopts = [
     "--strict-config",               # Error on unknown config keys
     "--tb=short",                    # Shorter traceback format
     "--verbose",                     # Verbose output for debugging
-    "--cov=src",                     # Coverage collection
-    "--cov-report=term-missing",     # Show missing lines in terminal
-    "--cov-fail-under=80",           # Fail if coverage below 80%
     "--durations=10",                # Show 10 slowest tests
     "--maxfail=5",                   # Stop after 5 failures
     "--import-mode=prepend",         # Prepend mode for src imports

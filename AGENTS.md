@@ -44,7 +44,8 @@ marketing language. Modules should expose `snake_case.py`, classes use
 ## Testing Guidelines
 Pytest drives all suites. New tests belong beside the feature under `tests/` and
 should be named `test_<feature>.py`. Maintain the minimum 80% coverage enforced by
-`--cov-fail-under=80`. Use markers defined in `pytest.ini` (`@pytest.mark.integration`,
+the CI profile (`python scripts/dev.py test --profile ci`). Use markers defined in
+`pytest.ini` (`@pytest.mark.integration`,
 `@pytest.mark.performance`, etc.) so suites can be targeted via
 `scripts/dev.py test --profile <profile>`.
 

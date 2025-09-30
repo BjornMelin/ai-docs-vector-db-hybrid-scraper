@@ -62,15 +62,15 @@ ruff format .
 # Type checking
 uv run mypy src/
 
-# Run tests with coverage
-uv run pytest --cov=src --cov-report=html
+# Run tests with coverage (CI profile)
+uv run python scripts/dev.py test --profile ci
 ```
 
 #### Required Code Quality
 
 - **Type Hints**: All functions must have complete type annotations
 - **Docstrings**: Follow Google-style docstrings for all public functions
-- **Testing**: Maintain >=90% test coverage
+- **Testing**: Maintain >=90% test coverage (threshold enforced in CI; run `uv run python scripts/dev.py test --profile ci` locally when needed)
 - **Performance**: Follow advanced performance patterns
 
 #### Example Code Structure
@@ -156,7 +156,7 @@ change: code
 
    ```bash
    # Run full test suite
-   uv run pytest --cov=src
+   uv run python scripts/dev.py test --profile ci
 
    # Code quality checks
    ruff check . --fix
@@ -267,7 +267,7 @@ uv run pytest -m integration
 uv run pytest -m benchmark
 
 # Run with coverage
-uv run pytest --cov=src --cov-report=html
+uv run python scripts/dev.py test --profile ci
 
 # Run performance benchmarks
 uv run pytest --benchmark-only

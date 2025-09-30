@@ -223,8 +223,8 @@ Stop with `docker compose down` when finished.
 # Quick unit + fast integration tests
 python scripts/dev.py test --profile quick
 
-# Full suite with coverage
-python scripts/dev.py test --profile full --coverage
+# Full suite with coverage (mirrors CI)
+python scripts/dev.py test --profile ci
 
 # Lint, format, type-check, and tests in one pass
 python scripts/dev.py quality

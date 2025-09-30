@@ -10,7 +10,7 @@
 
 ```bash
 # Run all tests
-pytest
+python scripts/dev.py test --profile full
 
 # Run tests in specific file
 pytest tests/test_example.py
@@ -21,8 +21,8 @@ pytest -v
 # Run tests matching pattern
 pytest -k "test_function_name"
 
-# Run tests with coverage report
-pytest --cov=src --cov-report=term-missing
+# Run tests with coverage report (mirrors CI)
+python scripts/dev.py test --profile ci
 
 # Run tests in parallel
 pytest -n auto
@@ -116,20 +116,12 @@ def test_with_context_manager():
 ## Coverage Requirements
 
 ```bash
-# Minimum coverage threshold
-pytest --cov=src --cov-fail-under=80
+# Minimum coverage threshold (CI profile)
+python scripts/dev.py test --profile ci
 ```
 
-**Coverage configuration in pyproject.toml:**
-
-```toml
-[tool.coverage.run]
-branch = true
-source = ["src"]
-
-[tool.coverage.report]
-exclude_lines = ["pragma: no cover", "def __repr__"]
-```
+CI enforces the project-wide 80% threshold via this profile. Run it locally when
+you need coverage feedback or before publishing a pull request.
 
 ## Test Organization and Markers
 

@@ -381,7 +381,7 @@ uv run pytest -m e2e
 uv run pytest -n auto
 
 # Run with coverage
-uv run pytest --cov=src --cov-report=html
+uv run python scripts/dev.py test --profile ci
 
 # Debug failing tests
 uv run pytest tests/unit/test_module.py::test_specific -xvs

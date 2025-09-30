@@ -8,7 +8,8 @@ and observable.
 ## Architecture
 
 - **Local persistent layer** – `PersistentCacheManager` stores payloads under the
-  configured `base_path` using SHA-256 key hashes. Directory sharding prevents
+  configured `base_path` using SHA-256 key hashes truncated to 16 hex
+  characters. Directory sharding prevents
   large fan-out and allows safe deletion, even when many keys share a namespace.
 - **Distributed layer** – `DragonflyCache` provides Redis-compatible operations
   and optional compression. Specialised caches (embeddings/search results) use
@@ -65,6 +66,8 @@ Key configuration lives under `CacheConfig` in `src/config/settings.py`:
 
 - Persistent paths default to `cache/local` unless the manager is constructed
   with a custom `local_cache_path`.
+- On POSIX hosts the cache directory is hardened to `0700` permissions during
+  initialization; adjust manually if you need shared access.
 - All deletion helpers swallow missing-key scenarios, so repeated deletes are
   safe.
 - Optional monitoring imports are guarded; metrics wiring only activates when
