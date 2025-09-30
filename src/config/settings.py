@@ -235,11 +235,15 @@ class DeploymentTier(str, Enum):
 
 
 class CacheConfig(BaseModel):
-    """Cache configuration with local and distributed options."""
+    """Cache configuration for persistent local storage and distributed layers."""
 
     enable_caching: bool = Field(default=True, description="Enable caching globally")
     enable_local_cache: bool = Field(
-        default=True, description="Enable local in-memory cache"
+        default=True,
+        description=(
+            "Enable local persistent cache. When enabled the manager writes hashed "
+            "entries to disk for warm restarts."
+        ),
     )
     enable_redis_cache: bool = Field(default=True, description="Enable Redis cache")
 
@@ -263,11 +267,22 @@ class CacheConfig(BaseModel):
         default=7200, gt=0, description="Query cache TTL in seconds"
     )
     ttl_search_results: int = Field(
-        default=3600, gt=0, description="Search result cache TTL"
+        default=3600,
+        gt=0,
+        description=(
+            "Search result cache TTL in seconds. Applies to both hits and empty "
+            "results (negative caching)."
+        ),
     )
 
     # Local cache limits
-    local_max_size: int = Field(default=1000, gt=0, description="Local cache max items")
+    local_max_size: int = Field(
+        default=1000,
+        gt=0,
+        description=(
+            "Local cache max items persisted on disk before eviction policies apply."
+        ),
+    )
     local_max_memory_mb: int = Field(
         default=100, gt=0, description="Local cache max memory MB"
     )
@@ -279,7 +294,16 @@ class CacheConfig(BaseModel):
             "embeddings": 86400,
             "collections": 7200,
         },
-        description="Specific TTL settings for different cache types",
+        description=(
+            "Specific TTL overrides for cache types. Empty search results reuse "
+            "the `search_results` TTL."
+        ),
+    )
+    memory_pressure_threshold: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="Optional ratio of used/local cache memory before evictions",  # noqa: E501
     )
 
 
@@ -1159,8 +1183,8 @@ def get_settings() -> Settings:
 
     Returns:
         The global settings instance, creating it if it doesn't exist.
-
     """
+
     global _settings_instance
     if _settings_instance is None:
         _settings_instance = Settings()
@@ -1181,29 +1205,22 @@ def get_settings() -> Settings:
 
 
 def set_settings(new_settings: Settings) -> None:
-    """Set the global settings instance.
+    """Set the global settings instance."""
 
-    Args:
-        new_settings: The settings instance to set globally.
-
-    """
     global _settings_instance
     _settings_instance = new_settings
 
 
 def reset_settings() -> None:
     """Reset the global settings instance."""
+
     global _settings_instance
     _settings_instance = None
 
 
 def create_settings_from_env() -> Settings:
-    """Create a new settings instance from environment variables.
+    """Create a new settings instance from environment variables."""
 
-    Returns:
-        A new settings instance loaded from environment variables.
-
-    """
     return Settings()
 
 
@@ -1248,22 +1265,12 @@ def get_security_config() -> SecurityConfig:
 
 
 def create_simple_config() -> Settings:
-    """Create configuration optimized for simple/solo developer use.
-
-    Returns:
-        Settings instance configured for simple mode.
-
-    """
+    """Create configuration optimized for simple/solo developer use."""
     return Settings(mode=ApplicationMode.SIMPLE)
 
 
 def create_enterprise_config() -> Settings:
-    """Create configuration with full enterprise features enabled.
-
-    Returns:
-        Settings instance configured for enterprise mode.
-
-    """
+    """Create configuration with full enterprise features enabled."""
     return Settings(mode=ApplicationMode.ENTERPRISE)
 
 
