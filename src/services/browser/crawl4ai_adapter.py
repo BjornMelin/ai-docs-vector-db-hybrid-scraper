@@ -106,7 +106,7 @@ class Crawl4AIAdapter(BaseService):
         try:
             self._crawler = AsyncWebCrawler(config=self._browser_config)
             await self._crawler.start()
-            self._initialized = True
+            self._mark_initialized()
             logger.info("Crawl4AI adapter initialized with shared crawler")
         except RECOVERABLE_ERRORS as exc:  # pragma: no cover - defensive trace
             self._crawler = None
@@ -123,7 +123,7 @@ class Crawl4AIAdapter(BaseService):
                 logger.exception("Error cleaning up Crawl4AI adapter")
             finally:
                 self._crawler = None
-        self._initialized = False
+        self._mark_uninitialized()
 
     async def scrape(
         self,
@@ -173,7 +173,10 @@ class Crawl4AIAdapter(BaseService):
             else:
                 crawl_result = raw_result
             payload = self._build_success_payload(crawl_result)
-            self._metrics.successful_requests += 1
+            if payload.get("success", False):
+                self._metrics.successful_requests += 1
+            else:
+                self._metrics.failed_requests += 1
             return payload
         except RECOVERABLE_ERRORS as exc:  # pragma: no cover - defensive trace
             logger.exception("Crawl4AI adapter error for %s", url)
@@ -184,7 +187,7 @@ class Crawl4AIAdapter(BaseService):
                 "error": str(exc),
                 "content": "",
                 "metadata": {
-                    "extraction_method": "crawl4ai",
+                    "extraction_type": "crawl4ai",
                     "processing_time_ms": (perf_counter() - started) * 1000,
                 },
             }
@@ -215,21 +218,45 @@ class Crawl4AIAdapter(BaseService):
             msg = "Adapter not initialized"
             raise CrawlServiceError(msg)
 
+        if not urls:
+            return []
+
         run_cfg = self._run_config_template.clone(stream=False)
-        raw_results = await crawl_page(
-            urls,
-            run_cfg,
-            self._browser_config,
-            dispatcher=self._dispatcher,
-            crawler=self._crawler,
-        )
+        try:
+            raw_results = await crawl_page(
+                urls,
+                run_cfg,
+                self._browser_config,
+                dispatcher=self._dispatcher,
+                crawler=self._crawler,
+            )
+        except RECOVERABLE_ERRORS as exc:  # pragma: no cover - defensive trace
+            logger.exception("Bulk crawl failed for %d URLs", len(urls))
+            failure_payload = {
+                "success": False,
+                "error": str(exc),
+                "content": "",
+                "metadata": {"extraction_type": extraction_type},
+            }
+            self._metrics.failed_requests += len(urls)
+            self._metrics.total_requests += len(urls)
+            return [
+                {
+                    **failure_payload,
+                    "url": url,
+                }
+                for url in urls
+            ]
+
         results = raw_results if isinstance(raw_results, list) else [raw_results]
         normalized: list[dict[str, Any]] = []
         for item in results:
             if getattr(item, "success", False):
-                normalized.append(
-                    self._build_success_payload(item, extraction_type=extraction_type)
+                payload = self._build_success_payload(
+                    item, extraction_type=extraction_type
                 )
+                normalized.append(payload)
+                self._metrics.successful_requests += 1
             else:
                 normalized.append(
                     {
@@ -237,9 +264,12 @@ class Crawl4AIAdapter(BaseService):
                         "url": getattr(item, "url", ""),
                         "error": getattr(item, "error_message", "Unknown error"),
                         "content": "",
-                        "metadata": {"extraction_method": extraction_type},
+                        "metadata": {"extraction_type": extraction_type},
                     }
                 )
+                self._metrics.failed_requests += 1
+
+        self._metrics.total_requests += len(results)
         return normalized
 
     def get_capabilities(self) -> dict[str, Any]:
