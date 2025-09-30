@@ -36,10 +36,10 @@ src.config.drift\_detection module
    :show-inheritance:
    :undoc-members:
 
-src.config.modern module
+src.config.loader module
 ------------------------
 
-.. automodule:: src.config.modern
+.. automodule:: src.config.loader
    :members:
    :show-inheritance:
    :undoc-members:
@@ -52,10 +52,10 @@ src.config.reloader module
    :show-inheritance:
    :undoc-members:
 
-src.config.settings module
---------------------------
+src.config.models module
+------------------------
 
-.. automodule:: src.config.settings
+.. automodule:: src.config.models
    :members:
    :show-inheritance:
    :undoc-members:
