@@ -51,9 +51,7 @@ async def demonstrate_config_reload():  # pylint: disable=too-many-statements
         logger.info("Observability initialized")
 
     # Create configuration reloader
-    reloader = ConfigReloader(
-        enable_signal_handler=True,
-    )
+    reloader = ConfigReloader()
 
     logger.info("Configuration reloader created")
 
@@ -84,9 +82,7 @@ async def demonstrate_config_reload():  # pylint: disable=too-many-statements
 
     try:
         # Create reloader with file watching capability
-        file_reloader = ConfigReloader(
-            enable_signal_handler=False,
-        )
+        file_reloader = ConfigReloader()
 
         # Enable file watching
         await file_reloader.enable_file_watching(poll_interval=0.5)
