@@ -1,12 +1,11 @@
 """Example demonstrating zero-downtime configuration reloading.
 
 This example shows how to use the configuration reloading mechanism
-with proper observability integration and service notifications.
+with proper observability integration.
 """
 
 import asyncio
 import logging
-import time
 from pathlib import Path
 
 from src.api.routers.config import (
@@ -15,8 +14,13 @@ from src.api.routers.config import (
     get_reload_stats,
     reload_configuration,
 )
-from src.config import Config, get_config
-from src.config.reload import ConfigReloader, ReloadTrigger, set_config_reloader
+from src.config import (
+    ConfigReloader,
+    ReloadTrigger,
+    get_config,
+    set_config_reloader,
+)
+from src.services.observability.config import ObservabilityConfig
 from src.services.observability.init import initialize_observability
 
 
@@ -27,59 +31,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-class ExampleService:
-    """Example service that reacts to configuration changes."""
-
-    def __init__(self, name: str):
-        self.name = name
-        self.config_version = None
-        self.is_running = False
-
-    def start(self, config: Config) -> None:
-        """Start the service with initial configuration."""
-        self.config_version = config.version
-        self.is_running = True
-        logger.info(
-            f"{self.name} started with config version: {self.config_version}"
-        )  # TODO: Convert f-string to logging format
-
-    def update_config(self, old_config: Config, new_config: Config) -> bool:
-        """Update service configuration."""
-        try:
-            old_version = old_config.version
-            new_version = new_config.version
-            update_msg = (
-                f"{self.name} updating from config {old_version} to {new_version}"
-            )
-            logger.info(update_msg)
-
-            # Simulate configuration validation
-            if not new_config.app_name:
-                logger.error(
-                    f"{self.name} config validation failed: missing app_name"
-                )  # TODO: Convert f-string to logging format
-                return False
-
-            # Simulate configuration update with some processing time
-            time.sleep(0.1)
-
-            self.config_version = new_config.version
-            logger.info(
-                f"{self.name} configuration updated successfully"
-            )  # TODO: Convert f-string to logging format
-        except Exception:
-            logger.exception(f"{self.name} configuration update failed")
-            return False
-        else:
-            return True
-
-    def stop(self) -> None:
-        """Stop the service."""
-        self.is_running = False
-        logger.info(f"{self.name} stopped")  # TODO: Convert f-string to logging format
-
-
-async def demonstrate_config_reload():
+async def demonstrate_config_reload():  # pylint: disable=too-many-statements
     """Demonstrate configuration reloading capabilities."""
     logger.info("=== Configuration Reloading Demonstration ===")
 
@@ -88,36 +40,22 @@ async def demonstrate_config_reload():
 
     # Initialize observability if enabled
     if config.observability.enabled:
-        initialize_observability(config.observability)
+        # Convert config model to service observability config
+        obs_config = ObservabilityConfig(
+            enabled=config.observability.enabled,
+            service_name=config.observability.service_name,
+            service_version=config.observability.service_version,
+            otlp_endpoint=config.observability.otlp_endpoint,
+        )
+        initialize_observability(obs_config)
         logger.info("Observability initialized")
 
     # Create configuration reloader
     reloader = ConfigReloader(
         enable_signal_handler=True,
-        validation_timeout=10.0,
     )
-    reloader.set_current_config(config)
 
-    # Create example services
-    services = [
-        ExampleService("DatabaseService"),
-        ExampleService("CacheService"),
-        ExampleService("SearchService"),
-    ]
-
-    # Start services
-    for service in services:
-        service.start(config)
-
-    # Register service configuration callbacks
-    for service in services:
-        reloader.add_change_listener(
-            name=f"{service.name}_config",
-            callback=service.update_config,
-            priority=50,
-        )
-
-    logger.info("Services started and configuration callbacks registered")
+    logger.info("Configuration reloader created")
 
     # Demonstrate manual reload
     logger.info("\n--- Demonstrating Manual Configuration Reload ---")
@@ -127,46 +65,28 @@ async def demonstrate_config_reload():
     )
 
     logger.info("Manual reload completed:")
-    logger.info(
-        f"  - Operation ID: {operation.operation_id}"
-    )  # TODO: Convert f-string to logging format
-    logger.info(
-        f"  - Success: {operation.success}"
-    )  # TODO: Convert f-string to logging format
-    logger.info(
-        f"  - Duration: {operation.total_duration_ms:.1f}ms"
-    )  # TODO: Convert f-string to logging format
-    logger.info(
-        f"  - Services notified: {len(operation.services_notified)}"
-    )  # TODO: Convert f-string to logging format
+    logger.info("  - Operation ID: %s", operation.operation_id)
+    logger.info("  - Success: %s", operation.success)
+    logger.info("  - Duration: %.1fms", operation.total_duration_ms)
+    logger.info("  - Status: %s", operation.status.value)
 
     if operation.validation_warnings:
-        logger.warning(
-            f"  - Validation warnings: {operation.validation_warnings}"
-        )  # TODO: Convert f-string to logging format
+        logger.warning("  - Validation warnings: %s", operation.validation_warnings)
 
     # Demonstrate file watching
     logger.info("\n--- Demonstrating File Watching ---")
 
     # Create a temporary config file for testing
     temp_config_file = Path("temp_config.env")
-    temp_config_file.write_text("AI_DOCS_APP_NAME=Test App\nAI_DOCS_VERSION=1.0.1\n")
+    temp_config_file.write_text(
+        "AI_DOCS__APP_NAME=Test App\nAI_DOCS__VERSION=1.0.1\n", encoding="utf-8"
+    )
 
     try:
-        # Create reloader with file watching
+        # Create reloader with file watching capability
         file_reloader = ConfigReloader(
-            config_source=temp_config_file,
             enable_signal_handler=False,
         )
-        file_reloader.set_current_config(config)
-
-        # Register same callbacks
-        for service in services:
-            file_reloader.add_change_listener(
-                name=f"{service.name}_file_config",
-                callback=service.update_config,
-                priority=50,
-            )
 
         # Enable file watching
         await file_reloader.enable_file_watching(poll_interval=0.5)
@@ -176,20 +96,27 @@ async def demonstrate_config_reload():
         await asyncio.sleep(1)
         logger.info("Modifying configuration file...")
         temp_config_file.write_text(
-            "AI_DOCS_APP_NAME=Updated Test App\nAI_DOCS_VERSION=1.0.2\n"
+            "AI_DOCS__APP_NAME=Updated Test App\nAI_DOCS__VERSION=1.0.2\n",
+            encoding="utf-8",
         )
 
-        # Wait for file change detection
-        await asyncio.sleep(2)
+        # Perform a manual reload with the updated file
+        file_operation = await file_reloader.reload_config(
+            trigger=ReloadTrigger.FILE_WATCH,
+            config_source=temp_config_file,
+        )
+
+        logger.info("File reload completed:")
+        logger.info("  - Operation ID: %s", file_operation.operation_id)
+        logger.info("  - Success: %s", file_operation.success)
+        logger.info("  - Duration: %.1fms", file_operation.total_duration_ms)
 
         # Check reload history
         history = file_reloader.get_reload_history(limit=5)
-        logger.info(
-            f"File reload operations: {len(history)}"
-        )  # TODO: Convert f-string to logging format
+        logger.info("File reload operations: %s", len(history))
         for op in history:
             logger.info(
-                f"  - {op.operation_id}: {op.status.value} ({op.trigger.value})"
+                "  - %s: %s (%s)", op.operation_id, op.status.value, op.trigger.value
             )
 
         await file_reloader.disable_file_watching()
@@ -203,30 +130,21 @@ async def demonstrate_config_reload():
     logger.info("\n--- Demonstrating Configuration Rollback ---")
 
     # Add some config changes to create backup history
-    for i in range(3):
-        updated_config = Config(
-            app_name=f"Test App v{i + 1}",
-            version=f"1.0.{i + 1}",
+    for _ in range(3):
+        await reloader.reload_config(
+            trigger=ReloadTrigger.MANUAL,
+            force=True,
         )
-        reloader.set_current_config(updated_config)
         await asyncio.sleep(0.1)
 
     # Perform rollback
     rollback_operation = await reloader.rollback_config()
 
     logger.info("Rollback completed:")
-    logger.info(
-        f"  - Operation ID: {rollback_operation.operation_id}"
-    )  # TODO: Convert f-string to logging format
-    logger.info(
-        f"  - Success: {rollback_operation.success}"
-    )  # TODO: Convert f-string to logging format
-    logger.info(
-        f"  - Duration: {rollback_operation.total_duration_ms:.1f}ms"
-    )  # TODO: Convert f-string to logging format
-    logger.info(
-        f"  - Status: {rollback_operation.status.value}"
-    )  # TODO: Convert f-string to logging format
+    logger.info("  - Operation ID: %s", rollback_operation.operation_id)
+    logger.info("  - Success: %s", rollback_operation.success)
+    logger.info("  - Duration: %.1fms", rollback_operation.total_duration_ms)
+    logger.info("  - Status: %s", rollback_operation.status.value)
 
     # Show reload statistics
     logger.info("\n--- Configuration Reload Statistics ---")
@@ -234,13 +152,8 @@ async def demonstrate_config_reload():
 
     logger.info("Reload Statistics:")
     for key, value in stats.items():
-        logger.info(f"  - {key}: {value}")  # TODO: Convert f-string to logging format
+        logger.info("  - %s: %s", key, value)
 
-    # Cleanup services
-    for service in services:
-        service.stop()
-
-    await reloader.shutdown()
     logger.info("\n=== Demonstration Complete ===")
 
 
@@ -253,7 +166,6 @@ async def demonstrate_api_integration():
 
     # Initialize reloader
     reloader = ConfigReloader()
-    reloader.set_current_config(get_config())
 
     # Set global reloader for API access
     set_config_reloader(reloader)
@@ -264,15 +176,9 @@ async def demonstrate_api_integration():
     try:
         response = await reload_configuration(reload_request)
         logger.info("API reload response:")
-        logger.info(
-            f"  - Operation ID: {response.operation_id}"
-        )  # TODO: Convert f-string to logging format
-        logger.info(
-            f"  - Success: {response.success}"
-        )  # TODO: Convert f-string to logging format
-        logger.info(
-            f"  - Duration: {response.total_duration_ms:.1f}ms"
-        )  # TODO: Convert f-string to logging format
+        logger.info("  - Operation ID: %s", response.operation_id)
+        logger.info("  - Success: %s", response.success)
+        logger.info("  - Duration: %.1fms", response.total_duration_ms)
 
     except Exception:
         logger.exception("API reload failed")
@@ -281,12 +187,8 @@ async def demonstrate_api_integration():
     try:
         stats_response = await get_reload_stats()
         logger.info("API stats response:")
-        logger.info(
-            f"  - Total operations: {stats_response.total_operations}"
-        )  # TODO: Convert f-string to logging format
-        logger.info(
-            f"  - Success rate: {stats_response.success_rate:.2%}"
-        )  # TODO: Convert f-string to logging format
+        logger.info("  - Total operations: %s", stats_response.total_operations)
+        logger.info("  - Success rate: %.2f%%", stats_response.success_rate * 100)
 
     except Exception:
         logger.exception("API stats failed")
@@ -295,17 +197,13 @@ async def demonstrate_api_integration():
     try:
         status_response = await get_config_status()
         logger.info("API status response:")
+        logger.info("  - Config hash: %s", status_response.get("current_config_hash"))
         logger.info(
-            f"  - Config hash: {status_response.get('current_config_hash')}"
-        )  # TODO: Convert f-string to logging format
-        logger.info(
-            f"  - File watching: {status_response.get('file_watching_enabled')}"
+            "  - File watching: %s", status_response.get("file_watching_enabled")
         )
 
     except Exception:
         logger.exception("API status failed")
-
-    await reloader.shutdown()
 
 
 async def main():
