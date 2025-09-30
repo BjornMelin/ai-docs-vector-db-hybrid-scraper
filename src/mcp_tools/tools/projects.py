@@ -5,31 +5,15 @@ import json
 import logging
 import subprocess
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import yaml
-
-from src.mcp_tools.models.responses import OperationStatus, ProjectInfo
-
-
-if TYPE_CHECKING:
-    from fastmcp import Context
-else:
-    # Use a protocol for testing to avoid FastMCP import issues
-    from typing import Protocol
-
-    class Context(Protocol):
-        async def info(self, msg: str) -> None: ...
-        async def debug(self, msg: str) -> None: ...
-        async def warning(self, msg: str) -> None: ...
-        async def error(self, msg: str) -> None: ...
-
+from fastmcp import Context
 
 from src.config import SearchStrategy
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.models.requests import ProjectRequest
-from src.mcp_tools.models.responses import SearchResult
+from src.mcp_tools.models.responses import OperationStatus, ProjectInfo, SearchResult
 
 
 logger = logging.getLogger(__name__)
@@ -130,9 +114,7 @@ def register_tools(mcp, client_manager: ClientManager):
                     except (subprocess.SubprocessError, OSError, TimeoutError) as e:
                         if ctx:
                             await ctx.warning(f"Failed to process URL {url}: {e}")
-                        logger.warning(
-                            f"Failed to process URL {url}: {e}"
-                        )  # TODO: Convert f-string to logging format
+                        logger.warning("Failed to process URL %s: %s", url, e)
 
                 project["urls"] = request.urls
                 project["document_count"] = successful_count
@@ -394,7 +376,7 @@ def register_tools(mcp, client_manager: ClientManager):
                             f"Failed to delete collection {project['collection']}: {e}"
                         )
                     logger.warning(
-                        f"Failed to delete collection {project['collection']}: {e}"
+                        "Failed to delete collection %s: %s", project["collection"], e
                     )
 
             # Remove from persistent storage (single source of truth)
@@ -544,9 +526,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 except (subprocess.SubprocessError, OSError, TimeoutError) as e:
                     if ctx:
                         await ctx.warning(f"Failed to process URL {url}: {e}")
-                    logger.warning(
-                        f"Failed to process URL {url}: {e}"
-                    )  # TODO: Convert f-string to logging format
+                    logger.warning("Failed to process URL %s: %s", url, e)
 
             # Update project URLs
             updated_urls = list(existing_urls) + new_urls

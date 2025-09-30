@@ -3,24 +3,9 @@
 import asyncio
 import logging
 import time
-from typing import TYPE_CHECKING
 from uuid import uuid4
 
-from ._search_utils import search_documents_core
-
-
-if TYPE_CHECKING:
-    from fastmcp import Context
-else:
-    # Use a protocol for testing to avoid FastMCP import issues
-    from typing import Protocol
-
-    class Context(Protocol):
-        async def info(self, msg: str) -> None: ...
-        async def debug(self, msg: str) -> None: ...
-        async def warning(self, msg: str) -> None: ...
-        async def error(self, msg: str) -> None: ...
-
+from fastmcp import Context
 
 from src.config import SearchStrategy
 from src.infrastructure.client_manager import ClientManager
@@ -32,6 +17,8 @@ from src.mcp_tools.models.requests import (
 )
 from src.mcp_tools.models.responses import HyDEAdvancedResponse, SearchResult
 from src.security import MLSecurityValidator
+
+from ._search_utils import search_documents_core
 
 
 logger = logging.getLogger(__name__)

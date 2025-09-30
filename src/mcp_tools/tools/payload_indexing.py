@@ -3,27 +3,16 @@
 import logging
 import time
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from uuid import uuid4
 
-from src.mcp_tools.models.responses import ReindexCollectionResponse
-
-
-if TYPE_CHECKING:
-    from fastmcp import Context
-else:
-    # Use a protocol for testing to avoid FastMCP import issues
-    from typing import Protocol
-
-    class Context(Protocol):
-        async def info(self, msg: str) -> None: ...
-        async def debug(self, msg: str) -> None: ...
-        async def warning(self, msg: str) -> None: ...
-        async def error(self, msg: str) -> None: ...
-
+from fastmcp import Context
 
 from src.infrastructure.client_manager import ClientManager
-from src.mcp_tools.models.responses import GenericDictResponse
+from src.mcp_tools.models.responses import (
+    GenericDictResponse,
+    ReindexCollectionResponse,
+)
 from src.security import MLSecurityValidator
 
 

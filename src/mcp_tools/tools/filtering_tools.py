@@ -6,22 +6,10 @@ composition with boolean logic.
 """
 
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from uuid import uuid4
 
-
-if TYPE_CHECKING:
-    from fastmcp import Context
-else:
-    from typing import Protocol
-
-    class Context(Protocol):
-        async def info(self, msg: str) -> None: ...
-        async def debug(self, msg: str) -> None: ...
-        async def warning(self, msg: str) -> None: ...
-        async def error(self, msg: str) -> None: ...
-
-
+from fastmcp import Context
 from pydantic import BaseModel, Field
 
 from src.infrastructure.client_manager import ClientManager

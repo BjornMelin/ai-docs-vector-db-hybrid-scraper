@@ -1,25 +1,11 @@
 """Cache management tools for MCP server."""
 
 import logging
-from typing import TYPE_CHECKING
 
-from src.mcp_tools.models.responses import CacheClearResponse, CacheStatsResponse
-
-
-if TYPE_CHECKING:
-    from fastmcp import Context
-else:
-    # Use a protocol for testing to avoid FastMCP import issues
-    from typing import Protocol
-
-    class Context(Protocol):
-        async def info(self, msg: str) -> None: ...
-        async def debug(self, msg: str) -> None: ...
-        async def warning(self, msg: str) -> None: ...
-        async def error(self, msg: str) -> None: ...
-
+from fastmcp import Context
 
 from src.infrastructure.client_manager import ClientManager
+from src.mcp_tools.models.responses import CacheClearResponse, CacheStatsResponse
 
 
 logger = logging.getLogger(__name__)

@@ -1,27 +1,14 @@
 """Search and retrieval tools for MCP server."""
 
 import logging
-from typing import TYPE_CHECKING
 
-from ._search_utils import search_documents_core
-
-
-if TYPE_CHECKING:
-    from fastmcp import Context
-else:
-    # Use a protocol for testing to avoid FastMCP import issues
-    from typing import Protocol
-
-    class Context(Protocol):
-        async def info(self, msg: str) -> None: ...
-        async def debug(self, msg: str) -> None: ...
-        async def warning(self, msg: str) -> None: ...
-        async def error(self, msg: str) -> None: ...
-
+from fastmcp import Context
 
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.models.requests import SearchRequest
 from src.mcp_tools.models.responses import SearchResult
+
+from ._search_utils import search_documents_core
 
 
 logger = logging.getLogger(__name__)
@@ -32,7 +19,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
     @mcp.tool()
     async def search_documents(
-        request: SearchRequest, ctx: Context
+        request: SearchRequest, ctx: Context | None = None
     ) -> list[SearchResult]:
         """Search documents with hybrid search and reranking.
 
