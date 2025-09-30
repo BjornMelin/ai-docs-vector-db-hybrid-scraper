@@ -1,8 +1,8 @@
-"""Modern circuit breaker implementation using purgatory-circuitbreaker.
+"""Circuit breaker implementation using purgatory-circuitbreaker.
 
-This module provides a modernized circuit breaker implementation that replaces
-the custom circuit breaker with the battle-tested purgatory-circuitbreaker library.
-Provides distributed state management and improved reliability.
+This module provides a circuit breaker implementation that replaces
+the custom circuit breaker with the purgatory-circuitbreaker library.
+Provides distributed state management and reliability.
 """
 
 import asyncio
@@ -20,15 +20,15 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T")
 
 
-class ModernCircuitBreakerManager:
-    """Modern circuit breaker manager using purgatory-circuitbreaker.
+class CircuitBreakerManager:
+    """Circuit breaker manager using purgatory-circuitbreaker.
 
     Provides distributed circuit breaker functionality with Redis storage
     for state persistence across multiple instances.
     """
 
     def __init__(self, redis_url: str, config: Config | None = None):
-        """Initialize modern circuit breaker manager.
+        """Initialize circuit breaker manager.
 
         Args:
             redis_url: Redis URL for distributed state storage
@@ -46,18 +46,18 @@ class ModernCircuitBreakerManager:
             default_threshold = getattr(
                 config.performance, "circuit_breaker_failure_threshold", 5
             )
-            default_recovery_timeout = getattr(
+            default_ttl = getattr(
                 config.performance, "circuit_breaker_recovery_timeout", 60
             )
         else:
             default_threshold = 5
-            default_recovery_timeout = 60
+            default_ttl = 60
 
         # Create circuit breaker factory with distributed storage
         self.factory = AsyncCircuitBreakerFactory(
             default_threshold=default_threshold,
-            default_recovery_timeout=default_recovery_timeout,
-            storage=self.redis_storage,
+            default_ttl=default_ttl,
+            uow=self.redis_storage,
         )
 
         # Cache for circuit breaker instances
@@ -65,9 +65,11 @@ class ModernCircuitBreakerManager:
         self._lock = asyncio.Lock()
 
         logger.info(
-            f"ModernCircuitBreakerManager initialized with Redis: {redis_url}, "
-            f"threshold={default_threshold}, recovery_timeout="
-            f"{default_recovery_timeout}s"
+            "CircuitBreakerManager initialized with Redis: %s, "
+            "threshold=%s, recovery_timeout=%ss",
+            redis_url,
+            default_threshold,
+            default_ttl,
         )
 
     async def get_breaker(self, service_name: str, **kwargs: Any):
@@ -88,8 +90,8 @@ class ModernCircuitBreakerManager:
                         service_name, **kwargs
                     )
                     logger.debug(
-                        f"Created circuit breaker for service: {service_name}"
-                    )  # TODO: Convert f-string to logging format
+                        "Created circuit breaker for service: %s", service_name
+                    )
 
         return self._breakers[service_name]
 
@@ -165,7 +167,7 @@ class ModernCircuitBreakerManager:
             return self._extract_breaker_status(service_name, breaker)
         except (OSError, PermissionError, ValueError) as e:
             logger.warning(
-                f"Failed to get status for circuit breaker {service_name}: {e}"
+                "Failed to get status for circuit breaker %s: %s", service_name, e
             )
             return {"status": "error", "error": str(e)}
 
@@ -208,9 +210,7 @@ class ModernCircuitBreakerManager:
             return False
 
         await breaker.reset()
-        logger.info(
-            f"Reset circuit breaker for service: {service_name}"
-        )  # TODO: Convert f-string to logging format
+        logger.info("Reset circuit breaker for service: %s", service_name)
         return True
 
     async def get_all_statuses(self) -> dict[str, dict[str, Any]]:
@@ -228,33 +228,31 @@ class ModernCircuitBreakerManager:
     async def close(self) -> None:
         """Clean up resources.
 
-        Closes the Redis storage connection and clears cached breakers.
+        Clears cached breakers.
         """
         try:
             await self._cleanup_resources()
         except Exception:
-            logger.exception("Error closing ModernCircuitBreakerManager")
+            logger.exception("Error closing CircuitBreakerManager")
 
     async def _cleanup_resources(self) -> None:
         """Clean up circuit breaker manager resources."""
-        if hasattr(self.redis_storage, "close"):
-            await self.redis_storage.close()
         self._breakers.clear()
-        logger.info("ModernCircuitBreakerManager closed successfully")
+        logger.info("CircuitBreakerManager closed successfully")
 
 
 # Convenience function for creating circuit breaker manager
-def create_modern_circuit_breaker_manager(
+def create_circuit_breaker_manager(
     redis_url: str, config: Config | None = None
-) -> ModernCircuitBreakerManager:
-    """Create a modern circuit breaker manager instance.
+) -> CircuitBreakerManager:
+    """Create a circuit breaker manager instance.
 
     Args:
         redis_url: Redis URL for distributed state storage
         config: Application configuration
 
     Returns:
-        ModernCircuitBreakerManager instance
+        CircuitBreakerManager instance
 
     """
-    return ModernCircuitBreakerManager(redis_url, config)
+    return CircuitBreakerManager(redis_url, config)

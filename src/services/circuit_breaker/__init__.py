@@ -1,8 +1,8 @@
 """Circuit breaker pattern implementations."""
 
-from .modern import ModernCircuitBreakerManager
+from .circuit_breaker_manager import CircuitBreakerManager
 
 
 __all__ = [
-    "ModernCircuitBreakerManager",
+    "CircuitBreakerManager",
 ]
