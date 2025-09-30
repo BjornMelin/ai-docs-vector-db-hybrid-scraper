@@ -21,6 +21,7 @@ async def delete_in_batches(
     Returns:
         Number of cache entries deleted successfully.
     """
+
     if not keys:
         return 0
 

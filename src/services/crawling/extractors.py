@@ -62,8 +62,8 @@ class JavaScriptExecutor:
 
         Returns:
             JavaScript code as string or None if no specific pattern available
-
         """
+
         domain = urlparse(url).netloc
 
         # Site-specific JavaScript mapping
@@ -87,6 +87,7 @@ class DocumentationExtractor:
 
     def __init__(self):
         """Initialize documentation extractor with selector mappings."""
+
         self.selectors = {
             # Common documentation selectors
             "content": [
@@ -131,8 +132,8 @@ class DocumentationExtractor:
 
         Returns:
             Dictionary containing CSS selectors for structured extraction
-
         """
+
         schemas = {
             "api_reference": {
                 "endpoints": "section.endpoint",
