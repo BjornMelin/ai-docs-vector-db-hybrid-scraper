@@ -5,6 +5,7 @@ Modern test practices and infrastructure for the AI Documentation Vector DB syst
 ## Essential Testing Documents
 
 - [Testing Guide](testing-guide.md) - Modern test practices, patterns, and commands for developers
+- [MCP Tool and Service Unit Test Strategy](mcp-unit-tests.md) - Coverage map, decision record, and technical debt register for the MCP suites
 
 ## Quick Test Commands
 
