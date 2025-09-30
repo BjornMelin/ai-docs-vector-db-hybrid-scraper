@@ -1,3 +1,5 @@
+# pylint: skip-file
+
 """Example demonstrating zero-downtime configuration reloading.
 
 This example shows how to use the configuration reloading mechanism
@@ -8,17 +10,12 @@ import asyncio
 import logging
 from pathlib import Path
 
+import src.config as config_pkg
 from src.api.routers.config import (
     ReloadRequest,
     get_config_status,
     get_reload_stats,
     reload_configuration,
-)
-from src.config import (
-    ConfigReloader,
-    ReloadTrigger,
-    get_config,
-    set_config_reloader,
 )
 from src.services.observability.config import ObservabilityConfig
 from src.services.observability.init import initialize_observability
@@ -36,7 +33,7 @@ async def demonstrate_config_reload():  # pylint: disable=too-many-statements
     logger.info("=== Configuration Reloading Demonstration ===")
 
     # Initialize configuration
-    config = get_config()
+    config = config_pkg.get_config()
 
     # Initialize observability if enabled
     if config.observability.enabled:
@@ -51,14 +48,14 @@ async def demonstrate_config_reload():  # pylint: disable=too-many-statements
         logger.info("Observability initialized")
 
     # Create configuration reloader
-    reloader = ConfigReloader()
+    reloader = config_pkg.ConfigReloader()
 
     logger.info("Configuration reloader created")
 
     # Demonstrate manual reload
     logger.info("\n--- Demonstrating Manual Configuration Reload ---")
     operation = await reloader.reload_config(
-        trigger=ReloadTrigger.MANUAL,
+        trigger=config_pkg.ReloadTrigger.MANUAL,
         force=True,  # Force reload even if no changes
     )
 
@@ -82,7 +79,7 @@ async def demonstrate_config_reload():  # pylint: disable=too-many-statements
 
     try:
         # Create reloader with file watching capability
-        file_reloader = ConfigReloader()
+        file_reloader = config_pkg.ConfigReloader()
 
         # Enable file watching
         await file_reloader.enable_file_watching(poll_interval=0.5)
@@ -98,7 +95,7 @@ async def demonstrate_config_reload():  # pylint: disable=too-many-statements
 
         # Perform a manual reload with the updated file
         file_operation = await file_reloader.reload_config(
-            trigger=ReloadTrigger.FILE_WATCH,
+            trigger=config_pkg.ReloadTrigger.FILE_WATCH,
             config_source=temp_config_file,
         )
 
@@ -128,7 +125,7 @@ async def demonstrate_config_reload():  # pylint: disable=too-many-statements
     # Add some config changes to create backup history
     for _ in range(3):
         await reloader.reload_config(
-            trigger=ReloadTrigger.MANUAL,
+            trigger=config_pkg.ReloadTrigger.MANUAL,
             force=True,
         )
         await asyncio.sleep(0.1)
@@ -161,10 +158,10 @@ async def demonstrate_api_integration():
     # Here we demonstrate the underlying functionality
 
     # Initialize reloader
-    reloader = ConfigReloader()
+    reloader = config_pkg.ConfigReloader()
 
     # Set global reloader for API access
-    set_config_reloader(reloader)
+    config_pkg.set_config_reloader(reloader)
 
     # Simulate API reload request
     reload_request = ReloadRequest(force=True)

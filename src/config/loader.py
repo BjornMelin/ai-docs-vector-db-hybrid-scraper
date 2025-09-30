@@ -7,9 +7,10 @@ from __future__ import annotations
 import threading
 from importlib import import_module
 from pathlib import Path
-from typing import Any, Self
+from typing import Any, ClassVar, Self, cast
 
 from pydantic import Field, PrivateAttr, model_validator
+from pydantic.fields import ModelPrivateAttr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from .models import (
@@ -61,8 +62,8 @@ class Config(BaseSettings):
         env_ignore_empty=True,
         arbitrary_types_allowed=True,
     )
-    model_private_attrs = {
-        "_auto_detected_services": PrivateAttr(default=None),
+    model_private_attrs: ClassVar[dict[str, ModelPrivateAttr]] = {
+        "_auto_detected_services": cast(ModelPrivateAttr, PrivateAttr(default=None)),
     }
 
     # Core application metadata

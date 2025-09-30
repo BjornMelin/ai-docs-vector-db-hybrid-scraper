@@ -257,7 +257,7 @@ status: draft
   - Update docs with tuning guidance.
 - **Dependencies:** QA-01
 - **Owner:** Automation Engineer (TBD)
-- **Evidence:** `src/services/crawling/crawl4ai_provider.py:66-147` (conditional adaptive dispatcher).
+- **Evidence:** `src/services/crawling/c4a_presets.py` (memory-adaptive dispatcher preset and toggles).
 
 ## Analytics & UX
 
@@ -357,7 +357,7 @@ status: draft
 | 24                                     | Merged      | Coverage goals merged into QA-01.                          | Planning statements; tests missing coverage gating       | QA-01       |
 | 25                                     | Retained    | Security scans need enforcement; becomes SEC-02.           | `.github/workflows/core-ci.yml:214-233`                  | SEC-02      |
 | 26                                     | Retained    | mypy not enforced; becomes QA-03.                          | `.github/workflows` lacking mypy                         | QA-03       |
-| 29                                     | Retained    | Crawl4AI enhancements pending; becomes BRW-05.             | `src/services/crawling/crawl4ai_provider.py`             | BRW-05      |
+| 29                                     | Retained    | Crawl4AI enhancements pending; becomes BRW-05.             | `src/services/crawling/c4a_provider.py`                 | BRW-05      |
 | 32                                     | Superseded  | Duplicate of observability work; rolled into OPS-01.       | Planning note (cancelled)                                | OPS-01      |
 | 44                                     | Retained    | browser-use dependency absent; becomes BRW-01.             | `pyproject.toml:36-80`                                   | BRW-01      |
 | 45                                     | Retained    | FastAPI endpoints missing; becomes BRW-02.                 | `rg "browser" src/api/routers` → none                    | BRW-02      |

@@ -1,3 +1,5 @@
+# pylint: disable=duplicate-code
+
 """Integration tests for configuration error handling scenarios."""
 
 import asyncio
@@ -10,13 +12,7 @@ from unittest.mock import patch
 import pytest
 import yaml
 
-from src.config import (
-    Config,
-    ConfigManager,
-    OpenAIConfig,
-    QdrantConfig,
-    get_degradation_handler,
-)
+import src.config as config_pkg
 
 
 @pytest.fixture
@@ -27,17 +23,17 @@ def config_dir(tmp_path):
     return config_dir
 
 
-async def _create_manager_async(**kwargs: Any) -> ConfigManager:
-    """Instantiate ``ConfigManager`` off the main event loop for async tests."""
+async def _create_manager_async(**kwargs: Any) -> config_pkg.ConfigManager:
+    """Create a configuration manager on a worker thread."""
 
-    return await asyncio.to_thread(ConfigManager, **kwargs)
+    return await asyncio.to_thread(config_pkg.ConfigManager, **kwargs)
 
 
 @pytest.fixture
 def reset_degradation():
     """Reset degradation handler after each test."""
     yield
-    get_degradation_handler().reset()
+    config_pkg.get_degradation_handler().reset()
 
 
 @pytest.fixture(autouse=True)
@@ -61,8 +57,8 @@ class TestRealWorldErrorScenarios:
         }
         config_file.write_text(json.dumps(valid_config))
 
-        manager = ConfigManager(
-            config_class=Config,
+        manager = config_pkg.ConfigManager(
+            config_class=config_pkg.Config,
             config_file=config_file,
             enable_file_watching=False,
         )
@@ -109,13 +105,13 @@ class TestRealWorldErrorScenarios:
         config_file.write_text(yaml.dump(incomplete_config))
 
         # Create fallback config
-        fallback = Config(
-            openai=OpenAIConfig(api_key="sk-fallback"),
-            qdrant=QdrantConfig(url="http://fallback:6333"),
+        fallback = config_pkg.Config(
+            openai=config_pkg.OpenAIConfig(api_key="sk-fallback"),
+            qdrant=config_pkg.QdrantConfig(url="http://fallback:6333"),
         )
 
-        manager = ConfigManager(
-            config_class=Config,
+        manager = config_pkg.ConfigManager(
+            config_class=config_pkg.Config,
             config_file=config_file,
             enable_file_watching=False,
             fallback_config=fallback,
@@ -131,8 +127,8 @@ class TestRealWorldErrorScenarios:
         config_file = config_dir / "config.json"
         config_file.write_text('{"openai": {"api_key": "sk-test"}}')
 
-        manager = ConfigManager(
-            config_class=Config,
+        manager = config_pkg.ConfigManager(
+            config_class=config_pkg.Config,
             config_file=config_file,
             enable_file_watching=False,
         )
@@ -163,7 +159,7 @@ class TestRealWorldErrorScenarios:
         config_file.write_text('{"openai": {"api_key": "sk-original"}}')
 
         manager = await _create_manager_async(
-            config_class=Config,
+            config_class=config_pkg.Config,
             config_file=config_file,
             enable_file_watching=False,
         )
@@ -201,15 +197,15 @@ class TestRealWorldErrorScenarios:
         config_file = config_dir / "config.json"
         config_file.write_text('{"openai": {"api_key": "sk-test"}}')
 
-        _manager = ConfigManager(
-            config_class=Config,
+        _manager = config_pkg.ConfigManager(
+            config_class=config_pkg.Config,
             config_file=config_file,
             enable_file_watching=True,  # Enable to test degradation
             enable_graceful_degradation=True,
         )
 
         # Simulate multiple file watch failures
-        degradation = get_degradation_handler()
+        degradation = config_pkg.get_degradation_handler()
 
         for i in range(6):
             degradation.record_failure(
@@ -241,8 +237,8 @@ class TestRealWorldErrorScenarios:
         }
         config_file.write_text(json.dumps(invalid_config))
 
-        manager = ConfigManager(
-            config_class=Config,
+        manager = config_pkg.ConfigManager(
+            config_class=config_pkg.Config,
             config_file=config_file,
             enable_file_watching=False,
         )
@@ -259,8 +255,8 @@ class TestRealWorldErrorScenarios:
         """Test configuration backup rotation."""
         config_file = config_dir / "config.json"
 
-        manager = ConfigManager(
-            config_class=Config,
+        manager = config_pkg.ConfigManager(
+            config_class=config_pkg.Config,
             config_file=config_file,
             enable_file_watching=False,
         )
@@ -289,8 +285,8 @@ class TestRealWorldErrorScenarios:
         config_file = config_dir / "config.json"
         config_file.write_text('{"openai": {"api_key": "sk-initial"}}')
 
-        manager = ConfigManager(
-            config_class=Config,
+        manager = config_pkg.ConfigManager(
+            config_class=config_pkg.Config,
             config_file=config_file,
             enable_file_watching=False,
         )
@@ -332,7 +328,7 @@ class TestRealWorldErrorScenarios:
         config_file.write_text('{"openai": {"api_key": "sk-test"}}')
 
         manager = await _create_manager_async(
-            config_class=Config,
+            config_class=config_pkg.Config,
             config_file=config_file,
             enable_file_watching=False,
         )
@@ -371,7 +367,7 @@ class TestAsyncErrorPropagation:
         config_file.write_text('{"qdrant": {"timeout": "not-a-number"}}')
 
         manager = await _create_manager_async(
-            config_class=Config,
+            config_class=config_pkg.Config,
             config_file=config_file,
             enable_file_watching=False,
         )
@@ -386,8 +382,8 @@ class TestAsyncErrorPropagation:
 
         config_file = config_dir / "missing.json"
 
-        manager = ConfigManager(
-            config_class=Config,
+        manager = config_pkg.ConfigManager(
+            config_class=config_pkg.Config,
             config_file=config_file,
             enable_file_watching=False,
         )
