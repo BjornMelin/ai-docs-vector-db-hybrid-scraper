@@ -153,7 +153,7 @@ accessibility = [
     "selenium>=4.35.0,<5.0.0",
     "playwright>=1.55.0,<2.0.0",
     "beautifulsoup4>=4.13.5,<5.0.0",
-    "lxml>=5.3.0,<5.4.0",
+    "lxml>=5.3.0,<6.1.0",
 ]
 
 # Browser automation (essential for web scraping)
