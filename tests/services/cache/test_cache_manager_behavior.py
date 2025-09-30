@@ -1,6 +1,7 @@
 """Behavioural tests for the cache manager and helpers."""
 
 import asyncio
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
 
@@ -72,3 +73,84 @@ def test_delete_in_batches_counts_successful_deletions() -> None:
 
     assert deleted == 2
     assert cache.calls == [["alpha_ok", "beta"], ["gamma_ok", "delta"]]
+
+
+def test_set_with_zero_ttl_evicts_entry(tmp_path: Path) -> None:
+    """Ensure that explicit zero TTL invalidates the entry immediately."""
+
+    manager = CacheManager(
+        enable_local_cache=True,
+        enable_distributed_cache=False,
+        enable_specialized_caches=False,
+        enable_metrics=False,
+        local_cache_path=tmp_path,
+    )
+
+    run(
+        manager.set(
+            "ephemeral",
+            {"value": "v"},
+            cache_type=CacheType.LOCAL,
+            ttl=0,
+        )
+    )
+    assert run(manager.get("ephemeral", cache_type=CacheType.LOCAL)) is None
+
+    run(manager.close())
+
+
+@dataclass(slots=True)
+class _StubDistributedCache:
+    """Lightweight distributed cache stub for pattern clearing tests."""
+
+    keys: list[str]
+    deleted: list[str]
+
+    async def scan_keys(self, pattern: str) -> list[str]:
+        return list(self.keys)
+
+    async def delete(self, key: str) -> bool:
+        self.deleted.append(key)
+        return True
+
+    async def get(self, key: str) -> None:  # pragma: no cover - behaviourless stub
+        return None
+
+
+def test_clear_specific_cache_type_removes_local_and_distributed(
+    tmp_path: Path,
+) -> None:
+    """Clear operations must purge both distributed and local storage layers."""
+
+    manager = CacheManager(
+        enable_local_cache=True,
+        enable_distributed_cache=False,
+        enable_specialized_caches=False,
+        enable_metrics=False,
+        local_cache_path=tmp_path,
+    )
+
+    run(
+        manager.set(
+            "session:42",
+            {"value": 42},
+            cache_type=CacheType.LOCAL,
+            ttl=60,
+        )
+    )
+    hashed_key = manager._get_cache_key(  # pylint: disable=protected-access
+        "session:42", CacheType.LOCAL
+    )
+
+    persisted_path = cache_path_for_key(tmp_path, hashed_key)
+    assert persisted_path.exists()
+
+    stub = _StubDistributedCache(keys=[hashed_key], deleted=[])
+    manager._distributed_cache = cast(Any, stub)  # pylint: disable=protected-access
+
+    assert run(manager._clear_specific_cache_type(CacheType.LOCAL)) is True  # pylint: disable=protected-access
+    assert stub.deleted == [hashed_key]
+    assert run(manager.get("session:42", cache_type=CacheType.LOCAL)) is None
+    assert not persisted_path.exists()
+
+    run(manager.close())

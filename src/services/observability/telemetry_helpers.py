@@ -216,11 +216,11 @@ def _create_resource(config: "ObservabilityConfig") -> object | None:
 
     """
     try:
-        if get_resource_attributes is None:
+        if get_resource_attributes is None or Resource is None:
             logger.error("Resource attributes function not available")
             return None
 
-        return Resource.create(get_resource_attributes(config))
+        return Resource.create(get_resource_attributes(config))  # type: ignore[attr-defined]
     except (ImportError, ValueError, TypeError):
         logger.exception("Failed to create resource")
         return None
@@ -240,17 +240,17 @@ def _initialize_tracing(
 
     """
     try:
-        tracer_provider = TracerProvider(resource=resource)
+        tracer_provider = TracerProvider(resource=resource)  # type: ignore[operator]
 
         # Configure OTLP span exporter
-        otlp_exporter = OTLPSpanExporter(
+        otlp_exporter = OTLPSpanExporter(  # type: ignore[operator]
             endpoint=config.otlp_endpoint,
             headers=config.otlp_headers,
             insecure=config.otlp_insecure,
         )
 
         # Configure batch span processor
-        span_processor = BatchSpanProcessor(
+        span_processor = BatchSpanProcessor(  # type: ignore[operator]
             otlp_exporter,
             schedule_delay_millis=config.batch_schedule_delay,
             max_queue_size=config.batch_max_queue_size,
@@ -262,11 +262,11 @@ def _initialize_tracing(
 
         # Add console exporter for development
         if config.console_exporter and ConsoleSpanExporter is not None:
-            console_processor = BatchSpanProcessor(ConsoleSpanExporter())
+            console_processor = BatchSpanProcessor(ConsoleSpanExporter())  # type: ignore[operator]
             tracer_provider.add_span_processor(console_processor)
 
         # Set global tracer provider
-        trace.set_tracer_provider(tracer_provider)
+        trace.set_tracer_provider(tracer_provider)  # type: ignore[attr-defined]
     except (ImportError, ValueError, TypeError, ConnectionError):
         logger.exception("Failed to initialize tracing")
         return None
@@ -289,22 +289,21 @@ def _initialize_metrics(
     """
     try:
         # Initialize metrics
-        metric_reader = PeriodicExportingMetricReader(
-            OTLPMetricExporter(
+        metric_reader = PeriodicExportingMetricReader(  # type: ignore[operator]
+            OTLPMetricExporter(  # type: ignore[operator]
                 endpoint=config.otlp_endpoint,
                 headers=config.otlp_headers,
                 insecure=config.otlp_insecure,
             ),
-            export_interval_millis=30000,  # 30 seconds
         )
 
-        meter_provider = MeterProvider(
+        meter_provider = MeterProvider(  # type: ignore[operator]
             resource=resource,
             metric_readers=[metric_reader],
         )
 
         # Set global meter provider
-        metrics.set_meter_provider(meter_provider)
+        metrics.set_meter_provider(meter_provider)  # type: ignore[attr-defined]
     except (ImportError, ValueError, TypeError, ConnectionError):
         logger.exception("Failed to initialize metrics")
         return None

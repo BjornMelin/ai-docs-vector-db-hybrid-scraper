@@ -2,9 +2,9 @@
 
 import logging
 from functools import lru_cache
-from typing import Annotated
+from typing import Annotated, Any
 
-from fastapi import Depends
+from fastapi import Depends  # type: ignore[import]
 
 from . import tracking as tracking_module
 from .config import ObservabilityConfig, get_observability_config
@@ -21,12 +21,12 @@ logger = logging.getLogger(__name__)
 
 # Configuration Dependencies
 ObservabilityConfigDep = Annotated[
-    ObservabilityConfig, Depends(get_observability_config)
+    ObservabilityConfig, Depends(get_observability_config)  # type: ignore[valid-type]
 ]
 
 
 @lru_cache
-def get_observability_service() -> dict[str, any]:
+def get_observability_service() -> dict[str, Any]:
     """Get observability service instance with singleton pattern.
 
     Initializes observability if not already done and returns service
@@ -101,7 +101,7 @@ ObservabilityServiceDep = Annotated[dict, Depends(get_observability_service)]
 
 def get_ai_tracer(
     observability_service: ObservabilityServiceDep,
-) -> any:
+) -> Any:
     """Get tracer for AI operations.
 
     Args:
@@ -117,12 +117,12 @@ def get_ai_tracer(
     return create_noop_tracer()
 
 
-AITracerDep = Annotated[any, Depends(get_ai_tracer)]
+AITracerDep = Annotated[Any, Depends(get_ai_tracer)]  # type: ignore[valid-type]
 
 
 def get_service_meter(
     observability_service: ObservabilityServiceDep,
-) -> any:
+) -> Any:
     """Get meter for service metrics.
 
     Args:
@@ -138,13 +138,13 @@ def get_service_meter(
     return create_noop_meter()
 
 
-ServiceMeterDep = Annotated[any, Depends(get_service_meter)]
+ServiceMeterDep = Annotated[Any, Depends(get_service_meter)]  # type: ignore[valid-type]
 
 
 def create_span_context(
     operation_name: str,
     tracer: AITracerDep,
-) -> any:
+) -> Any:
     """Create a span context for an operation.
 
     Args:
@@ -233,7 +233,7 @@ async def track_ai_cost_metrics(
 # Health check for observability
 async def get_observability_health(
     observability_service: ObservabilityServiceDep,
-) -> dict[str, any]:
+) -> dict[str, Any]:
     """Get observability health status.
 
     Args:
@@ -254,20 +254,20 @@ async def get_observability_health(
             "status": "error",
             "error": str(e),
         }
-    else:
-        return {
-            "enabled": enabled,
-            "service_name": config.service_name,
-            "otlp_endpoint": config.otlp_endpoint if enabled else None,
-            "instrumentation": {
-                "fastapi": config.instrument_fastapi if enabled else False,
-                "httpx": config.instrument_httpx if enabled else False,
-                "redis": config.instrument_redis if enabled else False,
-                "sqlalchemy": config.instrument_sqlalchemy if enabled else False,
-            },
-            "ai_tracking": {
-                "operations": config.track_ai_operations if enabled else False,
-                "costs": config.track_costs if enabled else False,
-            },
-            "status": "healthy" if enabled else "disabled",
-        }
+
+    return {
+        "enabled": enabled,
+        "service_name": config.service_name,
+        "otlp_endpoint": config.otlp_endpoint if enabled else None,
+        "instrumentation": {
+            "fastapi": config.instrument_fastapi if enabled else False,
+            "httpx": config.instrument_httpx if enabled else False,
+            "redis": config.instrument_redis if enabled else False,
+            "sqlalchemy": config.instrument_sqlalchemy if enabled else False,
+        },
+        "ai_tracking": {
+            "operations": config.track_ai_operations if enabled else False,
+            "costs": config.track_costs if enabled else False,
+        },
+        "status": "healthy" if enabled else "disabled",
+    }

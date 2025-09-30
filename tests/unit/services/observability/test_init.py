@@ -19,8 +19,8 @@ class TestObservabilityInitialization:
         """Setup for each test."""
         # Reset global state
 
-        init_module._tracer_provider = None
-        init_module._meter_provider = None
+        init_module._STATE.tracer_provider = None
+        init_module._STATE.meter_provider = None
 
     def test_initialize_observability_disabled(self):
         """Test initialization when observability is disabled."""
@@ -190,8 +190,8 @@ class TestObservabilityInitialization:
         mock_tracer_provider = MagicMock()
         mock_meter_provider = MagicMock()
 
-        init_module._tracer_provider = mock_tracer_provider
-        init_module._meter_provider = mock_meter_provider
+        init_module._STATE.tracer_provider = mock_tracer_provider
+        init_module._STATE.meter_provider = mock_meter_provider
 
         shutdown_observability()
 
@@ -200,29 +200,29 @@ class TestObservabilityInitialization:
         mock_meter_provider.shutdown.assert_called_once()
 
         # Verify providers were reset
-        assert init_module._tracer_provider is None
-        assert init_module._meter_provider is None
+        assert init_module._STATE.tracer_provider is None
+        assert init_module._STATE.meter_provider is None
 
     def test_shutdown_observability_with_exceptions(self):
         """Test shutdown handles exceptions gracefully."""
         # Setup providers that raise exceptions
 
         mock_tracer_provider = MagicMock()
-        mock_tracer_provider.shutdown.side_effect = Exception("Shutdown failed")
+        mock_tracer_provider.shutdown.side_effect = OSError("Shutdown failed")
 
         mock_meter_provider = MagicMock()
-        mock_meter_provider.shutdown.side_effect = Exception("Shutdown failed")
+        mock_meter_provider.shutdown.side_effect = OSError("Shutdown failed")
 
-        init_module._tracer_provider = mock_tracer_provider
-        init_module._meter_provider = mock_meter_provider
+        init_module._STATE.tracer_provider = mock_tracer_provider
+        init_module._STATE.meter_provider = mock_meter_provider
 
         # Should not raise exception
         shutdown_observability()
 
         # Verify providers were reset despite exceptions
         # Note: The implementation catches exceptions but still sets providers to None
-        assert init_module._tracer_provider is None
-        assert init_module._meter_provider is None
+        assert init_module._STATE.tracer_provider is None
+        assert init_module._STATE.meter_provider is None
 
     def test_is_observability_enabled(self):
         """Test observability enabled check."""
@@ -231,11 +231,11 @@ class TestObservabilityInitialization:
         assert is_observability_enabled() is False
 
         # Set tracer provider
-        init_module._tracer_provider = MagicMock()
+        init_module._STATE.tracer_provider = MagicMock()
         assert is_observability_enabled() is True
 
         # Reset
-        init_module._tracer_provider = None
+        init_module._STATE.tracer_provider = None
         assert is_observability_enabled() is False
 
 

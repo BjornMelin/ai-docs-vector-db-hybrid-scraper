@@ -166,8 +166,8 @@ uv run pytest tests/security/ -m security -v
 # Run specific category
 uv run pytest tests/security/input_validation/ -v
 
-# Run with coverage
-uv run pytest tests/security/ -m security --cov=src --cov-report=html
+# Run with coverage (CI profile)
+python scripts/dev.py test --profile ci -- -m security
 ```
 
 ### CI/CD Integration

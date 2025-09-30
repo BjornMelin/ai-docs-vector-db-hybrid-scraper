@@ -508,8 +508,8 @@ uv run pytest tests/integration/ -m "integration and not slow" --maxfail=5
 # Full integration test suite
 uv run pytest tests/integration/ --tb=short --durations=10
 
-# Integration tests with coverage
-uv run pytest tests/integration/ --cov=src --cov-report=html
+# Integration tests with coverage (CI profile scoped to integration suite)
+python scripts/dev.py test --profile ci -- tests/integration/
 ```
 
 ## Integration Testing Strategies

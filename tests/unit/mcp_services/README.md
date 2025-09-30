@@ -157,8 +157,8 @@ uv run pytest tests/unit/mcp_services/test_analytics_service.py -v
 ./scripts/run_mcp_services_tests.py
 
 # Manual comprehensive run
-uv run pytest tests/unit/mcp_services/ tests/integration/mcp_services/ \
-  --cov=src/mcp_services --cov-report=term-missing --cov-report=html
+python scripts/dev.py test --profile ci -- \
+  tests/unit/mcp_services/ tests/integration/mcp_services/
 ```
 
 ### Performance Testing

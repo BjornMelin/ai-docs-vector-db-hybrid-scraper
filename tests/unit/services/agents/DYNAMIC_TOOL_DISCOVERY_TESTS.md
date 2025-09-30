@@ -113,8 +113,8 @@ Comprehensive test suite for the J3 research implementation of autonomous tool o
 # Run all tests
 uv run pytest tests/unit/services/agents/test_dynamic_tool_discovery.py -v
 
-# Run with coverage (requires module import fix)
-uv run pytest tests/unit/services/agents/test_dynamic_tool_discovery.py --cov=src/services/agents/dynamic_tool_discovery
+# Run with coverage (CI profile scoped to the test module)
+python scripts/dev.py test --profile ci -- tests/unit/services/agents/test_dynamic_tool_discovery.py
 
 # Run specific test categories
 uv run pytest tests/unit/services/agents/test_dynamic_tool_discovery.py -k "TestIntelligentCapabilityAssessment"
