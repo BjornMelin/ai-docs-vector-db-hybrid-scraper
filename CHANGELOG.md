@@ -13,8 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Captured the comprehensive unit-test refactor roadmap in `planning/unit_test_refactor_plan.md` covering fixture cleanup,
   deterministic rewrites, and sprint sequencing.
 - Added a `quality-unit` make target that runs Ruff, Pylint, Pyright, and the unit test suite in one command for local gating.
+- Published `docs/testing/unit-suite-overview.md` to document the consolidated unit-test coverage, decision rationale, and outstanding debt.
 
 ### Changed
+- Removed temporary testing planning markdown from `tests/` after migrating the coverage, decision, and debt details into `docs/testing`.
 - Consolidated CI into a lean `core-ci.yml` pipeline (lint → tests with coverage → build → dependency audit) and introduced on-demand security and regression workflows while deleting `fast-feedback.yml`, `status-dashboard.yml`, and other scheduled automation.
 - Simplified documentation checks to rely on `scripts/dev.py validate --check-docs --strict` plus strict MkDocs builds with pinned docs extras.
 - Documented manual triggers for the security and regression workflows in `CONTRIBUTING.md` so contributors can opt into deeper validation without slowing default CI.
@@ -23,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refined `README.md` with a table of contents, environment variable reference, expanded MCP integration steps, and SEO-aligned positioning for AI engineers.
 - Updated repository description and topics to emphasize the retrieval-augmented documentation ingestion stack and surface the project in GitHub search.
 - Rebuilt the dual-mode architecture unit suite with parametrized helpers, FeatureFlag stubs, and service factory coverage to remove brittle duplication and rely on pytest + Pydantic behaviors instead of bespoke assertions.
+- Flattened the legacy `tests/unit/{architecture,config,core,infrastructure,models,processing,security,utils}` packages into new deterministic modules covering hybrid search toggles, agentic vector configs, batch optimisers, security validators, GPU fallbacks, and service health probes.
 - Updated `src/architecture/modes.py` to drop the legacy `AI_DOCS_DEPLOYMENT__TIER` fallback and to expose typed accessors for feature and resource lookup used by the new tests.
 - Replaced the property-based configuration suite with deterministic parametrized coverage that asserts full `model_dump` payloads and strict validator behavior for the unified settings models.
 - Streamlined the observability configuration unit tests with fixtures and parametrization to focus on the supported Pydantic surface.
