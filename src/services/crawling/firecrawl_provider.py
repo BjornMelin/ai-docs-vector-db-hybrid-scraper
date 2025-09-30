@@ -1,10 +1,19 @@
 """Firecrawl provider using direct SDK."""
 
-import asyncio
 import logging
-from typing import Any
+from collections.abc import Iterable
+from typing import Any, cast
 
-from firecrawl import FirecrawlApp
+from firecrawl import AsyncFirecrawl
+from firecrawl.client import AsyncV2Proxy
+from firecrawl.v2.types import (
+    CrawlJob,
+    CrawlResponse,
+    FormatOption,
+    MapData,
+    ScrapeOptions,
+    ScrapeResponse,
+)
 
 from src.config import FirecrawlConfig
 from src.services.base import BaseService
@@ -19,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 def _raise_no_crawl_id_returned() -> None:
     """Raise CrawlServiceError for missing crawl ID."""
+
     msg = "No crawl ID returned"
     raise CrawlServiceError(msg)
 
@@ -34,11 +44,12 @@ class FirecrawlProvider(BaseService, CrawlProvider):
         Args:
             config: Firecrawl configuration model
             rate_limiter: Optional rate limiter
-
         """
-        super().__init__(config)
+
+        super().__init__()
         self.config = config
-        self._client: FirecrawlApp | None = None
+        self._client: object | None = None
+        self._firecrawl: AsyncFirecrawl | None = None
         self._initialized = False
         self.rate_limiter = rate_limiter
 
@@ -48,9 +59,15 @@ class FirecrawlProvider(BaseService, CrawlProvider):
             return
 
         try:
-            self._client = FirecrawlApp(
-                api_key=self.config.api_key, api_url=self.config.api_url
+            api_key = self.config.api_key
+            if not api_key:
+                msg = "Firecrawl API key is required"
+                raise CrawlServiceError(msg)
+
+            self._firecrawl = AsyncFirecrawl(
+                api_key=api_key, api_url=self.config.api_url
             )
+            self._client = self._firecrawl
             self._initialized = True
             logger.info("Firecrawl client initialized")
         except Exception as e:
@@ -59,7 +76,9 @@ class FirecrawlProvider(BaseService, CrawlProvider):
 
     async def cleanup(self) -> None:
         """Cleanup Firecrawl resources."""
+
         self._client = None
+        self._firecrawl = None
         self._initialized = False
         logger.info("Firecrawl resources cleaned up")
 
@@ -74,43 +93,41 @@ class FirecrawlProvider(BaseService, CrawlProvider):
 
         Returns:
             Scrape result
-
         """
+
         if not self._initialized:
             msg = "Provider not initialized"
             raise CrawlServiceError(msg)
 
-        formats = formats or ["markdown"]
+        format_options = self._normalize_formats(formats)
 
         try:
-            # Firecrawl SDK is synchronous, but we're in async context
-            result = await self._scrape_url_with_rate_limit(url, formats)
+            response = await self._scrape_url_with_rate_limit(url, format_options)
 
-            # Process result
-            if result.get("success", False):
+            if response.success and response.data:
+                document = response.data
+                metadata = document.metadata_dict
                 return {
                     "success": True,
-                    "content": result.get("markdown", ""),
-                    "html": result.get("html", ""),
-                    "metadata": result.get("metadata", {}),
+                    "content": document.markdown or "",
+                    "html": document.html or "",
+                    "metadata": metadata,
                     "url": url,
                 }
             return {
                 "success": False,
-                "error": result.get("error", "Unknown error"),
+                "error": response.error or "Scraping failed",
                 "content": "",
                 "metadata": {},
                 "url": url,
             }
 
         except Exception as e:
-            logger.exception("Failed to scrape {url}")
+            logger.exception("Failed to scrape %s", url)
 
             error_msg = str(e).lower()
             if "rate limit" in error_msg:
-                logger.warning(
-                    f"Firecrawl rate limit hit for {url}"
-                )  # TODO: Convert f-string to logging format
+                logger.warning("Firecrawl rate limit hit for %s", url)
                 error_detail = "Rate limit exceeded. Please try again later."
             elif "invalid api key" in error_msg or "unauthorized" in error_msg:
                 logger.exception("Invalid Firecrawl API key")
@@ -118,14 +135,12 @@ class FirecrawlProvider(BaseService, CrawlProvider):
                     "Invalid API key. Please check your Firecrawl configuration."
                 )
             elif "timeout" in error_msg:
-                logger.warning(
-                    f"Timeout while scraping {url}"
-                )  # TODO: Convert f-string to logging format
+                logger.warning("Timeout while scraping %s", url)
                 error_detail = (
                     "Request timed out. The page may be too large or slow to load."
                 )
             elif "not found" in error_msg or "404" in error_msg:
-                logger.info("Page not found")
+                logger.info("Page not found for %s", url)
                 error_detail = "Page not found (404)."
             else:
                 error_detail = "Scraping failed"
@@ -159,76 +174,50 @@ class FirecrawlProvider(BaseService, CrawlProvider):
             msg = "Provider not initialized"
             raise CrawlServiceError(msg)
 
-        formats = formats or ["markdown"]
+        format_options = self._normalize_formats(formats)
 
         try:
-            # Start async crawl
-            crawl_result = await self._async_crawl_url_with_rate_limit(
-                url, max_pages, formats
+            crawl_response = await self._start_crawl_with_rate_limit(
+                url, max_pages, format_options
             )
 
-            # Get crawl ID
-            crawl_id = crawl_result.get("id")
+            crawl_id = crawl_response.id
             if not crawl_id:
                 _raise_no_crawl_id_returned()
 
-            logger.info(
-                f"Started crawl job {crawl_id} for {url}"
-            )  # TODO: Convert f-string to logging format
+            logger.info("Started crawl job %s for %s", crawl_id, url)
 
-            # Poll for completion
+            v2_client = self._get_v2_client()
+            crawl_job = await v2_client.wait_crawl(
+                crawl_id, poll_interval=5, timeout=600
+            )
 
-            max_attempts = 120  # 10 minutes with 5 second intervals
-            for _ in range(max_attempts):
-                status = self._client.check_crawl_status(crawl_id)
+            if crawl_job.status == "completed":
+                return self._build_crawl_success(crawl_job, crawl_id)
+            if crawl_job.status == "failed":
+                return {
+                    "success": False,
+                    "error": "Crawl failed",
+                    "pages": [],
+                    "total": 0,
+                    "crawl_id": crawl_id,
+                }
 
-                if status.get("status") == "completed":
-                    # Get results
-                    data = status.get("data", [])
-                    return {
-                        "success": True,
-                        "pages": [
-                            {
-                                "url": page.get("url", ""),
-                                "content": page.get("markdown", ""),
-                                "html": page.get("html", ""),
-                                "metadata": page.get("metadata", {}),
-                            }
-                            for page in data
-                        ],
-                        "total": len(data),
-                        "crawl_id": crawl_id,
-                    }
-                if status.get("status") == "failed":
-                    return {
-                        "success": False,
-                        "error": status.get("error", "Crawl failed"),
-                        "pages": [],
-                        "total": 0,
-                        "crawl_id": crawl_id,
-                    }
-
-                # Wait before next check
-                await asyncio.sleep(5)
-
-            # Timeout
+            return {
+                "success": False,
+                "error": "Crawl ended with unknown status",
+                "pages": [],
+                "total": 0,
+                "crawl_id": crawl_id,
+            }
 
         except Exception as e:
-            logger.exception("Failed to crawl {url}")
+            logger.exception("Failed to crawl %s", url)
             return {
                 "success": False,
                 "error": str(e),
                 "pages": [],
                 "total": 0,
-            }
-
-        else:
-            return {
-                "success": False,
-                "error": "Crawl timed out",
-                "pages": [],
-                "total": 0,
-                "crawl_id": crawl_id,
             }
 
     async def cancel_crawl(self, crawl_id: str) -> bool:
@@ -239,17 +228,17 @@ class FirecrawlProvider(BaseService, CrawlProvider):
 
         Returns:
             Success status
-
         """
+
         if not self._initialized:
             msg = "Provider not initialized"
             raise CrawlServiceError(msg)
 
         try:
-            result = self._client.cancel_crawl(crawl_id)
-            return result.get("success", False)
+            v2_client = self._get_v2_client()
+            return await v2_client.cancel_crawl(crawl_id)
         except (ConnectionError, OSError, PermissionError):
-            logger.exception("Failed to cancel crawl {crawl_id}")
+            logger.exception("Failed to cancel crawl %s", crawl_id)
             return False
 
     async def map_url(
@@ -263,33 +252,20 @@ class FirecrawlProvider(BaseService, CrawlProvider):
 
         Returns:
             Map result with URLs
-
         """
+
         if not self._initialized:
             msg = "Provider not initialized"
             raise CrawlServiceError(msg)
 
         try:
-            result = self._client.map_url(
-                url=url,
-                params={"includeSubdomains": include_subdomains},
-            )
+            v2_client = self._get_v2_client()
+            map_result = await v2_client.map(url, include_subdomains=include_subdomains)
 
-            if result.get("success", False):
-                return {
-                    "success": True,
-                    "urls": result.get("links", []),
-                    "total": len(result.get("links", [])),
-                }
-            return {
-                "success": False,
-                "error": result.get("error", "Map failed"),
-                "urls": [],
-                "total": 0,
-            }
+            return self._build_map_response(map_result)
 
         except Exception as e:
-            logger.exception("Failed to map {url}")
+            logger.exception("Failed to map %s", url)
             return {
                 "success": False,
                 "error": str(e),
@@ -298,48 +274,89 @@ class FirecrawlProvider(BaseService, CrawlProvider):
             }
 
     async def _scrape_url_with_rate_limit(
-        self, url: str, formats: list[str]
-    ) -> dict[str, Any]:
-        """Scrape URL with rate limiting.
+        self, url: str, formats: list[FormatOption]
+    ) -> ScrapeResponse:
+        """Scrape URL with rate limiting."""
 
-        Args:
-            url: URL to scrape
-            formats: Output formats
-
-        Returns:
-            Firecrawl response
-
-        """
         if self.rate_limiter:
             await self.rate_limiter.acquire("firecrawl")
 
-        # Run synchronous method in thread pool to avoid blocking
+        v2_client = self._get_v2_client()
+        result = await v2_client.scrape(url=url, formats=formats)
+        return cast(ScrapeResponse, result)
 
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, self._client.scrape_url, url, formats)
+    async def _start_crawl_with_rate_limit(
+        self, url: str, max_pages: int, formats: list[FormatOption]
+    ) -> CrawlResponse:
+        """Start crawl with rate limiting."""
 
-    async def _async_crawl_url_with_rate_limit(
-        self, url: str, max_pages: int, formats: list[str]
-    ) -> dict[str, Any]:
-        """Start crawl with rate limiting.
-
-        Args:
-            url: Starting URL
-            max_pages: Maximum pages
-            formats: Output formats
-
-        Returns:
-            Crawl job info
-
-        """
         if self.rate_limiter:
             await self.rate_limiter.acquire("firecrawl")
 
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(
-            None,
-            self._client.async_crawl_url,
-            url,
-            max_pages,
-            {"formats": formats},
+        v2_client = self._get_v2_client()
+        scrape_options = ScrapeOptions(formats=formats)
+        return await v2_client.start_crawl(
+            url=url,
+            limit=max_pages,
+            scrape_options=scrape_options,
         )
+
+    def _get_client(self) -> AsyncFirecrawl:
+        """Return initialized client or raise."""
+
+        if not self._initialized or not isinstance(self._firecrawl, AsyncFirecrawl):
+            msg = "Provider not initialized"
+            raise CrawlServiceError(msg)
+        return self._firecrawl
+
+    def _get_v2_client(self) -> AsyncV2Proxy:
+        """Return Firecrawl v2 proxy client."""
+
+        client = self._get_client()
+        v2_client = getattr(client, "v2", None)
+        if not isinstance(v2_client, AsyncV2Proxy):
+            msg = "Firecrawl v2 client unavailable"
+            raise CrawlServiceError(msg)
+        return v2_client
+
+    @staticmethod
+    def _normalize_formats(formats: Iterable[str] | None) -> list[FormatOption]:
+        """Normalize format list for Firecrawl SDK."""
+
+        normalized = list(formats) if formats else ["markdown"]
+        return [cast(FormatOption, fmt) for fmt in normalized]
+
+    @staticmethod
+    def _build_crawl_success(crawl_job: CrawlJob, crawl_id: str) -> dict[str, Any]:
+        """Convert crawl job into response payload."""
+
+        pages: list[dict[str, Any]] = []
+        for document in crawl_job.data:
+            metadata = document.metadata_dict
+            page_url = metadata.get("url") or metadata.get("sourceUrl") or ""
+            pages.append(
+                {
+                    "url": page_url,
+                    "content": document.markdown or "",
+                    "html": document.html or "",
+                    "metadata": metadata,
+                }
+            )
+
+        return {
+            "success": True,
+            "pages": pages,
+            "total": len(pages),
+            "crawl_id": crawl_id,
+        }
+
+    @staticmethod
+    def _build_map_response(map_result: MapData) -> dict[str, Any]:
+        """Convert map data into response payload."""
+
+        links = [link.model_dump(exclude_none=True) for link in map_result.links]
+        return {
+            "success": True,
+            "urls": links,
+            "total": len(links),
+        }

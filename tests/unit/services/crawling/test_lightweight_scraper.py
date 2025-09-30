@@ -4,7 +4,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
-import respx  # noqa: F401  # third-party mock helper used via fixtures
 from bs4 import BeautifulSoup
 
 # LightweightScraperConfig not in simplified config, use Config instead
@@ -18,24 +17,13 @@ from src.services.errors import CrawlServiceError
 
 @pytest.fixture
 def config():
-    """Create test configuration."""
-    return Config(
-        enable_lightweight_tier=True,
-        use_head_analysis=True,
-        content_threshold=100,
-        max_lightweight_size=1_000_000,
-        timeout=5.0,
-        head_timeout=2.0,
-        simple_url_patterns=[
-            r".*\.md$",
-            r".*/raw/.*",
-            r".*\.(txt|json|xml)$",
-        ],
-        known_simple_sites={
-            "docs.python.org": {"selector": ".document"},
-            "test.example.com": {"selector": ".content"},
-        },
-    )
+    """Create test configuration.
+
+    Note: LightweightScraper now uses getattr() to extract config values
+    with sensible defaults, so we just need a basic Config instance.
+    The scraper will use defaults for lightweight-specific settings.
+    """
+    return Config()
 
 
 @pytest.fixture
@@ -77,7 +65,7 @@ class TestLightweightScraper:
     @pytest.mark.asyncio
     async def test_can_handle_disabled(self, scraper):
         """Test can_handle when lightweight tier is disabled."""
-        scraper.config.enable_lightweight_tier = False
+        scraper._enable_lightweight_tier = False
         assert not await scraper.can_handle("https://example.com/test.md")
 
     @pytest.mark.asyncio
@@ -101,13 +89,14 @@ class TestLightweightScraper:
     async def test_can_handle_known_sites(self, scraper):
         """Test can_handle with known simple sites."""
         assert await scraper.can_handle("https://docs.python.org/3/tutorial/index.html")
-        assert await scraper.can_handle("https://test.example.com/page")
+        assert await scraper.can_handle("https://golang.org/doc/page")
+        assert await scraper.can_handle("https://developer.mozilla.org/en-US/docs/Web")
         assert not await scraper.can_handle("https://unknown.com/page")
 
     @pytest.mark.asyncio
     async def test_can_handle_with_head_analysis(self, scraper):
         """Test can_handle with HEAD request analysis."""
-        scraper.config.use_head_analysis = True
+        scraper._use_head_analysis = True
 
         with patch.object(scraper, "_analyze_url") as mock_analyze:
             mock_analyze.return_value = TierRecommendation.LIGHTWEIGHT_OK
