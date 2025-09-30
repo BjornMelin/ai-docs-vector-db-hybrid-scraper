@@ -1,18 +1,14 @@
-"""Configuration management API endpoints.
-
-This module provides FastAPI endpoints for managing configuration reloading,
-monitoring reload operations, and accessing configuration status information.
-"""
+"""FastAPI router for configuration lifecycle management."""
 
 import logging
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Body, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
 from src.config import ReloadOperation, ReloadTrigger, get_config_reloader
-from src.services.observability.config_instrumentation import (
+from src.services.observability.tracing import (
     ConfigOperationType,
     instrument_config_operation,
 )
@@ -24,42 +20,36 @@ router = APIRouter(prefix="/config", tags=["Configuration Management"])
 
 
 class ReloadRequest(BaseModel):
-    """Configuration reload request."""
+    """Request payload used when triggering a reload."""
 
     force: bool = Field(
-        default=False, description="Force reload even if no changes detected"
+        default=False, description="Reload even when no changes are detected"
     )
     config_source: str | None = Field(
-        default=None, description="Optional specific config source path"
+        default=None, description="Optional configuration source override"
     )
 
 
 class ReloadResponse(BaseModel):
-    """Configuration reload response."""
+    """Structured response returned by reload and rollback operations."""
 
     operation_id: str
     status: str
     success: bool
     message: str | None = None
-
-    # Timing information
     total_duration_ms: float
     validation_duration_ms: float
     apply_duration_ms: float
-
-    # Change information
     previous_config_hash: str | None = None
     new_config_hash: str | None = None
     changes_applied: list[str] = Field(default_factory=list)
     services_notified: list[str] = Field(default_factory=list)
-
-    # Validation results
     validation_errors: list[str] = Field(default_factory=list)
     validation_warnings: list[str] = Field(default_factory=list)
 
 
 class ReloadHistoryResponse(BaseModel):
-    """Configuration reload history response."""
+    """Response body containing recent reload operations."""
 
     operations: list[ReloadResponse]
     total_count: int
@@ -67,7 +57,7 @@ class ReloadHistoryResponse(BaseModel):
 
 
 class ReloadStatsResponse(BaseModel):
-    """Configuration reload statistics response."""
+    """Aggregated statistics describing reload execution history."""
 
     total_operations: int
     successful_operations: int
@@ -79,30 +69,39 @@ class ReloadStatsResponse(BaseModel):
     current_config_hash: str | None = None
 
 
+RELOAD_REQUEST_BODY = Body(...)
+ROLLBACK_REQUEST_BODY = Body(...)
+
+
 class RollbackRequest(BaseModel):
-    """Configuration rollback request."""
+    """Request payload for rolling back to a previous snapshot."""
 
     target_hash: str | None = Field(
-        default=None, description="Specific config hash to rollback to"
+        default=None, description="Specific configuration hash to restore"
     )
 
 
+ReloadRequest.model_rebuild(_types_namespace=globals())
+RollbackRequest.model_rebuild(_types_namespace=globals())
+
+
 def _operation_to_response(operation: ReloadOperation) -> ReloadResponse:
-    """Convert ReloadOperation to API response."""
+    """Convert a ``ReloadOperation`` into the public response model."""
+
     return ReloadResponse(
-        operation_id=operation.operation_id,
-        status=operation.status.value,
-        success=operation.success,
-        message=operation.error_message,
-        total_duration_ms=operation.total_duration_ms,
-        validation_duration_ms=operation.validation_duration_ms,
-        apply_duration_ms=operation.apply_duration_ms,
-        previous_config_hash=operation.previous_config_hash,
-        new_config_hash=operation.new_config_hash,
-        changes_applied=operation.changes_applied,
-        services_notified=operation.services_notified,
-        validation_errors=operation.validation_errors,
-        validation_warnings=operation.validation_warnings,
+        operation_id=getattr(operation, "operation_id", "unknown"),
+        status=getattr(getattr(operation, "status", None), "value", "unknown"),
+        success=getattr(operation, "success", False),
+        message=getattr(operation, "error_message", None),
+        total_duration_ms=getattr(operation, "total_duration_ms", 0.0),
+        validation_duration_ms=getattr(operation, "validation_duration_ms", 0.0),
+        apply_duration_ms=getattr(operation, "apply_duration_ms", 0.0),
+        previous_config_hash=getattr(operation, "previous_config_hash", None),
+        new_config_hash=getattr(operation, "new_config_hash", None),
+        changes_applied=list(getattr(operation, "changes_applied", [])),
+        services_notified=list(getattr(operation, "services_notified", [])),
+        validation_errors=list(getattr(operation, "validation_errors", [])),
+        validation_warnings=list(getattr(operation, "validation_warnings", [])),
     )
 
 
@@ -111,58 +110,41 @@ def _operation_to_response(operation: ReloadOperation) -> ReloadResponse:
     operation_type=ConfigOperationType.UPDATE,
     operation_name="api.config.reload",
 )
-async def reload_configuration(request: ReloadRequest) -> ReloadResponse:
-    """Trigger a configuration reload operation.
-
-    This endpoint provides a safe way to reload configuration with proper
-    validation and rollback capabilities. The operation is performed
-    asynchronously with comprehensive error handling.
+async def reload_configuration(
+    request: ReloadRequest = RELOAD_REQUEST_BODY,
+) -> ReloadResponse:
+    """Reload configuration from disk via the API.
 
     Args:
-        request: Reload request parameters
+        request: Reload parameters supplied by the caller.
 
     Returns:
-        Reload operation results and metrics
+        ReloadResponse: Metrics and metadata associated with the reload run.
 
     Raises:
-        HTTPException: If reload operation fails
-
+        HTTPException: Raised when the reloader surfaces an unexpected error.
     """
+
     try:
         reloader = get_config_reloader()
-
-        # Perform reload operation
+        config_source = Path(request.config_source) if request.config_source else None
         operation = await reloader.reload_config(
             trigger=ReloadTrigger.API,
-            config_source=Path(request.config_source)
-            if request.config_source
-            else None,
+            config_source=config_source,
             force=request.force,
         )
 
         response = _operation_to_response(operation)
-
         if not operation.success:
-            # Return detailed error information but don't raise exception
-            # This allows clients to get full operation details
             logger.warning("Configuration reload failed: %s", operation.error_message)
 
-    except Exception as e:
+    except Exception as exc:  # noqa: BLE001 - propagate as HTTP error
         logger.exception("Unexpected error during configuration reload")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Configuration reload failed: {e!s}",
-        ) from e
-    else:
-        return response
-
-
-def _raise_rollback_error(operation: object) -> None:
-    """Raise HTTPException for failed rollback operation."""
-    raise HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST,
-        detail=f"Configuration rollback failed: {operation.error_message}",
-    )
+            detail=f"Configuration reload failed: {exc!s}",
+        ) from exc
+    return response
 
 
 @router.post("/rollback", response_model=ReloadResponse)
@@ -170,44 +152,41 @@ def _raise_rollback_error(operation: object) -> None:
     operation_type=ConfigOperationType.ROLLBACK,
     operation_name="api.config.rollback",
 )
-async def rollback_configuration(request: RollbackRequest) -> ReloadResponse:
-    """Rollback to a previous configuration.
-
-    This endpoint allows rolling back to a previous configuration state
-    in case of issues with the current configuration. If no target hash
-    is specified, rolls back to the most recent backup.
+async def rollback_configuration(
+    request: RollbackRequest = ROLLBACK_REQUEST_BODY,
+) -> ReloadResponse:
+    """Rollback to a previous configuration snapshot.
 
     Args:
-        request: Rollback request parameters
+        request: Rollback parameters supplied by the caller.
 
     Returns:
-        Rollback operation results and metrics
+        ReloadResponse: Outcome for the rollback attempt.
 
     Raises:
-        HTTPException: If rollback operation fails
-
+        HTTPException: Raised if rollback fails or the reloader raises an exception.
     """
+
     try:
         reloader = get_config_reloader()
-
-        # Perform rollback operation
         operation = await reloader.rollback_config(target_hash=request.target_hash)
 
         response = _operation_to_response(operation)
-
         if not operation.success:
-            _raise_rollback_error(operation)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Configuration rollback failed: {operation.error_message}",
+            )
 
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception as exc:  # noqa: BLE001 - propagate as HTTP error
         logger.exception("Unexpected error during configuration rollback")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Configuration rollback failed: {e!s}",
-        ) from e
-    else:
-        return response
+            detail=f"Configuration rollback failed: {exc!s}",
+        ) from exc
+    return response
 
 
 @router.get("/history", response_model=ReloadHistoryResponse)
@@ -216,83 +195,61 @@ async def get_reload_history(
         default=20, ge=1, le=100, description="Number of operations to return"
     ),
 ) -> ReloadHistoryResponse:
-    """Get configuration reload operation history.
-
-    Returns recent configuration reload operations with their results,
-    timing information, and change details.
+    """Return recent reload operations recorded by the reloader.
 
     Args:
-        limit: Maximum number of operations to return
+        limit: Maximum number of operations to return.
 
     Returns:
-        Historical reload operations
-
+        ReloadHistoryResponse: Collection of historical operations.
     """
+
     try:
         reloader = get_config_reloader()
-        history = reloader.get_reload_history(limit=limit)
-
+        history = reloader.get_reload_history(limit)
         operations = [_operation_to_response(op) for op in history]
-
         return ReloadHistoryResponse(
-            operations=operations,
-            total_count=len(history),
-            limit=limit,
+            operations=operations, total_count=len(history), limit=limit
         )
 
-    except Exception as e:
+    except Exception as exc:  # noqa: BLE001 - propagate as HTTP error
         logger.exception("Error retrieving reload history")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve reload history: {e!s}",
-        ) from e
+            detail=f"Failed to retrieve reload history: {exc!s}",
+        ) from exc
 
 
 @router.get("/stats", response_model=ReloadStatsResponse)
 async def get_reload_stats() -> ReloadStatsResponse:
-    """Get configuration reload statistics.
+    """Return aggregate statistics describing reload execution."""
 
-    Returns comprehensive statistics about configuration reload operations
-    including success rates, timing metrics, and system status.
-
-    Returns:
-        Configuration reload statistics
-
-    """
     try:
         reloader = get_config_reloader()
         stats = reloader.get_reload_stats()
-
         return ReloadStatsResponse(**stats)
 
-    except Exception as e:
+    except Exception as exc:  # noqa: BLE001 - propagate as HTTP error
         logger.exception("Error retrieving reload statistics")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve reload statistics: {e!s}",
-        ) from e
+            detail=f"Failed to retrieve reload statistics: {exc!s}",
+        ) from exc
 
 
 @router.get("/status")
 async def get_config_status() -> dict[str, Any]:
-    """Get current configuration status and health information.
+    """Return the current reloader state and key health indicators."""
 
-    Returns:
-        Current configuration status including hash, listeners, and settings
-
-    """
     try:
         reloader = get_config_reloader()
         stats = reloader.get_reload_stats()
-
-        # Additional status information
-        status_info = {
+        return {
             "config_reloader_enabled": True,
             "current_config_hash": stats.get("current_config_hash"),
             "registered_listeners": stats.get("listeners_registered", 0),
             "available_backups": stats.get("backups_available", 0),
             "file_watching_enabled": reloader.is_file_watch_enabled(),
-            "signal_handler_enabled": reloader.enable_signal_handler,
             "reload_statistics": {
                 "total_operations": stats.get("total_operations", 0),
                 "success_rate": stats.get("success_rate", 0.0),
@@ -300,14 +257,12 @@ async def get_config_status() -> dict[str, Any]:
             },
         }
 
-    except Exception as e:
+    except Exception as exc:  # noqa: BLE001 - propagate as HTTP error
         logger.exception("Error retrieving configuration status")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve configuration status: {e!s}",
-        ) from e
-    else:
-        return status_info
+            detail=f"Failed to retrieve configuration status: {exc!s}",
+        ) from exc
 
 
 @router.post("/file-watch/enable")
@@ -316,102 +271,77 @@ async def enable_file_watching(
         default=1.0, ge=0.1, le=60.0, description="Polling interval in seconds"
     ),
 ) -> dict[str, Any]:
-    """Enable automatic configuration file watching.
-
-    Enables monitoring of the configuration file for changes and automatic
-    reload when changes are detected.
+    """Enable on-disk file watching for configuration updates.
 
     Args:
-        poll_interval: File polling interval in seconds
+        poll_interval: Polling cadence, in seconds, used by the file watcher.
 
     Returns:
-        File watching status
-
+        dict[str, Any]: Status summary describing the watcher state.
     """
+
     try:
         reloader = get_config_reloader()
         await reloader.enable_file_watching(poll_interval=poll_interval)
-
         return {
             "file_watching_enabled": True,
             "poll_interval_seconds": poll_interval,
-            "config_source": str(reloader.config_source),
-            "message": "Configuration file watching enabled",
         }
 
-    except Exception as e:
+    except Exception as exc:  # noqa: BLE001 - propagate as HTTP error
         logger.exception("Error enabling file watching")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to enable file watching: {e!s}",
-        ) from e
+            detail=f"Failed to enable file watching: {exc!s}",
+        ) from exc
 
 
 @router.post("/file-watch/disable")
 async def disable_file_watching() -> dict[str, Any]:
-    """Disable automatic configuration file watching.
+    """Disable configuration file watching."""
 
-    Returns:
-        File watching status
-
-    """
     try:
         reloader = get_config_reloader()
         await reloader.disable_file_watching()
 
-    except Exception as e:
+    except Exception as exc:  # noqa: BLE001 - propagate as HTTP error
         logger.exception("Error disabling file watching")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to disable file watching: {e!s}",
-        ) from e
-    else:
-        return {
-            "file_watching_enabled": False,
-            "message": "Configuration file watching disabled",
-        }
+            detail=f"Failed to disable file watching: {exc!s}",
+        ) from exc
+    return {
+        "file_watching_enabled": False,
+    }
 
 
 @router.get("/backups")
 async def list_config_backups() -> dict[str, Any]:
-    """List available configuration backups.
+    """Return metadata for configuration backups exposed by the reloader."""
 
-    Returns information about available configuration backups that can
-    be used for rollback operations.
-
-    Returns:
-        Available configuration backups
-
-    """
     try:
         reloader = get_config_reloader()
 
-        # Access backup information (note: this requires exposing backup list)
-        if hasattr(reloader, "_config_backups"):
-            backups = [
+        backups: list[dict[str, Any]] = []
+        for backup_hash, backup_config in reloader.get_config_backups():
+            backups.append(
                 {
                     "hash": backup_hash,
-                    "created_at": backup_config.model_dump().get(
-                        "created_at", "unknown"
-                    ),
-                    "environment": str(backup_config.environment)
-                    if hasattr(backup_config, "environment")
-                    else "unknown",
+                    "created_at": backup_config.created_at,
+                    "environment": backup_config.environment,
                 }
-                for backup_hash, backup_config in reloader.get_config_backups()
-            ]
-        else:
-            backups = []
+            )
 
+        max_backup_count = getattr(getattr(reloader, "_backups", None), "maxlen", 0)
         return {
             "available_backups": len(backups),
             "backups": backups,
-            "max_backup_count": reloader.backup_count,
+            "max_backup_count": max_backup_count or len(backups),
         }
 
-    except Exception as e:
+    except Exception as exc:  # noqa: BLE001 - propagate as HTTP error
         logger.exception("Error retrieving configuration backups")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve configuration backups: {e!s}",
-        ) from e
+            detail=f"Failed to retrieve configuration backups: {exc!s}",
+        ) from exc

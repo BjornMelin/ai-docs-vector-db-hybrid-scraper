@@ -81,9 +81,11 @@ class ConfigReloader:
         self,
         *,
         history_limit: int = 50,
-        enable_signal_handler: bool = True,
+        config_source: Path | str | None = None,
     ) -> None:
-        self.enable_signal_handler = enable_signal_handler
+        self._default_config_source = (
+            Path(config_source).expanduser() if config_source else None
+        )
         self._file_watch_enabled = False
         self._history: deque[ReloadOperation] = deque(maxlen=history_limit)
         self._backups: deque[tuple[str, ConfigBackup]] = deque(maxlen=history_limit)
@@ -125,7 +127,9 @@ class ConfigReloader:
             success = False
 
             try:
-                replacement = self._load_config_source(config_source)
+                replacement = self._load_config_source(
+                    config_source or self._default_config_source
+                )
                 set_config(replacement)
                 success = True
                 new_config_hash = self._hash_config(replacement)
