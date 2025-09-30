@@ -52,7 +52,7 @@ that an empty list is returned from cache without re-hit on the backend stub.
 
 ## Configuration knobs
 
-Key configuration lives under `CacheConfig` in `src/config/settings.py`:
+Key configuration lives under `CacheConfig` in `src/config/models.py`:
 
 - `enable_local_cache` enables the persistent layer (disk writes plus hashed
   keys).

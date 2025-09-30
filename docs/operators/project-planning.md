@@ -57,7 +57,7 @@ status: draft
   - Document configuration migration + rollback in `docs/operators/configuration.md`.
 - **Dependencies:** QA-01
 - **Owner:** Platform Engineer (TBD)
-- **Evidence:** `rg "Secret" src/config/settings.py` → none; `src/services/dependencies.py:55-132` auto-detection lacks tests.
+- **Evidence:** `rg "Secret" src/config/models.py` → none; `src/services/dependencies.py:55-132` auto-detection lacks tests.
 
 ### INF-02 – Centralize API Error Handling
 
@@ -334,7 +334,7 @@ status: draft
 | Legacy ID                              | Disposition | Notes                                                      | Evidence                                                 | New Mapping |
 | -------------------------------------- | ----------- | ---------------------------------------------------------- | -------------------------------------------------------- | ----------- |
 | 1                                      | Merged      | Tests still fail (missing plugins); merged into QA-01.     | `pytest … -q` failure; `tests/test_infrastructure.py:21` | QA-01       |
-| 2                                      | Retained    | Config hardening incomplete; becomes INF-01.               | `rg "Secret" src/config/settings.py` → none              | INF-01      |
+| 2                                      | Retained    | Config hardening incomplete; becomes INF-01.               | `rg "Secret" src/config/models.py` → none              | INF-01      |
 | 3                                      | Retained    | No global handlers; becomes INF-02.                        | `src/api/app_factory.py:224-280`                         | INF-02      |
 | 4                                      | Retained    | Manager classes still present; becomes ARC-01.             | `src/services/managers/crawling_manager.py:27-101`       | ARC-01      |
 | 5                                      | Retained    | Circuit breaker unused; becomes INF-03.                    | `src/services/dependencies.py` lacks references          | INF-03      |
@@ -382,7 +382,7 @@ status: draft
 | R2      | Observability middleware never attached; production incidents would lack metrics/traces.                  | High        | Medium     | OPS-01 (wire Prometheus/OTel)          | Observability Eng | Open   | `src/api/app_factory.py:320-380`                                          |
 | R3      | Browser automation disabled by missing `browser-use` dependency; tiered crawling relies on fallback only. | High        | Medium     | BRW-01..BRW-03                         | Automation Eng    | Open   | `src/services/browser/browser_use_adapter.py:22-59`                       |
 | R4      | Circuit breaker logic unused; upstream outages propagate directly to clients.                             | Medium-High | Medium     | INF-03                                 | Platform Eng      | Open   | `src/services/circuit_breaker/circuit_breaker_manager.py` vs dependencies |
-| R5      | Unified config stores secrets as plain strings; no secret management or rotation story.                   | High        | Medium     | INF-01                                 | Platform Eng      | Open   | `rg "SecretStr" src/config/settings.py` → none                            |
+| R5      | Unified config stores secrets as plain strings; no secret management or rotation story.                   | High        | Medium     | INF-01                                 | Platform Eng      | Open   | `rg "SecretStr" src/config/models.py` → none                            |
 
 ---
 

@@ -1,5 +1,7 @@
 """Runtime configuration reloader supporting hot updates and rollbacks."""
 
+# pylint: disable=too-many-instance-attributes, import-outside-toplevel
+
 from __future__ import annotations
 
 import asyncio

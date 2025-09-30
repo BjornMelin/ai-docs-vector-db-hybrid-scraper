@@ -2,7 +2,7 @@
 
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from fastapi import APIRouter, Body, HTTPException, Query, status
 from pydantic import BaseModel, Field
@@ -227,7 +227,21 @@ async def get_reload_stats() -> ReloadStatsResponse:
     try:
         reloader = get_config_reloader()
         stats = reloader.get_reload_stats()
-        return ReloadStatsResponse(**stats)
+        current_hash_value = stats.get("current_config_hash")
+        current_hash = (
+            str(current_hash_value) if current_hash_value is not None else None
+        )
+
+        return ReloadStatsResponse(
+            total_operations=cast(int, stats.get("total_operations", 0)),
+            successful_operations=cast(int, stats.get("successful_operations", 0)),
+            failed_operations=cast(int, stats.get("failed_operations", 0)),
+            success_rate=cast(float, stats.get("success_rate", 0.0)),
+            average_duration_ms=cast(float, stats.get("average_duration_ms", 0.0)),
+            listeners_registered=cast(int, stats.get("listeners_registered", 0)),
+            backups_available=cast(int, stats.get("backups_available", 0)),
+            current_config_hash=current_hash,
+        )
 
     except Exception as exc:  # noqa: BLE001 - propagate as HTTP error
         logger.exception("Error retrieving reload statistics")

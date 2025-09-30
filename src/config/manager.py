@@ -1,5 +1,7 @@
 """High-level configuration manager and graceful degradation utilities."""
 
+# pylint: disable=too-many-instance-attributes, too-many-arguments
+
 from __future__ import annotations
 
 import asyncio

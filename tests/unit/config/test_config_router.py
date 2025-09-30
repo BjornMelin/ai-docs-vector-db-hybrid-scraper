@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import importlib.util
 import warnings
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
 
@@ -10,10 +12,15 @@ import pytest
 from fastapi import FastAPI, status
 from fastapi.testclient import TestClient
 
-from src.api.routers import config as config_router
-
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
+
+BASE_DIR = Path(__file__).resolve().parents[3]
+MODULE_PATH = BASE_DIR / "src" / "api" / "routers" / "config.py"
+CONFIG_SPEC = importlib.util.spec_from_file_location("config_router", MODULE_PATH)
+assert CONFIG_SPEC is not None and CONFIG_SPEC.loader is not None
+config_router = importlib.util.module_from_spec(CONFIG_SPEC)
+CONFIG_SPEC.loader.exec_module(config_router)
 
 
 class DummyBackupConfig:
@@ -55,12 +62,24 @@ class DummyReloader:  # pylint: disable=too-many-instance-attributes
         self.raise_reload_error = False
         self.raise_rollback_error = False
 
-    async def reload_config(self, *args: Any, **_kwargs: Any) -> DummyReloadOperation:
+    async def reload_config(
+        self,
+        *,
+        trigger: Any,
+        config_source: Path | None = None,
+        force: bool = False,
+    ) -> DummyReloadOperation:
+        del trigger, config_source, force
         if self.raise_reload_error:
             raise RuntimeError("reload failure")
         return DummyReloadOperation()
 
-    async def rollback_config(self, *args: Any, **_kwargs: Any) -> DummyReloadOperation:
+    async def rollback_config(
+        self,
+        *,
+        target_hash: str | None = None,
+    ) -> DummyReloadOperation:
+        del target_hash
         if self.raise_rollback_error:
             return DummyReloadOperation(success=False, error_message="rollback failed")
         return DummyReloadOperation()
@@ -84,8 +103,8 @@ class DummyReloader:  # pylint: disable=too-many-instance-attributes
     def is_file_watch_enabled(self) -> bool:  # noqa: D401 - matches router expectation
         return self._file_watch_enabled
 
-    async def enable_file_watching(self, *args: Any, **_kwargs: Any) -> None:
-        del args, _kwargs
+    async def enable_file_watching(self, *, poll_interval: float | None = None) -> None:
+        del poll_interval
         self._file_watch_enabled = True
 
     async def disable_file_watching(self) -> None:
@@ -101,16 +120,8 @@ class DummyReloader:  # pylint: disable=too-many-instance-attributes
             )
         ]
 
-    async def enable_signal_handler(
-        self,
-    ) -> None:  # pragma: no cover - unused but present
-        return None
 
-
-class ClientWithReloader(TestClient):
-    """Typed test client exposing the mocked config reloader."""
-
-    reloader: DummyReloader
+ClientWithReloader = TestClient  # Alias for readability
 
 
 @pytest.fixture()
@@ -121,9 +132,9 @@ def app(monkeypatch: pytest.MonkeyPatch) -> ClientWithReloader:
     monkeypatch.setattr(config_router, "get_config_reloader", lambda: reloader)
     fastapi_app = FastAPI()
     fastapi_app.include_router(config_router.router)
-    client = cast(ClientWithReloader, TestClient(fastapi_app))
-    client.reloader = reloader
-    return client
+    client = TestClient(fastapi_app)
+    cast(Any, client).reloader = reloader
+    return cast(ClientWithReloader, client)
 
 
 def test_reload_configuration_success(app: ClientWithReloader) -> None:
@@ -137,23 +148,25 @@ def test_reload_configuration_success(app: ClientWithReloader) -> None:
 
 
 def test_reload_configuration_error(app: ClientWithReloader) -> None:
-    """Verify reload errors propagate as HTTP 500 responses."""
+    """Ensure unexpected reloader errors surface as HTTP 500."""
 
-    app.reloader.raise_reload_error = True
+    reloader = cast(DummyReloader, cast(Any, app).reloader)
+    reloader.raise_reload_error = True
     response = app.post("/config/reload", json={})
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
 def test_rollback_configuration_failure(app: ClientWithReloader) -> None:
-    """Check rollback failures surface descriptive client errors."""
+    """Rollback failures should surface as HTTP 400."""
 
-    app.reloader.raise_rollback_error = True
+    reloader = cast(DummyReloader, cast(Any, app).reloader)
+    reloader.raise_rollback_error = True
     response = app.post("/config/rollback", json={})
     assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
 def test_history_endpoint(app: ClientWithReloader) -> None:
-    """Confirm history endpoint returns operation metadata."""
+    """History endpoint returns serialized operations."""
 
     response = app.get("/config/history", params={"limit": 5})
     assert response.status_code == 200
@@ -163,7 +176,7 @@ def test_history_endpoint(app: ClientWithReloader) -> None:
 
 
 def test_stats_endpoint(app: ClientWithReloader) -> None:
-    """Ensure stats endpoint exposes aggregated counts."""
+    """Statistics endpoint returns aggregate counters."""
 
     response = app.get("/config/stats")
     assert response.status_code == 200
@@ -171,7 +184,7 @@ def test_stats_endpoint(app: ClientWithReloader) -> None:
 
 
 def test_status_endpoint(app: ClientWithReloader) -> None:
-    """Validate status endpoint exposes reloader health data."""
+    """Status endpoint returns a health snapshot."""
 
     response = app.get("/config/status")
     assert response.status_code == 200
@@ -181,7 +194,7 @@ def test_status_endpoint(app: ClientWithReloader) -> None:
 
 
 def test_file_watch_toggle(app: ClientWithReloader) -> None:
-    """Ensure file watching can be enabled and disabled."""
+    """Enabling and disabling file watching should succeed."""
 
     enable_response = app.post(
         "/config/file-watch/enable", params={"poll_interval": 0.5}
@@ -193,7 +206,7 @@ def test_file_watch_toggle(app: ClientWithReloader) -> None:
 
 
 def test_backups_endpoint(app: ClientWithReloader) -> None:
-    """Verify backups endpoint surfaces the stored metadata."""
+    """Backups endpoint returns metadata for available snapshots."""
 
     response = app.get("/config/backups")
     assert response.status_code == 200
