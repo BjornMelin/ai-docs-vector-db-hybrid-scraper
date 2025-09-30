@@ -275,7 +275,7 @@ class CacheManager:
             return
         try:
             ttl = self._local_default_ttl
-            await self._local_cache.set(cache_key, value, ttl=ttl)
+            await self._local_cache.set(cache_key, value, ttl_seconds=ttl)
         except (ConnectionError, OSError, PermissionError) as e:
             logger.warning(
                 "Failed to populate local cache for key %s: %s", cache_key, e
@@ -335,7 +335,11 @@ class CacheManager:
     ) -> bool:
         """Execute the actual cache set operation."""
         cache_key = self._get_cache_key(key, cache_type)
-        effective_ttl = ttl or self.distributed_ttl_seconds.get(cache_type, 3600)
+        effective_ttl = (
+            ttl
+            if ttl is not None
+            else self.distributed_ttl_seconds.get(cache_type, 3600)
+        )
 
         # Set in L1 cache
         await self._set_local_cache(cache_key, value, effective_ttl)
@@ -360,7 +364,7 @@ class CacheManager:
                 if ttl_limit is not None
                 else effective_ttl
             )
-            await self._local_cache.set(cache_key, value, ttl=ttl_value)
+            await self._local_cache.set(cache_key, value, ttl_seconds=ttl_value)
         except (ConnectionError, OSError, PermissionError) as e:
             logger.warning("Local cache set error for key %s: %s", cache_key, e)
 
@@ -467,7 +471,7 @@ class CacheManager:
         # Clear from local cache
         if self._local_cache:
             try:
-                await self._local_cache.delete(self._get_cache_key(key, cache_type))
+                await self._local_cache.delete(key)
             except (ConnectionError, RuntimeError, TimeoutError) as e:
                 logger.warning("Local cache delete error for key %s: %s", key, e)
         return True
@@ -589,56 +593,21 @@ class CacheManager:
             Formatted cache key
         """
         # Create content-based hash for consistent keys (using SHA256 for security)
-        key_hash = hashlib.sha256(key.encode()).hexdigest()[:12]
+        key_hash = hashlib.sha256(key.encode()).hexdigest()[:16]
         return f"{self.key_prefix}{cache_type.value}:{key_hash}"
 
-    # Direct access methods for specialized caches
-    async def get_embedding_direct(
-        self, content_hash: str, model: str
-    ) -> list[float] | None:
-        """Direct access to embedding cache.
-
-        Args:
-            content_hash: Hash of the content that was embedded
-            model: Name of the embedding model used
-
-        Returns:
-            list[float] | None: Cached embedding vector or None if not found
-        """
-        if not self._embedding_cache:
-            return None
-        return await self._embedding_cache.get_embedding(content_hash, model)
-
-    async def set_search_results_direct(
-        self,
-        query_hash: str,
-        collection: str,
-        results: list[dict[str, object]],
-        ttl: int | None = None,
-    ) -> bool:
-        """Direct access to search result cache.
-
-        Args:
-            query_hash: Hash of the search query
-            collection: Name of the collection searched
-            results: Search results to cache
-            ttl: Custom TTL in seconds (None uses default)
-
-        Returns:
-            bool: True if successfully cached
-        """
-        if not self._search_cache:
-            return False
-        return await self._search_cache.set_search_results(
-            query_hash, results, collection, ttl=ttl
-        )
-
     async def get_performance_stats(self) -> dict[str, object]:
-        """Return lightweight performance stats for active cache layers."""
+        """Return lightweight performance stats for enabled cache layers."""
 
         stats: dict[str, object] = {}
 
         if self._local_cache:
             stats["local"] = asdict(self._local_cache.stats)
+
+        if self._distributed_cache:
+            stats["distributed"] = {
+                "compression_enabled": self._distributed_cache.enable_compression,
+                "redis_url": self._distributed_cache.redis_url,
+            }
 
         return stats

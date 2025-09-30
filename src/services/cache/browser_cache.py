@@ -12,6 +12,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from .base import CacheInterface
+from .persistent_cache import PersistentCacheManager
 
 
 logger = logging.getLogger(__name__)
@@ -20,6 +21,7 @@ logger = logging.getLogger(__name__)
 class BrowserCacheEntry:
     """Entry for browser automation cache."""
 
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     def __init__(
         self,
         url: str,
@@ -27,7 +29,7 @@ class BrowserCacheEntry:
         metadata: dict[str, Any],
         tier_used: str,
         timestamp: float | None = None,
-    ):
+    ) -> None:
         """Initialize cache entry.
 
         Args:
@@ -76,18 +78,19 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
     based on content type and domain.
     """
 
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     def __init__(
         self,
-        local_cache: CacheInterface[str] | None = None,
+        local_cache: PersistentCacheManager | None = None,
         distributed_cache: CacheInterface[str] | None = None,
         default_ttl: int = 3600,  # 1 hour default
         dynamic_content_ttl: int = 300,  # 5 minutes for dynamic content
         static_content_ttl: int = 86400,  # 24 hours for static content
-    ):
+    ) -> None:
         """Initialize browser cache.
 
         Args:
-            local_cache: Local cache implementation
+        local_cache: Local persistent cache implementation
             distributed_cache: Distributed cache implementation
             default_ttl: Default TTL in seconds
             dynamic_content_ttl: TTL for dynamic content
@@ -276,7 +279,7 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
         if not self.local_cache:
             return
         try:
-            await self.local_cache.set(key, cached_json, ttl=300)  # 5 min local
+            await self.local_cache.set(key, cached_json, ttl_seconds=300)  # 5 min local
         except (ConnectionError, FileNotFoundError, OSError, PermissionError) as e:
             logger.warning("Error promoting to local cache for key %s: %s", key, e)
 
@@ -345,7 +348,9 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
         if not self.local_cache:
             return None
         try:
-            return await self.local_cache.set(key, cached_json, ttl=min(ttl, 3600))
+            return await self.local_cache.set(
+                key, cached_json, ttl_seconds=min(ttl, 3600)
+            )
         except (ConnectionError, RuntimeError, TimeoutError) as e:
             logger.warning("Error storing in local cache: %s", e)
             return False
@@ -543,7 +548,9 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
 
         if self.local_cache:
             try:
-                count += await self.local_cache.clear()
+                local_cleared = await self.local_cache.clear()
+                if isinstance(local_cleared, int):
+                    count += local_cleared
             except (ConnectionError, RuntimeError, TimeoutError) as e:
                 logger.warning("Error clearing local cache: %s", e)
 

@@ -43,8 +43,8 @@ def span_context(
             span.record_exception(exc)
             span.set_status(Status(StatusCode.ERROR, str(exc)))
             raise
-        else:
-            span.set_status(Status(StatusCode.OK))
+
+        span.set_status(Status(StatusCode.OK))
 
 
 @asynccontextmanager

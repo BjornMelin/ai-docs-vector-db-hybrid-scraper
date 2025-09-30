@@ -33,6 +33,12 @@ class _ObservabilityState:
 _STATE = _ObservabilityState()
 
 
+def _reset_observability_state() -> None:
+    """Reset observability state to uninitialized state."""
+    _STATE.tracer_provider = None
+    _STATE.meter_provider = None
+
+
 _validate_telemetry_components: Callable[[], bool] | None = getattr(
     _telemetry_helpers, "_validate_telemetry_components", None
 )
@@ -154,12 +160,15 @@ def initialize_observability(config: ObservabilityConfig | None = None) -> bool:
         _perform_initialization(resolved_config)
     except ObservabilityInitError as exc:
         logger.error("Failed to initialize OpenTelemetry: %s", exc)
+        _reset_observability_state()
         return False
     except ImportError:
         logger.warning("OpenTelemetry packages not available")
+        _reset_observability_state()
         return False
     except (AttributeError, OSError, RuntimeError, ValueError):
         logger.exception("Failed to initialize OpenTelemetry")
+        _reset_observability_state()
         return False
 
     logger.info(
@@ -221,7 +230,11 @@ def shutdown_observability() -> None:
         except (OSError, PermissionError) as exc:
             logger.exception("Error during tracer provider shutdown")
             tracer_shutdown_error = str(exc)
-        except (RuntimeError, ValueError) as exc:  # pragma: no cover - safety net
+        except (
+            RuntimeError,
+            ValueError,
+            Exception,
+        ) as exc:  # pragma: no cover - safety net
             logger.exception("Unexpected tracer shutdown failure")
             tracer_shutdown_error = str(exc)
         finally:
@@ -240,7 +253,11 @@ def shutdown_observability() -> None:
         except (OSError, PermissionError) as exc:
             logger.exception("Error during meter provider shutdown")
             meter_shutdown_error = str(exc)
-        except (RuntimeError, ValueError) as exc:  # pragma: no cover - safety net
+        except (
+            RuntimeError,
+            ValueError,
+            Exception,
+        ) as exc:  # pragma: no cover - safety net
             logger.exception("Unexpected meter shutdown failure")
             meter_shutdown_error = str(exc)
         finally:

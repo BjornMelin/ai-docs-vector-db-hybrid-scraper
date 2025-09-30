@@ -436,7 +436,7 @@ class TestCorrelationIntegration:
 
     def test_manager_with_mocked_trace(self, mock_trace):
         """Test correlation manager with mocked trace."""
-        _trace_module, _tracer, _span = mock_trace
+        _trace_module, tracer, _span = mock_trace
 
         manager = TraceCorrelationManager()
         manager.tracer = tracer
@@ -445,7 +445,7 @@ class TestCorrelationIntegration:
             pass
 
         tracer.start_as_current_span.assert_called_once()
-        span.set_attribute.assert_called()
+        _span.set_attribute.assert_called()
 
     def test_get_current_context_with_mocked_trace(self, mock_trace):
         """Test get_current_context with mocked trace."""

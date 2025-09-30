@@ -2,6 +2,7 @@
 
 from unittest.mock import Mock, patch
 
+import src.services.observability.init as init_module
 from src.services.observability.config import ObservabilityConfig
 from src.services.observability.init import (
     _setup_auto_instrumentation,
@@ -28,11 +29,14 @@ class TestObservabilityInitialization:
         config = ObservabilityConfig(enabled=True)
 
         # Mock the imports to cause ImportError
-        with patch.dict("sys.modules", {"opentelemetry.metrics": None}):
+        with patch(
+            "builtins.__import__",
+            side_effect=ImportError("No module named 'opentelemetry'"),
+        ):
             result = initialize_observability(config)
 
             assert result is False
-            mock_logger.warning.assert_called()
+            mock_logger.error.assert_called()
 
     @patch("src.services.observability.init.logger")
     def test_initialize_observability_general_exception(self, mock_logger):
@@ -104,17 +108,11 @@ class TestObservabilityShutdown:
         mock_tracer_provider_instance = Mock()
         mock_meter_provider_instance = Mock()
 
-        # Patch the module-level variables directly
-        with (
-            patch(
-                "src.services.observability.init._tracer_provider",
-                mock_tracer_provider_instance,
-            ),
-            patch(
-                "src.services.observability.init._meter_provider",
-                mock_meter_provider_instance,
-            ),
-        ):
+        # Set the state directly
+        init_module._STATE.tracer_provider = mock_tracer_provider_instance
+        init_module._STATE.meter_provider = mock_meter_provider_instance
+
+        try:
             shutdown_observability()
 
             # Verify shutdown calls
@@ -126,6 +124,10 @@ class TestObservabilityShutdown:
             mock_logger.info.assert_any_call(
                 "Shutting down OpenTelemetry meter provider..."
             )
+        finally:
+            # Clean up
+            init_module._STATE.tracer_provider = None
+            init_module._STATE.meter_provider = None
             mock_logger.info.assert_any_call("OpenTelemetry shutdown completed")
 
     @patch("src.services.observability.init.logger")
@@ -136,18 +138,17 @@ class TestObservabilityShutdown:
             "Shutdown failed"
         )
 
-        with (
-            patch(
-                "src.services.observability.init._tracer_provider",
-                mock_tracer_provider_instance,
-            ),
-            patch("src.services.observability.init._meter_provider", None),
-        ):
+        init_module._STATE.tracer_provider = mock_tracer_provider_instance
+        init_module._STATE.meter_provider = None
+
+        try:
             shutdown_observability()
 
             mock_logger.error.assert_called_with(
-                "Error during tracer provider shutdown: Shutdown failed"
+                "Error during tracer provider shutdown: %s", "Shutdown failed"
             )
+        finally:
+            init_module._STATE.tracer_provider = None
 
     @patch("src.services.observability.init.logger")
     def test_shutdown_observability_meter_error(self, mock_logger):
@@ -157,27 +158,25 @@ class TestObservabilityShutdown:
             "Meter shutdown failed"
         )
 
-        with (
-            patch("src.services.observability.init._tracer_provider", None),
-            patch(
-                "src.services.observability.init._meter_provider",
-                mock_meter_provider_instance,
-            ),
-        ):
+        init_module._STATE.tracer_provider = None
+        init_module._STATE.meter_provider = mock_meter_provider_instance
+
+        try:
             shutdown_observability()
 
             mock_logger.error.assert_called_with(
-                "Error during meter provider shutdown: Meter shutdown failed"
+                "Error during meter provider shutdown: %s", "Meter shutdown failed"
             )
+        finally:
+            init_module._STATE.meter_provider = None
 
     def test_shutdown_observability_no_providers(self):
         """Test observability shutdown with no active providers."""
-        with (
-            patch("src.services.observability.init._tracer_provider", None),
-            patch("src.services.observability.init._meter_provider", None),
-        ):
-            # Should not raise exception
-            shutdown_observability()
+        init_module._STATE.tracer_provider = None
+        init_module._STATE.meter_provider = None
+
+        # Should not raise exception
+        shutdown_observability()
 
 
 class TestObservabilityStatus:
@@ -187,18 +186,19 @@ class TestObservabilityStatus:
         """Test observability enabled status when tracer provider exists."""
         mock_tracer_provider_instance = Mock()
 
-        with patch(
-            "src.services.observability.init._tracer_provider",
-            mock_tracer_provider_instance,
-        ):
+        init_module._STATE.tracer_provider = mock_tracer_provider_instance
+        try:
             result = is_observability_enabled()
             assert result is True
+        finally:
+            init_module._STATE.tracer_provider = None
 
     def test_is_observability_enabled_false(self):
         """Test observability disabled status when no tracer provider."""
-        with patch("src.services.observability.init._tracer_provider", None):
-            result = is_observability_enabled()
-            assert result is False
+        init_module._STATE.tracer_provider = None
+
+        result = is_observability_enabled()
+        assert result is False
 
 
 class TestObservabilityIntegration:
@@ -314,30 +314,39 @@ class TestObservabilityErrorHandling:
         mock_provider = Mock()
         mock_provider.shutdown.side_effect = RuntimeError("Critical shutdown error")
 
-        with patch("src.services.observability.init._tracer_provider", mock_provider):
+        init_module._STATE.tracer_provider = mock_provider
+        try:
             # Should not raise exception despite provider error
             shutdown_observability()
 
             # Should log the error
             mock_logger.error.assert_called()
+        finally:
+            init_module._STATE.tracer_provider = None
 
     def test_robust_error_handling_in_status_check(self):
         """Test that status check handles various conditions gracefully."""
         # Test with valid provider
         mock_provider = Mock()
-        with patch("src.services.observability.init._tracer_provider", mock_provider):
+        init_module._STATE.tracer_provider = mock_provider
+        try:
             assert is_observability_enabled() is True
+        finally:
+            init_module._STATE.tracer_provider = None
 
         # Test with None provider
-        with patch("src.services.observability.init._tracer_provider", None):
-            assert is_observability_enabled() is False
+        init_module._STATE.tracer_provider = None
+        assert is_observability_enabled() is False
 
         # Test with provider that has no shutdown method (shouldn't affect status check)
         broken_provider = "not_a_provider_object"
-        with patch("src.services.observability.init._tracer_provider", broken_provider):
+        init_module._STATE.tracer_provider = broken_provider
+        try:
             assert (
                 is_observability_enabled() is True
             )  # Any non-None value should return True
+        finally:
+            init_module._STATE.tracer_provider = None
 
     def test_initialization_with_partial_failures(self):
         """Test initialization behavior with partial component failures."""

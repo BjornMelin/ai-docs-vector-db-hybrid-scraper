@@ -26,6 +26,7 @@ import gzip
 import hashlib
 import json
 import logging
+import os
 import pickle
 import random
 import time
@@ -160,7 +161,11 @@ def cache_path_for_key(base_dir: Path, key: str) -> Path:
 
 # pylint: disable=too-many-instance-attributes,too-many-arguments
 class PersistentCacheManager:
-    """Cache with an in-memory hot set and optional disk persistence."""
+    """Cache with an in-memory hot set and optional disk persistence.
+
+    On POSIX systems the constructor hardens ``base_path`` permissions to
+    ``0700`` so persisted entries are only accessible to the current user.
+    """
 
     def __init__(
         self,
@@ -195,6 +200,13 @@ class PersistentCacheManager:
 
         self.base_path = base_path
         self.base_path.mkdir(parents=True, exist_ok=True)
+        if os.name == "posix":
+            try:
+                self.base_path.chmod(0o700)
+            except OSError:
+                logger.debug(
+                    "Unable to set restrictive permissions on %s", self.base_path
+                )
         self.max_entries = max_entries
         self.max_size = max_entries
         self.max_memory_bytes = max_memory_bytes
@@ -280,7 +292,6 @@ class PersistentCacheManager:
         key: str,
         value: Any,
         *,
-        ttl: int | None = None,
         ttl_seconds: int | None = None,
     ) -> bool:
         """Store a value in the cache with optional expiry handling.
@@ -288,14 +299,13 @@ class PersistentCacheManager:
         Args:
             key: Cache key to populate.
             value: Serializable payload to cache.
-            ttl: Optional TTL in seconds (deprecated alias for ``ttl_seconds``).
             ttl_seconds: Preferred TTL override in seconds.
 
         Returns:
             True if the value was stored successfully across configured layers.
         """
 
-        effective_ttl = ttl_seconds if ttl_seconds is not None else ttl
+        effective_ttl = ttl_seconds
         if effective_ttl is not None and effective_ttl <= 0:
             await self.delete(key)
             return True
@@ -358,6 +368,19 @@ class PersistentCacheManager:
             self._stats.record_delete()
         return removed
 
+    async def exists(self, key: str) -> bool:
+        """Return whether a key is present in memory or persisted on disk."""
+
+        async with self._lock:
+            if key in self._entries:
+                return True
+
+        if not self.persistence_enabled:
+            return False
+
+        path = cache_path_for_key(self.base_path, key)
+        return await asyncio.to_thread(path.exists)
+
     async def clear(self) -> None:
         """Remove all in-memory entries and wipe persisted artifacts."""
 
@@ -367,6 +390,11 @@ class PersistentCacheManager:
 
         if self.persistence_enabled:
             await asyncio.to_thread(self._clear_disk)
+
+    async def close(self) -> None:
+        """Release resources associated with the cache."""
+
+        await self.cleanup()
 
     async def initialize(self) -> None:
         """Placeholder to match existing cache manager interface."""
