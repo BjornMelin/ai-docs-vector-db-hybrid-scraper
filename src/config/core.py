@@ -5,7 +5,7 @@ settings system to maintain backward compatibility with existing code.
 """
 
 # Re-export main configuration functions
-from .settings import Config, get_config, reset_config
+from .loader import Config, get_config, reset_config
 
 
 __all__ = [
