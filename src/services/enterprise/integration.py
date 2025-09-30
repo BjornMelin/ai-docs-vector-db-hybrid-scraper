@@ -8,18 +8,17 @@ security framework, and observability platform.
 
 import asyncio
 import contextlib
+import inspect
 import logging
 import time
-
-# Callable import removed (unused)
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
-# BaseModel and Field imports removed (unused)
 from src.architecture.service_factory import BaseService
-from src.config.modern import Config
+from src.config import Config
 from src.services.deployment.feature_flags import FeatureFlagConfig, FeatureFlagManager
 from src.services.enterprise.cache import EnterpriseCacheService
 from src.services.enterprise.search import EnterpriseSearchService
@@ -34,20 +33,26 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def _raise_missing_service_dependencies(missing_deps: list[str]) -> None:
+def _raise_missing_service_dependencies(
+    missing_deps: Mapping[str, Sequence[str]],
+) -> None:
     """Raise ValueError for missing service dependencies."""
-    msg = f"Missing service dependencies: {missing_deps}"
+
+    flattened = {service: list(deps) for service, deps in missing_deps.items()}
+    msg = f"Missing service dependencies: {flattened}"
     raise ValueError(msg)
 
 
 def _raise_circular_dependencies_detected(cycles: list) -> None:
     """Raise ValueError for circular dependencies detected."""
+
     msg = f"Circular dependencies detected: {cycles}"
     raise ValueError(msg)
 
 
 def _raise_service_health_check_failed(service_name: str, health_result: dict) -> None:
     """Raise RuntimeError for service health check failure."""
+
     msg = f"Service {service_name} failed health check: {health_result}"
     raise RuntimeError(msg)
 
@@ -80,7 +85,7 @@ class IntegrationPhase(str, Enum):
 
 
 @dataclass
-class ServiceDescriptor:
+class ServiceDescriptor:  # pylint: disable=too-many-instance-attributes
     """Comprehensive service description for enterprise integration."""
 
     name: str
@@ -101,7 +106,7 @@ class ServiceDescriptor:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
-class HealthMonitor:
+class HealthMonitor:  # pylint: disable=too-many-instance-attributes
     """Advanced health monitoring for enterprise services."""
 
     def __init__(self, service_name: str, descriptor: ServiceDescriptor):
@@ -137,9 +142,13 @@ class HealthMonitor:
                 return health_result
 
             # Perform service-specific health check
-            if hasattr(self.descriptor.service, "health_check"):
-                service_health = await self.descriptor.service.health_check()
-                health_result["details"].update(service_health)
+            health_callable = getattr(self.descriptor.service, "health_check", None)
+            if callable(health_callable):
+                result = health_callable()
+                if inspect.isawaitable(result):
+                    result = await result
+                if isinstance(result, Mapping):
+                    health_result["details"].update(result)
 
             # Check dependencies
             dependency_health = await self._check_dependencies()
@@ -320,7 +329,7 @@ class ServiceDependencyGraph:
         return missing_deps
 
 
-class EnterpriseServiceRegistry:
+class EnterpriseServiceRegistry:  # pylint: disable=too-many-instance-attributes
     """Centralized service discovery and orchestration for enterprise features."""
 
     def __init__(self, config: Config):
@@ -555,7 +564,7 @@ class EnterpriseServiceRegistry:
                 await asyncio.sleep(self.health_check_interval)
 
 
-class EnterpriseIntegrationManager:
+class EnterpriseIntegrationManager:  # pylint: disable=too-many-instance-attributes
     """Main orchestrator for enterprise feature integration."""
 
     def __init__(self, config: Config):
@@ -603,7 +612,7 @@ class EnterpriseIntegrationManager:
 
             integration_time = time.time() - self.integration_start_time
             logger.info(
-                f"Enterprise integration completed in {integration_time:.2f} seconds"
+                "Enterprise integration completed in %.2f seconds", integration_time
             )
 
         except Exception:
@@ -659,7 +668,7 @@ class EnterpriseIntegrationManager:
 
         # Initialize performance monitoring
         self.performance_monitor = PerformanceMonitor()
-        await self.performance_monitor.initialize()
+        self.performance_monitor.initialize()
 
         # Initialize feature flag manager
         feature_flag_config = FeatureFlagConfig()
@@ -712,12 +721,13 @@ class _IntegrationManagerSingleton:
     _instance: EnterpriseIntegrationManager | None = None
 
     @classmethod
-    async def get_instance(cls, config: Config = None) -> EnterpriseIntegrationManager:
+    async def get_instance(
+        cls, config: Config | None = None
+    ) -> EnterpriseIntegrationManager:
         """Get the singleton enterprise integration manager instance."""
         if cls._instance is None:
-            if config is None:
-                config = Config()
-            cls._instance = EnterpriseIntegrationManager(config)
+            resolved_config = config or Config()
+            cls._instance = EnterpriseIntegrationManager(resolved_config)
         return cls._instance
 
     @classmethod
@@ -729,14 +739,14 @@ class _IntegrationManagerSingleton:
 
 
 async def get_integration_manager(
-    config: Config = None,
+    config: Config | None = None,
 ) -> EnterpriseIntegrationManager:
     """Get or create the global enterprise integration manager."""
     return await _IntegrationManagerSingleton.get_instance(config)
 
 
 async def initialize_enterprise_platform(
-    config: Config = None,
+    config: Config | None = None,
 ) -> EnterpriseIntegrationManager:
     """Initialize the complete enterprise platform."""
     integration_manager = await get_integration_manager(config)
