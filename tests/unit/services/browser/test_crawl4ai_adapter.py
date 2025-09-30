@@ -5,6 +5,7 @@ Verifies initialization, scraping, bulk crawling, health checks, and metrics col
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncGenerator
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
@@ -103,6 +104,32 @@ async def test_scrape_failure(
     payload = await adapter.scrape("https://example.com")
     assert payload["success"] is False
     assert "boom" in payload["error"]
+    metrics = await adapter.get_performance_metrics()
+    assert metrics["failed_requests"] == 1
+    assert metrics["total_requests"] == 1
+
+
+@pytest.mark.asyncio
+async def test_scrape_unsuccessful_result_updates_metrics(
+    monkeypatch: pytest.MonkeyPatch,
+    initialized_adapter: tuple[Crawl4AIAdapter, AsyncMock],
+) -> None:
+    """Verify metrics increment when Crawl4AI returns success False."""
+
+    adapter, _ = initialized_adapter
+    unsuccessful = _fake_result("https://example.com/fail")
+    unsuccessful.success = False
+    unsuccessful.error_message = "blocked"
+    monkeypatch.setattr(
+        "src.services.browser.crawl4ai_adapter.crawl_page",
+        AsyncMock(return_value=unsuccessful),
+    )
+    payload = await adapter.scrape("https://example.com/fail")
+    assert payload["success"] is False
+    metrics = await adapter.get_performance_metrics()
+    assert metrics["successful_requests"] == 0
+    assert metrics["failed_requests"] == 1
+    assert metrics["total_requests"] == 1
 
 
 @pytest.mark.asyncio
@@ -127,6 +154,41 @@ async def test_crawl_bulk(
     )
     assert len(payloads) == 2
     assert all(item["success"] for item in payloads)
+    metrics = await adapter.get_performance_metrics()
+    assert metrics["successful_requests"] == 2
+    assert metrics["total_requests"] == 2
+
+
+@pytest.mark.asyncio
+async def test_crawl_bulk_handles_exception(
+    monkeypatch: pytest.MonkeyPatch,
+    initialized_adapter: tuple[Crawl4AIAdapter, AsyncMock],
+) -> None:
+    """Verify bulk crawl normalizes errors when dispatcher raises."""
+
+    adapter, _ = initialized_adapter
+    monkeypatch.setattr(
+        "src.services.browser.crawl4ai_adapter.crawl_page",
+        AsyncMock(side_effect=RuntimeError("bulk fail")),
+    )
+    urls = ["https://example.com/a", "https://example.com/b"]
+    payloads = await adapter.crawl_bulk(urls)
+    assert [payload["url"] for payload in payloads] == urls
+    assert all(not payload["success"] for payload in payloads)
+    assert all(
+        payload["metadata"]["extraction_type"] == "crawl4ai_bulk"
+        for payload in payloads
+    )
+
+
+@pytest.mark.asyncio
+async def test_crawl_bulk_empty_input(
+    initialized_adapter: tuple[Crawl4AIAdapter, AsyncMock],
+) -> None:
+    """Verify bulk crawl gracefully handles empty input."""
+
+    adapter, _ = initialized_adapter
+    assert await adapter.crawl_bulk([]) == []
 
 
 @pytest.mark.asyncio
@@ -140,6 +202,24 @@ async def test_health_check(
     monkeypatch.setattr(adapter, "scrape", AsyncMock(return_value={"success": True}))
     status = await adapter.health_check()
     assert status["healthy"] is True
+
+
+@pytest.mark.asyncio
+async def test_health_check_handles_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+    initialized_adapter: tuple[Crawl4AIAdapter, AsyncMock],
+) -> None:
+    """Verify health check surfaces timeout status when scrape hangs."""
+
+    adapter, _ = initialized_adapter
+    monkeypatch.setattr(
+        adapter,
+        "scrape",
+        AsyncMock(side_effect=asyncio.TimeoutError),
+    )
+    status = await adapter.health_check()
+    assert status["healthy"] is False
+    assert status["status"] == "timeout"
 
 
 @pytest.mark.asyncio
