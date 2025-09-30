@@ -1,5 +1,3 @@
-# pylint: skip-file
-
 """Example demonstrating zero-downtime configuration reloading.
 
 This example shows how to use the configuration reloading mechanism
@@ -17,6 +15,7 @@ from src.api.routers.config import (
     get_reload_stats,
     reload_configuration,
 )
+from src.config.reloader import ReloadTrigger
 from src.services.observability.config import ObservabilityConfig
 from src.services.observability.init import initialize_observability
 
@@ -55,7 +54,7 @@ async def demonstrate_config_reload():  # pylint: disable=too-many-statements
     # Demonstrate manual reload
     logger.info("\n--- Demonstrating Manual Configuration Reload ---")
     operation = await reloader.reload_config(
-        trigger=config_pkg.ReloadTrigger.MANUAL,
+        trigger=ReloadTrigger.MANUAL,
         force=True,  # Force reload even if no changes
     )
 
@@ -95,7 +94,7 @@ async def demonstrate_config_reload():  # pylint: disable=too-many-statements
 
         # Perform a manual reload with the updated file
         file_operation = await file_reloader.reload_config(
-            trigger=config_pkg.ReloadTrigger.FILE_WATCH,
+            trigger=ReloadTrigger.FILE_WATCH,
             config_source=temp_config_file,
         )
 
@@ -125,7 +124,7 @@ async def demonstrate_config_reload():  # pylint: disable=too-many-statements
     # Add some config changes to create backup history
     for _ in range(3):
         await reloader.reload_config(
-            trigger=config_pkg.ReloadTrigger.MANUAL,
+            trigger=ReloadTrigger.MANUAL,
             force=True,
         )
         await asyncio.sleep(0.1)

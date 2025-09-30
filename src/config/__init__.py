@@ -106,8 +106,42 @@ from .security.config import (
 )
 
 
+async def get_config_with_auto_detection(*, force_reload: bool = False) -> Config:
+    """Return configuration after running lightweight auto-detection."""
+
+    config = get_config(force_reload=force_reload)
+    if not config.auto_detection.enabled:
+        config.set_auto_detected_services(None)
+        return config
+
+    detector = EnvironmentDetector(config=config.auto_detection)
+    environment = await detector.detect()
+    autodetected = AutoDetectedServices(environment=environment)
+    config.set_auto_detected_services(autodetected)
+    return config
+
+
+_reloader_instance: ConfigReloader | None = None
+get_degradation_handler = _get_degradation_handler
+
+
+def get_config_reloader(**kwargs: Any) -> ConfigReloader:
+    """Return the globally shared :class:`ConfigReloader` instance."""
+
+    global _reloader_instance
+    if _reloader_instance is None:
+        _reloader_instance = ConfigReloader(**kwargs)
+    return _reloader_instance
+
+
+def set_config_reloader(reloader: ConfigReloader) -> None:
+    """Override the globally shared :class:`ConfigReloader`."""
+
+    global _reloader_instance
+    _reloader_instance = reloader
+
+
 __all__ = [
-    # Loader exports
     "Config",
     "create_config_from_env",
     "create_enterprise_config",
@@ -122,7 +156,6 @@ __all__ = [
     "load_config",
     "reset_config",
     "set_config",
-    # Models & enums
     "ABTestVariant",
     "ApplicationMode",
     "AutoDetectionConfig",
@@ -173,7 +206,6 @@ __all__ = [
     "VectorType",
     "ConfigManager",
     "GracefulDegradationHandler",
-    # Security models
     "ConfigAccessLevel",
     "ConfigDataClassification",
     "ConfigOperationType",
@@ -181,14 +213,14 @@ __all__ = [
     "EncryptedConfigItem",
     "SecureConfigManager",
     "SecurityConfig",
-    # Drift toolkit
     "ConfigDriftDetector",
     "DriftSeverity",
     "get_drift_detector",
     "get_drift_summary",
     "initialize_drift_detector",
     "run_drift_detection",
-    # Reloader exports
+    "set_config_reloader",
+    "get_config_with_auto_detection",
     "ConfigBackup",
     "ConfigError",
     "ConfigLoadError",
@@ -197,42 +229,4 @@ __all__ = [
     "ReloadOperation",
     "ReloadStatus",
     "ReloadTrigger",
-    "set_config_reloader",
-    # Auto-detection helpers
-    "get_config_with_auto_detection",
 ]
-
-
-async def get_config_with_auto_detection(*, force_reload: bool = False) -> Config:
-    """Return configuration after running lightweight auto-detection."""
-
-    config = get_config(force_reload=force_reload)
-    if not config.auto_detection.enabled:
-        config.set_auto_detected_services(None)
-        return config
-
-    detector = EnvironmentDetector(config=config.auto_detection)
-    environment = await detector.detect()
-    autodetected = AutoDetectedServices(environment=environment)
-    config.set_auto_detected_services(autodetected)
-    return config
-
-
-_reloader_instance: ConfigReloader | None = None
-get_degradation_handler = _get_degradation_handler
-
-
-def get_config_reloader(**kwargs: Any) -> ConfigReloader:
-    """Return the globally shared :class:`ConfigReloader` instance."""
-
-    global _reloader_instance
-    if _reloader_instance is None:
-        _reloader_instance = ConfigReloader(**kwargs)
-    return _reloader_instance
-
-
-def set_config_reloader(reloader: ConfigReloader) -> None:
-    """Override the globally shared :class:`ConfigReloader`."""
-
-    global _reloader_instance
-    _reloader_instance = reloader

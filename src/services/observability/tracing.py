@@ -10,8 +10,8 @@ from __future__ import annotations
 import asyncio
 import functools
 import logging
-from collections.abc import Callable, Mapping
-from contextlib import AbstractContextManager, contextmanager
+from collections.abc import Callable, Iterator, Mapping
+from contextlib import contextmanager
 from enum import Enum
 from typing import Any, TypeVar, cast
 
@@ -47,7 +47,7 @@ def span(
     *,
     attributes: Mapping[str, Any] | None = None,
     tracer_name: str | None = None,
-) -> AbstractContextManager[Span]:
+) -> Iterator[Span]:
     """Create a span context manager with consistent error handling."""
 
     tracer = get_tracer(tracer_name)
@@ -103,7 +103,7 @@ def trace_function(
                         current_span.set_status(Status(StatusCode.ERROR, str(exc)))
                     raise
 
-        return sync_wrapper  # type: ignore[return-value]
+        return cast(FuncT, sync_wrapper)
 
     return decorator
 
