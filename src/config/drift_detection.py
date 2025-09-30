@@ -17,8 +17,8 @@ from .drift import (
     run_drift_detection,
 )
 
-# Import DriftDetectionConfig from settings
-from .settings import DriftDetectionConfig
+# Import DriftDetectionConfig from models
+from .models import DriftDetectionConfig
 
 
 # Export everything for backward compatibility
