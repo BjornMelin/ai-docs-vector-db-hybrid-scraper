@@ -2,16 +2,10 @@
 
 from __future__ import annotations
 
-import pytest
-
-
-pytest.importorskip(
-    "playwright.async_api", reason="Playwright is required for integration tests"
-)
-
 from collections.abc import AsyncIterator
 from typing import cast
 
+import pytest
 from crawl4ai import AsyncWebCrawler, BrowserConfig, CacheMode
 from crawl4ai.models import CrawlResult
 
@@ -21,6 +15,11 @@ from src.services.crawling.c4a_presets import (
     base_run_config,
     best_first_run_config,
     preset_browser_config,
+)
+
+
+pytest.importorskip(
+    "playwright.async_api", reason="Playwright is required for integration tests"
 )
 
 
@@ -115,11 +114,10 @@ async def test_adapter_bulk_crawl(
     ) as crawler:  # pragma: no cover - integration
         adapter._crawler = crawler  # use shared crawler within context
         adapter._mark_initialized()
-        payloads = await adapter.crawl_bulk(
-            [f"{integration_server}/static", f"{integration_server}/static"],
-            extraction_type="integration",
-        )
+        urls = [f"{integration_server}/static" for _ in range(5)]
+        payloads = await adapter.crawl_bulk(urls, extraction_type="integration")
         adapter._mark_uninitialized()
+    assert len(payloads) == 5
     assert all(payload["success"] for payload in payloads)
     assert all(
         payload["metadata"]["extraction_type"] == "integration" for payload in payloads
