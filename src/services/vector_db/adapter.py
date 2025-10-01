@@ -301,6 +301,42 @@ class QdrantVectorAdapter(VectorAdapter):
             )
         return matches
 
+    async def recommend(
+        self,
+        collection: str,
+        *,
+        positive_ids: Sequence[str] | None = None,
+        vector: Sequence[float] | None = None,
+        limit: int = 10,
+        filters: Mapping[str, Any] | None = None,
+    ) -> list[VectorMatch]:
+        if not positive_ids and vector is None:
+            msg = "`positive_ids` or `vector` must be provided for recommend"
+            raise ValueError(msg)
+
+        recommend_kwargs: dict[str, Any] = {
+            "collection_name": collection,
+            "limit": limit,
+            "with_payload": True,
+            "with_vectors": False,
+            "query_filter": _filter_from_mapping(filters),
+        }
+
+        if positive_ids:
+            recommend_kwargs["positive"] = list(positive_ids)
+        if vector is not None:
+            recommend_kwargs["query_vector"] = list(vector)
+
+        results = await self._client.recommend(**recommend_kwargs)
+        return [
+            VectorMatch(
+                id=str(point.id),
+                score=point.score,
+                payload=point.payload,
+            )
+            for point in results
+        ]
+
     async def scroll(
         self,
         collection: str,
@@ -349,9 +385,48 @@ def _filter_from_mapping(
 
     if not filters:
         return None
+    clause_keys = {"must", "should", "must_not"} & set(filters)
+    if clause_keys:
+        filter_kwargs: dict[str, list[models.FieldCondition]] = {}
+        for clause in clause_keys:
+            entries = filters.get(clause)
+            if not entries:
+                continue
+            if not isinstance(entries, Sequence):
+                msg = "Filter clause %s must be a sequence"
+                raise TypeError(msg % clause)
+            filter_kwargs[clause] = [
+                _field_condition_from_entry(entry) for entry in entries
+            ]
+        must_conditions = cast(list[models.Condition] | None, filter_kwargs.get("must"))
+        should_conditions = cast(
+            list[models.Condition] | None, filter_kwargs.get("should")
+        )
+        must_not_conditions = cast(
+            list[models.Condition] | None, filter_kwargs.get("must_not")
+        )
+        return models.Filter(
+            must=must_conditions,
+            should=should_conditions,
+            must_not=must_not_conditions,
+        )
     conditions = []
     for key, value in filters.items():
         if isinstance(value, Mapping):
+            range_keys = {"gt", "gte", "lt", "lte"} & set(value)
+            if range_keys:
+                range_kwargs = {
+                    range_key: value[range_key]
+                    for range_key in ("gt", "gte", "lt", "lte")
+                    if range_key in value
+                }
+                conditions.append(
+                    models.FieldCondition(
+                        key=key,
+                        range=models.Range(**range_kwargs),
+                    )
+                )
+                continue
             if "in" in value:
                 conditions.append(
                     models.FieldCondition(
@@ -384,7 +459,7 @@ def _normalize_match_value(value: Any) -> models.ValueVariants:
 
     if isinstance(value, bool):
         return cast(models.ValueVariants, value)
-    if isinstance(value, int) and not isinstance(value, bool):
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
         return cast(models.ValueVariants, value)
     if isinstance(value, str):
         return cast(models.ValueVariants, value)
@@ -398,19 +473,55 @@ def _normalize_match_any(values: Any) -> models.AnyVariants:
     if isinstance(values, Sequence) and not isinstance(values, (str, bytes)):
         iterable: Iterable[Any] = values
     elif isinstance(values, Iterable):
-        iterable = values
+        iterable = list(values)
     else:
-        raise TypeError("MatchAny expects an iterable value collection")
-    items = list(iterable)
-    if not items:
-        raise ValueError("MatchAny requires a non-empty sequence of values")
-    if all(isinstance(item, str) for item in items):
-        return cast(models.AnyVariants, items)
-    if all(isinstance(item, (bool, int)) for item in items):
-        coerced = [int(item) for item in items]
-        return cast(models.AnyVariants, coerced)
-    msg = "MatchAny only accepts sequences of strings or integers"
-    raise TypeError(msg)
+        msg = "MatchAny expects an iterable value collection"
+        raise TypeError(msg)
+
+    normalized = [_normalize_match_value(value) for value in iterable]
+    return cast(models.AnyVariants, normalized)
+
+
+def _field_condition_from_entry(entry: Mapping[str, Any]) -> models.FieldCondition:
+    """Build a FieldCondition from a structured filter clause entry."""
+
+    key = entry.get("key")
+    if not isinstance(key, str) or not key:
+        msg = "Filter entry must define a non-empty 'key'"
+        raise ValueError(msg)
+
+    if "range" in entry:
+        range_payload = entry["range"]
+        if not isinstance(range_payload, Mapping):
+            msg = "Range filter must supply a mapping"
+            raise TypeError(msg)
+        range_kwargs = {
+            part: range_payload[part]
+            for part in ("gt", "gte", "lt", "lte")
+            if part in range_payload
+        }
+        return models.FieldCondition(key=key, range=models.Range(**range_kwargs))
+
+    if "in" in entry:
+        return models.FieldCondition(
+            key=key,
+            match=models.MatchAny(any=_normalize_match_any(entry["in"])),
+        )
+
+    if "values" in entry:
+        return models.FieldCondition(
+            key=key,
+            match=models.MatchAny(any=_normalize_match_any(entry["values"])),
+        )
+
+    if "value" in entry:
+        return models.FieldCondition(
+            key=key,
+            match=models.MatchValue(value=_normalize_match_value(entry["value"])),
+        )
+
+    msg = "Unsupported filter entry format for key %s"
+    raise ValueError(msg % key)
 
 
 def _coerce_vector_output(

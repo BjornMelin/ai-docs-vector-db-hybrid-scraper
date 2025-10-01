@@ -100,7 +100,7 @@ class VectorAdapter(ABC):
         """Execute a dense vector similarity search."""
 
     @abstractmethod
-    async def hybrid_query(
+    async def hybrid_query(  # pylint: disable=too-many-arguments
         self,
         collection: str,
         dense_vector: Sequence[float],
@@ -116,7 +116,7 @@ class VectorAdapter(ABC):
         """Return backend-specific statistics for a collection."""
 
     @abstractmethod
-    async def retrieve(
+    async def retrieve(  # pylint: disable=too-many-arguments
         self,
         collection: str,
         ids: Sequence[str],
@@ -127,7 +127,19 @@ class VectorAdapter(ABC):
         """Fetch records by identifier."""
 
     @abstractmethod
-    async def scroll(
+    async def recommend(  # pylint: disable=too-many-arguments
+        self,
+        collection: str,
+        *,
+        positive_ids: Sequence[str] | None = None,
+        vector: Sequence[float] | None = None,
+        limit: int = 10,
+        filters: Mapping[str, Any] | None = None,
+    ) -> list[VectorMatch]:
+        """Return records related to the supplied examples."""
+
+    @abstractmethod
+    async def scroll(  # pylint: disable=too-many-arguments
         self,
         collection: str,
         *,

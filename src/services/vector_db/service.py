@@ -406,6 +406,26 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
             with_vectors=with_vectors,
         )
 
+    async def recommend_similar(  # pylint: disable=too-many-arguments
+        self,
+        collection: str,
+        *,
+        positive_ids: Sequence[str] | None = None,
+        vector: Sequence[float] | None = None,
+        limit: int = 10,
+        filters: Mapping[str, Any] | None = None,
+    ) -> list[VectorMatch]:
+        """Return records similar to the supplied identifiers or vector."""
+
+        adapter = self._require_adapter()
+        return await adapter.recommend(
+            collection,
+            positive_ids=positive_ids,
+            vector=vector,
+            limit=limit,
+            filters=filters,
+        )
+
     async def scroll(  # pylint: disable=too-many-arguments
         self,
         collection: str,

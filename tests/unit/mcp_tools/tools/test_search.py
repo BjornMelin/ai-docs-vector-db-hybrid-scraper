@@ -1,444 +1,260 @@
-"""Tests for MCP search tools."""
+"""Tests for MCP search tool wrappers that delegate to VectorStoreService."""
 
+from __future__ import annotations
+
+from collections.abc import Callable
 from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 
 from src.mcp_tools.tools.search import register_tools
+from src.services.vector_db.adapter_base import VectorMatch
 
 
-@pytest.fixture
-def mock_context():
-    """Create a mock context for testing."""
-    context = Mock()
-    context.info = AsyncMock()
-    context.debug = AsyncMock()
-    context.warning = AsyncMock()
-    context.error = AsyncMock()
-    return context
+@pytest.fixture()
+def mock_vector_service() -> Mock:
+    service = Mock()
+    service.is_initialized.return_value = True
+    service.initialize = AsyncMock()
+    service.search_documents = AsyncMock()
+    service.hybrid_search = AsyncMock()
+    service.scroll = AsyncMock()
+    service.retrieve_documents = AsyncMock()
+    service.recommend_similar = AsyncMock()
+    return service
 
 
-@pytest.fixture
-def mock_client_manager():
-    """Create a mock client manager."""
+@pytest.fixture()
+def mock_client_manager(mock_vector_service: Mock) -> Mock:
     manager = Mock()
-
-    # Mock QdrantService
-    mock_qdrant = Mock()
-    mock_qdrant._client = Mock()
-    mock_qdrant._client.retrieve = AsyncMock()
-    mock_qdrant.hybrid_search = AsyncMock()
-    manager.get_qdrant_service = AsyncMock(return_value=mock_qdrant)
-
+    manager.get_vector_store_service = AsyncMock(return_value=mock_vector_service)
     return manager
 
 
-@pytest.mark.asyncio
-async def test_search_documents_tool_registration(mock_client_manager, _mock_context):
-    """Test that search_documents tool is properly registered."""
+@pytest.fixture()
+def register(mock_client_manager: Mock) -> dict[str, Callable]:
     mock_mcp = MagicMock()
-    registered_tools = {}
+    registered: dict[str, Callable] = {}
 
-    def capture_tool(func):
-        registered_tools[func.__name__] = func
+    def capture(func: Callable) -> Callable:
+        registered[func.__name__] = func
         return func
 
-    mock_mcp.tool.return_value = capture_tool
-
+    mock_mcp.tool.return_value = capture
     register_tools(mock_mcp, mock_client_manager)
-    assert "search_documents" in registered_tools
+    return registered
 
-    assert "search_documents" in registered_tools
-    assert "search_similar" in registered_tools
+
+@pytest.fixture()
+def mock_context() -> Mock:
+    ctx = Mock()
+    ctx.info = AsyncMock()
+    ctx.warning = AsyncMock()
+    ctx.error = AsyncMock()
+    return ctx
+
+
+def _match(
+    identifier: str,
+    score: float = 0.5,
+    payload: dict[str, str] | None = None,
+    *,
+    vector: tuple[float, ...] | None = None,
+) -> VectorMatch:
+    return VectorMatch(
+        id=identifier,
+        score=score,
+        payload=payload or {"content": identifier},
+        vector=vector,
+    )
 
 
 @pytest.mark.asyncio
-async def test_search_documents_basic(mock_client_manager, mock_context):
-    """Test basic search_documents functionality."""
-    mock_mcp = MagicMock()
-    registered_tools = {}
-
-    def capture_tool(func):
-        registered_tools[func.__name__] = func
-        return func
-
-    mock_mcp.tool.return_value = capture_tool
-
-    register_tools(mock_mcp, mock_client_manager)
+async def test_registers_expected_tools(register: dict[str, Callable]) -> None:
+    expected = {
+        "search_documents",
+        "hybrid_search",
+        "scroll_collection",
+        "search_with_context",
+        "recommend_similar",
+        "hyde_search",
+        "reranked_search",
+        "multi_stage_search",
+        "filtered_search",
+    }
+    assert expected <= set(register)
 
 
 @pytest.mark.asyncio
-async def test_search_similar_success(mock_client_manager, mock_context):
-    """Test successful search_similar functionality."""
-    mock_mcp = MagicMock()
-    registered_tools = {}
-
-    def capture_tool(func):
-        registered_tools[func.__name__] = func
-        return func
-
-    mock_mcp.tool.return_value = capture_tool
-
-    # Mock retrieved document with vector
-    mock_retrieved_doc = Mock()
-    mock_retrieved_doc.vector = Mock()
-    mock_retrieved_doc.vector.dense = [0.1, 0.2, 0.3, 0.4]
-
-    # Mock hybrid search results
-    mock_search_results = [
-        {
-            "id": "source_doc",
-            "score": 1.0,
-            "payload": {
-                "content": "Source content",
-                "url": "https://example.com/source",
-            },
-        },
-        {
-            "id": "similar_doc1",
-            "score": 0.85,
-            "payload": {
-                "content": "Similar content 1",
-                "url": "https://example.com/similar1",
-                "title": "Similar Document 1",
-            },
-        },
-        {
-            "id": "similar_doc2",
-            "score": 0.75,
-            "payload": {
-                "content": "Similar content 2",
-                "url": "https://example.com/similar2",
-                "title": "Similar Document 2",
-            },
-        },
+async def test_search_documents_applies_threshold(
+    register: dict[str, Callable],
+    mock_vector_service: Mock,
+    mock_context: Mock,
+) -> None:
+    mock_vector_service.search_documents.return_value = [
+        _match("keep", 0.9),
+        _match("drop", 0.3),
     ]
-
-    # Setup mocks
-    mock_qdrant = await mock_client_manager.get_qdrant_service()
-    mock_qdrant._client.retrieve.return_value = [mock_retrieved_doc]
-    mock_qdrant.hybrid_search.return_value = mock_search_results
-
-    register_tools(mock_mcp, mock_client_manager)
-
-    # Test search_similar function
-    result = await registered_tools["search_similar"](
-        query_id="source_doc",
-        collection="documentation",
-        limit=2,
-        score_threshold=0.7,
+    results = await register["search_documents"](
+        query="test",
+        collection="docs",
+        limit=5,
+        score_threshold=0.5,
+        filter_conditions={"tag": "howto"},
         ctx=mock_context,
     )
-
-    # Should exclude source document and return 2 similar documents
-    assert len(result) == 2
-    assert result[0].id == "similar_doc1"
-    assert result[0].content == "Similar content 1"
-    assert result[0].score == 0.85
-    assert result[1].id == "similar_doc2"
-
-    # Verify correct API calls
-    mock_qdrant._client.retrieve.assert_called_once_with(
-        collection_name="documentation",
-        ids=["source_doc"],
-        with_vectors=True,
-        with_payload=True,
+    mock_vector_service.search_documents.assert_awaited_once_with(
+        "docs",
+        "test",
+        limit=5,
+        filters={"tag": "howto"},
     )
-
-    mock_qdrant.hybrid_search.assert_called_once_with(
-        collection_name="documentation",
-        query_vector=[0.1, 0.2, 0.3, 0.4],
-        sparse_vector=None,
-        limit=3,  # limit + 1 to exclude self
-        score_threshold=0.7,
-        fusion_type="rrf",
-        search_accuracy="balanced",
-    )
-
-    # Verify context logging
-    mock_context.info.assert_called()
-    mock_context.debug.assert_called()
+    assert [result["id"] for result in results] == ["keep"]
 
 
 @pytest.mark.asyncio
-async def test_search_similar_document_not_found(mock_client_manager, mock_context):
-    """Test search_similar when source document is not found."""
-    mock_mcp = MagicMock()
-    registered_tools = {}
+async def test_hybrid_search_forwards_filters(
+    register: dict[str, Callable],
+    mock_vector_service: Mock,
+    mock_context: Mock,
+) -> None:
+    mock_vector_service.hybrid_search.return_value = [_match("hybrid", 0.8)]
+    results = await register["hybrid_search"](
+        query="hybrid",
+        limit=1,
+        filter_conditions={"stage": {"gte": 2}},
+        ctx=mock_context,
+    )
+    mock_vector_service.hybrid_search.assert_awaited_once_with(
+        "documentation",
+        "hybrid",
+        limit=1,
+        filters={"stage": {"gte": 2}},
+    )
+    assert results[0]["id"] == "hybrid"
 
-    def capture_tool(func):
-        registered_tools[func.__name__] = func
-        return func
 
-    mock_mcp.tool.return_value = capture_tool
+@pytest.mark.asyncio
+async def test_scroll_collection_formats_payload(
+    register: dict[str, Callable],
+    mock_vector_service: Mock,
+    mock_context: Mock,
+) -> None:
+    mock_vector_service.scroll.return_value = (
+        [_match("doc-1"), _match("doc-2")],
+        "cursor",
+    )
+    payload = await register["scroll_collection"](
+        collection="docs",
+        limit=2,
+        ctx=mock_context,
+    )
+    assert payload["count"] == 2
+    assert payload["points"][0]["id"] == "doc-1"
+    assert payload["next_page_offset"] == "cursor"
 
-    # Mock empty retrieval result
-    mock_qdrant = await mock_client_manager.get_qdrant_service()
-    mock_qdrant._client.retrieve.return_value = []
 
-    register_tools(mock_mcp, mock_client_manager)
+@pytest.mark.asyncio
+async def test_recommend_similar_excludes_seed_and_applies_threshold(
+    register: dict[str, Callable],
+    mock_vector_service: Mock,
+    mock_context: Mock,
+) -> None:
+    mock_vector_service.retrieve_documents.return_value = [
+        _match("seed", vector=(0.1, 0.2)),
+    ]
+    mock_vector_service.recommend_similar.return_value = [
+        _match("seed", 1.0),
+        _match("candidate-1", 0.9),
+        _match("candidate-2", 0.4),
+    ]
+    results = await register["recommend_similar"](
+        point_id="seed",
+        limit=5,
+        score_threshold=0.5,
+        ctx=mock_context,
+    )
+    mock_vector_service.recommend_similar.assert_awaited_once_with(
+        "documentation",
+        vector=(0.1, 0.2),
+        limit=6,
+        filters=None,
+    )
+    assert [result["id"] for result in results] == ["candidate-1"]
+    assert results[0]["method"] == "recommend_similar"
 
-    # Test search_similar function with non-existent document
-    with pytest.raises(ValueError, match="Document missing_doc not found"):
-        await registered_tools["search_similar"](
-            query_id="missing_doc",
-            collection="documentation",
-            limit=10,
-            score_threshold=0.7,
+
+@pytest.mark.asyncio
+async def test_recommend_similar_raises_when_document_missing(
+    register: dict[str, Callable],
+    mock_vector_service: Mock,
+    mock_context: Mock,
+) -> None:
+    mock_vector_service.retrieve_documents.return_value = []
+    with pytest.raises(ValueError, match="Document missing"):
+        await register["recommend_similar"](
+            point_id="missing",
             ctx=mock_context,
         )
 
-    # Verify error logging
-    mock_context.error.assert_called()
-
 
 @pytest.mark.asyncio
-async def test_search_similar_vector_formats(mock_client_manager, mock_context):
-    """Test search_similar with different vector formats."""
-    mock_mcp = MagicMock()
-    registered_tools = {}
-
-    def capture_tool(func):
-        registered_tools[func.__name__] = func
-        return func
-
-    mock_mcp.tool.return_value = capture_tool
-
-    # Test case 1: vector as list
-    mock_retrieved_doc1 = Mock()
-    mock_retrieved_doc1.vector = [0.1, 0.2, 0.3, 0.4]
-
-    mock_qdrant = await mock_client_manager.get_qdrant_service()
-    mock_qdrant._client.retrieve.return_value = [mock_retrieved_doc1]
-    mock_qdrant.hybrid_search.return_value = [
-        {
-            "id": "similar_doc",
-            "score": 0.8,
-            "payload": {"content": "Similar content", "url": "https://example.com"},
-        }
+async def test_reranked_search_adds_rrf_metadata(
+    register: dict[str, Callable],
+    mock_vector_service: Mock,
+    mock_context: Mock,
+) -> None:
+    mock_vector_service.hybrid_search.return_value = [
+        _match("first", 0.9),
+        _match("second", 0.8),
     ]
-
-    register_tools(mock_mcp, mock_client_manager)
-
-    result = await registered_tools["search_similar"](
-        query_id="doc1", collection="documentation", limit=10, ctx=mock_context
+    results = await register["reranked_search"](
+        query="test",
+        rerank_limit=5,
+        ctx=mock_context,
     )
-
-    assert len(result) == 1
-    mock_qdrant.hybrid_search.assert_called_with(
-        collection_name="documentation",
-        query_vector=[0.1, 0.2, 0.3, 0.4],
-        sparse_vector=None,
-        limit=11,
-        score_threshold=0.7,
-        fusion_type="rrf",
-        search_accuracy="balanced",
-    )
+    assert all(result["method"] == "rrf_reranked" for result in results)
+    assert "rerank_score" in results[0]
 
 
 @pytest.mark.asyncio
-async def test_search_similar_dict_vector_format(mock_client_manager, mock_context):
-    """Test search_similar with dictionary vector format."""
-    mock_mcp = MagicMock()
-    registered_tools = {}
-
-    def capture_tool(func):
-        registered_tools[func.__name__] = func
-        return func
-
-    mock_mcp.tool.return_value = capture_tool
-
-    # Test case: vector as dict with "dense" key
-    mock_retrieved_doc = Mock()
-    mock_retrieved_doc.vector = {"dense": [0.1, 0.2, 0.3, 0.4], "sparse": []}
-
-    mock_qdrant = await mock_client_manager.get_qdrant_service()
-    mock_qdrant._client.retrieve.return_value = [mock_retrieved_doc]
-    mock_qdrant.hybrid_search.return_value = []
-
-    register_tools(mock_mcp, mock_client_manager)
-
-    result = await registered_tools["search_similar"](
-        query_id="doc1", collection="documentation", limit=5, ctx=mock_context
-    )
-
-    assert len(result) == 0
-    mock_qdrant.hybrid_search.assert_called_with(
-        collection_name="documentation",
-        query_vector=[0.1, 0.2, 0.3, 0.4],
-        sparse_vector=None,
-        limit=6,
-        score_threshold=0.7,
-        fusion_type="rrf",
-        search_accuracy="balanced",
-    )
-
-
-@pytest.mark.asyncio
-async def test_search_similar_exclude_self(mock_client_manager, mock_context):
-    """Test that search_similar excludes the source document from results."""
-    mock_mcp = MagicMock()
-    registered_tools = {}
-
-    def capture_tool(func):
-        registered_tools[func.__name__] = func
-        return func
-
-    mock_mcp.tool.return_value = capture_tool
-
-    # Mock retrieved document
-    mock_retrieved_doc = Mock()
-    mock_retrieved_doc.vector = Mock()
-    mock_retrieved_doc.vector.dense = [0.1, 0.2, 0.3, 0.4]
-
-    # Mock search results including the source document
-    mock_search_results = [
-        {
-            "id": "source_doc",  # This should be excluded
-            "score": 1.0,
-            "payload": {"content": "Source content"},
-        },
-        {
-            "id": "similar_doc1",
-            "score": 0.9,
-            "payload": {"content": "Similar content 1", "title": "Similar 1"},
-        },
-        {
-            "id": "similar_doc2",
-            "score": 0.8,
-            "payload": {"content": "Similar content 2", "title": "Similar 2"},
-        },
+async def test_multi_stage_search_deduplicates_by_score(
+    register: dict[str, Callable],
+    mock_vector_service: Mock,
+    mock_context: Mock,
+) -> None:
+    mock_vector_service.hybrid_search.side_effect = [
+        [_match("dup", 0.4), _match("unique", 0.3)],
+        [_match("dup", 0.9)],
     ]
-
-    mock_qdrant = await mock_client_manager.get_qdrant_service()
-    mock_qdrant._client.retrieve.return_value = [mock_retrieved_doc]
-    mock_qdrant.hybrid_search.return_value = mock_search_results
-
-    register_tools(mock_mcp, mock_client_manager)
-
-    result = await registered_tools["search_similar"](
-        query_id="source_doc", collection="documentation", limit=5, ctx=mock_context
+    results = await register["multi_stage_search"](
+        query="test",
+        stages=2,
+        limit=2,
+        ctx=mock_context,
     )
-
-    # Should only return similar documents, not the source
-    assert len(result) == 2
-    assert result[0].id == "similar_doc1"
-    assert result[1].id == "similar_doc2"
-
-    # Verify no source document in results
-    assert all(r.id != "source_doc" for r in result)
+    assert [result["id"] for result in results] == ["dup", "unique"]
+    assert results[0]["method"].startswith("multi_stage_")
 
 
 @pytest.mark.asyncio
-async def test_search_similar_error_handling(mock_client_manager, mock_context):
-    """Test error handling in search_similar."""
-    mock_mcp = MagicMock()
-    registered_tools = {}
-
-    def capture_tool(func):
-        registered_tools[func.__name__] = func
-        return func
-
-    mock_mcp.tool.return_value = capture_tool
-
-    # Mock QdrantService to raise an exception
-    mock_qdrant = await mock_client_manager.get_qdrant_service()
-    mock_qdrant._client.retrieve.side_effect = Exception("Qdrant connection error")
-
-    register_tools(mock_mcp, mock_client_manager)
-
-    # Test that exception is properly handled and re-raised
-    with pytest.raises(Exception, match="Qdrant connection error"):
-        await registered_tools["search_similar"](
-            query_id="test_doc", collection="documentation", limit=10, ctx=mock_context
-        )
-
-    # Verify error logging
-    mock_context.error.assert_called()
-
-
-@pytest.mark.asyncio
-async def test_search_similar_without_context(mock_client_manager):
-    """Test search_similar functionality without context parameter."""
-    mock_mcp = MagicMock()
-    registered_tools = {}
-
-    def capture_tool(func):
-        registered_tools[func.__name__] = func
-        return func
-
-    mock_mcp.tool.return_value = capture_tool
-
-    # Mock retrieved document
-    mock_retrieved_doc = Mock()
-    mock_retrieved_doc.vector = Mock()
-    mock_retrieved_doc.vector.dense = [0.1, 0.2, 0.3, 0.4]
-
-    # Mock search results
-    mock_search_results = [
-        {
-            "id": "similar_doc1",
-            "score": 0.9,
-            "payload": {"content": "Similar content", "url": "https://example.com"},
-        }
-    ]
-
-    mock_qdrant = await mock_client_manager.get_qdrant_service()
-    mock_qdrant._client.retrieve.return_value = [mock_retrieved_doc]
-    mock_qdrant.hybrid_search.return_value = mock_search_results
-
-    register_tools(mock_mcp, mock_client_manager)
-
-    # Test without ctx parameter (None)
-    result = await registered_tools["search_similar"](
-        query_id="test_doc",
-        collection="documentation",
-        limit=5,
-        score_threshold=0.8,
-        ctx=None,
+async def test_filtered_search_converts_boolean_filters(
+    register: dict[str, Callable],
+    mock_vector_service: Mock,
+    mock_context: Mock,
+) -> None:
+    mock_vector_service.search_documents.return_value = [_match("doc", 0.7)]
+    await register["filtered_search"](
+        query="doc",
+        must_conditions=[{"key": "tag", "value": "api"}],
+        should_conditions=[{"key": "lang", "values": ["py", "rs"]}],
+        must_not_conditions=[{"key": "status", "value": "draft"}],
+        ctx=mock_context,
     )
-
-    assert len(result) == 1
-    assert result[0].id == "similar_doc1"
-    assert result[0].content == "Similar content"
-
-
-@pytest.mark.asyncio
-async def test_search_similar_default_parameters(mock_client_manager, mock_context):
-    """Test search_similar with default parameters."""
-    mock_mcp = MagicMock()
-    registered_tools = {}
-
-    def capture_tool(func):
-        registered_tools[func.__name__] = func
-        return func
-
-    mock_mcp.tool.return_value = capture_tool
-
-    # Mock retrieved document
-    mock_retrieved_doc = Mock()
-    mock_retrieved_doc.vector = [0.1, 0.2, 0.3, 0.4]
-
-    mock_qdrant = await mock_client_manager.get_qdrant_service()
-    mock_qdrant._client.retrieve.return_value = [mock_retrieved_doc]
-    mock_qdrant.hybrid_search.return_value = []
-
-    register_tools(mock_mcp, mock_client_manager)
-
-    # Test with only required parameter
-    result = await registered_tools["search_similar"](
-        query_id="test_doc", ctx=mock_context
-    )
-
-    assert len(result) == 0
-
-    # Verify default parameters were used
-    mock_qdrant.hybrid_search.assert_called_with(
-        collection_name="documentation",  # default
-        query_vector=[0.1, 0.2, 0.3, 0.4],
-        sparse_vector=None,
-        limit=11,  # default 10 + 1
-        score_threshold=0.7,  # default
-        fusion_type="rrf",
-        search_accuracy="balanced",
-    )
+    mock_vector_service.search_documents.assert_awaited_once()
+    call_kwargs = mock_vector_service.search_documents.await_args.kwargs
+    assert "filters" in call_kwargs
+    filters = call_kwargs["filters"]
+    assert filters["must"][0]["value"] == "api"
+    assert set(filters["should"][0]["values"]) == {"py", "rs"}
+    assert filters["must_not"][0]["value"] == "draft"
