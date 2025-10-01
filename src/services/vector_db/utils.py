@@ -16,11 +16,8 @@ def build_filter(filters: dict[str, Any] | None) -> models.Filter | None:
 
     Returns:
         Qdrant Filter object or None if no filters provided
-
-    Raises:
-        ValueError: If filter values have incorrect types
-
     """
+
     if not filters:
         return None
 
