@@ -41,9 +41,8 @@ class SearchService:
 
             Provides tools for:
             - Vector similarity search
-            - Hybrid vector + text search
-            - Multi-stage search with refinement
-            - Search result filtering and reranking
+            - Hybrid sparse/dense search
+            - Filtered and multi-stage retrieval
             - Web search integration
             """,
         )
@@ -114,15 +113,13 @@ class SearchService:
                 # Advanced search tools
                 "hyde_search",
                 "multi_stage_search",
-                "search_reranking",
-                "ab_test_search",
                 # Query processing
                 "query_expansion",
                 "clustered_search",
                 "federated_search",
                 "personalized_search",
                 "orchestrated_search",
-                # Advanced filtering
+                # Filter utilities
                 "temporal_filter",
                 "content_type_filter",
                 "metadata_filter",

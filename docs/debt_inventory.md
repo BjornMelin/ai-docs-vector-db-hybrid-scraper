@@ -26,12 +26,12 @@ phase that replaces the corresponding surface.
   production modules.
 
 ## MCP Tools
-- `src/mcp_tools/tools/helpers/tool_registrars.py` has TODO markers for logging
-  consistency. Phase 3 consolidation replaces tool registration with a reduced
-  surface, removing this helper entirely.
-- Redundant tool modules (`search.py`, `search_tools.py`, `documents.py`, etc.)
-  introduce divergent schemas and duplicated logic. All will be replaced by thin
-  adapters that delegate to the consolidated vector/RAG services.
+- [x] Search adapters now delegate directly to `VectorStoreService`; legacy helper
+  modules such as `_search_utils.py` were removed in Phase 3.
+- [x] Document management tools route lifecycle operations through
+  `VectorStoreService` CRUD methods, eliminating bespoke caching layers.
+- Remaining registration helpers under `src/mcp_tools/tools/helpers` can be
+  removed once the reduced service catalog has stabilised (tracked for Phase 4).
 
 ## Cross-Cutting Items within Scope
 - Numerous change logs and research docs reference "legacy" behaviours. These

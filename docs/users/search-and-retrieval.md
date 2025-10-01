@@ -6,10 +6,10 @@ owner: product-education
 last_reviewed: 2025-03-13
 ---
 
-# Search & Retrieval Guide
+## Search & Retrieval Guide
 
 > **Status**: Active  
-> **Last Updated**: 2025-01-09  
+> **Last Updated**: 2025-10-01
 > **Purpose**: Complete guide to effective searching and information retrieval  
 > **Audience**: Users who want to find information effectively
 
@@ -24,7 +24,7 @@ Our system uses multiple AI techniques working together to understand what you'r
 ### 🧠 Intelligent Understanding
 
 - **Semantic Search**: Understands meaning, not just keyword matching
-- **HyDE Enhancement**: Automatically generates hypothetical examples to find better matches
+- **HyDE Compatibility Mode**: Provides the historic HyDE entry point while delegating to the unified hybrid search pipeline
 - **Smart Reranking**: Uses AI to reorder results by relevance
 - **Multi-Stage Retrieval**: Searches broadly first, then refines for precision
 
@@ -88,20 +88,19 @@ Our system uses multiple AI techniques working together to understand what you'r
 
 ## Search Features Explained
 
-### HyDE Enhancement (Automatic)
+### HyDE Enhancement (Compatibility Mode)
 
-**What it does**: Automatically generates hypothetical examples of what good results
-might look like, then searches for content similar to those examples.
+**What it does now**: The `hyde_search` MCP tool is retained for backward
+compatibility, but under the hood it simply calls the consolidated hybrid search
+path provided by `VectorStoreService`. No additional hypothetical documents are
+generated in Phase 3.
 
-**When it helps most**:
+**When to use it**: Reach for `hyde_search` when you prefer the previous API
+contract or want a named tool for hybrid search. For new workflows, the default
+`search_documents` or `filtered_search` tools are equivalent in capability.
 
-- Complex conceptual queries
-- When you're not sure of exact terminology
-- Searching for best practices or patterns
-- Research-oriented questions
-
-**User experience**: You'll notice more relevant results appear higher in rankings,
-especially for conceptual searches.
+**User experience**: Expect faster responses with the same query semantics—the
+result list mirrors the unified hybrid search pipeline.
 
 ### Semantic Reranking (Automatic)
 

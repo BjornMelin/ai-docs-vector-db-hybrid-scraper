@@ -6,12 +6,11 @@ owner: product-education
 last_reviewed: 2025-03-13
 ---
 
-# Quick Start Guide
+## Quick Start Guide
 
 > **Status**: Active  
-> **Last Updated**: 2025-01-10  
-> **Purpose**: 5-minute setup guide for Portfolio ULTRATHINK transformation  
-> **Audience**: Anyone wanting to experience 887.9% performance improvement immediately
+> **Last Updated**: 2025-10-01
+> **Purpose**: 5-minute setup guide
 
 Get up and running with the **Portfolio ULTRATHINK transformed** AI Documentation Vector DB in 5 minutes!
 Experience **94% configuration reduction**, **50.9% faster response times**, and **zero-maintenance infrastructure**.
@@ -110,6 +109,7 @@ uv run python src/unified_mcp_server.py
 ```
 
 **Simple Mode Features:**
+
 - ✅ Basic vector search and document processing
 - ✅ Core MCP tools (15+ available)
 - ✅ Standard caching and performance optimization
@@ -125,10 +125,11 @@ uv run python src/unified_mcp_server.py
 ```
 
 **Enterprise Mode Features:**
+
 - ✅ **All Simple Mode features** +
 - ✅ **5-Tier Browser Automation** with intelligent tier selection
 - ✅ **Hybrid Dense+Sparse Vector Search** with BGE reranking
-- ✅ **HyDE Query Enhancement** for 40% better search relevance
+- ✅ **HyDE Compatibility Mode** to preserve earlier tool semantics with the new hybrid search stack
 - ✅ **ML-Based Performance Optimization** with predictive scaling
 - ✅ **Full Observability Stack** (OpenTelemetry + Prometheus + Grafana)
 - ✅ **Circuit Breaker Patterns** with adaptive thresholds
@@ -152,6 +153,7 @@ curl "http://localhost:8000/health/dependencies"
 ```
 
 **Expected Performance Improvements:**
+
 - 🚀 **Search Latency**: P95 reduced from 680ms → 334ms (50.9% faster)
 - 📈 **Throughput**: Increased from 45 RPS → 444 RPS (887.9% improvement)
 - 💾 **Memory Usage**: Reduced from 2.1GB → 356MB (83% reduction)
@@ -229,32 +231,32 @@ mcp bulk-process \
 
 ### Core Settings (Required)
 
-| Setting | Purpose | Default | Transformation Benefit |
-|---------|---------|---------|----------------------|
-| `OPENAI_API_KEY` | Multi-provider embeddings | Required | Intelligent routing + failover |
-| `DEPLOYMENT_TIER` | Architecture mode | `simple` | **Dual-mode**: Simple (25K) vs Enterprise (70K) |
-| `QDRANT_URL` | Vector database | `http://localhost:6333` | Query API + optimized connections |
-| `EMBEDDING_PROVIDER` | AI provider selection | `openai` | Auto-fallback between providers |
+| Setting              | Purpose                   | Default                 | Transformation Benefit                          |
+| -------------------- | ------------------------- | ----------------------- | ----------------------------------------------- |
+| `OPENAI_API_KEY`     | Multi-provider embeddings | Required                | Intelligent routing + failover                  |
+| `DEPLOYMENT_TIER`    | Architecture mode         | `simple`                | **Dual-mode**: Simple (25K) vs Enterprise (70K) |
+| `QDRANT_URL`         | Vector database           | `http://localhost:6333` | Query API + optimized connections               |
+| `EMBEDDING_PROVIDER` | AI provider selection     | `openai`                | Auto-fallback between providers                 |
 
 ### Transformation Features (Auto-Enabled)
 
-| Setting | Purpose | Default | Performance Impact |
-|---------|---------|---------|------------------|
-| `DATABASE_ADAPTIVE_SCALING` | ML-based pool optimization | `true` | **887.9% throughput increase** |
-| `ENABLE_HYDE_ENHANCEMENT` | Query improvement | `true` | **40% better search relevance** |
-| `ENABLE_RERANKING` | BGE reranker | `true` | **96.1% search accuracy** |
-| `CACHE_PROVIDER` | DragonflyDB vs Redis | `dragonfly` | **3x faster cache performance** |
-| `CIRCUIT_BREAKER_ENABLED` | Adaptive thresholds | `true` | **Self-healing infrastructure** |
+| Setting                     | Purpose                    | Default     | Performance Impact              |
+| --------------------------- | -------------------------- | ----------- | ------------------------------- |
+| `DATABASE_ADAPTIVE_SCALING` | ML-based pool optimization | `true`      | **887.9% throughput increase**  |
+| `ENABLE_HYDE_ENHANCEMENT`   | Query improvement          | `true`      | **40% better search relevance** |
+| `ENABLE_RERANKING`          | BGE reranker               | `true`      | **96.1% search accuracy**       |
+| `CACHE_PROVIDER`            | DragonflyDB vs Redis       | `dragonfly` | **3x faster cache performance** |
+| `CIRCUIT_BREAKER_ENABLED`   | Adaptive thresholds        | `true`      | **Self-healing infrastructure** |
 
 ### Enterprise Mode Settings (Production)
 
-| Setting | Purpose | Default | Enterprise Value |
-|---------|---------|---------|-----------------|
-| `ENABLE_ENTERPRISE_FEATURES` | Full feature set | `false` | All advanced capabilities |
-| `ENABLE_5_TIER_AUTOMATION` | Intelligent scraping | `true` | HTTP → Playwright automation |
-| `ENABLE_ML_OPTIMIZATION` | Performance prediction | `true` | Predictive scaling |
-| `ENABLE_MONITORING_STACK` | Full observability | `true` | OpenTelemetry + Prometheus |
-| `DEPENDENCY_INJECTION_MODE` | Clean architecture | `strict` | **95% circular dependency elimination** |
+| Setting                      | Purpose                | Default  | Enterprise Value                        |
+| ---------------------------- | ---------------------- | -------- | --------------------------------------- |
+| `ENABLE_ENTERPRISE_FEATURES` | Full feature set       | `false`  | All advanced capabilities               |
+| `ENABLE_5_TIER_AUTOMATION`   | Intelligent scraping   | `true`   | HTTP → Playwright automation            |
+| `ENABLE_ML_OPTIMIZATION`     | Performance prediction | `true`   | Predictive scaling                      |
+| `ENABLE_MONITORING_STACK`    | Full observability     | `true`   | OpenTelemetry + Prometheus              |
+| `DEPENDENCY_INJECTION_MODE`  | Clean architecture     | `strict` | **95% circular dependency elimination** |
 
 ## Portfolio ULTRATHINK Troubleshooting
 
@@ -272,6 +274,7 @@ uv run python scripts/migrate_config.py  # Auto-migrate settings
 #### Dual-Mode Architecture Issues
 
 **Simple Mode Not Starting:**
+
 ```bash
 # Verify mode selection
 export DEPLOYMENT_TIER=simple
@@ -282,6 +285,7 @@ uv run python -c "from src.config.unified import UnifiedConfig; print(UnifiedCon
 ```
 
 **Enterprise Mode Performance Problems:**
+
 ```bash
 # Verify enterprise features are enabled
 export ENABLE_ENTERPRISE_FEATURES=true
