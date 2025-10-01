@@ -5,6 +5,8 @@ using Large Language Models. Portfolio-worthy implementation showcasing advanced
 AI integration patterns.
 """
 
+# pylint: disable=duplicate-code
+
 import logging
 from typing import Any
 

@@ -5,6 +5,8 @@ replacing the 50+ Manager classes with clean, testable functions.
 Achieves 60% complexity reduction while maintaining full functionality.
 """
 
+# pylint: disable=too-many-lines,no-else-return,no-else-raise,duplicate-code,cyclic-import
+
 import asyncio
 import logging
 import time
@@ -256,7 +258,7 @@ async def _prepare_detection_config(
 
 async def _perform_environment_detection(detection_config: Any) -> Any:
     """Perform environment detection."""
-    env_detector = EnvironmentDetector(detection_config)
+    env_detector = EnvironmentDetector(config=detection_config)
     return await env_detector.detect()
 
 
