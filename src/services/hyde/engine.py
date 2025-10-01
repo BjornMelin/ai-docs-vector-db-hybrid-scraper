@@ -6,6 +6,7 @@ import asyncio
 import hashlib
 import logging
 import time
+from collections.abc import Mapping
 from typing import Any, cast
 
 import numpy as np
@@ -317,7 +318,20 @@ class HyDEQueryEngine(BaseService):
                 limit=limit,
                 filters=_filters,
             )
-            return [dict(match.payload or {}) for match in matches]
+            results: list[dict[str, Any]] = []
+            for match in matches:
+                if isinstance(match, Mapping):
+                    payload = dict(match.get("payload", {}) or {})
+                    payload.setdefault("id", match.get("id"))
+                    payload.setdefault("score", match.get("score", 0.0))
+                    results.append(payload)
+                    continue
+
+                payload = dict(getattr(match, "payload", {}) or {})
+                payload.setdefault("id", getattr(match, "id", None))
+                payload.setdefault("score", getattr(match, "score", 0.0))
+                results.append(payload)
+            return results
 
         except Exception as e:
             logger.exception("Query API search failed")
@@ -360,7 +374,13 @@ class HyDEQueryEngine(BaseService):
                 limit=limit,
                 filters=filters,
             )
-            return [dict(match.payload or {}) for match in matches]
+            results: list[dict[str, Any]] = []
+            for match in matches:
+                payload = dict(getattr(match, "payload", {}) or {})
+                payload.setdefault("id", getattr(match, "id", None))
+                payload.setdefault("score", getattr(match, "score", 0.0))
+                results.append(payload)
+            return results
 
         except Exception as e:
             logger.exception("Fallback search failed")

@@ -1,3 +1,5 @@
+# pylint: disable=too-many-lines,duplicate-code,cyclic-import,too-many-locals
+
 """Comprehensive tests for the simplified SearchOrchestrator.
 
 This test suite provides extensive coverage for the SearchOrchestrator including:
@@ -130,8 +132,6 @@ def orchestrator(vector_store_stub):
     return orchestrator
 
 
-
-
 @pytest.fixture
 def basic_request():
     """Create a basic search request."""
@@ -139,6 +139,22 @@ def basic_request():
         query="What is machine learning?",
         collection_name="documentation",
         limit=10,
+        offset=0,
+        mode=SearchMode.ENHANCED,
+        pipeline=SearchPipeline.BALANCED,
+        enable_expansion=True,
+        enable_clustering=False,
+        enable_personalization=False,
+        enable_federation=False,
+        enable_rag=False,
+        rag_max_tokens=None,
+        rag_temperature=None,
+        rag_top_k=None,
+        require_high_confidence=False,
+        user_id=None,
+        session_id=None,
+        enable_caching=True,
+        max_processing_time_ms=5000.0,
     )
 
 
@@ -149,6 +165,7 @@ def comprehensive_request():
         query="Python web development best practices",
         collection_name="programming",
         limit=20,
+        offset=0,
         mode=SearchMode.FULL,
         pipeline=SearchPipeline.COMPREHENSIVE,
         enable_expansion=True,
@@ -156,8 +173,14 @@ def comprehensive_request():
         enable_personalization=True,
         enable_federation=True,
         enable_rag=True,
+        rag_max_tokens=1000,
+        rag_temperature=0.1,
+        rag_top_k=5,
+        require_high_confidence=False,
         user_id="test_user_123",
         session_id="session_456",
+        enable_caching=True,
+        max_processing_time_ms=10000.0,
     )
 
 
@@ -198,6 +221,21 @@ class TestModels:
             collection_name="test_collection",
             limit=5,
             offset=10,
+            mode=SearchMode.ENHANCED,
+            pipeline=SearchPipeline.BALANCED,
+            enable_expansion=True,
+            enable_clustering=False,
+            enable_personalization=False,
+            enable_federation=False,
+            enable_rag=False,
+            rag_max_tokens=None,
+            rag_temperature=None,
+            rag_top_k=None,
+            require_high_confidence=False,
+            user_id=None,
+            session_id=None,
+            enable_caching=True,
+            max_processing_time_ms=5000.0,
         )
         assert request.query == "test query"
         assert request.collection_name == "test_collection"
@@ -208,7 +246,7 @@ class TestModels:
 
     def test_search_request_defaults(self):
         """Test SearchRequest default values."""
-        request = SearchRequest(query="test")
+        request = SearchRequest(query="test")  # type: ignore
         assert request.collection_name is None
         assert request.limit == 10
         assert request.offset == 0
@@ -226,21 +264,21 @@ class TestModels:
         """Test SearchRequest validation limits."""
         # Test limit boundaries
         with pytest.raises(ValueError):
-            SearchRequest(query="test", limit=0)  # Below minimum
+            SearchRequest(query="test", limit=0)  # type: ignore # Below minimum
 
         with pytest.raises(ValueError):
-            SearchRequest(query="test", limit=1001)  # Above maximum
+            SearchRequest(query="test", limit=1001)  # type: ignore # Above maximum
 
         # Test offset boundaries
         with pytest.raises(ValueError):
-            SearchRequest(query="test", offset=-1)  # Below minimum
+            SearchRequest(query="test", offset=-1)  # type: ignore # Below minimum
 
         # Valid boundaries
-        request_min = SearchRequest(query="test", limit=1, offset=0)
+        request_min = SearchRequest(query="test", limit=1, offset=0)  # type: ignore
         assert request_min.limit == 1
         assert request_min.offset == 0
 
-        request_max = SearchRequest(query="test", limit=1000)
+        request_max = SearchRequest(query="test", limit=1000)  # type: ignore
         assert request_max.limit == 1000
 
     def test_search_result_validation(self):
@@ -255,7 +293,7 @@ class TestModels:
             generated_answer="Test answer",
             answer_confidence=0.8,
             cache_hit=True,
-        )
+        )  # type: ignore
 
         assert len(result.results) == 1
         assert result.total_results == 1
@@ -274,7 +312,7 @@ class TestModels:
             total_results=0,
             query_processed="test",
             processing_time_ms=100.0,
-        )
+        )  # type: ignore
 
         assert result.results == []
         assert result.total_results == 0
@@ -446,7 +484,7 @@ class TestCoreSearchFunctionality:
         # Basic mode
         basic_request = SearchRequest(
             query="test", mode=SearchMode.BASIC, enable_expansion=True
-        )
+        )  # type: ignore
         result = await orchestrator.search(basic_request)
         # Expansion should be disabled in basic mode even if requested
         assert "query_expansion" not in result.features_used
@@ -454,7 +492,7 @@ class TestCoreSearchFunctionality:
         # Enhanced mode
         enhanced_request = SearchRequest(
             query="test", mode=SearchMode.ENHANCED, enable_expansion=True
-        )
+        )  # type: ignore
         # Mock the private attribute instead of the property
         mock_service = Mock()
         mock_service.expand_query = AsyncMock(
@@ -469,7 +507,7 @@ class TestCoreSearchFunctionality:
     @pytest.mark.asyncio
     async def test_search_with_limit_and_offset(self, orchestrator):
         """Test search respects limit and offset parameters."""
-        request = SearchRequest(query="test", limit=5, offset=0)
+        request = SearchRequest(query="test", limit=5, offset=0)  # type: ignore
         result = await orchestrator.search(request)
 
         assert len(result.results) == 5
@@ -500,7 +538,7 @@ class TestFeatureIntegration:
         """Test query expansion feature."""
         request = SearchRequest(
             query="ML algorithms", mode=SearchMode.ENHANCED, enable_expansion=True
-        )
+        )  # type: ignore
 
         # Mock the expansion service
         mock_service = Mock()
@@ -520,7 +558,7 @@ class TestFeatureIntegration:
         """Test query expansion failure handling."""
         request = SearchRequest(
             query="test", mode=SearchMode.ENHANCED, enable_expansion=True
-        )
+        )  # type: ignore
 
         # Mock expansion service to raise exception
         mock_service = Mock()
@@ -541,7 +579,7 @@ class TestFeatureIntegration:
             query="test",
             enable_clustering=True,
             enable_expansion=False,  # Disable expansion to focus on clustering
-        )
+        )  # type: ignore
 
         # Mock _execute_search to return results with required fields for clustering
         with patch.object(orchestrator, "_execute_search") as mock_search:
@@ -612,7 +650,7 @@ class TestFeatureIntegration:
             query="test",
             limit=3,  # Less than 5 results
             enable_clustering=True,
-        )
+        )  # type: ignore
 
         # Mock to return only 3 results
         with patch.object(orchestrator, "_execute_search") as mock_search:
@@ -635,7 +673,7 @@ class TestFeatureIntegration:
             enable_personalization=True,
             enable_expansion=False,  # Disable expansion to focus on ranking
             user_id="test_user",
-        )
+        )  # type: ignore
 
         # Mock _execute_search to return results with required fields for ranking
         with patch.object(orchestrator, "_execute_search") as mock_search:
@@ -678,7 +716,7 @@ class TestFeatureIntegration:
             query="test",
             enable_personalization=True,
             user_id=None,  # No user ID
-        )
+        )  # type: ignore
 
         result = await orchestrator.search(request)
 
@@ -704,7 +742,7 @@ class TestFeatureIntegration:
         )
         mock_get_config.return_value = mock_config
 
-        request = SearchRequest(query="What is Python?", enable_rag=True)
+        request = SearchRequest(query="What is Python?", enable_rag=True)  # type: ignore
 
         # Mock RAG generator
         mock_rag = Mock()
@@ -758,7 +796,7 @@ class TestFeatureIntegration:
         )
         mock_get_config.return_value = mock_config
 
-        request = SearchRequest(query="What is Python?", enable_rag=True)
+        request = SearchRequest(query="What is Python?", enable_rag=True)  # type: ignore
 
         # Mock RAG generator with low confidence
         mock_rag = Mock()
@@ -785,7 +823,7 @@ class TestFeatureIntegration:
     @pytest.mark.asyncio
     async def test_rag_failure_handling(self, orchestrator):
         """Test RAG failure doesn't break search."""
-        request = SearchRequest(query="test", enable_rag=True)
+        request = SearchRequest(query="test", enable_rag=True)  # type: ignore
 
         # Mock RAG generator to raise exception
         mock_rag = Mock()
@@ -832,7 +870,7 @@ class TestFeatureIntegration:
             query="federated search test",
             enable_federation=True,
             collection_name="target_collection",
-        )
+        )  # type: ignore
 
         result = await orchestrator.search(request)
 
@@ -859,7 +897,7 @@ class TestFeatureIntegration:
         )
         orchestrator._federated_service = mock_federated_service
 
-        request = SearchRequest(query="test federation failure", enable_federation=True)
+        request = SearchRequest(query="test federation failure", enable_federation=True)  # type: ignore
 
         result = await orchestrator.search(request)
 
@@ -879,7 +917,7 @@ class TestPipelineConfiguration:
             query="test",
             pipeline=SearchPipeline.FAST,
             # Don't set any optional fields to get pure pipeline behavior
-        )
+        )  # type: ignore
 
         config = orchestrator._apply_pipeline_config(request)
 
@@ -891,7 +929,7 @@ class TestPipelineConfiguration:
 
     def test_apply_pipeline_config_balanced(self, orchestrator):
         """Test applying balanced pipeline configuration."""
-        request = SearchRequest(query="test", pipeline=SearchPipeline.BALANCED)
+        request = SearchRequest(query="test", pipeline=SearchPipeline.BALANCED)  # type: ignore
 
         config = orchestrator._apply_pipeline_config(request)
 
@@ -902,7 +940,7 @@ class TestPipelineConfiguration:
 
     def test_apply_pipeline_config_comprehensive(self, orchestrator):
         """Test applying comprehensive pipeline configuration."""
-        request = SearchRequest(query="test", pipeline=SearchPipeline.COMPREHENSIVE)
+        request = SearchRequest(query="test", pipeline=SearchPipeline.COMPREHENSIVE)  # type: ignore
 
         config = orchestrator._apply_pipeline_config(request)
 
@@ -919,7 +957,7 @@ class TestPipelineConfiguration:
             enable_expansion=True,  # But explicitly enable it
             enable_clustering=True,  # Enable clustering too
             max_processing_time_ms=2000.0,  # Custom timeout
-        )
+        )  # type: ignore
 
         config = orchestrator._apply_pipeline_config(request)
 
@@ -955,7 +993,7 @@ class TestCachingFunctionality:
     @pytest.mark.asyncio
     async def test_cache_disabled(self, orchestrator):
         """Test search with caching disabled."""
-        request = SearchRequest(query="test", enable_caching=False)
+        request = SearchRequest(query="test", enable_caching=False)  # type: ignore
 
         result1 = await orchestrator.search(request)
         result2 = await orchestrator.search(request)
@@ -968,13 +1006,13 @@ class TestCachingFunctionality:
     @pytest.mark.asyncio
     async def test_cache_key_generation(self, orchestrator):
         """Test cache key generation."""
-        request1 = SearchRequest(query="test", limit=10, user_id="user1")
+        request1 = SearchRequest(query="test", limit=10, user_id="user1")  # type: ignore
         request2 = SearchRequest(
             query="test", limit=20, user_id="user1"
-        )  # Different limit
+        )  # Different limit # type: ignore
         request3 = SearchRequest(
             query="test", limit=10, user_id="user2"
-        )  # Different user
+        )  # Different user # type: ignore
 
         key1 = orchestrator._get_cache_key(request1)
         key2 = orchestrator._get_cache_key(request2)
@@ -992,7 +1030,7 @@ class TestCachingFunctionality:
 
         # Fill cache beyond limit
         for i in range(5):
-            request = SearchRequest(query=f"test query {i}")
+            request = SearchRequest(query=f"test query {i}")  # type: ignore
             await orchestrator.search(request)
 
         # Cache should not exceed size limit
@@ -1036,7 +1074,7 @@ class TestStatisticsAndPerformance:
         for i in range(3):
             request = SearchRequest(
                 query=f"test {i}"
-            )  # Different queries to avoid cache
+            )  # Different queries to avoid cache # type: ignore
             await orchestrator.search(request)
 
         stats = orchestrator.get_stats()
@@ -1122,7 +1160,7 @@ class TestEdgeCasesAndErrorHandling:
     @pytest.mark.asyncio
     async def test_empty_query(self, orchestrator):
         """Test search with empty query."""
-        request = SearchRequest(query="")
+        request = SearchRequest(query="")  # type: ignore
         result = await orchestrator.search(request)
 
         assert isinstance(result, SearchResult)
@@ -1132,7 +1170,7 @@ class TestEdgeCasesAndErrorHandling:
     async def test_very_long_query(self, orchestrator):
         """Test search with very long query."""
         long_query = "a" * 1000  # 1000 character query
-        request = SearchRequest(query=long_query)
+        request = SearchRequest(query=long_query)  # type: ignore
         result = await orchestrator.search(request)
 
         assert isinstance(result, SearchResult)
@@ -1142,7 +1180,7 @@ class TestEdgeCasesAndErrorHandling:
     async def test_zero_limit(self, _orchestrator):
         """Test search with zero limit should fail validation."""
         with pytest.raises(ValueError):
-            SearchRequest(query="test", limit=0)
+            SearchRequest(query="test", limit=0)  # type: ignore
 
     @pytest.mark.asyncio
     async def test_search_with_all_features_failing(self, orchestrator):
@@ -1154,7 +1192,7 @@ class TestEdgeCasesAndErrorHandling:
             enable_personalization=True,
             enable_rag=True,
             user_id="test_user",
-        )
+        )  # type: ignore
 
         # Mock all services to fail
         mock_expansion = Mock()
@@ -1192,7 +1230,7 @@ class TestEdgeCasesAndErrorHandling:
         request = SearchRequest(
             query="test",
             max_processing_time_ms=1.0,  # Very short timeout
-        )
+        )  # type: ignore
 
         # The current implementation doesn't enforce timeouts,
         # but this tests the parameter is accepted

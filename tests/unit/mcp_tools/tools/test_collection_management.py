@@ -1,5 +1,6 @@
 """Comprehensive test suite for MCP collections tools."""
 
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -16,24 +17,28 @@ class TestCollectionsTools:
         """Create a mock client manager with collections service."""
         mock_manager = MagicMock()
 
-        # Mock qdrant service
-        mock_qdrant = AsyncMock()
-        mock_qdrant.list_collections.return_value = ["docs", "api", "knowledge"]
+        # Mock vector store service
+        mock_vector = AsyncMock()
+        mock_vector.list_collections.return_value = [
+            "docs",
+            "api",
+            "knowledge",
+        ]
 
-        # Mock collection info object with attributes
-        mock_info = MagicMock()
-        mock_info.vectors_count = 5000
-        mock_info.indexed_vectors_count = 4800
-        mock_info.config.params.vectors.size = 384
-        mock_info.config.params.vectors.distance = "cosine"
+        async def mock_stats(_name: str) -> dict[str, Any]:
+            return {
+                "points_count": 1000,
+                "indexed_vectors": 950,
+                "vectors": {"size": 384, "distance": "cosine"},
+            }
 
-        mock_qdrant.get_collection_info.return_value = mock_info
-        mock_qdrant.delete_collection.return_value = AsyncMock()
+        mock_vector.collection_stats.side_effect = mock_stats
+        mock_vector.drop_collection = AsyncMock()
 
         # Mock cache manager
         mock_cache = AsyncMock()
         mock_cache.clear.return_value = 10  # cleared items
-        mock_manager.get_qdrant_service = AsyncMock(return_value=mock_qdrant)
+        mock_manager.get_vector_store_service = AsyncMock(return_value=mock_vector)
         mock_manager.get_cache_manager = AsyncMock(return_value=mock_cache)
 
         return mock_manager
@@ -134,9 +139,11 @@ class TestCollectionsTools:
         """Test collections error handling."""
 
         # Make qdrant service raise an exception
-        mock_qdrant = AsyncMock()
-        mock_qdrant.list_collections.side_effect = Exception("Service unavailable")
-        mock_client_manager.get_qdrant_service = AsyncMock(return_value=mock_qdrant)
+        mock_vector = AsyncMock()
+        mock_vector.list_collections.side_effect = Exception("Service unavailable")
+        mock_client_manager.get_vector_store_service = AsyncMock(
+            return_value=mock_vector
+        )
 
         mock_mcp = MagicMock()
         registered_tools = {}

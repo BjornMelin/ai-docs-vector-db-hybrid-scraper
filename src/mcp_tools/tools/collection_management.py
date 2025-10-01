@@ -24,49 +24,67 @@ def register_tools(mcp, client_manager: ClientManager):  # pylint: disable=too-m
             await ctx.info("Retrieving list of all collections")
 
         try:
-            qdrant_service = await client_manager.get_qdrant_service()
-            collections = await qdrant_service.list_collections()
-            collection_info = []
+            vector_service = await client_manager.get_vector_store_service()
+            collections = await vector_service.list_collections()
+            collection_info: list[CollectionInfo] = []
 
             if ctx:
                 await ctx.debug(f"Found {len(collections)} collections")
 
             for collection_name in collections:
                 try:
-                    info = await qdrant_service.get_collection_info(collection_name)
+                    stats = await vector_service.collection_stats(collection_name)
+                    vectors_meta = (
+                        stats.get("vectors", {}) if isinstance(stats, dict) else {}
+                    )
                     collection_info.append(
-                        {
-                            "name": collection_name,
-                            "vectors_count": info.vectors_count,
-                            "indexed_vectors_count": info.indexed_vectors_count,
-                            "config": {
-                                "size": info.config.params.vectors.size,
-                                "distance": info.config.params.vectors.distance,
-                            },
-                        }
+                        CollectionInfo.model_validate(
+                            {
+                                "name": collection_name,
+                                "vectors_count": vectors_meta.get("size"),
+                                "points_count": stats.get("points_count")
+                                if isinstance(stats, dict)
+                                else None,
+                                "status": "active",
+                                "indexed_vectors_count": stats.get("indexed_vectors")
+                                if isinstance(stats, dict)
+                                else None,
+                                "vector_config": vectors_meta,
+                            }
+                        )
                     )
                     if ctx:
                         await ctx.debug(
-                            f"Retrieved info for collection {collection_name}: "
-                            f"{info.vectors_count} vectors"
+                            "Retrieved info for collection %s: %s vectors",
+                            collection_name,
+                            vectors_meta.get("size"),
                         )
-                except Exception as e:
+                except Exception as exc:  # pragma: no cover - defensive branch
                     logger.exception(
                         "Failed to get info for collection %s", collection_name
                     )
                     if ctx:
                         await ctx.warning(
-                            f"Failed to get info for collection {collection_name}: {e}"
+                            "Failed to get info for collection "
+                            f"{collection_name}: {exc}"
                         )
-                    collection_info.append({"name": collection_name, "error": str(e)})
+                    collection_info.append(
+                        CollectionInfo.model_validate(
+                            {
+                                "name": collection_name,
+                                "status": "error",
+                                "error": str(exc),
+                            }
+                        )
+                    )
 
             if ctx:
                 await ctx.info(
-                    f"Successfully retrieved information for "
+                    "Successfully retrieved information for "
                     f"{len(collection_info)} collections"
                 )
 
-            return [CollectionInfo(**c) for c in collection_info]
+            return collection_info
 
         except Exception as e:
             if ctx:
@@ -86,10 +104,10 @@ def register_tools(mcp, client_manager: ClientManager):  # pylint: disable=too-m
             await ctx.info(f"Starting deletion of collection: {collection_name}")
 
         try:
-            qdrant_service = await client_manager.get_qdrant_service()
+            vector_service = await client_manager.get_vector_store_service()
             cache_manager = await client_manager.get_cache_manager()
 
-            await qdrant_service.delete_collection(collection_name)
+            await vector_service.drop_collection(collection_name)
             if ctx:
                 await ctx.debug(f"Collection {collection_name} deleted from Qdrant")
 
@@ -124,12 +142,15 @@ def register_tools(mcp, client_manager: ClientManager):  # pylint: disable=too-m
             await ctx.info(f"Starting optimization of collection: {collection_name}")
 
         try:
-            qdrant_service = await client_manager.get_qdrant_service()
+            vector_service = await client_manager.get_vector_store_service()
             # Get current collection info
-            info = await qdrant_service.get_collection_info(collection_name)
+            stats = await vector_service.collection_stats(collection_name)
+            vectors_meta = stats.get("vectors", {}) if isinstance(stats, dict) else {}
             if ctx:
                 await ctx.debug(
-                    f"Collection {collection_name} has {info.vectors_count} vectors"
+                    "Collection %s has %s vectors",
+                    collection_name,
+                    vectors_meta.get("size"),
                 )
 
             # Trigger optimization
@@ -143,8 +164,10 @@ def register_tools(mcp, client_manager: ClientManager):  # pylint: disable=too-m
                 status="optimized",
                 collection=collection_name,
                 details={
-                    "vectors_count": info.vectors_count,
-                    "indexed_vectors_count": info.indexed_vectors_count,
+                    "vectors_count": vectors_meta.get("size"),
+                    "indexed_vectors_count": stats.get("indexed_vectors")
+                    if isinstance(stats, dict)
+                    else None,
                 },
             )
         except Exception as e:

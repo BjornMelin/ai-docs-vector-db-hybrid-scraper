@@ -21,6 +21,9 @@ phase that replaces the corresponding surface.
   no longer carries bespoke logging TODOs after the Phase 2 rewrite.
 - ✅ Model/metrics DTOs in `src/services/rag/models.py` have been trimmed to the
   new response schema, removing the legacy `search_results`/follow-up fields.
+- ✅ Added `VectorServiceRetriever` abstraction with unit coverage, aligning
+  LangChain retrieval with the vector adapter while avoiding test-only hooks in
+  production modules.
 
 ## MCP Tools
 - `src/mcp_tools/tools/helpers/tool_registrars.py` has TODO markers for logging

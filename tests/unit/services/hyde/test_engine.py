@@ -1,6 +1,8 @@
 # pylint: disable=too-many-public-methods,too-many-arguments,too-many-positional-arguments
 """Tests for HyDE query processing engine."""
 
+from types import SimpleNamespace
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -16,6 +18,17 @@ from src.services.vector_db.service import VectorStoreService
 
 class TestError(Exception):
     """Custom exception for this module."""
+
+
+def _vector_match(
+    *,
+    doc_id: str = "doc1",
+    score: float = 0.9,
+    payload: dict[str, Any] | None = None,
+) -> SimpleNamespace:
+    """Construct a lightweight vector match object for adapter stubs."""
+
+    return SimpleNamespace(id=doc_id, score=score, payload=payload or {})
 
 
 class TestHyDEQueryEngine:
@@ -263,12 +276,14 @@ class TestHyDEQueryEngine:
         mock_embedding_manager.generate_embeddings.return_value = {
             "embeddings": [[0.1, 0.2, 0.3]]
         }
-        mock_results = [{"id": "doc1", "score": 0.9}]
+        mock_results = [_vector_match(payload={})]
         mock_vector_store.search_vector.return_value = mock_results
 
         results = await engine.enhanced_search("test query")
 
-        assert results == mock_results
+        assert len(results) == len(mock_results)
+        assert results[0]["id"] == mock_results[0].id
+        assert results[0]["score"] == pytest.approx(mock_results[0].score)
         assert engine.fallback_count == 0  # Not counted as fallback when disabled
         mock_vector_store.search_vector.assert_called_once()
 
@@ -306,7 +321,7 @@ class TestHyDEQueryEngine:
         }
 
         # Mock search results
-        mock_results = [{"id": "doc1", "score": 0.9}]
+        mock_results = [_vector_match(payload={})]
         mock_vector_store.hybrid_search.return_value = mock_results
 
         # Mock cache operations
@@ -314,7 +329,9 @@ class TestHyDEQueryEngine:
 
         results = await engine.enhanced_search("test query", use_cache=True)
 
-        assert results == mock_results
+        assert len(results) == len(mock_results)
+        assert results[0]["id"] == mock_results[0].id
+        assert results[0]["score"] == pytest.approx(mock_results[0].score)
         assert engine.search_count == 1
         assert engine.cache_hit_count == 0
         mock_vector_store.hybrid_search.assert_called_once()
@@ -421,12 +438,15 @@ class TestHyDEQueryEngine:
         mock_embedding_manager.generate_embeddings.return_value = {
             "embeddings": [[0.1, 0.2, 0.3]]
         }
-        fallback_results = [{"id": "fallback_doc", "score": 0.7}]
-        mock_vector_store.search_vector.return_value = fallback_results
+        fallback_matches = [_vector_match(doc_id="fallback_doc", score=0.7)]
+        mock_vector_store.search_vector.return_value = fallback_matches
+        engine.cache.get_search_results = AsyncMock(return_value=None)
 
         results = await engine.enhanced_search("test query")
 
-        assert results == fallback_results
+        assert len(results) == len(fallback_matches)
+        assert results[0]["id"] == "fallback_doc"
+        assert results[0]["score"] == pytest.approx(0.7)
         assert engine.fallback_count == 1
         mock_vector_store.search_vector.assert_called_once()
 
@@ -595,29 +615,28 @@ class TestHyDEQueryEngine:
         engine._initialized = True
 
         query_embedding = [0.1, 0.2, 0.3]
-        hyde_embedding = [0.4, 0.5, 0.6]
-        mock_results = [{"id": "doc1", "score": 0.9}]
+        mock_results = [_vector_match(payload={})]
 
         mock_vector_store.hybrid_search.return_value = mock_results
 
         results = await engine._perform_hybrid_search(
+            query="HyDE search",
             query_embedding=query_embedding,
-            hyde_embedding=hyde_embedding,
             collection_name="documents",
             limit=10,
             filters={"type": "doc"},
             search_accuracy="balanced",
         )
 
-        assert results == mock_results
-        mock_vector_store.hybrid_search.assert_called_once_with(
-            collection_name="documents",
-            query="HyDE search",
-            query_embedding=query_embedding,
-            hypothetical_embeddings=[hyde_embedding],
+        assert len(results) == len(mock_results)
+        assert results[0]["id"] == mock_results[0].id
+        assert results[0]["score"] == pytest.approx(mock_results[0].score)
+        mock_vector_store.hybrid_search.assert_awaited_once_with(
+            "documents",
+            "HyDE search",
+            sparse_vector=None,
             limit=10,
-            fusion_algorithm=engine.config.fusion_algorithm,
-            search_accuracy="balanced",
+            filters={"type": "doc"},
         )
 
     @pytest.mark.asyncio
@@ -629,8 +648,8 @@ class TestHyDEQueryEngine:
 
         with pytest.raises(QdrantServiceError) as exc_info:
             await engine._perform_hybrid_search(
+                query="HyDE search",
                 query_embedding=[0.1, 0.2, 0.3],
-                hyde_embedding=[0.4, 0.5, 0.6],
                 collection_name="documents",
                 limit=10,
                 filters=None,
@@ -652,7 +671,7 @@ class TestHyDEQueryEngine:
         }
 
         # Mock search results
-        mock_results = [{"id": "doc1", "score": 0.8}]
+        mock_results = [_vector_match(score=0.8, payload={})]
         mock_vector_store.search_vector.return_value = mock_results
 
         results = await engine._fallback_search(
@@ -663,7 +682,9 @@ class TestHyDEQueryEngine:
             search_accuracy="balanced",
         )
 
-        assert results == mock_results
+        assert len(results) == len(mock_results)
+        assert results[0]["id"] == mock_results[0].id
+        assert results[0]["score"] == pytest.approx(mock_results[0].score)
         mock_vector_store.search_vector.assert_called_once_with(
             collection_name="documents",
             query_vector=[0.1, 0.2, 0.3],
@@ -731,12 +752,14 @@ class TestHyDEQueryEngine:
         mock_embedding_manager.generate_embeddings.return_value = {
             "embeddings": [[0.1, 0.2, 0.3]]
         }
-        mock_results = [{"id": "doc1", "score": 0.8}]
+        mock_results = [_vector_match(score=0.8, payload={})]
         mock_vector_store.search_vector.return_value = mock_results
 
         results = await engine.enhanced_search("test query")
 
-        assert results == mock_results
+        assert len(results) == len(mock_results)
+        assert results[0]["id"] == mock_results[0].id
+        assert results[0]["score"] == pytest.approx(mock_results[0].score)
         assert engine.control_group_searches == 1
         assert engine.treatment_group_searches == 0
         mock_vector_store.search_vector.assert_called_once()
@@ -764,14 +787,16 @@ class TestHyDEQueryEngine:
         }
 
         # Mock search results
-        mock_results = [{"id": "doc1", "score": 0.9}]
+        mock_results = [_vector_match(payload={})]
         mock_vector_store.hybrid_search.return_value = mock_results
 
         engine.cache.set_search_results = AsyncMock()
 
         results = await engine.enhanced_search("test query")
 
-        assert results == mock_results
+        assert len(results) == len(mock_results)
+        assert results[0]["id"] == mock_results[0].id
+        assert results[0]["score"] == pytest.approx(mock_results[0].score)
         assert engine.control_group_searches == 0
         assert engine.treatment_group_searches == 1
         mock_vector_store.hybrid_search.assert_called_once()
