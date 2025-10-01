@@ -1,4 +1,4 @@
-"""FastAPI dependency injection functions replacing Manager classes."""
+"""FastAPI dependency injection functions."""
 
 # pylint: disable=too-many-lines,no-else-return,no-else-raise,duplicate-code,cyclic-import
 
@@ -10,16 +10,7 @@ from datetime import UTC, datetime
 from functools import lru_cache
 from typing import Annotated, Any
 
-
-try:
-    from fastapi import Depends  # type: ignore[attr-defined]
-except ImportError:
-    # Fallback for when FastAPI is not available
-    def Depends(dependency=None):  # type: ignore  # noqa: N802
-        """Fallback Depends for type checking."""
-        return dependency
-
-
+from fastapi import Depends  # type: ignore[attr-defined]
 from pydantic import BaseModel
 
 from src.config import (
@@ -62,7 +53,7 @@ def create_service_error_handler(
     service_name: str,
     error_class: type[Exception] = RuntimeError,
 ) -> Callable:
-    """Create error handler decorator for service operations (DRY pattern)."""
+    """Create error handler decorator for service operations."""
 
     def decorator(func: Callable) -> Callable:
         async def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -78,19 +69,13 @@ def create_service_error_handler(
     return decorator
 
 
-# ============================================================================
-# CONFIGURATION DEPENDENCIES
-# ============================================================================
+#### CONFIGURATION DEPENDENCIES ####
 
 ConfigDep = Annotated[Config, Depends(get_config)]
 
 
 async def get_auto_detected_config() -> Config:
-    """Get configuration with auto-detection applied.
-
-    This async dependency performs service auto-detection and applies
-    discovered services to the configuration with proper precedence.
-    """
+    """Get configuration with auto-detection applied."""
     return await get_config_with_auto_detection()
 
 
@@ -99,21 +84,12 @@ AutoDetectedConfigDep = Annotated[Config, Depends(get_auto_detected_config)]
 
 @lru_cache
 def get_client_manager() -> ClientManager:
-    """Get singleton ClientManager instance.
-
-    Uses @lru_cache for singleton pattern with automatic cleanup.
-    Replaces ClientManager class singleton complexity.
-    """
+    """Get singleton ClientManager instance."""
     return ClientManager.from_unified_config()
 
 
 async def get_auto_detected_client_manager() -> ClientManager:
-    """Get ClientManager instance with auto-detection applied.
-
-    This async dependency creates a ClientManager with service auto-detection
-    enabled, allowing automatic discovery and configuration of Redis, Qdrant,
-    and PostgreSQL services in the environment.
-    """
+    """Get ClientManager instance with auto-detection applied."""
     return await ClientManager.from_unified_config_with_auto_detection()
 
 
@@ -133,12 +109,7 @@ AutoDetectedClientManagerDep = Annotated[
 async def get_auto_detected_services(
     config: AutoDetectedConfigDep,
 ) -> Any:
-    """Get auto-detected services information.
-
-    Returns the auto-detection results including discovered services
-    and environment information. Protected by circuit breaker for
-    external metadata API failures.
-    """
+    """Get auto-detected services information."""
     if (auto_detected := config.get_auto_detected_services()) is None:
         # Return empty services if auto-detection wasn't performed
         return AutoDetectedServices(
@@ -163,22 +134,14 @@ AutoDetectedServicesDep = Annotated[Any, Depends(get_auto_detected_services)]
 async def get_auto_detected_redis_client(
     client_manager: AutoDetectedClientManagerDep,
 ) -> Any:
-    """Get Redis client using auto-detected configuration when available.
-
-    Returns Redis client configured with auto-detected service parameters
-    including Redis 8.2 RESP3 protocol optimizations and connection pooling.
-    """
+    """Get Redis client using auto-detected configuration."""
     return await client_manager.get_redis_client()
 
 
 async def get_auto_detected_qdrant_client(
     client_manager: AutoDetectedClientManagerDep,
 ) -> Any:
-    """Get Qdrant client using auto-detected configuration when available.
-
-    Returns Qdrant client configured with auto-detected service parameters
-    including gRPC optimization when available.
-    """
+    """Get Qdrant client using auto-detected configuration."""
     return await client_manager.get_qdrant_client()
 
 
@@ -210,11 +173,7 @@ AutoDetectedTaskQueueDep = Annotated[Any, Depends(get_auto_detected_task_queue_m
 async def get_auto_detection_health_checker(
     config: AutoDetectedConfigDep,
 ) -> Any:
-    """Get auto-detection health checker for monitoring services.
-
-    Provides health monitoring for auto-detected services.
-    Protected by circuit breaker for service health check failures.
-    """
+    """Get auto-detection health checker."""
     # HealthChecker imported at top-level
 
     health_checker = HealthChecker(config.auto_detection)
@@ -238,11 +197,7 @@ AutoDetectionHealthDep = Annotated[Any, Depends(get_auto_detection_health_checke
 async def get_auto_detection_connection_pools(
     config: AutoDetectedConfigDep,
 ) -> Any:
-    """Get connection pool manager for auto-detected services.
-
-    Provides optimized connection pools for discovered services.
-    Protected by circuit breaker for connection pool initialization failures.
-    """
+    """Get connection pool manager for auto-detected services."""
     # ConnectionPoolManager imported at top-level
 
     pool_manager = ConnectionPoolManager(config.auto_detection)
@@ -259,7 +214,7 @@ AutoDetectionPoolsDep = Annotated[Any, Depends(get_auto_detection_connection_poo
 
 
 class AutoDetectionRequest(BaseModel):
-    """Pydantic model for auto-detection requests."""
+    """Auto-detection request model."""
 
     force_refresh: bool = False
     timeout_seconds: float | None = None
@@ -267,7 +222,7 @@ class AutoDetectionRequest(BaseModel):
 
 
 class AutoDetectionResponse(BaseModel):
-    """Pydantic model for auto-detection responses."""
+    """Auto-detection response model."""
 
     services_found: int
     environment_type: str
@@ -354,7 +309,7 @@ async def perform_auto_detection(
 
 # Embedding Service Dependencies
 class EmbeddingRequest(BaseModel):
-    """Pydantic model for embedding generation requests."""
+    """Embedding generation request model."""
 
     texts: list[str]
     quality_tier: str | None = None
@@ -366,7 +321,7 @@ class EmbeddingRequest(BaseModel):
 
 
 class EmbeddingResponse(BaseModel):
-    """Pydantic model for embedding generation responses."""
+    """Embedding generation response model."""
 
     embeddings: list[list[float]]
     provider: str
@@ -389,11 +344,7 @@ class EmbeddingResponse(BaseModel):
 async def get_embedding_manager(
     client_manager: ClientManagerDep,
 ) -> Any:
-    """Get initialized EmbeddingManager service.
-
-    Replaces EmbeddingManager.initialize() pattern with dependency injection.
-    Protected by circuit breaker for external embedding API failures.
-    """
+    """Get initialized EmbeddingManager service."""
     return await client_manager.get_embedding_manager()
 
 
@@ -412,12 +363,7 @@ async def generate_embeddings(
     request: EmbeddingRequest,
     embedding_manager: EmbeddingManagerDep,
 ) -> EmbeddingResponse:
-    """Generate embeddings with smart provider selection.
-
-    Function-based replacement for EmbeddingManager.generate_embeddings().
-    Provides clean interface with Pydantic validation.
-    Protected by Tenacity-powered circuit breaker with exponential backoff.
-    """
+    """Generate embeddings with smart provider selection."""
     try:
         quality_tier = (
             QualityTier(request.quality_tier) if request.quality_tier else None
@@ -459,11 +405,7 @@ class CacheRequest(BaseModel):
 async def get_cache_manager(
     client_manager: ClientManagerDep,
 ) -> Any:
-    """Get initialized CacheManager service.
-
-    Replaces CacheManager.initialize() pattern with dependency injection.
-    Protected by circuit breaker for Redis connection failures.
-    """
+    """Get initialized CacheManager service."""
     return await client_manager.get_cache_manager()
 
 
@@ -475,10 +417,7 @@ async def cache_get(
     cache_type: str = "crawl",
     cache_manager: CacheManagerDep = None,
 ) -> Any:
-    """Get value from cache with L1 -> L2 fallback.
-
-    Function-based replacement for CacheManager.get().
-    """
+    """Get value from cache."""
     try:
         return await cache_manager.get(key, CacheType(cache_type))
     except (OSError, ConnectionError, ImportError, ModuleNotFoundError):
@@ -493,10 +432,7 @@ async def cache_set(
     ttl: int | None = None,
     cache_manager: CacheManagerDep = None,
 ) -> bool:
-    """Set value in both cache layers.
-
-    Function-based replacement for CacheManager.set().
-    """
+    """Set value in cache."""
     try:
         return await cache_manager.set(key, value, CacheType(cache_type), ttl)
     except (OSError, ConnectionError, ImportError, ModuleNotFoundError):
@@ -509,10 +445,7 @@ async def cache_delete(
     cache_type: str = "crawl",
     cache_manager: CacheManagerDep = None,
 ) -> bool:
-    """Delete value from both cache layers.
-
-    Function-based replacement for CacheManager.delete().
-    """
+    """Delete value from cache."""
     try:
         return await cache_manager.delete(key, CacheType(cache_type))
     except (OSError, ConnectionError, ImportError, ModuleNotFoundError):
@@ -555,11 +488,7 @@ class CrawlResponse(BaseModel):
 async def get_crawl_manager(
     client_manager: ClientManagerDep,
 ) -> Any:
-    """Get initialized CrawlManager service.
-
-    Replaces CrawlManager.initialize() pattern with dependency injection.
-    Protected by circuit breaker for external crawling API failures.
-    """
+    """Get initialized CrawlManager service."""
     return await client_manager.get_crawl_manager()
 
 
@@ -578,11 +507,7 @@ async def scrape_url(
     request: CrawlRequest,
     crawl_manager: CrawlManagerDep,
 ) -> CrawlResponse:
-    """Scrape URL with intelligent 5-tier AutomationRouter selection.
-
-    Function-based replacement for CrawlManager.scrape_url().
-    Protected by Tenacity-powered circuit breaker with exponential backoff.
-    """
+    """Scrape URL with provider selection."""
     try:
         result = await crawl_manager.scrape_url(
             url=request.url, preferred_provider=request.preferred_provider
@@ -599,10 +524,7 @@ async def crawl_site(
     request: CrawlRequest,
     crawl_manager: CrawlManagerDep,
 ) -> dict[str, Any]:
-    """Crawl entire website from starting URL.
-
-    Function-based replacement for CrawlManager.crawl_site().
-    """
+    """Crawl entire website from starting URL."""
     try:
         result = await crawl_manager.crawl_site(
             url=request.url,
@@ -631,10 +553,7 @@ class TaskRequest(BaseModel):
 async def get_task_queue_manager(
     client_manager: ClientManagerDep,
 ) -> Any:
-    """Get initialized TaskQueueManager service.
-
-    Replaces TaskQueueManager.initialize() pattern with dependency injection.
-    """
+    """Get initialized TaskQueueManager service."""
     return await client_manager.get_task_queue_manager()  # type: ignore[attr-defined]
 
 
@@ -645,10 +564,7 @@ async def enqueue_task(
     request: TaskRequest,
     task_manager: TaskQueueManagerDep,
 ) -> str | None:
-    """Enqueue a task for execution.
-
-    Function-based replacement for TaskQueueManager.enqueue().
-    """
+    """Enqueue a task for execution."""
     try:
         job_id = await task_manager.enqueue(
             request.task_name,
@@ -669,10 +585,7 @@ async def get_task_status(
     job_id: str,
     task_manager: TaskQueueManagerDep,
 ) -> dict[str, Any]:
-    """Get status of a task.
-
-    Function-based replacement for TaskQueueManager.get_job_status().
-    """
+    """Get status of a task."""
     try:
         status = await task_manager.get_job_status(job_id)
     except Exception as e:
@@ -686,10 +599,7 @@ async def get_task_status(
 async def get_database_manager(
     client_manager: ClientManagerDep,
 ) -> Any:
-    """Get initialized DatabaseManager service.
-
-    Replaces DatabaseManager.initialize() pattern with dependency injection.
-    """
+    """Get initialized DatabaseManager service."""
     return await client_manager.get_database_manager()
 
 
@@ -699,11 +609,7 @@ DatabaseManagerDep = Annotated[Any, Depends(get_database_manager)]
 async def get_database_session(
     db_manager: DatabaseManagerDep,
 ) -> AsyncGenerator[Any]:
-    """Get database session with automatic cleanup.
-
-    Function-based replacement for DatabaseManager session management.
-    Uses yield for automatic resource cleanup.
-    """
+    """Get database session with automatic cleanup."""
     async with db_manager.get_session() as session:
         yield session
 
@@ -721,7 +627,7 @@ DatabaseSessionDep = Annotated[Any, Depends(get_database_session)]
 async def get_vector_store_service(
     client_manager: ClientManagerDep,
 ) -> VectorStoreService:
-    """Provide initialized vector store service."""
+    """Get initialized vector store service."""
 
     return await client_manager.get_vector_store_service()
 
@@ -733,10 +639,7 @@ VectorStoreServiceDep = Annotated[VectorStoreService, Depends(get_vector_store_s
 async def get_hyde_engine(
     client_manager: ClientManagerDep,
 ) -> Any:
-    """Get initialized HyDEEngine service.
-
-    Replaces HyDEEngine.initialize() pattern with dependency injection.
-    """
+    """Get initialized HyDEEngine service."""
     return await client_manager.get_hyde_engine()  # type: ignore[attr-defined]
 
 
@@ -747,10 +650,7 @@ HyDEEngineDep = Annotated[Any, Depends(get_hyde_engine)]
 async def get_content_intelligence_service(
     client_manager: ClientManagerDep,
 ) -> Any:
-    """Get initialized ContentIntelligenceService.
-
-    Replaces ContentIntelligenceService.initialize() pattern with dependency injection.
-    """
+    """Get initialized ContentIntelligenceService."""
     return await client_manager.get_content_intelligence_service()  # type: ignore[attr-defined]
 
 
@@ -761,7 +661,7 @@ ContentIntelligenceServiceDep = Annotated[
 
 # RAG Service Dependencies
 class RAGRequest(BaseModel):
-    """Pydantic model for RAG answer generation requests."""
+    """RAG answer generation request model."""
 
     query: str
     search_results: list[dict[str, Any]]
@@ -775,7 +675,7 @@ class RAGRequest(BaseModel):
 
 
 class RAGResponse(BaseModel):
-    """Pydantic model for RAG answer generation responses."""
+    """RAG answer generation response model."""
 
     answer: str
     confidence_score: float
@@ -798,11 +698,7 @@ async def get_rag_generator(
     config: ConfigDep,
     client_manager: ClientManagerDep,
 ) -> Any:
-    """Get initialized RAGGenerator service.
-
-    Replaces RAGGenerator.initialize() pattern with dependency injection.
-    Protected by circuit breaker for LLM API failures.
-    """
+    """Get initialized RAGGenerator service."""
     # RAGGenerator imported at top-level
 
     generator = RAGGenerator(config.rag, client_manager)  # type: ignore[arg-type]
@@ -880,12 +776,7 @@ async def generate_rag_answer(
     request: RAGRequest,
     rag_generator: RAGGeneratorDep,
 ) -> RAGResponse:
-    """Generate contextual answer from search results using RAG.
-
-    Function-based replacement for RAGGenerator.generate_answer().
-    Provides clean interface with Pydantic validation.
-    Protected by Tenacity-powered circuit breaker with exponential backoff.
-    """
+    """Generate contextual answer from search results using RAG."""
     try:
         internal_request = _convert_to_internal_rag_request(request)
         result = await rag_generator.generate_answer(internal_request)
@@ -913,10 +804,7 @@ async def generate_rag_answer(
 async def get_rag_metrics(
     rag_generator: RAGGeneratorDep,
 ) -> dict[str, Any]:
-    """Get RAG service performance metrics.
-
-    Function-based replacement for RAGGenerator.get_metrics().
-    """
+    """Get RAG service performance metrics."""
     try:
         metrics = rag_generator.get_metrics()
         # Convert RAGServiceMetrics to dict if it's a Pydantic model
@@ -931,10 +819,7 @@ async def get_rag_metrics(
 async def clear_rag_cache(
     rag_generator: RAGGeneratorDep,
 ) -> dict[str, str]:
-    """Clear RAG answer cache.
-
-    Function-based replacement for RAGGenerator.clear_cache().
-    """
+    """Clear RAG answer cache."""
     try:
         rag_generator.clear_cache()
         # RAGGenerator.clear_cache is a no-op (no cache to purge)
@@ -951,10 +836,7 @@ async def clear_rag_cache(
 async def get_browser_automation_router(
     client_manager: ClientManagerDep,
 ) -> Any:
-    """Get initialized BrowserAutomationRouter service.
-
-    Replaces BrowserAutomationRouter.initialize() pattern with dependency injection.
-    """
+    """Get initialized BrowserAutomationRouter service."""
     return await client_manager.get_browser_automation_router()
 
 
@@ -965,10 +847,7 @@ BrowserAutomationRouterDep = Annotated[Any, Depends(get_browser_automation_route
 async def get_project_storage(
     client_manager: ClientManagerDep,
 ) -> Any:
-    """Get initialized ProjectStorage service.
-
-    Replaces ProjectStorage.initialize() pattern with dependency injection.
-    """
+    """Get initialized ProjectStorage service."""
     return await client_manager.get_project_storage()  # type: ignore[attr-defined]
 
 
@@ -977,11 +856,7 @@ ProjectStorageDep = Annotated[Any, Depends(get_project_storage)]
 
 # Circuit Breaker Monitoring Functions
 async def get_circuit_breaker_status() -> dict[str, Any]:
-    """Get status of all circuit breakers.
-
-    Provides real-time monitoring of circuit breaker states, metrics,
-    and health across all protected services.
-    """
+    """Get status of all circuit breakers."""
     try:
         all_status = CircuitBreakerRegistry.get_all_status()
 
@@ -1025,15 +900,8 @@ async def get_circuit_breaker_status() -> dict[str, Any]:
 
 
 async def reset_circuit_breaker(service_name: str) -> dict[str, Any]:
-    """Reset a specific circuit breaker.
+    """Reset a specific circuit breaker."""
 
-    Args:
-        service_name: Name of the service circuit breaker to reset
-
-    Returns:
-        Reset operation result
-
-    """
     try:
         if (breaker := CircuitBreakerRegistry.get(service_name)) is None:
             return {
@@ -1057,12 +925,8 @@ async def reset_circuit_breaker(service_name: str) -> dict[str, Any]:
 
 
 async def reset_all_circuit_breakers() -> dict[str, Any]:
-    """Reset all circuit breakers.
+    """Reset all circuit breakers."""
 
-    Returns:
-        Reset operation results for all circuits
-
-    """
     try:
         services = CircuitBreakerRegistry.get_services()
         results = {}
@@ -1092,11 +956,8 @@ async def reset_all_circuit_breakers() -> dict[str, Any]:
 
 # Utility Functions for Service Health
 async def get_service_health() -> dict[str, Any]:
-    """Get health status of all services.
+    """Get health status of all services."""
 
-    Function-based replacement for various health check methods.
-    Now includes circuit breaker health information.
-    """
     try:
         client_manager = get_client_manager()
         health_status = await client_manager.get_health_status()
@@ -1123,11 +984,8 @@ async def get_service_health() -> dict[str, Any]:
 async def get_auto_detected_service_health(
     health_checker: AutoDetectionHealthDep = None,
 ) -> dict[str, Any]:
-    """Get health status of auto-detected services.
+    """Get health status of auto-detected services."""
 
-    Function-based health monitoring for auto-detected services
-    with detailed metrics and uptime tracking.
-    """
     try:
         if health_checker is None:
             return {
@@ -1186,11 +1044,7 @@ async def get_auto_detected_service_health(
 async def get_auto_detection_pool_metrics(
     pool_manager: AutoDetectionPoolsDep = None,
 ) -> dict[str, Any]:
-    """Get metrics for auto-detected service connection pools.
-
-    Function-based pool metrics collection for monitoring
-    connection pool performance and utilization.
-    """
+    """Get metrics for auto-detected service connection pools."""
     try:
         if pool_manager is None:
             return {
@@ -1317,10 +1171,7 @@ async def get_auto_detection_summary(
 
 # Service Performance Metrics
 async def get_service_metrics() -> dict[str, Any]:
-    """Get performance metrics for all services.
-
-    Function-based replacement for various metrics collection methods.
-    """
+    """Get performance metrics for all services."""
     try:
         client_manager = get_client_manager()
 
@@ -1358,10 +1209,7 @@ async def get_service_metrics() -> dict[str, Any]:
 
 # Cleanup Function
 async def cleanup_services() -> None:
-    """Cleanup all services and release resources.
-
-    Function-based replacement for various cleanup methods.
-    """
+    """Cleanup all services and release resources."""
     try:
         client_manager = get_client_manager()
         await client_manager.cleanup()
@@ -1435,10 +1283,7 @@ async def get_crawl_recommended_tool(
     url: str,
     crawl_manager: CrawlManagerDep,
 ) -> str:
-    """Get recommended tool for a URL based on performance metrics.
-
-    Function-based replacement for CrawlingManager.get_recommended_tool().
-    """
+    """Get recommended tool for a URL based on performance metrics."""
     try:
         return await crawl_manager.get_recommended_tool(url)
     except (ConnectionError, TimeoutError, ValueError) as e:
@@ -1451,10 +1296,7 @@ async def map_website_urls(
     include_subdomains: bool = False,
     crawl_manager: CrawlManagerDep = None,
 ) -> dict[str, Any]:
-    """Map a website to get list of URLs.
-
-    Function-based replacement for CrawlingManager.map_url().
-    """
+    """Map a website to get list of URLs."""
     try:
         return await crawl_manager.map_url(url, include_subdomains)
     except (ConnectionError, TimeoutError, ValueError) as e:
@@ -1470,10 +1312,7 @@ async def map_website_urls(
 async def get_crawl_tier_metrics(
     crawl_manager: CrawlManagerDep,
 ) -> dict[str, dict]:
-    """Get performance metrics for all crawling tiers.
-
-    Function-based replacement for CrawlingManager.get_tier_metrics().
-    """
+    """Get performance metrics for all crawling tiers."""
     try:
         return crawl_manager.get_tier_metrics()
     except (ConnectionError, TimeoutError, ValueError) as e:
@@ -1505,10 +1344,7 @@ async def register_health_check_function(
     request: HealthCheckRequest,
     check_function: Callable[[], Any],
 ) -> dict[str, str]:
-    """Register a health check for a service.
-
-    Function-based replacement for MonitoringManager.register_health_check().
-    """
+    """Register a health check for a service."""
     try:
         _health_checks[request.service_name] = {
             "check_function": check_function,
@@ -1549,10 +1385,7 @@ def _update_health_failure(health: dict[str, Any], error_msg: str) -> None:
 
 
 async def check_service_health_function(service_name: str) -> bool:
-    """Check health of a specific service.
-
-    Function-based replacement for MonitoringManager.check_service_health().
-    """
+    """Check health of a specific service."""
     if service_name not in _health_checks:
         logger.warning("No health check registered for %s", service_name)
         return False
@@ -1577,10 +1410,7 @@ async def check_service_health_function(service_name: str) -> bool:
 
 
 async def get_all_health_status() -> dict[str, dict[str, Any]]:
-    """Get health status of all monitored services.
-
-    Function-based replacement for MonitoringManager.get_health_status().
-    """
+    """Get health status of all monitored services."""
     status = {}
 
     for service_name, health in _health_checks.items():
@@ -1596,10 +1426,7 @@ async def get_all_health_status() -> dict[str, dict[str, Any]]:
 
 
 async def get_overall_health_summary() -> dict[str, Any]:
-    """Get overall system health summary.
-
-    Function-based replacement for MonitoringManager.get_overall_health().
-    """
+    """Get overall system health summary."""
     health_status = await get_all_health_status()
 
     total_services = len(health_status)
@@ -1629,10 +1456,7 @@ async def track_operation_performance(
     *args: Any,
     **kwargs: Any,
 ) -> Any:
-    """Track performance of an operation.
-
-    Function-based replacement for MonitoringManager.track_performance().
-    """
+    """Track performance of an operation."""
     start_time = time.time()
 
     try:
@@ -1661,10 +1485,7 @@ async def rerank_search_results(
     request: RerankerRequest,
     embedding_manager: EmbeddingManagerDep,
 ) -> list[dict[str, Any]]:
-    """Rerank search results using BGE reranker.
-
-    Function-based replacement for EmbeddingManager.rerank_results().
-    """
+    """Rerank search results using BGE reranker."""
     try:
         return await embedding_manager.rerank_results(request.query, request.results)
     except Exception:
@@ -1678,10 +1499,7 @@ async def estimate_embedding_cost(
     provider_name: str | None = None,
     embedding_manager: EmbeddingManagerDep = None,
 ) -> dict[str, dict[str, float]] | dict[str, dict[str, str | float]]:
-    """Estimate embedding generation cost.
-
-    Function-based replacement for EmbeddingManager.estimate_cost().
-    """
+    """Estimate embedding generation cost."""
     try:
         return embedding_manager.estimate_cost(texts, provider_name)
     except Exception as e:
@@ -1692,10 +1510,7 @@ async def estimate_embedding_cost(
 async def get_embedding_provider_info(
     embedding_manager: EmbeddingManagerDep,
 ) -> dict[str, dict[str, Any]]:
-    """Get information about available embedding providers.
-
-    Function-based replacement for EmbeddingManager.get_provider_info().
-    """
+    """Get information about available embedding providers."""
     try:
         return embedding_manager.get_provider_info()
     except Exception as e:
@@ -1709,10 +1524,7 @@ async def get_optimal_embedding_provider(
     budget_limit: float | None = None,
     embedding_manager: EmbeddingManagerDep = None,
 ) -> str:
-    """Select optimal provider based on constraints.
-
-    Function-based replacement for EmbeddingManager.get_optimal_provider().
-    """
+    """Select optimal provider based on constraints."""
     try:
         return await embedding_manager.get_optimal_provider(
             text_length, quality_required, budget_limit
@@ -1733,10 +1545,7 @@ async def analyze_text_characteristics(
     request: TextAnalysisRequest,
     embedding_manager: EmbeddingManagerDep,
 ) -> dict[str, Any]:
-    """Analyze text characteristics for smart model selection.
-
-    Function-based replacement for EmbeddingManager.analyze_text_characteristics().
-    """
+    """Analyze text characteristics for smart model selection."""
     try:
         analysis = embedding_manager.analyze_text_characteristics(request.texts)
         # Convert TextAnalysis to dict for service boundary
@@ -1766,10 +1575,7 @@ async def analyze_text_characteristics(
 async def get_embedding_usage_report(
     embedding_manager: EmbeddingManagerDep,
 ) -> dict[str, Any]:
-    """Get comprehensive embedding usage report.
-
-    Function-based replacement for EmbeddingManager.get_usage_report().
-    """
+    """Get comprehensive embedding usage report."""
     try:
         return embedding_manager.get_usage_report()
     except Exception as e:
