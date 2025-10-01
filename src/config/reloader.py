@@ -5,7 +5,9 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
+import logging
 from collections import deque
 from collections.abc import Iterator
 from dataclasses import dataclass, field
@@ -15,7 +17,16 @@ from pathlib import Path
 from time import perf_counter
 from uuid import uuid4
 
+
+try:  # pragma: no cover - optional dependency in minimal environments
+    from watchfiles import awatch
+except ImportError:  # pragma: no cover - ensures graceful degradation
+    awatch = None
+
 from .loader import Config, get_config, set_config
+
+
+logger = logging.getLogger(__name__)
 
 
 class ConfigError(Exception):
@@ -86,9 +97,10 @@ class ConfigReloader:
         config_source: Path | str | None = None,
     ) -> None:
         self._default_config_source = (
-            Path(config_source).expanduser() if config_source else None
+            Path(config_source).expanduser().resolve() if config_source else None
         )
         self._file_watch_enabled = False
+        self._watch_task: asyncio.Task[None] | None = None
         self._history: deque[ReloadOperation] = deque(maxlen=history_limit)
         self._backups: deque[tuple[str, ConfigBackup]] = deque(maxlen=history_limit)
         self._lock = asyncio.Lock()
@@ -109,13 +121,13 @@ class ConfigReloader:
         Args:
             trigger: Identifier describing what initiated the reload.
             config_source: Optional path to JSON/YAML/env file providing overrides.
-            force: Reserved for compatibility; ignored in the current implementation.
+            force: When ``True`` the reload is applied even if no effective change
+                is detected in the configuration payload.
 
         Returns:
             ReloadOperation: Structured details describing the attempt.
         """
 
-        del force
         async with self._lock:
             previous_config = get_config()
             previous_hash = self._hash_config(previous_config)
@@ -127,14 +139,27 @@ class ConfigReloader:
             new_config_hash: str | None = None
             error_message: str | None = None
             success = False
+            changes_applied: list[str] = []
 
             try:
                 replacement = self._load_config_source(
                     config_source or self._default_config_source
                 )
-                set_config(replacement)
-                success = True
-                new_config_hash = self._hash_config(replacement)
+                replacement_hash = self._hash_config(replacement)
+
+                if not force and replacement_hash == previous_hash:
+                    logger.debug(
+                        "Reload skipped: configuration hash unchanged (%s)",
+                        replacement_hash,
+                    )
+                    success = True
+                    new_config_hash = previous_hash
+                else:
+                    set_config(replacement)
+                    success = True
+                    new_config_hash = replacement_hash
+                    if replacement_hash != previous_hash:
+                        changes_applied.append("reload")
             except Exception as exc:  # pragma: no cover - defensive path
                 error_message = str(exc)
                 # Restore previous configuration snapshot on failure.
@@ -153,7 +178,7 @@ class ConfigReloader:
                     apply_duration_ms=duration_ms,
                     previous_config_hash=previous_hash,
                     new_config_hash=new_config_hash if success else previous_hash,
-                    changes_applied=["reload"] if success else [],
+                    changes_applied=changes_applied,
                 )
                 self._record_operation(operation)
 
@@ -222,26 +247,101 @@ class ConfigReloader:
             "failed_operations": self._failed_operations,
             "success_rate": success_rate,
             "average_duration_ms": average_duration,
-            "listeners_registered": 0,
+            "listeners_registered": int(
+                self._watch_task is not None and not self._watch_task.done()
+            ),
             "backups_available": len(self._backups),
             "current_config_hash": self._hash_config(get_config()),
         }
 
     async def enable_file_watching(self, poll_interval: float | None = None) -> None:
-        """Mark file watching as enabled (stub for compatibility)."""
+        """Enable asynchronous watching of the configuration source.
 
-        del poll_interval
+        Args:
+            poll_interval: Optional debounce interval (seconds) for filesystem
+                change notifications. Defaults to 0.5s when omitted.
+
+        Raises:
+            ConfigError: When file watching cannot be enabled.
+        """
+
+        if awatch is None:  # pragma: no cover - optional dependency guard
+            msg = "watchfiles dependency is required for file watching"
+            raise ConfigError(msg)
+
+        if self._default_config_source is None:
+            msg = "Cannot enable file watching without a configured source path"
+            raise ConfigError(msg)
+
+        target = self._default_config_source
+        if not target.exists():
+            msg = f"Configuration source not found for watching: {target}"
+            raise ConfigLoadError(msg)
+
+        if self._watch_task and not self._watch_task.done():
+            logger.debug("File watching already active for %s", target)
+            return
+
+        await self.disable_file_watching()
+
+        debounce = int(poll_interval if poll_interval is not None else 0.5)
+        watch_root = target if target.is_dir() else target.parent
+        monitored_file = target.resolve()
+
+        async def _watch_loop() -> None:
+            # Type assertion for awatch
+            assert awatch is not None
+
+            try:
+                async for changes in awatch(watch_root, debounce=debounce):
+                    if not self._file_watch_enabled:
+                        break
+
+                    if target.is_file():
+                        relevant = any(
+                            Path(changed).resolve() == monitored_file
+                            for _change, changed in changes
+                        )
+                        if not relevant:
+                            continue
+
+                    logger.debug("Detected configuration change in %s", monitored_file)
+                    try:
+                        await self.reload_config(
+                            trigger=ReloadTrigger.FILE_WATCH,
+                            config_source=target,
+                        )
+                    except Exception as exc:  # pragma: no cover - defensive path
+                        logger.exception("File watch reload failed: %s", exc)
+            except asyncio.CancelledError:
+                logger.debug("File watching task cancelled")
+                raise
+            except Exception as exc:  # pragma: no cover - defensive path
+                logger.exception("File watching task failed: %s", exc)
+            finally:
+                self._file_watch_enabled = False
+                self._watch_task = None
+                logger.debug("File watching stopped for %s", monitored_file)
+
         self._file_watch_enabled = True
+        self._watch_task = asyncio.create_task(_watch_loop(), name="config-file-watch")
 
     async def disable_file_watching(self) -> None:
         """Disable file watching hooks for configuration changes."""
 
         self._file_watch_enabled = False
+        if self._watch_task and not self._watch_task.done():
+            self._watch_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._watch_task
+        self._watch_task = None
 
     def is_file_watch_enabled(self) -> bool:
         """Return whether on-disk file watching is active."""
 
-        return self._file_watch_enabled
+        return self._file_watch_enabled and (
+            self._watch_task is not None and not self._watch_task.done()
+        )
 
     def get_config_backups(self) -> Iterator[tuple[str, ConfigBackup]]:
         """Yield configuration backups starting with the newest snapshot."""
@@ -263,6 +363,8 @@ class ConfigReloader:
 
     def _store_backup(self, config_hash: str | None, config: Config) -> None:
         if config_hash is None:
+            return
+        if self._backups and self._backups[0][0] == config_hash:
             return
         snapshot = config.model_copy(deep=True)
         backup = ConfigBackup(

@@ -14,12 +14,33 @@ from src.services.errors import EmbeddingServiceError
 from .config import HyDEConfig, HyDEPromptConfig
 
 
+# pylint: disable=unnecessary-ellipsis
+
+
 class OpenAIClientProtocol(Protocol):
     """Protocol for OpenAI client."""
 
-    async def chat_completions_create(self, **kwargs) -> Any:
-        """Create chat completion."""
-        ...
+    class ModelsProtocol(Protocol):
+        """Protocol for models API."""
+
+        async def list(self) -> Any:
+            """List available models."""
+            ...
+
+    class ChatProtocol(Protocol):
+        """Protocol for chat API."""
+
+        class CompletionsProtocol(Protocol):
+            """Protocol for completions API."""
+
+            async def create(self, **kwargs) -> Any:
+                """Create chat completion."""
+                ...
+
+        completions: CompletionsProtocol
+
+    models: ModelsProtocol
+    chat: ChatProtocol
 
 
 logger = logging.getLogger(__name__)
@@ -59,7 +80,7 @@ class HypotheticalDocumentGenerator(BaseService):
             openai_client: Optional OpenAI client for LLM operations
 
         """
-        super().__init__(config)
+        super().__init__(None)
         self.config = config
         self.prompt_config = prompt_config
         self._llm_client = openai_client
@@ -84,14 +105,17 @@ class HypotheticalDocumentGenerator(BaseService):
 
         Raises:
             EmbeddingServiceError: If OpenAI client unavailable
-
         """
+
         if self._initialized:
             return
 
         try:
             if not self._llm_client:
                 _raise_openai_client_not_available()
+
+            # Type assertion for mypy/pyright
+            assert self._llm_client is not None
 
             # Test LLM connection
             await self._llm_client.models.list()
@@ -181,8 +205,11 @@ class HypotheticalDocumentGenerator(BaseService):
 
             if self.config.log_generations:
                 logger.debug(
-                    f"Generated {len(documents)} documents for query '{query}' "
-                    f"in {generation_time:.2f}s, diversity={diversity_score:.2f}"
+                    "Generated %d documents for query '%s' in %.2fs, diversity=%.2f",
+                    len(documents),
+                    query,
+                    generation_time,
+                    diversity_score,
                 )
 
         except Exception as e:
@@ -324,15 +351,16 @@ class HypotheticalDocumentGenerator(BaseService):
                 if len(document.strip()) >= self.config.min_generation_length:
                     documents.append(document)
             except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
-                logger.warning(
-                    f"Failed to generate document: {e}"
-                )  # TODO: Convert f-string to logging format
+                logger.warning("Failed to generate document: %s", e)
                 continue
 
         return documents
 
     async def _generate_single_document(self, prompt: str) -> str:
         """Generate a single hypothetical document."""
+        # Type assertion for mypy/pyright
+        assert self._llm_client is not None
+
         try:
             response = await asyncio.wait_for(
                 self._llm_client.chat.completions.create(
@@ -351,9 +379,7 @@ class HypotheticalDocumentGenerator(BaseService):
             logger.warning("Document generation timed out")
             return ""
         except (ValueError, TypeError, UnicodeDecodeError) as e:
-            logger.warning(
-                f"Failed to generate document: {e}"
-            )  # TODO: Convert f-string to logging format
+            logger.warning("Failed to generate document: %s", e)
             return ""
 
     def _post_process_documents(self, documents: list[str], _query: str) -> list[str]:
