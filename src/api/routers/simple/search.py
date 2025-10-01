@@ -4,13 +4,14 @@ Simplified search endpoints optimized for solo developers.
 """
 
 import logging
-from typing import Any
+from time import perf_counter
+from typing import Any, cast
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from src.architecture.service_factory import get_service
-from src.models.requests import SearchRequest
+from src.services.vector_db import VectorMatch, VectorStoreService
 
 
 logger = logging.getLogger(__name__)
@@ -59,25 +60,20 @@ async def search_documents(request: SimpleSearchRequest) -> SimpleSearchResponse
 
 async def _perform_search(request: SimpleSearchRequest) -> SimpleSearchResponse:
     """Perform search with service lookup and response conversion."""
-    # Get search service
-    search_service = await get_service("search_service")
-
-    # Convert to internal search request
-    internal_request = SearchRequest(
-        query=request.query,
+    vector_service = await _get_vector_store_service()
+    started = perf_counter()
+    matches = await vector_service.search_documents(
+        request.collection_name,
+        request.query,
         limit=request.limit,
-        collection_name=request.collection_name,
     )
-
-    # Perform search
-    response = await search_service.search(internal_request)
-
-    # Convert to simple response
+    processing_time_ms = (perf_counter() - started) * 1000
+    results = [_vector_match_to_result(match) for match in matches]
     return SimpleSearchResponse(
-        query=response.query,
-        results=response.results,
-        total_count=response.total_count,
-        processing_time_ms=response.processing_time_ms,
+        query=request.query,
+        results=results,
+        total_count=len(results),
+        processing_time_ms=processing_time_ms,
     )
 
 
@@ -117,5 +113,40 @@ async def search_health() -> dict[str, Any]:
 
 async def _get_search_stats() -> dict[str, Any]:
     """Get search service statistics."""
-    search_service = await get_service("search_service")
-    return search_service.get_search_stats()
+    vector_service = await _get_vector_store_service()
+    collections = await vector_service.list_collections()
+    stats: dict[str, Any] = {"collections": collections}
+    default_collection = "documents"
+    if default_collection in collections:
+        try:
+            stats["default_collection"] = default_collection
+            stats["default_collection_stats"] = (
+                await vector_service.collection_stats(default_collection)
+            )
+        except Exception as exc:  # pragma: no cover - defensive logging branch
+            stats["default_collection_error"] = str(exc)
+    return stats
+
+
+async def _get_vector_store_service() -> VectorStoreService:
+    """Resolve the initialized vector store service from the factory."""
+
+    service = await get_service("vector_db_service")
+    if not isinstance(service, VectorStoreService):  # pragma: no cover - safety net
+        msg = "Vector DB service is not a VectorStoreService instance"
+        raise TypeError(msg)
+    return cast(VectorStoreService, service)
+
+
+def _vector_match_to_result(match: VectorMatch) -> dict[str, Any]:
+    """Normalize a vector match into the simple search response format."""
+
+    payload = dict(match.payload or {})
+    result: dict[str, Any] = {
+        "id": match.id,
+        "score": match.score,
+        "payload": payload,
+    }
+    if match.vector is not None:
+        result["vector"] = list(match.vector)
+    return result

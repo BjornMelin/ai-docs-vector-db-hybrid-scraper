@@ -60,10 +60,10 @@ except ImportError:
 
 try:
     from src.services.embeddings.manager import EmbeddingManager
-    from src.services.vector_db.service import VectorDBService
+    from src.services.vector_db import VectorStoreService
 except ImportError:
     EmbeddingManager = None
-    VectorDBService = None
+    VectorStoreService = None
 
 
 logger = logging.getLogger(__name__)
@@ -364,9 +364,10 @@ def _register_mode_services(factory: ModeAwareServiceFactory) -> None:
         logger.warning("Some service implementations not available")
 
     # Register universal services (work in both modes)
-    if EmbeddingManager and VectorDBService:
+    if EmbeddingManager:
         factory.register_universal_service("embedding_service", EmbeddingManager)
-        factory.register_universal_service("vector_db_service", VectorDBService)
+    if VectorStoreService:
+        factory.register_universal_service("vector_db_service", VectorStoreService)
     else:
         logger.warning("Universal services not available")
 

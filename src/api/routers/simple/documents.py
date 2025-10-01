@@ -1,15 +1,13 @@
-"""Simple mode documents API router.
-
-Simplified document management endpoints optimized for solo developers.
-"""
+"""Simple mode documents API router."""
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from src.architecture.service_factory import get_service
+from src.services.vector_db import VectorStoreService
 
 
 logger = logging.getLogger(__name__)
@@ -55,14 +53,12 @@ async def _add_document_to_service(
     request: SimpleDocumentRequest,
 ) -> SimpleDocumentResponse:
     """Add document to vector database service."""
-    # Get vector database service
-    vector_db_service = await get_service("vector_db_service")
+    vector_db_service = await _get_vector_store_service()
 
-    # Process document (simplified)
     document_id = await vector_db_service.add_document(
-        content=request.content,
-        metadata=request.metadata,
-        collection_name=request.collection_name,
+        request.collection_name,
+        request.content,
+        metadata=request.metadata or None,
     )
 
     return SimpleDocumentResponse(
@@ -93,11 +89,9 @@ async def _get_document_from_service(
     document_id: str, collection_name: str
 ) -> dict[str, Any] | None:
     """Get document from vector database service."""
-    vector_db_service = await get_service("vector_db_service")
-    return await vector_db_service.get_document(
-        document_id=document_id,
-        collection_name=collection_name,
-    )
+    vector_db_service = await _get_vector_store_service()
+    document = await vector_db_service.get_document(collection_name, document_id)
+    return dict(document) if document else None
 
 
 @router.delete("/documents/{document_id}")
@@ -119,18 +113,17 @@ async def delete_document(
 
 async def _delete_document_from_service(document_id: str, collection_name: str) -> bool:
     """Delete document from vector database service."""
-    vector_db_service = await get_service("vector_db_service")
-    return await vector_db_service.delete_document(
-        document_id=document_id,
-        collection_name=collection_name,
-    )
+    vector_db_service = await _get_vector_store_service()
+    return await vector_db_service.delete_document(collection_name, document_id)
 
 
 @router.get("/documents")
 async def list_documents(
     collection_name: str = Query(default="documents", description="Collection name"),
     limit: int = Query(default=10, ge=1, le=50, description="Maximum results"),
-    offset: int = Query(default=0, ge=0, description="Offset for pagination"),
+    offset: str | None = Query(
+        default=None, description="Opaque pagination offset token"
+    ),
 ) -> dict[str, Any]:
     """List documents in a collection (simplified)."""
     try:
@@ -141,22 +134,23 @@ async def list_documents(
 
 
 async def _list_documents_from_service(
-    collection_name: str, limit: int, offset: int
+    collection_name: str, limit: int, offset: str | None
 ) -> dict[str, Any]:
     """List documents from vector database service."""
-    vector_db_service = await get_service("vector_db_service")
+    vector_db_service = await _get_vector_store_service()
 
-    documents = await vector_db_service.list_documents(
-        collection_name=collection_name,
+    documents, next_offset = await vector_db_service.list_documents(
+        collection_name,
         limit=limit,
         offset=offset,
     )
+    normalized_docs = [dict(document) for document in documents]
 
     return {
-        "documents": documents,
-        "count": len(documents),
+        "documents": normalized_docs,
+        "count": len(normalized_docs),
         "limit": limit,
-        "offset": offset,
+        "next_offset": next_offset,
     }
 
 
@@ -172,7 +166,7 @@ async def list_collections() -> dict[str, Any]:
 
 async def _list_collections_from_service() -> dict[str, Any]:
     """List collections from vector database service."""
-    vector_db_service = await get_service("vector_db_service")
+    vector_db_service = await _get_vector_store_service()
     collections = await vector_db_service.list_collections()
 
     return {
@@ -196,7 +190,7 @@ async def documents_health() -> dict[str, Any]:
 
 async def _check_documents_health() -> dict[str, Any]:
     """Check documents service health."""
-    vector_db_service = await get_service("vector_db_service")
+    vector_db_service = await _get_vector_store_service()
     collections = await vector_db_service.list_collections()
 
     return {
@@ -204,3 +198,13 @@ async def _check_documents_health() -> dict[str, Any]:
         "service_type": "simple",
         "collections_count": len(collections),
     }
+
+
+async def _get_vector_store_service() -> VectorStoreService:
+    """Resolve the vector store service with runtime type protection."""
+
+    service = await get_service("vector_db_service")
+    if not isinstance(service, VectorStoreService):  # pragma: no cover - safety
+        msg = "Vector DB service is not a VectorStoreService instance"
+        raise TypeError(msg)
+    return cast(VectorStoreService, service)

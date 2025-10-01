@@ -137,20 +137,20 @@ async def get_vector_db_client(
         client_manager: Client manager for dependency injection
 
     Yields:
-        QdrantService: Initialized vector database client
+        VectorStoreService: Initialized vector database client
     """
 
-    from src.services.vector_db.service import (
-        QdrantService,  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
-    )
+    from src.services.vector_db import (  # pylint: disable=import-outside-toplevel
+        VectorStoreService,
+    )  # noqa: PLC0415
 
-    qdrant_manager = QdrantService(config, client_manager)
+    vector_service = VectorStoreService(config, client_manager, None)
 
     try:
-        await qdrant_manager.initialize()
-        yield qdrant_manager
+        await vector_service.initialize()
+        yield vector_service
     finally:
-        await qdrant_manager.cleanup()
+        await vector_service.cleanup()
 
 
 # Rate limiter dependency (optional)
