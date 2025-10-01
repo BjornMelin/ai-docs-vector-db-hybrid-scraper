@@ -168,7 +168,7 @@ class TestBackgroundMonitoringTasks:
 
     @pytest.mark.asyncio
     async def test_start_background_tasks_enabled(
-        self, mock_metrics_registry, mock_health_manager, _mock_cache_manager
+        self, mock_metrics_registry, mock_health_manager, mock_cache_manager
     ):
         """Test starting background tasks when enabled."""
         # Configure the mock registries to have the right config attributes

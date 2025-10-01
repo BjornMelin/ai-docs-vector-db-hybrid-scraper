@@ -51,7 +51,7 @@ class TestHNSWOptimizer:
         assert optimizer._initialized is False
 
     @pytest.mark.asyncio
-    async def test_initialize_success(self, optimizer, __mock_qdrant_service):
+    async def test_initialize_success(self, optimizer, _mock_qdrant_service):
         """Test successful optimizer initialization."""
         await optimizer.initialize()
 
@@ -541,10 +541,6 @@ class TestHNSWOptimizer:
             call_count += 1
             if call_count <= 2:  # First 2 calls succeed
                 return MagicMock()
-                msg = "Query failed"
-                raise TestError(msg)
-                msg = "Query failed"
-                raise TestError(msg)
             return None
 
         _mock_qdrant_service._client.query_points.side_effect = mock_query

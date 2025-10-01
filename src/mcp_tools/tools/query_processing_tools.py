@@ -1,20 +1,21 @@
-"""Query processing tools for MCP server.
+"""Model Context Protocol query processing tools.
 
-This module exposes query processing capabilities through the Model Context
-Protocol, including query expansion, clustering, federated search, personalization,
-and orchestration.
+The module exposes typed wrappers around the search orchestrator. Each helper
+prepares a request, invokes the orchestrator, and converts raw responses into
+MCP-friendly result models.
 """
 
+from __future__ import annotations
+
 import logging
-from uuid import uuid4
+from collections.abc import Callable, Iterable, Mapping
+from typing import Any
 
 from fastmcp import Context
 from pydantic import BaseModel, Field
 
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.models.responses import SearchResult
-
-# ProcessingStage removed from simplified orchestrator
 from src.services.query_processing import (
     SearchMode,
     SearchOrchestrator,
@@ -23,48 +24,60 @@ from src.services.query_processing import (
 )
 
 
+ResultPayload = Mapping[str, Any]
+ExplanationFactory = Callable[[ResultPayload], str | None]
+
+
 logger = logging.getLogger(__name__)
 
 
-# Request models for MCP tools
+# ---------------------------------------------------------------------------
+# Request models used by MCP tools
+# ---------------------------------------------------------------------------
+
+
 class QueryExpansionRequest(BaseModel):
-    """Request for query expansion."""
+    """Request payload for the query expansion tool."""
 
     collection_name: str = Field(..., description="Collection to search")
     query: str = Field(..., description="Search query to expand")
     expansion_methods: list[str] = Field(
-        ["synonyms", "related_terms"], description="Expansion methods to use"
+        default_factory=lambda: ["synonyms", "related_terms"],
+        description="Expansion methods to apply",
     )
-    expansion_depth: int = Field(2, ge=1, le=5, description="Depth of expansion")
+    expansion_depth: int = Field(2, ge=1, le=5, description="Expansion breadth")
     context_window: int = Field(100, ge=50, le=500, description="Context window size")
     limit: int = Field(10, ge=1, le=100, description="Number of results")
 
 
 class ClusteredSearchRequest(BaseModel):
-    """Request for clustered search."""
+    """Request payload for clustered search."""
 
     collection_name: str = Field(..., description="Collection to search")
     query: str = Field(..., description="Search query")
     num_clusters: int = Field(
-        5, ge=2, le=20, description="Number of clusters to create"
+        5, ge=2, le=20, description="Target number of clusters for presentation"
     )
     clustering_algorithm: str = Field(
-        "kmeans", description="Clustering algorithm (kmeans, hierarchical, dbscan)"
+        "kmeans",
+        description="Clustering algorithm (kmeans, hierarchical, dbscan)",
     )
     min_cluster_size: int = Field(2, ge=1, description="Minimum cluster size")
-    limit: int = Field(10, ge=1, le=100, description="Number of results")
+    limit: int = Field(10, ge=1, le=100, description="Number of results to return")
 
 
 class FederatedSearchRequest(BaseModel):
-    """Request for federated search."""
+    """Request payload for federated search."""
 
     collections: list[str] = Field(..., description="Collections to search across")
     query: str = Field(..., description="Search query")
     federation_strategy: str = Field(
-        "parallel", description="Federation strategy (parallel, sequential, adaptive)"
+        "parallel",
+        description="Strategy (parallel, sequential, adaptive)",
     )
     result_merging: str = Field(
-        "score", description="Result merging strategy (score, relevance, round_robin)"
+        "score",
+        description="Merge strategy (score, relevance, round_robin)",
     )
     per_collection_limit: int = Field(
         5, ge=1, le=50, description="Results per collection"
@@ -73,58 +86,206 @@ class FederatedSearchRequest(BaseModel):
 
 
 class PersonalizedSearchRequest(BaseModel):
-    """Request for personalized search."""
+    """Request payload for personalized search."""
 
     collection_name: str = Field(..., description="Collection to search")
     query: str = Field(..., description="Search query")
-    user_id: str = Field(..., description="User ID for personalization")
+    user_id: str = Field(..., description="User identifier")
     personalization_strength: float = Field(
-        0.5, ge=0.0, le=1.0, description="Personalization strength"
+        0.5, ge=0.0, le=1.0, description="Strength of personalization"
     )
     use_history: bool = Field(True, description="Use search history")
-    use_preferences: bool = Field(True, description="Use user preferences")
+    use_preferences: bool = Field(True, description="Use preference signals")
     limit: int = Field(10, ge=1, le=100, description="Number of results")
 
 
 class OrchestrationRequest(BaseModel):
-    """Request for orchestrated search."""
+    """Request payload for orchestrated search."""
 
     collection_name: str = Field(..., description="Collection to search")
     query: str = Field(..., description="Search query")
-    stages: list[str] = Field(
-        None, description="Stages to include (if None, automatic selection)"
+    stages: list[str] | None = Field(
+        default=None,
+        description="Explicit pipeline stages (None => automatic selection)",
     )
     time_budget_ms: float = Field(
-        3000.0, ge=100.0, description="Time budget in milliseconds"
+        3000.0, ge=100.0, description="Processing time budget in milliseconds"
     )
     quality_threshold: float = Field(
-        0.7, ge=0.0, le=1.0, description="Quality threshold"
+        0.7, ge=0.0, le=1.0, description="Quality threshold for orchestration"
     )
     limit: int = Field(10, ge=1, le=100, description="Number of results")
 
 
-# Helper function to create the orchestrator
+# ---------------------------------------------------------------------------
+# Helper utilities
+# ---------------------------------------------------------------------------
+
+
 def create_orchestrator() -> SearchOrchestrator:
-    """Create and configure the search orchestrator."""
+    """Instantiate the shared search orchestrator used by MCP tools."""
+
     return SearchOrchestrator(enable_performance_optimization=True)
 
 
-# Individual tool implementations
+def _build_search_request(
+    *,
+    query: str,
+    collection_name: str | None,
+    limit: int,
+    overrides: dict[str, Any] | None = None,
+) -> SearchRequest:
+    """Create a SearchRequest with consistent defaults."""
+
+    params: dict[str, Any] = {
+        "query": query,
+        "collection_name": collection_name,
+        "limit": limit,
+        "offset": 0,
+        "mode": SearchMode.ENHANCED,
+        "pipeline": SearchPipeline.BALANCED,
+        "enable_expansion": False,
+        "enable_clustering": False,
+        "enable_personalization": False,
+        "enable_federation": False,
+        "enable_rag": False,
+        "rag_max_tokens": None,
+        "rag_temperature": None,
+        "rag_top_k": None,
+        "require_high_confidence": False,
+        "user_id": None,
+        "session_id": None,
+        "enable_caching": True,
+        "max_processing_time_ms": 3000.0,
+    }
+
+    if overrides:
+        params.update(overrides)
+
+    return SearchRequest(**params)
+
+
+def _safe_metadata(payload: ResultPayload) -> dict[str, Any]:
+    """Return payload metadata as a mutable dictionary."""
+
+    metadata = payload.get("metadata")
+    if isinstance(metadata, Mapping):
+        return dict(metadata)
+    return {}
+
+
+def _best_effort_score(value: Any) -> float:
+    """Convert arbitrary score values to floats safely."""
+
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _convert_results(
+    payloads: Iterable[ResultPayload],
+    *,
+    limit: int,
+    explanation_factory: ExplanationFactory | None = None,
+    global_metadata: Mapping[str, Any] | None = None,
+) -> list[SearchResult]:
+    """Convert orchestrator payloads into MCP SearchResult models."""
+
+    converted: list[SearchResult] = []
+    for payload in payloads:
+        metadata = _safe_metadata(payload)
+        if global_metadata:
+            metadata.update(global_metadata)
+
+        explanation = explanation_factory(payload) if explanation_factory else None
+        if explanation:
+            metadata.setdefault("explanation", explanation)
+
+        url = payload.get("url") or metadata.get("url")
+        title = payload.get("title")
+
+        converted.append(
+            SearchResult(
+                id=str(payload.get("id", "")),
+                content=str(payload.get("content", "")),
+                score=_best_effort_score(payload.get("score")),
+                title=title if isinstance(title, str) else None,
+                url=url if isinstance(url, str) else None,
+                metadata=metadata or None,
+            )
+        )
+
+        if len(converted) >= limit:
+            break
+
+    return converted
+
+
+async def _run_search(
+    orchestrator: SearchOrchestrator,
+    search_request: SearchRequest,
+) -> Any:
+    """Execute the orchestrator search call."""
+
+    return await orchestrator.search(search_request)
+
+
+# ---------------------------------------------------------------------------
+# Tool implementations
+# ---------------------------------------------------------------------------
+
+
 async def query_expansion_tool(
     request: QueryExpansionRequest,
     ctx: Context,
     orchestrator: SearchOrchestrator,
 ) -> list[SearchResult]:
-    """Implementation for query expansion."""
-    request_id = str(uuid4())
-    await ctx.info(f"Starting query expansion search {request_id}")
+    """Execute a search with query expansion enabled."""
+
+    search_request = _build_search_request(
+        query=request.query,
+        collection_name=request.collection_name,
+        limit=request.limit,
+        overrides={
+            "enable_expansion": True,
+            "enable_caching": True,
+            "max_processing_time_ms": 3000.0,
+        },
+    )
+
+    await ctx.info("Starting query expansion search")
 
     try:
-        return await _execute_query_expansion_search(request, orchestrator, ctx)
-    except Exception as e:
-        await ctx.error(f"Query expansion search failed: {e!s}")
-        logger.exception("Query expansion error: ")
+        result = await _run_search(orchestrator, search_request)
+    except Exception:  # pragma: no cover - surfaced via ctx.error
+        await ctx.error("Query expansion search failed")
+        logger.exception("Query expansion search failed")
         raise
+
+    expanded_query = (
+        result.expanded_query if hasattr(result, "expanded_query") else None
+    )
+
+    def explanation(_: ResultPayload) -> str | None:
+        if expanded_query:
+            return f"Expanded query: {expanded_query}"
+        return None
+
+    converted = _convert_results(
+        result.results,
+        limit=request.limit,
+        explanation_factory=explanation,
+        global_metadata={"expanded_query": expanded_query} if expanded_query else None,
+    )
+
+    processed_query = getattr(result, "query_processed", request.query)
+    await ctx.info(
+        "Query expansion search completed: "
+        f"{len(converted)} results (processed query: {processed_query})"
+    )
+
+    return converted
 
 
 async def clustered_search_tool(
@@ -132,16 +293,49 @@ async def clustered_search_tool(
     ctx: Context,
     orchestrator: SearchOrchestrator,
 ) -> list[SearchResult]:
-    """Implementation for clustered search."""
-    request_id = str(uuid4())
-    await ctx.info(f"Starting clustered search {request_id}")
+    """Execute a clustered search."""
+
+    search_request = _build_search_request(
+        query=request.query,
+        collection_name=request.collection_name,
+        limit=request.limit * 2,
+        overrides={
+            "enable_clustering": True,
+            "enable_expansion": True,
+            "max_processing_time_ms": 4000.0,
+        },
+    )
+
+    await ctx.info("Starting clustered search")
 
     try:
-        return await _execute_clustered_search(request, orchestrator, ctx)
-    except Exception as e:
-        await ctx.error(f"Clustered search failed: {e!s}")
-        logger.exception("Clustered search error: ")
+        result = await _run_search(orchestrator, search_request)
+    except Exception:  # pragma: no cover - surfaced via ctx.error
+        await ctx.error("Clustered search failed")
+        logger.exception("Clustered search failed")
         raise
+
+    def explanation(payload: ResultPayload) -> str | None:
+        cluster_id = payload.get("cluster_id")
+        if cluster_id is None:
+            return None
+        cluster_label = payload.get("cluster_label")
+        if isinstance(cluster_label, str) and cluster_label:
+            return f"Cluster {cluster_id}: {cluster_label}"
+        return f"Cluster {cluster_id}"
+
+    converted = _convert_results(
+        result.results,
+        limit=request.limit,
+        explanation_factory=explanation,
+    )
+
+    await ctx.info(
+        "Clustered search completed: "
+        f"{len(converted)} results (target clusters: {request.num_clusters})"
+    )
+
+    return converted
 
 
 async def federated_search_tool(
@@ -149,16 +343,50 @@ async def federated_search_tool(
     ctx: Context,
     orchestrator: SearchOrchestrator,
 ) -> list[SearchResult]:
-    """Implementation for federated search."""
-    request_id = str(uuid4())
-    await ctx.info(f"Starting federated search {request_id}")
+    """Execute a federated search across collections."""
+
+    primary_collection = request.collections[0] if request.collections else None
+
+    search_request = _build_search_request(
+        query=request.query,
+        collection_name=primary_collection,
+        limit=request.total_limit,
+        overrides={
+            "enable_federation": True,
+            "enable_expansion": True,
+            "max_processing_time_ms": 4000.0,
+        },
+    )
+
+    await ctx.info("Starting federated search")
 
     try:
-        return await _execute_federated_search(request, orchestrator, ctx)
-    except Exception as e:
-        await ctx.error(f"Federated search failed: {e!s}")
-        logger.exception("Federated search error: ")
+        result = await _run_search(orchestrator, search_request)
+    except Exception:  # pragma: no cover - surfaced via ctx.error
+        await ctx.error("Federated search failed")
+        logger.exception("Federated search failed")
         raise
+
+    def explanation(payload: ResultPayload) -> str | None:
+        metadata = payload.get("metadata")
+        if isinstance(metadata, Mapping):
+            collection = metadata.get("collection")
+            if isinstance(collection, str) and collection:
+                return f"From collection: {collection}"
+        return None
+
+    converted = _convert_results(
+        result.results,
+        limit=request.total_limit,
+        explanation_factory=explanation,
+    )
+
+    await ctx.info(
+        "Federated search completed: "
+        f"{len(converted)} results from {len(request.collections)} collections"
+    )
+
+    return converted
 
 
 async def personalized_search_tool(
@@ -166,16 +394,47 @@ async def personalized_search_tool(
     ctx: Context,
     orchestrator: SearchOrchestrator,
 ) -> list[SearchResult]:
-    """Implementation for personalized search."""
-    request_id = str(uuid4())
-    await ctx.info(f"Starting personalized search {request_id}")
+    """Execute a personalized search for the supplied user."""
+
+    search_request = _build_search_request(
+        query=request.query,
+        collection_name=request.collection_name,
+        limit=request.limit,
+        overrides={
+            "enable_personalization": True,
+            "user_id": request.user_id,
+            "enable_expansion": True,
+            "max_processing_time_ms": 3500.0,
+        },
+    )
+
+    await ctx.info("Starting personalized search")
 
     try:
-        return await _execute_personalized_search(request, orchestrator, ctx)
-    except Exception as e:
-        await ctx.error(f"Personalized search failed: {e!s}")
-        logger.exception("Personalized search error: ")
+        result = await _run_search(orchestrator, search_request)
+    except Exception:  # pragma: no cover - surfaced via ctx.error
+        await ctx.error("Personalized search failed")
+        logger.exception("Personalized search failed")
         raise
+
+    def explanation(payload: ResultPayload) -> str | None:
+        personalized_score = payload.get("personalized_score")
+        if personalized_score is None:
+            return None
+        return f"Personalized score: {_best_effort_score(personalized_score):.2f}"
+
+    converted = _convert_results(
+        result.results,
+        limit=request.limit,
+        explanation_factory=explanation,
+    )
+
+    await ctx.info(
+        "Personalized search completed: "
+        f"{len(converted)} results for user {request.user_id}"
+    )
+
+    return converted
 
 
 async def orchestrated_search_tool(
@@ -183,284 +442,106 @@ async def orchestrated_search_tool(
     ctx: Context,
     orchestrator: SearchOrchestrator,
 ) -> list[SearchResult]:
-    """Implementation for orchestrated search."""
-    request_id = str(uuid4())
-    await ctx.info(f"Starting orchestrated search {request_id}")
+    """Execute a fully orchestrated search pipeline."""
+
+    search_request = _build_search_request(
+        query=request.query,
+        collection_name=request.collection_name,
+        limit=request.limit,
+        overrides={
+            "enable_expansion": True,
+            "enable_clustering": True,
+            "enable_personalization": True,
+            "max_processing_time_ms": request.time_budget_ms,
+        },
+    )
+
+    await ctx.info("Starting orchestrated search")
 
     try:
-        return await _execute_orchestrated_search(request, orchestrator, ctx)
-    except Exception as e:
-        await ctx.error(f"Orchestrated search failed: {e!s}")
-        logger.exception("Orchestrated search error: ")
+        result = await _run_search(orchestrator, search_request)
+    except Exception:  # pragma: no cover - surfaced via ctx.error
+        await ctx.error("Orchestrated search failed")
+        logger.exception("Orchestrated search failed")
         raise
 
+    features_used = getattr(result, "features_used", [])
 
-def register_query_processing_tools(mcp, _client_manager: ClientManager):
-    """Register advanced query processing tools with the MCP server."""
-    # Initialize the orchestrator
+    def explanation(_: ResultPayload) -> str | None:
+        if not features_used:
+            return "Features: basic"
+        return f"Features: {', '.join(features_used)}"
+
+    converted = _convert_results(
+        result.results,
+        limit=request.limit,
+        explanation_factory=explanation,
+    )
+
+    processing_time = getattr(result, "processing_time_ms", 0.0)
+    await ctx.info(
+        "Orchestrated search completed: "
+        f"{len(converted)} results ({processing_time:.1f} ms)"
+    )
+
+    return converted
+
+
+# ---------------------------------------------------------------------------
+# Registration helpers
+# ---------------------------------------------------------------------------
+
+
+def register_query_processing_tools(mcp, _client_manager: ClientManager) -> None:
+    """Register query processing tools with the MCP server."""
+
     orchestrator = create_orchestrator()
 
     @mcp.tool()
     async def search_with_query_expansion(
         request: QueryExpansionRequest, ctx: Context
     ) -> list[SearchResult]:
-        """Search with automatic query expansion.
-
-        Enhance queries by adding synonyms, related terms, and contextual
-        expansions to improve recall and find more relevant results.
-        """
         return await query_expansion_tool(request, ctx, orchestrator)
 
     @mcp.tool()
     async def search_with_clustering(
         request: ClusteredSearchRequest, ctx: Context
     ) -> list[SearchResult]:
-        """Search with result clustering.
-
-        Group search results into meaningful clusters based on content
-        similarity, topics, or other features for better organization.
-        """
         return await clustered_search_tool(request, ctx, orchestrator)
 
     @mcp.tool()
     async def search_federated(
         request: FederatedSearchRequest, ctx: Context
     ) -> list[SearchResult]:
-        """Search across multiple collections simultaneously.
-
-        Execute federated search across different data sources with
-        intelligent result merging and ranking strategies.
-        """
         return await federated_search_tool(request, ctx, orchestrator)
 
     @mcp.tool()
     async def search_personalized(
         request: PersonalizedSearchRequest, ctx: Context
     ) -> list[SearchResult]:
-        """Search with user personalization.
-
-        Tailor search results based on user history, preferences, and
-        behavior patterns for more relevant results.
-        """
         return await personalized_search_tool(request, ctx, orchestrator)
 
     @mcp.tool()
     async def search_orchestrated(
         request: OrchestrationRequest, ctx: Context
     ) -> list[SearchResult]:
-        """Search with orchestration.
-
-        Select and coordinate multiple processing stages based on query
-        characteristics and time/quality constraints.
-        """
         return await orchestrated_search_tool(request, ctx, orchestrator)
 
-    logger.info("Advanced query processing tools registered successfully")
+    logger.info("Query processing tools registered successfully")
 
 
-# Helper functions
+def register_tools(mcp, client_manager: ClientManager) -> None:
+    """Match other tool modules' registration API for consistency."""
+
+    register_query_processing_tools(mcp, client_manager)
 
 
-async def _execute_query_expansion_search(
-    request, orchestrator: SearchOrchestrator, ctx: Context
-) -> list[SearchResult]:
-    """Execute query expansion search with organized error handling."""
-    # Create search request
-    search_request = SearchRequest(
-        query=request.query,
-        collection_name=request.collection_name,
-        limit=request.limit,
-        mode=SearchMode.ENHANCED,
-        pipeline=SearchPipeline.BALANCED,
-        enable_expansion=True,
-        enable_caching=True,
-    )
-
-    # Execute search
-    result = await orchestrator.search(search_request)
-
-    # Convert results
-    converted_results = []
-    for r in result.results:
-        search_result = SearchResult(
-            id=r.get("id", ""),
-            content=r.get("content", ""),
-            metadata=r.get("metadata", {}),
-            score=r.get("score", 0.0),
-            source=r.get("metadata", {}).get("source", "unknown"),
-            relevance_explanation=f"Query expanded: {result.expanded_query}"
-            if result.expanded_query
-            else "Query processed",
-        )
-        converted_results.append(search_result)
-
-    await ctx.info(
-        f"Query expansion search completed: {len(converted_results)} results "
-        f"(expanded query: {result.query_processed})"
-    )
-
-    return converted_results
-
-
-async def _execute_clustered_search(
-    request, orchestrator: SearchOrchestrator, ctx: Context
-) -> list[SearchResult]:
-    """Execute clustered search with organized error handling."""
-    # Create search request
-    search_request = SearchRequest(
-        query=request.query,
-        collection_name=request.collection_name,
-        limit=request.limit * 2,  # Get more results for clustering
-        mode=SearchMode.ENHANCED,
-        pipeline=SearchPipeline.BALANCED,
-        enable_clustering=True,
-        enable_caching=True,
-    )
-
-    # Execute search
-    result = await orchestrator.search(search_request)
-
-    # Convert results
-    converted_results = []
-    for r in result.results[: request.limit]:
-        cluster_info = r.get("cluster_id", "unclustered")
-        search_result = SearchResult(
-            id=r.get("id", ""),
-            content=r.get("content", ""),
-            metadata=r.get("metadata", {}),
-            score=r.get("score", 0.0),
-            source=r.get("metadata", {}).get("source", "unknown"),
-            relevance_explanation=f"Cluster: {cluster_info}",
-        )
-        converted_results.append(search_result)
-
-    await ctx.info(
-        f"Clustered search completed: {len(converted_results)} results "
-        f"in {request.num_clusters} clusters"
-    )
-
-    return converted_results
-
-
-async def _execute_federated_search(
-    request, orchestrator: SearchOrchestrator, ctx: Context
-) -> list[SearchResult]:
-    """Execute federated search with organized error handling."""
-    # Create search request
-    search_request = SearchRequest(
-        query=request.query,
-        collection_name=request.collections[0],  # Primary collection
-        limit=request.total_limit,
-        mode=SearchMode.ENHANCED,
-        pipeline=SearchPipeline.BALANCED,
-        enable_federation=True,
-        enable_caching=True,
-    )
-
-    # Execute search
-    result = await orchestrator.search(search_request)
-
-    # Convert results
-    converted_results = []
-    for r in result.results:
-        collection = r.get("metadata", {}).get("collection", "unknown")
-        search_result = SearchResult(
-            id=r.get("id", ""),
-            content=r.get("content", ""),
-            metadata=r.get("metadata", {}),
-            score=r.get("score", 0.0),
-            source=r.get("metadata", {}).get("source", "unknown"),
-            relevance_explanation=f"From: {collection}",
-        )
-        converted_results.append(search_result)
-
-    await ctx.info(
-        f"Federated search completed: {len(converted_results)} results "
-        f"from {len(request.collections)} collections"
-    )
-
-    return converted_results
-
-
-async def _execute_personalized_search(
-    request, orchestrator: SearchOrchestrator, ctx: Context
-) -> list[SearchResult]:
-    """Execute personalized search with organized error handling."""
-    # Create search request
-    search_request = SearchRequest(
-        query=request.query,
-        collection_name=request.collection_name,
-        limit=request.limit,
-        mode=SearchMode.ENHANCED,
-        pipeline=SearchPipeline.BALANCED,
-        user_id=request.user_id,
-        enable_personalization=True,
-        enable_caching=True,
-    )
-
-    # Execute search
-    result = await orchestrator.search(search_request)
-
-    # Convert results
-    converted_results = []
-    for r in result.results:
-        personalization_score = r.get("personalized_score", 0.0)
-        search_result = SearchResult(
-            id=r.get("id", ""),
-            content=r.get("content", ""),
-            metadata=r.get("metadata", {}),
-            score=r.get("score", 0.0),
-            source=r.get("metadata", {}).get("source", "unknown"),
-            relevance_explanation=f"Personalized (score: {personalization_score:.2f})",
-        )
-        converted_results.append(search_result)
-
-    await ctx.info(
-        f"Personalized search completed: {len(converted_results)} results "
-        f"for user {request.user_id}"
-    )
-
-    return converted_results
-
-
-async def _execute_orchestrated_search(
-    request, orchestrator: SearchOrchestrator, ctx: Context
-) -> list[SearchResult]:
-    """Execute orchestrated search with organized error handling."""
-    # Create search request
-    search_request = SearchRequest(
-        query=request.query,
-        collection_name=request.collection_name,
-        limit=request.limit,
-        mode=SearchMode.ENHANCED,
-        pipeline=SearchPipeline.BALANCED,
-        enable_caching=True,
-        max_processing_time_ms=request.time_budget_ms,
-    )
-
-    # Execute search
-    result = await orchestrator.search(search_request)
-
-    # Convert results
-    converted_results = []
-    for r in result.results:
-        pipeline_info = (
-            "Features: "
-            f"{', '.join(result.features_used) if result.features_used else 'basic'}"
-        )
-        search_result = SearchResult(
-            id=r.get("id", ""),
-            content=r.get("content", ""),
-            metadata=r.get("metadata", {}),
-            score=r.get("score", 0.0),
-            source=r.get("metadata", {}).get("source", "unknown"),
-            relevance_explanation=pipeline_info,
-        )
-        converted_results.append(search_result)
-
-    await ctx.info(
-        f"Orchestrated search completed: {len(converted_results)} results\n"
-        f"Processing time: {result.processing_time_ms:.1f}ms"
-    )
-
-    return converted_results
+__all__ = [
+    "ClusteredSearchRequest",
+    "FederatedSearchRequest",
+    "OrchestrationRequest",
+    "PersonalizedSearchRequest",
+    "QueryExpansionRequest",
+    "register_query_processing_tools",
+    "register_tools",
+]

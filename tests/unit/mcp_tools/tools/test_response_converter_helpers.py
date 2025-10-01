@@ -11,9 +11,9 @@ from unittest.mock import Mock
 import pytest
 
 from src.mcp_tools.models.responses import (
-    AdvancedQueryProcessingResponse,
     QueryIntentResult,
     QueryPreprocessingResult,
+    QueryProcessingResponse,
     SearchResult,
     SearchStrategyResult,
 )
@@ -22,7 +22,12 @@ from src.services.query_processing.models import (
     MatryoshkaDimension,
     QueryComplexity,
     QueryIntent,
+    QueryIntentClassification as ServiceQueryIntentClassification,
+    QueryPreprocessingResult as ServiceQueryPreprocessingResult,
+    QueryProcessingResponse as ServiceQueryProcessingResponse,
+    SearchRecord,
     SearchStrategy,
+    SearchStrategySelection as ServiceSearchStrategySelection,
 )
 
 
@@ -325,8 +330,8 @@ class TestCompleteResponseConversion:
                 "metadata": {"category": "test"},
             }
         ]
-        mock_response._total_results = 1
-        mock_response._total_processing_time_ms = 150.5
+        mock_response.total_results = 1
+        mock_response.total_processing_time_ms = 150.5
         mock_response.search_time_ms = 120.0
         mock_response.strategy_selection_time_ms = 30.5
         mock_response.confidence_score = 0.88
@@ -345,11 +350,11 @@ class TestCompleteResponseConversion:
         )
 
         # Verify complete response structure
-        assert isinstance(result, AdvancedQueryProcessingResponse)
+        assert isinstance(result, QueryProcessingResponse)
         assert result.success is True
-        assert result._total_results == 1
+        assert result.total_results == 1
         assert len(result.results) == 1
-        assert result._total_processing_time_ms == 150.5
+        assert result.total_processing_time_ms == 150.5
         assert result.confidence_score == 0.88
         assert result.quality_score == 0.92
         assert result.fallback_used is False
@@ -372,8 +377,8 @@ class TestCompleteResponseConversion:
         mock_response = Mock()
         mock_response.success = False
         mock_response.results = []
-        mock_response._total_results = 0
-        mock_response._total_processing_time_ms = 0.0
+        mock_response.total_results = 0
+        mock_response.total_processing_time_ms = 0.0
         mock_response.search_time_ms = 0.0
         mock_response.strategy_selection_time_ms = 0.0
         mock_response.confidence_score = 0.0
@@ -391,8 +396,156 @@ class TestCompleteResponseConversion:
         )
 
         assert result.success is False
-        assert result._total_results == 0
+        assert result.total_results == 0
         assert result.error == "Processing failed"
         assert result.intent_classification is None
         assert result.preprocessing_result is None
         assert result.strategy_selection is None
+
+    def test_query_processing_contract_snapshot(self, response_converter):
+        """Validate JSON contract emitted for query processing response."""
+
+        intent = ServiceQueryIntentClassification(
+            primary_intent=QueryIntent.PROCEDURAL,
+            secondary_intents=[QueryIntent.FACTUAL],
+            confidence_scores={
+                QueryIntent.PROCEDURAL: 0.9,
+                QueryIntent.FACTUAL: 0.7,
+            },
+            complexity_level=QueryComplexity.MODERATE,
+            domain_category="web",
+            classification_reasoning="Procedural guidance required",
+            requires_context=False,
+            suggested_followups=["Provide auth best practices"],
+        )
+
+        preprocessing = ServiceQueryPreprocessingResult(
+            original_query="How to secure FastAPI?",
+            processed_query="secure fastapi",
+            corrections_applied=["FastAPI"],
+            expansions_added=["oauth", "jwt"],
+            normalization_applied=True,
+            context_extracted={"framework": "fastapi", "language": "python"},
+            preprocessing_time_ms=32.5,
+        )
+
+        strategy = ServiceSearchStrategySelection(
+            primary_strategy=SearchStrategy.HYBRID,
+            fallback_strategies=[SearchStrategy.SEMANTIC],
+            matryoshka_dimension=MatryoshkaDimension.MEDIUM,
+            confidence=0.82,
+            reasoning="Hybrid balances recall and precision",
+            estimated_quality=0.9,
+            estimated_latency_ms=210.0,
+        )
+
+        service_response = ServiceQueryProcessingResponse(
+            success=True,
+            results=[
+                SearchRecord.model_validate(
+                    {
+                        "id": "doc-1",
+                        "content": "Secure FastAPI deployment checklist",
+                        "score": 0.93,
+                        "url": "https://example.com/docs/secure-fastapi",
+                        "title": "Secure FastAPI",
+                        "metadata": {
+                            "source": "docs",
+                            "category": "security",
+                            "language": "python",
+                        },
+                    }
+                )
+            ],
+            total_results=1,
+            intent_classification=intent,
+            preprocessing_result=preprocessing,
+            strategy_selection=strategy,
+            total_processing_time_ms=148.0,
+            search_time_ms=115.0,
+            strategy_selection_time_ms=18.0,
+            confidence_score=0.87,
+            quality_score=0.91,
+            processing_steps=["preprocess", "classify", "search"],
+            fallback_used=False,
+            cache_hit=False,
+            error=None,
+            warnings=["cache_miss"],
+        )
+
+        mcp_response = response_converter.convert_to_mcp_response(
+            service_response, include_analytics=True
+        )
+        payload = mcp_response.model_dump(mode="json", exclude_unset=True)
+
+        expected_payload = {
+            "success": True,
+            "results": [
+                {
+                    "id": "doc-1",
+                    "content": "Secure FastAPI deployment checklist",
+                    "score": 0.93,
+                    "url": "https://example.com/docs/secure-fastapi",
+                    "title": "Secure FastAPI",
+                    "metadata": {
+                        "source": "docs",
+                        "category": "security",
+                        "language": "python",
+                    },
+                    "content_type": None,
+                    "content_confidence": None,
+                    "quality_overall": None,
+                    "quality_completeness": None,
+                    "quality_relevance": None,
+                    "quality_confidence": None,
+                    "content_intelligence_analyzed": None,
+                }
+            ],
+            "total_results": 1,
+            "intent_classification": {
+                "primary_intent": "procedural",
+                "secondary_intents": ["factual"],
+                "confidence_scores": {
+                    "procedural": 0.9,
+                    "factual": 0.7,
+                },
+                "complexity_level": "moderate",
+                "domain_category": "web",
+                "classification_reasoning": "Procedural guidance required",
+                "requires_context": False,
+                "suggested_followups": ["Provide auth best practices"],
+            },
+            "preprocessing_result": {
+                "original_query": "How to secure FastAPI?",
+                "processed_query": "secure fastapi",
+                "corrections_applied": ["FastAPI"],
+                "expansions_added": ["oauth", "jwt"],
+                "normalization_applied": True,
+                "context_extracted": {
+                    "framework": "fastapi",
+                    "language": "python",
+                },
+                "preprocessing_time_ms": 32.5,
+            },
+            "strategy_selection": {
+                "primary_strategy": "hybrid",
+                "fallback_strategies": ["semantic"],
+                "matryoshka_dimension": 768,
+                "confidence": 0.82,
+                "reasoning": "Hybrid balances recall and precision",
+                "estimated_quality": 0.9,
+                "estimated_latency_ms": 210.0,
+            },
+            "total_processing_time_ms": 148.0,
+            "search_time_ms": 115.0,
+            "strategy_selection_time_ms": 18.0,
+            "confidence_score": 0.87,
+            "quality_score": 0.91,
+            "processing_steps": ["preprocess", "classify", "search"],
+            "fallback_used": False,
+            "cache_hit": False,
+            "error": None,
+            "warnings": ["cache_miss"],
+        }
+
+        assert payload == expected_payload

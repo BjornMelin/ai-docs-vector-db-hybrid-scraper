@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping, Sequence
+from datetime import UTC, datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
@@ -17,6 +18,11 @@ from src.services.errors import EmbeddingServiceError
 
 from .adapter import QdrantVectorAdapter
 from .adapter_base import CollectionSchema, TextDocument, VectorMatch, VectorRecord
+from .payload_schema import (
+    CanonicalPayload,
+    PayloadValidationError,
+    ensure_canonical_payload,
+)
 
 
 if TYPE_CHECKING:
@@ -153,13 +159,29 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         """Add a single document to the store."""
 
         document_id = str(uuid4())
+        normalized_metadata = dict(metadata or {})
+        normalized_metadata.setdefault("doc_id", document_id)
+        normalized_metadata.setdefault(
+            "chunk_id", normalized_metadata.get("chunk_index", 0)
+        )
+        normalized_metadata.setdefault(
+            "tenant", normalized_metadata.get("tenant") or "default"
+        )
+        normalized_metadata.setdefault(
+            "source",
+            normalized_metadata.get("source")
+            or normalized_metadata.get("url")
+            or "inline",
+        )
+        normalized_metadata.setdefault("created_at", datetime.now(UTC).isoformat())
+
         await self.upsert_documents(
             collection,
             [
                 TextDocument(
                     id=document_id,
                     content=content,
-                    metadata=dict(metadata or {}),
+                    metadata=normalized_metadata,
                 )
             ],
         )
@@ -190,14 +212,27 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         except Exception as exc:  # pragma: no cover - provider-specific failures
             msg = f"Failed to generate embeddings: {exc}"
             raise EmbeddingServiceError(msg) from exc
-        records = [
-            VectorRecord(
-                id=document.id,
-                vector=vector,
-                payload=document.metadata,
+
+        records: list[VectorRecord] = []
+        for document, vector in zip(documents, embeddings, strict=True):
+            try:
+                canonical: CanonicalPayload = ensure_canonical_payload(
+                    document.metadata,
+                    content=document.content,
+                    id_hint=document.id,
+                )
+            except PayloadValidationError as exc:  # pragma: no cover - defensive
+                msg = f"Invalid payload for document '{document.id}': {exc}"
+                raise EmbeddingServiceError(msg) from exc
+
+            records.append(
+                VectorRecord(
+                    id=canonical.point_id,
+                    vector=vector,
+                    payload=canonical.payload,
+                )
             )
-            for document, vector in zip(documents, embeddings, strict=True)
-        ]
+
         await adapter.upsert(collection, records, batch_size=batch_size)
 
     async def upsert_vectors(

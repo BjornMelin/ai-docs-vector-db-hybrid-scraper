@@ -1,23 +1,14 @@
-"""Unit tests for ClientManager with proper dependency injection patterns.
-
-This test module demonstrates  testing patterns including:
-- Dependency injection for  testability
-- Test doubles (fakes, stubs, mocks) for isolation
-- Comprehensive coverage of functionality
-- Clear test organization and naming
-"""
+"""Modern unit tests for ClientManager with dependency injection container mocking."""
 
 import asyncio
 import time
-from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.config import Config, DatabaseConfig
+from src.config import Config
 from src.infrastructure.client_manager import ClientManager
+from src.infrastructure.container import ApplicationContainer
 from src.infrastructure.shared import CircuitBreaker, ClientHealth, ClientState
 from src.services.errors import APIError
 
@@ -26,88 +17,17 @@ class TestError(Exception):
     """Custom exception for this module."""
 
 
-# Abstract interfaces for  testability
-class ClientFactoryInterface(ABC):
-    """Abstract interface for creating API clients."""
+class MockClientProvider:
+    """Mock client provider for testing."""
 
-    @abstractmethod
-    async def create_qdrant_client(self, config: Config) -> Any:
-        """Create Qdrant client instance."""
+    def __init__(self, client=None):
+        self.client = client or AsyncMock()
+        self._healthy = True
 
-    @abstractmethod
-    async def create_openai_client(self, config: Config) -> Any:
-        """Create OpenAI client instance."""
-
-    @abstractmethod
-    async def create_redis_client(self, config: Config) -> Any:
-        """Create Redis client instance."""
-
-    @abstractmethod
-    async def create_firecrawl_client(self, config: Config) -> Any:
-        """Create Firecrawl client instance."""
+    async def health_check(self):
+        return self._healthy
 
 
-# Test doubles
-@dataclass
-class FakeQdrantClient:
-    """Fake Qdrant client for testing."""
-
-    url: str
-    api_key: str | None = None
-    is_connected: bool = True
-    collections: list[str] = None
-
-    def __post_init__(self):
-        if self.collections is None:
-            self.collections = []
-
-    async def get_collections(self):
-        """Simulate getting collections."""
-        if not self.is_connected:
-            msg = "Not connected to Qdrant"
-            raise ConnectionError(msg)
-        return self.collections
-
-    async def close(self):
-        """Simulate closing connection."""
-        self.is_connected = False
-
-
-class StubClientFactory(ClientFactoryInterface):
-    """Stub factory that returns predetermined test doubles."""
-
-    def __init__(self):
-        self.qdrant_client = None
-        self.openai_client = None
-        self.redis_client = None
-        self.firecrawl_client = None
-
-    async def create_qdrant_client(self, config: Config) -> Any:
-        if self.qdrant_client is None:
-            self.qdrant_client = FakeQdrantClient(
-                url=config.qdrant.url,
-                api_key=config.qdrant.api_key,
-                is_connected=True,
-            )
-        return self.qdrant_client
-
-    async def create_openai_client(self, _config: Config) -> Any:
-        if self.openai_client is None:
-            self.openai_client = MagicMock()
-        return self.openai_client
-
-    async def create_redis_client(self, _config: Config) -> Any:
-        if self.redis_client is None:
-            self.redis_client = AsyncMock()
-        return self.redis_client
-
-    async def create_firecrawl_client(self, _config: Config) -> Any:
-        if self.firecrawl_client is None:
-            self.firecrawl_client = AsyncMock()
-        return self.firecrawl_client
-
-
-# Fixtures
 @pytest.fixture(autouse=True)
 async def ensure_clean_singleton():
     """Ensure clean singleton state before and after each test."""
@@ -117,51 +37,62 @@ async def ensure_clean_singleton():
 
 
 @pytest.fixture
-def config():
+def test_config():
     """Create test configuration."""
     config = Config()
     config.openai.api_key = "test-openai-key"
     config.firecrawl.api_key = "test-firecrawl-key"
     config.cache.enable_caching = False
+    config.qdrant.url = "http://localhost:6333"
+    config.qdrant.api_key = "test-qdrant-key"
+    config.cache.redis_url = "redis://localhost:6379"
     return config
 
 
 @pytest.fixture
-def stub_factory():
-    """Create stub client factory."""
-    return StubClientFactory()
+async def mock_container(test_config):
+    """Create mock dependency injection container."""
+    container = ApplicationContainer()
+    container.config.override(test_config)
+
+    # Create and override providers with mocks
+    mock_openai_provider = MockClientProvider(AsyncMock())
+    mock_qdrant_provider = MockClientProvider(AsyncMock())
+    mock_redis_provider = MockClientProvider(AsyncMock())
+    mock_firecrawl_provider = MockClientProvider(AsyncMock())
+    mock_http_provider = MockClientProvider(AsyncMock())
+
+    container.openai_provider.override(mock_openai_provider)
+    container.qdrant_provider.override(mock_qdrant_provider)
+    container.redis_provider.override(mock_redis_provider)
+    container.firecrawl_provider.override(mock_firecrawl_provider)
+    container.http_provider.override(mock_http_provider)
+
+    # Mock parallel processing system
+    mock_parallel_system = AsyncMock()
+    mock_parallel_system.get_system_status.return_value = {"status": "healthy"}
+    container.parallel_processing_system.override(mock_parallel_system)
+
+    return container
 
 
 @pytest.fixture
-async def client_manager_with_stub(config, stub_factory):
-    """Create ClientManager with stub factory injection."""
-    # Use thread-safe reset
+async def client_manager_with_mocks(mock_container):
+    """Create ClientManager with mocked dependency injection container."""
     ClientManager.reset_singleton()
 
-    manager = ClientManager(config)
+    with patch(
+        "src.infrastructure.client_manager.get_container", return_value=mock_container
+    ):
+        manager = ClientManager()
+        await manager.initialize()
 
-    # Inject stub factory methods with proper signatures
-    manager._create_qdrant_client = lambda: stub_factory.create_qdrant_client(config)
-    manager._create_openai_client = lambda: stub_factory.create_openai_client(config)
-    manager._create_redis_client = lambda: stub_factory.create_redis_client(config)
-    manager._create_firecrawl_client = lambda: stub_factory.create_firecrawl_client(
-        config
-    )
+        yield manager
 
-    # Mock get_task_queue_manager if needed
-    async def mock_get_task_queue_manager():
-        return AsyncMock()
-
-    manager.get_task_queue_manager = mock_get_task_queue_manager
-
-    yield manager
-
-    # Cleanup
-    await manager.cleanup()
-    ClientManager.reset_singleton()
+        await manager.cleanup()
+        ClientManager.reset_singleton()
 
 
-# Test cases
 class TestClientState:
     """Test ClientState enum values."""
 
@@ -216,7 +147,7 @@ class TestCircuitBreaker:
         """Create circuit breaker with test parameters."""
         return CircuitBreaker(
             failure_threshold=3,
-            recovery_timeout=1.0,  # 1 second for faster tests
+            recovery_timeout=1.0,
             half_open_requests=1,
         )
 
@@ -236,235 +167,226 @@ class TestCircuitBreaker:
         """Test circuit breaker opens after threshold failures."""
 
         async def failing_func():
-            msg = "Test failure"
-            raise TestError(msg)
+            raise ConnectionError("Test connection failure")
 
-        # Fail multiple times - circuit breaker should pass through the original
-        # exception
-        for _ in range(3):  # Fixture failure threshold is 3
-            with pytest.raises(Exception, match="Test failure"):
+        for _ in range(3):
+            with pytest.raises(ConnectionError):
                 await circuit_breaker.call(failing_func)
 
-        # Circuit should be open now
-        assert circuit_breaker._state == ClientState.FAILED
+        assert circuit_breaker.state == ClientState.FAILED
 
-        # Next call should fail immediately with circuit breaker error
+        async def success_func():
+            return "success"
+
         with pytest.raises(APIError, match="Circuit breaker is open"):
-            await circuit_breaker.call(failing_func)
+            await circuit_breaker.call(success_func)
 
     @pytest.mark.asyncio
     async def test_circuit_breaker_recovery(self, circuit_breaker):
         """Test circuit breaker recovery after timeout."""
 
         async def failing_func():
-            msg = "Test failure"
-            raise RuntimeError(msg)
+            raise ConnectionError("Test connection failure")
 
         async def success_func():
-            return "recovered"
+            return "success"
 
-        # Open the circuit
         for _ in range(3):
-            with pytest.raises(RuntimeError):
+            with pytest.raises(ConnectionError):
                 await circuit_breaker.call(failing_func)
 
-        # Wait for recovery timeout
+        assert circuit_breaker.state == ClientState.FAILED
+
         await asyncio.sleep(1.1)
 
-        # Should be in half-open state
-        assert circuit_breaker.state == ClientState.DEGRADED
-
-        # Successful call should close circuit
         result = await circuit_breaker.call(success_func)
-        assert result == "recovered"
-        assert circuit_breaker._state == ClientState.HEALTHY
+        assert result == "success"
+        assert circuit_breaker.state == ClientState.HEALTHY
 
 
 class TestClientManagerInitialization:
     """Test ClientManager initialization and singleton pattern."""
 
     @pytest.mark.asyncio
-    async def test_singleton_pattern(self, config):
+    async def test_singleton_pattern(self):
         """Test that ClientManager follows singleton pattern."""
         ClientManager.reset_singleton()
 
-        manager1 = ClientManager(config)
-        manager2 = ClientManager(config)
+        with patch(
+            "src.infrastructure.client_manager.get_container"
+        ) as mock_get_container:
+            mock_container = MagicMock()
+            mock_get_container.return_value = mock_container
 
-        assert manager1 is manager2
+            manager1 = ClientManager()
+            manager2 = ClientManager()
 
-        # Cleanup
-        await manager1.cleanup()
+            assert manager1 is manager2
+
         ClientManager.reset_singleton()
 
     @pytest.mark.asyncio
-    async def test_initialization_with_config(self, config):
-        """Test initialization with configuration."""
-        ClientManager.reset_singleton()
-
-        manager = ClientManager(config)
-
-        assert manager.config == config
-        assert manager._clients == {}
-        assert manager._health == {}
-        assert manager._circuit_breakers == {}
-
-        # Cleanup
-        await manager.cleanup()
-        ClientManager.reset_singleton()
+    async def test_initialization_with_dependency_injection(
+        self, client_manager_with_mocks
+    ):
+        """Test initialization with dependency injection container."""
+        assert client_manager_with_mocks.is_initialized
+        assert client_manager_with_mocks._providers is not None
+        assert len(client_manager_with_mocks._providers) == 5
 
 
-class TestClientManagerClientCreation:
-    """Test client creation and management."""
+class TestClientManagerClientAccess:
+    """Test client access methods using dependency injection."""
 
     @pytest.mark.asyncio
-    async def test_get_qdrant_client(self, client_manager_with_stub, _stub_factory):
-        """Test Qdrant client creation with stub."""
-        client = await client_manager_with_stub.get_qdrant_client()
-
-        assert isinstance(client, FakeQdrantClient)
-        assert client.url == client_manager_with_stub.config.qdrant.url
-        assert client.is_connected
-
-        # Should return same instance on second call
-        client2 = await client_manager_with_stub.get_qdrant_client()
-        assert client is client2
-
-    @pytest.mark.asyncio
-    async def test_get_openai_client_with_api_key(self, client_manager_with_stub):
-        """Test OpenAI client creation when API key exists."""
-        client = await client_manager_with_stub.get_openai_client()
-
+    async def test_get_qdrant_client(self, client_manager_with_mocks):
+        """Test Qdrant client access through dependency injection."""
+        client = await client_manager_with_mocks.get_qdrant_client()
         assert client is not None
-        assert isinstance(client, MagicMock)
 
     @pytest.mark.asyncio
-    async def test_get_openai_client_without_api_key(self, config, _stub_factory):
-        """Test OpenAI client returns None without API key."""
-        config.openai.api_key = None
-        ClientManager.reset_singleton()
-
-        manager = ClientManager(config)
-        client = await manager.get_openai_client()
-
-        assert client is None
-
-        # Cleanup
-        await manager.cleanup()
-        ClientManager.reset_singleton()
+    async def test_get_openai_client(self, client_manager_with_mocks):
+        """Test OpenAI client access through dependency injection."""
+        client = await client_manager_with_mocks.get_openai_client()
+        assert client is not None
 
     @pytest.mark.asyncio
-    async def test_get_qdrant_service(self, client_manager_with_stub):
-        """Test Qdrant service creation."""
-        with patch("src.services.vector_db.service.QdrantService") as mock_service:
-            mock_instance = AsyncMock()
-            mock_service.return_value = mock_instance
-
-            service = await client_manager_with_stub.get_qdrant_service()
-
-            assert service is mock_instance
-            mock_instance.initialize.assert_called_once()
+    async def test_get_redis_client(self, client_manager_with_mocks):
+        """Test Redis client access through dependency injection."""
+        client = await client_manager_with_mocks.get_redis_client()
+        assert client is not None
 
     @pytest.mark.asyncio
-    async def test_get_embedding_manager(self, client_manager_with_stub):
-        """Test EmbeddingManager creation."""
-        with patch("src.services.embeddings.manager.EmbeddingManager") as mock_manager:
-            mock_instance = MagicMock()
-            mock_instance.initialize = AsyncMock()
-            mock_manager.return_value = mock_instance
-
-            manager = await client_manager_with_stub.get_embedding_manager()
-
-            assert manager is mock_instance
-            mock_manager.assert_called_once()
-
-
-class TestClientManagerHealthChecks:
-    """Test health monitoring functionality."""
+    async def test_get_firecrawl_client(self, client_manager_with_mocks):
+        """Test Firecrawl client access through dependency injection."""
+        client = await client_manager_with_mocks.get_firecrawl_client()
+        assert client is not None
 
     @pytest.mark.asyncio
-    async def test_health_check_initialization(self, client_manager_with_stub):
-        """Test health check task starts after initialization."""
-        # Initialize manager to start health checks
-        await client_manager_with_stub.initialize()
+    async def test_get_http_client(self, client_manager_with_mocks):
+        """Test HTTP client access through dependency injection."""
+        client = await client_manager_with_mocks.get_http_client()
+        assert client is not None
 
-        assert client_manager_with_stub._health_check_task is not None
-        assert not client_manager_with_stub._health_check_task.done()
 
-    @pytest.mark.asyncio
-    async def test_check_qdrant_health_success(
-        self, client_manager_with_stub, _stub_factory
-    ):
-        """Test successful Qdrant health check."""
-        # Create client first
-        await client_manager_with_stub.get_qdrant_client()
-
-        # Check health
-        await client_manager_with_stub._check_qdrant_health()
-
-        health = client_manager_with_stub._health.get("qdrant")
-        assert health is not None
-        assert health.state == ClientState.HEALTHY
-        assert health.consecutive_failures == 0
+class TestClientManagerServiceIntegration:
+    """Test service integration methods."""
 
     @pytest.mark.asyncio
-    async def test_check_qdrant_health_failure(
-        self, client_manager_with_stub, _stub_factory
-    ):
-        """Test failed Qdrant health check."""
-        # Create client first
-        client = await client_manager_with_stub.get_qdrant_client()
+    async def test_get_vector_store_service(self, client_manager_with_mocks):
+        """Test vector store service creation and caching."""
+        with (
+            patch(
+                "src.infrastructure.client_manager.FastEmbedProvider"
+            ) as mock_embed_cls,
+            patch(
+                "src.infrastructure.client_manager.VectorStoreService"
+            ) as mock_service_cls,
+        ):
+            mock_embed = MagicMock()
+            mock_embed_cls.return_value = mock_embed
 
-        # Make client fail
-        client.is_connected = False
+            mock_service = MagicMock()
+            mock_service.initialize = AsyncMock()
+            mock_service.cleanup = AsyncMock()
+            mock_service_cls.return_value = mock_service
 
-        # Manually run health check to update status
-        await client_manager_with_stub._run_single_health_check(
-            "qdrant", client_manager_with_stub._check_qdrant_health
-        )
+            service1 = await client_manager_with_mocks.get_vector_store_service()
+            assert service1 is mock_service
+            assert mock_service.initialize.await_count == 1
 
-        health = client_manager_with_stub._health.get("qdrant")
-        assert health is not None
-        assert health.state == ClientState.DEGRADED
-        assert health.consecutive_failures == 1
-        assert health.last_error is not None
+            service2 = await client_manager_with_mocks.get_vector_store_service()
+            assert service2 is service1
+            assert mock_service.initialize.await_count == 1
 
     @pytest.mark.asyncio
-    async def test_get_health_status(self, client_manager_with_stub):
-        """Test getting overall health status."""
-        # Create some clients
-        await client_manager_with_stub.get_qdrant_client()
+    async def test_get_parallel_processing_system(self, client_manager_with_mocks):
+        """Test parallel processing system access."""
+        system = await client_manager_with_mocks.get_parallel_processing_system()
+        assert system is not None
 
-        # Get health status
-        status = await client_manager_with_stub.get_health_status()
+    @pytest.mark.asyncio
+    async def test_get_browser_automation_router(self, client_manager_with_mocks):
+        """Test browser automation router creation and caching."""
+        with patch(
+            "src.infrastructure.client_manager.AutomationRouter"
+        ) as mock_router_class:
+            mock_router = MagicMock()
+            mock_router.initialize = AsyncMock()
+            mock_router_class.return_value = mock_router
+
+            router1 = await client_manager_with_mocks.get_browser_automation_router()
+            assert router1 is mock_router
+            mock_router.initialize.assert_awaited_once()
+
+            router2 = await client_manager_with_mocks.get_browser_automation_router()
+            assert router2 is router1
+            mock_router.initialize.assert_awaited_once()
+
+
+class TestClientManagerHealthAndStatus:
+    """Test health monitoring and status methods."""
+
+    @pytest.mark.asyncio
+    async def test_get_health_status(self, client_manager_with_mocks):
+        """Test health status retrieval."""
+        with patch(
+            "src.infrastructure.client_manager.deps_get_health_status",
+            new_callable=AsyncMock,
+        ) as mock_health_func:
+            mock_health_func.return_value = {"test": "healthy"}
+
+            status = await client_manager_with_mocks.get_health_status()
+            assert status == {"test": "healthy"}
+            mock_health_func.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_get_overall_health(self, client_manager_with_mocks):
+        """Test overall health retrieval."""
+        with patch(
+            "src.infrastructure.client_manager.deps_get_overall_health",
+            new_callable=AsyncMock,
+        ) as mock_overall_func:
+            mock_overall_func.return_value = {"healthy": True}
+
+            health = await client_manager_with_mocks.get_overall_health()
+            assert health == {"healthy": True}
+            mock_overall_func.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_get_service_status(self, client_manager_with_mocks):
+        """Test service status information."""
+        status = await client_manager_with_mocks.get_service_status()
 
         assert isinstance(status, dict)
-        assert "qdrant" in status
-        assert "state" in status["qdrant"]
-        assert "last_check" in status["qdrant"]
+        assert "initialized" in status
+        assert "mode" in status
+        assert "providers" in status
+        assert status["mode"] == "function_based_dependencies"
 
 
 class TestClientManagerContextManager:
     """Test context manager functionality."""
 
     @pytest.mark.asyncio
-    async def test_managed_client_qdrant(self, client_manager_with_stub):
-        """Test managed client context for Qdrant."""
-        async with client_manager_with_stub.managed_client("qdrant") as client:
-            assert isinstance(client, FakeQdrantClient)
-            assert client.is_connected
+    async def test_async_context_manager(self, client_manager_with_mocks):
+        """Test async context manager protocol."""
+        async with client_manager_with_mocks as manager:
+            assert manager.is_initialized
+
+        assert not client_manager_with_mocks._initialized
 
     @pytest.mark.asyncio
-    async def test_managed_client_openai(self, client_manager_with_stub):
-        """Test managed client context for OpenAI."""
-        async with client_manager_with_stub.managed_client("openai") as client:
+    async def test_managed_client_context(self, client_manager_with_mocks):
+        """Test managed client context manager."""
+        async with client_manager_with_mocks.managed_client("qdrant") as client:
             assert client is not None
 
     @pytest.mark.asyncio
-    async def test_managed_client_invalid_type(self, client_manager_with_stub):
-        """Test managed client with invalid type."""
+    async def test_managed_client_invalid_type(self, client_manager_with_mocks):
+        """Test managed client with invalid type raises ValueError."""
         with pytest.raises(ValueError, match="Unknown client type"):
-            async with client_manager_with_stub.managed_client("invalid"):
+            async with client_manager_with_mocks.managed_client("invalid_type"):
                 pass
 
 
@@ -472,457 +394,102 @@ class TestClientManagerCleanup:
     """Test cleanup and resource management."""
 
     @pytest.mark.asyncio
-    async def test_cleanup_closes_clients(
-        self, client_manager_with_stub, _stub_factory
-    ):
-        """Test cleanup properly closes all clients."""
-        # Create clients
-        qdrant_client = await client_manager_with_stub.get_qdrant_client()
+    async def test_cleanup_resets_state(self, client_manager_with_mocks):
+        """Test that cleanup properly resets manager state."""
+        assert client_manager_with_mocks.is_initialized
 
-        # Cleanup
-        await client_manager_with_stub.cleanup()
+        await client_manager_with_mocks.cleanup()
 
-        # Verify client was closed
-        assert not qdrant_client.is_connected
-        assert client_manager_with_stub._clients == {}
+        assert not client_manager_with_mocks._initialized
+        assert client_manager_with_mocks._providers == {}
+        assert client_manager_with_mocks._parallel_processing_system is None
 
     @pytest.mark.asyncio
-    async def test_cleanup_cancels_health_check(self, client_manager_with_stub):
-        """Test cleanup cancels health check task."""
-        # Initialize to start health checks
-        await client_manager_with_stub.initialize()
+    async def test_cleanup_with_vector_store_service(self, client_manager_with_mocks):
+        """Test cleanup when vector store service exists."""
+        with (
+            patch(
+                "src.infrastructure.client_manager.FastEmbedProvider"
+            ) as mock_embed_cls,
+            patch(
+                "src.infrastructure.client_manager.VectorStoreService"
+            ) as mock_service_cls,
+        ):
+            mock_embed_cls.return_value = MagicMock()
 
-        health_task = client_manager_with_stub._health_check_task
-        assert health_task is not None
+            mock_service = MagicMock()
+            mock_service.initialize = AsyncMock()
+            mock_service.cleanup = AsyncMock()
+            mock_service_cls.return_value = mock_service
 
-        # Cleanup
-        await client_manager_with_stub.cleanup()
+            await client_manager_with_mocks.get_vector_store_service()
+            assert client_manager_with_mocks._vector_store_service is mock_service
 
-        # Task should be cancelled
-        assert health_task.cancelled()
-
-    @pytest.mark.asyncio
-    async def test_cleanup_handles_exceptions(self, client_manager_with_stub):
-        """Test cleanup handles client close exceptions gracefully."""
-        # Create a client that fails to close
-        failing_client = AsyncMock()
-        failing_client.close.side_effect = Exception("Close failed")
-        client_manager_with_stub._clients["test"] = failing_client
-
-        # Cleanup should not raise
-        await client_manager_with_stub.cleanup()
-
-        # Client should be removed despite error
-        assert "test" not in client_manager_with_stub._clients
+            await client_manager_with_mocks.cleanup()
+            mock_service.cleanup.assert_awaited_once()
 
 
 class TestClientManagerErrorHandling:
     """Test error handling and resilience."""
 
     @pytest.mark.asyncio
-    async def test_circuit_breaker_integration(self, config):
-        """Test circuit breaker prevents cascading failures."""
-        ClientManager.reset_singleton()
-        manager = ClientManager(config)
+    async def test_get_qdrant_client_provider_error(self, client_manager_with_mocks):
+        """Test error when Qdrant provider is not available."""
+        original_provider = client_manager_with_mocks._providers.get("qdrant")
+        client_manager_with_mocks._providers["qdrant"] = None
 
-        # Mock client creation to fail
-        async def failing_create():
-            msg = "Cannot connect"
-            raise ConnectionError(msg)
-
-        manager._create_qdrant_client = failing_create
-
-        # No need to set failure threshold - default is already 5
-
-        # First few attempts should raise the original error (default threshold is 5)
-        for _ in range(5):
-            with pytest.raises(APIError, match="Failed to create qdrant client"):
-                await manager.get_qdrant_client()
-
-        # Circuit should be open now, next attempt fails fast
-        # The error might be wrapped in the APIError message
-        with pytest.raises(APIError) as excinfo:
-            await manager.get_qdrant_client()
-
-        # Check that circuit breaker is mentioned in the error
-        assert "circuit breaker is open" in str(excinfo.value).lower()
-
-        # Cleanup
-        await manager.cleanup()
-        ClientManager.reset_singleton()
+        try:
+            with pytest.raises(APIError, match="Qdrant client provider not available"):
+                await client_manager_with_mocks.get_qdrant_client()
+        finally:
+            if original_provider:
+                client_manager_with_mocks._providers["qdrant"] = original_provider
 
     @pytest.mark.asyncio
-    async def test_health_check_error_handling(self, client_manager_with_stub):
-        """Test health check handles errors gracefully."""
-        # Create client first to establish health entry
-        await client_manager_with_stub.get_qdrant_client()
+    async def test_get_redis_client_provider_error(self, client_manager_with_mocks):
+        """Test error when Redis provider is not available."""
+        original_provider = client_manager_with_mocks._providers.get("redis")
+        client_manager_with_mocks._providers["redis"] = None
 
-        # Replace with a client that throws during health check
-        failing_client = AsyncMock()
-        failing_client.get_collections.side_effect = Exception("Health check failed")
-        client_manager_with_stub._clients["qdrant"] = failing_client
-
-        # Run health check manually
-        await client_manager_with_stub._run_single_health_check(
-            "qdrant", client_manager_with_stub._check_qdrant_health
-        )
-
-        # Health should be degraded
-        health = client_manager_with_stub._health.get("qdrant")
-        assert health is not None
-        assert health.state == ClientState.DEGRADED
-        # The actual error message might be different
-        assert health.last_error is not None
-
-
-# Integration test example
-class TestClientManagerIntegration:
-    """Integration tests for ClientManager."""
+        try:
+            with pytest.raises(APIError, match="Redis client provider not available"):
+                await client_manager_with_mocks.get_redis_client()
+        finally:
+            if original_provider:
+                client_manager_with_mocks._providers["redis"] = original_provider
 
     @pytest.mark.asyncio
-    @pytest.mark.integration
+    async def test_get_http_client_provider_error(self, client_manager_with_mocks):
+        """Test error when HTTP provider is not available."""
+        original_provider = client_manager_with_mocks._providers.get("http")
+        client_manager_with_mocks._providers["http"] = None
+
+        try:
+            with pytest.raises(APIError, match="HTTP client provider not available"):
+                await client_manager_with_mocks.get_http_client()
+        finally:
+            if original_provider:
+                client_manager_with_mocks._providers["http"] = original_provider
+
+
+class TestClientManagerFactoryMethods:
+    """Test factory methods for ClientManager creation."""
+
     @pytest.mark.asyncio
-    async def test_full_lifecycle(self, config):
-        """Test full lifecycle of ClientManager."""
-        ClientManager.reset_singleton()
+    async def test_from_unified_config(self):
+        """Test factory method for creating from unified config."""
+        manager = ClientManager.from_unified_config()
+        assert isinstance(manager, ClientManager)
 
-        # Create manager
-        manager = ClientManager(config)
-
-        # Mock all client creation methods
-        mock_qdrant = AsyncMock()
-        mock_qdrant.get_collections = AsyncMock(return_value=[])
-        manager._create_qdrant_client = AsyncMock(return_value=mock_qdrant)
-
-        # Create client
-        qdrant_client = await manager.get_qdrant_client()
-        assert qdrant_client is not None
-
-        # Check health
-        status = await manager.get_health_status()
-        assert "qdrant" in status
-
-        # Use managed client
-        async with manager.managed_client("qdrant") as client:
-            assert client is qdrant_client
-
-        # Cleanup
-        await manager.cleanup()
-
-        # Verify cleanup
-        assert manager._clients == {}
-        assert (
-            manager._health_check_task.cancelled()
-            if manager._health_check_task
-            else True
-        )
-
-        ClientManager.reset_singleton()
-
-
-class TestClientManagerDatabaseIntegration:
-    """Test database manager integration with ClientManager."""
-
-    @pytest.mark.skip(
-        reason="Test infrastructure mocking complexity - client manager import "
-        "caching issue"
-    )
     @pytest.mark.asyncio
-    async def test_get_database_manager_creation(self):
-        """Test creation of database manager."""
-
-        config = Config()
-        config.database = DatabaseConfig(
-            database_url="sqlite+aiosqlite:///:memory:",
-            echo_queries=True,
-            pool_size=20,
-        )
-
-        client_manager = ClientManager(config)
-
+    async def test_from_unified_config_with_auto_detection(self):
+        """Test factory method with auto-detection."""
         with patch(
-            "src.infrastructure.client_manager.DatabaseManager"
-        ) as mock_database_manager_class:
-            mock_database_manager = AsyncMock()
-            mock_database_manager_class.return_value = mock_database_manager
+            "src.infrastructure.client_manager.get_container"
+        ) as mock_get_container:
+            mock_container = MagicMock()
+            mock_get_container.return_value = mock_container
 
-            # First call should create the manager
-            db_manager = await client_manager.get_database_manager()
-
-            assert db_manager is mock_database_manager
-            mock_database_manager_class.assert_called_once()
-            mock_database_manager.initialize.assert_called_once()
-
-            # Second call should return the same instance (cached)
-            db_manager2 = await client_manager.get_database_manager()
-            assert db_manager2 is mock_database_manager
-
-            # Should not create a new instance
-            mock_database_manager_class.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_database_manager_in_managed_client(self):
-        """Test database manager through managed_client interface."""
-
-        config = Config()
-        config.database = DatabaseConfig(
-            database_url="sqlite+aiosqlite:///:memory:",
-            echo_queries=True,
-            pool_size=20,
-        )
-
-        client_manager = ClientManager(config)
-
-        with patch.object(client_manager, "get_database_manager") as mock_get_db:
-            mock_db_manager = AsyncMock()
-            mock_get_db.return_value = mock_db_manager
-
-            async with client_manager.managed_client("database") as db_manager:
-                assert db_manager is mock_db_manager
-
-            mock_get_db.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_database_manager_cleanup(self):
-        """Test database manager is included in cleanup."""
-
-        config = Config()
-        config.database = DatabaseConfig(database_url="sqlite+aiosqlite:///:memory:")
-
-        client_manager = ClientManager(config)
-
-        # Mock database manager with cleanup method
-        mock_db_manager = AsyncMock()
-        mock_db_manager.cleanup = AsyncMock()
-        client_manager._database_manager = mock_db_manager
-
-        await client_manager.cleanup()
-
-        # Should call cleanup on database manager
-        mock_db_manager.cleanup.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_database_manager_enterprise_creation(self):
-        """Test database manager uses enterprise DatabaseManager with monitoring."""
-
-        config = Config()
-        config.database = DatabaseConfig(
-            database_url="sqlite+aiosqlite:///:memory:",
-        )
-
-        client_manager = ClientManager(config)
-
-        with patch(
-            "src.infrastructure.client_manager.DatabaseManager"
-        ) as mock_database_manager_class:
-            mock_database_manager = AsyncMock()
-            mock_database_manager_class.return_value = mock_database_manager
-
-            await client_manager.get_database_manager()
-
-            # Verify database manager was created with enterprise components
-            mock_database_manager_class.assert_called_once()
-            call__kwargs = mock_database_manager_class.call_args._kwargs
-            assert "config" in call__kwargs
-            assert "load_monitor" in call__kwargs
-            assert "query_monitor" in call__kwargs
-            assert "circuit_breaker" in call__kwargs
-            mock_database_manager.initialize.assert_called_once()
-
-
-class TestClientManagerAdvancedCoverage:
-    """Test  coverage scenarios for AB testing and service getters."""
-
-    @pytest.mark.asyncio
-    async def test_get_ab_testing_manager_creation(self):
-        """Test creation of AB testing manager."""
-        config = Config()
-        client_manager = ClientManager(config)
-
-        # Mock the ABTestingManager and its dependencies
-        with (
-            patch(
-                "src.services.deployment.ab_testing.ABTestingManager"
-            ) as mock_ab_class,
-            patch.object(client_manager, "get_qdrant_service") as mock_get_qdrant,
-            patch.object(client_manager, "get_cache_manager") as mock_get_cache,
-            patch.object(
-                client_manager, "get_feature_flag_manager"
-            ) as mock_get_feature_flag,
-        ):
-            mock_ab_instance = AsyncMock()
-            mock_ab_class.return_value = mock_ab_instance
-
-            _mock_qdrant_service = Mock()
-            mock_cache_manager = Mock()
-            mock_feature_flag_manager = Mock()
-            mock_get_qdrant.return_value = _mock_qdrant_service
-            mock_get_cache.return_value = mock_cache_manager
-            mock_get_feature_flag.return_value = mock_feature_flag_manager
-
-            # First call should create the manager
-            ab_manager = await client_manager.get_ab_testing_manager()
-
-            assert ab_manager is mock_ab_instance
-            mock_ab_class.assert_called_once_with(
-                qdrant_service=_mock_qdrant_service,
-                cache_manager=mock_cache_manager,
-                feature_flag_manager=mock_feature_flag_manager,
-            )
-
-            # Second call should return the same instance (cached)
-            ab_manager2 = await client_manager.get_ab_testing_manager()
-            assert ab_manager2 is mock_ab_instance
-
-            # Should not create a new instance
-            mock_ab_class.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_create_qdrant_client_with_config(self):
-        """Test creation of Qdrant client with configuration."""
-        # Clear singleton to ensure clean state
-        ClientManager.reset_singleton()
-
-        config = Config()
-        config.qdrant.url = "http://localhost:6333"
-        config.qdrant.api_key = "test-key"
-        config.qdrant.timeout = 30.0
-        config.qdrant.prefer_grpc = True
-
-        client_manager = ClientManager(config)
-
-        # Mock the client creation method instead of the class
-        mock_client = AsyncMock()
-        mock_client.get_collections = AsyncMock(return_value=[])
-
-        async def mock_create_qdrant():
-            # Verify the config values are correct
-            assert client_manager.config.qdrant.url == "http://localhost:6333"
-            assert client_manager.config.qdrant.api_key == "test-key"
-            assert client_manager.config.qdrant.timeout == 30.0
-            assert client_manager.config.qdrant.prefer_grpc is True
-            return mock_client
-
-        client_manager._create_qdrant_client = mock_create_qdrant
-
-        # Call the method to create the client
-        qdrant_client = await client_manager.get_qdrant_client()
-
-        assert qdrant_client is mock_client
-
-        # Cleanup
-        await client_manager.cleanup()
-        ClientManager.reset_singleton()
-
-    @pytest.mark.asyncio
-    async def test_get_qdrant_service_lazy_initialization(self):
-        """Test lazy initialization of QdrantService."""
-        config = Config()
-        client_manager = ClientManager(config)
-
-        with patch(
-            "src.services.vector_db.service.QdrantService"
-        ) as mock_service_class:
-            mock_service = AsyncMock()
-            mock_service_class.return_value = mock_service
-
-            # First call should create the service
-            service1 = await client_manager.get_qdrant_service()
-            assert service1 == mock_service
-            mock_service.initialize.assert_called_once()
-
-            # Second call should return the same instance
-            service2 = await client_manager.get_qdrant_service()
-            assert service2 == service1
-            assert mock_service.initialize.call_count == 1  # Not called again
-
-    @pytest.mark.asyncio
-    async def test_get_hyde_engine_with_dependencies(self):
-        """Test HyDEEngine initialization with all dependencies."""
-        config = Config()
-        client_manager = ClientManager(config)
-
-        mock_hyde_engine = AsyncMock()
-        mock_embedding_manager = AsyncMock()
-        _mock_qdrant_service = AsyncMock()
-        mock_cache_manager = AsyncMock()
-        mock_openai_client = AsyncMock()
-
-        with (
-            patch(
-                "src.services.hyde.engine.HyDEQueryEngine",
-                return_value=mock_hyde_engine,
-            ),
-            patch("src.services.hyde.config.HyDEConfig") as mock_config_class,
-            patch("src.services.hyde.config.HyDEPromptConfig"),
-            patch("src.services.hyde.config.HyDEMetricsConfig"),
-            patch.object(
-                client_manager,
-                "get_embedding_manager",
-                return_value=mock_embedding_manager,
-            ),
-            patch.object(
-                client_manager, "get_qdrant_service", return_value=_mock_qdrant_service
-            ),
-            patch.object(
-                client_manager, "get_cache_manager", return_value=mock_cache_manager
-            ),
-            patch.object(
-                client_manager, "get_openai_client", return_value=mock_openai_client
-            ),
-        ):
-            service = await client_manager.get_hyde_engine()
-            assert service == mock_hyde_engine
-            mock_hyde_engine.initialize.assert_called_once()
-
-            # Verify HyDEConfig was created from unified config
-            mock_config_class.from_unified_config.assert_called_once_with(
-                client_manager.config.hyde
-            )
-
-    @pytest.mark.asyncio
-    async def test_get_cache_manager_initialization(self):
-        """Test CacheManager initialization with config parameters."""
-        config = Config()
-        client_manager = ClientManager(config)
-
-        with patch("src.services.cache.manager.CacheManager") as mock_manager_class:
-            mock_manager = AsyncMock()
-            mock_manager_class.return_value = mock_manager
-
-            service = await client_manager.get_cache_manager()
-            assert service == mock_manager
-
-            # Verify initialization parameters
-            call_args = mock_manager_class.call_args
-            assert (
-                call_args._kwargs["dragonfly_url"]
-                == client_manager.config.cache.dragonfly_url
-            )
-            assert (
-                call_args._kwargs["enable_local_cache"]
-                == client_manager.config.cache.enable_local_cache
-            )
-            assert (
-                call_args._kwargs["enable_distributed_cache"]
-                == client_manager.config.cache.enable_dragonfly_cache
-            )
-
-    @pytest.mark.asyncio
-    async def test_get_project_storage_initialization(self):
-        """Test ProjectStorage initialization."""
-        config = Config()
-        client_manager = ClientManager(config)
-
-        with patch(
-            "src.services.core.project_storage.ProjectStorage"
-        ) as mock_storage_class:
-            mock_storage = AsyncMock()
-            mock_storage_class.return_value = mock_storage
-
-            service = await client_manager.get_project_storage()
-            assert service == mock_storage
-
-            mock_storage_class.assert_called_once_with(
-                data_dir=client_manager.config.data_dir
-            )
+            manager = await ClientManager.from_unified_config_with_auto_detection()
+            assert isinstance(manager, ClientManager)
+            assert manager.is_initialized

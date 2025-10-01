@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import warnings
 from collections.abc import Generator
 from typing import Any
 
@@ -12,11 +11,6 @@ from fastapi.testclient import TestClient
 import src.api.app_factory as app_factory
 from src.api.app_profiles import AppProfile
 from src.architecture.service_factory import reset_service_factory
-
-
-warnings.filterwarnings(
-    "ignore", message="on_event is deprecated", category=DeprecationWarning
-)
 
 
 @pytest.fixture(autouse=True)
@@ -36,6 +30,7 @@ def _patch_service_registration(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(app_factory, "_register_mode_services", lambda _: None)
     monkeypatch.setattr(app_factory, "_initialize_critical_services", async_noop)
+    monkeypatch.setattr(app_factory, "_apply_middleware_stack", lambda *_: None)
 
 
 def test_create_app_simple_profile_exposes_service_status() -> None:
@@ -60,16 +55,16 @@ def test_create_app_simple_profile_exposes_service_status() -> None:
     app.state.service_factory = stub_factory
     app.state.mode_config.enabled_services = stub_factory.available
 
-    client = TestClient(app)
-    response = client.get("/health")
-    payload = response.json()
+    with TestClient(app) as client:
+        response = client.get("/health")
+        payload = response.json()
 
-    assert response.status_code == 200
-    assert payload["available_services"] == stub_factory.available
-    assert payload["service_status"] == [
-        {"name": "embedding_service", "healthy": True},
-        {"name": "search_service", "healthy": True},
-    ]
+        assert response.status_code == 200
+        assert payload["available_services"] == stub_factory.available
+        assert payload["service_status"] == [
+            {"name": "embedding_service", "healthy": True},
+            {"name": "search_service", "healthy": True},
+        ]
 
 
 def test_create_app_enterprise_requires_routers() -> None:

@@ -1,14 +1,13 @@
 """Response converters for query processing MCP tools."""
 
-from uuid import uuid4
-
 from src.mcp_tools.models.responses import (
-    AdvancedQueryProcessingResponse,
     QueryIntentResult,
     QueryPreprocessingResult,
+    QueryProcessingResponse,
     SearchResult,
     SearchStrategyResult,
 )
+from src.services.query_processing.models import SearchRecord
 
 
 class ResponseConverter:
@@ -77,22 +76,35 @@ class ResponseConverter:
         results, include_analytics: bool = False
     ) -> list[SearchResult]:
         """Convert search results to MCP format."""
-        search_results = []
-        for result in results:
-            search_result = SearchResult(
-                id=str(result.get("id", uuid4())),
-                content=result.get("content", ""),
-                score=result.get("score", 0.0),
-                url=result.get("url"),
-                title=result.get("title"),
-                metadata=result.get("metadata") if include_analytics else None,
+
+        search_results: list[SearchResult] = []
+        for payload in results:
+            record = SearchRecord.from_payload(payload)
+            metadata = record.metadata if include_analytics else None
+
+            search_results.append(
+                SearchResult(
+                    id=record.id,
+                    content=record.content,
+                    score=record.score,
+                    url=record.url,
+                    title=record.title,
+                    metadata=metadata,
+                    content_type=record.content_type,
+                    content_confidence=record.content_confidence,
+                    quality_overall=record.quality_overall,
+                    quality_completeness=record.quality_completeness,
+                    quality_relevance=record.quality_relevance,
+                    quality_confidence=record.quality_confidence,
+                    content_intelligence_analyzed=record.content_intelligence_analyzed,
+                )
             )
-            search_results.append(search_result)
+
         return search_results
 
     def convert_to_mcp_response(
         self, response, include_analytics: bool = False
-    ) -> AdvancedQueryProcessingResponse:
+    ) -> QueryProcessingResponse:
         """Convert internal response to MCP response format."""
         # Convert components using helper methods
         intent_result = self.convert_intent_classification(
@@ -106,7 +118,17 @@ class ResponseConverter:
             response.results, include_analytics
         )
 
-        return AdvancedQueryProcessingResponse(
+        warnings_data = getattr(response, "warnings", None)
+        if isinstance(warnings_data, list):
+            warnings = warnings_data
+        elif warnings_data is None:
+            warnings = []
+        elif isinstance(warnings_data, (tuple, set)):
+            warnings = list(warnings_data)
+        else:
+            warnings = [str(warnings_data)]
+
+        return QueryProcessingResponse(
             success=response.success,
             results=search_results,
             total_results=response.total_results,
@@ -122,4 +144,5 @@ class ResponseConverter:
             fallback_used=response.fallback_used,
             cache_hit=response.cache_hit,
             error=response.error,
+            warnings=warnings,
         )

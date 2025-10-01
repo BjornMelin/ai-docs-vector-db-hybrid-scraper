@@ -424,8 +424,8 @@ class SearchStrategyResult(BaseModel):
     estimated_latency_ms: float = Field(..., description="Estimated processing latency")
 
 
-class AdvancedQueryProcessingResponse(BaseModel):
-    """Complete response from advanced query processing pipeline."""
+class QueryProcessingResponse(BaseModel):
+    """Complete response from query processing pipeline."""
 
     success: bool = Field(default=True, description="Whether processing succeeded")
     results: list[SearchResult] = Field(
@@ -470,6 +470,7 @@ class AdvancedQueryProcessingResponse(BaseModel):
 
     # Error handling
     error: str | None = Field(default=None, description="Error message if failed")
+    warnings: list[str] = Field(default_factory=list, description="Warning messages")
 
     model_config = ConfigDict(extra="allow")
 

@@ -440,9 +440,13 @@ class FederatedSearchService:
             self._update_performance_stats(request, result, total_search_time)
 
             self._logger.info(
-                f"Federated search completed: "
-                f"{len(successful_results)}/{len(target_collections)} collections, "
-                f"{len(merged_results)} total results in {total_search_time:.1f}ms"
+                "Federated search completed: "
+                "%d/%d collections, "
+                "%d total results in %.1f ms",
+                len(successful_results),
+                len(target_collections),
+                len(merged_results),
+                total_search_time,
             )
 
         except Exception as e:
@@ -700,7 +704,7 @@ class FederatedSearchService:
 
         except TimeoutError:
             self._logger.warning(
-                f"Parallel search timed out after {request.timeout_ms}ms"
+                "Parallel search timed out after %d ms", request.timeout_ms
             )
             return [
                 self._create_error_result("Search timeout") for _ in target_collections

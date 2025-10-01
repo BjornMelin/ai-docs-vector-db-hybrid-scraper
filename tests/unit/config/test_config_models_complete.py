@@ -73,12 +73,10 @@ DEFAULT_EXPECTATIONS = [
         HyDEConfig,
         {
             "enable_hyde": True,
-            "enabled": True,
             "model": "gpt-3.5-turbo",
             "num_generations": 5,
             "generation_temperature": 0.7,
             "max_tokens": 150,
-            "temperature": 0.7,
             "cache_ttl": 3600,
             "query_weight": 0.3,
         },

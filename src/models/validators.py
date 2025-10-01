@@ -29,11 +29,8 @@ def validate_api_key_common(
 
     Returns:
         Validated API key or None
-
-    Raises:
-        ValueError: If validation fails
-
     """
+
     if value is None:
         return value
 
@@ -81,11 +78,8 @@ def validate_url_format(value: str) -> str:
 
     Returns:
         Validated and normalized URL
-
-    Raises:
-        ValueError: If URL format is invalid
-
     """
+
     if not value.startswith(("http://", "https://")):
         msg = "URL must start with http:// or https://"
         raise ValueError(msg)
@@ -101,11 +95,8 @@ def validate_positive_int(value: int, field_name: str = "value") -> int:
 
     Returns:
         Validated integer
-
-    Raises:
-        ValueError: If value is not positive
-
     """
+
     if value <= 0:
         msg = f"{field_name} must be positive"
         raise ValueError(msg)
@@ -121,11 +112,8 @@ def validate_percentage(value: float, field_name: str = "value") -> float:
 
     Returns:
         Validated percentage
-
-    Raises:
-        ValueError: If value is not a valid percentage
-
     """
+
     if not 0.0 <= value <= 1.0:
         msg = f"{field_name} must be between 0.0 and 1.0"
         raise ValueError(msg)
@@ -142,11 +130,8 @@ def validate_rate_limit_config(
 
     Returns:
         Validated configuration
-
-    Raises:
-        ValueError: If configuration structure is invalid
-
     """
+
     for provider, limits in value.items():
         if not isinstance(limits, dict):
             msg = f"Rate limits for provider '{provider}' must be a dictionary"
@@ -181,11 +166,8 @@ def validate_chunk_sizes(
         chunk_overlap: Overlap between chunks
         min_chunk_size: Minimum allowed chunk size
         max_chunk_size: Maximum allowed chunk size
-
-    Raises:
-        ValueError: If size relationships are invalid
-
     """
+
     if chunk_overlap >= chunk_size:
         msg = "chunk_overlap must be less than chunk_size"
         raise ValueError(msg)
@@ -206,31 +188,25 @@ def validate_scoring_weights(
         quality_weight: Weight for quality scoring
         speed_weight: Weight for speed scoring
         cost_weight: Weight for cost scoring
-
-    Raises:
-        ValueError: If weights don't sum to 1.0
-
     """
+
     total = quality_weight + speed_weight + cost_weight
     if abs(total - 1.0) > 0.01:  # Allow small floating point errors
         msg = f"Scoring weights must sum to 1.0, got {total}"
         raise ValueError(msg)
 
 
-def validate_vector_dimensions(value: int) -> int:
+def validate_vector_dimensions(value: int, model_name: str | None = None) -> int:
     """Validate vector dimensions are within reasonable bounds.
 
     Args:
         value: Vector dimensions to validate
-        model_name: Model name for context in error messages
+        model_name: Optional model name for context in error messages
 
     Returns:
         Validated dimensions
-
-    Raises:
-        ValueError: If dimensions are invalid
-
     """
+
     if value <= 0:
         msg = "Vector dimensions must be positive"
         raise ValueError(msg)
@@ -256,11 +232,8 @@ def validate_model_benchmark_consistency(key: str, model_name: str) -> str:
 
     Returns:
         Validated key
-
-    Raises:
-        ValueError: If key doesn't match model name
-
     """
+
     if key != model_name:
         msg = (
             f"Dictionary key '{key}' does not match "
@@ -279,11 +252,8 @@ def validate_collection_name(value: str) -> str:
 
     Returns:
         Validated collection name
-
-    Raises:
-        ValueError: If name format is invalid
-
     """
+
     if not value:
         msg = "Collection name cannot be empty"
         raise ValueError(msg)
@@ -307,20 +277,17 @@ def validate_collection_name(value: str) -> str:
     return value
 
 
-def validate_embedding_model_name(value: str) -> str:
+def validate_embedding_model_name(value: str, provider: str | None = None) -> str:
     """Validate embedding model name format.
 
     Args:
         value: Model name to validate
-        provider: Provider name for context
+        provider: Optional provider name for context
 
     Returns:
         Validated model name
-
-    Raises:
-        ValueError: If model name is invalid
-
     """
+
     if not value:
         msg = "Model name cannot be empty"
         raise ValueError(msg)
@@ -348,11 +315,8 @@ def validate_cache_ttl(value: int, min_ttl: int = 60, max_ttl: int = 86400) -> i
 
     Returns:
         Validated TTL
-
-    Raises:
-        ValueError: If TTL is out of range
-
     """
+
     if value < min_ttl:
         msg = f"Cache TTL must be at least {min_ttl} seconds"
         raise ValueError(msg)
@@ -365,11 +329,13 @@ def validate_cache_ttl(value: int, min_ttl: int = 60, max_ttl: int = 86400) -> i
 # Custom field types with built-in validation
 def positive_int(description: str = "Positive integer") -> int:
     """Create a positive integer field."""
+
     return Field(gt=0, description=description)
 
 
 def non_negative_int(description: str = "Non-negative integer") -> int:
     """Create a non-negative integer field."""
+
     return Field(ge=0, description=description)
 
 
@@ -380,11 +346,13 @@ def percentage(description: str = "Percentage (0.0 to 1.0)") -> float:
 
 def port_number(description: str = "Port number") -> int:
     """Create a port number field."""
+
     return Field(ge=1, le=65535, description=description)
 
 
 def collection_name_field(description: str = "Collection name") -> str:
     """Create a collection name field."""
+
     return Field(
         min_length=2,
         max_length=64,
@@ -396,6 +364,7 @@ def collection_name_field(description: str = "Collection name") -> str:
 # Validation decorators for common patterns
 def openai_api_key_validator(v: str | None) -> str | None:
     """Validator for OpenAI API keys."""
+
     return validate_api_key_common(
         v, prefix="sk-", service_name="OpenAI", min_length=20, max_length=200
     )
@@ -403,6 +372,7 @@ def openai_api_key_validator(v: str | None) -> str | None:
 
 def firecrawl_api_key_validator(v: str | None) -> str | None:
     """Validator for Firecrawl API keys."""
+
     return validate_api_key_common(
         v,
         prefix="fc-",

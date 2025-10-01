@@ -1,6 +1,7 @@
 """Mode-aware FastAPI application factory with profile-driven composition."""
 
 import logging
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from importlib import import_module
 from typing import Any
@@ -119,6 +120,9 @@ def create_app(
     app.state.service_factory = ModeAwareServiceFactory(mode)
     set_service_factory(app.state.service_factory)
 
+    # Register lifespan handler (temporary bridge retains global factory usage)
+    app.router.lifespan_context = _build_app_lifespan(app)
+
     # Configure CORS based on mode
     _configure_cors(app, mode)
 
@@ -127,9 +131,6 @@ def create_app(
 
     # Add profile-specific routes
     _configure_routes(app, resolved_profile, mode)
-
-    # Add startup and shutdown events
-    _configure_lifecycle_events(app)
 
     logger.info("Created FastAPI app in %s mode", mode.value)
 
@@ -351,33 +352,29 @@ def _get_mode_features(mode: ApplicationMode) -> dict[str, Any]:
     }
 
 
-def _configure_lifecycle_events(app: FastAPI) -> None:
-    """Configure startup and shutdown events."""
+def _build_app_lifespan(app: FastAPI):
+    """Return a lifespan context manager for FastAPI startup/shutdown."""
 
-    @app.on_event("startup")
-    async def startup_event():
-        """Initialize services on startup."""
+    @asynccontextmanager
+    async def lifespan(_: FastAPI):
         mode = app.state.mode
         service_factory: ModeAwareServiceFactory = app.state.service_factory
 
         logger.info("Starting application in %s mode", mode.value)
 
-        # Register mode-specific services
         _register_mode_services(service_factory)
-
-        # Initialize critical services
         await _initialize_critical_services(service_factory)
 
         logger.info("Application startup complete in %s mode", mode.value)
 
-    @app.on_event("shutdown")
-    async def shutdown_event():
-        """Clean up services on shutdown."""
-        service_factory: ModeAwareServiceFactory = app.state.service_factory
+        try:
+            yield
+        finally:
+            logger.info("Shutting down application")
+            await service_factory.cleanup_all_services()
+            logger.info("Application shutdown complete")
 
-        logger.info("Shutting down application")
-        await service_factory.cleanup_all_services()
-        logger.info("Application shutdown complete")
+    return lifespan
 
 
 def _register_mode_services(factory: ModeAwareServiceFactory) -> None:

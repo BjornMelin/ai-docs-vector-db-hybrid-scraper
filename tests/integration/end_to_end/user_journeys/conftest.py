@@ -488,7 +488,7 @@ def journey_executor():
 
             valid_results = [r for r in results if r.get("score", 0) >= min_score]
             return {
-                "_total_results": len(results),
+                "total_results": len(results),
                 "valid_results": len(valid_results),
                 "validation_passed": len(valid_results) > 0,
                 "min_score_threshold": min_score,

@@ -5,19 +5,17 @@ including query intent classification, processing requests/responses, and
 configuration models for the centralized orchestrator.
 """
 
+from collections.abc import Iterable
 from datetime import datetime
 from enum import Enum
 from typing import Any
+from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
 class QueryIntent(str, Enum):
-    """Advanced query intent classification categories.
-
-    Expanded from 4 basic categories to 14 total categories for comprehensive
-    query understanding and strategy selection.
-    """
+    """Advanced query intent classification categories."""
 
     # Basic categories (existing)
     CONCEPTUAL = "conceptual"  # High-level understanding questions
@@ -26,16 +24,16 @@ class QueryIntent(str, Enum):
     TROUBLESHOOTING = "troubleshooting"  # Problem-solving queries
 
     # Advanced categories (new)
-    COMPARATIVE = "comparative"  # Comparison between technologies/concepts
-    ARCHITECTURAL = "architectural"  # System design and architecture queries
-    PERFORMANCE = "performance"  # Optimization and performance-related queries
-    SECURITY = "security"  # Security-focused questions and concerns
-    INTEGRATION = "integration"  # API integration and compatibility queries
+    COMPARATIVE = "comparative"  # Comparison between tech/concepts
+    ARCHITECTURAL = "architectural"  # System design and arch queries
+    PERFORMANCE = "performance"  # Performance-related queries
+    SECURITY = "security"  # Security questions and concerns
+    INTEGRATION = "integration"  # API integration and compat queries
     BEST_PRACTICES = "best_practices"  # Recommended approaches and patterns
     CODE_REVIEW = "code_review"  # Code analysis and improvement suggestions
     MIGRATION = "migration"  # Upgrade and migration guidance
     DEBUGGING = "debugging"  # Error diagnosis and resolution
-    CONFIGURATION = "configuration"  # Setup and configuration assistance
+    CONFIGURATION = "configuration"  # Setup and config assistance
 
 
 class QueryComplexity(str, Enum):
@@ -198,13 +196,70 @@ class QueryProcessingRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class SearchRecord(BaseModel):
+    """Normalized search result entry for query processing."""
+
+    id: str = Field(..., description="Unique identifier for the document")
+    content: str = Field(..., description="Document content or snippet")
+    score: float = Field(..., ge=0.0, description="Relevance score")
+    url: str | None = Field(default=None, description="Document URL")
+    title: str | None = Field(default=None, description="Document title")
+    metadata: dict[str, Any] | None = Field(
+        default=None, description="Additional metadata supplied by providers"
+    )
+    content_type: str | None = Field(
+        default=None, description="Detected content type for analytics"
+    )
+    content_confidence: float | None = Field(
+        default=None, ge=0.0, le=1.0, description="Content confidence score"
+    )
+    quality_overall: float | None = Field(
+        default=None, ge=0.0, le=1.0, description="Overall quality score"
+    )
+    quality_completeness: float | None = Field(
+        default=None, ge=0.0, le=1.0, description="Completeness quality score"
+    )
+    quality_relevance: float | None = Field(
+        default=None, ge=0.0, le=1.0, description="Relevance quality score"
+    )
+    quality_confidence: float | None = Field(
+        default=None, ge=0.0, le=1.0, description="Confidence in quality scoring"
+    )
+    content_intelligence_analyzed: bool | None = Field(
+        default=None, description="Flag indicating content intelligence analysis"
+    )
+
+    model_config = ConfigDict(extra="allow")
+
+    @classmethod
+    def from_payload(cls, payload: Any) -> "SearchRecord":
+        """Create a search record from a raw payload."""
+
+        if isinstance(payload, cls):
+            return payload
+        if isinstance(payload, dict):
+            normalized_payload = payload.copy()
+            normalized_payload.setdefault("id", str(uuid4()))
+            normalized_payload.setdefault("content", "")
+            normalized_payload.setdefault("score", 0.0)
+            return cls.model_validate(normalized_payload)
+        msg = f"Unsupported search record payload type: {type(payload)!r}"
+        raise TypeError(msg)
+
+    @classmethod
+    def parse_list(cls, payloads: Iterable[Any]) -> list["SearchRecord"]:
+        """Normalize a collection of payloads into search records."""
+
+        return [cls.from_payload(item) for item in payloads]
+
+
 class QueryProcessingResponse(BaseModel):
     """Response from advanced query processing pipeline."""
 
     success: bool = Field(default=True, description="Whether processing succeeded")
 
     # Core results
-    results: list[dict[str, Any]] = Field(
+    results: list[SearchRecord] = Field(
         default_factory=list, description="Search results"
     )
     total_results: int = Field(default=0, description="Total matching documents")
@@ -300,6 +355,7 @@ __all__ = [
     "QueryPreprocessingResult",
     "QueryProcessingRequest",
     "QueryProcessingResponse",
+    "SearchRecord",
     "SearchStrategy",
     "SearchStrategySelection",
 ]

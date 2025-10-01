@@ -3,6 +3,7 @@
 import asyncio
 import inspect
 import logging
+from datetime import UTC, datetime
 from typing import Any, cast
 from uuid import uuid4
 
@@ -165,6 +166,7 @@ def _build_text_documents(
     crawl_result: dict[str, Any],
     request: DocumentRequest,
     enriched_content: Any | None,
+    doc_id: str,
 ) -> list[TextDocument]:
     """Convert chunk data into TextDocument payloads."""
 
@@ -176,6 +178,7 @@ def _build_text_documents(
     total_chunks = len(chunks)
     base_title = crawl_result.get("title") or crawl_result["metadata"].get("title", "")
 
+    current_time = datetime.now(UTC).isoformat()
     for index, chunk in enumerate(chunks):
         payload: dict[str, Any] = {
             "content": chunk["content"],
@@ -187,6 +190,12 @@ def _build_text_documents(
             "quality_score": crawl_result.get("quality_score", 0.0),
             **chunk.get("metadata", {}),
         }
+
+        payload.setdefault("doc_id", doc_id)
+        payload["chunk_id"] = payload.get("chunk_id", index)
+        payload.setdefault("tenant", request.collection or "default")
+        payload.setdefault("source", payload.get("source") or request.url)
+        payload.setdefault("created_at", current_time)
 
         if enriched_content:
             payload.update(
@@ -329,6 +338,7 @@ def register_tools(mcp, client_manager: ClientManager):
                     crawl_result,
                     request,
                     enriched_content,
+                    doc_id,
                 ),
             )
 

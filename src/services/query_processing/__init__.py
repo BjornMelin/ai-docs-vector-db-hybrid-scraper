@@ -37,18 +37,19 @@ from .federated import (
     SearchMode as FederatedSearchMode,
 )
 from .intent_classifier import QueryIntentClassifier
-from .models import QueryIntent, QueryProcessingRequest, QueryProcessingResponse
+from .models import (
+    QueryIntent,
+    QueryProcessingRequest,
+    QueryProcessingResponse,
+    SearchRecord,
+)
 
 # ProcessingStage removed as it's not implemented in simplified orchestrator
 from .orchestrator import (
     SearchMode,
     SearchOrchestrator,
-    SearchOrchestrator as AdvancedSearchOrchestrator,
     SearchPipeline,
     SearchRequest,
-    SearchRequest as AdvancedSearchRequest,
-    SearchResult as AdvancedSearchResult,
-    SearchResult as OrchestratorSearchResult,
 )
 from .pipeline import QueryProcessingPipeline
 from .preprocessor import QueryPreprocessor
@@ -67,10 +68,6 @@ from .strategy_selector import SearchStrategySelector
 
 
 __all__ = [
-    # Advanced search orchestrator
-    "AdvancedSearchOrchestrator",
-    "AdvancedSearchRequest",
-    "AdvancedSearchResult",
     # Result clustering
     "ClusterGroup",
     "ClusteringMethod",
@@ -92,15 +89,12 @@ __all__ = [
     # Interaction handling
     "InteractionEvent",
     "InteractionType",
-    "OrchestratorSearchResult",
     # Outlier detection
     "OutlierResult",
     # Personalized ranking
     "PersonalizedRankingRequest",
     "PersonalizedRankingResult",
     "PersonalizedRankingService",
-    # Pipeline stages
-    # "ProcessingStage",  # Removed from simplified orchestrator
     # Core query processing
     "QueryExpansionRequest",
     "QueryExpansionResult",
@@ -111,6 +105,7 @@ __all__ = [
     "QueryProcessingPipeline",
     "QueryProcessingRequest",
     "QueryProcessingResponse",
+    "SearchRecord",
     # Ranking
     "RankedResult",
     "RankingStrategy",

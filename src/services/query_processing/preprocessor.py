@@ -11,13 +11,14 @@ import time
 from typing import Any
 
 from .models import QueryPreprocessingResult
+from .utils import STOP_WORDS
 
 
 logger = logging.getLogger(__name__)
 
 
 class QueryPreprocessor:
-    """Advanced query preprocessing for enhanced search quality.
+    """Query preprocessing for search quality.
 
     Provides spell correction, normalization, expansion, and context extraction
     to prepare queries for optimal processing by the query pipeline.
@@ -60,33 +61,7 @@ class QueryPreprocessor:
             "docker": ["containerization"],
         }
 
-        # Stop words that can be removed for better search
-        self._stop_words = {
-            "a",
-            "an",
-            "and",
-            "are",
-            "as",
-            "at",
-            "be",
-            "by",
-            "for",
-            "from",
-            "has",
-            "he",
-            "in",
-            "is",
-            "it",
-            "its",
-            "of",
-            "on",
-            "that",
-            "the",
-            "to",
-            "was",
-            "will",
-            "with",
-        }
+        self._stop_words = set(STOP_WORDS)
 
         # Technical context patterns
         self._context_patterns = {

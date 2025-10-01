@@ -12,22 +12,83 @@ from typing import Any
 
 from src.services.base import BaseService
 
-from .models import QueryProcessingRequest, QueryProcessingResponse
-from .orchestrator import SearchOrchestrator as AdvancedSearchOrchestrator
+from .models import QueryProcessingRequest, QueryProcessingResponse, SearchRecord
+from .orchestrator import (
+    SearchOrchestrator,
+    SearchPipeline,
+    SearchRequest,
+    SearchResult,
+)
+
+
+_PIPELINE_BY_ACCURACY = {
+    "fast": SearchPipeline.FAST,
+    "balanced": SearchPipeline.BALANCED,
+    "comprehensive": SearchPipeline.COMPREHENSIVE,
+}
 
 
 logger = logging.getLogger(__name__)
 
 
+def _build_search_request(request: QueryProcessingRequest) -> SearchRequest:
+    """Translate a high level processing request into a search request."""
+
+    pipeline = _PIPELINE_BY_ACCURACY.get(
+        request.search_accuracy.lower(), SearchPipeline.BALANCED
+    )
+
+    user_id = request.user_context.get("user_id") if request.user_context else None
+    session_id = (
+        request.user_context.get("session_id") if request.user_context else None
+    )
+
+    return SearchRequest(
+        query=request.query,
+        collection_name=request.collection_name,
+        limit=request.limit,
+        pipeline=pipeline,
+        user_id=user_id,
+        session_id=session_id,
+        filters=request.filters or None,
+        enable_caching=True,
+        max_processing_time_ms=float(request.max_processing_time_ms),
+    )  # type: ignore
+
+
+def _build_processing_response(
+    search_result: SearchResult,
+) -> QueryProcessingResponse:
+    """Create a processing response wrapper for the search result."""
+
+    return QueryProcessingResponse(
+        success=True,
+        results=SearchRecord.parse_list(search_result.results),
+        total_results=search_result.total_results,
+        total_processing_time_ms=search_result.processing_time_ms,
+        search_time_ms=search_result.processing_time_ms,
+        strategy_selection_time_ms=0.0,
+        processing_steps=search_result.features_used,
+        cache_hit=search_result.cache_hit,
+        strategy_selection=None,
+        preprocessing_result=None,
+        intent_classification=None,
+        confidence_score=search_result.answer_confidence or 0.0,
+        quality_score=0.0,
+        fallback_used=False,
+        warnings=[],
+    )
+
+
 class QueryProcessingPipeline(BaseService):
-    """Unified interface for advanced query processing pipeline.
+    """Unified interface for query processing pipeline.
 
     Provides a single entry point for all query processing operations,
     coordinating intent classification, preprocessing, strategy selection,
     and search execution through the orchestrator.
     """
 
-    def __init__(self, orchestrator: AdvancedSearchOrchestrator, config: Any = None):
+    def __init__(self, orchestrator: SearchOrchestrator, config: Any = None):
         """Initialize the query processing pipeline.
 
         Args:
@@ -66,7 +127,7 @@ class QueryProcessingPipeline(BaseService):
         limit: int = 10,
         **kwargs,
     ) -> QueryProcessingResponse:
-        """Process a query through the complete advanced pipeline.
+        """Process a query through the complete pipeline.
 
         This is the main entry point for query processing that coordinates
         all pipeline components to deliver optimal search results.
@@ -112,8 +173,9 @@ class QueryProcessingPipeline(BaseService):
                 **kwargs,
             )
 
-        # Process through orchestrator
-        return await self.orchestrator.process_query(request)
+        search_request = _build_search_request(request)
+        search_result = await self.orchestrator.search(search_request)
+        return _build_processing_response(search_result)
 
     async def process_advanced(
         self, request: QueryProcessingRequest
@@ -128,7 +190,9 @@ class QueryProcessingPipeline(BaseService):
 
         """
         self._validate_initialized()
-        return await self.orchestrator.process_query(request)
+        search_request = _build_search_request(request)
+        search_result = await self.orchestrator.search(search_request)
+        return _build_processing_response(search_result)
 
     async def process_batch(
         self, requests: list[QueryProcessingRequest], max_concurrent: int = 5
@@ -195,19 +259,16 @@ class QueryProcessingPipeline(BaseService):
             enable_strategy_selection=True,
         )
 
-        # Process through orchestrator
-        response = await self.orchestrator.process_query(request)
+        search_request = _build_search_request(request)
+        search_result = await self.orchestrator.search(search_request)
 
-        # Return analysis components
         return {
-            "query": query,
-            "preprocessing": response.preprocessing_result,
-            "intent_classification": response.intent_classification,
-            "complexity": response.intent_classification.complexity_level
-            if response.intent_classification
-            else None,
-            "strategy": response.strategy_selection,
-            "processing_time_ms": response.total_processing_time_ms,
+            "query": search_request.query,
+            "processed_query": search_result.query_processed,
+            "features_used": search_result.features_used,
+            "processing_time_ms": search_result.processing_time_ms,
+            "cache_hit": search_result.cache_hit,
+            "result_count": search_result.total_results,
         }
 
     async def get_metrics(self) -> dict[str, Any]:
@@ -225,7 +286,7 @@ class QueryProcessingPipeline(BaseService):
                 "strategy_usage": {},
             }
 
-        base_metrics = self.orchestrator.get_performance_stats()
+        base_metrics = self.orchestrator.get_stats()
 
         # Return metrics in expected format
         return {
@@ -259,42 +320,27 @@ class QueryProcessingPipeline(BaseService):
                     enable_intent_classification=True,
                 )
 
-                # Check component health based on successful analysis
-                intent_healthy = test_response.get("intent_classification") is not None
-                preprocessing_healthy = test_response.get("preprocessing") is not None
-                strategy_healthy = test_response.get("strategy") is not None
+                search_healthy = test_response.get("result_count", 0) > 0
+                cached = test_response.get("cache_hit", False)
 
                 health_status["components"] = {
                     "orchestrator": {
                         "status": "healthy",
-                        "message": "Working correctly",
+                        "message": "Search executed successfully",
                     },
-                    "intent_classifier": {
-                        "status": "healthy" if intent_healthy else "degraded",
-                        "message": "Classification working"
-                        if intent_healthy
-                        else "Classification issues",
+                    "search_pipeline": {
+                        "status": "healthy" if search_healthy else "degraded",
+                        "message": "Results returned"
+                        if search_healthy
+                        else "No results returned",
                     },
-                    "preprocessor": {
-                        "status": "healthy" if preprocessing_healthy else "degraded",
-                        "message": "Preprocessing working"
-                        if preprocessing_healthy
-                        else "Preprocessing issues",
-                    },
-                    "strategy_selector": {
-                        "status": "healthy" if strategy_healthy else "degraded",
-                        "message": "Selection working"
-                        if strategy_healthy
-                        else "Selection issues",
+                    "cache": {
+                        "status": "healthy" if cached else "cold",
+                        "message": "Warm cache" if cached else "Cache miss",
                     },
                 }
 
-                # Overall status based on components
-                if not all(
-                    comp["status"] == "healthy"
-                    for comp in health_status["components"].values()
-                    if isinstance(comp, dict)
-                ):
+                if not search_healthy:
                     health_status["status"] = "degraded"
 
             except Exception as e:

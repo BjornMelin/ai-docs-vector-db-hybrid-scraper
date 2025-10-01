@@ -1,90 +1,151 @@
-"""Result clustering service for semantic grouping of search results.
+# pylint: disable=too-many-lines
 
-This module provides result clustering capabilities using various algorithms
-including HDBSCAN, DBSCAN, K-means, and agglomerative clustering to semantically
-group search results for better organization and presentation.
+"""Result clustering service for grouping search results.
+
+The module exposes clustering algorithms with caching, metrics, and optional
+dependencies. Missing third-party libraries are detected at runtime so the
+service can continue operating with reduced functionality.
 """
+
+from __future__ import annotations
 
 import logging
 import re
 import time
-import warnings
+from collections import Counter
 from enum import Enum
-from typing import Any
+from typing import Any, NoReturn
 
 import numpy as np
-from pydantic import BaseModel, Field, field_validator
+from numpy.typing import NDArray
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
+
+from .utils import (
+    STOP_WORDS,
+    CacheManager,
+    PerformanceTracker,
+    build_cache_key,
+    distance_for_metric,
+    merge_performance_metadata,
+    performance_snapshot,
+    sklearn_metric_for,
+)
 
 
 # Optional clustering dependencies
-try:
-    import sklearn.cluster
-    from sklearn.cluster import (
-        DBSCAN,
-        AgglomerativeClustering,
-        KMeans,
-        SpectralClustering,
-    )
-    from sklearn.metrics import (
-        calinski_harabasz_score,
-        davies_bouldin_score,
-        silhouette_score,
-    )
-    from sklearn.mixture import GaussianMixture
-    from sklearn.neighbors import NearestNeighbors
-except ImportError:
-    DBSCAN = None
-    KMeans = None
-    AgglomerativeClustering = None
-    SpectralClustering = None
-    GaussianMixture = None
-    silhouette_score = None
-    calinski_harabasz_score = None
-    davies_bouldin_score = None
-    NearestNeighbors = None
-    sklearn = None
+try:  # pragma: no cover - import availability tested via unit suite
+    import sklearn.cluster as sk_cluster  # type: ignore[import-not-found]
+    import sklearn.metrics as sk_metrics  # type: ignore[import-not-found]
+    import sklearn.mixture as sk_mixture  # type: ignore[import-not-found]
+    import sklearn.neighbors as sk_neighbors  # type: ignore[import-not-found]
+except ImportError:  # pragma: no cover - covered by availability checks
+    sk_cluster = None  # type: ignore[assignment]
+    sk_metrics = None  # type: ignore[assignment]
+    sk_mixture = None  # type: ignore[assignment]
+    sk_neighbors = None  # type: ignore[assignment]
 
-try:
-    import hdbscan
-except ImportError:
-    hdbscan = None
-
+try:  # pragma: no cover - import availability tested via unit suite
+    import hdbscan  # type: ignore[import-not-found]
+except ImportError:  # pragma: no cover - covered by availability checks
+    hdbscan = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
-# Suppress sklearn warnings for cleaner output
-warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
+
+FloatArray = NDArray[np.float64]
+IntArray = NDArray[np.intp]
+
+
+def _optional_attr(module: Any | None, name: str) -> Any | None:
+    """Safely fetch an attribute from an optional module."""
+
+    if module is None:
+        return None
+    return getattr(module, name, None)
+
+
+DEFAULT_MAX_CLUSTERS = 8
+EMBEDDING_STD_DIM_SAMPLE = 5
+ADDITIONAL_STOP_WORDS = {
+    "the",
+    "and",
+    "for",
+    "are",
+    "but",
+    "not",
+    "you",
+    "all",
+    "can",
+    "was",
+    "one",
+    "our",
+    "day",
+    "get",
+    "has",
+    "his",
+    "how",
+    "man",
+    "from",
+    "they",
+    "know",
+    "want",
+    "been",
+    "some",
+    "time",
+    "when",
+    "come",
+    "here",
+    "just",
+    "like",
+    "many",
+    "over",
+    "take",
+    "them",
+    "well",
+    "were",
+    "her",
+    "had",
+    "him",
+    "good",
+    "much",
+    "make",
+    "very",
+    "long",
+    "such",
+    "than",
+}
+TEXT_STOP_WORDS = STOP_WORDS.union(ADDITIONAL_STOP_WORDS)
 
 
 class ClusteringMethod(str, Enum):
     """Clustering algorithms available for result grouping."""
 
-    HDBSCAN = "hdbscan"  # Hierarchical DBSCAN (recommended)
-    DBSCAN = "dbscan"  # Density-based clustering
-    KMEANS = "kmeans"  # K-means clustering
-    AGGLOMERATIVE = "agglomerative"  # Hierarchical agglomerative
-    SPECTRAL = "spectral"  # Spectral clustering
-    GAUSSIAN_MIXTURE = "gaussian_mixture"  # Gaussian mixture models
-    AUTO = "auto"  # Automatic method selection
+    HDBSCAN = "hdbscan"
+    DBSCAN = "dbscan"
+    KMEANS = "kmeans"
+    AGGLOMERATIVE = "agglomerative"
+    SPECTRAL = "spectral"
+    GAUSSIAN_MIXTURE = "gaussian_mixture"
+    AUTO = "auto"
 
 
 class ClusteringScope(str, Enum):
     """Scope of clustering operations."""
 
-    STRICT = "strict"  # High confidence clusters only
-    MODERATE = "moderate"  # Balanced clustering
-    INCLUSIVE = "inclusive"  # Include more results in clusters
-    ADAPTIVE = "adaptive"  # Adapt based on data characteristics
+    STRICT = "strict"
+    MODERATE = "moderate"
+    INCLUSIVE = "inclusive"
+    ADAPTIVE = "adaptive"
 
 
 class SimilarityMetric(str, Enum):
     """Similarity metrics for clustering."""
 
-    COSINE = "cosine"  # Cosine similarity (default for embeddings)
-    EUCLIDEAN = "euclidean"  # Euclidean distance
-    MANHATTAN = "manhattan"  # Manhattan distance
-    JACCARD = "jaccard"  # Jaccard similarity
-    HAMMING = "hamming"  # Hamming distance
+    COSINE = "cosine"
+    EUCLIDEAN = "euclidean"
+    MANHATTAN = "manhattan"
+    JACCARD = "jaccard"
+    HAMMING = "hamming"
 
 
 class SearchResult(BaseModel):
@@ -92,23 +153,26 @@ class SearchResult(BaseModel):
 
     id: str = Field(..., description="Unique result identifier")
     title: str = Field(..., description="Result title")
-    content: str = Field(..., description="Result content or snippet")
+    content: str = Field(..., description="Result snippet or body")
     score: float = Field(..., ge=0.0, le=1.0, description="Relevance score")
     embedding: list[float] | None = Field(
-        None, description="Vector embedding for clustering"
+        default=None, description="Vector embedding for clustering"
     )
     metadata: dict[str, Any] = Field(
-        default_factory=dict, description="Additional result metadata"
+        default_factory=dict, description="Result metadata"
     )
+
+    model_config = ConfigDict(extra="allow")
 
     @field_validator("embedding")
     @classmethod
-    def validate_embedding_size(cls, v):
-        """Validate embedding dimensions."""
-        if v is not None and len(v) == 0:
+    def validate_embedding_size(cls, value: list[float] | None) -> list[float] | None:
+        """Ensure embeddings are non-empty when provided."""
+
+        if value is not None and not value:
             msg = "Embedding cannot be empty"
             raise ValueError(msg)
-        return v
+        return value
 
 
 class ClusterGroup(BaseModel):
@@ -135,357 +199,342 @@ class ClusterGroup(BaseModel):
         default_factory=dict, description="Cluster metadata"
     )
 
+    model_config = ConfigDict(extra="allow")
+
 
 class OutlierResult(BaseModel):
-    """Results that don't fit into any cluster."""
+    """Results that did not fit into any cluster."""
 
     result: SearchResult = Field(..., description="Outlier result")
     distance_to_nearest_cluster: float = Field(
-        ..., ge=0.0, description="Distance to nearest cluster"
+        ..., ge=0.0, description="Distance to nearest cluster centroid"
     )
     outlier_score: float = Field(
         ..., ge=0.0, le=1.0, description="Outlier confidence score"
     )
 
+    model_config = ConfigDict(extra="allow")
+
 
 class ResultClusteringRequest(BaseModel):
     """Request for result clustering operations."""
 
-    # Core clustering data
     results: list[SearchResult] = Field(..., description="Results to cluster")
     query: str | None = Field(None, description="Original search query")
 
-    # Clustering configuration
     method: ClusteringMethod = Field(
-        ClusteringMethod.HDBSCAN, description="Clustering algorithm"
+        default=ClusteringMethod.HDBSCAN,
+        description="Preferred clustering method",
     )
     scope: ClusteringScope = Field(
-        ClusteringScope.MODERATE, description="Clustering scope"
+        default=ClusteringScope.MODERATE, description="Clustering scope"
     )
     similarity_metric: SimilarityMetric = Field(
-        SimilarityMetric.COSINE, description="Similarity metric"
+        default=SimilarityMetric.COSINE, description="Similarity metric"
     )
 
-    # Algorithm parameters
-    min_cluster_size: int = Field(3, ge=2, le=20, description="Minimum cluster size")
+    min_cluster_size: int = Field(3, ge=2, le=50, description="Minimum cluster size")
     max_clusters: int | None = Field(
-        None, ge=2, le=50, description="Maximum number of clusters"
+        default=None, ge=2, le=50, description="Maximum number of clusters"
+    )
+    num_clusters: int | None = Field(
+        default=None, ge=2, le=50, description="Presentation cluster target"
     )
     min_samples: int | None = Field(
-        None, ge=1, description="Minimum samples for HDBSCAN/DBSCAN"
+        default=None, ge=1, description="Minimum samples for density-based clustering"
     )
-    eps: float | None = Field(None, ge=0.0, le=2.0, description="Epsilon for DBSCAN")
+    eps: float | None = Field(
+        default=None, ge=0.0, le=2.0, description="Epsilon for DBSCAN/HDBSCAN"
+    )
 
-    # Quality controls
     min_cluster_confidence: float = Field(
-        0.6, ge=0.0, le=1.0, description="Minimum cluster confidence"
+        0.6, ge=0.0, le=1.0, description="Minimum cluster confidence threshold"
     )
     outlier_threshold: float = Field(
         0.3, ge=0.0, le=1.0, description="Outlier detection threshold"
     )
 
-    # Processing options
     use_hierarchical: bool = Field(
         False, description="Use hierarchical clustering features"
     )
-    generate_labels: bool = Field(
-        True, description="Generate human-readable cluster labels"
+    generate_labels: bool = Field(True, description="Generate cluster labels")
+    extract_keywords: bool = Field(
+        True, description="Extract representative keywords for clusters"
     )
-    extract_keywords: bool = Field(True, description="Extract representative keywords")
 
-    # Performance settings
     max_processing_time_ms: float = Field(
-        5000.0, ge=100.0, description="Maximum processing time"
+        5000.0, ge=100.0, description="Maximum allowed processing time"
     )
     enable_caching: bool = Field(True, description="Enable clustering result caching")
 
+    model_config = ConfigDict(extra="allow")
+
     @field_validator("results")
     @classmethod
-    def validate_results_count(cls, v):
-        """Validate minimum results for clustering."""
-        if len(v) < 3:
+    def validate_results_count(cls, value: list[SearchResult]) -> list[SearchResult]:
+        """Ensure we have enough results for clustering."""
+
+        if len(value) < 3:
             msg = "Need at least 3 results for clustering"
             raise ValueError(msg)
-        return v
-
-
-def _raise_invalid_clustering_request() -> None:
-    """Raise ValueError for invalid clustering request."""
-    msg = "Invalid clustering request"
-    raise ValueError(msg)
-
-
-def _raise_no_valid_embeddings() -> None:
-    """Raise ValueError when no valid embeddings are found."""
-    msg = "No valid embeddings found in results"
-    raise ValueError(msg)
+        return value
 
 
 class ResultClusteringResult(BaseModel):
     """Result of clustering operations."""
 
-    clusters: list[ClusterGroup] = Field(..., description="Identified clusters")
-    outliers: list[OutlierResult] = Field(
-        default_factory=list, description="Outlier results"
-    )
-
-    # Clustering metadata
+    clusters: list[ClusterGroup] = Field(default_factory=list, description="Clusters")
+    outliers: list[OutlierResult] = Field(default_factory=list, description="Outliers")
     method_used: ClusteringMethod = Field(..., description="Algorithm used")
-    total_results: int = Field(..., ge=0, description="Total input results")
+    total_results: int = Field(
+        ...,
+        ge=0,
+        description="Total input results",
+        validation_alias=AliasChoices("_total_results", "total_results"),
+        serialization_alias="_total_results",
+    )
     clustered_results: int = Field(..., ge=0, description="Results in clusters")
     outlier_count: int = Field(..., ge=0, description="Number of outliers")
     cluster_count: int = Field(..., ge=0, description="Number of clusters")
 
-    # Quality metrics
     silhouette_score: float | None = Field(
-        None, ge=-1.0, le=1.0, description="Silhouette coefficient"
+        default=None, ge=-1.0, le=1.0, description="Silhouette coefficient"
     )
     calinski_harabasz_score: float | None = Field(
-        None, ge=0.0, description="Calinski-Harabasz index"
+        default=None, ge=0.0, description="Calinski-Harabasz index"
     )
     davies_bouldin_score: float | None = Field(
-        None, ge=0.0, description="Davies-Bouldin index"
+        default=None, ge=0.0, description="Davies-Bouldin index"
     )
 
-    # Performance metrics
     processing_time_ms: float = Field(..., ge=0.0, description="Processing time")
-    cache_hit: bool = Field(False, description="Whether result was cached")
-
-    # Analysis metadata
+    cache_hit: bool = Field(
+        False, description="Whether the result was returned from cache"
+    )
     clustering_metadata: dict[str, Any] = Field(
         default_factory=dict, description="Algorithm-specific metadata"
     )
 
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
 
-class ResultClusteringService:
-    """Advanced result clustering service with multiple algorithms."""
+    @property
+    def _total_results(self) -> int:
+        """Return the total number of input results."""
+
+        return self.total_results
+
+
+def _raise_value_error(message: str) -> NoReturn:
+    """Helper for explicit ValueError raising (aids static analysis)."""
+
+    raise ValueError(message)
+
+
+class ResultClusteringService:  # pylint: disable=too-many-instance-attributes
+    """Result clustering service supporting multiple algorithms."""
 
     def __init__(
         self,
         enable_hdbscan: bool = True,
-        enable_metrics: bool = True,
+        enable_advanced_metrics: bool = True,
         cache_size: int = 500,
-    ):
-        """Initialize result clustering service.
-
-        Args:
-            enable_hdbscan: Enable HDBSCAN algorithm (requires hdbscan package)
-            enable_metrics: Enable clustering metrics
-            cache_size: Size of clustering cache
-
-        """
+    ) -> None:
         self._logger = logging.getLogger(
             f"{self.__class__.__module__}.{self.__class__.__name__}"
         )
 
-        # Configuration
         self.enable_hdbscan = enable_hdbscan
-        self.enable_metrics = enable_metrics
-
-        # Caching
-        self.clustering_cache = {}
-        self.cache_size = cache_size
-        self.cache_stats = {"hits": 0, "misses": 0}
-
-        # Algorithm availability
+        self.enable_advanced_metrics = enable_advanced_metrics
+        self._cache = CacheManager(cache_size)
+        self._cache_size = cache_size
         self.available_algorithms = self._check_algorithm_availability()
+        self._performance = PerformanceTracker()
 
-        # Performance tracking
-        self.performance_stats = {
-            "total_clusterings": 0,
-            "avg_processing_time": 0.0,
-            "method_usage": {},
-        }
-
-    async def cluster_results(
+    async def cluster_results(  # pylint: disable=too-many-locals
         self, request: ResultClusteringRequest
     ) -> ResultClusteringResult:
-        """Cluster search results using the specified algorithm.
+        """Cluster search results using the specified algorithm."""
 
-        Args:
-            request: Clustering request with results and parameters
-
-        Returns:
-            ResultClusteringResult with clustered groups and metadata
-
-        """
         start_time = time.time()
 
         try:
-            # Check cache first
             if request.enable_caching:
-                cached_result = self._get_cached_result(request)
-                if cached_result:
-                    cached_result.cache_hit = True
-                    return cached_result
+                cached = self._get_cached_result(request)
+                if cached:
+                    cached.cache_hit = True
+                    return cached
 
-            # Validate request
             if not self._validate_clustering_request(request):
-                _raise_invalid_clustering_request()
+                _raise_value_error("Invalid clustering request")
 
-            # Extract embeddings
             embeddings = self._extract_embeddings(request.results)
             if embeddings is None:
-                _raise_no_valid_embeddings()
+                _raise_value_error("No valid embeddings found in results")
 
-            # Select and apply clustering method
             method = self._select_clustering_method(request, embeddings)
-            cluster_labels, cluster_metadata = await self._apply_clustering(
+            cluster_labels, metadata = await self._apply_clustering(
                 embeddings, method, request
             )
 
-            # Build cluster groups
             clusters = self._build_cluster_groups(
                 request.results, cluster_labels, embeddings, request
             )
-
-            # Identify outliers
             outliers = self._identify_outliers(
                 request.results, cluster_labels, embeddings, request
             )
-
-            # Calculate quality metrics
-            quality_metrics = self._calculate_quality_metrics(
+            metrics = self._calculate_quality_metrics(
                 embeddings, cluster_labels, request
             )
 
-            processing_time_ms = (time.time() - start_time) * 1000
+            processing_time_ms = float((time.time() - start_time) * 1000.0)
 
-            # Build result
             result = ResultClusteringResult(
                 clusters=clusters,
                 outliers=outliers,
                 method_used=method,
                 total_results=len(request.results),
-                clustered_results=sum(len(c.results) for c in clusters),
+                clustered_results=sum(len(cluster.results) for cluster in clusters),
                 outlier_count=len(outliers),
                 cluster_count=len(clusters),
-                silhouette_score=quality_metrics.get("silhouette_score"),
-                calinski_harabasz_score=quality_metrics.get("calinski_harabasz_score"),
-                davies_bouldin_score=quality_metrics.get("davies_bouldin_score"),
+                silhouette_score=metrics.get("silhouette_score"),
+                calinski_harabasz_score=metrics.get("calinski_harabasz_score"),
+                davies_bouldin_score=metrics.get("davies_bouldin_score"),
                 processing_time_ms=processing_time_ms,
                 cache_hit=False,
                 clustering_metadata={
-                    **cluster_metadata,
-                    "embedding_dimensions": embeddings.shape[1],
+                    **metadata,
+                    "embedding_dimensions": int(embeddings.shape[1]),
                     "algorithm_parameters": self._get_algorithm_parameters(
                         method, request
                     ),
                 },
             )
 
-        except Exception as e:
-            processing_time_ms = (time.time() - start_time) * 1000
-            self._logger.exception("Result clustering failed: %s", e)
-
-            # Return fallback result
-            return ResultClusteringResult(
-                clusters=[],
-                outliers=[],
-                method_used=ClusteringMethod.KMEANS,
-                total_results=len(request.results),
-                clustered_results=0,
-                outlier_count=0,
-                cluster_count=0,
-                processing_time_ms=processing_time_ms,
-                cache_hit=False,
-                clustering_metadata={"error": str(e)},
-            )
-        else:
-            # Cache result
             if request.enable_caching:
                 self._cache_result(request, result)
 
-            # Update performance stats
             self._update_performance_stats(method, processing_time_ms)
 
             self._logger.info(
-                "Clustered %d results into %d clusters with %d outliers using %s in %.1fms",
+                "Clustered %d results into %d clusters with %d outliers "
+                "using %s in %.1f ms",
                 len(request.results),
-                len(clusters),
-                len(outliers),
+                len(result.clusters),
+                len(result.outliers),
                 method.value,
                 processing_time_ms,
             )
 
             return result
 
+        except Exception as exc:  # pragma: no cover - behaviour asserted by tests
+            processing_time_ms = float((time.time() - start_time) * 1000.0)
+            self._logger.exception("Result clustering failed")
+
+            outliers = [
+                OutlierResult(
+                    result=search_result,
+                    distance_to_nearest_cluster=1.0,
+                    outlier_score=1.0,
+                )
+                for search_result in request.results
+            ]
+
+            fallback_method = (
+                request.method
+                if request.method != ClusteringMethod.AUTO
+                else ClusteringMethod.KMEANS
+            )
+
+            error_message = str(exc) or "Result clustering failed"
+
+            return ResultClusteringResult(
+                clusters=[],
+                outliers=outliers,
+                method_used=fallback_method,
+                total_results=len(request.results),
+                clustered_results=0,
+                outlier_count=len(outliers),
+                cluster_count=0,
+                silhouette_score=None,
+                calinski_harabasz_score=None,
+                davies_bouldin_score=None,
+                processing_time_ms=processing_time_ms,
+                cache_hit=False,
+                clustering_metadata={"error": error_message},
+            )
+
     def _check_algorithm_availability(self) -> dict[str, bool]:
         """Check which clustering algorithms are available."""
-        algorithms = {}
 
-        algorithms["sklearn"] = sklearn is not None
-        algorithms["hdbscan"] = hdbscan is not None
-        algorithms["numpy"] = True  # numpy is always available
-
-        if not algorithms["hdbscan"]:
+        availability = {
+            "sklearn": _optional_attr(sk_cluster, "DBSCAN") is not None
+            and _optional_attr(sk_cluster, "KMeans") is not None,
+            "hdbscan": hdbscan is not None and self.enable_hdbscan,
+            "numpy": True,
+        }
+        if not availability["hdbscan"]:
             self.enable_hdbscan = False
-
-        return algorithms
+        return availability
 
     def _validate_clustering_request(self, request: ResultClusteringRequest) -> bool:
         """Validate clustering request parameters."""
-        # Check minimum results
+
         if len(request.results) < request.min_cluster_size:
             return False
 
-        # Check algorithm availability
         if request.method == ClusteringMethod.HDBSCAN and not self.enable_hdbscan:
             return False
 
-        # Check embeddings
-        valid_embeddings = sum(1 for r in request.results if r.embedding is not None)
-        return not valid_embeddings < request.min_cluster_size
+        embeddings_with_data = sum(
+            1 for result in request.results if result.embedding is not None
+        )
+        return embeddings_with_data >= request.min_cluster_size
 
-    def _extract_embeddings(self, results: list[SearchResult]) -> np.ndarray | None:
-        """Extract and validate embeddings from results."""
-        embeddings = [
+    def _extract_embeddings(self, results: list[SearchResult]) -> FloatArray | None:
+        """Extract embeddings from results."""
+
+        vectors = [
             result.embedding
             for result in results
             if result.embedding is not None and len(result.embedding) > 0
         ]
 
-        if len(embeddings) < 3:
+        if len(vectors) < 3:
             return None
 
-        # Convert to numpy array and validate dimensions
-        embedding_array = np.array(embeddings)
-
-        # Check for consistent dimensions
+        embedding_array = np.array(vectors, dtype=float)
         if embedding_array.ndim != 2:
             return None
 
-        # Normalize embeddings for cosine similarity
-        norms = np.linalg.norm(embedding_array, axis=1, keepdims=True)
-        norms[norms == 0] = 1  # Avoid division by zero
-        return embedding_array / norms
+        return embedding_array
 
     def _select_clustering_method(
-        self, request: ResultClusteringRequest, embeddings: np.ndarray
+        self, request: ResultClusteringRequest, embeddings: FloatArray
     ) -> ClusteringMethod:
         """Select the optimal clustering method."""
+
         if request.method != ClusteringMethod.AUTO:
             return request.method
 
-        # Auto-select based on data characteristics
-        n_samples = embeddings.shape[0]
-
-        if n_samples < 50 and self.enable_hdbscan:
+        sample_count = int(embeddings.shape[0])
+        if self.enable_hdbscan and sample_count <= 50:
             return ClusteringMethod.HDBSCAN
-        if n_samples < 100:
+        if sample_count < 100:
             return ClusteringMethod.DBSCAN
-        if request.max_clusters is not None:
+        if request.max_clusters is not None or request.num_clusters is not None:
             return ClusteringMethod.KMEANS
         return ClusteringMethod.AGGLOMERATIVE
 
     async def _apply_clustering(
         self,
-        embeddings: np.ndarray,
+        embeddings: FloatArray,
         method: ClusteringMethod,
         request: ResultClusteringRequest,
-    ) -> tuple[np.ndarray, dict[str, Any]]:
+    ) -> tuple[IntArray, dict[str, Any]]:
         """Apply the selected clustering algorithm."""
-        metadata = {"method": method.value}
+
+        metadata: dict[str, Any] = {"method": method.value}
 
         if method == ClusteringMethod.HDBSCAN:
             return self._apply_hdbscan(embeddings, request, metadata)
@@ -499,644 +548,592 @@ class ResultClusteringService:
             return self._apply_spectral(embeddings, request, metadata)
         if method == ClusteringMethod.GAUSSIAN_MIXTURE:
             return self._apply_gaussian_mixture(embeddings, request, metadata)
-        msg = f"Unsupported clustering method: {method}"
-        raise ValueError(msg)
+
+        _raise_value_error(f"Unsupported clustering method: {method}")
 
     def _apply_hdbscan(
         self,
-        embeddings: np.ndarray,
+        embeddings: FloatArray,
         request: ResultClusteringRequest,
         metadata: dict[str, Any],
-    ) -> tuple[np.ndarray, dict[str, Any]]:
+    ) -> tuple[IntArray, dict[str, Any]]:
         """Apply HDBSCAN clustering."""
-        if hdbscan is None:
-            msg = "HDBSCAN requires the 'hdbscan' package"
-            raise ImportError(msg)
 
-        # Configure parameters
+        if hdbscan is None:
+            _raise_value_error("HDBSCAN requires the 'hdbscan' package")
+
         min_cluster_size = max(request.min_cluster_size, 3)
         min_samples = request.min_samples or max(2, min_cluster_size - 1)
 
-        # Apply HDBSCAN
+        metric = sklearn_metric_for(request.similarity_metric)
+
         clusterer = hdbscan.HDBSCAN(
             min_cluster_size=min_cluster_size,
             min_samples=min_samples,
-            metric="cosine"
-            if request.similarity_metric == SimilarityMetric.COSINE
-            else "euclidean",
+            metric=metric,
             cluster_selection_epsilon=request.eps,
         )
 
-        cluster_labels = clusterer.fit_predict(embeddings)
+        labels = clusterer.fit_predict(embeddings)
 
+        n_clusters, n_noise = self._cluster_noise_stats(labels)
         metadata.update(
             {
                 "min_cluster_size": min_cluster_size,
                 "min_samples": min_samples,
-                "n_clusters": len(set(cluster_labels))
-                - (1 if -1 in cluster_labels else 0),
-                "n_noise": list(cluster_labels).count(-1),
+                "n_clusters": n_clusters,
+                "n_noise": n_noise,
                 "cluster_persistence": getattr(clusterer, "cluster_persistence_", None),
             }
         )
 
-        return cluster_labels, metadata
+        return labels, metadata
 
     def _apply_dbscan(
         self,
-        embeddings: np.ndarray,
+        embeddings: FloatArray,
         request: ResultClusteringRequest,
         metadata: dict[str, Any],
-    ) -> tuple[np.ndarray, dict[str, Any]]:
+    ) -> tuple[IntArray, dict[str, Any]]:
         """Apply DBSCAN clustering."""
-        if DBSCAN is None:
-            msg = "DBSCAN requires scikit-learn"
-            raise ImportError(msg)
 
-        # Auto-determine eps if not provided
-        eps = request.eps
-        if eps is None:
-            eps = self._estimate_eps(embeddings, request.min_cluster_size)
+        dbscan_cls = _optional_attr(sk_cluster, "DBSCAN")
+        if dbscan_cls is None:
+            _raise_value_error("DBSCAN requires scikit-learn")
 
+        eps = request.eps or self._estimate_eps(
+            embeddings, request.min_cluster_size, request.similarity_metric
+        )
         min_samples = request.min_samples or request.min_cluster_size
 
-        # Apply DBSCAN
-        clusterer = DBSCAN(
-            eps=eps,
-            min_samples=min_samples,
-            metric="cosine"
-            if request.similarity_metric == SimilarityMetric.COSINE
-            else "euclidean",
-        )
+        metric = sklearn_metric_for(request.similarity_metric)
 
-        cluster_labels = clusterer.fit_predict(embeddings)
+        clusterer = dbscan_cls(eps=eps, min_samples=min_samples, metric=metric)
+        labels = clusterer.fit_predict(embeddings)
+
+        n_clusters, n_noise = self._cluster_noise_stats(labels)
 
         metadata.update(
             {
-                "eps": eps,
-                "min_samples": min_samples,
-                "n_clusters": len(set(cluster_labels))
-                - (1 if -1 in cluster_labels else 0),
-                "n_noise": list(cluster_labels).count(-1),
+                "eps": float(eps),
+                "min_samples": int(min_samples),
+                "n_clusters": n_clusters,
+                "n_noise": n_noise,
             }
         )
 
-        return cluster_labels, metadata
+        return labels, metadata
 
     def _apply_kmeans(
         self,
-        embeddings: np.ndarray,
+        embeddings: FloatArray,
         request: ResultClusteringRequest,
         metadata: dict[str, Any],
-    ) -> tuple[np.ndarray, dict[str, Any]]:
+    ) -> tuple[IntArray, dict[str, Any]]:
         """Apply K-means clustering."""
-        if KMeans is None:
-            msg = "KMeans requires scikit-learn"
-            raise ImportError(msg)
 
-        # Determine number of clusters
-        n_clusters = request.max_clusters
-        if n_clusters is None:
-            n_clusters = min(8, max(2, len(embeddings) // request.min_cluster_size))
+        kmeans_cls = _optional_attr(sk_cluster, "KMeans")
+        if kmeans_cls is None:
+            _raise_value_error("KMeans requires scikit-learn")
 
-        # Apply K-means
-        clusterer = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
+        n_clusters = self._resolve_cluster_count(embeddings, request)
 
-        cluster_labels = clusterer.fit_predict(embeddings)
+        clusterer = kmeans_cls(
+            n_clusters=int(n_clusters), random_state=42, n_init="auto"
+        )
+        labels = clusterer.fit_predict(embeddings)
+
+        inertia_value = (
+            float(clusterer.inertia_) if clusterer.inertia_ is not None else 0.0
+        )
 
         metadata.update(
             {
-                "n_clusters": n_clusters,
-                "inertia": clusterer.inertia_,
-                "n_iter": clusterer.n_iter_,
+                "n_clusters": int(n_clusters),
+                "inertia": inertia_value,
+                "n_iter": int(clusterer.n_iter_),
             }
         )
 
-        return cluster_labels, metadata
+        return labels, metadata
 
     def _apply_agglomerative(
         self,
-        embeddings: np.ndarray,
+        embeddings: FloatArray,
         request: ResultClusteringRequest,
         metadata: dict[str, Any],
-    ) -> tuple[np.ndarray, dict[str, Any]]:
+    ) -> tuple[IntArray, dict[str, Any]]:
         """Apply agglomerative clustering."""
-        if AgglomerativeClustering is None:
-            msg = "AgglomerativeClustering requires scikit-learn"
-            raise ImportError(msg)
 
-        # Determine number of clusters
-        n_clusters = request.max_clusters
-        if n_clusters is None:
-            n_clusters = min(8, max(2, len(embeddings) // request.min_cluster_size))
+        agglomerative_cls = _optional_attr(sk_cluster, "AgglomerativeClustering")
+        if agglomerative_cls is None:
+            _raise_value_error("AgglomerativeClustering requires scikit-learn")
 
-        # Apply agglomerative clustering
-        clusterer = AgglomerativeClustering(
-            n_clusters=n_clusters, linkage="ward", metric="euclidean"
+        n_clusters = self._resolve_cluster_count(embeddings, request)
+
+        metric = request.similarity_metric.value
+        linkage = "ward" if metric == "euclidean" else "average"
+        if metric not in {"euclidean", "manhattan", "cosine"}:
+            metric = "euclidean"
+
+        clusterer = agglomerative_cls(
+            n_clusters=int(n_clusters),
+            metric=metric,
+            linkage=linkage,
         )
+        labels = clusterer.fit_predict(embeddings)
 
-        cluster_labels = clusterer.fit_predict(embeddings)
-
-        metadata.update({"n_clusters": n_clusters, "linkage": "ward"})
-
-        return cluster_labels, metadata
+        metadata.update(
+            {"n_clusters": int(n_clusters), "linkage": linkage, "metric": metric}
+        )
+        return labels, metadata
 
     def _apply_spectral(
         self,
-        embeddings: np.ndarray,
+        embeddings: FloatArray,
         request: ResultClusteringRequest,
         metadata: dict[str, Any],
-    ) -> tuple[np.ndarray, dict[str, Any]]:
+    ) -> tuple[IntArray, dict[str, Any]]:
         """Apply spectral clustering."""
-        if SpectralClustering is None:
-            msg = "SpectralClustering requires scikit-learn"
-            raise ImportError(msg)
 
-        # Determine number of clusters
-        n_clusters = request.max_clusters
-        if n_clusters is None:
-            n_clusters = min(8, max(2, len(embeddings) // request.min_cluster_size))
+        spectral_cls = _optional_attr(sk_cluster, "SpectralClustering")
+        if spectral_cls is None:
+            _raise_value_error("SpectralClustering requires scikit-learn")
 
-        # Apply spectral clustering
-        clusterer = SpectralClustering(
-            n_clusters=n_clusters,
-            affinity="cosine"
-            if request.similarity_metric == SimilarityMetric.COSINE
-            else "rbf",
-            random_state=42,
+        n_clusters = self._resolve_cluster_count(embeddings, request)
+
+        affinity = (
+            "cosine" if request.similarity_metric == SimilarityMetric.COSINE else "rbf"
         )
 
-        cluster_labels = clusterer.fit_predict(embeddings)
+        clusterer = spectral_cls(
+            n_clusters=int(n_clusters),
+            affinity=affinity,
+            random_state=42,
+        )
+        labels = clusterer.fit_predict(embeddings)
 
-        metadata.update({"n_clusters": n_clusters, "affinity": clusterer.affinity})
-
-        return cluster_labels, metadata
+        metadata.update({"n_clusters": int(n_clusters), "affinity": affinity})
+        return labels, metadata
 
     def _apply_gaussian_mixture(
         self,
-        embeddings: np.ndarray,
+        embeddings: FloatArray,
         request: ResultClusteringRequest,
         metadata: dict[str, Any],
-    ) -> tuple[np.ndarray, dict[str, Any]]:
+    ) -> tuple[IntArray, dict[str, Any]]:
         """Apply Gaussian mixture model clustering."""
-        if GaussianMixture is None:
-            msg = "GaussianMixture requires scikit-learn"
-            raise ImportError(msg)
 
-        # Determine number of components
-        n_components = request.max_clusters
-        if n_components is None:
-            n_components = min(8, max(2, len(embeddings) // request.min_cluster_size))
+        gaussian_mixture_cls = _optional_attr(sk_mixture, "GaussianMixture")
+        if gaussian_mixture_cls is None:
+            _raise_value_error("GaussianMixture requires scikit-learn")
 
-        # Apply Gaussian mixture
-        clusterer = GaussianMixture(
-            n_components=n_components, covariance_type="full", random_state=42
+        n_components = self._resolve_cluster_count(embeddings, request)
+
+        clusterer = gaussian_mixture_cls(
+            n_components=int(n_components), covariance_type="full", random_state=42
         )
+        labels = clusterer.fit_predict(embeddings)
 
-        cluster_labels = clusterer.fit_predict(embeddings)
+        lower_bound = (
+            float(clusterer.lower_bound_)
+            if getattr(clusterer, "lower_bound_", None) is not None
+            else 0.0
+        )
 
         metadata.update(
             {
-                "n_components": n_components,
-                "bic": clusterer.bic(embeddings),
-                "aic": clusterer.aic(embeddings),
-                "lower_bound": clusterer.lower_bound_,
+                "n_components": int(n_components),
+                "bic": float(clusterer.bic(embeddings)),
+                "aic": float(clusterer.aic(embeddings)),
+                "lower_bound": lower_bound,
             }
         )
+        return labels, metadata
 
-        return cluster_labels, metadata
-
-    def _estimate_eps(self, embeddings: np.ndarray, min_cluster_size: int) -> float:
+    def _estimate_eps(
+        self,
+        embeddings: FloatArray,
+        min_cluster_size: int,
+        similarity_metric: SimilarityMetric = SimilarityMetric.COSINE,
+    ) -> float:
         """Estimate eps parameter for DBSCAN using k-distance."""
-        if NearestNeighbors is None:
-            msg = "NearestNeighbors requires scikit-learn"
-            raise ImportError(msg)
 
-        # Use k = min_cluster_size for k-distance
-        k = min_cluster_size
+        neighbors_cls = _optional_attr(sk_neighbors, "NearestNeighbors")
+        if neighbors_cls is None:
+            _raise_value_error("NearestNeighbors requires scikit-learn")
 
-        neighbors = NearestNeighbors(n_neighbors=k, metric="cosine")
+        neighbors = neighbors_cls(
+            n_neighbors=min_cluster_size,
+            metric=sklearn_metric_for(similarity_metric),
+        )
         neighbors.fit(embeddings)
         distances, _ = neighbors.kneighbors(embeddings)
-
-        # Sort k-distances
         k_distances = np.sort(distances[:, -1])
+        eps = float(np.percentile(k_distances, 75))
+        return float(min(eps, 0.5))
 
-        # Use knee point heuristic
-        # Simple implementation: use 75th percentile
-        eps = np.percentile(k_distances, 75)
-
-        return min(eps, 0.5)  # Cap at reasonable maximum
-
-    def _build_cluster_groups(
+    def _build_cluster_groups(  # pylint: disable=too-many-locals
         self,
         results: list[SearchResult],
-        cluster_labels: np.ndarray,
-        embeddings: np.ndarray,
+        cluster_labels: IntArray,
+        embeddings: FloatArray,
         request: ResultClusteringRequest,
     ) -> list[ClusterGroup]:
         """Build cluster groups from clustering results."""
-        clusters = []
-        unique_labels = set(cluster_labels)
 
-        # Remove noise label (-1) if present
-        unique_labels.discard(-1)
+        clusters: list[ClusterGroup] = []
+        unique_labels = {int(label) for label in cluster_labels if label != -1}
 
-        for cluster_id in unique_labels:
-            # Get results in this cluster
-            cluster_mask = cluster_labels == cluster_id
+        for cluster_id in sorted(unique_labels):
+            mask = cluster_labels == cluster_id
             cluster_results = [
-                results[i] for i in range(len(results)) if cluster_mask[i]
+                results[i] for i, selected in enumerate(mask) if selected
             ]
-            cluster_embeddings = embeddings[cluster_mask]
-
-            # Skip small clusters if required
             if len(cluster_results) < request.min_cluster_size:
                 continue
 
-            # Calculate cluster metrics
-            centroid = np.mean(cluster_embeddings, axis=0).tolist()
-            avg_score = np.mean([r.score for r in cluster_results])
-            coherence_score = self._calculate_coherence(cluster_embeddings)
-            confidence = self._calculate_cluster_confidence(
-                cluster_embeddings, embeddings, request
+            cluster_embeddings = embeddings[mask]
+            summary = self._summarize_cluster(
+                cluster_embeddings, cluster_results, embeddings, request
             )
 
-            # Generate cluster label and keywords
             label = None
-            keywords = []
             if request.generate_labels:
                 label = self._generate_cluster_label(cluster_results, request.query)
+
+            keywords: list[str] = []
             if request.extract_keywords:
                 keywords = self._extract_cluster_keywords(cluster_results)
 
-            cluster = ClusterGroup(
-                cluster_id=int(cluster_id),
-                label=label,
-                results=cluster_results,
-                centroid=centroid,
-                confidence=confidence,
-                size=len(cluster_results),
-                avg_score=avg_score,
-                coherence_score=coherence_score,
-                keywords=keywords,
-                metadata={
-                    "embedding_std": np.std(cluster_embeddings, axis=0).tolist()[
-                        :5
-                    ],  # First 5 dims
-                    "score_std": np.std([r.score for r in cluster_results]),
-                },
+            clusters.append(
+                ClusterGroup(
+                    cluster_id=int(cluster_id),
+                    label=label,
+                    results=cluster_results,
+                    centroid=summary["centroid"],
+                    confidence=summary["confidence"],
+                    size=len(cluster_results),
+                    avg_score=summary["avg_score"],
+                    coherence_score=summary["coherence"],
+                    keywords=keywords,
+                    metadata={
+                        "embedding_std": summary["embedding_std"],
+                        "score_std": summary["score_std"],
+                    },
+                )
             )
 
-            clusters.append(cluster)
-
-        # Sort clusters by size (largest first)
-        clusters.sort(key=lambda c: c.size, reverse=True)
-
+        clusters.sort(key=lambda cluster: cluster.size, reverse=True)
         return clusters
 
     def _identify_outliers(
         self,
         results: list[SearchResult],
-        cluster_labels: np.ndarray,
-        embeddings: np.ndarray,
-        _request: ResultClusteringRequest,
+        cluster_labels: IntArray,
+        embeddings: FloatArray,
+        request: ResultClusteringRequest,
     ) -> list[OutlierResult]:
-        """Identify outlier results that don't fit into clusters."""
-        outliers = []
+        """Identify outlier results that do not belong to any cluster."""
 
-        # Find results labeled as noise (-1)
-        noise_mask = cluster_labels == -1
-        noise_indices = np.where(noise_mask)[0]
+        outliers: list[OutlierResult] = []
+        noise_indices = np.where(cluster_labels == -1)[0]
+        cluster_indices = [i for i, label in enumerate(cluster_labels) if label != -1]
 
-        for idx in noise_indices:
-            result = results[idx]
-            embedding = embeddings[idx]
+        if not cluster_indices:
+            return [
+                OutlierResult(
+                    result=results[int(index)],
+                    distance_to_nearest_cluster=1.0,
+                    outlier_score=1.0,
+                )
+                for index in noise_indices
+            ]
 
-            # Calculate distance to nearest cluster
+        centroids = {}
+        for label in {int(lbl) for lbl in cluster_labels if lbl != -1}:
+            mask = cluster_labels == label
+            centroids[label] = embeddings[mask].mean(axis=0)
+
+        for index in noise_indices:
+            embedding = embeddings[int(index)]
             min_distance = float("inf")
-            unique_labels = set(cluster_labels)
-            unique_labels.discard(-1)
-
-            for cluster_id in unique_labels:
-                cluster_mask = cluster_labels == cluster_id
-                cluster_embeddings = embeddings[cluster_mask]
-
-                if len(cluster_embeddings) > 0:
-                    # Calculate distance to cluster centroid
-                    centroid = np.mean(cluster_embeddings, axis=0)
-                    distance = np.linalg.norm(embedding - centroid)
-                    min_distance = min(min_distance, distance)
-
+            for centroid in centroids.values():
+                distance = distance_for_metric(
+                    embedding, centroid, request.similarity_metric
+                )
+                min_distance = min(min_distance, distance)
             if min_distance == float("inf"):
                 min_distance = 1.0
 
-            # Calculate outlier score
-            outlier_score = min(1.0, min_distance / 2.0)  # Normalize
-
-            outlier = OutlierResult(
-                result=result,
-                distance_to_nearest_cluster=min_distance,
-                outlier_score=outlier_score,
+            outliers.append(
+                OutlierResult(
+                    result=results[int(index)],
+                    distance_to_nearest_cluster=float(min_distance),
+                    outlier_score=float(min(1.0, min_distance / 2.0)),
+                )
             )
-
-            outliers.append(outlier)
 
         return outliers
 
-    def _calculate_coherence(self, cluster_embeddings: np.ndarray) -> float:
+    def _calculate_coherence(self, cluster_embeddings: FloatArray) -> float:
         """Calculate intra-cluster coherence score."""
-        if len(cluster_embeddings) < 2:
+
+        if cluster_embeddings.shape[0] < 2:
             return 1.0
 
-        # Calculate pairwise similarities
-        similarities = []
-        for i in range(len(cluster_embeddings)):
-            for j in range(i + 1, len(cluster_embeddings)):
-                similarity = np.dot(cluster_embeddings[i], cluster_embeddings[j])
-                similarities.append(similarity)
-
-        # Ensure coherence score is bounded between 0 and 1
-        coherence = float(np.mean(similarities)) if similarities else 0.0
-        return max(0.0, min(1.0, coherence))
+        norms = np.linalg.norm(cluster_embeddings, axis=1, keepdims=True)
+        norms[norms == 0] = 1.0
+        normalised = cluster_embeddings / norms
+        similarity_matrix = normalised @ normalised.T
+        upper = similarity_matrix[np.triu_indices(similarity_matrix.shape[0], k=1)]
+        if upper.size == 0:
+            return 1.0
+        coherence = float(np.mean(upper))
+        return float(np.clip(coherence, 0.0, 1.0))
 
     def _calculate_cluster_confidence(
         self,
-        cluster_embeddings: np.ndarray,
-        _all_embeddings: np.ndarray,
+        cluster_embeddings: FloatArray,
+        _all_embeddings: FloatArray,
         request: ResultClusteringRequest,
     ) -> float:
         """Calculate confidence score for a cluster."""
-        if len(cluster_embeddings) < 2:
+
+        if cluster_embeddings.shape[0] < 2:
             return 0.0
 
-        # Base confidence on cluster cohesion
         coherence = self._calculate_coherence(cluster_embeddings)
-
-        # Adjust based on cluster size
-        size_factor = min(1.0, len(cluster_embeddings) / (request.min_cluster_size * 2))
-
-        # Combine factors
-        confidence = coherence * 0.7 + size_factor * 0.3
-
-        return max(0.0, min(1.0, confidence))
+        size_factor = min(
+            1.0, cluster_embeddings.shape[0] / (request.min_cluster_size * 2)
+        )
+        confidence = (coherence * 0.7) + (size_factor * 0.3)
+        return float(np.clip(confidence, 0.0, 1.0))
 
     def _calculate_quality_metrics(
         self,
-        embeddings: np.ndarray,
-        cluster_labels: np.ndarray,
-        _request: ResultClusteringRequest,
+        embeddings: FloatArray,
+        cluster_labels: IntArray,
+        request: ResultClusteringRequest,
     ) -> dict[str, float]:
         """Calculate clustering quality metrics."""
-        metrics = {}
 
-        if not self.enable_metrics:
-            return metrics
+        if not self.enable_advanced_metrics:
+            return {}
 
-        if silhouette_score is not None:
-            # Filter out noise points for metrics calculation
-            valid_mask = cluster_labels != -1
-            if np.sum(valid_mask) > 1 and len(set(cluster_labels[valid_mask])) > 1:
-                valid_embeddings = embeddings[valid_mask]
-                valid_labels = cluster_labels[valid_mask]
+        silhouette_fn = _optional_attr(sk_metrics, "silhouette_score")
+        calinski_fn = _optional_attr(sk_metrics, "calinski_harabasz_score")
+        davies_fn = _optional_attr(sk_metrics, "davies_bouldin_score")
 
-                try:
-                    # Silhouette score
-                    metrics["silhouette_score"] = silhouette_score(
-                        valid_embeddings, valid_labels, metric="cosine"
-                    )
+        if silhouette_fn is None:
+            return {}
 
-                    # Calinski-Harabasz index
-                    if calinski_harabasz_score is not None:
-                        metrics["calinski_harabasz_score"] = calinski_harabasz_score(
-                            valid_embeddings, valid_labels
-                        )
+        valid_mask = cluster_labels != -1
+        if np.sum(valid_mask) < 2:
+            return {}
 
-                    # Davies-Bouldin index
-                    if davies_bouldin_score is not None:
-                        metrics["davies_bouldin_score"] = davies_bouldin_score(
-                            valid_embeddings, valid_labels
-                        )
+        valid_labels = cluster_labels[valid_mask]
+        if len({int(label) for label in valid_labels}) < 2:
+            return {}
 
-                except (ValueError, TypeError, UnicodeDecodeError) as e:
-                    self._logger.warning("Failed to calculate quality metrics: %s", e)
+        valid_embeddings = embeddings[valid_mask]
+        metrics: dict[str, float] = {}
+        metric_name = sklearn_metric_for(request.similarity_metric)
+
+        try:
+            metrics["silhouette_score"] = float(
+                silhouette_fn(valid_embeddings, valid_labels, metric=metric_name)
+            )
+            if calinski_fn is not None:
+                metrics["calinski_harabasz_score"] = float(
+                    calinski_fn(valid_embeddings, valid_labels)
+                )
+            if davies_fn is not None:
+                metrics["davies_bouldin_score"] = float(
+                    davies_fn(valid_embeddings, valid_labels)
+                )
+        except (ValueError, TypeError) as exc:  # pragma: no cover - defensive
+            self._logger.warning("Failed to calculate quality metrics: %s", exc)
 
         return metrics
 
-    def _generate_cluster_label(
-        self, results: list[SearchResult], _query: str | None = None
-    ) -> str:
-        """Generate human-readable label for a cluster."""
-        # Simple implementation - extract common terms
-        all_titles = " ".join(
-            r.title.lower() for r in results[:5]
-        )  # Use first 5 for efficiency
+    def _resolve_cluster_count(
+        self, embeddings: FloatArray, request: ResultClusteringRequest
+    ) -> int:
+        """Determine the target number of clusters for bounded algorithms."""
 
-        # Extract most common meaningful words
-        words = re.findall(r"\b\w{3,}\b", all_titles)
+        explicit = request.max_clusters or request.num_clusters
+        if explicit is not None:
+            return int(explicit)
+        fallback = max(2, embeddings.shape[0] // request.min_cluster_size)
+        return int(min(DEFAULT_MAX_CLUSTERS, fallback))
 
-        # Remove common stop words
-        stop_words = {
-            "the",
-            "and",
-            "for",
-            "are",
-            "but",
-            "not",
-            "you",
-            "all",
-            "can",
-            "her",
-            "was",
-            "one",
-            "our",
-            "had",
-            "day",
-            "get",
-            "has",
-            "him",
-            "his",
-            "how",
-            "man",
-            "new",
-            "now",
-            "old",
-            "see",
-            "two",
-            "way",
-            "who",
-            "boy",
-            "did",
-            "its",
-            "let",
-            "put",
-            "say",
-            "she",
-            "too",
-            "use",
+    @staticmethod
+    def _cluster_noise_stats(labels: IntArray) -> tuple[int, int]:
+        """Return cluster and noise counts for label arrays."""
+
+        n_noise = int(np.sum(labels == -1))
+        n_clusters = int(len({int(lbl) for lbl in labels if lbl != -1}))
+        return n_clusters, n_noise
+
+    def _summarize_cluster(
+        self,
+        cluster_embeddings: FloatArray,
+        cluster_results: list[SearchResult],
+        all_embeddings: FloatArray,
+        request: ResultClusteringRequest,
+    ) -> dict[str, Any]:
+        """Compute aggregate metrics for a cluster."""
+
+        centroid_vector = cluster_embeddings.mean(axis=0)
+        scores = np.array([res.score for res in cluster_results], dtype=float)
+        coherence = self._calculate_coherence(cluster_embeddings)
+        confidence = self._calculate_cluster_confidence(
+            cluster_embeddings, all_embeddings, request
+        )
+        embedding_std = cluster_embeddings.std(axis=0)
+
+        return {
+            "centroid": [float(value) for value in centroid_vector],
+            "avg_score": float(scores.mean()) if scores.size else 0.0,
+            "score_std": float(scores.std()) if scores.size else 0.0,
+            "coherence": float(coherence),
+            "confidence": float(confidence),
+            "embedding_std": [
+                float(value) for value in embedding_std[:EMBEDDING_STD_DIM_SAMPLE]
+            ],
         }
 
-        filtered_words = [w for w in words if w not in stop_words and len(w) > 3]
+    def _generate_cluster_label(
+        self, results: list[SearchResult], query: str | None = None
+    ) -> str:
+        """Generate human-readable label for a cluster."""
 
-        if filtered_words:
-            # Count word frequencies
-            word_counts = {}
-            for word in filtered_words:
-                word_counts[word] = word_counts.get(word, 0) + 1
+        titles = " ".join(result.title for result in results[:5])
+        words = re.findall(r"\b\w{3,}\b", titles.lower())
+        filtered = [word for word in words if word not in TEXT_STOP_WORDS]
+        if query:
+            filtered.extend(re.findall(r"\b\w{3,}\b", query.lower()))
 
-            # Get most common words
-            common_words = sorted(word_counts.items(), key=lambda x: x[1], reverse=True)
-            top_words = [word for word, count in common_words[:3] if count > 1]
+        if not filtered:
+            return "Cluster"
 
-            if top_words:
-                return " & ".join(top_words).title()
-
-        # Fallback to generic labels
-        return f"Cluster {hash(str([r.id for r in results[:3]])) % 1000}"
+        counter = Counter(filtered)
+        most_common = counter.most_common(2)
+        label = " ".join(word.title() for word, _ in most_common)
+        return label or "Cluster"
 
     def _extract_cluster_keywords(self, results: list[SearchResult]) -> list[str]:
         """Extract representative keywords for a cluster."""
-        # Combine titles and content snippets
-        text_content = ""
-        for result in results[:10]:  # Limit for efficiency
-            text_content += f"{result.title} {result.content} "
 
-        # Extract keywords using simple frequency analysis
-        words = re.findall(r"\b\w{4,}\b", text_content.lower())
-
-        # Remove common words
-        stop_words = {
-            "that",
-            "with",
-            "have",
-            "this",
-            "will",
-            "your",
-            "from",
-            "they",
-            "know",
-            "want",
-            "been",
-            "good",
-            "much",
-            "some",
-            "time",
-            "very",
-            "when",
-            "come",
-            "here",
-            "just",
-            "like",
-            "long",
-            "make",
-            "many",
-            "over",
-            "such",
-            "take",
-            "than",
-            "them",
-            "well",
-            "were",
-        }
-
-        filtered_words = [w for w in words if w not in stop_words]
-
-        # Count frequencies
-        word_counts = {}
-        for word in filtered_words:
-            word_counts[word] = word_counts.get(word, 0) + 1
-
-        # Get top keywords
-        keywords = sorted(word_counts.items(), key=lambda x: x[1], reverse=True)
-        return [word for word, count in keywords[:8] if count >= 2]
+        text = " ".join(result.content.lower() for result in results)
+        words = re.findall(r"\b\w{3,}\b", text)
+        filtered = [word for word in words if word not in TEXT_STOP_WORDS]
+        counter = Counter(filtered)
+        return [word for word, count in counter.most_common(8) if count >= 2]
 
     def _get_algorithm_parameters(
         self, method: ClusteringMethod, request: ResultClusteringRequest
     ) -> dict[str, Any]:
         """Get algorithm-specific parameters used."""
-        params = {
+
+        params: dict[str, Any] = {
             "method": method.value,
             "min_cluster_size": request.min_cluster_size,
             "similarity_metric": request.similarity_metric.value,
             "scope": request.scope.value,
         }
-
-        if request.max_clusters:
+        if request.max_clusters is not None:
             params["max_clusters"] = request.max_clusters
-        if request.min_samples:
+        if request.num_clusters is not None:
+            params["num_clusters"] = request.num_clusters
+        if request.min_samples is not None:
             params["min_samples"] = request.min_samples
-        if request.eps:
+        if request.eps is not None:
             params["eps"] = request.eps
-
         return params
+
+    def _generate_cache_key(self, request: ResultClusteringRequest) -> str:
+        """Generate cache key for request."""
+
+        result_ids = sorted(result.id for result in request.results)
+        parts = [
+            ",".join(result_ids),
+            request.method.value,
+            str(request.min_cluster_size),
+            str(request.max_clusters or ""),
+            str(request.num_clusters or ""),
+            request.similarity_metric.value,
+        ]
+        return build_cache_key(*parts)
 
     def _get_cached_result(
         self, request: ResultClusteringRequest
     ) -> ResultClusteringResult | None:
-        """Get cached clustering result."""
+        """Get cached clustering result if available."""
+
         cache_key = self._generate_cache_key(request)
-
-        if cache_key in self.clustering_cache:
-            self.cache_stats["hits"] += 1
-            return self.clustering_cache[cache_key]
-
-        self.cache_stats["misses"] += 1
-        return None
+        return self._cache.get(cache_key)
 
     def _cache_result(
         self, request: ResultClusteringRequest, result: ResultClusteringResult
     ) -> None:
         """Cache clustering result."""
-        if len(self.clustering_cache) >= self.cache_size:
-            # Simple LRU eviction
-            oldest_key = next(iter(self.clustering_cache))
-            del self.clustering_cache[oldest_key]
 
         cache_key = self._generate_cache_key(request)
-        self.clustering_cache[cache_key] = result
-
-    def _generate_cache_key(self, request: ResultClusteringRequest) -> str:
-        """Generate cache key for request."""
-        # Simple cache key based on result IDs and parameters
-        result_ids = sorted([r.id for r in request.results])
-        key_components = [
-            str(hash(tuple(result_ids))),
-            request.method.value,
-            str(request.min_cluster_size),
-            str(request.max_clusters),
-            request.similarity_metric.value,
-        ]
-        return "|".join(key_components)
+        self._cache.set(cache_key, result)
 
     def _update_performance_stats(
         self, method: ClusteringMethod, processing_time: float
     ) -> None:
         """Update performance statistics."""
-        self.performance_stats["total_clusterings"] += 1
 
-        # Update average processing time
-        total = self.performance_stats["total_clusterings"]
-        current_avg = self.performance_stats["avg_processing_time"]
-        self.performance_stats["avg_processing_time"] = (
-            current_avg * (total - 1) + processing_time
-        ) / total
-
-        # Update method usage
-        method_key = method.value
-        if method_key not in self.performance_stats["method_usage"]:
-            self.performance_stats["method_usage"][method_key] = 0
-        self.performance_stats["method_usage"][method_key] += 1
+        self._performance.record(processing_time, label=method.value)
 
     def get_performance_stats(self) -> dict[str, Any]:
-        """Get performance statistics."""
-        return {
-            **self.performance_stats,
-            "cache_stats": self.cache_stats,
-            "cache_size": len(self.clustering_cache),
-            "available_algorithms": self.available_algorithms,
+        """Return performance statistics including cache state."""
+
+        snapshot = performance_snapshot(self._performance)
+        formatted_stats = {
+            "_total_clusterings": snapshot["total_operations"],
+            "avg_processing_time": snapshot["avg_processing_time"],
+            "method_usage": snapshot["counters"],
+            "available_algorithms": dict(self.available_algorithms),
         }
+        return merge_performance_metadata(
+            performance_stats=formatted_stats,
+            cache_tracker=self._cache.tracker,
+            cache_size=len(self._cache),
+        )
 
     def clear_cache(self) -> None:
         """Clear clustering cache."""
-        self.clustering_cache.clear()
-        self.cache_stats = {"hits": 0, "misses": 0}
+
+        self._cache.clear()
+
+    @property
+    def clustering_cache(self) -> dict[str, ResultClusteringResult]:
+        """Return a snapshot of cached clustering results."""
+
+        return self._cache.snapshot()
+
+    @property
+    def cache_size(self) -> int:
+        """Return the configured cache size."""
+
+        return self._cache_size
+
+    @property
+    def cache_stats(self) -> dict[str, int]:
+        """Return cache hit and miss counts."""
+
+        return {
+            "hits": self._cache.tracker.hits,
+            "misses": self._cache.tracker.misses,
+        }
+
+    @property
+    def performance_stats(self) -> dict[str, Any]:
+        """Expose performance statistics via property access."""
+
+        return self.get_performance_stats()

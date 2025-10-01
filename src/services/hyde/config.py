@@ -1,5 +1,7 @@
 """HyDE configuration models with Pydantic v2."""
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -111,6 +113,42 @@ class HyDEConfig(BaseModel):
             }
         }
     }
+
+    @classmethod
+    def from_unified_config(cls, config: Any) -> "HyDEConfig":
+        """Create HyDE configuration from unified settings object."""
+
+        return cls(
+            enable_hyde=getattr(config, "enable_hyde", True),
+            enable_fallback=getattr(config, "enable_fallback", True),
+            enable_reranking=getattr(config, "enable_reranking", True),
+            enable_caching=getattr(config, "enable_caching", True),
+            num_generations=getattr(config, "num_generations", 5),
+            generation_temperature=getattr(config, "generation_temperature", 0.7),
+            max_generation_tokens=getattr(config, "max_generation_tokens", 200),
+            generation_model=getattr(config, "generation_model", "gpt-3.5-turbo"),
+            generation_timeout_seconds=getattr(
+                config, "generation_timeout_seconds", 10
+            ),
+            hyde_prefetch_limit=getattr(config, "hyde_prefetch_limit", 50),
+            query_prefetch_limit=getattr(config, "query_prefetch_limit", 30),
+            hyde_weight_in_fusion=getattr(config, "hyde_weight_in_fusion", 0.6),
+            fusion_algorithm=getattr(config, "fusion_algorithm", "rrf"),
+            cache_ttl_seconds=getattr(config, "cache_ttl_seconds", 3600),
+            cache_hypothetical_docs=getattr(config, "cache_hypothetical_docs", True),
+            cache_prefix=getattr(config, "cache_prefix", "hyde"),
+            parallel_generation=getattr(config, "parallel_generation", True),
+            max_concurrent_generations=getattr(config, "max_concurrent_generations", 5),
+            use_domain_specific_prompts=getattr(
+                config, "use_domain_specific_prompts", True
+            ),
+            prompt_variation=getattr(config, "prompt_variation", True),
+            min_generation_length=getattr(config, "min_generation_length", 20),
+            filter_duplicates=getattr(config, "filter_duplicates", True),
+            diversity_threshold=getattr(config, "diversity_threshold", 0.3),
+            log_generations=getattr(config, "log_generations", False),
+            track_metrics=getattr(config, "track_metrics", True),
+        )
 
 
 class HyDEPromptConfig(BaseModel):

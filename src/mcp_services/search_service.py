@@ -75,9 +75,7 @@ class SearchService:
         search_tools.register_tools(self.mcp, self.client_manager)
 
         # Register query processing and orchestration tools
-        query_processing_tools.register_query_processing_tools(
-            self.mcp, self.client_manager
-        )
+        query_processing_tools.register_tools(self.mcp, self.client_manager)
 
         # Register web search tools
         web_search.register_tools(self.mcp, self.client_manager)

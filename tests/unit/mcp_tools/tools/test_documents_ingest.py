@@ -230,11 +230,19 @@ async def test_add_document_without_content_intelligence(
 
     assert isinstance(result, AddDocumentResponse)
     upsert_args = documents_env.vector_service.upsert_documents.await_args.args
+    text_documents = upsert_args[1]
     metadata_flags = [
         bool(doc.metadata.get("content_intelligence_analyzed"))
-        for doc in upsert_args[1]
+        for doc in text_documents
     ]
     assert metadata_flags == [False, False]
+    for index, document in enumerate(text_documents):
+        metadata = document.metadata or {}
+        assert metadata["doc_id"]
+        assert metadata["chunk_id"] == index
+        assert metadata["tenant"] == request.collection
+        assert metadata["source"] == request.url
+        assert "content_hash" in metadata
 
 
 @pytest.mark.asyncio
