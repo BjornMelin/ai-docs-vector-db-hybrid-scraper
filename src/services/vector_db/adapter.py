@@ -21,12 +21,17 @@ class QdrantVectorAdapter(VectorAdapter):
 
     async def create_collection(self, schema: CollectionSchema) -> None:
         """Create the collection if it does not exist, otherwise ensure schema."""
-        vectors_config = {
-            "default": models.VectorParams(
-                size=schema.vector_size,
-                distance=_distance_from_string(schema.distance),
-            )
-        }
+
+        if await self._client.collection_exists(schema.name):
+            try:
+                await self._client.delete_collection(schema.name)
+            except UnexpectedResponse as exc:  # pragma: no cover - defensive
+                if exc.status_code != 404:
+                    raise
+        vectors_config = models.VectorParams(
+            size=schema.vector_size,
+            distance=_distance_from_string(schema.distance),
+        )
         sparse_config = None
         if schema.requires_sparse:
             sparse_config = {
@@ -35,7 +40,7 @@ class QdrantVectorAdapter(VectorAdapter):
                 )
             }
 
-        await self._client.recreate_collection(
+        await self._client.create_collection(
             collection_name=schema.name,
             vectors_config=vectors_config,
             sparse_vectors_config=sparse_config,
@@ -87,10 +92,13 @@ class QdrantVectorAdapter(VectorAdapter):
             )
             for record in records
         ]
+        upsert_kwargs: dict[str, Any] = {}
+        if batch_size is not None:
+            upsert_kwargs["batch_size"] = batch_size
         await self._client.upsert(
             collection_name=collection,
             points=points,
-            batch_size=batch_size,
+            **upsert_kwargs,
         )
 
     async def delete(
@@ -142,11 +150,13 @@ class QdrantVectorAdapter(VectorAdapter):
             List of vector matches.
         """
 
-        results = await self._client.search(
+        query_response = await self._client.query_points(
             collection_name=collection,
-            query_vector=list(vector),
+            query=list(vector),
             limit=limit,
             query_filter=_filter_from_mapping(filters),
+            with_payload=True,
+            with_vectors=False,
         )
         return [
             VectorMatch(
@@ -154,7 +164,7 @@ class QdrantVectorAdapter(VectorAdapter):
                 score=point.score,
                 payload=point.payload,
             )
-            for point in results
+            for point in query_response.points
         ]
 
     # pylint: disable=too-many-arguments  # Exposes full hybrid search knobs.

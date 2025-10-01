@@ -1,4 +1,6 @@
-"""RAG service models and configuration."""
+"""Lightweight data models for the LangChain-backed RAG service."""
+
+from __future__ import annotations
 
 from typing import Any
 
@@ -6,152 +8,142 @@ from pydantic import BaseModel, Field
 
 
 class RAGConfig(BaseModel):
-    """Configuration for RAG (Retrieval-Augmented Generation) service."""
+    """Runtime configuration for the LangChain RAG generator."""
 
-    # LLM Configuration
-    model: str = Field(default="gpt-3.5-turbo", description="LLM model to use")
+    model: str = Field(
+        default="gpt-4o-mini",
+        description="ChatCompletion model identifier supported by langchain-openai.",
+    )
     temperature: float = Field(
-        default=0.1, ge=0.0, le=2.0, description="Generation temperature"
+        default=0.2,
+        ge=0.0,
+        le=2.0,
+        description="Sampling temperature passed to the chat model.",
     )
     max_tokens: int = Field(
-        default=1000, gt=0, le=4000, description="Maximum response tokens"
+        default=600,
+        gt=0,
+        le=4000,
+        description="Upper bound on response tokens for the chat model.",
     )
-    timeout_seconds: float = Field(default=30.0, gt=0, description="Generation timeout")
-
-    # Answer Generation Configuration
-    max_context_length: int = Field(
-        default=4000, gt=0, description="Max context length in tokens"
+    retriever_top_k: int = Field(
+        default=5,
+        gt=0,
+        le=50,
+        description="Default number of documents to fetch from the retriever.",
     )
-    max_results_for_context: int = Field(
-        default=5, gt=0, le=20, description="Max search results to include"
+    include_sources: bool = Field(
+        default=True,
+        description="Return structured source attributions alongside the answer.",
     )
-    min_confidence_threshold: float = Field(
-        default=0.6, ge=0.0, le=1.0, description="Minimum confidence for answers"
-    )
-
-    # Answer Quality Configuration
-    include_sources: bool = Field(default=True, description="Include source citations")
-    include_confidence_score: bool = Field(
-        default=True, description="Include confidence scoring"
-    )
-    enable_fact_checking: bool = Field(
-        default=False, description="Enable basic fact checking"
-    )
-
-    # Performance Configuration
-    enable_caching: bool = Field(default=True, description="Enable answer caching")
-    cache_ttl_seconds: int = Field(default=3600, gt=0, description="Cache TTL")
-    parallel_processing: bool = Field(
-        default=True, description="Enable parallel processing"
-    )
-
-    # Portfolio Features
-    enable_answer_metrics: bool = Field(
-        default=True, description="Track answer quality metrics"
-    )
-    enable_source_attribution: bool = Field(
-        default=True, description="Detailed source attribution"
+    confidence_from_scores: bool = Field(
+        default=True,
+        description=(
+            "If True, derive a heuristic confidence from retrieval scores whenever "
+            "a score is supplied by the retriever."
+        ),
     )
 
 
 class SourceAttribution(BaseModel):
-    """Source attribution for generated answers."""
+    """Source metadata surfaced with the generated answer."""
 
-    source_id: str = Field(..., description="Unique source identifier")
-    title: str = Field(..., description="Source document title")
-    url: str | None = Field(None, description="Source URL if available")
-    relevance_score: float = Field(
-        ..., ge=0.0, le=1.0, description="Relevance to query"
+    source_id: str = Field(..., description="Identifier taken from the search result.")
+    title: str = Field(..., description="Human readable source title if available.")
+    url: str | None = Field(None, description="Optional source URL.")
+    excerpt: str | None = Field(
+        None, description="Relevant snippet included in context."
     )
-    excerpt: str = Field(..., description="Relevant excerpt from source")
-    position_in_context: int = Field(
-        ..., ge=0, description="Position in context window"
+    score: float | None = Field(
+        None,
+        ge=0.0,
+        le=1.0,
+        description="Normalized relevance score when provided by the retrieval layer.",
     )
 
 
 class AnswerMetrics(BaseModel):
-    """Metrics for generated answers."""
+    """Lightweight telemetry returned with each generation."""
 
-    confidence_score: float = Field(
-        ..., ge=0.0, le=1.0, description="Answer confidence"
+    total_tokens: int | None = Field(
+        None, description="Total tokens reported by the model, if available."
     )
-    context_utilization: float = Field(
-        ..., ge=0.0, le=1.0, description="How much context was used"
+    prompt_tokens: int | None = Field(
+        None, description="Prompt tokens reported by the model, if available."
     )
-    source_diversity: float = Field(
-        ..., ge=0.0, le=1.0, description="Diversity of sources used"
+    completion_tokens: int | None = Field(
+        None, description="Completion tokens reported by the model, if available."
     )
-    answer_length: int = Field(..., ge=0, description="Answer length in characters")
-    generation_time_ms: float = Field(..., ge=0.0, description="Generation time")
-    tokens_used: int = Field(..., ge=0, description="Total tokens consumed")
-    cost_estimate: float = Field(..., ge=0.0, description="Estimated cost in USD")
+    generation_time_ms: float = Field(
+        ..., ge=0.0, description="Wall clock generation latency in milliseconds."
+    )
 
 
 class RAGRequest(BaseModel):
-    """Request for RAG answer generation."""
+    """Incoming request payload for the RAG generator."""
 
-    query: str = Field(..., min_length=1, description="User query")
-    search_results: list[dict[str, Any]] = Field(
-        ..., description="Search results to use as context"
+    query: str = Field(..., min_length=1, description="Natural language question.")
+    top_k: int | None = Field(
+        None,
+        gt=0,
+        le=50,
+        description="Optional override for the number of documents to retrieve.",
     )
-
-    # Optional configuration overrides
+    filters: dict[str, Any] | None = Field(
+        None,
+        description="Optional metadata filters passed to the retriever.",
+    )
     max_tokens: int | None = Field(
-        None, gt=0, le=4000, description="Override max tokens"
+        None,
+        gt=0,
+        le=4000,
+        description="Optional override for maximum completion tokens.",
     )
     temperature: float | None = Field(
-        None, ge=0.0, le=2.0, description="Override temperature"
+        None,
+        ge=0.0,
+        le=2.0,
+        description="Optional override for model sampling temperature.",
     )
-    include_sources: bool = Field(True, description="Include source citations")
-
-    # Context preferences
-    preferred_source_types: list[str] | None = Field(
-        None, description="Preferred source types"
-    )
-    exclude_source_ids: list[str] | None = Field(None, description="Sources to exclude")
-
-    # Quality requirements
-    require_high_confidence: bool = Field(
-        False, description="Require high confidence answers"
-    )
-    max_context_results: int | None = Field(
-        None, gt=0, le=20, description="Max results for context"
+    include_sources: bool | None = Field(
+        None,
+        description="Override default source attribution behaviour.",
     )
 
 
 class RAGResult(BaseModel):
-    """Result of RAG answer generation."""
+    """Structured response returned by the RAG generator."""
 
-    # Generated content
-    answer: str = Field(..., description="Generated answer")
-    confidence_score: float = Field(
-        ..., ge=0.0, le=1.0, description="Answer confidence"
+    answer: str = Field(..., description="Model generated answer text.")
+    confidence_score: float | None = Field(
+        None,
+        ge=0.0,
+        le=1.0,
+        description="Heuristic confidence derived from retrieval scores.",
     )
-
-    # Source information
     sources: list[SourceAttribution] = Field(
-        default_factory=list, description="Source attributions"
+        default_factory=list,
+        description="Ordered list of sources referenced in the answer.",
     )
-    context_used: str = Field(..., description="Context provided to LLM")
-
-    # Metadata
-    query_processed: str = Field(..., description="Processed query")
-    generation_time_ms: float = Field(..., ge=0.0, description="Generation time")
-
-    # Quality metrics
-    metrics: AnswerMetrics | None = Field(None, description="Answer quality metrics")
-
-    # Status flags
-    truncated: bool = Field(False, description="Whether context was truncated")
-    cached: bool = Field(False, description="Whether answer was cached")
-
-    # Portfolio showcase features
-    reasoning_trace: list[str] | None = Field(
-        None, description="Step-by-step reasoning"
+    generation_time_ms: float = Field(
+        ..., ge=0.0, description="Total generation latency in milliseconds."
     )
-    alternative_perspectives: list[str] | None = Field(
-        None, description="Alternative viewpoints"
+    metrics: AnswerMetrics | None = Field(
+        None, description="Optional token usage information from the chat model."
     )
-    follow_up_questions: list[str] | None = Field(
-        None, description="Suggested follow-up questions"
+
+
+class RAGServiceMetrics(BaseModel):
+    """Aggregated metrics emitted by the generator instance."""
+
+    generation_count: int = Field(
+        ..., ge=0, description="Total number of answers generated in this instance."
+    )
+    avg_generation_time_ms: float | None = Field(
+        None,
+        ge=0.0,
+        description="Mean generation latency in milliseconds when available.",
+    )
+    total_generation_time_ms: float = Field(
+        ..., ge=0.0, description="Aggregate generation latency in milliseconds."
     )

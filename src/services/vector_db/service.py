@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 from src.config import get_config
-from src.infrastructure.client_manager import ClientManager
 from src.services.base import BaseService
 from src.services.embeddings.base import EmbeddingProvider
 from src.services.embeddings.fastembed_provider import FastEmbedProvider
@@ -17,19 +16,28 @@ from .adapter import QdrantVectorAdapter
 from .adapter_base import CollectionSchema, TextDocument, VectorMatch, VectorRecord
 
 
+if TYPE_CHECKING:
+    from src.infrastructure.client_manager import ClientManager
+
+
 class VectorStoreService(BaseService):
     """High-level vector store operations built on top of Qdrant."""
 
     def __init__(
         self,
         config=None,
-        client_manager=None,
+        client_manager: ClientManager | None = None,
         embeddings_provider: EmbeddingProvider | None = None,
     ) -> None:
         """Initialize the VectorStoreService."""
 
         config = config or get_config()
-        client_manager = client_manager or ClientManager()
+        if client_manager is None:
+            from src.infrastructure.client_manager import (
+                ClientManager as _ClientManager,
+            )
+
+            client_manager = _ClientManager()
         if embeddings_provider is None:
             model_name = getattr(config.fastembed, "model", "BAAI/bge-small-en-v1.5")
             embeddings_provider = FastEmbedProvider(model_name=model_name)
