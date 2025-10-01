@@ -23,9 +23,13 @@ from src.config import Config, get_config
 from src.infrastructure.client_manager import ClientManager
 
 # Import new function-based dependencies
-from src.services.dependencies import get_cache_manager, get_embedding_manager
+from src.services.dependencies import (
+    get_cache_manager,
+    get_embedding_manager,
+    get_vector_store_service,
+)
 from src.services.fastapi.middleware.correlation import get_correlation_id
-from src.services.vector_db.service import QdrantService
+from src.services.vector_db import VectorStoreService
 
 
 logger = logging.getLogger(__name__)
@@ -38,7 +42,7 @@ class DependencyContainer:
         """Initialize dependency container."""
         self._config: Config | None = None
         self._client_manager: ClientManager | None = None
-        self._vector_service: QdrantService | None = None
+        self._vector_service: VectorStoreService | None = None
         self._embedding_manager: Any | None = None
         self._cache_manager: Any | None = None
         self._initialized = False
@@ -86,8 +90,8 @@ class DependencyContainer:
 
         """
         self._client_manager = ClientManager.from_unified_config()
-        self._vector_service = QdrantService(config, self._client_manager)
-        await self._vector_service.initialize()
+        await self._client_manager.initialize()
+        self._vector_service = await get_vector_store_service(self._client_manager)
 
     async def _initialize_managers(self) -> None:
         """Initialize embedding and cache managers."""
@@ -104,9 +108,6 @@ class DependencyContainer:
     async def _perform_cleanup(self) -> None:
         """Perform dependency cleanup steps."""
         # Function-based managers are cleaned up through client manager
-        if self._vector_service:
-            await self._vector_service.cleanup()
-
         if self._client_manager:
             await self._client_manager.cleanup()
 
@@ -127,7 +128,7 @@ class DependencyContainer:
         return self._config
 
     @property
-    def vector_service(self) -> QdrantService:
+    def vector_service(self) -> VectorStoreService:
         """Get vector database service."""
         if not self._vector_service:
             msg = "Vector service not initialized"
@@ -249,7 +250,7 @@ def _raise_vector_service_unavailable() -> HTTPException:
     )
 
 
-async def get_vector_service() -> QdrantService:
+async def get_vector_service() -> VectorStoreService:
     """FastAPI dependency for vector database service.
 
     Returns:

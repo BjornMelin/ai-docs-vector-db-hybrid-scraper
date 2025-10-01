@@ -8,6 +8,7 @@ from typing import Any
 
 from dependency_injector.wiring import Provide, inject
 
+from src.config import get_config
 from src.infrastructure.clients import (
     FirecrawlClientProvider,
     HTTPClientProvider,
@@ -17,7 +18,9 @@ from src.infrastructure.clients import (
 )
 from src.infrastructure.container import ApplicationContainer, get_container
 from src.services.browser.automation_router import AutomationRouter
+from src.services.embeddings.fastembed_provider import FastEmbedProvider
 from src.services.errors import APIError
+from src.services.vector_db import VectorStoreService
 
 
 # Import dependencies for health checks
@@ -62,6 +65,8 @@ class ClientManager:
         self._providers: dict[str, Any] = {}
         self._parallel_processing_system: Any | None = None
         self._initialized = False
+        self._vector_store_service: VectorStoreService | None = None
+        self._config = get_config()
 
     @inject
     def initialize_providers(
@@ -130,6 +135,9 @@ class ClientManager:
 
     async def cleanup(self) -> None:
         """Cleanup resources (function-based dependencies are stateless)."""
+        if self._vector_store_service:
+            await self._vector_store_service.cleanup()
+            self._vector_store_service = None
         self._providers.clear()
         self._parallel_processing_system = None
         self._initialized = False
@@ -151,6 +159,17 @@ class ClientManager:
             msg = "Qdrant client provider not available"
             raise APIError(msg)
         return provider.client
+
+    async def get_vector_store_service(self) -> VectorStoreService:
+        if self._vector_store_service:
+            return self._vector_store_service
+
+        model_name = getattr(self._config.fastembed, "model", "BAAI/bge-small-en-v1.5")
+        provider = FastEmbedProvider(model_name=model_name)
+        service = VectorStoreService(self._config, self, provider)
+        await service.initialize()
+        self._vector_store_service = service
+        return service
 
     async def get_redis_client(self):
         provider = self._providers.get("redis")
@@ -207,14 +226,6 @@ class ClientManager:
             "function-based cache dependencies"
         )
         return await self.get_redis_client()
-
-    async def get_qdrant_service(self):
-        """Backward compatibility: use function-based dependencies."""
-        logger.warning(
-            "get_qdrant_service() deprecated - use get_qdrant_client() or "
-            "function-based qdrant dependencies"
-        )
-        return await self.get_qdrant_client()
 
     async def get_crawl_manager(self):
         """Backward compatibility: returns None since we use function-based deps."""

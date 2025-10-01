@@ -4,7 +4,11 @@ from abc import ABC, abstractmethod
 
 
 class EmbeddingProvider(ABC):
-    """Abstract base class for embedding providers."""
+    """Abstract base class for embedding providers.
+
+    Phase 0 exposes additional metadata helpers so downstream services can rely on
+    a single contract when constructing vector adapters and retrievers.
+    """
 
     @abstractmethod
     def __init__(self, model_name: str, **kwargs):
@@ -17,6 +21,7 @@ class EmbeddingProvider(ABC):
         """
         self.model_name = model_name
         self.dimensions: int = 0
+        self._normalize_embeddings: bool = False
 
     @abstractmethod
     async def generate_embeddings(
@@ -50,3 +55,15 @@ class EmbeddingProvider(ABC):
     @abstractmethod
     def max_tokens_per_request(self) -> int:
         """Get maximum tokens per request."""
+
+    @property
+    def embedding_dimension(self) -> int:
+        """Expose the configured embedding dimensionality."""
+
+        return self.dimensions
+
+    @property
+    def normalize_embeddings(self) -> bool:
+        """Return whether generated embeddings are L2-normalized."""
+
+        return self._normalize_embeddings

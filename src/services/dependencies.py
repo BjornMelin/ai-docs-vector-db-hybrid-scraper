@@ -43,6 +43,7 @@ from src.services.errors import (
 )
 from src.services.rag import RAGGenerator
 from src.services.rag.models import RAGRequest as InternalRAGRequest
+from src.services.vector_db import VectorStoreService
 
 
 logger = logging.getLogger(__name__)
@@ -702,25 +703,22 @@ async def get_database_session(
 DatabaseSessionDep = Annotated[Any, Depends(get_database_session)]
 
 
-# Vector Database Dependencies
+# Vector Store Dependencies
 @circuit_breaker(
-    service_name="qdrant_service",
+    service_name="vector_store_service",
     failure_threshold=3,
     recovery_timeout=15.0,
     enable_adaptive_timeout=True,
 )
-async def get_qdrant_service(
+async def get_vector_store_service(
     client_manager: ClientManagerDep,
-) -> Any:
-    """Get initialized QdrantService.
+) -> VectorStoreService:
+    """Provide initialized vector store service."""
 
-    Replaces QdrantService.initialize() pattern with dependency injection.
-    Protected by circuit breaker for Qdrant database failures.
-    """
-    return await client_manager.get_qdrant_service()
+    return await client_manager.get_vector_store_service()
 
 
-QdrantServiceDep = Annotated[Any, Depends(get_qdrant_service)]
+VectorStoreServiceDep = Annotated[VectorStoreService, Depends(get_vector_store_service)]
 
 
 # HyDE Engine Dependencies
@@ -1366,81 +1364,6 @@ async def cleanup_services() -> None:
     except (ConnectionError, OSError, PermissionError):
         logger.exception("Service cleanup failed")
         raise
-
-
-# Legacy Manager Class Replacement Dependencies
-#
-# These function-based dependencies replace the 4 remaining Manager classes
-# (EmbeddingManager, DatabaseManager, CrawlingManager, MonitoringManager)
-# to complete the service layer flattening migration.
-
-
-# Direct Database Operations (replacing DatabaseManager)
-@circuit_breaker(
-    service_name="database_operations",
-    failure_threshold=3,
-    recovery_timeout=15.0,
-    enable_adaptive_timeout=True,
-)
-async def get_qdrant_collections(
-    qdrant_service: QdrantServiceDep,
-) -> list[str]:
-    """Get list of Qdrant collections.
-
-    Function-based replacement for DatabaseManager.get_collections().
-    Protected by circuit breaker for Qdrant database failures.
-    """
-    try:
-        return [
-            col.name for col in (await qdrant_service.get_collections()).collections
-        ]
-    except Exception as e:
-        logger.exception("Failed to get Qdrant collections")
-        msg = f"Failed to get collections: {e}"
-        raise EmbeddingServiceError(msg) from e
-
-
-async def store_qdrant_embeddings(
-    collection_name: str,
-    points: list[dict[str, Any]],
-    qdrant_service: QdrantServiceDep,
-) -> bool:
-    """Store embeddings in Qdrant collection.
-
-    Function-based replacement for DatabaseManager.store_embeddings().
-    """
-    try:
-        await qdrant_service.upsert_points(collection_name, points)
-    except Exception as e:
-        logger.exception("Failed to store embeddings in")
-        msg = f"Failed to store embeddings: {e}"
-        raise EmbeddingServiceError(msg) from e
-    else:
-        return True
-
-
-async def search_qdrant_similar(
-    collection_name: str,
-    query_vector: list[float],
-    limit: int = 10,
-    filter_conditions: dict[str, Any] | None = None,
-    qdrant_service: QdrantServiceDep = None,
-) -> list[dict[str, Any]]:
-    """Search for similar vectors in Qdrant.
-
-    Function-based replacement for DatabaseManager.search_similar().
-    """
-    try:
-        return await qdrant_service.search(
-            collection_name=collection_name,
-            query_vector=query_vector,
-            limit=limit,
-            filter_conditions=filter_conditions,
-        )
-    except Exception as e:
-        logger.exception("Failed to search vectors in")
-        msg = f"Failed to search vectors: {e}"
-        raise EmbeddingServiceError(msg) from e
 
 
 # Direct Cache Operations (extending existing cache dependencies)
