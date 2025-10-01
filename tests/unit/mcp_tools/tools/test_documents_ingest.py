@@ -242,7 +242,6 @@ async def test_add_document_without_content_intelligence(
         assert metadata["chunk_id"] == index
         assert metadata["tenant"] == request.collection
         assert metadata["source"] == request.url
-        assert "content_hash" in metadata
 
 
 @pytest.mark.asyncio

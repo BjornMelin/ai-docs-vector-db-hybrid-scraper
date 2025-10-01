@@ -18,7 +18,7 @@ from typing import Any, NoReturn
 
 import numpy as np
 from numpy.typing import NDArray
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .utils import (
     STOP_WORDS,
@@ -286,13 +286,7 @@ class ResultClusteringResult(BaseModel):
     clusters: list[ClusterGroup] = Field(default_factory=list, description="Clusters")
     outliers: list[OutlierResult] = Field(default_factory=list, description="Outliers")
     method_used: ClusteringMethod = Field(..., description="Algorithm used")
-    total_results: int = Field(
-        ...,
-        ge=0,
-        description="Total input results",
-        validation_alias=AliasChoices("_total_results", "total_results"),
-        serialization_alias="_total_results",
-    )
+    total_results: int = Field(..., ge=0, description="Total input results")
     clustered_results: int = Field(..., ge=0, description="Results in clusters")
     outlier_count: int = Field(..., ge=0, description="Number of outliers")
     cluster_count: int = Field(..., ge=0, description="Number of clusters")
@@ -316,12 +310,6 @@ class ResultClusteringResult(BaseModel):
     )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-    @property
-    def _total_results(self) -> int:
-        """Return the total number of input results."""
-
-        return self.total_results
 
 
 def _raise_value_error(message: str) -> NoReturn:

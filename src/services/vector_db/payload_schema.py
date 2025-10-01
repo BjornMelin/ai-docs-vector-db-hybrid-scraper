@@ -86,18 +86,23 @@ def ensure_canonical_payload(
     doc_id = _coerce_string(payload.get("doc_id") or id_hint, field="doc_id")
     payload["doc_id"] = doc_id
 
-    chunk_id_value = payload.get("chunk_id", payload.get("chunk_index", 0))
-    chunk_id = _coerce_int(chunk_id_value, field="chunk_id")
+    chunk_id = _coerce_int(
+        payload.get("chunk_id", payload.get("chunk_index", 0)),
+        field="chunk_id",
+    )
     payload["chunk_id"] = chunk_id
     payload.pop("chunk_index", None)
 
-    tenant_value = payload.get("tenant") or "default"
-    tenant = _coerce_string(tenant_value, field="tenant")
-    payload["tenant"] = tenant
+    payload["tenant"] = _coerce_string(
+        payload.get("tenant") or "default",
+        field="tenant",
+    )
+    tenant = payload["tenant"]
 
-    source_value = payload.get("source") or payload.get("url") or "unknown"
-    source = _coerce_string(source_value, field="source")
-    payload["source"] = source
+    payload["source"] = _coerce_string(
+        payload.get("source") or payload.get("url") or "unknown",
+        field="source",
+    )
 
     created_at = payload.get("created_at")
     if not created_at:
@@ -107,10 +112,9 @@ def ensure_canonical_payload(
     if payload.get("updated_at") is None and "updated_at" in payload:
         payload.pop("updated_at")
 
-    content_hash = payload.get("content_hash")
     computed_hash = compute_content_hash(content)
-    if content_hash and content_hash != computed_hash:
-        payload["content_hash_previous"] = content_hash
+    if payload.get("content_hash") and payload["content_hash"] != computed_hash:
+        payload["content_hash_previous"] = payload["content_hash"]
     payload["content_hash"] = computed_hash
 
     for field in _OPTIONAL_TIMESTAMP_FIELDS:

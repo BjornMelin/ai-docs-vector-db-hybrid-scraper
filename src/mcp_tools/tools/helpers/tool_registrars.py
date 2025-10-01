@@ -5,15 +5,16 @@ from uuid import uuid4
 
 from fastmcp import Context
 
-from src.mcp_tools.models.requests import (
+from src.mcp_tools.models import (
     AdvancedQueryProcessingRequest,
     QueryAnalysisRequest,
-)
-from src.mcp_tools.models.responses import (
-    AdvancedQueryProcessingResponse,
     QueryAnalysisResponse,
+    QueryProcessingResponse as MCPQueryProcessingResponse,
 )
-from src.services.query_processing.models import QueryProcessingRequest
+from src.services.query_processing.models import (
+    QueryProcessingRequest,
+    QueryProcessingResponse as ServiceQueryProcessingResponse,
+)
 
 from .pipeline_factory import QueryProcessingPipelineFactory
 from .response_converter import ResponseConverter
@@ -34,7 +35,7 @@ def register_advanced_query_processing_tool(
     @mcp.tool()
     async def advanced_query_processing(
         request: AdvancedQueryProcessingRequest, ctx: Context
-    ) -> AdvancedQueryProcessingResponse:
+    ) -> MCPQueryProcessingResponse:
         """Process queries using advanced intent
                classification and intelligent strategy selection.
 
@@ -114,17 +115,20 @@ def register_advanced_query_processing_tool(
 
         except Exception as e:
             await ctx.error(f"Advanced query processing {request_id} failed: {e}")
-            logger.exception(
-                "Advanced query processing failed: "
-            )  # TODO: Convert f-string to logging format
+            logger.exception("Advanced query processing failed: %s", e)
 
-            # Return error response
-            return AdvancedQueryProcessingResponse(
-                success=False, results=[], total_results=0, error=str(e)
+            error_response = ServiceQueryProcessingResponse(
+                success=False,
+                results=[],
+                total_results=0,
+                error=str(e),
+                warnings=[],
+            )
+            return converter.convert_to_mcp_response(
+                error_response, request.include_analytics
             )
 
-        else:
-            return mcp_response
+        return mcp_response
 
 
 def register_query_analysis_tool(
@@ -209,9 +213,6 @@ def register_query_analysis_tool(
 
         except Exception as e:
             await ctx.error(f"Query analysis {request_id} failed: {e}")
-            logger.exception(
-                "Query analysis failed: "
-            )  # TODO: Convert f-string to logging format
+            logger.exception("Query analysis failed: %s", e)
             raise
-        else:
-            return response
+        return response

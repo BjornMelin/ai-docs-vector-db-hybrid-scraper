@@ -67,7 +67,11 @@ def register_pipeline_metrics_tool(mcp, factory: QueryProcessingPipelineFactory)
             pipeline = await factory.create_pipeline(ctx)
 
             # Get performance metrics
-            metrics = pipeline.get_performance_metrics()
+            metrics_getter = getattr(pipeline, "get_performance_metrics", None)
+            if metrics_getter is None:
+                msg = "Pipeline does not expose performance metrics"
+                raise AttributeError(msg)
+            metrics = metrics_getter()
 
             await ctx.info(f"Pipeline metrics collection {request_id} completed")
 
@@ -101,11 +105,13 @@ def register_pipeline_warmup_tool(mcp, factory: QueryProcessingPipelineFactory):
 
             await ctx.info(f"Pipeline warm-up {request_id} completed successfully")
 
-        except (ConnectionError, TimeoutError, ValueError):
-            await ctx.warning("Pipeline warm-up {request_id} had issues")
-            logger.warning("Pipeline warm-up failed")
+        except (ConnectionError, TimeoutError, ValueError, Exception) as exc:
+            await ctx.warning(
+                f"Pipeline warm-up {request_id} had issues: {exc}"
+            )
+            logger.warning("Pipeline warm-up failed", exc_info=True)
             return {
                 "status": "partial_success",
-                "message": "Pipeline warm-up completed with issues",
+                "message": f"Pipeline warm-up completed with issues: {exc}",
             }
         return {"status": "success", "message": "Pipeline warmed up successfully"}
