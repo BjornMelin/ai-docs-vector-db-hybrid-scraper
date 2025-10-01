@@ -28,8 +28,19 @@ class TestRAGIntegration:
         """Sample RAG request."""
         return RAGRequest(
             query="How do I use FastAPI with Pydantic?",
+            search_results=[
+                {
+                    "id": "doc_1",
+                    "content": "FastAPI documentation excerpt",
+                    "metadata": {"title": "FastAPI Docs"},
+                },
+                {
+                    "id": "doc_2",
+                    "content": "Pydantic documentation excerpt",
+                    "metadata": {"title": "Pydantic Docs"},
+                },
+            ],
             include_sources=True,
-            top_k=2,
         )
 
     @pytest.fixture
@@ -87,7 +98,6 @@ class TestRAGIntegration:
         # Verify metrics formatting
         assert response.metrics is not None
         assert response.metrics["generation_time_ms"] == pytest.approx(1250.0)
-        assert response.reasoning_trace is None
 
         # Verify generator was called correctly
         mock_generator.generate_answer.assert_called_once()
@@ -142,29 +152,43 @@ class TestRAGIntegration:
         # Test valid request
         valid_request = RAGRequest(
             query="Test query",
-            top_k=3,
-            filters={"category": "docs"},
+            search_results=[
+                {
+                    "id": "doc_1",
+                    "content": "Test content",
+                    "metadata": {"category": "docs"},
+                }
+            ],
             include_sources=False,
             temperature=0.5,
             max_tokens=1000,
+            require_high_confidence=True,
+            max_context_results=5,
+            preferred_source_types=["official"],
+            exclude_source_ids=["old_doc"],
         )
 
         assert valid_request.query == "Test query"
-        assert valid_request.top_k == 3
-        assert valid_request.filters == {"category": "docs"}
+        assert len(valid_request.search_results) == 1
         assert valid_request.include_sources is False
         assert valid_request.temperature == 0.5
         assert valid_request.max_tokens == 1000
+        assert valid_request.require_high_confidence is True
+        assert valid_request.max_context_results == 5
+        assert valid_request.preferred_source_types == ["official"]
+        assert valid_request.exclude_source_ids == ["old_doc"]
 
         # Test request with minimal fields
         minimal_request = RAGRequest(
             query="Minimal query",
+            search_results=[],
         )
 
         assert minimal_request.query == "Minimal query"
-        assert minimal_request.top_k is None
-        assert minimal_request.filters is None
-        assert minimal_request.include_sources is None
+        assert minimal_request.search_results == []
+        assert minimal_request.include_sources is True
+        assert minimal_request.max_tokens is None
+        assert minimal_request.temperature is None
 
     @pytest.mark.asyncio
     async def test_response_serialization(self, mock_rag_result):
@@ -178,12 +202,12 @@ class TestRAGIntegration:
             query="Test query",
             search_results=[
                 {
-                    "id": "test",
-                    "title": "Test Doc",
+                    "id": "doc_1",
                     "content": "Test content",
-                    "score": 0.9,
+                    "metadata": {"title": "Test Doc"},
                 }
             ],
+            include_sources=True,
         )
 
         # Generate response
