@@ -9,7 +9,6 @@ This module provides a clean, modular architecture for Qdrant operations:
 - QdrantDocuments: Document/point CRUD operations
 """
 
-from . import filters
 from .adaptive_fusion_tuner import AdaptiveFusionTuner
 from .agentic_manager import AgenticVectorManager
 from .collections import QdrantCollections
@@ -39,5 +38,4 @@ __all__ = [
     "QdrantService",
     "QueryClassifier",
     "SPLADEProvider",
-    "filters",
 ]

@@ -142,8 +142,8 @@ class TestQdrantUtils:
             "min_quality_score": 0.7,
             "max_quality_score": 1.0,
             "min_score": 0.5,
-            "min__total_chunks": 1,
-            "max__total_chunks": 10,
+            "min_total_chunks": 1,
+            "max_total_chunks": 10,
             "min_links_count": 0,
             "max_links_count": 50,
         }
@@ -152,6 +152,54 @@ class TestQdrantUtils:
 
         assert isinstance(result, models.Filter)
         assert len(result.must) == len(filters)
+
+    def test_build_filter_match_any(self):
+        """Test build_filter with MatchAny specification."""
+        filters = {"content_type": {"any": ["guide", "tutorial"]}}
+
+        result = build_filter(filters)
+
+        assert isinstance(result, models.Filter)
+        condition = result.must[0]
+        assert isinstance(condition.match, models.MatchAny)
+
+    def test_build_filter_temporal_window(self):
+        """Test temporal filter shortcut with relative window."""
+        filters = {"temporal": {"field": "created_at", "window": "7d"}}
+
+        result = build_filter(filters)
+
+        assert isinstance(result, models.Filter)
+        assert result.must
+        condition = result.must[0]
+        assert isinstance(condition.range, models.Range)
+        assert condition.range.gte is not None
+
+    def test_build_filter_boolean_structure(self):
+        """Test boolean structure using must and must_not clauses."""
+        filters = {
+            "must": [{"doc_type": "api"}],
+            "must_not": [{"language": {"any": ["java", "php"]}}],
+        }
+
+        result = build_filter(filters)
+
+        assert isinstance(result, models.Filter)
+        assert result.must and result.must_not
+
+    def test_build_filter_field_conditions(self):
+        """Test custom field condition injection."""
+        filters = {
+            "field_conditions": [
+                {"title": {"text": "introduction"}},
+                {"range": {"score": {"gte": 0.6}}},
+            ]
+        }
+
+        result = build_filter(filters)
+
+        assert isinstance(result, models.Filter)
+        assert len(result.must) == 2
 
     def test_build_filter_all_keyword_fields(self):
         """Test build_filter with all supported keyword fields."""
