@@ -76,14 +76,6 @@ mcp\_tools.tools.embeddings module
    :show-inheritance:
    :undoc-members:
 
-mcp\_tools.tools.filtering\_tools module
-----------------------------------------
-
-.. automodule:: mcp_tools.tools.filtering_tools
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 mcp\_tools.tools.lightweight\_scrape module
 -------------------------------------------
 

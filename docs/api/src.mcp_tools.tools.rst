@@ -108,14 +108,6 @@ src.mcp\_tools.tools.filtering module
    :show-inheritance:
    :undoc-members:
 
-src.mcp\_tools.tools.filtering\_tools module
---------------------------------------------
-
-.. automodule:: src.mcp_tools.tools.filtering_tools
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 src.mcp\_tools.tools.hybrid\_search module
 ------------------------------------------
 

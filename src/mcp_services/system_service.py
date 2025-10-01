@@ -14,7 +14,6 @@ from src.mcp_tools.tools import (
     configuration,
     cost_estimation,
     embeddings,
-    filtering_tools,
     system_health,
 )
 
@@ -46,7 +45,6 @@ class SystemService:
             - Configuration management and validation
             - Cost estimation for operations
             - Embedding provider management
-            - Data filtering and processing
             """,
         )
         self.client_manager: ClientManager | None = None
@@ -77,7 +75,6 @@ class SystemService:
         configuration.register_tools(self.mcp, self.client_manager)
         cost_estimation.register_tools(self.mcp, self.client_manager)
         embeddings.register_tools(self.mcp, self.client_manager)
-        filtering_tools.register_filtering_tools(self.mcp, self.client_manager)
 
         logger.info("Registered system tools")
 
@@ -106,7 +103,6 @@ class SystemService:
                 "configuration_management",
                 "cost_estimation",
                 "embedding_management",
-                "data_filtering",
             ],
             "status": "active",
         }

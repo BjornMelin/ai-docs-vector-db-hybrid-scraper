@@ -633,6 +633,7 @@ class QdrantService(BaseService):
         filters: dict[str, object],
         limit: int = 10,
         search_accuracy: str = "balanced",
+        score_threshold: float | None = None,
         user_id: str | None = None,
         request_id: str | None = None,
     ) -> list[dict[str, object]]:
@@ -649,11 +650,8 @@ class QdrantService(BaseService):
 
         Returns:
             list[dict[str, object]]: Filtered search results
-
-        Raises:
-            QdrantServiceError: If filtered search fails
-
         """
+
         self._validate_initialized()
 
         # Route search through deployment infrastructure if enabled
@@ -683,6 +681,7 @@ class QdrantService(BaseService):
             filters=filters,
             limit=limit,
             search_accuracy=search_accuracy,
+            score_threshold=score_threshold,
         )
 
         # Track metrics for deployment monitoring
@@ -703,11 +702,8 @@ class QdrantService(BaseService):
 
         Args:
             collection_name: Name of the collection to index
-
-        Raises:
-            QdrantServiceError: If index creation fails
-
         """
+
         self._validate_initialized()
         await self._indexing.create_payload_indexes(collection_name)
 
@@ -719,11 +715,8 @@ class QdrantService(BaseService):
 
         Returns:
             list[str]: List of indexed field names
-
-        Raises:
-            QdrantServiceError: If listing indexes fails
-
         """
+
         self._validate_initialized()
         return await self._indexing.list_payload_indexes(collection_name)
 

@@ -11,7 +11,6 @@ from fastmcp import FastMCP
 
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.tools import (
-    filtering_tools,
     query_processing_tools,
     search,
     search_tools,
@@ -80,9 +79,6 @@ class SearchService:
         query_processing_tools.register_query_processing_tools(
             self.mcp, self.client_manager
         )
-
-        # Register advanced filtering tools
-        filtering_tools.register_filtering_tools(self.mcp, self.client_manager)
 
         # Register web search tools
         web_search.register_tools(self.mcp, self.client_manager)
