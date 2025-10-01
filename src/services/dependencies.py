@@ -1,21 +1,25 @@
-"""FastAPI dependency injection functions replacing Manager classes.
-
-This module provides function-based dependency injection for services,
-replacing the 50+ Manager classes with clean, testable functions.
-Achieves 60% complexity reduction while maintaining full functionality.
-"""
+"""FastAPI dependency injection functions replacing Manager classes."""
 
 # pylint: disable=too-many-lines,no-else-return,no-else-raise,duplicate-code,cyclic-import
 
 import asyncio
 import logging
 import time
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Callable
 from datetime import UTC, datetime
 from functools import lru_cache
 from typing import Annotated, Any
 
-from fastapi import Depends
+
+try:
+    from fastapi import Depends  # type: ignore[attr-defined]
+except ImportError:
+    # Fallback for when FastAPI is not available
+    def Depends(dependency=None):  # type: ignore  # noqa: N802
+        """Fallback Depends for type checking."""
+        return dependency
+
+
 from pydantic import BaseModel
 
 from src.config import (
@@ -45,12 +49,39 @@ from src.services.errors import (
 )
 from src.services.rag import RAGGenerator
 from src.services.rag.models import RAGRequest as InternalRAGRequest
-from src.services.vector_db import VectorStoreService
+from src.services.vector_db.service import VectorStoreService
 
 
 logger = logging.getLogger(__name__)
 
-# Configuration Dependencies
+
+#### HELPER FUNCTIONS & DECORATORS ####
+
+
+def create_service_error_handler(
+    service_name: str,
+    error_class: type[Exception] = RuntimeError,
+) -> Callable:
+    """Create error handler decorator for service operations (DRY pattern)."""
+
+    def decorator(func: Callable) -> Callable:
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
+            try:
+                return await func(*args, **kwargs)
+            except Exception as e:
+                logger.exception("%s operation failed", service_name)
+                msg = f"Failed {service_name} operation: {e}"
+                raise error_class(msg) from e
+
+        return wrapper
+
+    return decorator
+
+
+# ============================================================================
+# CONFIGURATION DEPENDENCIES
+# ============================================================================
+
 ConfigDep = Annotated[Config, Depends(get_config)]
 
 
@@ -162,7 +193,7 @@ async def get_auto_detected_task_queue_manager(
     client_manager: AutoDetectedClientManagerDep,
 ) -> Any:
     """Get TaskQueueManager using auto-detected Redis when available."""
-    return await client_manager.get_task_queue_manager()
+    return await client_manager.get_task_queue_manager()  # type: ignore[attr-defined]
 
 
 AutoDetectedRedisDep = Annotated[Any, Depends(get_auto_detected_redis_client)]
@@ -246,57 +277,6 @@ class AutoDetectionResponse(BaseModel):
     is_cached: bool = False
 
 
-async def _prepare_detection_config(
-    request: AutoDetectionRequest, config: Config
-) -> Any:
-    """Prepare detection configuration with timeout override."""
-    detection_config = config.auto_detection
-    if request.timeout_seconds:
-        detection_config.timeout_seconds = request.timeout_seconds
-    return detection_config
-
-
-async def _perform_environment_detection(detection_config: Any) -> Any:
-    """Perform environment detection."""
-    env_detector = EnvironmentDetector(config=detection_config)
-    return await env_detector.detect()
-
-
-async def _perform_service_discovery(detection_config: Any) -> Any:
-    """Perform service discovery."""
-    service_discovery = ServiceDiscovery(detection_config)
-    return await service_discovery.discover_all_services()
-
-
-def _filter_discovered_services(
-    discovery_result: Any, enabled_services: list[str] | None
-) -> list[Any]:
-    """Filter discovered services by type if requested."""
-    services = discovery_result.services
-    if enabled_services:
-        services = [s for s in services if s.service_type in enabled_services]
-    return services
-
-
-def _format_services_for_response(services: list[Any]) -> list[dict[str, Any]]:
-    """Format services for API response."""
-    return [
-        {
-            "service_name": service.service_name,
-            "service_type": service.service_type,
-            "host": service.host,
-            "port": service.port,
-            "is_available": service.is_available,
-            "connection_string": service.connection_string,
-            "version": service.version,
-            "supports_pooling": service.supports_pooling,
-            "detection_time_ms": service.detection_time_ms,
-            "metadata": service.metadata,
-        }
-        for service in services
-    ]
-
-
 @tenacity_circuit_breaker(
     service_name="perform_auto_detection",
     max_attempts=2,
@@ -309,22 +289,48 @@ async def perform_auto_detection(
     request: AutoDetectionRequest,
     config: ConfigDep,
 ) -> AutoDetectionResponse:
-    """Perform service auto-detection on demand.
-
-    Function-based auto-detection that can be called from API endpoints.
-    Protected by Tenacity-powered circuit breaker with retry logic.
-    """
+    """Perform service auto-detection (consolidated implementation)."""
     start_time = time.time()
     try:
-        detection_config = await _prepare_detection_config(request, config)
-        detected_env = await _perform_environment_detection(detection_config)
-        discovery_result = await _perform_service_discovery(detection_config)
+        # Prepare detection config
+        detection_config = config.auto_detection
+        if request.timeout_seconds:
+            detection_config.timeout_seconds = request.timeout_seconds
 
-        services = _filter_discovered_services(
-            discovery_result, request.enabled_services
-        )
+        # Perform environment detection and service discovery
+        env_detector = EnvironmentDetector(config=detection_config)
+        detected_env = await env_detector.detect()
+
+        service_discovery = ServiceDiscovery(detection_config)
+        discovery_result = await service_discovery.discover_all_services()
+
+        # Filter services by type if requested
+        services = discovery_result.services
+        if request.enabled_services:
+            services = [
+                s
+                for s in services
+                if s.service_type in request.enabled_services  # type: ignore[attr-defined]
+            ]
+
+        # Format services for response
+        formatted_services = [
+            {
+                "service_name": s.service_name,  # type: ignore[attr-defined]
+                "service_type": s.service_type,  # type: ignore[attr-defined]
+                "host": s.host,  # type: ignore[attr-defined]
+                "port": s.port,  # type: ignore[attr-defined]
+                "is_available": s.is_available,  # type: ignore[attr-defined]
+                "connection_string": s.connection_string,  # type: ignore[attr-defined]
+                "version": s.version,  # type: ignore[attr-defined]
+                "supports_pooling": s.supports_pooling,  # type: ignore[attr-defined]
+                "detection_time_ms": s.detection_time_ms,  # type: ignore[attr-defined]
+                "metadata": s.metadata,  # type: ignore[attr-defined]
+            }
+            for s in services
+        ]
+
         detection_time_ms = (time.time() - start_time) * 1000
-        formatted_services = _format_services_for_response(services)
 
         return AutoDetectionResponse(
             services_found=len(services),
@@ -629,7 +635,7 @@ async def get_task_queue_manager(
 
     Replaces TaskQueueManager.initialize() pattern with dependency injection.
     """
-    return await client_manager.get_task_queue_manager()
+    return await client_manager.get_task_queue_manager()  # type: ignore[attr-defined]
 
 
 TaskQueueManagerDep = Annotated[Any, Depends(get_task_queue_manager)]
@@ -731,7 +737,7 @@ async def get_hyde_engine(
 
     Replaces HyDEEngine.initialize() pattern with dependency injection.
     """
-    return await client_manager.get_hyde_engine()
+    return await client_manager.get_hyde_engine()  # type: ignore[attr-defined]
 
 
 HyDEEngineDep = Annotated[Any, Depends(get_hyde_engine)]
@@ -745,7 +751,7 @@ async def get_content_intelligence_service(
 
     Replaces ContentIntelligenceService.initialize() pattern with dependency injection.
     """
-    return await client_manager.get_content_intelligence_service()
+    return await client_manager.get_content_intelligence_service()  # type: ignore[attr-defined]
 
 
 ContentIntelligenceServiceDep = Annotated[
@@ -799,7 +805,7 @@ async def get_rag_generator(
     """
     # RAGGenerator imported at top-level
 
-    generator = RAGGenerator(config.rag, client_manager)
+    generator = RAGGenerator(config.rag, client_manager)  # type: ignore[arg-type]
     await generator.initialize()
     return generator
 
@@ -809,16 +815,24 @@ RAGGeneratorDep = Annotated[Any, Depends(get_rag_generator)]
 
 def _convert_to_internal_rag_request(request: RAGRequest) -> InternalRAGRequest:
     """Convert external RAG request to internal format."""
+    # Extract top_k from search_results length as a reasonable default
+    if request.search_results:
+        top_k = request.max_context_results or len(request.search_results)
+    else:
+        top_k = request.max_context_results
+
+    # Extract filters from search_results metadata if available
+    filters: dict[str, Any] | None = None
+    if request.preferred_source_types:
+        filters = {"source_types": request.preferred_source_types}
+
     return InternalRAGRequest(
         query=request.query,
-        search_results=request.search_results,
+        top_k=top_k,
+        filters=filters,
         max_tokens=request.max_tokens,
         temperature=request.temperature,
         include_sources=request.include_sources,
-        require_high_confidence=request.require_high_confidence,
-        max_context_results=request.max_context_results,
-        preferred_source_types=request.preferred_source_types,
-        exclude_source_ids=request.exclude_source_ids,
     )
 
 
@@ -834,9 +848,8 @@ def _format_rag_sources(
             "source_id": source.source_id,
             "title": source.title,
             "url": source.url,
-            "relevance_score": source.relevance_score,
+            "relevance_score": source.score,
             "excerpt": source.excerpt,
-            "position_in_context": source.position_in_context,
         }
         for source in result.sources
     ]
@@ -848,12 +861,10 @@ def _format_rag_metrics(result: Any) -> dict[str, Any] | None:
         return None
 
     return {
-        "confidence_score": result.metrics.confidence_score,
-        "context_utilization": result.metrics.context_utilization,
-        "source_diversity": result.metrics.source_diversity,
-        "answer_length": result.metrics.answer_length,
-        "tokens_used": result.metrics.tokens_used,
-        "cost_estimate": result.metrics.cost_estimate,
+        "total_tokens": result.metrics.total_tokens,
+        "prompt_tokens": result.metrics.prompt_tokens,
+        "completion_tokens": result.metrics.completion_tokens,
+        "generation_time_ms": result.metrics.generation_time_ms,
     }
 
 
@@ -884,14 +895,14 @@ async def generate_rag_answer(
 
         return RAGResponse(
             answer=result.answer,
-            confidence_score=result.confidence_score,
+            confidence_score=result.confidence_score or 0.0,
             sources_used=len(result.sources),
             generation_time_ms=result.generation_time_ms,
             sources=sources,
             metrics=metrics,
-            follow_up_questions=result.follow_up_questions,
-            cached=result.cached,
-            reasoning_trace=result.reasoning_trace,
+            follow_up_questions=None,
+            cached=False,
+            reasoning_trace=None,
         )
     except Exception as e:
         logger.exception("RAG answer generation failed")
@@ -908,11 +919,13 @@ async def get_rag_metrics(
     """
     try:
         metrics = rag_generator.get_metrics()
+        # Convert RAGServiceMetrics to dict if it's a Pydantic model
+        if hasattr(metrics, "model_dump"):
+            return metrics.model_dump()
+        return metrics
     except Exception as e:
         logger.exception("Failed to get RAG metrics")
         return {"error": str(e)}
-    else:
-        return metrics
 
 
 async def clear_rag_cache(
@@ -924,14 +937,14 @@ async def clear_rag_cache(
     """
     try:
         rag_generator.clear_cache()
+        # RAGGenerator.clear_cache is a no-op (no cache to purge)
+        return {
+            "status": "noop",
+            "message": "RAG generator operates without a local cache",
+        }
     except Exception as e:
         logger.exception("Failed to clear RAG cache")
         return {"status": "error", "message": str(e)}
-    else:
-        return {
-            "status": "success",
-            "message": "RAG answer cache cleared successfully",
-        }
 
 
 # Browser Automation Dependencies
@@ -956,7 +969,7 @@ async def get_project_storage(
 
     Replaces ProjectStorage.initialize() pattern with dependency injection.
     """
-    return await client_manager.get_project_storage()
+    return await client_manager.get_project_storage()  # type: ignore[attr-defined]
 
 
 ProjectStorageDep = Annotated[Any, Depends(get_project_storage)]
@@ -1220,65 +1233,12 @@ async def get_auto_detection_pool_metrics(
         }
 
 
-def _format_auto_detection_info(auto_detected: Any) -> dict[str, Any]:
-    """Format auto-detection information for summary."""
-    return {
-        "environment": {
-            "type": auto_detected.environment.environment_type.value,
-            "is_containerized": auto_detected.environment.is_containerized,
-            "is_kubernetes": auto_detected.environment.is_kubernetes,
-            "cloud_provider": auto_detected.environment.cloud_provider,
-            "region": auto_detected.environment.region,
-            "detection_confidence": auto_detected.environment.detection_confidence,
-        },
-        "services": {
-            "total_discovered": len(auto_detected.services),
-            "services_by_type": {
-                service.service_type: {
-                    "host": service.host,
-                    "port": service.port,
-                    "is_available": service.is_available,
-                    "version": service.version,
-                    "supports_pooling": service.supports_pooling,
-                }
-                for service in auto_detected.services
-            },
-        },
-        "detection_performance": {
-            "total_time_ms": auto_detected.total_detection_time_ms,
-            "started_at": auto_detected.detection_started_at,
-            "completed_at": auto_detected.detection_completed_at,
-        },
-        "errors": auto_detected.errors,
-    }
-
-
-def _determine_overall_status(
-    service_health: dict[str, Any], connection_pools: dict[str, Any]
-) -> str:
-    """Determine overall status from health and pool metrics."""
-    health_status = service_health.get("status", "unknown")
-    pool_status = connection_pools.get("status", "unknown")
-
-    if health_status == "healthy" and pool_status in ["active", "no_pools"]:
-        return "healthy"
-    if health_status == "degraded" or pool_status == "error":
-        return "degraded"
-    if health_status in ["no_auto_detection", "error"]:
-        return "unavailable"
-    return "unknown"
-
-
 async def get_auto_detection_summary(
     auto_detected: AutoDetectedServicesDep = None,
     health_checker: AutoDetectionHealthDep = None,
     pool_manager: AutoDetectionPoolsDep = None,
 ) -> dict[str, Any]:
-    """Get comprehensive auto-detection summary with all metrics.
-
-    Provides complete overview of auto-detected services, their health,
-    connection pools, and performance metrics.
-    """
+    """Get comprehensive auto-detection summary with all metrics."""
     summary = {
         "timestamp": datetime.now(tz=UTC).isoformat(),
         "auto_detection": {},
@@ -1288,8 +1248,39 @@ async def get_auto_detection_summary(
     }
 
     try:
+        # Inline auto-detection formatting
         if auto_detected:
-            summary["auto_detection"] = _format_auto_detection_info(auto_detected)
+            summary["auto_detection"] = {
+                "environment": {
+                    "type": auto_detected.environment.environment_type.value,
+                    "is_containerized": auto_detected.environment.is_containerized,
+                    "is_kubernetes": auto_detected.environment.is_kubernetes,
+                    "cloud_provider": auto_detected.environment.cloud_provider,
+                    "region": auto_detected.environment.region,
+                    "detection_confidence": (
+                        auto_detected.environment.detection_confidence
+                    ),
+                },
+                "services": {
+                    "total_discovered": len(auto_detected.services),
+                    "services_by_type": {
+                        service.service_type: {
+                            "host": service.host,
+                            "port": service.port,
+                            "is_available": service.is_available,
+                            "version": service.version,
+                            "supports_pooling": service.supports_pooling,
+                        }
+                        for service in auto_detected.services
+                    },
+                },
+                "detection_performance": {
+                    "total_time_ms": auto_detected.total_detection_time_ms,
+                    "started_at": auto_detected.detection_started_at,
+                    "completed_at": auto_detected.detection_completed_at,
+                },
+                "errors": auto_detected.errors,
+            }
 
         summary["service_health"] = await get_auto_detected_service_health(
             health_checker
@@ -1298,9 +1289,20 @@ async def get_auto_detection_summary(
             pool_manager
         )
 
-        summary["overall_status"] = _determine_overall_status(
-            summary["service_health"], summary["connection_pools"]
-        )
+        # Inline status determination
+        health_status = summary["service_health"].get("status", "unknown")
+        pool_status = summary["connection_pools"].get("status", "unknown")
+
+        if health_status == "healthy" and pool_status in ["active", "no_pools"]:
+            summary["overall_status"] = "healthy"
+        elif health_status == "degraded" or pool_status == "error":
+            summary["overall_status"] = "degraded"
+        elif health_status in ["no_auto_detection", "error"]:
+            summary["overall_status"] = "unavailable"
+        else:
+            summary["overall_status"] = "unknown"
+
+        return summary
     except Exception as e:
         logger.exception("Auto-detection summary failed")
         return {
@@ -1341,8 +1343,9 @@ async def get_service_metrics() -> dict[str, Any]:
         # Get crawl metrics if available
         try:
             crawl_manager = await client_manager.get_crawl_manager()
-            crawl_metrics = crawl_manager.get_tier_metrics()
-            metrics["crawl_service"] = crawl_metrics
+            if crawl_manager:
+                crawl_metrics = crawl_manager.get_tier_metrics()  # type: ignore[attr-defined]
+                metrics["crawl_service"] = crawl_metrics
         except (ConnectionError, TimeoutError, ValueError) as e:
             logger.debug("Crawl metrics unavailable", exc_info=e)
 
@@ -1368,67 +1371,10 @@ async def cleanup_services() -> None:
         raise
 
 
-# Direct Cache Operations (extending existing cache dependencies)
-async def redis_ping(
-    redis_client: AutoDetectedRedisDep = None,
-) -> bool:
-    """Check Redis connectivity.
-
-    Function-based replacement for DatabaseManager.redis_ping().
-    """
-    if not redis_client:
-        return False
-
-    try:
-        await redis_client.ping()
-    except (ConnectionError, TimeoutError) as e:
-        logger.warning("Redis ping failed: %s", e)
-        return False
-    else:
-        return True
-
-
-async def redis_set_value(
-    key: str,
-    value: str,
-    ex: int | None = None,
-    redis_client: AutoDetectedRedisDep = None,
-) -> bool:
-    """Set value in Redis.
-
-    Function-based replacement for DatabaseManager.redis_set().
-    """
-    if not redis_client:
-        return False
-
-    try:
-        await redis_client.set(key, value, ex=ex)
-    except (ConnectionError, TimeoutError) as e:
-        logger.warning("Redis set failed for %s: %s", key, e)
-        return False
-    else:
-        return True
-
-
-async def redis_get_value(
-    key: str,
-    redis_client: AutoDetectedRedisDep = None,
-) -> str | None:
-    """Get value from Redis.
-
-    Function-based replacement for DatabaseManager.redis_get().
-    """
-    if not redis_client:
-        return None
-
-    try:
-        return await redis_client.get(key)
-    except (ConnectionError, TimeoutError) as e:
-        logger.warning("Redis get failed for %s: %s", key, e)
-        return None
-
-
-# Direct Crawling Operations (extending existing crawl dependencies)
+# ============================================================================
+# CRAWLING OPERATIONS
+# ============================================================================
+# Note: Redis operations removed - use cache_manager functions instead
 class BulkCrawlRequest(BaseModel):
     """Pydantic model for bulk crawling requests."""
 
@@ -1437,61 +1383,48 @@ class BulkCrawlRequest(BaseModel):
     max_concurrent: int = 5
 
 
-async def _bulk_scrape_with_manager(
-    request: BulkCrawlRequest, crawl_manager: Any
-) -> list[dict[str, Any]]:
-    """Use manager's built-in bulk functionality."""
-    return await crawl_manager.bulk_scrape(
-        urls=request.urls,
-        preferred_provider=request.preferred_provider,
-        max_concurrent=request.max_concurrent,
-    )
-
-
-async def _bulk_scrape_fallback(
-    request: BulkCrawlRequest, crawl_manager: Any
-) -> list[dict[str, Any]]:
-    """Fallback to individual scraping with semaphore."""
-    semaphore = asyncio.Semaphore(request.max_concurrent)
-
-    async def scrape_with_semaphore(url: str) -> dict[str, Any]:
-        async with semaphore:
-            return await crawl_manager.scrape_url(url, request.preferred_provider)
-
-    tasks = [scrape_with_semaphore(url) for url in request.urls]
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-
-    # Convert exceptions to error results
-    processed_results = []
-    for i, result in enumerate(results):
-        if isinstance(result, Exception):
-            processed_results.append(
-                {
-                    "success": False,
-                    "error": f"Scraping failed: {result}",
-                    "url": request.urls[i],
-                    "content": "",
-                    "metadata": {},
-                }
-            )
-        else:
-            processed_results.append(result)
-
-    return processed_results
-
-
 async def bulk_scrape_urls(
     request: BulkCrawlRequest,
     crawl_manager: CrawlManagerDep,
 ) -> list[dict[str, Any]]:
-    """Scrape multiple URLs concurrently.
-
-    Function-based replacement for CrawlingManager.bulk_scrape().
-    """
+    """Scrape multiple URLs concurrently (consolidated implementation)."""
     try:
+        # Try built-in bulk_scrape if available
         if hasattr(crawl_manager, "bulk_scrape"):
-            return await _bulk_scrape_with_manager(request, crawl_manager)
-        return await _bulk_scrape_fallback(request, crawl_manager)
+            return await crawl_manager.bulk_scrape(
+                urls=request.urls,
+                preferred_provider=request.preferred_provider,
+                max_concurrent=request.max_concurrent,
+            )
+
+        # Fallback: individual scraping with semaphore
+        semaphore = asyncio.Semaphore(request.max_concurrent)
+
+        async def scrape_with_semaphore(url: str) -> dict[str, Any]:
+            async with semaphore:
+                return await crawl_manager.scrape_url(url, request.preferred_provider)
+
+        results = await asyncio.gather(
+            *[scrape_with_semaphore(url) for url in request.urls],
+            return_exceptions=True,
+        )
+
+        # Convert exceptions to error dicts
+        processed: list[dict[str, Any]] = []
+        for i, result in enumerate(results):
+            if isinstance(result, Exception):
+                processed.append(
+                    {
+                        "success": False,
+                        "error": f"Scraping failed: {result}",
+                        "url": request.urls[i],
+                        "content": "",
+                        "metadata": {},
+                    }
+                )
+            else:
+                processed.append(result)  # type: ignore[arg-type]
+        return processed
     except Exception as e:
         logger.exception("Bulk scraping failed")
         msg = f"Failed to scrape URLs: {e}"
@@ -1570,7 +1503,7 @@ _health_checks: dict[str, dict[str, Any]] = {}
 
 async def register_health_check_function(
     request: HealthCheckRequest,
-    check_function: callable,
+    check_function: Callable[[], Any],
 ) -> dict[str, str]:
     """Register a health check for a service.
 
@@ -1692,9 +1625,9 @@ async def get_overall_health_summary() -> dict[str, Any]:
 # Performance tracking without complex Manager state
 async def track_operation_performance(
     operation_name: str,
-    operation_func: callable,
-    *args,
-    **kwargs,
+    operation_func: Callable[..., Any],
+    *args: Any,
+    **kwargs: Any,
 ) -> Any:
     """Track performance of an operation.
 
@@ -1744,7 +1677,7 @@ async def estimate_embedding_cost(
     texts: list[str],
     provider_name: str | None = None,
     embedding_manager: EmbeddingManagerDep = None,
-) -> dict[str, dict[str, float]]:
+) -> dict[str, dict[str, float]] | dict[str, dict[str, str | float]]:
     """Estimate embedding generation cost.
 
     Function-based replacement for EmbeddingManager.estimate_cost().

@@ -97,7 +97,13 @@ async def test_search_documents_dense(
     mock_vector_service.search_documents.assert_awaited_once_with(
         "docs", "test", limit=3, filters=None
     )
-    assert results == [SearchResult(id="result", content="result", score=0.9)]
+    expected = SearchResult(
+        id="result",
+        content="result",
+        score=0.9,
+        metadata={"content": "result"},
+    )
+    assert results == [expected]
 
 
 @pytest.mark.asyncio
