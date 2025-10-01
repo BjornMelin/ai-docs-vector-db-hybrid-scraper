@@ -69,6 +69,12 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         await self._embeddings.cleanup()
         self._mark_uninitialized()
 
+    @property
+    def embedding_dimension(self) -> int:
+        """Return the dimensionality of the dense embedding vectors."""
+
+        return self._embeddings.embedding_dimension
+
     async def ensure_collection(self, schema: CollectionSchema) -> None:
         """Ensure a collection exists with the given schema."""
 

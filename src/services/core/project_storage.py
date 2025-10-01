@@ -60,16 +60,12 @@ class ProjectStorage:
             # Create storage file if it doesn't exist
             if not self.storage_path.exists():
                 await self._save_projects({})
-                logger.info(
-                    f"Created new project storage at {self.storage_path}"
-                )  # TODO: Convert f-string to logging format
+                logger.info("Created new project storage at %s", self.storage_path)
 
             # Load existing projects
             await self.load_projects()
             self._initialized = True
-            logger.info(
-                f"Loaded {len(self._projects_cache)} projects from storage"
-            )  # TODO: Convert f-string to logging format
+            logger.info("Loaded %d projects from storage", len(self._projects_cache))
 
         except Exception as e:
             msg = "Failed to initialize project storage"
@@ -80,11 +76,13 @@ class ProjectStorage:
         async with self._lock:
             try:
                 if aiofiles:
-                    async with aiofiles.open(self.storage_path, "r") as f:
+                    async with aiofiles.open(
+                        self.storage_path, "r", encoding="utf-8"
+                    ) as f:
                         content = await f.read()
                 else:
                     # Fallback to synchronous read
-                    with self.storage_path.open() as f:
+                    with self.storage_path.open(encoding="utf-8") as f:
                         content = f.read()
 
                 self._projects_cache = json.loads(content) if content else {}
@@ -98,9 +96,7 @@ class ProjectStorage:
                 backup_path = self.storage_path.with_suffix(".json.bak")
                 if self.storage_path.exists():
                     self.storage_path.rename(backup_path)
-                    logger.warning(
-                        f"Backed up corrupted file to {backup_path}"
-                    )  # TODO: Convert f-string to logging format
+                    logger.warning("Backed up corrupted file to %s", backup_path)
                 self._projects_cache = {}
                 return {}
 
@@ -145,11 +141,11 @@ class ProjectStorage:
             temp_path = self.storage_path.with_suffix(".tmp")
 
             if aiofiles:
-                async with aiofiles.open(temp_path, "w") as f:
+                async with aiofiles.open(temp_path, "w", encoding="utf-8") as f:
                     await f.write(json.dumps(projects, indent=2, default=str))
             else:
                 # Fallback to synchronous write
-                with temp_path.open("w") as f:
+                with temp_path.open("w", encoding="utf-8") as f:
                     f.write(json.dumps(projects, indent=2, default=str))
 
             # Atomically replace the old file

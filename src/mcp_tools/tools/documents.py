@@ -1,7 +1,9 @@
 """Document management tools for MCP server."""
 
 import asyncio
+import inspect
 import logging
+from typing import Any, cast
 from uuid import uuid4
 
 from fastmcp import Context
@@ -12,6 +14,8 @@ from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.models.requests import BatchRequest, DocumentRequest
 from src.mcp_tools.models.responses import AddDocumentResponse, DocumentBatchResponse
 from src.security import SecurityValidator
+from src.services.vector_db.adapter_base import CollectionSchema, TextDocument
+from src.services.vector_db.service import VectorStoreService
 
 
 logger = logging.getLogger(__name__)
@@ -21,6 +25,256 @@ def _raise_scrape_error(url: str) -> None:
     """Raise ValueError for scraping failure."""
     msg = f"Failed to scrape {url}"
     raise ValueError(msg)
+
+
+async def _get_vector_service(client_manager: ClientManager) -> VectorStoreService:
+    """Return an initialised VectorStoreService instance."""
+
+    service = await client_manager.get_vector_store_service()
+    if not service.is_initialized():
+        await service.initialize()
+    return service
+
+
+async def _run_content_intelligence(
+    service: Any,
+    crawl_result: dict[str, Any],
+    request: DocumentRequest,
+    doc_id: str,
+    ctx: Context,
+):
+    """Execute content intelligence analysis when the service is available."""
+
+    if not service:
+        await ctx.debug("Content Intelligence Service not available")
+        return None
+
+    try:
+        analysis_result = await service.analyze_content(
+            content=crawl_result["content"],
+            url=request.url,
+            title=crawl_result.get("title")
+            or crawl_result["metadata"].get("title", ""),
+            raw_html=crawl_result.get("raw_html"),
+            confidence_threshold=0.7,
+        )
+    except (asyncio.CancelledError, TimeoutError, RuntimeError) as exc:
+        await ctx.warning(f"Content intelligence analysis error for {doc_id}: {exc}")
+        return None
+
+    if not getattr(analysis_result, "success", False):
+        await ctx.warning(f"Content intelligence analysis failed for {doc_id}")
+        return None
+
+    enriched_content = getattr(analysis_result, "enriched_content", None)
+    if enriched_content is None:
+        await ctx.warning(
+            f"Content intelligence returned no content for {doc_id} despite success"
+        )
+        return None
+
+    await ctx.info(
+        f"Content intelligence analysis completed for {doc_id}: "
+        f"type={enriched_content.classification.primary_type.value}, "
+        f"quality={enriched_content.quality_score.overall_score:.2f}"
+    )
+    return enriched_content
+
+
+async def _scrape_document(
+    client_manager: ClientManager,
+    request: DocumentRequest,
+    doc_id: str,
+    ctx: Context,
+) -> tuple[dict[str, Any], Any | None]:
+    """Scrape the target URL and optionally enrich the content."""
+
+    crawl_manager = await client_manager.get_crawl_manager()
+    if crawl_manager is None:
+        msg = "Crawl manager not available"
+        raise RuntimeError(msg)
+    crawl_manager = cast(Any, crawl_manager)
+
+    await ctx.debug(f"Scraping URL for document {doc_id} via UnifiedBrowserManager")
+    crawl_result = await crawl_manager.scrape_url(request.url)
+    if (
+        not crawl_result
+        or not crawl_result.get("success")
+        or not crawl_result.get("content")
+    ):
+        await ctx.error(f"Failed to scrape {request.url}")
+        _raise_scrape_error(request.url)
+
+    get_ci_service = getattr(client_manager, "get_content_intelligence_service", None)
+    if callable(get_ci_service):
+        prospective_service = get_ci_service()
+        if inspect.isawaitable(prospective_service):
+            content_intelligence_service = await prospective_service
+        else:
+            content_intelligence_service = prospective_service
+    else:
+        content_intelligence_service = None
+    enriched_content = await _run_content_intelligence(
+        content_intelligence_service,
+        crawl_result,
+        request,
+        doc_id,
+        ctx,
+    )
+    return crawl_result, enriched_content
+
+
+async def _chunk_document(
+    request: DocumentRequest,
+    crawl_result: dict[str, Any],
+    enriched_content: Any | None,
+    doc_id: str,
+    ctx: Context,
+) -> list[dict[str, Any]]:
+    """Chunk the scraped document using the configured strategy."""
+
+    chunk_config = ChunkingConfig(
+        strategy=request.chunk_strategy,
+        chunk_size=request.chunk_size,
+        chunk_overlap=request.chunk_overlap,
+    )
+
+    if enriched_content and enriched_content.classification:
+        content_type = enriched_content.classification.primary_type.value
+        if (
+            content_type in {"code", "reference"}
+            and request.chunk_strategy == ChunkingStrategy.BASIC
+        ):
+            chunk_config.strategy = ChunkingStrategy.ENHANCED
+            await ctx.debug(
+                f"Upgraded chunking strategy to ENHANCED for {content_type} content"
+            )
+
+    chunker = DocumentChunker(chunk_config)
+    chunks = chunker.chunk_content(
+        content=crawl_result["content"],
+        title=crawl_result.get("title") or crawl_result["metadata"].get("title", ""),
+        url=crawl_result.get("url", request.url),
+    )
+    await ctx.debug(f"Created {len(chunks)} chunks for document {doc_id}")
+    return chunks
+
+
+def _build_text_documents(
+    chunks: list[dict[str, Any]],
+    crawl_result: dict[str, Any],
+    request: DocumentRequest,
+    enriched_content: Any | None,
+) -> list[TextDocument]:
+    """Convert chunk data into TextDocument payloads."""
+
+    if not chunks:
+        msg = f"No chunks generated for {request.url}"
+        raise ValueError(msg)
+
+    documents: list[TextDocument] = []
+    total_chunks = len(chunks)
+    base_title = crawl_result.get("title") or crawl_result["metadata"].get("title", "")
+
+    for index, chunk in enumerate(chunks):
+        payload: dict[str, Any] = {
+            "content": chunk["content"],
+            "url": request.url,
+            "title": base_title,
+            "chunk_index": index,
+            "total_chunks": total_chunks,
+            "tier_used": crawl_result.get("tier_used", "unknown"),
+            "quality_score": crawl_result.get("quality_score", 0.0),
+            **chunk.get("metadata", {}),
+        }
+
+        if enriched_content:
+            payload.update(
+                {
+                    "content_type": (
+                        enriched_content.classification.primary_type.value
+                    ),
+                    "content_confidence": (
+                        enriched_content.classification.confidence_scores.get(
+                            enriched_content.classification.primary_type, 0.0
+                        )
+                    ),
+                    "quality_overall": enriched_content.quality_score.overall_score,
+                    "quality_completeness": enriched_content.quality_score.completeness,
+                    "quality_relevance": enriched_content.quality_score.relevance,
+                    "quality_confidence": enriched_content.quality_score.confidence,
+                    "ci_word_count": enriched_content.metadata.word_count,
+                    "ci_char_count": enriched_content.metadata.char_count,
+                    "ci_language": enriched_content.metadata.language,
+                    "ci_semantic_tags": enriched_content.metadata.semantic_tags,
+                    "content_intelligence_analyzed": True,
+                }
+            )
+            if enriched_content.classification.secondary_types:
+                payload["secondary_content_types"] = [
+                    content_type.value
+                    for content_type in enriched_content.classification.secondary_types
+                ]
+        else:
+            payload["content_intelligence_analyzed"] = False
+
+        documents.append(
+            TextDocument(
+                id=str(uuid4()),
+                content=chunk["content"],
+                metadata=payload,
+            )
+        )
+
+    return documents
+
+
+async def _persist_documents(
+    vector_service: VectorStoreService,
+    collection: str,
+    strategy: ChunkingStrategy,
+    documents_to_upsert: list[TextDocument],
+) -> None:
+    """Ensure collection existence and persist documents."""
+
+    schema = CollectionSchema(
+        name=collection,
+        vector_size=vector_service.embedding_dimension,
+        distance="cosine",
+        requires_sparse=(strategy != ChunkingStrategy.BASIC),
+    )
+    await vector_service.ensure_collection(schema)
+    await vector_service.upsert_documents(collection, documents_to_upsert)
+
+
+def _build_ingestion_response(
+    request: DocumentRequest,
+    crawl_result: dict[str, Any],
+    chunk_count: int,
+    vector_service: VectorStoreService,
+    enriched_content: Any | None,
+) -> AddDocumentResponse:
+    """Create the structured response for the ingestion flow."""
+
+    response_kwargs: dict[str, Any] = {
+        "url": request.url,
+        "title": crawl_result.get("title") or crawl_result["metadata"].get("title", ""),
+        "chunks_created": chunk_count,
+        "collection": request.collection,
+        "chunking_strategy": request.chunk_strategy.value,
+        "embedding_dimensions": vector_service.embedding_dimension,
+    }
+
+    if enriched_content:
+        response_kwargs.update(
+            {
+                "content_type": (enriched_content.classification.primary_type.value),
+                "quality_score": enriched_content.quality_score.overall_score,
+                "content_intelligence_analyzed": True,
+            }
+        )
+
+    return AddDocumentResponse(**response_kwargs)
 
 
 def register_tools(mcp, client_manager: ClientManager):
@@ -39,241 +293,71 @@ def register_tools(mcp, client_manager: ClientManager):
         await ctx.info(f"Processing document {doc_id}: {request.url}")
 
         try:
-            # Validate URL using SecurityValidator
-            security_validator = SecurityValidator.from_unified_config()
-            validated_url = security_validator.validate_url(request.url)
-            request.url = validated_url
-            # Get services from client manager
+            vector_service = await _get_vector_service(client_manager)
             cache_manager = await client_manager.get_cache_manager()
-            crawl_manager = await client_manager.get_crawl_manager()
-            embedding_manager = await client_manager.get_embedding_manager()
-            qdrant_service = await client_manager.get_qdrant_service()
 
-            # Check cache for existing document
+            request.url = SecurityValidator.from_unified_config().validate_url(
+                request.url
+            )
+
             cache_key = f"doc:{request.url}"
-            cached = await cache_manager.get(cache_key)
-            if cached:
+            cached_result = await cache_manager.get(cache_key)
+            if cached_result:
                 await ctx.debug(f"Document {doc_id} found in cache")
-                return AddDocumentResponse(**cached)
+                return AddDocumentResponse(**cached_result)
 
-            # Scrape the URL using 5-tier UnifiedBrowserManager
-            await ctx.debug(
-                f"Scraping URL for document {doc_id} via UnifiedBrowserManager"
-            )
-            crawl_result = await crawl_manager.scrape_url(request.url)
-            if (
-                not crawl_result
-                or not crawl_result.get("success")
-                or not crawl_result.get("content")
-            ):
-                await ctx.error(f"Failed to scrape {request.url}")
-                _raise_scrape_error(request.url)
-
-            # Apply Content Intelligence analysis
-            enriched_content = None
-            content_intelligence_service = (
-                await client_manager.get_content_intelligence_service()
-            )
-            if content_intelligence_service:
-                await ctx.debug(f"Analyzing content intelligence for document {doc_id}")
-                try:
-                    analysis_result = (
-                        await content_intelligence_service.analyze_content(
-                            content=crawl_result["content"],
-                            url=request.url,
-                            title=crawl_result.get("title")
-                            or crawl_result["metadata"].get("title", ""),
-                            raw_html=crawl_result.get("raw_html"),
-                            confidence_threshold=0.7,
-                        )
-                    )
-                    if analysis_result.success:
-                        enriched_content = analysis_result.enriched_content
-                        await ctx.info(
-                            f"Content intelligence analysis completed for {doc_id}: "
-                            "type="
-                            f"{enriched_content.classification.primary_type.value}, "
-                            f"quality={enriched_content.quality_score.overall_score:.2f}"
-                        )
-                    else:
-                        await ctx.warning(
-                            f"Content intelligence analysis failed for {doc_id}"
-                        )
-                except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
-                    await ctx.warning(
-                        f"Content intelligence analysis error for {doc_id}: {e}"
-                    )
-            else:
-                await ctx.debug("Content Intelligence Service not available")
-
-            # Configure chunking (enhanced with content intelligence insights)
-            chunk_config = ChunkingConfig(
-                strategy=request.chunk_strategy,
-                chunk_size=request.chunk_size,
-                chunk_overlap=request.chunk_overlap,
+            crawl_result, enriched_content = await _scrape_document(
+                client_manager,
+                request,
+                doc_id,
+                ctx,
             )
 
-            # Optimize chunking strategy based on content type
-            if enriched_content and enriched_content.classification:
-                content_type = enriched_content.classification.primary_type.value
-                if (
-                    content_type in ["code", "reference"]
-                    and request.chunk_strategy == ChunkingStrategy.BASIC
-                ):
-                    chunk_config.strategy = ChunkingStrategy.ENHANCED
-                    await ctx.debug(
-                        f"Upgraded chunking strategy to ENHANCED for "
-                        f"{content_type} content"
-                    )
-
-            # Chunk the document
-            await ctx.debug(
-                f"Chunking document {doc_id} with strategy {chunk_config.strategy}"
+            chunks = await _chunk_document(
+                request,
+                crawl_result,
+                enriched_content,
+                doc_id,
+                ctx,
             )
-            chunker = DocumentChunker(chunk_config)
-            chunks = chunker.chunk_content(
-                content=crawl_result["content"],
-                title=crawl_result["title"]
-                or crawl_result["metadata"].get("title", ""),
-                url=crawl_result["url"],
-            )
-            await ctx.debug(f"Created {len(chunks)} chunks for document {doc_id}")
-
-            # Generate embeddings for chunks
-            texts = [chunk["content"] for chunk in chunks]
-            await ctx.debug(f"Generating embeddings for {len(texts)} chunks")
-            embeddings_result = await embedding_manager.generate_embeddings(texts)
-            embeddings = embeddings_result.embeddings
-
-            # Prepare points for insertion
-            points = []
-            for i, (chunk, embedding) in enumerate(
-                zip(chunks, embeddings, strict=False)
-            ):
-                # Base payload
-                payload = {
-                    "content": chunk["content"],
-                    "url": request.url,
-                    "title": crawl_result["title"]
-                    or crawl_result["metadata"].get("title", ""),
-                    "chunk_index": i,
-                    "total_chunks": len(chunks),
-                    "tier_used": crawl_result.get("tier_used", "unknown"),
-                    "quality_score": crawl_result.get("quality_score", 0.0),
-                    **chunk.get("metadata", {}),
-                }
-
-                # Enhance with content intelligence metadata if available
-                if enriched_content:
-                    payload.update(
-                        {
-                            "content_type": (
-                                enriched_content.classification.primary_type.value
-                            ),
-                            "content_confidence": (
-                                enriched_content.classification.confidence_scores.get(
-                                    enriched_content.classification.primary_type, 0.0
-                                )
-                            ),
-                            "quality_overall": (
-                                enriched_content.quality_score.overall_score
-                            ),
-                            "quality_completeness": (
-                                enriched_content.quality_score.completeness
-                            ),
-                            "quality_relevance": (
-                                enriched_content.quality_score.relevance
-                            ),
-                            "quality_confidence": (
-                                enriched_content.quality_score.confidence
-                            ),
-                            "ci_word_count": enriched_content.metadata.word_count,
-                            "ci_char_count": enriched_content.metadata.char_count,
-                            "ci_language": enriched_content.metadata.language,
-                            "ci_semantic_tags": enriched_content.metadata.semantic_tags,
-                            "content_intelligence_analyzed": True,
-                        }
-                    )
-
-                    # Add secondary content types if available
-                    if enriched_content.classification.secondary_types:
-                        payload["secondary_content_types"] = [
-                            ct.value
-                            for ct in enriched_content.classification.secondary_types
-                        ]
-                else:
-                    payload["content_intelligence_analyzed"] = False
-
-                point = {
-                    "id": str(uuid4()),
-                    "vector": embedding,
-                    "payload": payload,
-                }
-                points.append(point)
-
-            # Ensure collection exists
-            await qdrant_service.create_collection(
-                collection_name=request.collection,
-                vector_size=len(embeddings[0]),
-                distance="Cosine",
-                sparse_vector_name="sparse"
-                if request.chunk_strategy != ChunkingStrategy.BASIC
-                else None,
-                enable_quantization=True,
+            await _persist_documents(
+                vector_service,
+                request.collection,
+                request.chunk_strategy,
+                _build_text_documents(
+                    chunks,
+                    crawl_result,
+                    request,
+                    enriched_content,
+                ),
             )
 
-            # Insert points
-            await qdrant_service.upsert_points(
-                collection_name=request.collection,
-                points=points,
+            result = _build_ingestion_response(
+                request,
+                crawl_result,
+                len(chunks),
+                vector_service,
+                enriched_content,
             )
 
-            # Prepare response with content intelligence insights
-            response_kwargs = {
-                "url": request.url,
-                "title": crawl_result["title"]
-                or crawl_result["metadata"].get("title", ""),
-                "chunks_created": len(chunks),
-                "collection": request.collection,
-                "chunking_strategy": request.chunk_strategy.value,
-                "embedding_dimensions": len(embeddings[0]),
-            }
-
-            # Add content intelligence metadata to response if available
-            if enriched_content:
-                response_kwargs.update(
-                    {
-                        "content_type": (
-                            enriched_content.classification.primary_type.value
-                        ),
-                        "quality_score": enriched_content.quality_score.overall_score,
-                        "content_intelligence_analyzed": True,
-                    }
-                )
-
-            result = AddDocumentResponse(**response_kwargs)
-
-            # Cache result
             await cache_manager.set(cache_key, result.model_dump(), ttl=86400)
 
-            # Enhanced completion message with content intelligence info
-            completion_msg = (
+            message = (
                 f"Document {doc_id} processed successfully: "
                 f"{len(chunks)} chunks created in collection {request.collection}"
             )
-            if enriched_content:
-                completion_msg += (
-                    f" (type: {enriched_content.classification.primary_type.value}, "
-                    f"quality: {enriched_content.quality_score.overall_score:.2f})"
+            result_content_type = getattr(result, "content_type", None)
+            if result_content_type:
+                message += (
+                    f" (type: {result_content_type}, "
+                    f"quality: {getattr(result, 'quality_score', 0.0):.2f})"
                 )
-            await ctx.info(completion_msg)
-
-        except Exception as e:
-            await ctx.error(f"Failed to process document {doc_id}: {e}")
+            await ctx.info(message)
+        except Exception as exc:  # noqa: BLE001 - surface unexpected errors to MCP clients
+            await ctx.error(f"Failed to process document {doc_id}: {exc}")
             logger.exception("Failed to add document")
             raise
-        else:
-            return result
+        return result
 
     @mcp.tool()
     async def add_documents_batch(
