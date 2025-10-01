@@ -10,6 +10,7 @@ from .models import (
     SourceAttribution,
 )
 from .retriever import VectorServiceRetriever
+from .utils import build_default_rag_config, initialise_rag_generator
 
 
 __all__ = [
@@ -21,4 +22,6 @@ __all__ = [
     "RAGServiceMetrics",
     "SourceAttribution",
     "VectorServiceRetriever",
+    "build_default_rag_config",
+    "initialise_rag_generator",
 ]

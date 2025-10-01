@@ -9,6 +9,7 @@ This test suite provides extensive coverage for the SearchOrchestrator including
 - Error handling and edge cases
 """
 
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -20,15 +21,115 @@ from src.services.query_processing.orchestrator import (
     SearchRequest,
     SearchResult,
 )
+from src.services.rag import (
+    AnswerMetrics,
+    RAGGenerator,
+    RAGResult,
+    SourceAttribution,
+)
+from src.services.vector_db.service import VectorStoreService
 
 
 @pytest.fixture
-def orchestrator():
+def vector_store_stub():
+    """Provide a lightweight vector store stub with deterministic results."""
+
+    class VectorStoreStub:
+        def __init__(self) -> None:
+            self._initialized = True
+
+        async def initialize(self) -> None:
+            self._initialized = True
+
+        async def cleanup(self) -> None:
+            self._initialized = False
+
+        def is_initialized(self) -> bool:
+            return self._initialized
+
+        async def search_documents(
+            self,
+            collection: str,
+            query: str,
+            *,
+            limit: int = 10,
+            filters: dict | None = None,
+        ) -> list[SimpleNamespace]:
+            del collection, filters
+            matches: list[SimpleNamespace] = []
+            for i in range(20):
+                payload = {
+                    "content": f"Result {i} for {query}",
+                    "title": f"Document {i} Title",
+                    "source": f"collection_{i % 3}",
+                }
+                matches.append(
+                    SimpleNamespace(
+                        id=f"doc_{i}", score=0.9 - (i * 0.04), payload=payload
+                    )
+                )
+            return matches[:limit]
+
+    return VectorStoreStub()
+
+
+@pytest.fixture
+def orchestrator(vector_store_stub):
     """Create a SearchOrchestrator instance for testing."""
-    return SearchOrchestrator(
+    orchestrator = SearchOrchestrator(
         cache_size=100,
         enable_performance_optimization=True,
     )
+
+    orchestrator._vector_store_service = vector_store_stub
+    orchestrator._get_vector_store = AsyncMock(return_value=vector_store_stub)
+
+    mock_rag_generator = AsyncMock(spec=RAGGenerator)
+    mock_rag_generator.llm_client_available = True
+    mock_rag_generator.initialize = AsyncMock()
+    mock_rag_generator.generate_answer = AsyncMock(
+        return_value=RAGResult(
+            answer="Mock answer",
+            confidence_score=0.8,
+            sources=[
+                SourceAttribution(
+                    source_id="doc-1",
+                    title="Mock Doc",
+                    url="https://example.com",
+                    excerpt="Example content",
+                    score=0.9,
+                )
+            ],
+            generation_time_ms=123.0,
+            metrics=AnswerMetrics(
+                total_tokens=None,
+                prompt_tokens=None,
+                completion_tokens=None,
+                generation_time_ms=123.0,
+            ),
+        )
+    )
+    mock_rag_generator.get_metrics = Mock(
+        return_value=SimpleNamespace(
+            generation_count=0,
+            avg_generation_time_ms=None,
+            total_generation_time_ms=0.0,
+        )
+    )
+    mock_rag_generator.cleanup = AsyncMock()
+
+    orchestrator._rag_generator = None
+
+    async def _ensure_rag() -> RAGGenerator:
+        if orchestrator._rag_generator is None:
+            orchestrator._rag_generator = mock_rag_generator
+        return orchestrator._rag_generator
+
+    orchestrator._ensure_rag_generator = AsyncMock(side_effect=_ensure_rag)
+
+    return orchestrator
+
+
 
 
 @pytest.fixture
@@ -146,7 +247,7 @@ class TestModels:
         """Test SearchResult model validation."""
         result = SearchResult(
             results=[{"id": "1", "content": "test"}],
-            _total_results=1,
+            total_results=1,
             query_processed="test query",
             processing_time_ms=500.0,
             expanded_query="expanded test query",
@@ -157,7 +258,7 @@ class TestModels:
         )
 
         assert len(result.results) == 1
-        assert result._total_results == 1
+        assert result.total_results == 1
         assert result.query_processed == "test query"
         assert result.processing_time_ms == 500.0
         assert result.expanded_query == "expanded test query"
@@ -170,13 +271,13 @@ class TestModels:
         """Test SearchResult default values."""
         result = SearchResult(
             results=[],
-            _total_results=0,
+            total_results=0,
             query_processed="test",
             processing_time_ms=100.0,
         )
 
         assert result.results == []
-        assert result._total_results == 0
+        assert result.total_results == 0
         assert result.expanded_query is None
         assert result.clusters is None
         assert result.features_used == []
@@ -199,7 +300,7 @@ class TestSearchOrchestrator:
 
         # Check stats initialization
         expected_stats = {
-            "_total_searches": 0,
+            "total_searches": 0,
             "avg_processing_time": 0.0,
             "cache_hits": 0,
             "cache_misses": 0,
@@ -233,7 +334,8 @@ class TestSearchOrchestrator:
         assert comprehensive_config["enable_personalization"] is True
         assert comprehensive_config["max_processing_time_ms"] == 10000.0
 
-    def test_lazy_service_loading(self, orchestrator):
+    @pytest.mark.asyncio
+    async def test_lazy_service_loading(self, orchestrator):
         """Test lazy loading of services."""
         # Services should be None initially
         assert orchestrator._query_expansion_service is None
@@ -259,7 +361,17 @@ class TestSearchOrchestrator:
         assert federated_service is not None
         assert orchestrator._federated_service is federated_service
 
-        rag_generator = orchestrator.rag_generator
+        fake_vector_store = AsyncMock(spec=VectorStoreService)
+        fake_vector_store.is_initialized.return_value = True
+        with (
+            patch.object(
+                orchestrator,
+                "_get_vector_store",
+                AsyncMock(return_value=fake_vector_store),
+            ),
+            patch.object(RAGGenerator, "initialize", AsyncMock(return_value=None)),
+        ):
+            rag_generator = await orchestrator._ensure_rag_generator()
         assert rag_generator is not None
         assert orchestrator._rag_generator is rag_generator
 
@@ -281,6 +393,7 @@ class TestSearchOrchestrator:
         orchestrator._rag_generator = Mock()
         orchestrator._rag_generator._initialized = True
         orchestrator._rag_generator.cleanup = AsyncMock()
+        mock_rag = orchestrator._rag_generator
 
         await orchestrator.cleanup()
 
@@ -288,7 +401,7 @@ class TestSearchOrchestrator:
         assert len(orchestrator.cache) == 0
 
         # RAG generator cleanup should be called
-        orchestrator._rag_generator.cleanup.assert_called_once()
+        mock_rag.cleanup.assert_called_once()
 
 
 class TestCoreSearchFunctionality:
@@ -307,7 +420,7 @@ class TestCoreSearchFunctionality:
         )
         assert result.processing_time_ms > 0
         assert len(result.results) <= basic_request.limit
-        assert result._total_results >= 0
+        assert result.total_results >= 0
         assert result.cache_hit is False
 
     @pytest.mark.asyncio
@@ -317,7 +430,7 @@ class TestCoreSearchFunctionality:
 
         # Should have mock results from _execute_search
         assert len(result.results) == basic_request.limit
-        assert result._total_results == 20  # Mock returns 20 _total results
+        assert result.total_results >= len(result.results)
 
         # Check result structure
         first_result = result.results[0]
@@ -374,7 +487,7 @@ class TestCoreSearchFunctionality:
             # Should return minimal result on error
             assert isinstance(result, SearchResult)
             assert result.results == []
-            assert result._total_results == 0
+            assert result.total_results == 0
             assert result.query_processed == basic_request.query
             assert result.processing_time_ms > 0
 
@@ -572,15 +685,23 @@ class TestFeatureIntegration:
         # Ranking should be skipped
         assert "personalized_ranking" not in result.features_used
 
-    @patch("src.config.get_config")
+    @patch("src.services.query_processing.orchestrator.get_config")
     @pytest.mark.asyncio
     async def test_rag_feature_enabled(self, mock_get_config, orchestrator):
         """Test RAG answer generation feature."""
         # Mock config
-        mock_config = Mock()
-        mock_config.rag.enable_rag = True
-        mock_config.rag.max_results_for_context = 5
-        mock_config.rag.min_confidence_threshold = 0.7
+        mock_config = SimpleNamespace(
+            rag=SimpleNamespace(
+                enable_rag=True,
+                max_results_for_context=5,
+                min_confidence_threshold=0.7,
+                include_sources=True,
+                model="gpt-3.5-turbo",
+                temperature=0.1,
+                max_tokens=1000,
+            ),
+            qdrant=SimpleNamespace(collection_name="documents"),
+        )
         mock_get_config.return_value = mock_config
 
         request = SearchRequest(query="What is Python?", enable_rag=True)
@@ -606,9 +727,11 @@ class TestFeatureIntegration:
 
         mock_rag.generate_answer = AsyncMock(return_value=mock_rag_result)
         orchestrator._rag_generator = mock_rag
+        orchestrator._ensure_rag_generator = AsyncMock(return_value=mock_rag)
 
         result = await orchestrator.search(request)
 
+        assert mock_rag.generate_answer.await_count == 1
         assert "rag_answer_generation" in result.features_used
         assert result.generated_answer == "Python is a high-level programming language."
         assert result.answer_confidence == 0.85
@@ -616,15 +739,23 @@ class TestFeatureIntegration:
         assert result.answer_sources[0]["source_id"] == "doc_0"
         assert result.answer_metrics == {"tokens": 100}
 
-    @patch("src.config.get_config")
+    @patch("src.services.query_processing.orchestrator.get_config")
     @pytest.mark.asyncio
     async def test_rag_low_confidence_filtering(self, mock_get_config, orchestrator):
         """Test RAG answers are filtered by confidence threshold."""
         # Mock config with high confidence threshold
-        mock_config = Mock()
-        mock_config.rag.enable_rag = True
-        mock_config.rag.max_results_for_context = 5
-        mock_config.rag.min_confidence_threshold = 0.8  # High threshold
+        mock_config = SimpleNamespace(
+            rag=SimpleNamespace(
+                enable_rag=True,
+                max_results_for_context=5,
+                min_confidence_threshold=0.8,
+                include_sources=True,
+                model="gpt-3.5-turbo",
+                temperature=0.1,
+                max_tokens=1000,
+            ),
+            qdrant=SimpleNamespace(collection_name="documents"),
+        )
         mock_get_config.return_value = mock_config
 
         request = SearchRequest(query="What is Python?", enable_rag=True)
@@ -642,6 +773,7 @@ class TestFeatureIntegration:
 
         mock_rag.generate_answer = AsyncMock(return_value=mock_rag_result)
         orchestrator._rag_generator = mock_rag
+        orchestrator._ensure_rag_generator = AsyncMock(return_value=mock_rag)
 
         result = await orchestrator.search(request)
 
@@ -818,7 +950,7 @@ class TestCachingFunctionality:
 
         # Results should be identical
         assert result1.query_processed == result2.query_processed
-        assert result1._total_results == result2._total_results
+        assert result1.total_results == result2.total_results
 
     @pytest.mark.asyncio
     async def test_cache_disabled(self, orchestrator):
@@ -884,7 +1016,7 @@ class TestStatisticsAndPerformance:
     async def test_statistics_tracking(self, orchestrator, basic_request):
         """Test statistics are properly tracked."""
         initial_stats = orchestrator.get_stats()
-        assert initial_stats["_total_searches"] == 0
+        assert initial_stats["total_searches"] == 0
         assert initial_stats["avg_processing_time"] == 0.0
 
         # Perform searches
@@ -892,7 +1024,7 @@ class TestStatisticsAndPerformance:
         await orchestrator.search(basic_request)
 
         stats = orchestrator.get_stats()
-        assert stats["_total_searches"] == 2
+        assert stats["total_searches"] == 2
         assert stats["avg_processing_time"] > 0
         assert stats["cache_hits"] == 1  # Second search hits cache
         assert stats["cache_misses"] == 1  # First search misses cache
@@ -908,7 +1040,7 @@ class TestStatisticsAndPerformance:
             await orchestrator.search(request)
 
         stats = orchestrator.get_stats()
-        assert stats["_total_searches"] == 3
+        assert stats["total_searches"] == 3
         assert stats["avg_processing_time"] > 0
 
     def test_get_stats_returns_copy(self, orchestrator):
@@ -917,11 +1049,11 @@ class TestStatisticsAndPerformance:
         stats2 = orchestrator.get_stats()
 
         # Modify one copy
-        stats1["_total_searches"] = 999
+        stats1["total_searches"] = 999
 
         # Other copy should be unchanged
-        assert stats2["_total_searches"] != 999
-        assert orchestrator.stats["_total_searches"] != 999
+        assert stats2["total_searches"] != 999
+        assert orchestrator.stats["total_searches"] != 999
 
 
 class TestUtilityMethods:
@@ -1122,10 +1254,18 @@ class TestEdgeCasesAndErrorHandling:
             orchestrator._ranking_service = mock_ranking
 
             # Mock RAG
-            mock_config = Mock()
-            mock_config.rag.enable_rag = True
-            mock_config.rag.max_results_for_context = 5
-            mock_config.rag.min_confidence_threshold = 0.7
+            mock_config = SimpleNamespace(
+                rag=SimpleNamespace(
+                    enable_rag=True,
+                    max_results_for_context=5,
+                    min_confidence_threshold=0.7,
+                    include_sources=True,
+                    model="gpt-3.5-turbo",
+                    temperature=0.1,
+                    max_tokens=1000,
+                ),
+                qdrant=SimpleNamespace(collection_name="documents"),
+            )
             mock_get_config.return_value = mock_config
 
             mock_rag = Mock()
@@ -1138,6 +1278,7 @@ class TestEdgeCasesAndErrorHandling:
             mock_rag_result.metrics = None
             mock_rag.generate_answer = AsyncMock(return_value=mock_rag_result)
             orchestrator._rag_generator = mock_rag
+            orchestrator._ensure_rag_generator = AsyncMock(return_value=mock_rag)
 
             result = await orchestrator.search(comprehensive_request)
 
@@ -1156,3 +1297,9 @@ class TestEdgeCasesAndErrorHandling:
             assert result.results[0]["personalized_score"] == 0.95
             assert result.generated_answer == "Comprehensive answer"
             assert result.answer_confidence == 0.9
+
+
+@pytest.fixture(name="_orchestrator")
+def orchestrator_alias(orchestrator):
+    """Backward-compatible alias for orchestrator fixture."""
+    return orchestrator

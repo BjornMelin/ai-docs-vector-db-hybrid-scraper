@@ -15,8 +15,7 @@ from src.config import Config, get_config
 from src.services.rag import (
     RAGGenerator,
     RAGRequest,
-    VectorServiceRetriever,
-    build_default_rag_config,
+    initialise_rag_generator,
 )
 from src.services.vector_db.service import VectorStoreService
 
@@ -32,16 +31,7 @@ async def _create_rag_generator(
     vector_store = VectorStoreService(config=config)
     await vector_store.initialize()
 
-    rag_config = build_default_rag_config(config)
-
-    retriever = VectorServiceRetriever(
-        vector_service=vector_store,
-        collection=getattr(config.qdrant, "collection_name", "documents"),
-        k=rag_config.retriever_top_k,
-    )
-
-    rag_generator = RAGGenerator(rag_config, retriever)
-    await rag_generator.initialize()
+    rag_generator, _ = await initialise_rag_generator(config, vector_store)
     return rag_generator, vector_store
 
 

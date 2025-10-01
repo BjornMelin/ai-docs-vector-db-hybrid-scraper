@@ -25,7 +25,7 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
     del client_manager  # Client manager not required for Tavily-backed tools.
 
     @mcp.tool()
-    async def web_search(
+    async def web_search(  # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
         query: str,
         max_results: int = 5,
         search_depth: str = "basic",
