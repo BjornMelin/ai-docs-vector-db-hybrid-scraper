@@ -17,7 +17,8 @@ from rich.table import Table
 # Import unified configuration and service layer
 from src.config import get_config
 from src.infrastructure.client_manager import ClientManager
-from src.services.vector_db import CollectionSchema, VectorStoreService
+from src.services.vector_db import CollectionSchema
+from src.services.vector_db.service import VectorStoreService
 from src.utils import async_command
 
 

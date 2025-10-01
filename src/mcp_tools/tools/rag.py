@@ -12,8 +12,7 @@ from fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
 from src.config import get_config
-from src.services.rag import RAGGenerator
-from src.services.rag.models import RAGRequest
+from src.services.rag import RAGGenerator, RAGRequest
 
 
 logger = logging.getLogger(__name__)
@@ -94,12 +93,8 @@ def register_tools(app: FastMCP) -> None:
 
         Returns:
             RAGAnswerResponse: Generated answer with metadata and sources
-
-        Raises:
-            ValueError: If request is invalid
-            RuntimeError: If RAG generation fails
-
         """
+
         config = get_config()
 
         # Check if RAG is enabled
@@ -112,52 +107,27 @@ def register_tools(app: FastMCP) -> None:
             raise ValueError(msg)
 
         try:
-            # Initialize RAG generator
             rag_generator = RAGGenerator(config.rag)
             await rag_generator.initialize()
 
-            # Create RAG request
             rag_request = RAGRequest(
                 query=request.query,
                 search_results=request.search_results,
                 max_tokens=request.max_tokens,
                 temperature=request.temperature,
                 include_sources=request.include_sources,
-                require_high_confidence=request.require_high_confidence,
-                max_context_results=request.max_context_results,
             )
 
-            # Generate answer
             result = await rag_generator.generate_answer(rag_request)
 
-            # Format sources for response
             sources = None
             if request.include_sources and result.sources:
-                sources = [
-                    {
-                        "source_id": source.source_id,
-                        "title": source.title,
-                        "url": source.url,
-                        "relevance_score": source.relevance_score,
-                        "excerpt": source.excerpt,
-                        "position_in_context": source.position_in_context,
-                    }
-                    for source in result.sources
-                ]
+                sources = [source.model_dump() for source in result.sources]
 
-            # Format metrics
             metrics = None
             if result.metrics:
-                metrics = {
-                    "confidence_score": result.metrics.confidence_score,
-                    "context_utilization": result.metrics.context_utilization,
-                    "source_diversity": result.metrics.source_diversity,
-                    "answer_length": result.metrics.answer_length,
-                    "tokens_used": result.metrics.tokens_used,
-                    "cost_estimate": result.metrics.cost_estimate,
-                }
+                metrics = result.metrics.model_dump()
 
-            # Cleanup
             await rag_generator.cleanup()
 
             return RAGAnswerResponse(
@@ -167,7 +137,6 @@ def register_tools(app: FastMCP) -> None:
                 generation_time_ms=result.generation_time_ms,
                 sources=sources,
                 metrics=metrics,
-                follow_up_questions=result.follow_up_questions,
             )
 
         except Exception as e:
@@ -198,19 +167,17 @@ def register_tools(app: FastMCP) -> None:
         try:
             # Initialize RAG generator to get metrics
             rag_generator = RAGGenerator(config.rag)
-            metrics = rag_generator.get_metrics()
+            await rag_generator.initialize()
+            metrics = rag_generator.get_metrics().model_dump()
+            await rag_generator.cleanup()
 
             return RAGMetricsResponse(
                 generation_count=metrics["generation_count"],
-                avg_generation_time=metrics["avg_generation_time"],
-                total_cost=metrics["total_cost"],
-                cache_hit_rate=metrics["cache_hit_rate"],
-                avg_confidence=None,  # Would need to track this separately
-                avg_tokens_used=(
-                    metrics["total_tokens_used"] / metrics["generation_count"]
-                    if metrics["generation_count"] > 0
-                    else 0.0
-                ),
+                avg_generation_time=metrics["avg_generation_time_ms"],
+                total_cost=0.0,
+                cache_hit_rate=0.0,
+                avg_confidence=None,
+                avg_tokens_used=0.0,
             )
 
         except Exception as e:
@@ -249,16 +216,10 @@ def register_tools(app: FastMCP) -> None:
             return results
 
         try:
-            # Test RAG generator initialization
             rag_generator = RAGGenerator(config.rag)
             await rag_generator.initialize()
-
             results["connectivity_test"] = True
-            results["openai_client_available"] = rag_generator.llm_client_available
-
-            # Cleanup
             await rag_generator.cleanup()
-
         except Exception as e:
             results["error"] = str(e)
             logger.exception("RAG configuration test failed")
@@ -285,20 +246,9 @@ def register_tools(app: FastMCP) -> None:
             msg = "RAG is not enabled in the configuration"
             raise RuntimeError(msg)
 
-        try:
-            # Create RAG generator instance and clear cache
-            rag_generator = RAGGenerator(config.rag)
-            rag_generator.clear_cache()
-
-        except Exception as e:
-            logger.exception("Failed to clear RAG cache")
-            msg = "Failed to clear RAG cache"
-            raise RuntimeError(msg) from e
-
-        else:
-            return {
-                "status": "success",
-                "message": "RAG answer cache cleared successfully",
-            }
+        return {
+            "status": "noop",
+            "message": "RAG generator operates without a local cache",
+        }
 
     logger.info("RAG MCP tools registered successfully")

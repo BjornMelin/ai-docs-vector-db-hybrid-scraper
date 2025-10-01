@@ -25,6 +25,7 @@ sections below link to the key guides and reference material that engineers rely
 - **[API Reference](./api-reference.md)** – REST, browser automation, and MCP endpoints
 - **[Architecture](./architecture.md)** – System design, data flow, and component responsibilities
 - **[Configuration](./configuration.md)** – Environment variables, service defaults, and tuning knobs
+- **[Application Profiles](./app-profiles.md)** – How the simple and enterprise profiles are composed
 - **[Deployment Strategies](./deployment-strategies.md)** – Blue/green, canary, and feature flag rollout
   practices
 - **[CI/CD Workflows](./ci-cd.md)** – Automation inventory, triggers, and required validation gates

@@ -9,8 +9,8 @@
 ## Essential Test Commands
 
 ```bash
-# Run all tests
-python scripts/dev.py test --profile full
+# Run all tests (current profile)
+PYTEST_BENCHMARK_DISABLE=1 uv run python scripts/dev.py test --profile full
 
 # Run tests in specific file
 pytest tests/test_example.py
@@ -22,7 +22,11 @@ pytest -v
 pytest -k "test_function_name"
 
 # Run tests with coverage report (mirrors CI)
-python scripts/dev.py test --profile ci
+PYTEST_BENCHMARK_DISABLE=1 uv run python scripts/dev.py test --profile ci
+
+# Run tests for a specific application profile
+PYTEST_BENCHMARK_DISABLE=1 AI_DOCS_MODE=enterprise \
+  uv run python scripts/dev.py test --profile quick
 
 # Run tests in parallel
 pytest -n auto
