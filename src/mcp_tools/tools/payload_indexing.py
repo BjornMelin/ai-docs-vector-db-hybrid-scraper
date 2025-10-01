@@ -1,12 +1,17 @@
 """Payload indexing management tools for MCP server."""
 
+from __future__ import annotations
+
+import asyncio
 import logging
-import time
+from collections.abc import Mapping
 from datetime import UTC, datetime
+from time import perf_counter
 from typing import Any
 from uuid import uuid4
 
 from fastmcp import Context
+from qdrant_client import models
 
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.models.responses import (
@@ -18,233 +23,192 @@ from src.security import MLSecurityValidator
 
 logger = logging.getLogger(__name__)
 
+# Default payload index definitions expressed with Qdrant field schemas.
+_INDEX_DEFINITIONS: dict[str, models.PayloadSchemaType] = {
+    "site_name": models.PayloadSchemaType.KEYWORD,
+    "embedding_model": models.PayloadSchemaType.KEYWORD,
+    "title": models.PayloadSchemaType.TEXT,
+    "word_count": models.PayloadSchemaType.INTEGER,
+    "crawl_timestamp": models.PayloadSchemaType.DATETIME,
+}
+
+_VECTOR_SERVICE_INIT_LOCK = asyncio.Lock()
+
+
+async def _get_vector_service(client_manager: ClientManager):
+    """Return an initialised VectorStoreService instance."""
+
+    service = await client_manager.get_vector_store_service()
+    if not service.is_initialized():
+        async with _VECTOR_SERVICE_INIT_LOCK:
+            if not service.is_initialized():
+                await service.initialize()
+    return service
+
+
+def _normalise_summary(
+    collection: str,
+    summary: Mapping[str, Any],
+    *,
+    status: str = "success",
+    request_id: str | None = None,
+) -> GenericDictResponse:
+    """Shape summary metadata into a stable GenericDictResponse."""
+
+    indexed_fields = summary.get("indexed_fields", [])
+    points = summary.get("points_count", 0)
+    payload_schema = summary.get("payload_schema", {})
+    payload: dict[str, Any] = {
+        "collection_name": collection,
+        "status": status,
+        "indexes_created": len(indexed_fields),
+        "indexed_fields_count": len(indexed_fields),
+        "indexed_fields": indexed_fields,
+        "total_points": points,
+        "_total_points": points,  # Retain legacy key for compatibility
+        "payload_schema": payload_schema,
+    }
+    if request_id is not None:
+        payload["request_id"] = request_id
+    return GenericDictResponse.model_validate(payload)
+
 
 def register_tools(mcp, client_manager: ClientManager):
-    """Register payload indexing tools with the MCP server."""
+    """Register payload indexing helpers with the MCP server."""
+
+    validator = MLSecurityValidator.from_unified_config()
 
     @mcp.tool()
     async def create_payload_indexes(
-        collection_name: str, ctx: Context
-    ) -> "GenericDictResponse":
-        """Create payload indexes on a collection for faster filtering.
-
-        Creates indexes on key metadata fields like site_name, embedding_model,
-        title, word_count, crawl_timestamp, etc. for performance improvements.
-        """
-        # Generate request ID for tracking
+        collection_name: str,
+        ctx: Context,
+    ) -> GenericDictResponse:
         request_id = str(uuid4())
         await ctx.info(
             f"Creating payload indexes for collection: {collection_name} "
-            f"(Request: {request_id})"
+            f"(request {request_id})"
         )
 
-        try:
-            # Validate collection name
-            security_validator = MLSecurityValidator.from_unified_config()
-            collection_name = security_validator.validate_collection_name(
-                collection_name
-            )
+        safe_name = validator.validate_collection_name(collection_name)
+        service = await _get_vector_service(client_manager)
+        collections = await service.list_collections()
+        if safe_name not in collections:
+            msg = f"Collection '{safe_name}' not found"
+            raise ValueError(msg)
 
-            # Check if collection exists
-            collections = await client_manager.qdrant_service.list_collections()
-            if collection_name not in collections:
-                msg = f"Collection '{collection_name}' not found"
-                raise ValueError(msg)
-
-            # Create payload indexes
-            await client_manager.qdrant_service.create_payload_indexes(collection_name)
-
-            # Get index statistics
-            stats = await client_manager.qdrant_service.get_payload_index_stats(
-                collection_name
-            )
-
-            await ctx.info(
-                f"Successfully created {stats['indexed_fields_count']} payload indexes "
-                f"for {collection_name}"
-            )
-
-            return GenericDictResponse(
-                collection_name=collection_name,
-                status="success",
-                indexes_created=stats["indexed_fields_count"],
-                indexed_fields=stats["indexed_fields"],
-                total_points=stats["total_points"],
-                request_id=request_id,
-            )
-
-        except (ConnectionError, OSError, PermissionError):
-            await ctx.error("Failed to create payload indexes for {collection_name}")
-            logger.exception("Failed to create payload indexes")
-            raise
+        summary = await service.ensure_payload_indexes(safe_name, _INDEX_DEFINITIONS)
+        await ctx.info(
+            f"Ensured {summary['indexed_fields_count']} payload indexes for {safe_name}"
+        )
+        return _normalise_summary(safe_name, summary, request_id=request_id)
 
     @mcp.tool()
     async def list_payload_indexes(
-        collection_name: str, ctx: Context
+        collection_name: str,
+        ctx: Context,
     ) -> GenericDictResponse:
-        """List all payload indexes in a collection.
-
-        Shows which fields are indexed and their types for performance monitoring.
-        """
-        await ctx.info("Listing payload indexes for collection")
-
-        try:
-            # Validate collection name
-            security_validator = MLSecurityValidator.from_unified_config()
-            collection_name = security_validator.validate_collection_name(
-                collection_name
-            )
-
-            # Get index statistics
-            stats = await client_manager.qdrant_service.get_payload_index_stats(
-                collection_name
-            )
-
-            await ctx.info(
-                f"Found {stats['indexed_fields_count']} indexed fields in "
-                f"{collection_name}"
-            )
-
-            return GenericDictResponse(**stats)
-
-        except (TimeoutError, OSError, PermissionError):
-            await ctx.error("Failed to list payload indexes for {collection_name}")
-            logger.exception("Failed to list payload indexes")
-            raise
+        safe_name = validator.validate_collection_name(collection_name)
+        service = await _get_vector_service(client_manager)
+        summary = await service.get_payload_index_summary(safe_name)
+        count = summary["indexed_fields_count"]
+        await ctx.info(f"Collection {safe_name} exposes {count} payload indexes")
+        return _normalise_summary(safe_name, summary)
 
     @mcp.tool()
     async def reindex_collection(
-        collection_name: str, ctx: Context
+        collection_name: str,
+        ctx: Context,
     ) -> ReindexCollectionResponse:
-        """Reindex all payload fields in a collection.
-
-        Drops existing indexes and recreates them. Useful after bulk updates
-        or when index performance degrades.
-        """
-        # Generate request ID for tracking
         request_id = str(uuid4())
         await ctx.info(
-            f"Starting full reindex for collection: {collection_name} "
-            f"(Request: {request_id})"
+            "Reindexing payload fields for collection: "
+            f"{collection_name} (request {request_id})"
         )
 
-        try:
-            # Validate collection name
-            security_validator = MLSecurityValidator.from_unified_config()
-            collection_name = security_validator.validate_collection_name(
-                collection_name
-            )
+        safe_name = validator.validate_collection_name(collection_name)
+        service = await _get_vector_service(client_manager)
 
-            # Get stats before reindexing
-            stats_before = await client_manager.qdrant_service.get_payload_index_stats(
-                collection_name
-            )
+        before = await service.get_payload_index_summary(safe_name)
+        await service.drop_payload_indexes(safe_name, _INDEX_DEFINITIONS.keys())
+        after = await service.ensure_payload_indexes(safe_name, _INDEX_DEFINITIONS)
 
-            # Perform reindexing
-            await client_manager.qdrant_service.reindex_collection(collection_name)
+        await ctx.info(f"Successfully reindexed payload fields for {safe_name}")
 
-            # Get stats after reindexing
-            stats_after = await client_manager.qdrant_service.get_payload_index_stats(
-                collection_name
-            )
-
-            await ctx.info("Successfully reindexed collection")
-
-            return ReindexCollectionResponse(
-                status="success",
-                collection=collection_name,
-                reindexed_count=stats_after["indexed_fields_count"],
-                details={
-                    "indexes_before": stats_before["indexed_fields_count"],
-                    "indexes_after": stats_after["indexed_fields_count"],
-                    "indexed_fields": stats_after["indexed_fields"],
-                    "total_points": stats_after["total_points"],
-                    "request_id": request_id,
-                },
-            )
-
-        except (ConnectionError, OSError, PermissionError):
-            await ctx.error("Failed to reindex collection {collection_name}")
-            logger.exception("Failed to reindex collection")
-            raise
+        return ReindexCollectionResponse(
+            status="success",
+            collection=safe_name,
+            reindexed_count=after["indexed_fields_count"],
+            details={
+                "indexes_before": before["indexed_fields_count"],
+                "indexes_after": after["indexed_fields_count"],
+                "indexed_fields": after["indexed_fields"],
+                "total_points": after.get("points_count", 0),
+                "_total_points": after.get("points_count", 0),
+                "request_id": request_id,
+            },
+        )
 
     @mcp.tool()
     async def benchmark_filtered_search(
         collection_name: str,
         test_filters: dict[str, Any],
         query: str = "documentation search test",
-        ctx: Context = None,
+        ctx: Context | None = None,
     ) -> GenericDictResponse:
-        """Benchmark filtered search performance to demonstrate indexing improvements.
-
-        Compares performance of filtered searches and provides metrics on the
-        effectiveness of payload indexing.
-        """
         if ctx:
-            await ctx.info("Benchmarking filtered search on collection")
-
-        try:
-            # Validate collection name and filters
-            security_validator = MLSecurityValidator.from_unified_config()
-            collection_name = security_validator.validate_collection_name(
-                collection_name
-            )
-            query = security_validator.validate_query_string(query)
-
-            # Generate embedding for test query
-            embedding_result = (
-                await client_manager.embedding_manager.generate_embeddings(
-                    [query], generate_sparse=False
-                )
-            )
-            query_vector = embedding_result["embeddings"][0]
-
-            # Run filtered search with timing
-
-            start_time = time.time()
-
-            results = await client_manager.qdrant_service.filtered_search(
-                collection_name=collection_name,
-                query_vector=query_vector,
-                filters=test_filters,
-                limit=10,
-                search_accuracy="balanced",
+            await ctx.info(
+                "Benchmarking filtered search on %s",  # type: ignore[arg-type]
+                collection_name,
             )
 
-            search_time = (time.time() - start_time) * 1000  # Convert to milliseconds
+        safe_name = validator.validate_collection_name(collection_name)
+        clean_query = validator.validate_query_string(query)
 
-            # Get collection and index stats
-            collection_stats = await client_manager.qdrant_service.get_collection_info(
-                collection_name
+        service = await _get_vector_service(client_manager)
+
+        start = perf_counter()
+        matches = await service.search_documents(
+            safe_name,
+            clean_query,
+            limit=10,
+            filters=test_filters,
+        )
+        elapsed_ms = (perf_counter() - start) * 1000
+
+        results = [
+            {
+                "id": match.id,
+                "score": match.score,
+                "payload": match.payload or {},
+            }
+            for match in matches
+        ]
+
+        stats = await service.collection_stats(safe_name)
+        summary = await service.get_payload_index_summary(safe_name)
+
+        performance_estimate = (
+            "10-100x faster than unindexed"
+            if summary["indexed_fields_count"]
+            else "No indexes detected"
+        )
+
+        payload = {
+            "collection_name": safe_name,
+            "query": clean_query,
+            "filters_applied": test_filters,
+            "results_found": len(results),
+            "search_time_ms": round(elapsed_ms, 2),
+            "benchmark_timestamp": datetime.now(tz=UTC).isoformat(),
+            "performance_estimate": performance_estimate,
+            "results": results,
+            "total_points": stats.get("points_count", 0),
+            "_total_points": stats.get("points_count", 0),
+            "indexed_fields": summary["indexed_fields"],
+        }
+        if ctx:
+            await ctx.info(
+                f"Filtered search completed in {payload['search_time_ms']:.2f}ms with "
+                f"{payload['results_found']} results"
             )
-            index_stats = await client_manager.qdrant_service.get_payload_index_stats(
-                collection_name
-            )
-
-            if ctx:
-                await ctx.info(
-                    f"Filtered search completed in {search_time:.2f}ms with "
-                    f"{len(results)} results"
-                )
-
-            return GenericDictResponse(
-                collection_name=collection_name,
-                query=query,
-                filters_applied=test_filters,
-                search_time_ms=round(search_time, 2),
-                results_found=len(results),
-                total_points=collection_stats.get("points_count", 0),
-                indexed_fields=index_stats["indexed_fields"],
-                performance_estimate=(
-                    "10-100x faster than unindexed"
-                    if index_stats["indexed_fields"]
-                    else "No indexes detected"
-                ),
-                benchmark_timestamp=datetime.now(UTC).isoformat(),
-            )
-
-        except (TimeoutError, OSError, PermissionError):
-            if ctx:
-                await ctx.error("Failed to benchmark filtered search")
-            logger.exception("Failed to benchmark filtered search")
-            raise
+        return GenericDictResponse.model_validate(payload)

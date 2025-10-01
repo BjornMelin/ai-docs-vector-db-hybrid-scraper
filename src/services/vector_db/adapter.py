@@ -67,6 +67,35 @@ class QdrantVectorAdapter(VectorAdapter):
         collections = await self._client.get_collections()
         return [collection.name for collection in collections.collections]
 
+    async def get_collection_info(self, name: str) -> models.CollectionInfo:
+        """Return detailed metadata for a collection."""
+
+        return await self._client.get_collection(collection_name=name)
+
+    async def create_payload_index(
+        self,
+        collection: str,
+        field_name: str,
+        field_schema: models.PayloadSchemaType,
+    ) -> None:
+        """Create or update a payload index for the specified field."""
+
+        await self._client.create_payload_index(
+            collection_name=collection,
+            field_name=field_name,
+            field_schema=field_schema,
+            wait=True,
+        )
+
+    async def delete_payload_index(self, collection: str, field_name: str) -> None:
+        """Drop a payload index if it exists."""
+
+        await self._client.delete_payload_index(
+            collection_name=collection,
+            field_name=field_name,
+            wait=True,
+        )
+
     async def upsert(
         self,
         collection: str,

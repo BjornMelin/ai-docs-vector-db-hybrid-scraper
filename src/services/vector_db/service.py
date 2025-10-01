@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
+from enum import Enum
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
+
+from qdrant_client import models
 
 from src.config import get_config
 from src.services.base import BaseService
@@ -20,7 +23,7 @@ if TYPE_CHECKING:
     from src.infrastructure.client_manager import ClientManager
 
 
-class VectorStoreService(BaseService):
+class VectorStoreService(BaseService):  # pylint: disable=too-many-public-methods
     """High-level vector store operations built on top of Qdrant."""
 
     def __init__(
@@ -33,7 +36,7 @@ class VectorStoreService(BaseService):
 
         config = config or get_config()
         if client_manager is None:
-            from src.infrastructure.client_manager import (
+            from src.infrastructure.client_manager import (  # pylint: disable=import-outside-toplevel
                 ClientManager as _ClientManager,
             )
 
@@ -83,6 +86,51 @@ class VectorStoreService(BaseService):
 
         adapter = self._require_adapter()
         return await adapter.list_collections()
+
+    async def get_collection_info(self, name: str) -> Mapping[str, Any]:
+        """Return raw collection metadata."""
+
+        adapter = self._require_adapter()
+        info = await adapter.get_collection_info(name)
+        return _serialize_collection_info(info)
+
+    async def get_payload_index_summary(self, name: str) -> Mapping[str, Any]:
+        """Return a summary of payload indexes for the collection."""
+
+        info = await self.get_collection_info(name)
+        payload_schema = info.get("payload_schema", {})
+        indexed_fields = sorted(payload_schema.keys())
+        return {
+            "indexed_fields_count": len(indexed_fields),
+            "indexed_fields": indexed_fields,
+            "payload_schema": payload_schema,
+            "points_count": info.get("points_count", 0),
+        }
+
+    async def ensure_payload_indexes(
+        self, name: str, definitions: Mapping[str, models.PayloadSchemaType]
+    ) -> Mapping[str, Any]:
+        """Ensure the expected payload indexes exist for the collection."""
+
+        adapter = self._require_adapter()
+        summary = await self.get_payload_index_summary(name)
+        existing_schema: Mapping[str, Mapping[str, Any]] = summary.get(
+            "payload_schema", {}
+        )
+        for field, schema in definitions.items():
+            if not _schema_matches(existing_schema.get(field), schema):
+                await adapter.create_payload_index(name, field, schema)
+        return await self.get_payload_index_summary(name)
+
+    async def drop_payload_indexes(self, name: str, fields: Iterable[str]) -> None:
+        """Drop the specified payload indexes if they exist."""
+
+        adapter = self._require_adapter()
+        summary = await self.get_payload_index_summary(name)
+        existing_fields = set(summary.get("indexed_fields", []))
+        for field in fields:
+            if field in existing_fields:
+                await adapter.delete_payload_index(name, field)
 
     async def collection_stats(self, name: str) -> Mapping[str, Any]:
         """Get statistics for a collection."""
@@ -298,7 +346,7 @@ class VectorStoreService(BaseService):
             filters=filters,
         )
 
-    async def hybrid_search(
+    async def hybrid_search(  # pylint: disable=too-many-arguments
         self,
         collection: str,
         query: str,
@@ -358,7 +406,7 @@ class VectorStoreService(BaseService):
             with_vectors=with_vectors,
         )
 
-    async def scroll(
+    async def scroll(  # pylint: disable=too-many-arguments
         self,
         collection: str,
         *,
@@ -391,3 +439,55 @@ class VectorStoreService(BaseService):
             msg = "VectorStoreService is not initialized"
             raise EmbeddingServiceError(msg)
         return self._adapter
+
+
+def _serialize_collection_info(info: models.CollectionInfo) -> Mapping[str, Any]:
+    """Convert a Qdrant CollectionInfo into a plain mapping."""
+
+    payload_schema_raw = getattr(info, "payload_schema", {}) or {}
+    payload_schema = {
+        name: _serialize_payload_schema_entry(entry)
+        for name, entry in payload_schema_raw.items()
+    }
+    return {
+        "status": getattr(info, "status", None),
+        "vectors_count": getattr(info, "vectors_count", None),
+        "points_count": getattr(info, "points_count", None),
+        "payload_schema": payload_schema,
+    }
+
+
+def _serialize_payload_schema_entry(entry: Any) -> Mapping[str, Any]:
+    """Normalize payload schema entries to serializable dictionaries."""
+
+    if entry is None:
+        return {}
+    if hasattr(entry, "to_dict"):
+        raw = entry.to_dict()
+    elif isinstance(entry, dict):
+        raw = dict(entry)
+    else:
+        raw = {
+            key: getattr(entry, key)
+            for key in dir(entry)
+            if not key.startswith("_") and not callable(getattr(entry, key))
+        }
+    data_type = raw.get("data_type") or raw.get("type")
+    if isinstance(data_type, (models.PayloadSchemaType, Enum)):
+        raw["data_type"] = data_type.value
+    return raw
+
+
+def _schema_matches(
+    existing: Mapping[str, Any] | None,
+    expected: models.PayloadSchemaType,
+) -> bool:
+    """Return True if an existing index matches the desired definition."""
+
+    if existing is None:
+        return False
+    current_type = existing.get("data_type") or existing.get("type")
+    target = expected.value
+    if isinstance(target, Enum):  # pragma: no cover - defensive
+        target = target.value
+    return bool(target == current_type)
