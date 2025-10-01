@@ -5,6 +5,8 @@ and valuable V2 features. Includes query expansion, clustering,
 personalization, and federation.
 """
 
+# pylint: disable=too-many-instance-attributes,too-many-branches,too-many-statements,too-many-locals,too-many-nested-blocks,duplicate-code
+
 import logging
 import time
 from enum import Enum

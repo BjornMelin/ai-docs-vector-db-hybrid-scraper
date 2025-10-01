@@ -685,12 +685,11 @@ class TestHyDEQueryEngine:
         assert len(results) == len(mock_results)
         assert results[0]["id"] == mock_results[0].id
         assert results[0]["score"] == pytest.approx(mock_results[0].score)
-        mock_vector_store.search_vector.assert_called_once_with(
-            collection_name="documents",
-            query_vector=[0.1, 0.2, 0.3],
-            filters={"type": "doc"},
+        mock_vector_store.search_vector.assert_awaited_once_with(
+            collection="documents",
+            vector=[0.1, 0.2, 0.3],
             limit=10,
-            search_accuracy="balanced",
+            filters={"type": "doc"},
         )
 
     @pytest.mark.asyncio
@@ -867,7 +866,7 @@ class TestHyDEQueryEngine:
 
         metrics = engine.get_performance_metrics()
 
-        assert metrics["search_performance"]["_total_searches"] == 10
+        assert metrics["search_performance"]["total_searches"] == 10
         assert metrics["search_performance"]["avg_search_time"] == 2.0
         assert metrics["search_performance"]["cache_hit_rate"] == 0.3
         assert metrics["search_performance"]["fallback_rate"] == 0.2
@@ -900,7 +899,7 @@ class TestHyDEQueryEngine:
         assert "ab_testing" in metrics
         assert metrics["ab_testing"]["control_group_searches"] == 3
         assert metrics["ab_testing"]["treatment_group_searches"] == 7
-        assert metrics["ab_testing"]["_total_ab_searches"] == 10
+        assert metrics["ab_testing"]["total_ab_searches"] == 10
         assert metrics["ab_testing"]["treatment_percentage"] == 0.7
 
     def test_get_performance_metrics_zero_searches(self, engine):
@@ -910,7 +909,7 @@ class TestHyDEQueryEngine:
 
         metrics = engine.get_performance_metrics()
 
-        assert metrics["search_performance"]["_total_searches"] == 0
+        assert metrics["search_performance"]["total_searches"] == 0
         assert metrics["search_performance"]["avg_search_time"] == 0.0
         assert metrics["search_performance"]["cache_hit_rate"] == 0.0
         assert metrics["search_performance"]["fallback_rate"] == 0.0

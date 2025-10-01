@@ -178,12 +178,13 @@ class HyDEQueryEngine(BaseService):
             query_embedding = await self._generate_query_embedding(query)
 
             # Perform HyDE search with Query API
-            results = await self._perform_hyde_search(
+            results = await self._perform_hybrid_search(
                 query,
                 query_embedding,
                 collection_name,
                 limit,
                 filters,
+                search_accuracy,
             )
 
             # Apply reranking if enabled
@@ -298,13 +299,14 @@ class HyDEQueryEngine(BaseService):
 
         return list(embeddings_list[0])
 
-    async def _perform_hyde_search(
+    async def _perform_hybrid_search(
         self,
         query: str,
         query_embedding: list[float],
         collection_name: str,
         limit: int,
-        _filters: dict[str, Any] | None,
+        filters: dict[str, Any] | None,
+        search_accuracy: str,
     ) -> list[dict[str, Any]]:
         """Perform search using Query API with HyDE prefetch."""
         try:
@@ -312,11 +314,11 @@ class HyDEQueryEngine(BaseService):
             # but we need to call it differently since
             # it expects hypothetical_embeddings as a list
             matches = await self.vector_store.hybrid_search(
-                collection=collection_name,
-                query=query,
+                collection_name,
+                query,
                 sparse_vector=None,
                 limit=limit,
-                filters=_filters,
+                filters=filters,
             )
             results: list[dict[str, Any]] = []
             for match in matches:

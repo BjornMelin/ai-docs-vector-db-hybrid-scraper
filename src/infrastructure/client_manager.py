@@ -1,14 +1,16 @@
 """Client coordination layer using function-based dependencies."""
 
 import asyncio
+import importlib
 import logging
 import threading
+from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 from dependency_injector.wiring import Provide, inject
 
-from src.config import get_config
+from src.config import Config, get_config
 from src.infrastructure.clients import (
     FirecrawlClientProvider,
     HTTPClientProvider,
@@ -20,24 +22,46 @@ from src.infrastructure.container import ApplicationContainer, get_container
 from src.services.browser.automation_router import AutomationRouter
 from src.services.embeddings.fastembed_provider import FastEmbedProvider
 from src.services.errors import APIError
-from src.services.vector_db import VectorStoreService
+from src.services.vector_db.service import VectorStoreService
 
 
 # Import dependencies for health checks
-try:
-    from src.services.dependencies import (
-        get_health_status as deps_get_health_status,
-        get_overall_health as deps_get_overall_health,
-    )
+if TYPE_CHECKING:  # pragma: no cover - import only for type checking
+    HealthStatusCallable = Callable[[], Awaitable[dict[str, dict[str, Any]]]]
+    OverallHealthCallable = Callable[[], Awaitable[dict[str, Any]]]
+else:
+    HealthStatusCallable = Callable[[], Awaitable[dict[str, dict[str, Any]]]]
+    OverallHealthCallable = Callable[[], Awaitable[dict[str, Any]]]
+
+_dependencies_module = None
+try:  # pragma: no cover - optional dependency
+    _dependencies_module = importlib.import_module("src.services.dependencies")
 except ImportError:
-    deps_get_health_status = None
-    deps_get_overall_health = None
+    _dependencies_module = None
+
+if _dependencies_module is not None:
+    _deps_get_health_status = getattr(_dependencies_module, "get_health_status", None)
+    _deps_get_overall_health = getattr(_dependencies_module, "get_overall_health", None)
+else:
+    _deps_get_health_status = None
+    _deps_get_overall_health = None
+
+deps_get_health_status: HealthStatusCallable | None = (
+    cast(HealthStatusCallable, _deps_get_health_status)
+    if _deps_get_health_status is not None
+    else None
+)
+deps_get_overall_health: OverallHealthCallable | None = (
+    cast(OverallHealthCallable, _deps_get_overall_health)
+    if _deps_get_overall_health is not None
+    else None
+)
 
 
 logger = logging.getLogger(__name__)
 
 
-class ClientManager:
+class ClientManager:  # pylint: disable=too-many-public-methods
     """Client coordination layer using function-based dependencies.
 
     Provides backward compatibility while using function-based dependency injection
@@ -67,9 +91,16 @@ class ClientManager:
         self._initialized = False
         self._vector_store_service: VectorStoreService | None = None
         self._config = get_config()
+        self._automation_router: AutomationRouter | None = None
+
+    @property
+    def config(self) -> Config:
+        """Return the lazily loaded application configuration."""
+
+        return self._config
 
     @inject
-    def initialize_providers(
+    def initialize_providers(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         self,
         openai_provider: OpenAIClientProvider = Provide[
             ApplicationContainer.openai_provider
@@ -273,8 +304,8 @@ class ClientManager:
             AutomationRouter instance for intelligent browser automation
         """
 
-        if not hasattr(self, "_automation_router"):
-            self._automation_router = AutomationRouter(self.config)
+        if self._automation_router is None:
+            self._automation_router = AutomationRouter(self._config)
             await self._automation_router.initialize()
         return self._automation_router
 

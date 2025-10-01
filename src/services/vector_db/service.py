@@ -330,6 +330,56 @@ class VectorStoreService(BaseService):
             filters=filters,
         )
 
+    async def retrieve_documents(
+        self,
+        collection: str,
+        ids: Sequence[str],
+        *,
+        with_payload: bool = True,
+        with_vectors: bool = False,
+    ) -> list[VectorMatch]:
+        """Retrieve specific documents by ID.
+
+        Args:
+            collection: Name of the collection.
+            ids: Sequence of record IDs to fetch.
+            with_payload: Include payload data.
+            with_vectors: Include stored vectors.
+
+        Returns:
+            List of vector matches with payloads and optional vectors.
+        """
+
+        adapter = self._require_adapter()
+        return await adapter.retrieve(
+            collection,
+            ids,
+            with_payload=with_payload,
+            with_vectors=with_vectors,
+        )
+
+    async def scroll(
+        self,
+        collection: str,
+        *,
+        limit: int = 64,
+        offset: str | None = None,
+        filters: Mapping[str, Any] | None = None,
+        with_payload: bool = True,
+        with_vectors: bool = False,
+    ) -> tuple[list[VectorMatch], str | None]:
+        """Scroll through a collection with pagination."""
+
+        adapter = self._require_adapter()
+        return await adapter.scroll(
+            collection,
+            limit=limit,
+            offset=offset,
+            filters=filters,
+            with_payload=with_payload,
+            with_vectors=with_vectors,
+        )
+
     def _require_adapter(self) -> QdrantVectorAdapter:
         """Get the adapter, raising error if not initialized.
 

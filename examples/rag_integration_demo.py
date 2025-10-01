@@ -30,8 +30,8 @@ from src.infrastructure.client_manager import (  # pylint: disable=wrong-import-
     ClientManager,
 )
 from src.services.dependencies import (  # pylint: disable=wrong-import-position
-    RAGRequest,
     RAGResponse,
+    RAGRequest,
     clear_rag_cache,
     generate_rag_answer,
     get_rag_metrics,
@@ -40,8 +40,7 @@ from src.services.errors import EmbeddingServiceError  # pylint: disable=wrong-i
 from src.services.rag import (  # pylint: disable=wrong-import-position
     RAGConfig as ServiceRAGConfig,
     RAGGenerator,
-    VectorServiceRetriever,
-    build_default_rag_config,
+    initialise_rag_generator,
 )
 
 
@@ -69,14 +68,7 @@ async def _initialise_generator(
     """Initialise the vector-backed RAG generator."""
 
     vector_store = await client_manager.get_vector_store_service()
-    rag_config = build_default_rag_config(config)
-    retriever = VectorServiceRetriever(
-        vector_service=vector_store,
-        collection=getattr(config.qdrant, "collection_name", "documents"),
-        k=rag_config.retriever_top_k,
-    )
-    generator = RAGGenerator(rag_config, retriever)
-    await generator.initialize()
+    generator, rag_config = await initialise_rag_generator(config, vector_store)
     print("✅ RAG generator initialised successfully")
     return generator, rag_config
 
@@ -95,17 +87,14 @@ def _demo_rag_request(rag_config: ServiceRAGConfig) -> RAGRequest:
     request = RAGRequest(
         query=("How do I use type hints with FastAPI and Pydantic for API validation?"),
         include_sources=True,
-        top_k=3,
-        filters=None,
+        search_results=[],
         max_tokens=None,
         temperature=None,
     )
     print("📋 Pattern 2: Function-based Dependency Injection")
     print("-" * 40)
     print(f"🔍 Query: {request.query}")
-    print(
-        f"📚 Retrieving up to {request.top_k or rag_config.retriever_top_k} documents"
-    )
+    print(f"📚 Retrieving up to {rag_config.retriever_top_k} documents")
     print()
     return request
 
