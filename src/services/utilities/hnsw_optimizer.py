@@ -24,8 +24,8 @@ class HNSWOptimizer(BaseService):
         Args:
             config: Unified configuration
             qdrant_service: QdrantService instance
-
         """
+
         super().__init__(config)
         self.config = config
         self.qdrant_service = qdrant_service
@@ -71,8 +71,8 @@ class HNSWOptimizer(BaseService):
 
         Returns:
             Search results with optimal ef value used
-
         """
+
         cache_key = f"{collection_name}:{time_budget_ms}:{min_ef}:{max_ef}"
 
         # Check cache for similar queries
@@ -207,8 +207,8 @@ class HNSWOptimizer(BaseService):
 
         Returns:
             HNSW configuration dictionary
-
         """
+
         # Collection-specific optimization profiles
         configs = {
             "api_reference": {
@@ -280,8 +280,8 @@ class HNSWOptimizer(BaseService):
 
         Returns:
             Optimization results and recommendations
-
         """
+
         self.logger.info(
             "Optimizing HNSW parameters for collection %s (type: %s)",
             collection_name,
@@ -349,8 +349,8 @@ class HNSWOptimizer(BaseService):
 
         Returns:
             Current HNSW configuration
-
         """
+
         try:
             # Access vector configuration
             vectors_config = collection_info.config.params.vectors
@@ -509,8 +509,8 @@ class HNSWOptimizer(BaseService):
 
         Returns:
             Cache statistics
-
         """
+
         return {
             "adaptive_ef_cache_size": len(self.adaptive_ef_cache),
             "performance_cache_size": len(self.performance_cache),
