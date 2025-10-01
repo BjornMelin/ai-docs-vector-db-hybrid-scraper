@@ -44,12 +44,12 @@ class SecurityValidator:
 
         Args:
             security_config: Security configuration. If None, loads from unified config.
-
         """
+
         self.config = security_config or get_config().security
         logger.info(
-            f"SecurityValidator initialized with "
-            f"{len(self.config.allowed_domains)} allowed domains"
+            "SecurityValidator initialized with %d allowed domains",
+            len(self.config.allowed_domains),
         )
 
     @classmethod
@@ -58,18 +58,8 @@ class SecurityValidator:
         return cls(get_config().security)
 
     def validate_url(self, url: str) -> str:
-        """Validate and sanitize URL input using unified configuration.
+        """Validate and sanitize URL input using unified configuration."""
 
-        Args:
-            url: URL to validate
-
-        Returns:
-            Sanitized URL
-
-        Raises:
-            SecurityError: If URL is potentially dangerous
-
-        """
         if not url or not isinstance(url, str):
             msg = "URL must be a non-empty string"
             raise SecurityError(msg)
@@ -118,25 +108,9 @@ class SecurityValidator:
 
         return url.strip()
 
-    @classmethod
-    def validate_url_static(cls, url: str) -> str:
-        """Static method for backward compatibility - uses default config."""
-        validator = cls.from_unified_config()
-        return validator.validate_url(url)
-
     def validate_collection_name(self, name: str) -> str:
-        """Validate collection name.
+        """Validate collection name."""
 
-        Args:
-            name: Collection name to validate
-
-        Returns:
-            Sanitized collection name
-
-        Raises:
-            SecurityError: If name is invalid
-
-        """
         if not name or not isinstance(name, str):
             msg = "Collection name must be a non-empty string"
             raise SecurityError(msg)
@@ -162,18 +136,8 @@ class SecurityValidator:
         return name
 
     def validate_query_string(self, query: str) -> str:
-        """Validate search query string.
+        """Validate search query string."""
 
-        Args:
-            query: Search query to validate
-
-        Returns:
-            Sanitized query
-
-        Raises:
-            SecurityError: If query is invalid
-
-        """
         if not query or not isinstance(query, str):
             msg = "Query must be a non-empty string"
             raise SecurityError(msg)
@@ -194,15 +158,8 @@ class SecurityValidator:
         return re.sub(r'[<>"\']', "", query)
 
     def sanitize_filename(self, filename: str) -> str:
-        """Sanitize filename for safe file operations.
+        """Sanitize filename for safe file operations."""
 
-        Args:
-            filename: Filename to sanitize
-
-        Returns:
-            Sanitized filename
-
-        """
         if not filename or not isinstance(filename, str):
             return "safe_filename"
 
@@ -222,39 +179,14 @@ class SecurityValidator:
 
         return filename
 
-    @classmethod
-    def validate_collection_name_static(cls, name: str) -> str:
-        """Static method for backward compatibility - uses default config."""
-        validator = cls.from_unified_config()
-        return validator.validate_collection_name(name)
-
-    @classmethod
-    def validate_query_string_static(cls, query: str) -> str:
-        """Static method for backward compatibility - uses default config."""
-        validator = cls.from_unified_config()
-        return validator.validate_query_string(query)
-
-    @classmethod
-    def sanitize_filename_static(cls, filename: str) -> str:
-        """Static method for backward compatibility - uses default config."""
-        validator = cls.from_unified_config()
-        return validator.sanitize_filename(filename)
-
 
 class APIKeyValidator:
     """API key validation and management utilities."""
 
     @staticmethod
     def mask_api_key(api_key: str) -> str:
-        """Mask API key for logging.
+        """Mask API key for logging."""
 
-        Args:
-            api_key: API key to mask
-
-        Returns:
-            Masked API key
-
-        """
         if not api_key or len(api_key) < 8:
             return "*" * 12
 

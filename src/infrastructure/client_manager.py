@@ -62,11 +62,7 @@ logger = logging.getLogger(__name__)
 
 
 class ClientManager:  # pylint: disable=too-many-public-methods
-    """Client coordination layer using function-based dependencies.
-
-    Provides backward compatibility while using function-based dependency injection
-    instead of Manager classes to achieve 60% complexity reduction.
-    """
+    """Client coordination layer using function-based dependencies."""
 
     _instance: "ClientManager | None" = None
     _lock = asyncio.Lock()

@@ -15,7 +15,7 @@ from src.services.embeddings.manager import EmbeddingManager
 from src.services.errors import EmbeddingServiceError, QdrantServiceError
 from src.services.vector_db.service import VectorStoreService
 
-from .cache import HyDECache
+from .cache import CacheEntryContext, HyDECache, SearchResultPayload
 from .config import HyDEConfig, HyDEMetricsConfig, HyDEPromptConfig
 from .generator import HypotheticalDocumentGenerator
 
@@ -265,13 +265,15 @@ class HyDEQueryEngine(BaseService):
                 query=query,
                 embedding=hyde_embedding,
                 hypothetical_docs=generation_result.documents,
-                generation_metadata={
-                    "generation_time": generation_result.generation_time,
-                    "tokens_used": generation_result.tokens_used,
-                    "diversity_score": generation_result.diversity_score,
-                    "model": self.config.generation_model,
-                },
-                domain=domain,
+                context=CacheEntryContext(
+                    domain=domain,
+                    generation_metadata={
+                        "generation_time": generation_result.generation_time,
+                        "tokens_used": generation_result.tokens_used,
+                        "diversity_score": generation_result.diversity_score,
+                        "model": self.config.generation_model,
+                    },
+                ),
             )
 
         return hyde_embedding
@@ -421,10 +423,13 @@ class HyDEQueryEngine(BaseService):
             "hyde_enabled": True,
         }
 
-        search_metadata = {"result_count": len(results), "cached_at": time.time()}
+        payload = SearchResultPayload(
+            results=results,
+            metadata={"result_count": len(results), "cached_at": time.time()},
+        )
 
         await self.cache.set_search_results(
-            query, collection_name, search_params, results, search_metadata
+            query, collection_name, search_params, payload
         )
 
     async def _should_use_hyde_for_ab_test(self, query: str) -> bool:
