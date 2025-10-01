@@ -271,8 +271,8 @@ class ClientManager:
 
         Returns:
             AutomationRouter instance for intelligent browser automation
-
         """
+
         if not hasattr(self, "_automation_router"):
             self._automation_router = AutomationRouter(self.config)
             await self._automation_router.initialize()

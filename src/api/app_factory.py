@@ -48,15 +48,12 @@ try:
         cache as enterprise_cache,
         search as enterprise_search_service,
     )
-    from src.services.simple import (
-        cache as simple_cache,
-        search as simple_search_service,
-    )
 except ImportError:
     enterprise_cache = None
     enterprise_search_service = None
-    simple_cache = None
-    simple_search_service = None
+
+simple_cache = None
+simple_search_service = None
 
 try:
     from src.services.embeddings.manager import EmbeddingManager
@@ -77,8 +74,8 @@ def create_app(mode: ApplicationMode | None = None) -> FastAPI:
 
     Returns:
         Configured FastAPI application instance
-
     """
+
     if mode is None:
         mode = get_current_mode()
 
@@ -339,29 +336,41 @@ def _configure_lifecycle_events(app: FastAPI) -> None:
 def _register_mode_services(factory: ModeAwareServiceFactory) -> None:
     """Register services for the specified mode."""
     # Use pre-imported service implementations
-    if all(
-        [
-            enterprise_cache,
-            enterprise_search_service,
-            simple_cache,
-            simple_search_service,
-        ]
-    ):
-        # Register search services
+    simple_search_impl = (
+        getattr(simple_search_service, "SimpleSearchService", None)
+        if simple_search_service
+        else None
+    )
+    enterprise_search_impl = (
+        getattr(enterprise_search_service, "EnterpriseSearchService", None)
+        if enterprise_search_service
+        else None
+    )
+    if simple_search_impl or enterprise_search_impl:
         factory.register_service(
             "search_service",
-            simple_search_service.SimpleSearchService,
-            enterprise_search_service.EnterpriseSearchService,
-        )
-
-        # Register cache services
-        factory.register_service(
-            "cache_service",
-            simple_cache.SimpleCacheService,
-            enterprise_cache.EnterpriseCacheService,
+            simple_search_impl,
+            enterprise_search_impl,
         )
     else:
-        logger.warning("Some service implementations not available")
+        logger.warning("Search service implementations not available")
+
+    simple_cache_impl = (
+        getattr(simple_cache, "SimpleCacheService", None) if simple_cache else None
+    )
+    enterprise_cache_impl = (
+        getattr(enterprise_cache, "EnterpriseCacheService", None)
+        if enterprise_cache
+        else None
+    )
+    if simple_cache_impl or enterprise_cache_impl:
+        factory.register_service(
+            "cache_service",
+            simple_cache_impl,
+            enterprise_cache_impl,
+        )
+    else:
+        logger.warning("Cache service implementations not available")
 
     # Register universal services (work in both modes)
     if EmbeddingManager:

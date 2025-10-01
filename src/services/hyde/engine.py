@@ -11,7 +11,7 @@ import numpy as np
 from src.services.base import BaseService
 from src.services.embeddings.manager import EmbeddingManager
 from src.services.errors import EmbeddingServiceError, QdrantServiceError
-from src.services.vector_db.service import QdrantService
+from src.services.vector_db import VectorStoreService
 
 from .cache import HyDECache
 from .config import HyDEConfig, HyDEMetricsConfig, HyDEPromptConfig
@@ -30,7 +30,7 @@ class HyDEQueryEngine(BaseService):
         prompt_config: HyDEPromptConfig,
         metrics_config: HyDEMetricsConfig,
         embedding_manager: EmbeddingManager,
-        qdrant_service: QdrantService,
+        vector_store: VectorStoreService,
         cache_manager: Any,
         llm_client: Any,
     ):
@@ -41,7 +41,7 @@ class HyDEQueryEngine(BaseService):
             prompt_config: Prompt configuration
             metrics_config: Metrics configuration
             embedding_manager: Embedding service manager
-            qdrant_service: Qdrant service for search
+            vector_store: Vector service for search
             cache_manager: Cache manager (DragonflyDB)
             llm_client: LLM client for document generation
 
@@ -51,7 +51,7 @@ class HyDEQueryEngine(BaseService):
         self.prompt_config = prompt_config
         self.metrics_config = metrics_config
         self.embedding_manager = embedding_manager
-        self.qdrant_service = qdrant_service
+        self.vector_store = vector_store
 
         # Initialize components
         self.generator = HypotheticalDocumentGenerator(
@@ -83,8 +83,8 @@ class HyDEQueryEngine(BaseService):
                 self.embedding_manager.initialize()
                 if hasattr(self.embedding_manager, "initialize")
                 else asyncio.sleep(0),
-                self.qdrant_service.initialize()
-                if hasattr(self.qdrant_service, "initialize")
+                self.vector_store.initialize()
+                if hasattr(self.vector_store, "initialize")
                 else asyncio.sleep(0),
             )
 
@@ -300,15 +300,14 @@ class HyDEQueryEngine(BaseService):
             # Use the existing hyde_search method in QdrantService
             # but we need to call it differently since
             # it expects hypothetical_embeddings as a list
-            return await self.qdrant_service.hyde_search(
-                collection_name=collection_name,
-                query="HyDE search",  # Parameter not used in implementation
-                query_embedding=query_embedding,
-                hypothetical_embeddings=[hyde_embedding],  # Pass as list
+            matches = await self.vector_store.hybrid_search(
+                collection=collection_name,
+                query=query,
+                sparse_vector=None,
                 limit=limit,
-                fusion_algorithm=self.config.fusion_algorithm,
-                search_accuracy=search_accuracy,
+                filters=_filters,
             )
+            return [match.payload or {} for match in matches]
 
         except Exception as e:
             logger.exception("Query API search failed")
@@ -346,14 +345,13 @@ class HyDEQueryEngine(BaseService):
             # Generate query embedding
             query_embedding = await self._generate_query_embedding(query)
 
-            # Perform regular filtered search
-            return await self.qdrant_service.filtered_search(
-                collection_name=collection_name,
-                query_vector=query_embedding,
-                filters=filters or {},
+            matches = await self.vector_store.search_vector(
+                collection=collection_name,
+                vector=query_embedding,
                 limit=limit,
-                search_accuracy=search_accuracy,
+                filters=filters,
             )
+            return [match.payload or {} for match in matches]
 
         except Exception as e:
             logger.exception("Fallback search failed")
