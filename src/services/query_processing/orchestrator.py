@@ -12,10 +12,16 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from src.config import get_config
+import src.config as config_module
 from src.services.base import BaseService
-from src.services.rag import RAGGenerator
-from src.services.rag.models import RAGRequest
+from src.services.errors import EmbeddingServiceError
+from src.services.rag import (
+    RAGConfig as ServiceRAGConfig,
+    RAGGenerator,
+    RAGRequest,
+    VectorServiceRetriever,
+)
+from src.services.vector_db.service import VectorStoreService
 
 from .clustering import ResultClusteringRequest, ResultClusteringService
 from .expansion import QueryExpansionRequest, QueryExpansionService
@@ -27,6 +33,11 @@ from .federated import (
     SearchMode as FedSearchMode,
 )
 from .ranking import PersonalizedRankingRequest, PersonalizedRankingService
+
+
+def get_config():
+    """Return application configuration."""
+    return config_module.get_config()
 
 
 logger = logging.getLogger(__name__)
@@ -78,6 +89,12 @@ class SearchRequest(BaseModel):
     )
     rag_temperature: float | None = Field(
         None, ge=0.0, le=2.0, description="Override RAG temperature"
+    )
+    rag_top_k: int | None = Field(
+        None,
+        gt=0,
+        le=50,
+        description="Override number of documents retrieved for RAG context",
     )
     require_high_confidence: bool = Field(
         False, description="Require high confidence RAG answers"
@@ -132,6 +149,7 @@ class SearchOrchestrator(BaseService):
         self,
         cache_size: int = 1000,
         enable_performance_optimization: bool = True,
+        vector_store_service: VectorStoreService | None = None,
     ):
         """Initialize search orchestrator.
 
@@ -154,6 +172,7 @@ class SearchOrchestrator(BaseService):
         self._ranking_service: PersonalizedRankingService | None = None
         self._federated_service: FederatedSearchService | None = None
         self._rag_generator: RAGGenerator | None = None
+        self._vector_store_service: VectorStoreService | None = vector_store_service
 
         # Pipeline configurations
         self.pipeline_configs = {
@@ -217,12 +236,44 @@ class SearchOrchestrator(BaseService):
             self._federated_service = FederatedSearchService()
         return self._federated_service
 
-    @property
-    def rag_generator(self) -> RAGGenerator:
-        """Lazy load RAG generator service."""
+    async def _get_vector_store(self) -> VectorStoreService:
+        """Initialise and cache the vector store service."""
+
+        if self._vector_store_service is None:
+            config = get_config()
+            service = VectorStoreService(config=config)
+            await service.initialize()
+            self._vector_store_service = service
+        elif not self._vector_store_service.is_initialized():
+            await self._vector_store_service.initialize()
+        return self._vector_store_service
+
+    async def _ensure_rag_generator(self) -> RAGGenerator:
+        """Lazily construct the LangChain-backed RAG generator."""
+
         if self._rag_generator is None:
             config = get_config()
-            self._rag_generator = RAGGenerator(config.rag)
+            vector_store = await self._get_vector_store()
+            rag_config = ServiceRAGConfig(
+                model=config.rag.model,
+                temperature=config.rag.temperature,
+                max_tokens=config.rag.max_tokens,
+                retriever_top_k=getattr(config.rag, "max_results_for_context", 5),
+                include_sources=config.rag.include_sources,
+                confidence_from_scores=getattr(
+                    config.rag, "include_confidence_score", True
+                ),
+            )
+            retriever = VectorServiceRetriever(
+                vector_service=vector_store,
+                collection=getattr(config.qdrant, "collection_name", "documents"),
+                k=rag_config.retriever_top_k,
+            )
+            self._rag_generator = RAGGenerator(rag_config, retriever)
+
+        if not self._rag_generator.llm_client_available:
+            await self._rag_generator.initialize()
+
         return self._rag_generator
 
     async def _check_cache_for_request(
@@ -253,7 +304,10 @@ class SearchOrchestrator(BaseService):
 
         # Query expansion
         if config.get("enable_expansion", False) and request.mode != SearchMode.BASIC:
-            expanded_query = await self._try_query_expansion(request, features_used)
+            try:
+                expanded_query = await self._try_query_expansion(request, features_used)
+            except Exception:  # pragma: no cover - defensive fallback
+                expanded_query = None
             if expanded_query:
                 processed_query = expanded_query
 
@@ -277,7 +331,7 @@ class SearchOrchestrator(BaseService):
             if expansion_result.expanded_query:
                 features_used.append("query_expansion")
                 return expansion_result.expanded_query
-        except (ConnectionError, OSError, PermissionError):
+        except Exception:  # pragma: no cover - defensive fallback
             self._logger.warning("Query expansion failed")
         return None
 
@@ -334,7 +388,7 @@ class SearchOrchestrator(BaseService):
                                         sr["cluster_id"] = cluster.cluster_id
                                         sr["cluster_label"] = cluster.label
                         features_used.append("result_clustering")
-                    except (ConnectionError, OSError, PermissionError):
+                    except (ConnectionError, OSError, PermissionError, Exception):
                         self._logger.warning("Clustering failed")
 
                 # Personalized ranking (if enabled)
@@ -353,43 +407,39 @@ class SearchOrchestrator(BaseService):
                             search_results, ranking_result
                         )
                         features_used.append("personalized_ranking")
-                    except (OSError, PermissionError):
+                    except (OSError, PermissionError, Exception):
                         self._logger.warning("Personalized ranking failed")
 
             # Step 4: RAG answer generation (if enabled)
             rag_answer = None
             rag_confidence = None
-            rag_sources = None
+            rag_sources: list[dict[str, Any]] | None = None
             rag_metrics = None
 
-            if request.enable_rag and search_results:
+            if request.enable_rag:
                 try:
-                    config = get_config()
-
-                    # Only generate RAG answer if globally enabled or
-                    # explicitly requested
-                    if config.rag.enable_rag or request.enable_rag:
+                    app_config = get_config()
+                    if app_config.rag.enable_rag:
+                        rag_generator = await self._ensure_rag_generator()
                         rag_request = RAGRequest(
-                            query=request.query,
-                            search_results=search_results[
-                                : config.rag.max_results_for_context
-                            ],
+                            query=processed_query,
+                            top_k=request.rag_top_k,
                             max_tokens=request.rag_max_tokens,
                             temperature=request.rag_temperature,
-                            require_high_confidence=request.require_high_confidence,
+                            include_sources=app_config.rag.include_sources,
                         )
+                        rag_result = await rag_generator.generate_answer(rag_request)
 
-                        # Initialize RAG generator if needed
-                        if not self._rag_generator.llm_client_available:
-                            await self.rag_generator.initialize()
-
-                        rag_result = await self.rag_generator.generate_answer(
-                            rag_request
+                        include_answer = True
+                        confidence_threshold = getattr(
+                            app_config.rag, "min_confidence_threshold", 0.0
                         )
+                        if rag_result.confidence_score is not None:
+                            include_answer = (
+                                rag_result.confidence_score >= confidence_threshold
+                            )
 
-                        # Only include answer if confidence meets threshold
-                        min_confidence = config.rag.min_confidence_threshold
-                        if rag_result.confidence_score >= min_confidence:
+                        if include_answer:
                             rag_answer = rag_result.answer
                             rag_confidence = rag_result.confidence_score
                             rag_sources = [
@@ -397,11 +447,11 @@ class SearchOrchestrator(BaseService):
                                     "source_id": source.source_id,
                                     "title": source.title,
                                     "url": source.url,
-                                    "relevance_score": source.relevance_score,
+                                    "relevance_score": source.score,
                                     "excerpt": source.excerpt,
                                 }
                                 for source in rag_result.sources
-                            ]
+                            ] or None
                             rag_metrics = (
                                 rag_result.metrics.model_dump()
                                 if rag_result.metrics
@@ -409,11 +459,8 @@ class SearchOrchestrator(BaseService):
                             )
                             features_used.append("rag_answer_generation")
 
-                except (OSError, PermissionError, RuntimeError):
-                    self._logger.warning("RAG answer generation failed")
-                    # Continue without RAG - don't fail the entire search
-                else:
-                    return result
+                except (OSError, PermissionError, RuntimeError, EmbeddingServiceError):
+                    self._logger.warning("RAG answer generation failed", exc_info=True)
 
             # Calculate processing time
             processing_time = (time.time() - start_time) * 1000
@@ -445,7 +492,9 @@ class SearchOrchestrator(BaseService):
                 + processing_time
             ) / self.stats["total_searches"]
 
-        except (OSError, PermissionError, RuntimeError):
+            return result
+
+        except (OSError, PermissionError, RuntimeError, Exception):
             self._logger.exception("Search failed")
             # Return minimal result on error
             return SearchResult(
@@ -527,22 +576,36 @@ class SearchOrchestrator(BaseService):
                         }
                     )
 
-            except (AttributeError, OSError, PermissionError):
+            except Exception:  # pragma: no cover - defensive fallback
                 self._logger.warning("Federated search failed")
                 # Fall back to mock results
 
             else:
                 return results
-        # Default mock search implementation for non-federated search
+        vector_store = await self._get_vector_store()
+        collection = request.collection_name or getattr(
+            get_config().qdrant, "collection_name", "documents"
+        )
+        try:
+            matches = await vector_store.search_documents(
+                collection,
+                query,
+                limit=request.limit,
+            )
+        except Exception as exc:  # pragma: no cover - defensive logging
+            self._logger.warning("Vector search failed: %s", exc, exc_info=True)
+            return []
+
         results = []
-        for i in range(20):  # Mock 20 results
+        for match in matches:
+            payload = dict(match.payload or {})
             results.append(
                 {
-                    "id": f"doc_{i}",
-                    "title": f"Document {i} Title",  # Required by ranking/clustering
-                    "content": "Result {i} for query",
-                    "score": 0.9 - (i * 0.04),
-                    "metadata": {"source": f"collection_{i % 3}"},
+                    "id": match.id,
+                    "title": payload.get("title") or payload.get("name") or match.id,
+                    "content": payload.get("content") or payload.get("text") or "",
+                    "score": match.score,
+                    "metadata": payload,
                 }
             )
         return results
@@ -591,12 +654,8 @@ class SearchOrchestrator(BaseService):
             rag_stats = self._rag_generator.get_metrics()
             stats.update(
                 {
-                    "rag_answers_generated": rag_stats.get("total_answers", 0),
-                    "rag_avg_confidence": rag_stats.get("avg_confidence", 0.0),
-                    "rag_avg_generation_time": rag_stats.get(
-                        "avg_generation_time", 0.0
-                    ),
-                    "rag_success_rate": rag_stats.get("success_rate", 0.0),
+                    "rag_answers_generated": rag_stats.generation_count,
+                    "rag_avg_generation_time": rag_stats.avg_generation_time_ms or 0.0,
                 }
             )
 
@@ -646,5 +705,10 @@ class SearchOrchestrator(BaseService):
         # Cleanup RAG generator if initialized
         if self._rag_generator and self._rag_generator.llm_client_available:
             await self._rag_generator.cleanup()
+            self._rag_generator = None
+
+        if self._vector_store_service and self._vector_store_service.is_initialized():
+            await self._vector_store_service.cleanup()
+            self._vector_store_service = None
 
         self._logger.info("SearchOrchestrator cleaned up")

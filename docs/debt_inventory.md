@@ -11,10 +11,10 @@ phase that replaces the corresponding surface.
   (Phase 1).
 - `src/services/vector_db/query_classifier.py` exposes TODOs for replacing
   ad-hoc types. The new adapter removes the need for these bespoke classifiers.
-- Legacy files (`collections.py`, `search.py`, `indexing.py`, `documents.py`,
-  `hybrid_search.py`) duplicate features available in LangChain/Qdrant and
-  carry significant maintenance overhead. Entire directory will be replaced in
-  Phase 1.
+- Legacy files (`search.py`, `indexing.py`, `documents.py`, `hybrid_search.py`)
+  duplicate features available in LangChain/Qdrant and carry significant
+  maintenance overhead. The new `collection_management.py` tool suite and the
+  consolidated vector adapter replace these surfaces in Phase 1.
 
 ## RAG Pipeline
 - ✅ `src/services/rag/generator.py` now delegates to the LangChain retriever and

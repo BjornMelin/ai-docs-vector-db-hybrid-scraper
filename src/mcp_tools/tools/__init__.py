@@ -9,7 +9,7 @@ from . import (
     agentic_rag,
     analytics,
     cache,
-    collection_management,  # renamed from collections to avoid stdlib conflict
+    collection_management,
     configuration,
     content_intelligence,
     cost_estimation,
