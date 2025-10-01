@@ -91,11 +91,10 @@ async def get_metrics(
             detail="Failed to get RAG metrics",
         ) from e
 
-    else:
-        return {
-            "status": "success",
-            "metrics": metrics,
-        }
+    return {
+        "status": "success",
+        "metrics": metrics,
+    }
 
 
 @router.post("/cache/clear")

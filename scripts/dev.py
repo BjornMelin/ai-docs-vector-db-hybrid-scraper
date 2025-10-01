@@ -313,7 +313,7 @@ def _check_service_health(url: str) -> bool:
         return 200 <= response.status < 300
 
 
-def cmd_validate(args: argparse.Namespace) -> int:
+def cmd_validate(args: argparse.Namespace) -> int:  # pylint: disable=too-many-branches
     """Validate configuration, dependencies, and optionally documentation."""
 
     errors: list[str] = []

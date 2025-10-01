@@ -1,17 +1,19 @@
 """HyDE Query Engine with Query API integration."""
 
+# pylint: disable=too-many-instance-attributes,too-many-arguments,too-many-positional-arguments,too-many-locals
+
 import asyncio
 import hashlib
 import logging
 import time
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 
 from src.services.base import BaseService
 from src.services.embeddings.manager import EmbeddingManager
 from src.services.errors import EmbeddingServiceError, QdrantServiceError
-from src.services.vector_db import VectorStoreService
+from src.services.vector_db.service import VectorStoreService
 
 from .cache import HyDECache
 from .config import HyDEConfig, HyDEMetricsConfig, HyDEPromptConfig
@@ -46,7 +48,7 @@ class HyDEQueryEngine(BaseService):
             llm_client: LLM client for document generation
 
         """
-        super().__init__(config)
+        super().__init__(None)
         self.config = config
         self.prompt_config = prompt_config
         self.metrics_config = metrics_config
@@ -61,7 +63,7 @@ class HyDEQueryEngine(BaseService):
 
         # Performance tracking
         self.search_count = 0
-        self.total_search_time = 0.0
+        self._total_search_time = 0.0
         self.cache_hit_count = 0
         self.generation_count = 0
         self.fallback_count = 0
@@ -167,7 +169,7 @@ class HyDEQueryEngine(BaseService):
                     return cached_results
 
             # Generate or retrieve HyDE embedding
-            hyde_embedding = await self._get_or_generate_hyde_embedding(
+            _hyde_embedding = await self._get_or_generate_hyde_embedding(
                 query, domain, use_cache
             )
 
@@ -176,12 +178,11 @@ class HyDEQueryEngine(BaseService):
 
             # Perform HyDE search with Query API
             results = await self._perform_hyde_search(
+                query,
                 query_embedding,
-                hyde_embedding,
                 collection_name,
                 limit,
                 filters,
-                search_accuracy,
             )
 
             # Apply reranking if enabled
@@ -220,8 +221,7 @@ class HyDEQueryEngine(BaseService):
             msg = "HyDE search failed"
             raise EmbeddingServiceError(msg) from e
 
-        else:
-            return results
+        return results
 
     async def _get_or_generate_hyde_embedding(
         self, query: str, domain: str | None, use_cache: bool
@@ -280,20 +280,30 @@ class HyDEQueryEngine(BaseService):
             texts=[query], provider_name="openai", auto_select=False
         )
 
-        if "embeddings" not in embeddings_result or not embeddings_result["embeddings"]:
+        embeddings_list: list[list[float]] | None = None
+        if isinstance(embeddings_result, dict):
+            embeddings_list = cast(
+                list[list[float]] | None, embeddings_result.get("embeddings")
+            )
+        else:
+            embeddings_list = cast(
+                list[list[float]] | None,
+                getattr(embeddings_result, "embeddings", None),
+            )
+
+        if not embeddings_list:
             msg = "Failed to generate query embedding"
             raise EmbeddingServiceError(msg)
 
-        return embeddings_result["embeddings"][0]
+        return list(embeddings_list[0])
 
     async def _perform_hyde_search(
         self,
+        query: str,
         query_embedding: list[float],
-        hyde_embedding: list[float],
         collection_name: str,
         limit: int,
         _filters: dict[str, Any] | None,
-        search_accuracy: str,
     ) -> list[dict[str, Any]]:
         """Perform search using Query API with HyDE prefetch."""
         try:
@@ -307,7 +317,7 @@ class HyDEQueryEngine(BaseService):
                 limit=limit,
                 filters=_filters,
             )
-            return [match.payload or {} for match in matches]
+            return [dict(match.payload or {}) for match in matches]
 
         except Exception as e:
             logger.exception("Query API search failed")
@@ -329,8 +339,7 @@ class HyDEQueryEngine(BaseService):
             logger.warning("Reranking failed, returning original results")
             return results
 
-        else:
-            return results
+        return results
 
     async def _fallback_search(
         self,
@@ -351,7 +360,7 @@ class HyDEQueryEngine(BaseService):
                 limit=limit,
                 filters=filters,
             )
-            return [match.payload or {} for match in matches]
+            return [dict(match.payload or {}) for match in matches]
 
         except Exception as e:
             logger.exception("Fallback search failed")
@@ -525,6 +534,16 @@ class HyDEQueryEngine(BaseService):
         self.fallback_count = 0
         self.control_group_searches = 0
         self.treatment_group_searches = 0
+
+    @property
+    def total_search_time(self) -> float:
+        """Aggregate search latency recorded by the engine."""
+
+        return self._total_search_time
+
+    @total_search_time.setter
+    def total_search_time(self, value: float) -> None:
+        self._total_search_time = value
 
         self.cache.reset_metrics()
         logger.info("HyDE engine metrics reset")
