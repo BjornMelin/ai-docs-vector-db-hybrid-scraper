@@ -1,9 +1,4 @@
-"""FastMCP 2.0+ modular server composition.
-
-This module implements the H1 research findings for server composition,
-splitting the monolithic server into domain-specific services following
-FastMCP 2.0+ best practices.
-"""
+"""FastMCP 2.0+ modular server composition."""
 
 from .analytics_service import AnalyticsService
 from .document_service import DocumentService

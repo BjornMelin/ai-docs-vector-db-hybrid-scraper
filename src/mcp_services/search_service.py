@@ -11,10 +11,10 @@ from fastmcp import FastMCP
 
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.tools import (
-    hybrid_search,
-    hyde_search,
-    multi_stage_search,
-    search_with_reranking,
+    filtering_tools,
+    query_processing_tools,
+    search,
+    search_tools,
     web_search,
 )
 
@@ -23,10 +23,9 @@ logger = logging.getLogger(__name__)
 
 
 class SearchService:
-    """FastMCP 2.0+ search service with autonomous capabilities.
+    """FastMCP 2.0+ search service for search operations.
 
-    Implements intelligent search orchestration with multi-provider support
-    and autonomous web search agents based on I5 research findings.
+    Provides search functionality with multi-provider support.
     """
 
     def __init__(self, name: str = "search-service"):
@@ -39,21 +38,14 @@ class SearchService:
         self.mcp = FastMCP(
             name,
             instructions="""
-            Advanced search service with intelligent orchestration capabilities.
+            Search service for vector and text search operations.
 
-            Features:
-            - Hybrid vector + text search with DBSF score fusion
-            - HyDE (Hypothetical Document Embeddings) search
-            - Multi-stage search with progressive refinement
-            - Autonomous web search orchestration (I5 research)
-            - Search result reranking and quality assessment
-            - Real-time search strategy optimization
-
-            Autonomous Capabilities:
-            - Intelligent search provider selection
-            - Dynamic strategy adaptation based on query type
-            - Self-learning search pattern optimization
-            - Multi-provider result fusion and synthesis
+            Provides tools for:
+            - Vector similarity search
+            - Hybrid vector + text search
+            - Multi-stage search with refinement
+            - Search result filtering and reranking
+            - Web search integration
             """,
         )
         self.client_manager: ClientManager | None = None
@@ -70,7 +62,7 @@ class SearchService:
         # Register search tools
         await self._register_search_tools()
 
-        logger.info("SearchService initialized with autonomous capabilities")
+        logger.info("SearchService initialized")
 
     async def _register_search_tools(self) -> None:
         """Register all search-related MCP tools."""
@@ -78,16 +70,24 @@ class SearchService:
             msg = "SearchService not initialized"
             raise RuntimeError(msg)
 
-        # Register core search tools
-        hybrid_search.register_tools(self.mcp, self.client_manager)
-        hyde_search.register_tools(self.mcp, self.client_manager)
-        multi_stage_search.register_tools(self.mcp, self.client_manager)
-        search_with_reranking.register_tools(self.mcp, self.client_manager)
+        # Register core search tools (basic Qdrant operations)
+        search.register_tools(self.mcp, self.client_manager)
 
-        # Register autonomous web search tools (I5 research)
+        # Register advanced search tools (HyDE, A/B testing, multi-stage)
+        search_tools.register_tools(self.mcp, self.client_manager)
+
+        # Register query processing and orchestration tools
+        query_processing_tools.register_query_processing_tools(
+            self.mcp, self.client_manager
+        )
+
+        # Register advanced filtering tools
+        filtering_tools.register_filtering_tools(self.mcp, self.client_manager)
+
+        # Register web search tools
         web_search.register_tools(self.mcp, self.client_manager)
 
-        logger.info("Registered search tools with autonomous web search capabilities")
+        logger.info("Registered search tools")
 
     def get_mcp_server(self) -> FastMCP:
         """Get the FastMCP server instance.
@@ -109,20 +109,32 @@ class SearchService:
             "service": "search",
             "version": "2.0",
             "capabilities": [
+                # Core Qdrant search operations
+                "vector_search",
                 "hybrid_search",
+                "scroll_collection",
+                "recommend_similar",
+                "filtered_search",
+                # Advanced search tools
                 "hyde_search",
                 "multi_stage_search",
                 "search_reranking",
-                "autonomous_web_search",
-                "multi_provider_orchestration",
-                "intelligent_result_fusion",
-            ],
-            "autonomous_features": [
-                "provider_optimization",
-                "strategy_adaptation",
-                "quality_assessment",
-                "self_learning_patterns",
+                "ab_test_search",
+                # Query processing
+                "query_expansion",
+                "clustered_search",
+                "federated_search",
+                "personalized_search",
+                "orchestrated_search",
+                # Advanced filtering
+                "temporal_filter",
+                "content_type_filter",
+                "metadata_filter",
+                "similarity_filter",
+                "composite_filter",
+                # Web search
+                "web_search",
+                "multi_provider_search",
             ],
             "status": "active",
-            "research_basis": "I5_WEB_SEARCH_TOOL_ORCHESTRATION",
         }

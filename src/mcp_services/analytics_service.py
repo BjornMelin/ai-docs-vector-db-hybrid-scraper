@@ -1,8 +1,7 @@
 """Analytics Service - Domain-specific MCP server for analytics and monitoring.
 
-This service handles all analytics and monitoring functionality including
-performance metrics, observability, and agentic decision tracking based on
-J1 research findings. Integrates with existing enterprise observability infrastructure.
+This service handles analytics and monitoring functionality including
+performance metrics and observability.
 """
 
 import logging
@@ -28,11 +27,9 @@ logger = logging.getLogger(__name__)
 
 
 class AnalyticsService:
-    """FastMCP 2.0+ analytics service with agentic observability.
+    """FastMCP 2.0+ analytics service for monitoring and metrics.
 
-    Implements enterprise agentic observability with agent decision metrics
-    and multi-agent workflow visualization based on J1 research findings.
-    Integrates with existing enterprise observability infrastructure.
+    Provides analytics and monitoring with observability integration.
     """
 
     def __init__(self, name: str = "analytics-service"):
@@ -45,27 +42,14 @@ class AnalyticsService:
         self.mcp = FastMCP(
             name,
             instructions="""
-            Advanced analytics service with agentic observability capabilities.
+            Analytics service for monitoring and metrics collection.
 
-            Extends existing enterprise observability infrastructure with agentic-specific metrics:
-            - Agent decision metrics with confidence and quality tracking
-            - Multi-agent workflow visualization and dependency mapping
-            - Auto-RAG performance monitoring with convergence analysis
-            - Self-healing capabilities with predictive failure detection
-            - Cost estimation and optimization analytics
-            - Performance benchmarking and trend analysis
-
-            Autonomous Capabilities:
-            - Predictive failure detection and autonomous remediation
-            - Self-learning performance optimization patterns
-            - Intelligent cost and resource optimization
-            - Agent decision quality correlation and improvement
-
-            Integration Features:
-            - Extends existing OpenTelemetry infrastructure
-            - Integrates with AIOperationTracker for agent-specific metrics
-            - Leverages existing correlation and performance monitoring
-            """,  # noqa: E501
+            Provides tools for:
+            - Performance metrics and monitoring
+            - Workflow visualization and tracking
+            - Cost estimation and analysis
+            - Integration with existing observability infrastructure
+            """,
         )
         self.client_manager: ClientManager | None = None
 
@@ -89,18 +73,16 @@ class AnalyticsService:
         # Register analytics tools
         await self._register_analytics_tools()
 
-        logger.info(
-            "AnalyticsService initialized with agentic observability integration"
-        )
+        logger.info("AnalyticsService initialized")
 
     async def _initialize_observability_integration(self) -> None:
-        """Initialize integration with existing enterprise observability infra."""
+        """Initialize integration with existing observability infrastructure."""
         # Get existing observability components
         self.ai_tracker = get_ai_tracker()
         self.correlation_manager = get_correlation_manager()
         self.performance_monitor = get_performance_monitor()
 
-        logger.info("Integrated with existing enterprise observability infra")
+        logger.info("Integrated with existing observability infrastructure")
 
     async def _register_analytics_tools(self) -> None:
         """Register all analytics-related MCP tools."""
@@ -112,26 +94,22 @@ class AnalyticsService:
         analytics.register_tools(self.mcp, self.client_manager)
         query_processing.register_tools(self.mcp, self.client_manager)
 
-        # Register agentic RAG analytics tools (J1 research)
+        # Register agentic RAG analytics tools
         agentic_rag.register_tools(self.mcp, self.client_manager)
 
-        # Register enhanced observability tools
-        # that integrate with existing infrastructure
+        # Register observability tools that integrate with existing infrastructure
         await self._register_enhanced_observability_tools()
 
-        logger.info(
-            "Registered analytics tools with agentic "
-            "observability capabilities and enterprise integration"
-        )
+        logger.info("Registered analytics tools")
 
     async def _register_enhanced_observability_tools(self) -> None:
-        """Register enhanced observability tools that extend existing infrastructure."""
+        """Register observability tools that integrate with existing infrastructure."""
 
         @self.mcp.tool()
         async def get_agentic_decision_metrics(
             agent_id: str | None = None, time_range_minutes: int = 60
         ) -> dict[str, Any]:
-            """Get agent decision quality metrics using existing AI tracking infra.
+            """Get agent decision metrics using existing AI tracking infrastructure.
 
             Args:
                 agent_id: Specific agent ID to filter by
@@ -267,29 +245,11 @@ class AnalyticsService:
             "service": "analytics",
             "version": "2.0",
             "capabilities": [
-                "agent_decision_metrics",
+                "decision_metrics",
                 "workflow_visualization",
-                "auto_rag_monitoring",
-                "performance_analytics",
-                "cost_optimization",
-                "predictive_monitoring",
-                "agentic_observability",
+                "performance_monitoring",
+                "cost_estimation",
+                "observability_integration",
             ],
-            "autonomous_features": [
-                "failure_prediction",
-                "performance_optimization",
-                "cost_intelligence",
-                "decision_quality_tracking",
-            ],
-            "enterprise_integration": {
-                "opentelemetry_integration": True,
-                "existing_ai_tracker_extended": True,
-                "correlation_manager_leveraged": True,
-                "performance_monitor_integrated": True,
-                "no_duplicate_infrastructure": True,
-            },
             "status": "active",
-            "research_basis": (
-                "J1_ENTERPRISE_AGENTIC_OBSERVABILITY_WITH_EXISTING_INTEGRATION"
-            ),
         }
