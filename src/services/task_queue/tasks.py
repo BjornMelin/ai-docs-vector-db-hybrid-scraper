@@ -110,9 +110,7 @@ async def delete_collection(
                 }
 
             await qdrant_client.delete_collection(collection_name)
-            logger.info(
-                f"Successfully deleted collection {collection_name}"
-            )  # TODO: Convert f-string to logging format
+            logger.info("Successfully deleted collection %s", collection_name)
 
             return {
                 "status": "success",
@@ -123,9 +121,7 @@ async def delete_collection(
             await client_manager.cleanup()
 
     except asyncio.CancelledError:
-        logger.info(
-            f"Deletion of {collection_name} was cancelled"
-        )  # TODO: Convert f-string to logging format
+        logger.info("Deletion of %s was cancelled", collection_name)
         return {
             "status": "cancelled",
             "collection": collection_name,
@@ -166,9 +162,7 @@ async def persist_cache(
 
     """
     start_time = time.time()
-    logger.info(
-        f"Starting delayed persistence for {key} (delay: {delay}s)"
-    )  # TODO: Convert f-string to logging format
+    logger.info("Starting delayed persistence for %s (delay: %ds)", key, delay)
 
     try:
         await asyncio.sleep(delay)
@@ -194,9 +188,7 @@ async def persist_cache(
         else:
             persist_func(key, value)
 
-        logger.info(
-            f"Successfully persisted data for {key}"
-        )  # TODO: Convert f-string to logging format
+        logger.info("Successfully persisted data for %s", key)
 
         return {
             "status": "success",
@@ -334,9 +326,7 @@ async def config_drift_remediation(
 
     """
     start_time = time.time()
-    logger.info(
-        f"Starting configuration drift remediation for event {event_id}"
-    )  # TODO: Convert f-string to logging format
+    logger.info("Starting configuration drift remediation for event %s", event_id)
 
     try:
         # Log the remediation attempt (actual implementation would apply changes)
@@ -354,9 +344,7 @@ async def config_drift_remediation(
 
         await asyncio.sleep(0.1)  # Simulate remediation work
 
-        logger.info(
-            f"Configuration drift remediation completed for event {event_id}"
-        )  # TODO: Convert f-string to logging format
+        logger.info("Configuration drift remediation completed for event %s", event_id)
 
         return {
             "status": "success",

@@ -435,9 +435,7 @@ class ContentIntelligenceService(BaseService):
                     )
                 )
             except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
-                logger.warning(
-                    f"Content classification failed: {e}"
-                )  # TODO: Convert f-string to logging format
+                logger.warning("Content classification failed: %s", e)
 
         # Perform quality assessment if enabled
         if request.enable_quality_assessment:
@@ -466,9 +464,7 @@ class ContentIntelligenceService(BaseService):
                 )
 
             except (subprocess.SubprocessError, OSError, TimeoutError) as e:
-                logger.warning(
-                    f"Quality assessment failed: {e}"
-                )  # TODO: Convert f-string to logging format
+                logger.warning("Quality assessment failed: %s", e)
 
         # Perform metadata extraction if enabled
         if request.enable_metadata_extraction:
@@ -479,9 +475,7 @@ class ContentIntelligenceService(BaseService):
                     raw_html=request.raw_html,
                 )
             except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
-                logger.warning(
-                    f"Metadata extraction failed: {e}"
-                )  # TODO: Convert f-string to logging format
+                logger.warning("Metadata extraction failed: %s", e)
 
         # Generate adaptation recommendations if enabled
         if request.enable_adaptations:
@@ -493,9 +487,7 @@ class ContentIntelligenceService(BaseService):
                     )
                 )
             except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
-                logger.warning(
-                    f"Adaptation recommendations failed: {e}"
-                )  # TODO: Convert f-string to logging format
+                logger.warning("Adaptation recommendations failed: %s", e)
 
         # Set processing metadata
         enriched_content.processing_time_ms = (time.time() - analysis_start) * 1000
@@ -672,9 +664,7 @@ class ContentIntelligenceService(BaseService):
             TimeoutError,
             ValueError,
         ) as e:
-            logger.warning(
-                f"Cache retrieval failed: {e}"
-            )  # TODO: Convert f-string to logging format
+            logger.warning("Cache retrieval failed: %s", e)
 
         return None
 
@@ -702,9 +692,7 @@ class ContentIntelligenceService(BaseService):
             TimeoutError,
             ValueError,
         ) as e:
-            logger.warning(
-                f"Cache storage failed: {e}"
-            )  # TODO: Convert f-string to logging format
+            logger.warning("Cache storage failed: %s", e)
 
     def get_performance_metrics(self) -> dict[str, Any]:
         """Get performance metrics for the service.

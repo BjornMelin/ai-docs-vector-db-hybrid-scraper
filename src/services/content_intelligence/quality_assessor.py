@@ -298,9 +298,7 @@ class QualityAssessor:
                 relevance_score = min(relevance_score + 0.3, 1.0)
 
         except (ValueError, TypeError, UnicodeDecodeError) as e:
-            logger.warning(
-                f"Relevance assessment failed: {e}"
-            )  # TODO: Convert f-string to logging format
+            logger.warning("Relevance assessment failed: %s", e)
             return 0.5
 
         else:
@@ -400,9 +398,7 @@ class QualityAssessor:
                         days_old = (now - last_modified).days
                         return self._calculate_freshness_score(days_old)
                 except (ValueError, TypeError, UnicodeDecodeError) as e:
-                    logger.debug(
-                        f"Failed to parse last_modified date: {e}"
-                    )  # TODO: Convert f-string to logging format
+                    logger.debug("Failed to parse last_modified date: %s", e)
 
         # Try to extract dates from content
         date_patterns = [
@@ -692,9 +688,7 @@ class QualityAssessor:
                     max_similarity = max(max_similarity, jaccard_similarity)
 
         except (ValueError, TypeError, UnicodeDecodeError) as e:
-            logger.warning(
-                f"Duplicate similarity assessment failed: {e}"
-            )  # TODO: Convert f-string to logging format
+            logger.warning("Duplicate similarity assessment failed: %s", e)
             return 0.0
 
         else:

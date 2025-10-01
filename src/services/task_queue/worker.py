@@ -96,9 +96,7 @@ class WorkerSettings:
         """Called when a job starts."""
         job_id = ctx.get("job_id")
         function = ctx.get("job_try", {}).get("function")
-        logger.info(
-            f"Starting job {job_id}: {function}"
-        )  # TODO: Convert f-string to logging format
+        logger.info("Starting job %s: %s", job_id, function)
 
     @classmethod
     def on_job_end(cls, ctx: dict[str, Any]) -> None:
@@ -106,9 +104,7 @@ class WorkerSettings:
         job_id = ctx.get("job_id")
         function = ctx.get("job_try", {}).get("function")
         result = ctx.get("result")
-        logger.info(
-            f"Completed job {job_id}: {function} - Result: {result}"
-        )  # TODO: Convert f-string to logging format
+        logger.info("Completed job %s: %s - Result: %s", job_id, function, result)
 
 
 # For ARQ to find the settings

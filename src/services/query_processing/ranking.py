@@ -411,16 +411,17 @@ class PersonalizedRankingService:
             )
 
             self._logger.info(
-                f"Ranked {len(ranked_results)} results for user {request.user_id} "
-                f"using {strategy_used.value} in {processing_time_ms:.1f}ms "
-                f"(personalized: {personalization_applied})"
+                "Ranked %d results for user %d using %s in %.1fms (personalized: %s)",
+                len(ranked_results),
+                request.user_id,
+                strategy_used.value,
+                processing_time_ms,
+                personalization_applied,
             )
 
         except Exception as e:
             processing_time_ms = (time.time() - start_time) * 1000
-            self._logger.exception(
-                "Personalized ranking failed: "
-            )  # TODO: Convert f-string to logging format
+            self._logger.exception("Personalized ranking failed: %s", e)
 
             # Return fallback result with default ranking
             fallback_results = self._apply_default_ranking(request.results)
@@ -471,14 +472,14 @@ class PersonalizedRankingService:
             await self._update_user_profile_from_interaction(interaction)
 
             self._logger.debug(
-                f"Recorded {interaction.interaction_type.value} interaction "
-                f"for user {user_id} on result {interaction.result_id}"
+                "Recorded %s interaction for user %d on result %d",
+                interaction.interaction_type.value,
+                user_id,
+                interaction.result_id,
             )
 
-        except Exception:
-            self._logger.exception(
-                "Failed to record interaction: "
-            )  # TODO: Convert f-string to logging format
+        except Exception as e:
+            self._logger.exception("Failed to record interaction: %s", e)
 
     async def _get_user_profile(self, user_id: str) -> UserProfile:
         """Get or create user profile."""

@@ -20,10 +20,11 @@ import time
 from collections.abc import Callable
 from typing import Any
 
-from fastapi import HTTPException, Request, Response
+from fastapi.exceptions import HTTPException
 from fastapi.security import HTTPBearer
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import JSONResponse
+from starlette.requests import Request
+from starlette.responses import JSONResponse, Response
 
 from src.config.security import SecurityConfig
 from src.services.security.ai_security import AISecurityValidator
@@ -654,11 +655,10 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Returns:
             True if IP was unblocked, False if it wasn't blocked
-
         """
         if ip_address in self.blocked_ips:
             self.blocked_ips.remove(ip_address)
-            logger.info(f"Unblocked IP address {ip_address}")
+            logger.info("Unblocked IP address %s", ip_address)
             return True
         return False
 

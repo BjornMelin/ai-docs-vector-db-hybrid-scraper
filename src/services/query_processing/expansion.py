@@ -221,7 +221,6 @@ class QueryExpansionService:
 
         Returns:
             Expanded query string
-
         """
         # Create a request with default parameters
         request = QueryExpansionRequest(
@@ -351,15 +350,16 @@ class QueryExpansionService:
             self._update_performance_stats(request.strategy, processing_time_ms)
 
             self._logger.info(
-                f"Expanded query '{request.original_query}' to '{expanded_query}' "
-                f"with {len(filtered_terms)} terms in {processing_time_ms:.1f}ms"
+                "Expanded query '%s' to '%s' with %d terms in %.1fms",
+                request.original_query,
+                expanded_query,
+                len(filtered_terms),
+                processing_time_ms,
             )
 
         except Exception as e:
             processing_time_ms = (time.time() - start_time) * 1000
-            self._logger.exception(
-                "Query expansion failed: "
-            )  # TODO: Convert f-string to logging format
+            self._logger.exception("Query expansion failed: %s", e)
 
             # Return fallback result
             return QueryExpansionResult(

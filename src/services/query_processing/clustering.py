@@ -376,9 +376,7 @@ class ResultClusteringService:
 
         except Exception as e:
             processing_time_ms = (time.time() - start_time) * 1000
-            self._logger.exception(
-                "Result clustering failed: "
-            )  # TODO: Convert f-string to logging format
+            self._logger.exception("Result clustering failed: %s", e)
 
             # Return fallback result
             return ResultClusteringResult(
@@ -402,9 +400,12 @@ class ResultClusteringService:
             self._update_performance_stats(method, processing_time_ms)
 
             self._logger.info(
-                f"Clustered {len(request.results)} results into {len(clusters)} "
-                f"clusters with {len(outliers)} outliers using {method.value} "
-                f"in {processing_time_ms:.1f}ms"
+                "Clustered %d results into %d clusters with %d outliers using %s in %.1fms",
+                len(request.results),
+                len(clusters),
+                len(outliers),
+                method.value,
+                processing_time_ms,
             )
 
             return result
@@ -918,9 +919,7 @@ class ResultClusteringService:
                         )
 
                 except (ValueError, TypeError, UnicodeDecodeError) as e:
-                    self._logger.warning(
-                        f"Failed to calculate quality metrics: {e}"
-                    )  # TODO: Convert f-string to logging format
+                    self._logger.warning("Failed to calculate quality metrics: %s", e)
 
         return metrics
 

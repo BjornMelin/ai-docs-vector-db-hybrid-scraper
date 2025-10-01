@@ -75,12 +75,10 @@ class DistributedRateLimiter:
                     retry_on_timeout=True,
                     health_check_interval=30,
                 )
-                logger.info(
-                    f"Redis rate limiter initialized: {redis_url}"
-                )  # TODO: Convert f-string to logging format
+                logger.info("Redis rate limiter initialized: %s", redis_url)
             except (ConnectionError, ValueError, AttributeError) as e:
                 logger.warning(
-                    f"Failed to initialize Redis: {e}. Using local fallback only."
+                    "Failed to initialize Redis: %s. Using local fallback only.", e
                 )
                 self.redis_client = None
         else:
@@ -118,7 +116,7 @@ class DistributedRateLimiter:
                 )
             except (ConnectionError, ValueError, AttributeError, RuntimeError) as e:
                 logger.warning(
-                    f"Redis rate limit check failed: {e}. Using local fallback."
+                    "Redis rate limit check failed: %s. Using local fallback.", e
                 )
 
         # Local fallback
@@ -210,8 +208,11 @@ class DistributedRateLimiter:
             await self.redis_client.zrem(key, str(current_time))
 
         logger.debug(
-            f"Redis rate limit check: {identifier} - "
-            f"{current_requests}/{burst_limit} requests, allowed: {is_allowed}"
+            "Redis rate limit check: %s - %d/%d requests, allowed: %s",
+            identifier,
+            current_requests,
+            burst_limit,
+            is_allowed,
         )
 
         return is_allowed, rate_limit_info
@@ -278,8 +279,11 @@ class DistributedRateLimiter:
             }
 
             logger.debug(
-                f"Local rate limit check: {identifier} - "
-                f"{current_requests}/{burst_limit} requests, allowed: {is_allowed}"
+                "Local rate limit check: %s - %d/%d requests, allowed: %s",
+                identifier,
+                current_requests,
+                burst_limit,
+                is_allowed,
             )
 
             return is_allowed, rate_limit_info
@@ -303,9 +307,7 @@ class DistributedRateLimiter:
                     identifier, window, current_time
                 )
             except (ConnectionError, ValueError, AttributeError, RuntimeError) as e:
-                logger.warning(
-                    f"Failed to get Redis rate limit status: {e}"
-                )  # TODO: Convert f-string to logging format
+                logger.warning("Failed to get Redis rate limit status: %s", e)
 
         # Local fallback
         async with self._cache_lock:
@@ -382,18 +384,14 @@ class DistributedRateLimiter:
         """Reset Redis rate limit for identifier."""
         key = f"rate_limit:{identifier}:{window}"
         await self.redis_client.delete(key)
-        logger.info(
-            f"Reset Redis rate limit for {identifier}"
-        )  # TODO: Convert f-string to logging format
+        logger.info("Reset Redis rate limit for %s", identifier)
 
     async def _reset_local_rate_limit(self, identifier: str) -> None:
         """Reset local cache rate limit for identifier."""
         async with self._cache_lock:
             if identifier in self.local_cache:
                 del self.local_cache[identifier]
-                logger.info(
-                    f"Reset local rate limit for {identifier}"
-                )  # TODO: Convert f-string to logging format
+                logger.info("Reset local rate limit for %s", identifier)
 
     async def cleanup_expired_entries(self, max_age_hours: int = 24) -> int:
         """Clean up expired entries from local cache.
@@ -438,9 +436,7 @@ class DistributedRateLimiter:
                 del self.local_cache[identifier]
 
         if cleanup_count > 0:
-            logger.info(
-                f"Cleaned up {cleanup_count} expired rate limit entries"
-            )  # TODO: Convert f-string to logging format
+            logger.info("Cleaned up %d expired rate limit entries", cleanup_count)
 
         return cleanup_count
 
@@ -462,9 +458,7 @@ class DistributedRateLimiter:
             try:
                 await self._check_redis_health(status)
             except (ConnectionError, ValueError, AttributeError, RuntimeError) as e:
-                logger.warning(
-                    f"Redis health check failed: {e}"
-                )  # TODO: Convert f-string to logging format
+                logger.warning("Redis health check failed: %s", e)
                 status["redis_error"] = str(e)
 
         return status
@@ -480,9 +474,7 @@ class DistributedRateLimiter:
             try:
                 await self._close_redis_connection()
             except (ConnectionError, ValueError, AttributeError, RuntimeError) as e:
-                logger.warning(
-                    f"Error closing Redis connection: {e}"
-                )  # TODO: Convert f-string to logging format
+                logger.warning("Error closing Redis connection: %s", e)
 
     async def _close_redis_connection(self) -> None:
         """Close Redis connection."""

@@ -109,9 +109,7 @@ class QdrantAliasManager(BaseService):
             # Check if alias exists
             if await self.alias_exists(alias_name):
                 if not force:
-                    logger.warning(
-                        f"Alias {alias_name} already exists"
-                    )  # TODO: Convert f-string to logging format
+                    logger.warning("Alias %s already exists", alias_name)
                     return False
 
                 # Delete existing alias
@@ -129,9 +127,7 @@ class QdrantAliasManager(BaseService):
                 ]
             )
 
-            logger.info(
-                f"Created alias {alias_name} -> {collection_name}"
-            )  # TODO: Convert f-string to logging format
+            logger.info("Created alias %s -> %s", alias_name, collection_name)
 
         except Exception as e:
             logger.exception("Failed to create alias")
@@ -196,7 +192,10 @@ class QdrantAliasManager(BaseService):
             )
 
             logger.info(
-                f"Switched alias {alias_name}: {old_collection} -> {new_collection}"
+                "Switched alias %s: %s -> %s",
+                alias_name,
+                old_collection,
+                new_collection,
             )
 
             # Optionally delete old collection
@@ -232,9 +231,7 @@ class QdrantAliasManager(BaseService):
                 ]
             )
 
-            logger.info(
-                f"Deleted alias {alias_name}"
-            )  # TODO: Convert f-string to logging format
+            logger.info("Deleted alias %s", alias_name)
 
         except (OSError, PermissionError):
             logger.exception("Failed to delete alias")
@@ -309,15 +306,14 @@ class QdrantAliasManager(BaseService):
         # Check if any alias points to this collection
         aliases = await self.list_aliases()
         if collection_name in aliases.values():
-            logger.warning(
-                f"Collection {collection_name} still has aliases"
-            )  # TODO: Convert f-string to logging format
+            logger.warning("Collection %s still has aliases", collection_name)
             return
 
         # Schedule deletion after grace period
         logger.info(
-            f"Scheduling deletion of {collection_name} in {grace_period_minutes} "
-            "minutes"
+            "Scheduling deletion of %s in %d minutes",
+            collection_name,
+            grace_period_minutes,
         )
 
         # Task queue is required for persistent deletion scheduling
@@ -337,10 +333,10 @@ class QdrantAliasManager(BaseService):
 
         if job_id:
             logger.info(
-                f"Scheduled deletion of {collection_name} with job ID: {job_id}"
+                "Scheduled deletion of %s with job ID: %s", collection_name, job_id
             )
         else:
-            msg = f"Failed to schedule deletion of {collection_name} via task queue"
+            msg = "Failed to schedule deletion of %s via task queue", collection_name
             raise RuntimeError(msg)
 
     async def clone_collection_schema(self, source: str, target: str) -> bool:
@@ -386,9 +382,7 @@ class QdrantAliasManager(BaseService):
                         field_type=field_schema.data_type,
                     )
 
-            logger.info(
-                f"Cloned collection schema from {source} to {target}"
-            )  # TODO: Convert f-string to logging format
+            logger.info("Cloned collection schema from %s to %s", source, target)
 
         except Exception as e:
             logger.exception("Failed to clone collection schema")
@@ -456,17 +450,15 @@ class QdrantAliasManager(BaseService):
 
                 total_copied += len(records)
                 logger.debug(
-                    f"Copied {total_copied} points from {source} to {target}"
-                )  # TODO: Convert f-string to logging format
+                    "Copied %d points from %s to %s", total_copied, source, target
+                )
 
                 # Call progress callback if provided
                 if progress_callback:
                     try:
                         await progress_callback(total_copied, total_points)
                     except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
-                        logger.warning(
-                            f"Progress callback failed: {e}"
-                        )  # TODO: Convert f-string to logging format
+                        logger.warning("Progress callback failed: %s", e)
 
                 # Check limit
                 if limit and total_copied >= limit:
@@ -477,9 +469,7 @@ class QdrantAliasManager(BaseService):
                 if offset is None:
                     break
 
-            logger.info(
-                f"Copied {total_copied} points from {source} to {target}"
-            )  # TODO: Convert f-string to logging format
+            logger.info("Copied %d points from %s to %s", total_copied, source, target)
 
         except Exception as e:
             logger.exception("Failed to copy collection data")

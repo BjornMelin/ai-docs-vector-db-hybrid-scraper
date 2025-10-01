@@ -140,9 +140,7 @@ class TaskQueueManager(BaseService):
                     )  # Just tracking enqueue for now
 
                 return job.job_id
-            logger.error(
-                f"Failed to enqueue task {task_name}"
-            )  # TODO: Convert f-string to logging format
+            logger.error("Failed to enqueue task %s", task_name)
 
             # Record failure metrics
             if self.metrics_registry:
@@ -209,9 +207,7 @@ class TaskQueueManager(BaseService):
             job = await self._redis_pool.job(job_id)
             if job and job.status == "deferred":
                 await job.abort()
-                logger.info(
-                    f"Cancelled job {job_id}"
-                )  # TODO: Convert f-string to logging format
+                logger.info("Cancelled job %s", job_id)
                 return True
 
         except (TimeoutError, OSError, PermissionError):

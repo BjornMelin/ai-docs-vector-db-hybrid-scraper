@@ -105,9 +105,7 @@ class HealthChecker:
         # Start background monitoring task
         self._health_check_task = asyncio.create_task(self._monitor_loop())
 
-        self.logger.info(
-            f"Health monitoring started for {len(services)} services"
-        )  # TODO: Convert f-string to logging format
+        self.logger.info("Health monitoring started for %d services", len(services))
 
     async def stop_monitoring(self) -> None:
         """Stop health monitoring."""

@@ -103,9 +103,7 @@ class TierConfiguration:
     def __post_init__(self):
         """Validate configuration after initialization."""
         if self.tier_name not in [tier.value for tier in TierType]:
-            logger.warning(
-                f"Unknown tier type: {self.tier_name}"
-            )  # TODO: Convert f-string to logging format
+            logger.warning("Unknown tier type: %s", self.tier_name)
 
 
 @dataclass
