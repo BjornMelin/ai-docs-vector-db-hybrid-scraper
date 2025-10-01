@@ -67,6 +67,12 @@ class RAGGenerator(BaseService):
 
         return self._config
 
+    @property
+    def retriever(self) -> BaseRetriever:
+        """Expose the underlying retriever instance."""
+
+        return self._retriever
+
     async def initialize(self) -> None:
         """Prepare the chat model and executable chain."""
 

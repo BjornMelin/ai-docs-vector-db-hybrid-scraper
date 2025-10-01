@@ -13,25 +13,33 @@ from langchain_core.callbacks.manager import (
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
 
+from src.services.monitoring.metrics import get_metrics_registry
+from src.services.query_processing.rag.compression import (
+    CompressionStats,
+    DeterministicContextCompressor,
+)
 from src.services.vector_db.service import VectorStoreService
 
 
 class VectorServiceRetriever(BaseRetriever):
     """Expose VectorStoreService searches through the LangChain retriever API."""
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments
         self,
         vector_service: VectorStoreService,
         collection: str,
         *,
         k: int = 5,
         filters: Mapping[str, Any] | None = None,
+        compressor: DeterministicContextCompressor | None = None,
     ) -> None:
         super().__init__()
         self._vector_service = vector_service
         self._collection = collection
         self._k = k
         self._filters: Mapping[str, Any] | None = filters
+        self._compressor = compressor
+        self._compression_stats: CompressionStats | None = None
 
     def with_search_kwargs(
         self,
@@ -46,7 +54,14 @@ class VectorServiceRetriever(BaseRetriever):
             self._collection,
             k=k or self._k,
             filters=filters if filters is not None else self._filters,
+            compressor=self._compressor,
         )
+
+    @property
+    def compression_stats(self) -> CompressionStats | None:
+        """Return compression statistics from the most recent retrieval."""
+
+        return self._compression_stats
 
     def _get_relevant_documents(
         self,
@@ -97,6 +112,19 @@ class VectorServiceRetriever(BaseRetriever):
             metadata.setdefault("score", match.score)
             metadata.setdefault("title", payload.get("title"))
             documents.append(Document(page_content=content, metadata=metadata))
+
+        if self._compressor is not None:
+            compressed, stats = await self._compressor.compress(query, documents)
+            documents = compressed
+            self._compression_stats = stats
+            try:
+                registry = get_metrics_registry()
+            except RuntimeError:  # pragma: no cover - monitoring disabled
+                registry = None
+            if registry is not None:
+                registry.record_compression_stats(self._collection, stats)
+        else:
+            self._compression_stats = None
 
         await run_manager.on_retriever_end(documents)
 

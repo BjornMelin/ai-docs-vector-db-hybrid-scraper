@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from collections.abc import Iterable, Mapping, Sequence
 from datetime import UTC, datetime
 from enum import Enum
@@ -15,6 +16,7 @@ from src.services.base import BaseService
 from src.services.embeddings.base import EmbeddingProvider
 from src.services.embeddings.fastembed_provider import FastEmbedProvider
 from src.services.errors import EmbeddingServiceError
+from src.services.monitoring.metrics import get_metrics_registry
 
 from .adapter import QdrantVectorAdapter
 from .adapter_base import CollectionSchema, TextDocument, VectorMatch, VectorRecord
@@ -338,6 +340,17 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
             raise EmbeddingServiceError(msg) from exc
         return embedding
 
+    async def embed_documents(self, texts: Sequence[str]) -> list[list[float]]:
+        """Return embedding vectors for the supplied document texts."""
+
+        await self.initialize()
+        try:
+            embeddings = await self._embeddings.generate_embeddings(list(texts))
+        except Exception as exc:  # pragma: no cover - surfaces consistent errors
+            msg = f"Failed to embed documents: {exc}"
+            raise EmbeddingServiceError(msg) from exc
+        return embeddings
+
     async def search_documents(
         self,
         collection: str,
@@ -367,7 +380,7 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         )
         return matches
 
-    async def _query_with_optional_grouping(
+    async def _query_with_optional_grouping(  # pylint: disable=too-many-locals
         self,
         collection: str,
         vector: Sequence[float],
@@ -379,8 +392,13 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         qdrant_cfg = getattr(self.config, "qdrant", None)
         grouping_enabled = bool(getattr(qdrant_cfg, "enable_grouping", False))
         grouping_applied = False
+        registry = None
+        try:
+            registry = get_metrics_registry()
+        except RuntimeError:  # pragma: no cover - monitoring disabled
+            registry = None
 
-        if grouping_enabled and adapter.supports_query_groups():
+        if grouping_enabled:
             group_by_field = getattr(qdrant_cfg, "group_by_field", "doc_id")
             group_size = max(1, int(getattr(qdrant_cfg, "group_size", 1)))
             limit_multiplier = float(
@@ -397,6 +415,7 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
                 )
                 self._grouping_indexes.add(index_key)
 
+            start_time = time.perf_counter()
             matches, grouping_applied = await adapter.query_groups(
                 collection,
                 vector,
@@ -405,6 +424,12 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
                 group_size=group_size,
                 filters=filters,
             )
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            if registry is not None:
+                status = "applied" if grouping_applied else "fallback"
+                registry.record_grouping_attempt(
+                    collection, status, duration_ms=duration_ms
+                )
             if grouping_applied:
                 return matches[:limit], True
             return matches, False
@@ -415,6 +440,8 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
             limit=limit,
             filters=filters,
         )
+        if registry is not None:
+            registry.record_grouping_attempt(collection, "disabled")
         return matches, False
 
     async def search_vector(

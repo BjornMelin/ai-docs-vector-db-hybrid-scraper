@@ -20,6 +20,8 @@ import numpy as np
 from numpy.typing import NDArray
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from src.contracts.retrieval import SearchRecord
+
 from .utils import (
     STOP_WORDS,
     CacheManager,
@@ -148,10 +150,9 @@ class SimilarityMetric(str, Enum):
     HAMMING = "hamming"
 
 
-class SearchResult(BaseModel):
+class SearchResult(SearchRecord):
     """Individual search result for clustering."""
 
-    id: str = Field(..., description="Unique result identifier")
     title: str = Field(..., description="Result title")
     content: str = Field(..., description="Result snippet or body")
     score: float = Field(..., ge=0.0, le=1.0, description="Relevance score")
