@@ -55,6 +55,7 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         self._client_manager = client_manager
         self._embeddings = embeddings_provider
         self._adapter: QdrantVectorAdapter | None = None
+        self._grouping_indexes: set[tuple[str, str]] = set()
 
     async def initialize(self) -> None:
         """Initialize the service and its dependencies."""
@@ -346,18 +347,68 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
             List of vector matches.
         """
 
-        adapter = self._require_adapter()
         try:
             [embedding] = await self._embeddings.generate_embeddings([query])
         except Exception as exc:  # pragma: no cover
             msg = f"Failed to embed query: {exc}"
             raise EmbeddingServiceError(msg) from exc
-        return await adapter.query(
+        matches, _ = await self._query_with_optional_grouping(
             collection,
             embedding,
             limit=limit,
             filters=filters,
         )
+        return matches
+
+    async def _query_with_optional_grouping(
+        self,
+        collection: str,
+        vector: Sequence[float],
+        *,
+        limit: int,
+        filters: Mapping[str, Any] | None = None,
+    ) -> tuple[list[VectorMatch], bool]:
+        adapter = self._require_adapter()
+        qdrant_cfg = getattr(self.config, "qdrant", None)
+        grouping_enabled = bool(getattr(qdrant_cfg, "enable_grouping", False))
+        grouping_applied = False
+
+        if grouping_enabled and adapter.supports_query_groups():
+            group_by_field = getattr(qdrant_cfg, "group_by_field", "doc_id")
+            group_size = max(1, int(getattr(qdrant_cfg, "group_size", 1)))
+            limit_multiplier = float(
+                getattr(qdrant_cfg, "groups_limit_multiplier", 2.0)
+            )
+            limit_multiplier = limit_multiplier if limit_multiplier > 0 else 1.0
+            groups_limit = max(limit, int(limit * limit_multiplier))
+
+            index_key = (collection, group_by_field)
+            if index_key not in self._grouping_indexes:
+                await self.ensure_payload_indexes(
+                    collection,
+                    {group_by_field: models.PayloadSchemaType.KEYWORD},
+                )
+                self._grouping_indexes.add(index_key)
+
+            matches, grouping_applied = await adapter.query_groups(
+                collection,
+                vector,
+                group_by=group_by_field,
+                limit=groups_limit,
+                group_size=group_size,
+                filters=filters,
+            )
+            if grouping_applied:
+                return matches[:limit], True
+            return matches, False
+
+        matches = await adapter.query(
+            collection,
+            vector,
+            limit=limit,
+            filters=filters,
+        )
+        return matches, False
 
     async def search_vector(
         self,
@@ -379,13 +430,13 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
             List of vector matches.
         """
 
-        adapter = self._require_adapter()
-        return await adapter.query(
+        matches, _ = await self._query_with_optional_grouping(
             collection,
             vector,
             limit=limit,
             filters=filters,
         )
+        return matches
 
     async def hybrid_search(  # pylint: disable=too-many-arguments
         self,

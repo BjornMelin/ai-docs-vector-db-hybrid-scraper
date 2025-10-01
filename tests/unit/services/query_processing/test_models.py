@@ -11,6 +11,7 @@ from src.services.query_processing.models import (
     QueryPreprocessingResult,
     QueryProcessingRequest,
     QueryProcessingResponse,
+    SearchRecord,
     SearchStrategy,
     SearchStrategySelection,
 )
@@ -248,16 +249,25 @@ class TestQueryProcessingResponse:
         """Test creating a successful response."""
         response = QueryProcessingResponse(
             success=True,
-            results=[{"id": "1", "content": "test", "score": 0.9}],
-            _total_results=1,
-            _total_processing_time_ms=150.5,
+            results=[
+                SearchRecord.model_validate(
+                    {
+                        "id": "1",
+                        "content": "test",
+                        "score": 0.9,
+                    }
+                )
+            ],
+            total_results=1,
+            total_processing_time_ms=150.5,
             confidence_score=0.85,
             quality_score=0.9,
         )
 
         assert response.success is True
         assert len(response.results) == 1
-        assert response._total_results == 1
+        assert isinstance(response.results[0], SearchRecord)
+        assert response.total_results == 1
         assert response.confidence_score == 0.85
 
     def test_error_response(self):
@@ -265,7 +275,7 @@ class TestQueryProcessingResponse:
         response = QueryProcessingResponse(
             success=False,
             results=[],
-            _total_results=0,
+            total_results=0,
             error="Processing failed",
         )
 
@@ -293,16 +303,20 @@ class TestQueryProcessingResponse:
         response = QueryProcessingResponse(
             success=True,
             results=[],
-            _total_results=0,
+            total_results=0,
             intent_classification=intent_classification,
             preprocessing_result=preprocessing_result,
             processing_steps=["preprocessing", "intent_classification", "search"],
             fallback_used=False,
         )
 
-        assert response.intent_classification.primary_intent == QueryIntent.PERFORMANCE
+        payload = response.model_dump(mode="json")
         assert (
-            response.preprocessing_result.processed_query
+            payload["intent_classification"]["primary_intent"]
+            == QueryIntent.PERFORMANCE.value
+        )
+        assert (
+            payload["preprocessing_result"]["processed_query"]
             == "optimize database performance"
         )
         assert len(response.processing_steps) == 3
@@ -313,10 +327,10 @@ class TestQueryProcessingResponse:
         response = QueryProcessingResponse(
             success=True,
             results=[],
-            _total_results=0,
+            total_results=0,
         )
 
-        assert response._total_processing_time_ms == 0.0
+        assert response.total_processing_time_ms == 0.0
         assert response.search_time_ms == 0.0
         assert response.confidence_score == 0.0
         assert response.quality_score == 0.0
@@ -324,3 +338,31 @@ class TestQueryProcessingResponse:
         assert response.fallback_used is False
         assert response.cache_hit is False
         assert response.error is None
+        assert response.warnings == []
+
+
+class TestSearchRecord:
+    """Test normalization of search record payloads."""
+
+    def test_from_payload_generates_missing_id(self):
+        """Dictionary payload without identifier gets a generated UUID."""
+
+        payload = {"content": "snippet", "score": 0.42}
+        record = SearchRecord.from_payload(payload)
+
+        assert record.content == "snippet"
+        assert record.score == 0.42
+        assert record.id and isinstance(record.id, str)
+
+    def test_parse_list_accepts_existing_records(self):
+        """Existing SearchRecord instances are returned as-is in parse_list."""
+
+        record = SearchRecord(
+            id="abc",
+            content="example",
+            score=0.9,
+            metadata={"source": "unit-test"},
+        )
+        parsed = SearchRecord.parse_list([record])
+
+        assert parsed[0] is record

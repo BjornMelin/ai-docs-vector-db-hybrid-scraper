@@ -283,6 +283,25 @@ class QdrantConfig(BaseModel):
     prefer_grpc: bool = Field(default=False, description="Prefer gRPC connections")
     grpc_port: int = Field(default=6334, gt=0, description="Qdrant gRPC port")
     use_grpc: bool = Field(default=False, description="Enable gRPC client")
+    enable_grouping: bool = Field(
+        default=True,
+        description="Enable QueryPointGroups when the server supports it",
+    )
+    group_by_field: str = Field(
+        default="doc_id",
+        description="Payload field used for server-side grouping",
+    )
+    group_size: int = Field(
+        default=1,
+        ge=1,
+        le=10,
+        description="Maximum hits to return for each group",
+    )
+    groups_limit_multiplier: float = Field(
+        default=2.0,
+        gt=0,
+        description="Multiplier applied to requested limit when grouping",
+    )
 
 
 class OpenAIConfig(BaseModel):

@@ -1,5 +1,7 @@
 """Response converters for query processing MCP tools."""
 
+from enum import Enum
+
 from src.mcp_tools.models.responses import (
     QueryIntentResult,
     QueryPreprocessingResult,
@@ -8,6 +10,14 @@ from src.mcp_tools.models.responses import (
     SearchStrategyResult,
 )
 from src.services.query_processing.models import SearchRecord
+
+
+def _enum_or_value(value: object) -> object:
+    """Return enum value if provided, otherwise passthrough."""
+
+    if isinstance(value, Enum):
+        return value.value
+    return value
 
 
 class ResponseConverter:
@@ -19,21 +29,45 @@ class ResponseConverter:
         if not intent_data:
             return None
 
-        return QueryIntentResult(
-            primary_intent=intent_data.primary_intent.value,
-            secondary_intents=[
-                intent.value for intent in intent_data.secondary_intents
-            ],
-            confidence_scores={
-                intent.value: score
-                for intent, score in intent_data.confidence_scores.items()
-            },
-            complexity_level=intent_data.complexity_level.value,
-            domain_category=intent_data.domain_category,
-            classification_reasoning=intent_data.classification_reasoning,
-            requires_context=intent_data.requires_context,
-            suggested_followups=intent_data.suggested_followups,
-        )
+        payload = None
+        model_dump = getattr(intent_data, "model_dump", None)
+        if callable(model_dump):
+            try:
+                candidate = model_dump(mode="json")
+                if isinstance(candidate, dict):
+                    payload = candidate
+            except Exception:  # pragma: no cover - fall back to manual mapping
+                payload = None
+
+        if payload is None:
+            payload = {
+                "primary_intent": _enum_or_value(
+                    getattr(intent_data, "primary_intent", None)
+                ),
+                "secondary_intents": [
+                    _enum_or_value(value)
+                    for value in getattr(intent_data, "secondary_intents", [])
+                ],
+                "confidence_scores": {
+                    _enum_or_value(key): score
+                    for key, score in getattr(
+                        intent_data, "confidence_scores", {}
+                    ).items()
+                },
+                "complexity_level": _enum_or_value(
+                    getattr(intent_data, "complexity_level", None)
+                ),
+                "domain_category": getattr(intent_data, "domain_category", None),
+                "classification_reasoning": getattr(
+                    intent_data, "classification_reasoning", ""
+                ),
+                "requires_context": getattr(intent_data, "requires_context", False),
+                "suggested_followups": list(
+                    getattr(intent_data, "suggested_followups", [])
+                ),
+            }
+
+        return QueryIntentResult.model_validate(payload)
 
     @staticmethod
     def convert_preprocessing_result(
@@ -43,15 +77,40 @@ class ResponseConverter:
         if not preprocessing_data:
             return None
 
-        return QueryPreprocessingResult(
-            original_query=preprocessing_data.original_query,
-            processed_query=preprocessing_data.processed_query,
-            corrections_applied=preprocessing_data.corrections_applied,
-            expansions_added=preprocessing_data.expansions_added,
-            normalization_applied=preprocessing_data.normalization_applied,
-            context_extracted=preprocessing_data.context_extracted,
-            preprocessing_time_ms=preprocessing_data.preprocessing_time_ms,
-        )
+        payload = None
+        model_dump = getattr(preprocessing_data, "model_dump", None)
+        if callable(model_dump):
+            try:
+                candidate = model_dump(mode="json")
+                if isinstance(candidate, dict):
+                    payload = candidate
+            except Exception:  # pragma: no cover - fall back to manual mapping
+                payload = None
+
+        if payload is None:
+            payload = {
+                "original_query": getattr(preprocessing_data, "original_query", ""),
+                "processed_query": getattr(
+                    preprocessing_data, "processed_query", ""
+                ),
+                "corrections_applied": list(
+                    getattr(preprocessing_data, "corrections_applied", [])
+                ),
+                "expansions_added": list(
+                    getattr(preprocessing_data, "expansions_added", [])
+                ),
+                "normalization_applied": getattr(
+                    preprocessing_data, "normalization_applied", False
+                ),
+                "context_extracted": dict(
+                    getattr(preprocessing_data, "context_extracted", {})
+                ),
+                "preprocessing_time_ms": getattr(
+                    preprocessing_data, "preprocessing_time_ms", 0.0
+                ),
+            }
+
+        return QueryPreprocessingResult.model_validate(payload)
 
     @staticmethod
     def convert_strategy_selection(strategy_data) -> SearchStrategyResult | None:
@@ -59,17 +118,39 @@ class ResponseConverter:
         if not strategy_data:
             return None
 
-        return SearchStrategyResult(
-            primary_strategy=strategy_data.primary_strategy.value,
-            fallback_strategies=[
-                strategy.value for strategy in strategy_data.fallback_strategies
-            ],
-            matryoshka_dimension=strategy_data.matryoshka_dimension.value,
-            confidence=strategy_data.confidence,
-            reasoning=strategy_data.reasoning,
-            estimated_quality=strategy_data.estimated_quality,
-            estimated_latency_ms=strategy_data.estimated_latency_ms,
-        )
+        payload = None
+        model_dump = getattr(strategy_data, "model_dump", None)
+        if callable(model_dump):
+            try:
+                candidate = model_dump(mode="json")
+                if isinstance(candidate, dict):
+                    payload = candidate
+            except Exception:  # pragma: no cover - fall back to manual mapping
+                payload = None
+
+        if payload is None:
+            payload = {
+                "primary_strategy": _enum_or_value(
+                    getattr(strategy_data, "primary_strategy", None)
+                ),
+                "fallback_strategies": [
+                    _enum_or_value(value)
+                    for value in getattr(strategy_data, "fallback_strategies", [])
+                ],
+                "matryoshka_dimension": _enum_or_value(
+                    getattr(strategy_data, "matryoshka_dimension", None)
+                ),
+                "confidence": getattr(strategy_data, "confidence", 0.0),
+                "reasoning": getattr(strategy_data, "reasoning", ""),
+                "estimated_quality": getattr(
+                    strategy_data, "estimated_quality", 0.0
+                ),
+                "estimated_latency_ms": getattr(
+                    strategy_data, "estimated_latency_ms", 0.0
+                ),
+            }
+
+        return SearchStrategyResult.model_validate(payload)
 
     @staticmethod
     def convert_search_results(

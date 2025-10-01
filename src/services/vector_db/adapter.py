@@ -18,6 +18,17 @@ class QdrantVectorAdapter(VectorAdapter):
         """Initialize the QdrantVectorAdapter."""
 
         self._client = client
+        self._supports_query_groups: bool | None = None
+
+    async def _ensure_grouping_capability(self) -> None:
+        if self._supports_query_groups is not None:
+            return
+        self._supports_query_groups = hasattr(self._client, "query_points_groups")
+
+    def supports_query_groups(self) -> bool:
+        """Return cached capability flag for QueryPointGroups support."""
+
+        return bool(self._supports_query_groups)
 
     async def create_collection(self, schema: CollectionSchema) -> None:
         """Create the collection if it does not exist, otherwise ensure schema."""
@@ -103,13 +114,7 @@ class QdrantVectorAdapter(VectorAdapter):
         *,
         batch_size: int | None = None,
     ) -> None:
-        """Upsert vector records into a collection.
-
-        Args:
-            collection: Name of the collection.
-            records: Sequence of vector records to upsert.
-            batch_size: Optional batch size for upsert operation.
-        """
+        """Upsert vector records into a collection."""
 
         if not records:
             return
@@ -167,17 +172,7 @@ class QdrantVectorAdapter(VectorAdapter):
         limit: int = 10,
         filters: Mapping[str, Any] | None = None,
     ) -> list[VectorMatch]:
-        """Query the collection with a vector.
-
-        Args:
-            collection: Name of the collection.
-            vector: Query vector.
-            limit: Maximum number of results.
-            filters: Optional filters for the query.
-
-        Returns:
-            List of vector matches.
-        """
+        """Query the collection with a vector."""
 
         query_response = await self._client.query_points(
             collection_name=collection,
@@ -196,8 +191,68 @@ class QdrantVectorAdapter(VectorAdapter):
             for point in query_response.points
         ]
 
-    # pylint: disable=too-many-arguments  # Exposes full hybrid search knobs.
-    async def hybrid_query(
+    async def query_groups(  # pylint: disable=too-many-arguments
+        self,
+        collection: str,
+        vector: Sequence[float],
+        *,
+        group_by: str,
+        limit: int = 10,
+        group_size: int = 1,
+        filters: Mapping[str, Any] | None = None,
+    ) -> tuple[list[VectorMatch], bool]:
+        """Attempt a grouped query with graceful fallback."""
+
+        await self._ensure_grouping_capability()
+        if not self.supports_query_groups():
+            matches = await self.query(collection, vector, limit=limit, filters=filters)
+            return matches, False
+
+        try:
+            response = await self._client.query_points_groups(
+                collection_name=collection,
+                group_by=group_by,
+                query=list(vector),
+                limit=limit,
+                group_size=group_size,
+                query_filter=_filter_from_mapping(filters),
+                with_payload=True,
+                with_vectors=False,
+            )
+        except UnexpectedResponse as exc:
+            if exc.status_code in {400, 404, 405, 501}:
+                self._supports_query_groups = False
+                matches = await self.query(
+                    collection, vector, limit=limit, filters=filters
+                )
+                return matches, False
+            raise
+        except AttributeError:
+            self._supports_query_groups = False
+            matches = await self.query(collection, vector, limit=limit, filters=filters)
+            return matches, False
+
+        matches: list[VectorMatch] = []
+        for group in getattr(response, "groups", []) or []:
+            hits = getattr(group, "hits", [])
+            if not hits:
+                continue
+            hit = hits[0]
+            payload = dict(hit.payload or {})
+            payload["_grouping"] = {
+                "applied": True,
+                "group_id": getattr(group, "id", None),
+            }
+            matches.append(
+                VectorMatch(
+                    id=str(hit.id),
+                    score=hit.score,
+                    payload=payload,
+                )
+            )
+        return matches, True
+
+    async def hybrid_query(  # pylint: disable=too-many-arguments
         self,
         collection: str,
         dense_vector: Sequence[float],
@@ -206,18 +261,7 @@ class QdrantVectorAdapter(VectorAdapter):
         limit: int = 10,
         filters: Mapping[str, Any] | None = None,
     ) -> list[VectorMatch]:
-        """Perform hybrid search using dense and sparse vectors.
-
-        Args:
-            collection: Name of the collection.
-            dense_vector: Dense vector for search.
-            sparse_vector: Optional sparse vector for hybrid search.
-            limit: Maximum number of results.
-            filters: Optional filters for the query.
-
-        Returns:
-            List of vector matches.
-        """
+        """Perform hybrid search using dense and sparse vectors."""
 
         if not sparse_vector:
             return await self.query(
@@ -301,7 +345,7 @@ class QdrantVectorAdapter(VectorAdapter):
             )
         return matches
 
-    async def recommend(
+    async def recommend(  # pylint: disable=too-many-arguments
         self,
         collection: str,
         *,
@@ -337,7 +381,7 @@ class QdrantVectorAdapter(VectorAdapter):
             for point in results
         ]
 
-    async def scroll(
+    async def scroll(  # pylint: disable=too-many-arguments
         self,
         collection: str,
         *,

@@ -102,8 +102,16 @@ async def test_add_document_upserts_vector(
     assert args[0] == "docs"
     records: Sequence[VectorRecord] = args[1]
     assert len(records) == 1
-    assert records[0].id == document_id
-    assert records[0].payload == {"topic": "testing"}
+    record = records[0]
+    assert len(record.id) == 32
+    payload = record.payload or {}
+    assert payload["doc_id"] == document_id
+    assert payload["topic"] == "testing"
+    assert payload["chunk_id"] == 0
+    assert payload["tenant"] == "default"
+    assert payload["source"] == "inline"
+    assert "content_hash" in payload
+    assert "created_at" in payload
     assert kwargs["batch_size"] is None
 
 
@@ -247,6 +255,7 @@ async def test_search_documents_returns_adapter_matches(
 
     assert matches[0].id == "x"
     adapter_mock.query.assert_awaited_once()
+    adapter_mock.query_groups.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -268,6 +277,36 @@ async def test_search_vector_passthrough(
         limit=2,
         filters=None,
     )
+    adapter_mock.query_groups.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_search_documents_uses_query_groups_when_supported(
+    initialized_vector_store_service,
+) -> None:
+    """Grouping should be used when enabled and supported by the adapter."""
+
+    service: VectorStoreService = initialized_vector_store_service
+    config = service.config
+    assert config is not None
+    config.qdrant.enable_grouping = True
+    config.qdrant.group_by_field = "doc_id"
+    adapter_mock = AsyncMock(spec=QdrantVectorAdapter)
+    adapter_mock.supports_query_groups.return_value = True
+    grouped_match = VectorMatch(
+        id="doc-1",
+        score=0.9,
+        payload={"_grouping": {"applied": True, "group_id": "doc-1"}},
+    )
+    adapter_mock.query_groups.return_value = ([grouped_match], True)
+    service._adapter = adapter_mock
+    service._grouping_indexes.add(("docs", "doc_id"))
+
+    matches = await service.search_documents("docs", "query", limit=1)
+
+    adapter_mock.query_groups.assert_awaited_once()
+    adapter_mock.query.assert_not_called()
+    assert matches == [grouped_match]
 
 
 @pytest.mark.asyncio
