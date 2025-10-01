@@ -185,17 +185,15 @@ def create_mock_tools(client_manager) -> dict[str, AsyncMock]:
         )
 
     # Mock HyDE search tool
-    async def mock_hyde_search(
-        query: str,
-        collection: str = "documentation",
-        num_generations: int = 5,
-        **__kwargs,
-    ) -> dict[str, Any]:
-        """Mock HyDE search tool."""
-        return await client_manager.hyde_service.search(
-            query=query,
+    async def mock_hyde_search(request, **__kwargs) -> list[dict[str, Any]]:
+        """Mock HyDE search tool returning canned results."""
+
+        query = getattr(request, "query", "")
+        collection = getattr(request, "collection", "documentation")
+        return await client_manager.vector_service.hybrid_search(
             collection=collection,
-            num_generations=num_generations,
+            query=query,
+            limit=getattr(request, "limit", 10),
         )
 
     # Return all mock tools

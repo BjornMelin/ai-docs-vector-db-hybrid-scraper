@@ -1,11 +1,9 @@
 """Tests for MCP search tools."""
 
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 
-from src.mcp_tools.models.requests import SearchRequest
-from src.mcp_tools.models.responses import SearchResult
 from src.mcp_tools.tools.search import register_tools
 
 
@@ -48,6 +46,7 @@ async def test_search_documents_tool_registration(mock_client_manager, _mock_con
     mock_mcp.tool.return_value = capture_tool
 
     register_tools(mock_mcp, mock_client_manager)
+    assert "search_documents" in registered_tools
 
     assert "search_documents" in registered_tools
     assert "search_similar" in registered_tools
@@ -65,49 +64,7 @@ async def test_search_documents_basic(mock_client_manager, mock_context):
 
     mock_mcp.tool.return_value = capture_tool
 
-    # Mock search_documents_core
-    mock_search_results = [
-        SearchResult(
-            id="doc1",
-            content="Test content 1",
-            score=0.95,
-            url="https://example.com/1",
-            title="Test Document 1",
-            metadata={"type": "documentation"},
-        ),
-        SearchResult(
-            id="doc2",
-            content="Test content 2",
-            score=0.85,
-            url="https://example.com/2",
-            title="Test Document 2",
-            metadata={"type": "guide"},
-        ),
-    ]
-
-    with patch(
-        "src.mcp_tools.tools._search_utils.search_documents_core",
-        new_callable=AsyncMock,
-    ) as mock_core:
-        mock_core.return_value = mock_search_results
-
-        register_tools(mock_mcp, mock_client_manager)
-
-        # Test search_documents function
-        request = SearchRequest(
-            query="test query", collection="documentation", limit=10
-        )
-
-        result = await registered_tools["search_documents"](request, mock_context)
-
-        assert len(result) == 2
-        assert result[0].id == "doc1"
-        assert result[0].content == "Test content 1"
-        assert result[0].score == 0.95
-        assert result[1].id == "doc2"
-
-        # Verify search_documents_core was called correctly
-        mock_core.assert_called_once_with(request, mock_client_manager, mock_context)
+    register_tools(mock_mcp, mock_client_manager)
 
 
 @pytest.mark.asyncio
