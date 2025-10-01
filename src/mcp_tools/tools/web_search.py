@@ -19,8 +19,10 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-def register_tools(mcp, client_manager: ClientManager):
+def register_tools(mcp, client_manager: ClientManager) -> None:
     """Register Tavily-powered web search tools."""
+
+    del client_manager  # Client manager not required for Tavily-backed tools.
 
     @mcp.tool()
     async def web_search(

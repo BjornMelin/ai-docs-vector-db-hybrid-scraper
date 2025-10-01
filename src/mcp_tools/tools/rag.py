@@ -11,34 +11,60 @@ from typing import Any
 from fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
-from src.config import get_config
-from src.services.rag import RAGGenerator, RAGRequest
+from src.config import Config, get_config
+from src.services.rag import (
+    RAGGenerator,
+    RAGRequest,
+    VectorServiceRetriever,
+    build_default_rag_config,
+)
+from src.services.vector_db.service import VectorStoreService
 
 
 logger = logging.getLogger(__name__)
+
+
+async def _create_rag_generator(
+    config: Config,
+) -> tuple[RAGGenerator, VectorStoreService]:
+    """Initialise a RAG generator with an attached vector store."""
+
+    vector_store = VectorStoreService(config=config)
+    await vector_store.initialize()
+
+    rag_config = build_default_rag_config(config)
+
+    retriever = VectorServiceRetriever(
+        vector_service=vector_store,
+        collection=getattr(config.qdrant, "collection_name", "documents"),
+        k=rag_config.retriever_top_k,
+    )
+
+    rag_generator = RAGGenerator(rag_config, retriever)
+    await rag_generator.initialize()
+    return rag_generator, vector_store
 
 
 class RAGAnswerRequest(BaseModel):
     """Request for RAG answer generation."""
 
     query: str = Field(..., min_length=1, description="User query to answer")
-    search_results: list[dict[str, Any]] = Field(
-        ..., description="Search results to use as context"
-    )
 
     # Optional configuration
+    top_k: int | None = Field(
+        None, gt=0, le=50, description="Override number of documents retrieved"
+    )
+    filters: dict[str, Any] | None = Field(
+        None, description="Optional metadata filters for retrieval"
+    )
     max_tokens: int | None = Field(
         None, gt=0, le=4000, description="Maximum response tokens"
     )
     temperature: float | None = Field(
         None, ge=0.0, le=2.0, description="Generation temperature"
     )
-    include_sources: bool = Field(True, description="Include source citations")
-    require_high_confidence: bool = Field(
-        False, description="Require high confidence answers"
-    )
-    max_context_results: int | None = Field(
-        None, gt=0, le=20, description="Max results for context"
+    include_sources: bool | None = Field(
+        None, description="Override default source citation behaviour"
     )
 
 
@@ -46,8 +72,8 @@ class RAGAnswerResponse(BaseModel):
     """Response from RAG answer generation."""
 
     answer: str = Field(..., description="Generated contextual answer")
-    confidence_score: float = Field(
-        ..., ge=0.0, le=1.0, description="Answer confidence"
+    confidence_score: float | None = Field(
+        None, ge=0.0, le=1.0, description="Answer confidence"
     )
     sources_used: int = Field(..., ge=0, description="Number of sources used")
     generation_time_ms: float = Field(..., ge=0.0, description="Generation time")
@@ -55,29 +81,21 @@ class RAGAnswerResponse(BaseModel):
     # Optional detailed information
     sources: list[dict[str, Any]] | None = Field(None, description="Source details")
     metrics: dict[str, Any] | None = Field(None, description="Answer quality metrics")
-    follow_up_questions: list[str] | None = Field(
-        None, description="Suggested follow-up questions"
-    )
 
 
 class RAGMetricsResponse(BaseModel):
     """RAG service metrics response."""
 
     generation_count: int = Field(..., ge=0, description="Total generations")
-    avg_generation_time: float = Field(
-        ..., ge=0.0, description="Average generation time (ms)"
+    avg_generation_time_ms: float | None = Field(
+        None, ge=0.0, description="Average generation time (ms)"
     )
-    total_cost: float = Field(..., ge=0.0, description="Total estimated cost (USD)")
-    cache_hit_rate: float = Field(..., ge=0.0, le=1.0, description="Cache hit rate")
-
-    # Performance metrics
-    avg_confidence: float | None = Field(None, description="Average confidence score")
-    avg_tokens_used: float | None = Field(
-        None, description="Average tokens per generation"
+    total_generation_time_ms: float = Field(
+        ..., ge=0.0, description="Aggregate generation time (ms)"
     )
 
 
-def register_tools(app: FastMCP) -> None:
+def register_tools(app: FastMCP) -> None:  # pylint: disable=too-many-statements
     """Register RAG tools with FastMCP app."""
 
     @app.tool()
@@ -102,17 +120,14 @@ def register_tools(app: FastMCP) -> None:
             msg = "RAG is not enabled in the configuration"
             raise RuntimeError(msg)
 
-        if not request.search_results:
-            msg = "Search results are required for RAG answer generation"
-            raise ValueError(msg)
-
+        rag_generator = vector_store = None
         try:
-            rag_generator = RAGGenerator(config.rag)
-            await rag_generator.initialize()
+            rag_generator, vector_store = await _create_rag_generator(config)
 
             rag_request = RAGRequest(
                 query=request.query,
-                search_results=request.search_results,
+                top_k=request.top_k,
+                filters=request.filters,
                 max_tokens=request.max_tokens,
                 temperature=request.temperature,
                 include_sources=request.include_sources,
@@ -121,14 +136,10 @@ def register_tools(app: FastMCP) -> None:
             result = await rag_generator.generate_answer(rag_request)
 
             sources = None
-            if request.include_sources and result.sources:
+            if result.sources:
                 sources = [source.model_dump() for source in result.sources]
 
-            metrics = None
-            if result.metrics:
-                metrics = result.metrics.model_dump()
-
-            await rag_generator.cleanup()
+            metrics = result.metrics.model_dump() if result.metrics else None
 
             return RAGAnswerResponse(
                 answer=result.answer,
@@ -139,10 +150,15 @@ def register_tools(app: FastMCP) -> None:
                 metrics=metrics,
             )
 
-        except Exception as e:
+        except Exception as e:  # pragma: no cover - runtime safety
             logger.exception("RAG answer generation failed")
             msg = "Failed to generate RAG answer"
             raise RuntimeError(msg) from e
+        finally:
+            if rag_generator and rag_generator.llm_client_available:
+                await rag_generator.cleanup()
+            if vector_store and vector_store.is_initialized():
+                await vector_store.cleanup()
 
     @app.tool()
     async def get_rag_metrics() -> RAGMetricsResponse:
@@ -164,26 +180,25 @@ def register_tools(app: FastMCP) -> None:
             msg = "RAG is not enabled in the configuration"
             raise RuntimeError(msg)
 
+        rag_generator = vector_store = None
         try:
-            # Initialize RAG generator to get metrics
-            rag_generator = RAGGenerator(config.rag)
-            await rag_generator.initialize()
-            metrics = rag_generator.get_metrics().model_dump()
-            await rag_generator.cleanup()
-
+            rag_generator, vector_store = await _create_rag_generator(config)
+            service_metrics = rag_generator.get_metrics()
             return RAGMetricsResponse(
-                generation_count=metrics["generation_count"],
-                avg_generation_time=metrics["avg_generation_time_ms"],
-                total_cost=0.0,
-                cache_hit_rate=0.0,
-                avg_confidence=None,
-                avg_tokens_used=0.0,
+                generation_count=service_metrics.generation_count,
+                avg_generation_time_ms=service_metrics.avg_generation_time_ms,
+                total_generation_time_ms=service_metrics.total_generation_time_ms,
             )
 
-        except Exception as e:
+        except Exception as e:  # pragma: no cover - runtime safety
             logger.exception("Failed to get RAG metrics")
             msg = "Failed to get RAG metrics"
             raise RuntimeError(msg) from e
+        finally:
+            if rag_generator and rag_generator.llm_client_available:
+                await rag_generator.cleanup()
+            if vector_store and vector_store.is_initialized():
+                await vector_store.cleanup()
 
     @app.tool()
     async def test_rag_configuration() -> dict[str, Any]:
@@ -215,14 +230,18 @@ def register_tools(app: FastMCP) -> None:
             results["error"] = "RAG is not enabled in configuration"
             return results
 
+        rag_generator = vector_store = None
         try:
-            rag_generator = RAGGenerator(config.rag)
-            await rag_generator.initialize()
+            rag_generator, vector_store = await _create_rag_generator(config)
             results["connectivity_test"] = True
-            await rag_generator.cleanup()
-        except Exception as e:
+        except Exception as e:  # pragma: no cover - runtime safety
             results["error"] = str(e)
             logger.exception("RAG configuration test failed")
+        finally:
+            if rag_generator and rag_generator.llm_client_available:
+                await rag_generator.cleanup()
+            if vector_store and vector_store.is_initialized():
+                await vector_store.cleanup()
 
         return results
 
