@@ -11,11 +11,11 @@ from src.mcp_tools.models.responses import CollectionInfo, CollectionOperationRe
 logger = logging.getLogger(__name__)
 
 
-def register_tools(mcp, client_manager: ClientManager):
+def register_tools(mcp, client_manager: ClientManager):  # pylint: disable=too-many-statements
     """Register collection management tools with the MCP server."""
 
     @mcp.tool()
-    async def list_collections(ctx: Context = None) -> list[CollectionInfo]:
+    async def list_collections(ctx: Context | None = None) -> list[CollectionInfo]:
         """List all vector database collections.
 
         Returns information about each collection including size and status.
@@ -52,7 +52,7 @@ def register_tools(mcp, client_manager: ClientManager):
                         )
                 except Exception as e:
                     logger.exception(
-                        f"Failed to get info for collection {collection_name}"
+                        "Failed to get info for collection %s", collection_name
                     )
                     if ctx:
                         await ctx.warning(
@@ -76,7 +76,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
     @mcp.tool()
     async def delete_collection(
-        collection_name: str, ctx: Context = None
+        collection_name: str, ctx: Context | None = None
     ) -> CollectionOperationResponse:
         """Delete a vector database collection.
 
@@ -109,12 +109,12 @@ def register_tools(mcp, client_manager: ClientManager):
         except Exception as e:
             if ctx:
                 await ctx.error(f"Failed to delete collection {collection_name}: {e}")
-            logger.exception(f"Failed to delete collection {collection_name}")
+            logger.exception("Failed to delete collection %s", collection_name)
             return CollectionOperationResponse(status="error", message=str(e))
 
     @mcp.tool()
     async def optimize_collection(
-        collection_name: str, ctx: Context = None
+        collection_name: str, ctx: Context | None = None
     ) -> CollectionOperationResponse:
         """Optimize a collection for better performance.
 
@@ -150,5 +150,5 @@ def register_tools(mcp, client_manager: ClientManager):
         except Exception as e:
             if ctx:
                 await ctx.error(f"Failed to optimize collection {collection_name}: {e}")
-            logger.exception(f"Failed to optimize collection {collection_name}")
+            logger.exception("Failed to optimize collection %s", collection_name)
             return CollectionOperationResponse(status="error", message=str(e))

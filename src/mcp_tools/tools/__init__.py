@@ -6,9 +6,10 @@ the FastMCP instance.
 """
 
 from . import (
+    agentic_rag,
     analytics,
     cache,
-    collections,
+    collection_management,  # renamed from collections to avoid stdlib conflict
     configuration,
     content_intelligence,
     cost_estimation,
@@ -17,10 +18,7 @@ from . import (
     documents,
     embeddings,
     filtering_tools,
-    hybrid_search,
-    hyde_search,
     lightweight_scrape,
-    multi_stage_search,
     payload_indexing,
     projects,
     query_processing,
@@ -28,7 +26,6 @@ from . import (
     rag,
     search,
     search_tools,
-    search_with_reranking,
     system_health,
     utilities,
     web_search,
@@ -36,9 +33,10 @@ from . import (
 
 
 __all__ = [
+    "agentic_rag",
     "analytics",
     "cache",
-    "collections",
+    "collection_management",
     "configuration",
     "content_intelligence",
     "cost_estimation",
@@ -47,10 +45,7 @@ __all__ = [
     "documents",
     "embeddings",
     "filtering_tools",
-    "hybrid_search",
-    "hyde_search",
     "lightweight_scrape",
-    "multi_stage_search",
     "payload_indexing",
     "projects",
     "query_processing",
@@ -58,7 +53,6 @@ __all__ = [
     "rag",
     "search",
     "search_tools",
-    "search_with_reranking",
     "system_health",
     "utilities",
     "web_search",

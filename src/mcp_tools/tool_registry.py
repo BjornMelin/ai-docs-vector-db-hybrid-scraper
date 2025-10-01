@@ -5,15 +5,13 @@ with the server, following FastMCP 2.0 best practices.
 """
 
 import logging
-from typing import TYPE_CHECKING
+
+from fastmcp import FastMCP
+
+from src.infrastructure.client_manager import ClientManager
 
 from . import tools
 
-
-if TYPE_CHECKING:
-    from fastmcp import FastMCP
-
-    from src.infrastructure.client_manager import ClientManager
 
 logger = logging.getLogger(__name__)
 
@@ -27,8 +25,8 @@ async def register_all_tools(mcp: "FastMCP", client_manager: "ClientManager") ->
     Args:
         mcp: The FastMCP server instance
         client_manager: The unified client manager for all services
-
     """
+
     # Track registration for logging
     registered_tools = []
 
@@ -48,8 +46,8 @@ async def register_all_tools(mcp: "FastMCP", client_manager: "ClientManager") ->
 
     # Collection and project management
     logger.info("Registering management tools...")
-    tools.collections.register_tools(mcp, client_manager)
-    registered_tools.append("collections")
+    tools.collection_management.register_tools(mcp, client_manager)
+    registered_tools.append("collection_management")
 
     tools.projects.register_tools(mcp, client_manager)
     registered_tools.append("projects")
@@ -100,5 +98,5 @@ async def register_all_tools(mcp: "FastMCP", client_manager: "ClientManager") ->
 
     tool_list = ", ".join(registered_tools)
     logger.info(
-        f"Successfully registered {len(registered_tools)} tool modules: {tool_list}"
+        "Successfully registered %d tool modules: %s", len(registered_tools), tool_list
     )
