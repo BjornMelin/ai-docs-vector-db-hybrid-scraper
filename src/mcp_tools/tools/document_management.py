@@ -6,8 +6,9 @@ legacy caching, batching, or bespoke orchestration code paths.
 
 from __future__ import annotations
 
+import asyncio
 import logging
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from fastmcp import Context
@@ -21,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_VECTOR_SIZE = 1536
 _DEFAULT_DISTANCE = "cosine"
+_VECTOR_SERVICE_INIT_LOCK = asyncio.Lock()
 
 
 async def _get_vector_service(client_manager: ClientManager) -> VectorStoreService:
@@ -28,14 +30,32 @@ async def _get_vector_service(client_manager: ClientManager) -> VectorStoreServi
 
     service = await client_manager.get_vector_store_service()
     if not service.is_initialized():
-        await service.initialize()
+        async with _VECTOR_SERVICE_INIT_LOCK:
+            if not service.is_initialized():
+                await service.initialize()
     return service
 
 
 def _timestamp() -> str:
     """Return an ISO-8601 timestamp in UTC."""
 
-    return datetime.now(tz=UTC).isoformat()
+    ts = datetime.now(tz=timezone.utc).isoformat()  # noqa: UP017 (Python 3.10 support)
+    return ts.replace("+00:00", "Z")
+
+
+def _normalize_stats(stats: Any) -> dict[str, Any]:
+    """Convert service stats payloads to plain dictionaries."""
+
+    if isinstance(stats, dict):
+        return stats
+    if hasattr(stats, "model_dump"):
+        return stats.model_dump()  # type: ignore[no-untyped-call]
+    if hasattr(stats, "dict"):
+        return stats.dict()  # type: ignore[no-untyped-call]
+    if hasattr(stats, "__dict__"):
+        return dict(vars(stats))
+    msg = f"Unsupported stats payload type: {type(stats)!r}"
+    raise TypeError(msg)
 
 
 def register_tools(mcp, client_manager: ClientManager) -> None:
@@ -110,7 +130,7 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
             return {
                 "collection": collection_name,
                 "action": action,
-                "stats": dict(stats),
+                "stats": _normalize_stats(stats),
                 "sample_documents": documents,
             }
 
@@ -203,7 +223,7 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
             workspace_entry["collections"].append(
                 {
                     "name": collection,
-                    "stats": dict(stats),
+                    "stats": _normalize_stats(stats),
                 }
             )
 

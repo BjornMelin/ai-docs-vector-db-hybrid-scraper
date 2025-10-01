@@ -28,7 +28,7 @@ def mock_vector_service() -> Mock:
 
 
 @pytest.fixture
-async def mock_client_manager(mock_vector_service: Mock) -> Mock:
+def mock_client_manager(mock_vector_service: Mock) -> Mock:
     storage = Mock()
     storage.save_project = AsyncMock()
     storage.list_projects = AsyncMock(return_value=[])
@@ -62,7 +62,7 @@ def register(mock_client_manager: Mock) -> dict[str, Callable]:
 
 
 @pytest.fixture
-async def mock_context() -> Mock:
+def mock_context() -> Mock:
     ctx = Mock()
     ctx.info = AsyncMock()
     ctx.debug = AsyncMock()
