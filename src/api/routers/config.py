@@ -36,7 +36,11 @@ async def require_config_access(request: Request) -> None:
             status_code=status.HTTP_401_UNAUTHORIZED, detail="API key required"
         )
 
-    # Future enhancement: validate against configured key store / reloader registry.
+    if security_config.api_keys and api_key not in security_config.api_keys:
+        logger.warning("Config API key rejected", extra={"header": header_name})
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key"
+        )
 
 
 router = APIRouter(

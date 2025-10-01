@@ -167,6 +167,10 @@ class SecurityConfig(BaseModel):
         default=False, description="Require API key for access"
     )
     api_key_header: str = Field(default="X-API-Key", description="API key header name")
+    api_keys: list[str] = Field(
+        default_factory=list,
+        description="List of valid API keys for authenticated endpoints",
+    )
 
     # CORS configuration
     allowed_origins: list[str] = Field(
