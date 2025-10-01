@@ -6,7 +6,6 @@ import asyncio
 import hashlib
 import logging
 import time
-from collections.abc import Mapping
 from typing import Any, cast
 
 import numpy as np
@@ -25,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 class HyDEQueryEngine(BaseService):
-    """HyDE-enhanced search engine with Query API prefetch and fusion."""
+    """HyDE search engine with vector store integration."""
 
     def __init__(
         self,
@@ -117,7 +116,7 @@ class HyDEQueryEngine(BaseService):
         use_cache: bool = True,
         force_hyde: bool = False,
     ) -> list[dict[str, Any]]:
-        """Perform HyDE-enhanced search with Query API prefetch.
+        """Perform HyDE search with vector store integration.
 
         Args:
             query: Search query
@@ -170,7 +169,7 @@ class HyDEQueryEngine(BaseService):
                     return cached_results
 
             # Generate or retrieve HyDE embedding
-            _hyde_embedding = await self._get_or_generate_hyde_embedding(
+            hyde_embedding = await self._get_or_generate_hyde_embedding(
                 query, domain, use_cache
             )
 
@@ -181,6 +180,7 @@ class HyDEQueryEngine(BaseService):
             results = await self._perform_hybrid_search(
                 query,
                 query_embedding,
+                hyde_embedding,
                 collection_name,
                 limit,
                 filters,
@@ -303,32 +303,23 @@ class HyDEQueryEngine(BaseService):
         self,
         query: str,
         query_embedding: list[float],
+        hyde_embedding: list[float],
         collection_name: str,
         limit: int,
         filters: dict[str, Any] | None,
         search_accuracy: str,
     ) -> list[dict[str, Any]]:
-        """Perform search using Query API with HyDE prefetch."""
+        """Perform search using HyDE embedding."""
         try:
-            # Use the existing hyde_search method in QdrantService
-            # but we need to call it differently since
-            # it expects hypothetical_embeddings as a list
-            matches = await self.vector_store.hybrid_search(
-                collection_name,
-                query,
-                sparse_vector=None,
+            # Use HyDE embedding for search
+            matches = await self.vector_store.search_vector(
+                collection=collection_name,
+                vector=hyde_embedding,
                 limit=limit,
                 filters=filters,
             )
             results: list[dict[str, Any]] = []
             for match in matches:
-                if isinstance(match, Mapping):
-                    payload = dict(match.get("payload", {}) or {})
-                    payload.setdefault("id", match.get("id"))
-                    payload.setdefault("score", match.get("score", 0.0))
-                    results.append(payload)
-                    continue
-
                 payload = dict(getattr(match, "payload", {}) or {})
                 payload.setdefault("id", getattr(match, "id", None))
                 payload.setdefault("score", getattr(match, "score", 0.0))
@@ -336,7 +327,7 @@ class HyDEQueryEngine(BaseService):
             return results
 
         except Exception as e:
-            logger.exception("Query API search failed")
+            logger.exception("HyDE search execution failed")
             msg = "HyDE search execution failed"
             raise QdrantServiceError(msg) from e
 
@@ -446,61 +437,6 @@ class HyDEQueryEngine(BaseService):
         threshold = self.metrics_config.control_group_percentage
 
         return (query_hash % 100) >= (threshold * 100)
-
-    async def batch_search(
-        self,
-        queries: list[str],
-        collection_name: str = "documents",
-        limit: int = 10,
-        filters: dict[str, Any] | None = None,
-        search_accuracy: str = "balanced",
-        domain: str | None = None,
-        max_concurrent: int = 5,
-    ) -> list[list[dict[str, Any]]]:
-        """Perform batch HyDE search with concurrency control.
-
-        Args:
-            queries: List of search queries
-            collection_name: Target collection
-            limit: Number of results per query
-            filters: Optional filters to apply
-            search_accuracy: Search accuracy level
-            domain: Optional domain hint
-            max_concurrent: Maximum concurrent searches
-
-        Returns:
-            List of search results for each query
-
-        """
-        self._validate_initialized()
-
-        semaphore = asyncio.Semaphore(max_concurrent)
-
-        async def search_single(query: str) -> list[dict[str, Any]]:
-            async with semaphore:
-                return await self.enhanced_search(
-                    query=query,
-                    collection_name=collection_name,
-                    limit=limit,
-                    filters=filters,
-                    search_accuracy=search_accuracy,
-                    domain=domain,
-                )
-
-        # Execute searches concurrently
-        tasks = [search_single(query) for query in queries]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
-        # Handle exceptions
-        processed_results = []
-        for _i, result in enumerate(results):
-            if isinstance(result, Exception):
-                logger.error("Batch search failed for query {i}")
-                processed_results.append([])
-            else:
-                processed_results.append(result)
-
-        return processed_results
 
     def get_performance_metrics(self) -> dict[str, Any]:
         """Get performance metrics."""

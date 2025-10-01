@@ -1,12 +1,6 @@
 """HyDE configuration models with Pydantic v2."""
 
-from typing import TYPE_CHECKING
-
 from pydantic import BaseModel, Field
-
-
-if TYPE_CHECKING:
-    from src.config import HyDEConfig as UnifiedHyDEConfig
 
 
 class HyDEConfig(BaseModel):
@@ -101,47 +95,6 @@ class HyDEConfig(BaseModel):
     track_metrics: bool = Field(
         default=True, description="Track HyDE performance metrics"
     )
-
-    @classmethod
-    def from_unified_config(
-        cls, unified_hyde_config: "UnifiedHyDEConfig"
-    ) -> "HyDEConfig":
-        """Create HyDEConfig from unified configuration.
-
-        Args:
-            unified_hyde_config: HyDE configuration from UnifiedConfig
-
-        Returns:
-            HyDEConfig instance with values from unified config
-
-        """
-        return cls(
-            enable_hyde=unified_hyde_config.enable_hyde,
-            enable_fallback=unified_hyde_config.enable_fallback,
-            enable_reranking=unified_hyde_config.enable_reranking,
-            enable_caching=unified_hyde_config.enable_caching,
-            num_generations=unified_hyde_config.num_generations,
-            generation_temperature=unified_hyde_config.generation_temperature,
-            max_generation_tokens=unified_hyde_config.max_generation_tokens,
-            generation_model=unified_hyde_config.generation_model,
-            generation_timeout_seconds=unified_hyde_config.generation_timeout_seconds,
-            hyde_prefetch_limit=unified_hyde_config.hyde_prefetch_limit,
-            query_prefetch_limit=unified_hyde_config.query_prefetch_limit,
-            hyde_weight_in_fusion=unified_hyde_config.hyde_weight_in_fusion,
-            fusion_algorithm=unified_hyde_config.fusion_algorithm,
-            cache_ttl_seconds=unified_hyde_config.cache_ttl_seconds,
-            cache_hypothetical_docs=unified_hyde_config.cache_hypothetical_docs,
-            cache_prefix=unified_hyde_config.cache_prefix,
-            parallel_generation=unified_hyde_config.parallel_generation,
-            max_concurrent_generations=unified_hyde_config.max_concurrent_generations,
-            use_domain_specific_prompts=unified_hyde_config.use_domain_specific_prompts,
-            prompt_variation=unified_hyde_config.prompt_variation,
-            min_generation_length=unified_hyde_config.min_generation_length,
-            filter_duplicates=unified_hyde_config.filter_duplicates,
-            diversity_threshold=unified_hyde_config.diversity_threshold,
-            log_generations=unified_hyde_config.log_generations,
-            track_metrics=unified_hyde_config.track_metrics,
-        )
 
     model_config = {
         "json_schema_extra": {
