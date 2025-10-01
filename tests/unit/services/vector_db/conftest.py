@@ -9,6 +9,7 @@ from unittest.mock import AsyncMock
 import pytest
 from qdrant_client import AsyncQdrantClient
 
+from src.config.models import QdrantConfig
 from src.infrastructure.client_manager import ClientManager
 from src.services.embeddings.base import EmbeddingProvider
 from src.services.vector_db.adapter_base import CollectionSchema, TextDocument
@@ -130,6 +131,7 @@ def config_stub() -> Any:
 
     class _Config:
         fastembed = _FastEmbedConfig()
+        qdrant = QdrantConfig(enable_grouping=False)
 
     return _Config()
 
@@ -147,6 +149,8 @@ async def initialized_vector_store_service(
         client_manager=client_manager_stub,
         embeddings_provider=embeddings_provider_stub,
     )
+    if service.config and hasattr(service.config, "qdrant"):
+        service.config.qdrant.enable_grouping = False
     try:
         yield service
     finally:

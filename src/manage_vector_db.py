@@ -134,9 +134,6 @@ class VectorDBManager:
                 distance="cosine",
             )
             await vector_service.ensure_collection(schema)
-            console.print(
-                f"✅ Successfully created collection: {collection_name}", style="green"
-            )
             return True  # noqa: TRY300
         except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             console.print(
@@ -150,9 +147,6 @@ class VectorDBManager:
             await self.initialize()
             vector_service = await self.get_vector_store_service()
             await vector_service.drop_collection(collection_name)
-            console.print(
-                f"✅ Successfully deleted collection: {collection_name}", style="green"
-            )
             return True  # noqa: TRY300
         except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             console.print(
@@ -291,8 +285,7 @@ class VectorDBManager:
                 f"❌ Error clearing collection {collection_name}: {e}", style="red"
             )
             return False
-        else:
-            return True
+        return True
 
     async def get_stats(self) -> DatabaseStats | None:
         """Alias for get_database_stats for backward compatibility."""
@@ -355,7 +348,14 @@ async def create(ctx, collection_name, vector_size):
     """Create a new collection."""
     manager = _create_manager_from_context(ctx)
     try:
-        await manager.create_collection(collection_name, vector_size)
+        success = await manager.create_collection(
+            collection_name, vector_size=vector_size
+        )
+        if success:
+            console.print(
+                f"✅ Successfully created collection: {collection_name}",
+                style="green",
+            )
     finally:
         await manager.cleanup()
 
@@ -368,7 +368,12 @@ async def delete(ctx, collection_name):
     """Delete a collection."""
     manager = _create_manager_from_context(ctx)
     try:
-        await manager.delete_collection(collection_name)
+        success = await manager.delete_collection(collection_name)
+        if success:
+            console.print(
+                f"✅ Successfully deleted collection: {collection_name}",
+                style="green",
+            )
     finally:
         await manager.cleanup()
 
@@ -448,7 +453,11 @@ async def search(ctx, collection_name, query, limit):
     """Search for similar documents."""
     manager = _create_manager_from_context(ctx)
     try:
-        results = await manager.search_documents(collection_name, query, limit)
+        results = await manager.search_documents(
+            collection_name,
+            query,
+            limit=limit,
+        )
 
         if results:
             console.print(f"🔍 Search Results for: '{query}'", style="bold yellow")
