@@ -6,9 +6,12 @@ application mode, enabling different implementations for simple vs enterprise mo
 
 # pylint: disable=unnecessary-ellipsis
 
+import inspect
 import logging
 from abc import ABC, abstractmethod
 from typing import Any, Protocol, TypeVar
+
+from fastapi import Request
 
 from src.services.lifecycle import LifecycleTracker, ServiceLifecycle
 
@@ -125,7 +128,11 @@ class ModeAwareServiceFactory:
         # Create and initialize service instance
         try:
             service = service_class()
-            await service.initialize()
+            initialize = getattr(service, "initialize", None)
+            if callable(initialize):
+                result = initialize()
+                if inspect.isawaitable(result):
+                    await result
         except Exception as e:
             self._initialization_status[name] = False
             msg = f"Failed to initialize service '{name}': {e}"
@@ -358,6 +365,25 @@ def get_service_factory() -> ModeAwareServiceFactory:
 def reset_service_factory() -> None:
     """Reset the global service factory instance."""
     _ServiceFactorySingleton.reset_instance()
+
+
+def set_service_factory(factory: ModeAwareServiceFactory) -> None:
+    """Bind the provided factory as the global singleton reference."""
+
+    _ServiceFactorySingleton._instance = factory
+
+
+def get_request_service_factory(request: Request) -> ModeAwareServiceFactory:
+    """Return the service factory bound to the current FastAPI app."""
+
+    factory = getattr(request.app.state, "service_factory", None)
+    if factory is None:
+        raise RuntimeError("Service factory is not attached to application state")
+    if not isinstance(factory, ModeAwareServiceFactory):
+        raise TypeError(
+            "Application state service_factory is not a ModeAwareServiceFactory"
+        )
+    return factory
 
 
 async def get_service(name: str) -> ServiceProtocol:

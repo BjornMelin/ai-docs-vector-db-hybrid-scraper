@@ -5,12 +5,15 @@ Simplified search endpoints optimized for solo developers.
 
 import logging
 from time import perf_counter
-from typing import Any, cast
+from typing import Annotated, Any, cast
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from src.architecture.service_factory import get_service
+from src.architecture.service_factory import (
+    ModeAwareServiceFactory,
+    get_request_service_factory,
+)
 from src.services.vector_db import VectorMatch, VectorStoreService
 
 
@@ -40,15 +43,23 @@ class SimpleSearchResponse(BaseModel):
     )
 
 
+FactoryDependency = Annotated[
+    ModeAwareServiceFactory, Depends(get_request_service_factory)
+]
+
+
 @router.post("/search", response_model=SimpleSearchResponse)
-async def search_documents(request: SimpleSearchRequest) -> SimpleSearchResponse:
+async def search_documents(
+    request: SimpleSearchRequest,
+    factory: FactoryDependency,
+) -> SimpleSearchResponse:
     """Search documents using simple vector search.
 
     This endpoint provides basic vector search functionality without advanced features
     like reranking, query expansion, or hybrid search.
     """
     try:
-        return await _perform_search(request)
+        return await _perform_search(request, factory)
     except Exception as e:
         logger.exception("Search failed")
         # Return generic error message to prevent information disclosure
@@ -58,9 +69,11 @@ async def search_documents(request: SimpleSearchRequest) -> SimpleSearchResponse
         ) from e
 
 
-async def _perform_search(request: SimpleSearchRequest) -> SimpleSearchResponse:
+async def _perform_search(
+    request: SimpleSearchRequest, factory: ModeAwareServiceFactory
+) -> SimpleSearchResponse:
     """Perform search with service lookup and response conversion."""
-    vector_service = await _get_vector_store_service()
+    vector_service = await _get_vector_store_service(factory)
     started = perf_counter()
     matches = await vector_service.search_documents(
         request.collection_name,
@@ -79,6 +92,7 @@ async def _perform_search(request: SimpleSearchRequest) -> SimpleSearchResponse:
 
 @router.get("/search")
 async def search_documents_get(
+    factory: FactoryDependency,
     q: str = Query(..., min_length=1, max_length=500, description="Search query"),
     limit: int = Query(default=10, ge=1, le=25, description="Maximum results"),
     collection: str = Query(default="documents", description="Collection to search"),
@@ -89,14 +103,16 @@ async def search_documents_get(
         limit=limit,
         collection_name=collection,
     )
-    return await search_documents(request)
+    return await search_documents(request, factory)
 
 
 @router.get("/search/health")
-async def search_health() -> dict[str, Any]:
+async def search_health(
+    factory: FactoryDependency,
+) -> dict[str, Any]:
     """Get search service health status."""
     try:
-        stats = await _get_search_stats()
+        stats = await _get_search_stats(factory)
     except Exception as e:
         logger.exception("Search health check failed")
         return {
@@ -111,27 +127,29 @@ async def search_health() -> dict[str, Any]:
     }
 
 
-async def _get_search_stats() -> dict[str, Any]:
+async def _get_search_stats(factory: ModeAwareServiceFactory) -> dict[str, Any]:
     """Get search service statistics."""
-    vector_service = await _get_vector_store_service()
+    vector_service = await _get_vector_store_service(factory)
     collections = await vector_service.list_collections()
     stats: dict[str, Any] = {"collections": collections}
     default_collection = "documents"
     if default_collection in collections:
         try:
             stats["default_collection"] = default_collection
-            stats["default_collection_stats"] = (
-                await vector_service.collection_stats(default_collection)
+            stats["default_collection_stats"] = await vector_service.collection_stats(
+                default_collection
             )
         except Exception as exc:  # pragma: no cover - defensive logging branch
             stats["default_collection_error"] = str(exc)
     return stats
 
 
-async def _get_vector_store_service() -> VectorStoreService:
+async def _get_vector_store_service(
+    factory: ModeAwareServiceFactory,
+) -> VectorStoreService:
     """Resolve the initialized vector store service from the factory."""
 
-    service = await get_service("vector_db_service")
+    service = await factory.get_service("vector_db_service")
     if not isinstance(service, VectorStoreService):  # pragma: no cover - safety net
         msg = "Vector DB service is not a VectorStoreService instance"
         raise TypeError(msg)

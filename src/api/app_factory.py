@@ -5,13 +5,17 @@ implementing the dual-mode architecture for complexity management.
 """
 
 import logging
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.architecture.modes import ApplicationMode, get_current_mode, get_mode_config
-from src.architecture.service_factory import ModeAwareServiceFactory
+from src.architecture.service_factory import (
+    ModeAwareServiceFactory,
+    set_service_factory,
+)
 from src.services.fastapi.middleware.manager import get_middleware_manager
 
 
@@ -95,6 +99,7 @@ def create_app(mode: ApplicationMode | None = None) -> FastAPI:
     app.state.mode = mode
     app.state.mode_config = mode_config
     app.state.service_factory = ModeAwareServiceFactory(mode)
+    set_service_factory(app.state.service_factory)
 
     # Configure CORS based on mode
     _configure_cors(app, mode)
@@ -155,7 +160,7 @@ def _configure_cors(app: FastAPI, mode: ApplicationMode) -> None:
             allow_origins=["http://localhost:3000", "http://localhost:8000"],
             allow_credentials=True,
             allow_methods=["GET", "POST", "PUT", "DELETE"],
-            allow_headers=["Authorization", "Content-Type"],
+            allow_headers=["Authorization", "Content-Type", "X-API-Key"],
         )
 
 
@@ -175,6 +180,19 @@ def _configure_routes(app: FastAPI, mode: ApplicationMode) -> None:
     if mode == ApplicationMode.SIMPLE:
         _configure_simple_routes(app)
     elif mode == ApplicationMode.ENTERPRISE:
+        enterprise_routes = [
+            enterprise_search,
+            enterprise_documents,
+            enterprise_analytics,
+            enterprise_deployment,
+        ]
+        if not all(enterprise_routes):
+            logger.error(
+                "Enterprise mode selected but enterprise routers are unavailable"
+            )
+            raise RuntimeError(
+                "Enterprise mode requires enterprise routers to be installed"
+            )
         _configure_enterprise_routes(app)
 
     # Add common routes
@@ -250,7 +268,7 @@ def _configure_common_routes(app: FastAPI) -> None:
             "status": "healthy",
             "mode": mode.value,
             "available_services": available_services,
-            "timestamp": "2025-06-28T00:00:00Z",
+            "timestamp": datetime.now(UTC).isoformat(),
         }
 
     @app.get("/info")

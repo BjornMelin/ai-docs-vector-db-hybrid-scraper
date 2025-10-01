@@ -4,10 +4,15 @@ import logging
 from pathlib import Path
 from typing import Any, cast
 
-from fastapi import APIRouter, Body, HTTPException, Query, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 
-from src.config import ReloadOperation, ReloadTrigger, get_config_reloader
+from src.config import (
+    ReloadOperation,
+    ReloadTrigger,
+    get_config,
+    get_config_reloader,
+)
 from src.services.observability.tracing import (
     ConfigOperationType,
     instrument_config_operation,
@@ -16,7 +21,29 @@ from src.services.observability.tracing import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/config", tags=["Configuration Management"])
+
+async def require_config_access(request: Request) -> None:
+    """Ensure configuration endpoints are accessed with the required credentials."""
+
+    security_config = get_config().security
+    if not security_config.api_key_required:
+        return
+
+    header_name = security_config.api_key_header
+    api_key = request.headers.get(header_name)
+    if not api_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="API key required"
+        )
+
+    # Future enhancement: validate against configured key store / reloader registry.
+
+
+router = APIRouter(
+    prefix="/config",
+    tags=["Configuration Management"],
+    dependencies=[Depends(require_config_access)],
+)
 
 
 class ReloadRequest(BaseModel):

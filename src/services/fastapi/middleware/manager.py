@@ -8,7 +8,6 @@ import logging
 
 from starlette.applications import Starlette
 from starlette.middleware import Middleware
-from starlette.middleware.cors import CORSMiddleware
 
 from src.config import get_config
 
@@ -34,36 +33,24 @@ class MiddlewareManager:
         """Get essential middleware stack in correct order.
 
         Simplified order:
-        1. CORS (for API access)
-        2. Security (basic protection)
-        3. Timeout (request timeout)
-        4. Performance (basic monitoring)
+        1. Security (basic protection)
+        2. Timeout (request timeout)
+        3. Performance (basic monitoring)
         """
         middleware_stack = []
 
-        # 1. CORS - Essential for API access
-        middleware_stack.append(
-            Middleware(
-                CORSMiddleware,
-                allow_origins=["*"],  # Configure based on needs
-                allow_credentials=True,
-                allow_methods=["*"],
-                allow_headers=["*"],
-            )
-        )
-
-        # 2. Security - Basic protection
+        # 1. Security - Basic protection
         if self.config.security.enable_rate_limiting:
             middleware_stack.append(
                 Middleware(SecurityMiddleware, config=self.config.security)
             )
 
-        # 3. Timeout - Request timeout
+        # 2. Timeout - Request timeout
         middleware_stack.append(
             Middleware(TimeoutMiddleware, config=self.config.performance)
         )
 
-        # 4. Performance - Basic monitoring
+        # 3. Performance - Basic monitoring
         middleware_stack.append(
             Middleware(PerformanceMiddleware, config=self.config.performance)
         )
@@ -73,13 +60,6 @@ class MiddlewareManager:
     def apply_middleware(self, app: Starlette, middleware_names: list[str]) -> None:
         """Apply specified middleware to FastAPI app."""
         available_middleware = {
-            "cors": Middleware(
-                CORSMiddleware,
-                allow_origins=["*"],  # Configure based on needs
-                allow_credentials=True,
-                allow_methods=["*"],
-                allow_headers=["*"],
-            ),
             "security": Middleware(SecurityMiddleware, config=self.config.security),
             "timeout": Middleware(TimeoutMiddleware, config=self.config.performance),
             "performance": Middleware(
