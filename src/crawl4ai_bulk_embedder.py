@@ -2,7 +2,8 @@
 """Crawl4AI Bulk Embedder - High-performance bulk web scraping and embedding pipeline.
 
 This tool provides a CLI for bulk scraping URLs using Crawl4AI and generating embeddings
-for storage in Qdrant vector database. It supports concurrent processing, resumability,
+for storage in the unified vector store service.
+It supports concurrent processing, resumability,
 and various input formats.
 """
 
@@ -13,7 +14,7 @@ import logging
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from urllib.parse import urlparse
 
 import aiofiles
@@ -30,6 +31,8 @@ from .config import Config, get_config
 from .infrastructure.client_manager import ClientManager
 from .services.embeddings.manager import QualityTier
 from .services.logging_config import configure_logging
+from .services.vector_db.adapter_base import CollectionSchema, VectorRecord
+from .services.vector_db.service import VectorStoreService
 
 
 class ScrapingError(Exception):
@@ -93,7 +96,7 @@ class BulkEmbedder:
         Args:
             config: Unified configuration
             client_manager: Client manager for services
-            collection_name: Name of Qdrant collection
+            collection_name: Target vector collection name
             state_file: Optional state file for resumability
 
         """
@@ -104,9 +107,9 @@ class BulkEmbedder:
         self.state = self._load_state()
 
         # Services (initialized in async context)
-        self.crawl_manager = None
-        self.embedding_manager = None
-        self.qdrant_service = None
+        self.crawl_manager: Any | None = None
+        self.embedding_manager: Any | None = None
+        self.vector_service: VectorStoreService | None = None
 
     def _load_state(self) -> ProcessingState:
         """Load processing state from file if exists."""
@@ -145,23 +148,34 @@ class BulkEmbedder:
         """Initialize all required services."""
         # Get services from client manager
         self.crawl_manager = await self.client_manager.get_crawl_manager()
+        if self.crawl_manager is None:
+            raise RuntimeError("Crawl manager not available")
+
         self.embedding_manager = await self.client_manager.get_embedding_manager()
-        self.qdrant_service = await self.client_manager.get_qdrant_service()
+        if self.embedding_manager is None:
+            raise RuntimeError("Embedding manager not available")
+
+        self.vector_service = await self.client_manager.get_vector_store_service()
+        if self.vector_service and not self.vector_service.is_initialized():
+            await self.vector_service.initialize()
+
+        if self.vector_service is None:
+            raise RuntimeError("Vector store service unavailable")
 
         # Create collection if it doesn't exist
-        collections = await self.qdrant_service.list_collections()
+        collections = await self.vector_service.list_collections()
         if self.collection_name not in collections:
-            await self.qdrant_service.create_collection(
-                collection_name=self.collection_name,
-                vector_size=self.config.openai.dimensions or 1536,
-                distance="Cosine",
-                sparse_vector_name="sparse"
-                if self.config.fastembed.generate_sparse
-                else None,
-                enable_quantization=True,
-                collection_type="general",
+            generate_sparse_flag = bool(
+                getattr(self.config.fastembed, "generate_sparse", False)
             )
-            logger.info("Created collection")
+            schema = CollectionSchema(
+                name=self.collection_name,
+                vector_size=self.vector_service.embedding_dimension,
+                distance="cosine",
+                requires_sparse=generate_sparse_flag,
+            )
+            await self.vector_service.ensure_collection(schema)
+            logger.info("Created vector collection '%s'", self.collection_name)
 
     async def load_urls_from_file(self, file_path: Path) -> list[str]:
         """Load URLs from various file formats."""
@@ -292,14 +306,19 @@ class BulkEmbedder:
         self, url: str
     ) -> tuple[dict[str, Any], str, dict[str, Any]]:
         """Scrape URL and extract content for processing."""
+        scrape_result: dict[str, Any]
         try:
-            scrape_result = await self.crawl_manager.scrape_url(url=url)
-        except (httpx.HTTPError, ValueError, ConnectionError, TimeoutError) as e:
-            error_msg = f"Scraping failed: {e}"
-            _raise_scraping_error(error_msg)
+            if self.crawl_manager is None:
+                raise RuntimeError("Crawl manager not initialized")
+            crawl_manager = cast(Any, self.crawl_manager)
+            scrape_result = await crawl_manager.scrape_url(url=url)
+        except (httpx.HTTPError, ValueError, ConnectionError, TimeoutError) as exc:
+            msg = f"Scraping failed: {exc}"
+            raise ScrapingError(msg) from exc
 
         if not scrape_result.get("success"):
-            _raise_scraping_error(scrape_result.get("error", "Scraping failed"))
+            msg = scrape_result.get("error", "Scraping failed")
+            raise ScrapingError(msg)
 
         content = scrape_result.get("content", {})
         markdown_content = content.get("markdown", "")
@@ -342,11 +361,17 @@ class BulkEmbedder:
             raise RuntimeError(error_msg) from e
 
         try:
-            embedding_result = await self.embedding_manager.generate_embeddings(
+            if self.embedding_manager is None:
+                raise RuntimeError("Embedding manager not initialized")
+            embedding_manager = cast(Any, self.embedding_manager)
+            generate_sparse_flag = bool(
+                getattr(self.config.fastembed, "generate_sparse", False)
+            )
+            embedding_result = await embedding_manager.generate_embeddings(
                 texts=texts,
                 quality_tier=QualityTier.BALANCED,
                 auto_select=True,
-                generate_sparse=self.config.fastembed.generate_sparse,
+                generate_sparse=generate_sparse_flag,
             )
         except (ValueError, ConnectionError, RuntimeError) as e:
             error_msg = f"Embedding generation failed: {e}"
@@ -366,9 +391,9 @@ class BulkEmbedder:
         sparse_embeddings: list[Any],
         scrape_result: dict[str, Any],
     ) -> None:
-        """Prepare and store points in Qdrant."""
+        """Prepare and store vector records in the unified vector service."""
         try:
-            points = self._prepare_points(
+            records = self._prepare_records(
                 url=url,
                 chunks=chunks,
                 dense_embeddings=dense_embeddings,
@@ -379,17 +404,20 @@ class BulkEmbedder:
             error_msg = f"Point preparation failed: {e}"
             raise RuntimeError(error_msg) from e
 
+        if not self.vector_service:
+            raise RuntimeError("Vector store service not initialized")
+
         try:
-            await self.qdrant_service.upsert_points(
-                collection_name=self.collection_name,
-                points=points,
+            await self.vector_service.upsert_vectors(
+                self.collection_name,
+                records,
                 batch_size=100,
             )
         except (ConnectionError, ValueError, RuntimeError) as e:
             error_msg = f"Point storage failed: {e}"
             raise RuntimeError(error_msg) from e
 
-    def _prepare_points(
+    def _prepare_records(
         self,
         *,
         url: str,
@@ -397,10 +425,10 @@ class BulkEmbedder:
         dense_embeddings: list[Any],
         sparse_embeddings: list[Any],
         scrape_result: dict[str, Any],
-    ) -> list[dict[str, Any]]:
-        """Prepare points for Qdrant storage."""
+    ) -> list[VectorRecord]:
+        """Prepare records for vector store ingestion."""
         metadata = scrape_result.get("metadata", {})
-        points = []
+        records: list[VectorRecord] = []
         for i, (chunk, embedding) in enumerate(
             zip(chunks, dense_embeddings, strict=False)
         ):
@@ -421,19 +449,20 @@ class BulkEmbedder:
                 "provider": scrape_result.get("provider", "unknown"),
             }
 
-            point = {
-                "id": point_id,
-                "vector": embedding,
-                "payload": payload,
-            }
-
-            # Add sparse vector if available
+            sparse_vector = None
             if sparse_embeddings and i < len(sparse_embeddings):
-                point["sparse_vector"] = sparse_embeddings[i]
+                sparse_vector = sparse_embeddings[i]
 
-            points.append(point)
+            records.append(
+                VectorRecord(
+                    id=point_id,
+                    vector=list(embedding),
+                    payload=payload,
+                    sparse_vector=sparse_vector,
+                )
+            )
 
-        return points
+        return records
 
     async def process_urls_batch(
         self,
@@ -444,11 +473,17 @@ class BulkEmbedder:
         """Process URLs in batches with concurrency control."""
         semaphore = asyncio.Semaphore(max_concurrent)
 
+        task_id: int | None = None
+        if progress:
+            task_id = progress.add_task(
+                "[green]Processing URLs...",
+                total=len(urls),
+            )
+
         async def process_with_semaphore(url: str) -> dict[str, Any]:
             async with semaphore:
                 result = await self.process_url(url)
 
-                # Update state
                 if result["success"]:
                     self.state.completed_urls.append(url)
                     self.state.total_chunks_processed += result["chunks"]
@@ -456,13 +491,9 @@ class BulkEmbedder:
                 else:
                     self.state.failed_urls[url] = result["error"]
 
-                # Update progress
-                if progress and (
-                    task_id := getattr(process_with_semaphore, "task_id", None)
-                ):
+                if progress and task_id is not None:
                     progress.update(task_id, advance=1)
 
-                # Save state periodically
                 if len(self.state.completed_urls) % 10 == 0:
                     self._save_state()
 
@@ -470,12 +501,6 @@ class BulkEmbedder:
 
         # Create tasks
         tasks = []
-        if progress:
-            task_id = progress.add_task(
-                "[green]Processing URLs...",
-                total=len(urls),
-            )
-            process_with_semaphore.task_id = task_id
 
         for url in urls:
             task = asyncio.create_task(process_with_semaphore(url))

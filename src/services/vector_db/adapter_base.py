@@ -32,6 +32,7 @@ class VectorRecord:
     id: str
     vector: Sequence[float]
     payload: Mapping[str, Any] | None = None
+    sparse_vector: Mapping[str, Any] | None = None
 
 
 @dataclass(slots=True)
