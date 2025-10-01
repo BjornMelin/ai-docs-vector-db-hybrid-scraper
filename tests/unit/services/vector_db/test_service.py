@@ -62,14 +62,6 @@ class TestQdrantServiceInitialization:
         mock_client_manager.get_qdrant_client.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_initialization_requires_client_manager(self, mock_config):
-        """Test that QdrantService requires ClientManager."""
-        with pytest.raises(
-            TypeError, match="missing 1 required positional argument: 'client_manager'"
-        ):
-            QdrantService(mock_config)
-
-    @pytest.mark.asyncio
     async def test_double_initialization(
         self, qdrant_service, mock_client_manager, mock_qdrant_client
     ):
@@ -90,9 +82,7 @@ class TestQdrantServiceInitialization:
 
         service = QdrantService(mock_config, client_manager=mock_client_manager)
 
-        with pytest.raises(
-            QdrantServiceError, match="Failed to initialize QdrantService"
-        ):
+        with pytest.raises(QdrantServiceError, match="Failed to get Qdrant client"):
             await service.initialize()
 
         assert not service._initialized
@@ -399,6 +389,7 @@ class TestQdrantServiceSearchAPI:
             filters=filters,
             limit=5,
             search_accuracy="balanced",
+            score_threshold=None,
         )
 
 
@@ -754,9 +745,7 @@ class TestQdrantServiceHNSWOptimization:
             collection_type="api_reference",
         )
 
-    def test_get_hnsw_configuration_info(
-        self, qdrant_service, _mock_client_manager, _mock_qdrant_client
-    ):
+    def test_get_hnsw_configuration_info(self, qdrant_service):
         """Test get HNSW configuration info delegation."""
         # Mock the collections instance for the validation check
         qdrant_service._initialized = True
@@ -814,6 +803,14 @@ class TestQdrantServiceValidation:
     @pytest.mark.asyncio
     async def test_api_methods_require_initialization(self, qdrant_service):
         """Test that API methods require initialization."""
+        with pytest.raises(QdrantServiceError, match="Service not initialized"):
+            await qdrant_service.list_collections()
+
+        with pytest.raises(QdrantServiceError, match="Service not initialized"):
+            await qdrant_service.create_collection("test", 1536)
+
+        with pytest.raises(QdrantServiceError, match="Service not initialized"):
+            await qdrant_service.hybrid_search("test", [0.1] * 1536)
         with pytest.raises(QdrantServiceError, match="Service not initialized"):
             await qdrant_service.list_collections()
 

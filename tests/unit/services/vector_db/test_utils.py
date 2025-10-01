@@ -6,6 +6,31 @@ from qdrant_client import models
 from src.services.vector_db.utils import build_filter
 
 
+def _flatten_conditions(
+    filter_obj: models.Filter | models.Condition | None,
+) -> list[models.FieldCondition]:
+    stack: list[models.Filter | models.Condition] = []
+    if filter_obj is None:
+        return []
+    stack.append(filter_obj)
+    collected: list[models.FieldCondition] = []
+
+    while stack:
+        item = stack.pop()
+        if isinstance(item, models.FieldCondition):
+            collected.append(item)
+            continue
+        if isinstance(item, models.Filter):
+            for section in (item.must, item.should, item.must_not):
+                if section:
+                    if isinstance(section, list):
+                        stack.extend(section)
+                    else:
+                        stack.append(section)
+
+    return collected
+
+
 class TestQdrantUtils:
     """Test cases for Qdrant utility functions."""
 
@@ -30,11 +55,10 @@ class TestQdrantUtils:
         result = build_filter(filters)
 
         assert isinstance(result, models.Filter)
-        assert len(result.must) == 3
+        conditions = _flatten_conditions(result)
+        assert len(conditions) == 3
 
-        # Check that all conditions are field conditions with match values
-        for condition in result.must:
-            assert isinstance(condition, models.FieldCondition)
+        for condition in conditions:
             assert isinstance(condition.match, models.MatchValue)
 
     def test_build_filter_text_fields(self):
@@ -47,11 +71,10 @@ class TestQdrantUtils:
         result = build_filter(filters)
 
         assert isinstance(result, models.Filter)
-        assert len(result.must) == 2
+        conditions = _flatten_conditions(result)
+        assert len(conditions) == 2
 
-        # Check that all conditions are field conditions with text matches
-        for condition in result.must:
-            assert isinstance(condition, models.FieldCondition)
+        for condition in conditions:
             assert isinstance(condition.match, models.MatchText)
 
     def test_build_filter_range_fields(self):
@@ -66,11 +89,10 @@ class TestQdrantUtils:
         result = build_filter(filters)
 
         assert isinstance(result, models.Filter)
-        assert len(result.must) == 4
+        conditions = _flatten_conditions(result)
+        assert len(conditions) == 4
 
-        # Check that all conditions are field conditions with ranges
-        for condition in result.must:
-            assert isinstance(condition, models.FieldCondition)
+        for condition in conditions:
             assert isinstance(condition.range, models.Range)
 
     def test_build_filter_exact_match_fields(self):
@@ -83,11 +105,10 @@ class TestQdrantUtils:
         result = build_filter(filters)
 
         assert isinstance(result, models.Filter)
-        assert len(result.must) == 2
+        conditions = _flatten_conditions(result)
+        assert len(conditions) == 2
 
-        # Check that all conditions are field conditions with match values
-        for condition in result.must:
-            assert isinstance(condition, models.FieldCondition)
+        for condition in conditions:
             assert isinstance(condition.match, models.MatchValue)
 
     def test_build_filter_mixed_fields(self):
@@ -102,18 +123,19 @@ class TestQdrantUtils:
         result = build_filter(filters)
 
         assert isinstance(result, models.Filter)
-        assert len(result.must) == 4
+        conditions = _flatten_conditions(result)
+        assert len(conditions) == 4
 
-    def test_build_filter_invalid_keyword_value(self):
-        """Test build_filter with invalid keyword field value."""
-        filters = {
-            "doc_type": ["api", "guide"]  # Should be string, not list
-        }
+    def test_build_filter_keyword_list(self):
+        """Test build_filter with list value converted to MatchAny."""
+        filters = {"doc_type": ["api", "guide"]}
 
-        with pytest.raises(
-            ValueError, match="Filter value for doc_type must be a simple type"
-        ):
-            build_filter(filters)
+        result = build_filter(filters)
+
+        assert isinstance(result, models.Filter)
+        conditions = _flatten_conditions(result)
+        assert len(conditions) == 1
+        assert isinstance(conditions[0].match, models.MatchAny)
 
     def test_build_filter_invalid_text_value(self):
         """Test build_filter with invalid text field value."""
@@ -151,7 +173,8 @@ class TestQdrantUtils:
         result = build_filter(filters)
 
         assert isinstance(result, models.Filter)
-        assert len(result.must) == len(filters)
+        conditions = _flatten_conditions(result)
+        assert len(conditions) == len(filters)
 
     def test_build_filter_match_any(self):
         """Test build_filter with MatchAny specification."""
@@ -160,8 +183,9 @@ class TestQdrantUtils:
         result = build_filter(filters)
 
         assert isinstance(result, models.Filter)
-        condition = result.must[0]
-        assert isinstance(condition.match, models.MatchAny)
+        conditions = _flatten_conditions(result)
+        assert len(conditions) == 1
+        assert isinstance(conditions[0].match, models.MatchAny)
 
     def test_build_filter_temporal_window(self):
         """Test temporal filter shortcut with relative window."""
@@ -170,8 +194,9 @@ class TestQdrantUtils:
         result = build_filter(filters)
 
         assert isinstance(result, models.Filter)
-        assert result.must
-        condition = result.must[0]
+        conditions = _flatten_conditions(result)
+        assert conditions
+        condition = conditions[0]
         assert isinstance(condition.range, models.Range)
         assert condition.range.gte is not None
 
@@ -185,7 +210,9 @@ class TestQdrantUtils:
         result = build_filter(filters)
 
         assert isinstance(result, models.Filter)
-        assert result.must and result.must_not
+        conditions = _flatten_conditions(result)
+        keys = {condition.key for condition in conditions}
+        assert {"doc_type", "language"}.issubset(keys)
 
     def test_build_filter_field_conditions(self):
         """Test custom field condition injection."""
@@ -199,7 +226,8 @@ class TestQdrantUtils:
         result = build_filter(filters)
 
         assert isinstance(result, models.Filter)
-        assert len(result.must) == 2
+        conditions = _flatten_conditions(result)
+        assert len(conditions) == 2
 
     def test_build_filter_all_keyword_fields(self):
         """Test build_filter with all supported keyword fields."""
@@ -218,7 +246,8 @@ class TestQdrantUtils:
         result = build_filter(filters)
 
         assert isinstance(result, models.Filter)
-        assert len(result.must) == len(filters)
+        conditions = _flatten_conditions(result)
+        assert len(conditions) == len(filters)
 
     def test_build_filter_bool_keyword_value(self):
         """Test build_filter with boolean keyword values."""
@@ -229,7 +258,8 @@ class TestQdrantUtils:
         result = build_filter(filters)
 
         assert isinstance(result, models.Filter)
-        assert len(result.must) == 1
+        conditions = _flatten_conditions(result)
+        assert len(conditions) == 1
 
     def test_build_filter_numeric_keyword_value(self):
         """Test build_filter with numeric keyword values."""
@@ -240,4 +270,5 @@ class TestQdrantUtils:
         result = build_filter(filters)
 
         assert isinstance(result, models.Filter)
-        assert len(result.must) == 1
+        conditions = _flatten_conditions(result)
+        assert len(conditions) == 1

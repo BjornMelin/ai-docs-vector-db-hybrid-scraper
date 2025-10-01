@@ -10,8 +10,8 @@ from typing import Any
 import numpy as np
 from qdrant_client import AsyncQdrantClient, models
 
-from src.config import Config, SearchAccuracy, VectorType
-from src.models.vector_search import PrefetchConfig
+from src.config import Config, SearchAccuracy
+from src.models.vector_search import PrefetchConfig, VectorType
 from src.services.errors import QdrantServiceError
 from src.services.monitoring.metrics import get_metrics_registry
 
@@ -30,8 +30,8 @@ class QdrantSearch:
         Args:
             client: Initialized Qdrant client
             config: Unified configuration
-
         """
+
         self.client = client
         self.config = config
         self.prefetch_config = PrefetchConfig()
@@ -74,11 +74,8 @@ class QdrantSearch:
 
         Returns:
             List of results with id, score, and payload
-
-        Raises:
-            QdrantServiceError: If search fails
-
         """
+
         # Monitor search performance
         if self.metrics_registry:
             # Use the monitoring decorator manually
@@ -239,11 +236,8 @@ class QdrantSearch:
 
         Returns:
             List of results with id, score, and payload
-
-        Raises:
-            QdrantServiceError: If search fails
-
         """
+
         # Monitor search performance
         if self.metrics_registry:
             decorator = self.metrics_registry.monitor_search_performance(
@@ -269,6 +263,7 @@ class QdrantSearch:
         search_accuracy: str = "balanced",
     ) -> list[dict[str, Any]]:
         """Execute the actual multi-stage search operation."""
+
         # Validate input parameters
         if not stages:
             msg = "Stages list cannot be empty"
@@ -372,11 +367,8 @@ class QdrantSearch:
 
         Returns:
             List of search results
-
-        Raises:
-            QdrantServiceError: If search fails
-
         """
+
         # Monitor search performance
         if self.metrics_registry:
             decorator = self.metrics_registry.monitor_search_performance(
@@ -416,6 +408,7 @@ class QdrantSearch:
         search_accuracy: str = "balanced",
     ) -> list[dict[str, Any]]:
         """Execute the actual HyDE search operation."""
+
         try:
             # Average hypothetical embeddings for wider retrieval
             hypothetical_vector = np.mean(hypothetical_embeddings, axis=0).tolist()
@@ -486,6 +479,7 @@ class QdrantSearch:
         filters: dict[str, Any],
         limit: int = 10,
         search_accuracy: str = "balanced",
+        score_threshold: float | None = None,
     ) -> list[dict[str, Any]]:
         """Optimized filtered search using indexed payload fields.
 
@@ -498,11 +492,8 @@ class QdrantSearch:
 
         Returns:
             List of search results
-
-        Raises:
-            QdrantServiceError: If search fails
-
         """
+
         # Monitor search performance
         if self.metrics_registry:
             decorator = self.metrics_registry.monitor_search_performance(
@@ -511,12 +502,22 @@ class QdrantSearch:
 
             async def _monitored_search():
                 return await self._execute_filtered_search(
-                    collection_name, query_vector, filters, limit, search_accuracy
+                    collection_name,
+                    query_vector,
+                    filters,
+                    limit,
+                    search_accuracy,
+                    score_threshold,
                 )
 
             return await decorator(_monitored_search)()
         return await self._execute_filtered_search(
-            collection_name, query_vector, filters, limit, search_accuracy
+            collection_name,
+            query_vector,
+            filters,
+            limit,
+            search_accuracy,
+            score_threshold,
         )
 
     async def _execute_filtered_search(
@@ -526,8 +527,10 @@ class QdrantSearch:
         filters: dict[str, Any],
         limit: int = 10,
         search_accuracy: str = "balanced",
+        score_threshold: float | None = None,
     ) -> list[dict[str, Any]]:
         """Execute the actual filtered search operation."""
+
         # Validate input parameters
         if not isinstance(query_vector, list):
             msg = "query_vector must be a list"
@@ -555,15 +558,22 @@ class QdrantSearch:
             filter_obj = build_filter(filters)
 
             # Execute filtered search with Query API
+            query_kwargs = {
+                "collection_name": collection_name,
+                "query": query_vector,
+                "using": "dense",
+                "filter": filter_obj,
+                "limit": limit,
+                "params": self._get_search_params(SearchAccuracy(search_accuracy)),
+                "with_payload": True,
+                "with_vectors": False,
+            }
+
+            if score_threshold is not None and score_threshold > 0:
+                query_kwargs["score_threshold"] = float(score_threshold)
+
             results = await self.client.query_points(
-                collection_name=collection_name,
-                query=query_vector,
-                using="dense",
-                filter=filter_obj,
-                limit=limit,
-                params=self._get_search_params(SearchAccuracy(search_accuracy)),
-                with_payload=True,
-                with_vectors=False,
+                **query_kwargs,
             )
 
             # Format results
@@ -588,10 +598,12 @@ class QdrantSearch:
         self, vector_type: VectorType, final_limit: int
     ) -> int:
         """Calculate optimal prefetch limit based on research findings."""
+
         return self.prefetch_config.calculate_prefetch_limit(vector_type, final_limit)
 
     def _get_search_params(self, accuracy_level: SearchAccuracy) -> models.SearchParams:
         """Get optimized search parameters for different accuracy levels."""
+
         params_map = {
             SearchAccuracy.FAST: models.SearchParams(hnsw_ef=50, exact=False),
             SearchAccuracy.BALANCED: models.SearchParams(hnsw_ef=100, exact=False),
