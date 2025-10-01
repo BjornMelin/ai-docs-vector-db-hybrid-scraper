@@ -11,7 +11,8 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.architecture.modes import ApplicationMode, get_current_mode, get_mode_config
+from src.api.app_profiles import AppProfile, detect_profile
+from src.architecture.modes import ApplicationMode, get_mode_config
 from src.architecture.service_factory import (
     ModeAwareServiceFactory,
     set_service_factory,
@@ -70,18 +71,42 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-def create_app(mode: ApplicationMode | None = None) -> FastAPI:
-    """Create FastAPI app configured for specific mode.
+def _coerce_profile(
+    profile: AppProfile | ApplicationMode | str | None,
+) -> AppProfile:
+    """Normalize incoming profile/mode inputs to an :class:`AppProfile`."""
+
+    if profile is None:
+        return detect_profile()
+    if isinstance(profile, AppProfile):
+        return profile
+    if isinstance(profile, ApplicationMode):
+        return AppProfile.from_mode(profile)
+    if isinstance(profile, str):
+        try:
+            return AppProfile(profile.lower())
+        except ValueError as exc:  # pragma: no cover - defensive branch
+            raise ValueError(f"Unknown application profile: {profile}") from exc
+    msg = f"Unsupported profile type: {type(profile)!r}"
+    raise TypeError(msg)
+
+
+def create_app(
+    profile: AppProfile | ApplicationMode | str | None = None,
+) -> FastAPI:
+    """Create FastAPI app configured for a specific profile.
 
     Args:
-        mode: Application mode to use. If None, detects from environment.
+        profile: Desired application profile. When ``None`` the profile is
+            detected from environment configuration. ``ApplicationMode`` and
+            string values are accepted for backward compatibility.
 
     Returns:
-        Configured FastAPI application instance
+        Configured FastAPI application instance.
     """
 
-    if mode is None:
-        mode = get_current_mode()
+    resolved_profile = _coerce_profile(profile)
+    mode = resolved_profile.to_mode()
 
     mode_config = get_mode_config(mode)
 
@@ -96,6 +121,7 @@ def create_app(mode: ApplicationMode | None = None) -> FastAPI:
     )
 
     # Store mode information in app state
+    app.state.profile = resolved_profile
     app.state.mode = mode
     app.state.mode_config = mode_config
     app.state.service_factory = ModeAwareServiceFactory(mode)
