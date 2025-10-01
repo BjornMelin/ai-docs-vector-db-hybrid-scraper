@@ -14,7 +14,8 @@ from src.architecture.service_factory import (
     ModeAwareServiceFactory,
     get_request_service_factory,
 )
-from src.services.vector_db import VectorMatch, VectorStoreService
+from src.services.vector_db import VectorMatch
+from src.services.vector_db.service import VectorStoreService
 
 
 logger = logging.getLogger(__name__)

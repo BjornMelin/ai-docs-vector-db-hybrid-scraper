@@ -1,11 +1,8 @@
-"""Mode-aware FastAPI application factory.
-
-This module creates FastAPI applications configured for specific modes,
-implementing the dual-mode architecture for complexity management.
-"""
+"""Mode-aware FastAPI application factory with profile-driven composition."""
 
 import logging
 from datetime import UTC, datetime
+from importlib import import_module
 from typing import Any
 
 from fastapi import FastAPI
@@ -14,61 +11,56 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.api.app_profiles import AppProfile, detect_profile
 from src.architecture.modes import ApplicationMode, get_mode_config
 from src.architecture.service_factory import (
+    BaseService,
     ModeAwareServiceFactory,
     set_service_factory,
 )
 from src.services.fastapi.middleware.manager import get_middleware_manager
 
 
-# Import routers and services (conditional imports moved to top level)
 try:
     from .routers import config_router
 except ImportError:
     config_router = None
 
-try:
-    from .routers.simple import (
-        documents as simple_documents,
-        search as simple_search,
-    )
-except ImportError:
-    simple_documents = None
-    simple_search = None
-
-try:
-    from .routers.enterprise import (
-        analytics as enterprise_analytics,
-        deployment as enterprise_deployment,
-        documents as enterprise_documents,
-        search as enterprise_search,
-    )
-except ImportError:
-    enterprise_analytics = None
-    enterprise_deployment = None
-    enterprise_documents = None
-    enterprise_search = None
-
-try:
-    from src.services.enterprise import (
-        cache as enterprise_cache,
-        search as enterprise_search_service,
-    )
-except ImportError:
-    enterprise_cache = None
-    enterprise_search_service = None
-
-simple_cache = None
-simple_search_service = None
-
-try:
-    from src.services.embeddings.manager import EmbeddingManager
-    from src.services.vector_db import VectorStoreService
-except ImportError:
-    EmbeddingManager = None
-    VectorStoreService = None
-
 
 logger = logging.getLogger(__name__)
+
+
+def _resolve_optional_class(module_path: str, attribute: str) -> Any | None:
+    """Return attribute from module when available, suppressing import errors."""
+
+    try:
+        module = import_module(module_path)
+    except ImportError:
+        return None
+    return getattr(module, attribute, None)
+
+
+def _build_fail_closed_service(name: str) -> type["BaseService"]:
+    """Create a fail-closed service implementation that raises on use."""
+
+    class FailClosedService(BaseService):
+        """Fail-closed placeholder for unavailable optional services."""
+
+        def __init__(self) -> None:
+            super().__init__()
+            self._service_name = name
+
+        async def initialize(self) -> None:
+            self._mark_initialized()
+
+        async def cleanup(self) -> None:
+            self._mark_cleanup()
+
+        def get_service_name(self) -> str:
+            return self._service_name
+
+        def __getattr__(self, item: str) -> Any:  # pragma: no cover - defensive
+            msg = f"Service '{self._service_name}' is not available in this profile"
+            raise RuntimeError(msg)
+
+    return FailClosedService
 
 
 def _coerce_profile(
@@ -133,8 +125,8 @@ def create_app(
     # Apply mode-specific middleware stack
     _apply_middleware_stack(app, mode_config.middleware_stack)
 
-    # Add mode-specific routes
-    _configure_routes(app, mode)
+    # Add profile-specific routes
+    _configure_routes(app, resolved_profile, mode)
 
     # Add startup and shutdown events
     _configure_lifecycle_events(app)
@@ -196,72 +188,77 @@ def _apply_middleware_stack(app: FastAPI, middleware_stack: list[str]) -> None:
     middleware_manager.apply_middleware(app, middleware_stack)
 
 
-def _configure_routes(app: FastAPI, mode: ApplicationMode) -> None:
-    """Configure routes based on application mode."""
+def _configure_routes(app: FastAPI, profile: AppProfile, mode: ApplicationMode) -> None:
+    """Configure routes based on application profile."""
     # Always include basic config router
     if config_router:
         app.include_router(config_router, prefix="/api/v1")
 
-    # Add mode-specific routes
-    if mode == ApplicationMode.SIMPLE:
-        _configure_simple_routes(app)
-    elif mode == ApplicationMode.ENTERPRISE:
-        enterprise_routes = [
-            enterprise_search,
-            enterprise_documents,
-            enterprise_analytics,
-            enterprise_deployment,
-        ]
-        if not all(enterprise_routes):
-            logger.error(
-                "Enterprise mode selected but enterprise routers are unavailable"
-            )
-            raise RuntimeError(
-                "Enterprise mode requires enterprise routers to be installed"
-            )
-        _configure_enterprise_routes(app)
+    # Add profile-specific routes
+    if profile is AppProfile.SIMPLE:
+        _install_simple_routes(app)
+    elif profile is AppProfile.ENTERPRISE:
+        _install_enterprise_routes(app)
 
     # Add common routes
     _configure_common_routes(app)
 
 
-def _configure_simple_routes(app: FastAPI) -> None:
-    """Configure routes for simple mode."""
-    # Use pre-imported simple mode routers
-    if simple_search and simple_documents:
-        app.include_router(simple_search.router, prefix="/api/v1", tags=["search"])
-        app.include_router(
-            simple_documents.router, prefix="/api/v1", tags=["documents"]
-        )
-        logger.debug("Configured simple mode routes")
-    else:
-        logger.warning("Simple mode routers not available")
+def _install_simple_routes(app: FastAPI) -> None:
+    """Mount routers for the simple profile with lazy imports."""
+
+    try:
+        simple_search = import_module("src.api.routers.simple.search")
+        simple_documents = import_module("src.api.routers.simple.documents")
+    except ImportError as exc:  # pragma: no cover - defensive
+        logger.error("Simple profile requires simple routers: %s", exc)
+        raise RuntimeError(
+            "Simple profile requires simple routers to be installed"
+        ) from exc
+    app.include_router(simple_search.router, prefix="/api/v1", tags=["search"])
+    app.include_router(simple_documents.router, prefix="/api/v1", tags=["documents"])
+    logger.debug("Configured simple profile routes")
 
 
-def _configure_enterprise_routes(app: FastAPI) -> None:
-    """Configure routes for enterprise mode."""
-    # Use pre-imported enterprise mode routers
-    if all(
-        [
-            enterprise_search,
-            enterprise_documents,
-            enterprise_analytics,
-            enterprise_deployment,
-        ]
-    ):
-        app.include_router(enterprise_search.router, prefix="/api/v1", tags=["search"])
-        app.include_router(
-            enterprise_documents.router, prefix="/api/v1", tags=["documents"]
+def _install_enterprise_routes(app: FastAPI) -> None:
+    """Mount routers for the enterprise profile with lazy imports."""
+
+    required_modules = {
+        "search": "src.api.routers.enterprise.search",
+        "documents": "src.api.routers.enterprise.documents",
+        "analytics": "src.api.routers.enterprise.analytics",
+        "deployment": "src.api.routers.enterprise.deployment",
+    }
+    routers: dict[str, Any] = {}
+    missing: list[str] = []
+
+    for key, module_path in required_modules.items():
+        try:
+            routers[key] = import_module(module_path)
+        except ImportError as exc:
+            missing.append(f"{module_path} ({exc})")
+
+    if missing:
+        message = ", ".join(missing)
+        logger.error(
+            "Enterprise profile selected but enterprise routers are unavailable: %s",
+            message,
         )
-        app.include_router(
-            enterprise_analytics.router, prefix="/api/v1", tags=["analytics"]
-        )
-        app.include_router(
-            enterprise_deployment.router, prefix="/api/v1", tags=["deployment"]
-        )
-        logger.debug("Configured enterprise mode routes")
-    else:
-        logger.warning("Enterprise mode routers not available")
+        raise RuntimeError(
+            "Enterprise profile requires enterprise routers to be installed"
+        ) from ImportError(message)
+
+    app.include_router(routers["search"].router, prefix="/api/v1", tags=["search"])
+    app.include_router(
+        routers["documents"].router, prefix="/api/v1", tags=["documents"]
+    )
+    app.include_router(
+        routers["analytics"].router, prefix="/api/v1", tags=["analytics"]
+    )
+    app.include_router(
+        routers["deployment"].router, prefix="/api/v1", tags=["deployment"]
+    )
+    logger.debug("Configured enterprise profile routes")
 
 
 def _configure_common_routes(app: FastAPI) -> None:
@@ -286,14 +283,20 @@ def _configure_common_routes(app: FastAPI) -> None:
         """Health check endpoint."""
         mode = app.state.mode
         service_factory: ModeAwareServiceFactory = app.state.service_factory
+        mode_config = app.state.mode_config
 
         # Get available services for health check
         available_services = service_factory.get_available_services()
+        service_status = [
+            service_factory.get_service_status(name)
+            for name in mode_config.enabled_services
+        ]
 
         return {
             "status": "healthy",
             "mode": mode.value,
             "available_services": available_services,
+            "service_status": service_status,
             "timestamp": datetime.now(UTC).isoformat(),
         }
 
@@ -379,16 +382,11 @@ def _configure_lifecycle_events(app: FastAPI) -> None:
 
 def _register_mode_services(factory: ModeAwareServiceFactory) -> None:
     """Register services for the specified mode."""
-    # Use pre-imported service implementations
-    simple_search_impl = (
-        getattr(simple_search_service, "SimpleSearchService", None)
-        if simple_search_service
-        else None
+    simple_search_impl = _resolve_optional_class(
+        "src.services.simple.search", "SimpleSearchService"
     )
-    enterprise_search_impl = (
-        getattr(enterprise_search_service, "EnterpriseSearchService", None)
-        if enterprise_search_service
-        else None
+    enterprise_search_impl = _resolve_optional_class(
+        "src.services.enterprise.search", "EnterpriseSearchService"
     )
     if simple_search_impl or enterprise_search_impl:
         factory.register_service(
@@ -397,15 +395,18 @@ def _register_mode_services(factory: ModeAwareServiceFactory) -> None:
             enterprise_search_impl,
         )
     else:
-        logger.warning("Search service implementations not available")
+        logger.warning(
+            "Search service implementations not available; using fail-closed"
+        )
+        factory.register_universal_service(
+            "search_service", _build_fail_closed_service("search_service")
+        )
 
-    simple_cache_impl = (
-        getattr(simple_cache, "SimpleCacheService", None) if simple_cache else None
+    simple_cache_impl = _resolve_optional_class(
+        "src.services.simple.cache", "SimpleCacheService"
     )
-    enterprise_cache_impl = (
-        getattr(enterprise_cache, "EnterpriseCacheService", None)
-        if enterprise_cache
-        else None
+    enterprise_cache_impl = _resolve_optional_class(
+        "src.services.enterprise.cache", "EnterpriseCacheService"
     )
     if simple_cache_impl or enterprise_cache_impl:
         factory.register_service(
@@ -414,15 +415,39 @@ def _register_mode_services(factory: ModeAwareServiceFactory) -> None:
             enterprise_cache_impl,
         )
     else:
-        logger.warning("Cache service implementations not available")
+        logger.warning("Cache service implementations not available; using fail-closed")
+        factory.register_universal_service(
+            "cache_service", _build_fail_closed_service("cache_service")
+        )
 
-    # Register universal services (work in both modes)
-    if EmbeddingManager:
-        factory.register_universal_service("embedding_service", EmbeddingManager)
-    if VectorStoreService:
-        factory.register_universal_service("vector_db_service", VectorStoreService)
+    embedding_manager_cls = _resolve_optional_class(
+        "src.services.embeddings.manager", "EmbeddingManager"
+    )
+    if embedding_manager_cls:
+        factory.register_universal_service("embedding_service", embedding_manager_cls)
     else:
-        logger.warning("Universal services not available")
+        logger.warning("Embedding manager unavailable; using fail-closed")
+        factory.register_universal_service(
+            "embedding_service", _build_fail_closed_service("embedding_service")
+        )
+
+    vector_store_cls = _resolve_optional_class(
+        "src.services.vector_db.service", "VectorStoreService"
+    )
+    if vector_store_cls:
+        factory.register_universal_service("vector_db_service", vector_store_cls)
+    else:
+        logger.error("Vector store service unavailable; using fail-closed")
+        factory.register_universal_service(
+            "vector_db_service", _build_fail_closed_service("vector_db_service")
+        )
+
+    # Ensure optional cross-cutting services fail closed when not provided.
+    for optional_service in ("auth_service", "metrics_service", "tracing_service"):
+        if not factory.is_service_registered(optional_service):
+            factory.register_universal_service(
+                optional_service, _build_fail_closed_service(optional_service)
+            )
 
 
 async def _initialize_critical_services(factory: ModeAwareServiceFactory) -> None:

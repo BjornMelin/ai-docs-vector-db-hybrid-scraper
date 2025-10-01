@@ -1,8 +1,7 @@
-"""Vector store services built on top of Qdrant."""
+"""Vector store adapters and shared data structures."""
 
 from .adapter import QdrantVectorAdapter
 from .adapter_base import CollectionSchema, TextDocument, VectorMatch, VectorRecord
-from .service import VectorStoreService
 
 
 __all__ = [
@@ -11,5 +10,4 @@ __all__ = [
     "TextDocument",
     "VectorMatch",
     "VectorRecord",
-    "VectorStoreService",
 ]
