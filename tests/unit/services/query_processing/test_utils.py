@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 from pydantic import BaseModel
 
+from src.services.query_processing.clustering import SimilarityMetric
 from src.services.query_processing.utils import (
     STOP_WORDS,
     CacheManager,
@@ -108,13 +109,35 @@ def test_distance_helpers_respect_metric() -> None:
     assert sklearn_metric_for("euclidean") == "euclidean"
 
 
+def test_distance_helpers_support_enum_and_string_metrics() -> None:
+    """Test that distance calculations work with both string and enum metric inputs."""
+
+    vector_a = np.array([1.0, 0.0])
+    vector_b = np.array([0.0, 1.0])
+
+    # Test with string inputs
+    cosine_str = distance_for_metric(vector_a, vector_b, "cosine")
+    euclidean_str = distance_for_metric(vector_a, vector_b, "euclidean")
+
+    # Test with enum inputs
+    cosine_enum = distance_for_metric(vector_a, vector_b, SimilarityMetric.COSINE)
+    euclidean_enum = distance_for_metric(vector_a, vector_b, SimilarityMetric.EUCLIDEAN)
+
+    # Results should be identical
+    assert cosine_str == cosine_enum
+    assert euclidean_str == euclidean_enum
+
+    # Test sklearn_metric_for with both types
+    assert sklearn_metric_for("cosine") == sklearn_metric_for(SimilarityMetric.COSINE)
+    assert sklearn_metric_for("euclidean") == sklearn_metric_for(
+        SimilarityMetric.EUCLIDEAN
+    )
+
+
 def test_stop_words_contains_common_terms() -> None:
     """Test that STOP_WORDS contains expected common terms."""
     assert "the" in STOP_WORDS
     assert "and" in STOP_WORDS
-
-
-def test_deduplicate_results_prefers_embeddings() -> None:
     """Deduplication should collapse items sharing embeddings."""
 
     embedding = np.array([1.0, 0.0, 0.0])
