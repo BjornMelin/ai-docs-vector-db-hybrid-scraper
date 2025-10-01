@@ -1065,8 +1065,8 @@ class FederatedSearchService:
         for result in collection_results:
             for item in self._prepare_hits(result, request):
                 enhanced_item = {**item}
-                enhanced_item["_collection"] = result.collection_name
-                enhanced_item["_collection_confidence"] = result.confidence_score
+                enhanced_item["collection"] = result.collection_name
+                enhanced_item["collection_confidence"] = result.confidence_score
                 all_results.append(enhanced_item)
 
         # Sort by score (descending)
@@ -1097,8 +1097,8 @@ class FederatedSearchService:
             for result, hits in prepared:
                 if i < len(hits):
                     enhanced_item = {**hits[i]}
-                    enhanced_item["_collection"] = result.collection_name
-                    enhanced_item["_collection_confidence"] = result.confidence_score
+                    enhanced_item["collection"] = result.collection_name
+                    enhanced_item["collection_confidence"] = result.confidence_score
                     merged_results.append(enhanced_item)
 
         if request.enable_deduplication and not self._should_skip_dedup(
@@ -1129,9 +1129,9 @@ class FederatedSearchService:
             priority = self.collection_registry[result.collection_name].priority
             for item in self._prepare_hits(result, request):
                 enhanced_item = {**item}
-                enhanced_item["_collection"] = result.collection_name
-                enhanced_item["_collection_confidence"] = result.confidence_score
-                enhanced_item["_collection_priority"] = priority
+                enhanced_item["collection"] = result.collection_name
+                enhanced_item["collection_confidence"] = result.confidence_score
+                enhanced_item["collection_priority"] = priority
                 merged_results.append(enhanced_item)
 
         if request.enable_deduplication and not self._should_skip_dedup(sorted_results):
@@ -1152,8 +1152,8 @@ class FederatedSearchService:
         for result in collection_results:
             for item in self._prepare_hits(result, request):
                 enhanced_item = {**item}
-                enhanced_item["_collection"] = result.collection_name
-                enhanced_item["_collection_confidence"] = result.confidence_score
+                enhanced_item["collection"] = result.collection_name
+                enhanced_item["collection_confidence"] = result.confidence_score
 
                 payload = enhanced_item.get("payload") or {}
                 timestamp = (
@@ -1188,8 +1188,8 @@ class FederatedSearchService:
         for result in collection_results:
             for item in self._prepare_hits(result, request):
                 enhanced_item = {**item}
-                enhanced_item["_collection"] = result.collection_name
-                enhanced_item["_collection_confidence"] = result.confidence_score
+                enhanced_item["collection"] = result.collection_name
+                enhanced_item["collection_confidence"] = result.confidence_score
                 all_results.append(enhanced_item)
 
         # Simple diversity optimization: alternate between collections
@@ -1200,7 +1200,7 @@ class FederatedSearchService:
         while remaining_results and len(diverse_results) < request.limit * 2:
             # Find next result from unseen collection
             for i, item in enumerate(remaining_results):
-                collection = item["_collection"]
+                collection = item["collection"]
                 if collection not in collections_seen:
                     diverse_results.append(item)
                     remaining_results.pop(i)
@@ -1503,8 +1503,10 @@ class FederatedSearchService:
         if merged_results:
             collection_counts = {}
             for result in merged_results[:20]:  # Check top 20 results
-                collection = result.get("_collection", "unknown")
-                collection_counts[collection] = collection_counts.get(collection, 0) + 1
+                collection = result.get("collection", "unknown")
+                collection_counts[collection] = (
+                    collection_counts.get(collection, 0) + 1
+                )
 
             # Calculate diversity as entropy
             total_checked = sum(collection_counts.values())

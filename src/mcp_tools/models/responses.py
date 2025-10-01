@@ -5,6 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from src.contracts.retrieval import SearchRecord
 from src.services.query_processing.models import (
     QueryIntentClassification as ServiceQueryIntentClassification,
     QueryPreprocessingResult as ServiceQueryPreprocessingResult,
@@ -12,26 +13,8 @@ from src.services.query_processing.models import (
 )
 
 
-class SearchResult(BaseModel):
-    """Search result with metadata"""
-
-    id: str
-    content: str
-    score: float
-    url: str | None = None
-    title: str | None = None
-    metadata: dict[str, Any] | None = None
-
-    # Content Intelligence fields
-    content_type: str | None = None
-    content_confidence: float | None = None
-    quality_overall: float | None = None
-    quality_completeness: float | None = None
-    quality_relevance: float | None = None
-    quality_confidence: float | None = None
-    content_intelligence_analyzed: bool | None = None
-
-    model_config = ConfigDict(extra="allow")
+SearchResult = SearchRecord
+SearchResult.__doc__ = "Search result with metadata"
 
 
 class CrawlResult(BaseModel):

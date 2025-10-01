@@ -699,6 +699,49 @@ class RAGConfig(BaseModel):
     parallel_processing: bool = Field(
         default=True, description="Process retrieval stages in parallel"
     )
+    compression_enabled: bool = Field(
+        default=True,
+        description="Enable deterministic contextual compression before RAG",
+    )
+    compression_similarity_threshold: float = Field(
+        default=0.75,
+        ge=0.0,
+        le=1.0,
+        description="Minimum cosine similarity required for a sentence to be retained.",
+    )
+    compression_mmr_lambda: float = Field(
+        default=0.65,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Trade-off parameter for MMR "
+            "(1.0 -> relevance only, 0.0 -> diversity only)."
+        ),
+    )
+    compression_token_ratio: float = Field(
+        default=0.6,
+        ge=0.1,
+        le=1.0,
+        description="Target ratio of tokens to keep relative to the original context.",
+    )
+    compression_absolute_max_tokens: int = Field(
+        default=400,
+        ge=50,
+        le=2000,
+        description="Hard cap on tokens retained per document after compression.",
+    )
+    compression_min_sentences: int = Field(
+        default=1,
+        ge=1,
+        le=10,
+        description="Minimum number of sentences to keep per document.",
+    )
+    compression_max_sentences: int = Field(
+        default=8,
+        ge=1,
+        le=50,
+        description="Maximum number of sentences to keep per document.",
+    )
 
 
 class DeploymentConfig(BaseModel):
