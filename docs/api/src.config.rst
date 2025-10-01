@@ -12,14 +12,6 @@ Subpackages
 Submodules
 ----------
 
-src.config.core module
-----------------------
-
-.. automodule:: src.config.core
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 src.config.drift module
 -----------------------
 
