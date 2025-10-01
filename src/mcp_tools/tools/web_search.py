@@ -151,7 +151,6 @@ def register_tools(mcp, client_manager: ClientManager):
                 "query": validated_query,
                 "results": response.get("results", []),
                 "answer": response.get("answer"),
-                "follow_up_questions": response.get("follow_up_questions", []),
                 "response_time": response.get("response_time", 0),
             }
 

@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src.mcp_tools.models.responses import CollectionInfo, CollectionOperationResponse
-from src.mcp_tools.tools.collections import register_tools
+from src.mcp_tools.tools.collection_management import register_tools
 
 
 class TestCollectionsTools:
@@ -173,6 +173,7 @@ class TestCollectionsTools:
 
     def test_collection_operation_response_validation(self):
         """Test collection operation response model validation."""
+
         operation_response = CollectionOperationResponse(
             status="deleted", collection="test_collection"
         )

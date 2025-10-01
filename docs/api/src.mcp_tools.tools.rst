@@ -36,10 +36,10 @@ src.mcp\_tools.tools.cache module
    :show-inheritance:
    :undoc-members:
 
-src.mcp\_tools.tools.collections module
----------------------------------------
+src.mcp\_tools.tools.collection\_management module
+-------------------------------------------------
 
-.. automodule:: src.mcp_tools.tools.collections
+.. automodule:: src.mcp_tools.tools.collection_management
    :members:
    :show-inheritance:
    :undoc-members:

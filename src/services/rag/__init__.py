@@ -1,16 +1,24 @@
-"""Retrieval-Augmented Generation (RAG) services.
-
-This module provides RAG capabilities for generating contextual answers
-from search results using Large Language Models (LLMs).
-"""
+"""Retrieval-Augmented Generation (RAG) services."""
 
 from .generator import RAGGenerator
-from .models import RAGConfig, RAGRequest, RAGResult
+from .models import (
+    AnswerMetrics,
+    RAGConfig,
+    RAGRequest,
+    RAGResult,
+    RAGServiceMetrics,
+    SourceAttribution,
+)
+from .retriever import VectorServiceRetriever
 
 
 __all__ = [
+    "AnswerMetrics",
     "RAGConfig",
     "RAGGenerator",
     "RAGRequest",
     "RAGResult",
+    "RAGServiceMetrics",
+    "SourceAttribution",
+    "VectorServiceRetriever",
 ]

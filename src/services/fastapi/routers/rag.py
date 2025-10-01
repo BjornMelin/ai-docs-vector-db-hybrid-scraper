@@ -7,7 +7,9 @@ using RAG patterns with the integrated service dependencies.
 import logging
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi.exceptions import HTTPException
+from fastapi.routing import APIRouter
+from starlette import status
 
 from src.services.dependencies import (
     ConfigDep,
@@ -29,6 +31,7 @@ router = APIRouter(prefix="/rag", tags=["RAG"])
 async def generate_answer(
     request: RAGRequest,
     config: ConfigDep,
+    rag_generator: RAGGeneratorDep,
 ) -> RAGResponse:
     """Generate a contextual answer from search results using RAG.
 
@@ -42,11 +45,8 @@ async def generate_answer(
 
     Returns:
         RAGResponse: Generated answer with metadata and sources
-
-    Raises:
-        HTTPException: If RAG is not enabled or generation fails
-
     """
+
     # Check if RAG is enabled
     if not config.rag.enable_rag:
         raise HTTPException(
@@ -54,15 +54,9 @@ async def generate_answer(
             detail="RAG service is not enabled in configuration",
         )
 
-    if not request.search_results:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Search results are required for RAG answer generation",
-        )
-
     try:
         # Use function-based dependency injection for RAG generation
-        return await generate_rag_answer(request)
+        return await generate_rag_answer(request, rag_generator)
 
     except Exception as e:
         logger.exception("RAG answer generation failed")
@@ -86,11 +80,8 @@ async def get_metrics(
 
     Returns:
         dict[str, Any]: Service metrics and statistics
-
-    Raises:
-        HTTPException: If metrics retrieval fails
-
     """
+
     try:
         metrics = await get_rag_metrics(rag_generator)
     except Exception as e:
@@ -121,11 +112,8 @@ async def clear_cache(
 
     Returns:
         dict[str, str]: Cache clearing results
-
-    Raises:
-        HTTPException: If cache clearing fails
-
     """
+
     try:
         return await clear_rag_cache(rag_generator)
     except Exception as e:

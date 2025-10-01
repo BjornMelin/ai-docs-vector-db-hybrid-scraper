@@ -423,9 +423,7 @@ def _coerce_vector_mapping(vector: Mapping[str, Any]) -> Sequence[float] | None:
     for candidate in candidates:
         if isinstance(candidate, models.SparseVector):
             continue
-        normalized = _coerce_vector_output(
-            cast(models.VectorStructOutput, candidate)
-        )
+        normalized = _coerce_vector_output(cast(models.VectorStructOutput, candidate))
         if normalized is not None:
             return normalized
     return None

@@ -17,11 +17,10 @@ phase that replaces the corresponding surface.
   Phase 1.
 
 ## RAG Pipeline
-- `src/services/rag/generator.py` still relies on `TODO: Convert f-string to
-  logging format` annotations. The LangChain rewrite in Phase 2 will drop the
-  existing generator implementation and eliminate these TODOs.
-- Model/metrics classes in `src/services/rag/models.py` include fields unused by
-  the streamlined pipeline; they will be pruned alongside the new DTOs.
+- ✅ `src/services/rag/generator.py` now delegates to the LangChain retriever and
+  no longer carries bespoke logging TODOs after the Phase 2 rewrite.
+- ✅ Model/metrics DTOs in `src/services/rag/models.py` have been trimmed to the
+  new response schema, removing the legacy `search_results`/follow-up fields.
 
 ## MCP Tools
 - `src/mcp_tools/tools/helpers/tool_registrars.py` has TODO markers for logging

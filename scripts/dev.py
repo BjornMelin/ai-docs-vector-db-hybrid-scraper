@@ -124,6 +124,9 @@ def _build_pytest_command(
 
     command: list[str] = ["uv", "run", "pytest", *profile_cfg.args]
 
+    if "--benchmark-disable" not in command:
+        command.append("--benchmark-disable")
+
     if profile_cfg.uses_workers:
         command.extend(["-n", workers, "--dist", "worksteal"])
 
