@@ -6,14 +6,23 @@ load balancing, and distributed query optimization.
 
 import asyncio
 import logging
+import math
+import statistics
 import time
+from collections.abc import Awaitable, Callable, Sequence
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
+from typing import Any, cast
 
 import httpx
 import numpy as np
 from pydantic import BaseModel, Field, field_validator
+
+from src.config import get_config
+from src.config.models import QueryProcessingConfig, ScoreNormalizationStrategy
+from src.services.errors import EmbeddingServiceError
+from src.services.vector_db.adapter_base import VectorMatch
+from src.services.vector_db.service import VectorStoreService
 
 from .utils import (
     STOP_WORDS,
@@ -202,6 +211,25 @@ class FederatedSearchRequest(BaseModel):
     deduplication_threshold: float = Field(
         0.9, ge=0.0, le=1.0, description="Similarity threshold for deduplication"
     )
+    overfetch_multiplier: float | None = Field(
+        None,
+        ge=1.0,
+        le=5.0,
+        description="Optional multiplier applied to per-collection limits",
+    )
+    enable_score_normalization: bool = Field(
+        True, description="Enable score normalization prior to merging results"
+    )
+    score_normalization_strategy: ScoreNormalizationStrategy | None = Field(
+        None,
+        description="Normalization strategy overriding the configured default",
+    )
+    score_normalization_epsilon: float | None = Field(
+        None,
+        gt=0.0,
+        le=0.1,
+        description="Variance guard used when normalizing scores",
+    )
 
     # Quality controls
     min_collection_confidence: float = Field(
@@ -314,6 +342,10 @@ class FederatedSearchService:
         enable_result_caching: bool = True,
         cache_size: int = 100,
         max_concurrent_searches: int = 5,
+        *,
+        query_processing_config: QueryProcessingConfig | None = None,
+        vector_store_service: VectorStoreService | None = None,
+        config=None,
     ):
         """Initialize federated search service.
 
@@ -330,10 +362,27 @@ class FederatedSearchService:
         )
 
         # Configuration
+        resolved_config = config or get_config()
+        self._query_processing_config = query_processing_config or getattr(
+            resolved_config, "query_processing", QueryProcessingConfig()
+        )
         self.enable_intelligent_routing = enable_intelligent_routing
         self.enable_adaptive_load_balancing = enable_adaptive_load_balancing
         self.enable_result_caching = enable_result_caching
         self.max_concurrent_searches = max_concurrent_searches
+        self._vector_service: VectorStoreService | None = vector_store_service
+        self._default_overfetch_multiplier = (
+            self._query_processing_config.federated_overfetch_multiplier
+        )
+        self._default_normalization_enabled = (
+            self._query_processing_config.enable_score_normalization
+        )
+        self._default_normalization_strategy = (
+            self._query_processing_config.score_normalization_strategy
+        )
+        self._default_normalization_epsilon = (
+            self._query_processing_config.score_normalization_epsilon
+        )
 
         # Collection registry and metadata
         self.collection_registry = {}  # Collection name -> metadata
@@ -410,8 +459,15 @@ class FederatedSearchService:
             if not target_collections:
                 _raise_no_collections_selected()
 
+            vector_service = await self._get_vector_service()
+            query_vector: Sequence[float] | None = request.vector
+            if query_vector is None:
+                query_vector = await vector_service.embed_query(request.query)
+
             # Execute searches across collections
-            collection_results = await self._execute_search(request, target_collections)
+            collection_results = await self._execute_search(
+                request, target_collections, list(query_vector)
+            )
 
             # Filter successful results
             successful_results = [
@@ -467,6 +523,10 @@ class FederatedSearchService:
                     "target_collections_count": len(target_collections),
                     "successful_collections_count": len(successful_results),
                     "total_hits": sum(r.total_hits for r in successful_results),
+                    "grouping_applied": self._should_skip_dedup(successful_results),
+                    "score_normalization": quality_metrics.get(
+                        "score_normalization", {}
+                    ),
                     "search_efficiency": len(successful_results)
                     / len(target_collections)
                     if target_collections
@@ -491,6 +551,8 @@ class FederatedSearchService:
                 total_search_time,
             )
 
+            return result
+
         except Exception as e:
             total_search_time = (time.time() - start_time) * 1000
             self._logger.exception("Federated search failed")
@@ -511,11 +573,9 @@ class FederatedSearchService:
                 overall_confidence=0.0,
                 coverage_score=0.0,
                 diversity_score=0.0,
+                cache_hit=False,
                 federated_metadata={"error": str(e)},
             )
-
-        else:
-            return result
 
     async def register_collection(
         self, collection_name: str, metadata: CollectionMetadata, client: Any = None
@@ -710,7 +770,10 @@ class FederatedSearchService:
         return 0.5
 
     async def _execute_search(
-        self, request: FederatedSearchRequest, target_collections: list[str]
+        self,
+        request: FederatedSearchRequest,
+        target_collections: list[str],
+        query_vector: Sequence[float] | None,
     ) -> list[CollectionSearchResult]:
         """Execute search with adaptive system-load handling."""
 
@@ -718,25 +781,43 @@ class FederatedSearchService:
             request.search_mode == SearchMode.ADAPTIVE
             and self.enable_adaptive_load_balancing
         ) and self._get_system_load() >= 0.75:
-            return await self._execute_sequential_search(request, target_collections)
+            return await self._execute_sequential_search(
+                request, target_collections, query_vector
+            )
 
-        return await self._execute_federated_search(request, target_collections)
+        return await self._execute_federated_search(
+            request, target_collections, query_vector
+        )
 
     async def _execute_federated_search(
-        self, request: FederatedSearchRequest, target_collections: list[str]
+        self,
+        request: FederatedSearchRequest,
+        target_collections: list[str],
+        query_vector: Sequence[float] | None,
     ) -> list[CollectionSearchResult]:
         """Execute search across target collections."""
         if request.search_mode == SearchMode.PARALLEL:
-            return await self._execute_parallel_search(request, target_collections)
+            return await self._execute_parallel_search(
+                request, target_collections, query_vector
+            )
         if request.search_mode == SearchMode.SEQUENTIAL:
-            return await self._execute_sequential_search(request, target_collections)
+            return await self._execute_sequential_search(
+                request, target_collections, query_vector
+            )
         if request.search_mode == SearchMode.PRIORITIZED:
-            return await self._execute_prioritized_search(request, target_collections)
+            return await self._execute_prioritized_search(
+                request, target_collections, query_vector
+            )
         # ADAPTIVE or ROUND_ROBIN
-        return await self._execute_adaptive_search(request, target_collections)
+        return await self._execute_adaptive_search(
+            request, target_collections, query_vector
+        )
 
     async def _execute_parallel_search(
-        self, request: FederatedSearchRequest, target_collections: list[str]
+        self,
+        request: FederatedSearchRequest,
+        target_collections: list[str],
+        query_vector: Sequence[float] | None,
     ) -> list[CollectionSearchResult]:
         """Execute searches in parallel across collections."""
         semaphore = asyncio.Semaphore(self.max_concurrent_searches)
@@ -745,7 +826,7 @@ class FederatedSearchService:
             async with semaphore:
                 try:
                     return await self._search_single_collection(
-                        collection_name, request
+                        collection_name, request, query_vector
                     )
                 except Exception as exc:  # pragma: no cover - defensive guard
                     self._logger.exception(
@@ -773,12 +854,13 @@ class FederatedSearchService:
                 self._create_error_result("Search timeout", collection)
                 for collection in target_collections
             ]
-
-        else:
-            return results
+        return results
 
     async def _execute_sequential_search(
-        self, request: FederatedSearchRequest, target_collections: list[str]
+        self,
+        request: FederatedSearchRequest,
+        target_collections: list[str],
+        query_vector: Sequence[float] | None,
     ) -> list[CollectionSearchResult]:
         """Execute searches sequentially across collections."""
         results = []
@@ -786,7 +868,9 @@ class FederatedSearchService:
         for collection_name in target_collections:
             try:
                 result = await asyncio.wait_for(
-                    self._search_single_collection(collection_name, request),
+                    self._search_single_collection(
+                        collection_name, request, query_vector
+                    ),
                     timeout=request.per_collection_timeout_ms / 1000.0,
                 )
                 results.append(result)
@@ -807,7 +891,10 @@ class FederatedSearchService:
         return results
 
     async def _execute_prioritized_search(
-        self, request: FederatedSearchRequest, target_collections: list[str]
+        self,
+        request: FederatedSearchRequest,
+        target_collections: list[str],
+        query_vector: Sequence[float] | None,
     ) -> list[CollectionSearchResult]:
         """Execute searches with priority ordering."""
         # Sort collections by priority
@@ -833,70 +920,97 @@ class FederatedSearchService:
         # Execute high priority sequentially
         if high_priority:
             sequential_results = await self._execute_sequential_search(
-                request, high_priority
+                request, high_priority, query_vector
             )
             results.extend(sequential_results)
 
         # Execute normal priority in parallel
         if normal_priority:
             parallel_results = await self._execute_parallel_search(
-                request, normal_priority
+                request, normal_priority, query_vector
             )
             results.extend(parallel_results)
 
         return results
 
     async def _execute_adaptive_search(
-        self, request: FederatedSearchRequest, target_collections: list[str]
+        self,
+        request: FederatedSearchRequest,
+        target_collections: list[str],
+        query_vector: Sequence[float] | None,
     ) -> list[CollectionSearchResult]:
         """Execute adaptive search based on conditions."""
         # Simple adaptive logic - use parallel for small sets, sequential for large
         if len(target_collections) <= 5:
-            return await self._execute_parallel_search(request, target_collections)
-        return await self._execute_sequential_search(request, target_collections)
+            return await self._execute_parallel_search(
+                request, target_collections, query_vector
+            )
+        return await self._execute_sequential_search(
+            request, target_collections, query_vector
+        )
 
     async def _search_single_collection(
-        self, collection_name: str, request: FederatedSearchRequest
+        self,
+        collection_name: str,
+        request: FederatedSearchRequest,
+        query_vector: Sequence[float] | None,
     ) -> CollectionSearchResult:
         """Search a single collection."""
         start_time = time.time()
 
         try:
-            # This would integrate with actual Qdrant client
-            # For now, creating a mock implementation
+            vector_service = await self._get_vector_service()
+            vector = list(query_vector) if query_vector is not None else None
+            if vector is None:
+                vector = list(await vector_service.embed_query(request.query))
 
-            # Simulate search execution
-            await asyncio.sleep(0.1)  # Simulate network latency
+            effective_limit = self._calculate_collection_limit(request)
+            filters = self._build_collection_filters(collection_name, request)
 
-            # Mock results
-            mock_results = [
-                {
-                    "id": f"{collection_name}_result_{i}",
-                    "score": 0.9 - (i * 0.1),
-                    "payload": {
-                        "title": f"Result {i} from {collection_name}",
-                        "content": f"Mock content from collection {collection_name}",
-                        "collection": collection_name,
-                    },
-                }
-                for i in range(min(request.limit, 5))
-            ]
+            matches = await vector_service.search_vector(
+                collection_name,
+                vector,
+                limit=effective_limit,
+                filters=filters,
+            )
 
             search_time = (time.time() - start_time) * 1000
-
-            # Update collection performance stats
             self._update_collection_performance(collection_name, search_time, True)
+
+            hits = [
+                {
+                    "id": match.id,
+                    "score": float(match.score),
+                    "payload": self._copy_payload(match),
+                }
+                for match in matches
+            ]
+
+            grouping_applied = any(
+                isinstance(hit.get("payload"), dict)
+                and bool((hit["payload"].get("_grouping") or {}).get("applied", False))
+                for hit in hits
+            )
+
+            confidence_score = self._estimate_confidence(hits)
+            coverage_score = 1.0 if hits else 0.0
+
+            search_metadata = {
+                "grouping_applied": grouping_applied,
+                "fetched_limit": effective_limit,
+                "raw_hit_count": len(hits),
+            }
 
             return CollectionSearchResult(
                 collection_name=collection_name,
-                results=mock_results,
-                total_hits=len(mock_results),
+                results=hits,
+                total_hits=len(hits),
                 search_time_ms=search_time,
-                confidence_score=0.85,
-                coverage_score=0.9,
+                confidence_score=confidence_score,
+                coverage_score=coverage_score,
                 query_used=request.query,
-                filters_applied=request.global_filters,
-                search_metadata={"mock": True},
+                filters_applied=filters or {},
+                search_metadata=search_metadata,
                 has_errors=False,
             )
 
@@ -905,6 +1019,7 @@ class FederatedSearchService:
             httpx.RequestError,
             ConnectionError,
             TimeoutError,
+            EmbeddingServiceError,
         ) as e:
             search_time = (time.time() - start_time) * 1000
             self._update_collection_performance(collection_name, search_time, False)
@@ -944,11 +1059,11 @@ class FederatedSearchService:
         request: FederatedSearchRequest,
     ) -> list[dict[str, Any]]:
         """Merge results by relevance score."""
-        all_results = []
+        all_results: list[dict[str, Any]] = []
+        skip_dedup = self._should_skip_dedup(collection_results)
 
         for result in collection_results:
-            for item in result.results:
-                # Add collection context to result
+            for item in self._prepare_hits(result, request):
                 enhanced_item = {**item}
                 enhanced_item["_collection"] = result.collection_name
                 enhanced_item["_collection_confidence"] = result.confidence_score
@@ -958,7 +1073,7 @@ class FederatedSearchService:
         all_results.sort(key=lambda x: x.get("score", 0.0), reverse=True)
 
         # Apply deduplication if enabled
-        if request.enable_deduplication:
+        if request.enable_deduplication and not skip_dedup:
             all_results = self._deduplicate_results(
                 all_results, request.deduplication_threshold
             )
@@ -971,18 +1086,24 @@ class FederatedSearchService:
         request: FederatedSearchRequest,
     ) -> list[dict[str, Any]]:
         """Merge results using round-robin strategy."""
-        merged_results = []
-        max_len = max((len(r.results) for r in collection_results), default=0)
+        prepared = [
+            (result, self._prepare_hits(result, request))
+            for result in collection_results
+        ]
+        merged_results: list[dict[str, Any]] = []
+        max_len = max((len(hits) for _, hits in prepared), default=0)
 
         for i in range(max_len):
-            for result in collection_results:
-                if i < len(result.results):
-                    enhanced_item = {**result.results[i]}
+            for result, hits in prepared:
+                if i < len(hits):
+                    enhanced_item = {**hits[i]}
                     enhanced_item["_collection"] = result.collection_name
                     enhanced_item["_collection_confidence"] = result.confidence_score
                     merged_results.append(enhanced_item)
 
-        if request.enable_deduplication:
+        if request.enable_deduplication and not self._should_skip_dedup(
+            collection_results
+        ):
             merged_results = self._deduplicate_results(
                 merged_results, request.deduplication_threshold
             )
@@ -1002,18 +1123,18 @@ class FederatedSearchService:
             reverse=True,
         )
 
-        merged_results = []
+        merged_results: list[dict[str, Any]] = []
+
         for result in sorted_results:
-            for item in result.results:
+            priority = self.collection_registry[result.collection_name].priority
+            for item in self._prepare_hits(result, request):
                 enhanced_item = {**item}
                 enhanced_item["_collection"] = result.collection_name
                 enhanced_item["_collection_confidence"] = result.confidence_score
-                enhanced_item["_collection_priority"] = self.collection_registry[
-                    result.collection_name
-                ].priority
+                enhanced_item["_collection_priority"] = priority
                 merged_results.append(enhanced_item)
 
-        if request.enable_deduplication:
+        if request.enable_deduplication and not self._should_skip_dedup(sorted_results):
             merged_results = self._deduplicate_results(
                 merged_results, request.deduplication_threshold
             )
@@ -1026,27 +1147,30 @@ class FederatedSearchService:
         request: FederatedSearchRequest,
     ) -> list[dict[str, Any]]:
         """Merge results by temporal order."""
-        all_results = []
+        all_results: list[dict[str, Any]] = []
 
         for result in collection_results:
-            for item in result.results:
+            for item in self._prepare_hits(result, request):
                 enhanced_item = {**item}
                 enhanced_item["_collection"] = result.collection_name
                 enhanced_item["_collection_confidence"] = result.confidence_score
 
-                # Extract timestamp if available
-                timestamp = item.get("payload", {}).get("timestamp")
-                if timestamp:
-                    enhanced_item["_sort_timestamp"] = timestamp
-                else:
-                    enhanced_item["_sort_timestamp"] = datetime.now(tz=UTC).isoformat()
+                payload = enhanced_item.get("payload") or {}
+                timestamp = (
+                    payload.get("timestamp") if isinstance(payload, dict) else None
+                )
+                enhanced_item["_sort_timestamp"] = (
+                    timestamp if timestamp else datetime.now(tz=UTC).isoformat()
+                )
 
                 all_results.append(enhanced_item)
 
         # Sort by timestamp (most recent first)
         all_results.sort(key=lambda x: x.get("_sort_timestamp", ""), reverse=True)
 
-        if request.enable_deduplication:
+        if request.enable_deduplication and not self._should_skip_dedup(
+            collection_results
+        ):
             all_results = self._deduplicate_results(
                 all_results, request.deduplication_threshold
             )
@@ -1059,10 +1183,10 @@ class FederatedSearchService:
         request: FederatedSearchRequest,
     ) -> list[dict[str, Any]]:
         """Merge results optimizing for diversity."""
-        all_results = []
+        all_results: list[dict[str, Any]] = []
 
         for result in collection_results:
-            for item in result.results:
+            for item in self._prepare_hits(result, request):
                 enhanced_item = {**item}
                 enhanced_item["_collection"] = result.collection_name
                 enhanced_item["_collection_confidence"] = result.confidence_score
@@ -1088,12 +1212,244 @@ class FederatedSearchService:
                 if remaining_results:
                     diverse_results.append(remaining_results.pop(0))
 
-        if request.enable_deduplication:
+        if request.enable_deduplication and not self._should_skip_dedup(
+            collection_results
+        ):
             diverse_results = self._deduplicate_results(
                 diverse_results, request.deduplication_threshold
             )
 
         return diverse_results
+
+    async def _get_vector_service(self) -> VectorStoreService:
+        """Return an initialized vector store service instance."""
+
+        if self._vector_service is None:
+            self._vector_service = VectorStoreService()
+
+        service = self._vector_service
+        initialize_candidate = getattr(service, "initialize", None)
+        if callable(initialize_candidate):
+            initialize_coro = cast(Callable[[], Awaitable[Any]], initialize_candidate)
+            is_initialized_candidate = getattr(service, "is_initialized", None)
+            needs_initialize = True
+            if callable(is_initialized_candidate):
+                try:
+                    callable_is_initialized = cast(
+                        Callable[[], bool], is_initialized_candidate
+                    )
+                    needs_initialize = not bool(
+                        callable_is_initialized()  # pylint: disable=not-callable
+                    )
+                except Exception:  # pragma: no cover - defensive
+                    needs_initialize = True
+            if needs_initialize:
+                await initialize_coro()  # pylint: disable=not-callable
+        return service
+
+    @staticmethod
+    def _copy_payload(match: VectorMatch) -> dict[str, Any]:
+        """Return a shallow copy of a match payload."""
+
+        if match.payload is None:
+            return {}
+        if isinstance(match.payload, dict):
+            return dict(match.payload)
+        return dict(match.payload)
+
+    def _calculate_collection_limit(self, request: FederatedSearchRequest) -> int:
+        """Calculate per-collection limit applying configured over-fetch."""
+
+        multiplier = self._resolve_request_value(
+            request, "overfetch_multiplier", self._default_overfetch_multiplier
+        )
+        if multiplier is None:
+            multiplier = self._default_overfetch_multiplier
+        multiplier = max(1.0, float(multiplier))
+        base_limit = max(1, int(request.limit))
+        computed_limit = int(math.ceil(base_limit * multiplier))
+        max_limit = min(base_limit * 5, 1000)
+        return max(base_limit, min(computed_limit, max_limit))
+
+    def _build_collection_filters(
+        self, collection_name: str, request: FederatedSearchRequest
+    ) -> dict[str, Any] | None:
+        """Merge global and collection-specific filters."""
+
+        combined: dict[str, Any] = {}
+        if request.global_filters:
+            combined.update(request.global_filters)
+        specific = request.collection_specific_filters.get(collection_name, {})
+        if specific:
+            combined.update(specific)
+        return combined or None
+
+    @staticmethod
+    def _estimate_confidence(hits: list[dict[str, Any]]) -> float:
+        """Estimate confidence score from raw hit scores."""
+
+        scores: list[float] = []
+        for hit in hits:
+            raw_score = hit.get("score")
+            if isinstance(raw_score, (int, float)):
+                scores.append(float(raw_score))
+        if not scores:
+            return 0.0
+        max_score = max(scores)
+        try:
+            logistic = 1.0 / (1.0 + math.exp(-max_score))
+        except OverflowError:  # pragma: no cover - extreme values
+            logistic = 1.0 if max_score > 0 else 0.0
+        return float(max(0.0, min(1.0, logistic)))
+
+    @staticmethod
+    def _is_field_explicit(request: FederatedSearchRequest, field_name: str) -> bool:
+        """Return True if the request explicitly set the field value."""
+
+        fields_set = getattr(request, "__pydantic_fields_set__", None)
+        if fields_set is None:
+            fields_set = getattr(request, "model_fields_set", None)
+        return isinstance(fields_set, set) and field_name in fields_set
+
+    def _resolve_request_value(
+        self, request: FederatedSearchRequest, field_name: str, fallback: Any
+    ) -> Any:
+        """Resolve a request field honoring explicit overrides."""
+
+        if self._is_field_explicit(request, field_name):
+            return getattr(request, field_name)
+        return fallback
+
+    def _resolve_normalization_strategy(
+        self, request: FederatedSearchRequest
+    ) -> ScoreNormalizationStrategy:
+        """Resolve the score normalization strategy for this request."""
+
+        enabled = bool(
+            self._resolve_request_value(
+                request,
+                "enable_score_normalization",
+                self._default_normalization_enabled,
+            )
+        )
+        if not enabled:
+            return ScoreNormalizationStrategy.NONE
+
+        strategy = self._resolve_request_value(
+            request,
+            "score_normalization_strategy",
+            self._default_normalization_strategy,
+        )
+        if strategy is None:
+            return self._default_normalization_strategy
+        return strategy
+
+    def _resolve_normalization_epsilon(self, request: FederatedSearchRequest) -> float:
+        """Resolve epsilon guard used during normalization."""
+
+        epsilon = self._resolve_request_value(
+            request,
+            "score_normalization_epsilon",
+            self._default_normalization_epsilon,
+        )
+        if epsilon is None:
+            epsilon = self._default_normalization_epsilon
+        return float(epsilon)
+
+    def _prepare_hits(
+        self, result: CollectionSearchResult, request: FederatedSearchRequest
+    ) -> list[dict[str, Any]]:
+        """Copy and normalize result hits for downstream merging."""
+
+        hits = [dict(item) for item in result.results]
+        raw_scores: list[float] = []
+        for hit in hits:
+            raw_score = hit.get("score")
+            if isinstance(raw_score, (int, float)):
+                raw_scores.append(float(raw_score))
+        if raw_scores:
+            result.search_metadata.setdefault(
+                "raw_score_stats",
+                {"min": min(raw_scores), "max": max(raw_scores)},
+            )
+
+        strategy = self._resolve_normalization_strategy(request)
+        epsilon = self._resolve_normalization_epsilon(request)
+        normalized = self._normalize_scores_in_place(hits, strategy, epsilon)
+        result.search_metadata["score_normalized"] = normalized
+        result.search_metadata["score_normalization_strategy"] = strategy.value
+        return hits
+
+    @staticmethod
+    def _should_skip_dedup(
+        collection_results: list[CollectionSearchResult],
+    ) -> bool:
+        """Return True when server-side grouping already deduplicated results."""
+
+        return any(
+            bool(result.search_metadata.get("grouping_applied"))
+            for result in collection_results
+        )
+
+    def _normalize_scores_in_place(
+        self,
+        hits: list[dict[str, Any]],
+        strategy: ScoreNormalizationStrategy,
+        epsilon: float,
+    ) -> bool:
+        """Normalize scores within the supplied hit list."""
+
+        if strategy == ScoreNormalizationStrategy.NONE or not hits:
+            return False
+
+        scores: list[float] = []
+        for hit in hits:
+            score_value = hit.get("score")
+            if isinstance(score_value, (int, float)):
+                scores.append(float(score_value))
+        if len(scores) < 2:
+            return False
+
+        if strategy == ScoreNormalizationStrategy.MIN_MAX:
+            min_score = min(scores)
+            max_score = max(scores)
+            span = max_score - min_score
+            if span <= epsilon:
+                for hit in hits:
+                    score = hit.get("score")
+                    if isinstance(score, (int, float)):
+                        raw = float(score)
+                        hit["_raw_score"] = raw
+                        hit["score"] = 1.0
+                return True
+            for hit in hits:
+                score = hit.get("score")
+                if isinstance(score, (int, float)):
+                    raw = float(score)
+                    hit["_raw_score"] = raw
+                    hit["score"] = (raw - min_score) / span
+            return True
+
+        if strategy == ScoreNormalizationStrategy.Z_SCORE:
+            mean = statistics.fmean(scores)
+            stdev = statistics.pstdev(scores)
+            if stdev <= epsilon:
+                for hit in hits:
+                    score = hit.get("score")
+                    if isinstance(score, (int, float)):
+                        raw = float(score)
+                        hit["_raw_score"] = raw
+                        hit["score"] = 0.0
+                return True
+            for hit in hits:
+                score = hit.get("score")
+                if isinstance(score, (int, float)):
+                    raw = float(score)
+                    hit["_raw_score"] = raw
+                    hit["score"] = (raw - mean) / stdev
+            return True
+
+        return False
 
     def _deduplicate_results(
         self, results: list[dict[str, Any]], threshold: float
@@ -1116,7 +1472,7 @@ class FederatedSearchService:
         self,
         collection_results: list[CollectionSearchResult],
         merged_results: list[dict[str, Any]],
-        _request: FederatedSearchRequest,
+        request: FederatedSearchRequest,
     ) -> dict[str, Any]:
         """Calculate quality metrics for federated search."""
         if not collection_results:
@@ -1171,6 +1527,23 @@ class FederatedSearchService:
         else:
             diversity_score = 0.0
 
+        grouping_applied = self._should_skip_dedup(collection_results)
+        deduplication_applied = request.enable_deduplication and not grouping_applied
+        normalization_applied = any(
+            bool(result.search_metadata.get("score_normalized"))
+            for result in collection_results
+        )
+        normalization_strategies = sorted(
+            {
+                str(strategy)
+                for strategy in (
+                    result.search_metadata.get("score_normalization_strategy")
+                    for result in collection_results
+                )
+                if strategy
+            }
+        )
+
         return {
             "overall_confidence": weighted_confidence,
             "coverage_score": coverage_score,
@@ -1178,6 +1551,12 @@ class FederatedSearchService:
             "deduplication_stats": {
                 "original_count": sum(len(r.results) for r in collection_results),
                 "deduplicated_count": len(merged_results),
+                "applied": deduplication_applied,
+                "skip_reason": "grouping_applied" if grouping_applied else None,
+            },
+            "score_normalization": {
+                "applied": normalization_applied,
+                "strategies": normalization_strategies,
             },
         }
 
