@@ -78,6 +78,14 @@ class SearchStrategy(str, Enum):
     HYBRID = "hybrid"
 
 
+class ScoreNormalizationStrategy(str, Enum):
+    """Score normalization options for federated result merging."""
+
+    NONE = "none"
+    MIN_MAX = "min_max"
+    Z_SCORE = "z_score"
+
+
 class CacheType(str, Enum):
     """Cache group identifiers used by cache manager layers."""
 
@@ -301,6 +309,31 @@ class QdrantConfig(BaseModel):
         default=2.0,
         gt=0,
         description="Multiplier applied to requested limit when grouping",
+    )
+
+
+class QueryProcessingConfig(BaseModel):
+    """Query processing defaults for retrieval orchestration."""
+
+    federated_overfetch_multiplier: float = Field(
+        default=1.5,
+        ge=1.0,
+        le=5.0,
+        description="Multiplier applied to per-collection result limits before merging",
+    )
+    enable_score_normalization: bool = Field(
+        default=True,
+        description="Normalize relevance scores prior to federated result merging",
+    )
+    score_normalization_strategy: ScoreNormalizationStrategy = Field(
+        default=ScoreNormalizationStrategy.MIN_MAX,
+        description="Normalization strategy used when harmonizing collection scores",
+    )
+    score_normalization_epsilon: float = Field(
+        default=1e-6,
+        gt=0.0,
+        le=0.1,
+        description="Minimum variance guard used when normalizing scores",
     )
 
 

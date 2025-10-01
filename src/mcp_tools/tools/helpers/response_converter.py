@@ -90,9 +90,7 @@ class ResponseConverter:
         if payload is None:
             payload = {
                 "original_query": getattr(preprocessing_data, "original_query", ""),
-                "processed_query": getattr(
-                    preprocessing_data, "processed_query", ""
-                ),
+                "processed_query": getattr(preprocessing_data, "processed_query", ""),
                 "corrections_applied": list(
                     getattr(preprocessing_data, "corrections_applied", [])
                 ),
@@ -142,9 +140,7 @@ class ResponseConverter:
                 ),
                 "confidence": getattr(strategy_data, "confidence", 0.0),
                 "reasoning": getattr(strategy_data, "reasoning", ""),
-                "estimated_quality": getattr(
-                    strategy_data, "estimated_quality", 0.0
-                ),
+                "estimated_quality": getattr(strategy_data, "estimated_quality", 0.0),
                 "estimated_latency_ms": getattr(
                     strategy_data, "estimated_latency_ms", 0.0
                 ),

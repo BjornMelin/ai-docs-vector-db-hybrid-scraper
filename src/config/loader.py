@@ -40,6 +40,7 @@ from .models import (
     PerformanceConfig,
     PlaywrightConfig,
     QdrantConfig,
+    QueryProcessingConfig,
     RAGConfig,
     ReRankingConfig,
     SearchStrategy,
@@ -148,6 +149,10 @@ class Config(BaseSettings):
     )
     performance: PerformanceConfig = Field(
         default_factory=PerformanceConfig, description="Performance configuration"
+    )
+    query_processing: QueryProcessingConfig = Field(
+        default_factory=QueryProcessingConfig,
+        description="Query processing configuration",
     )
     monitoring: MonitoringConfig = Field(
         default_factory=MonitoringConfig, description="Monitoring configuration"

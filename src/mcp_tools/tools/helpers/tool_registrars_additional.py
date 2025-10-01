@@ -106,9 +106,7 @@ def register_pipeline_warmup_tool(mcp, factory: QueryProcessingPipelineFactory):
             await ctx.info(f"Pipeline warm-up {request_id} completed successfully")
 
         except (ConnectionError, TimeoutError, ValueError, Exception) as exc:
-            await ctx.warning(
-                f"Pipeline warm-up {request_id} had issues: {exc}"
-            )
+            await ctx.warning(f"Pipeline warm-up {request_id} had issues: {exc}")
             logger.warning("Pipeline warm-up failed", exc_info=True)
             return {
                 "status": "partial_success",

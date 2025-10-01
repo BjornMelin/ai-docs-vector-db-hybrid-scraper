@@ -327,6 +327,17 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         adapter = self._require_adapter()
         await adapter.delete(collection, ids=ids, filters=filters)
 
+    async def embed_query(self, query: str) -> Sequence[float]:
+        """Return the embedding vector for the supplied query string."""
+
+        await self.initialize()
+        try:
+            [embedding] = await self._embeddings.generate_embeddings([query])
+        except Exception as exc:  # pragma: no cover - surfaces consistent errors
+            msg = f"Failed to embed query: {exc}"
+            raise EmbeddingServiceError(msg) from exc
+        return embedding
+
     async def search_documents(
         self,
         collection: str,
@@ -347,11 +358,7 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
             List of vector matches.
         """
 
-        try:
-            [embedding] = await self._embeddings.generate_embeddings([query])
-        except Exception as exc:  # pragma: no cover
-            msg = f"Failed to embed query: {exc}"
-            raise EmbeddingServiceError(msg) from exc
+        embedding = await self.embed_query(query)
         matches, _ = await self._query_with_optional_grouping(
             collection,
             embedding,
