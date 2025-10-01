@@ -17,6 +17,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   record, and technical debt register for the new suites.
 
 ### Changed
+- Canonicalized query-processing payloads around the shared `SearchRecord` model and
+  updated MCP response adapters to subclass the service-layer Pydantic types,
+  eliminating duplicate DTO maintenance.
+- Refined MCP tool registrars to route all success and error paths through the
+  shared response converter, returning consistent warnings metadata and
+  serializing enums via the canonical service models.
+- Hardened converter helpers and tests to use `model_dump(mode="json")`
+  fallbacks, normalizing mocked inputs while preserving the JSON contract
+  snapshot tracked in `tests/unit/mcp_tools/tools/test_response_converter_helpers.py`.
+- Added focused unit coverage for `SearchRecord` normalization and documentation
+  of the new ownership boundaries in
+  `docs/query_processing_response_contract.md`.
 - Consolidated CI into a lean `core-ci.yml` pipeline (lint → tests with coverage → build → dependency audit) and introduced on-demand security and regression workflows while deleting `fast-feedback.yml`, `status-dashboard.yml`, and other scheduled automation.
 - Simplified documentation checks to rely on `scripts/dev.py validate --check-docs --strict` plus strict MkDocs builds with pinned docs extras.
 - Documented manual triggers for the security and regression workflows in `CONTRIBUTING.md` so contributors can opt into deeper validation without slowing default CI.
