@@ -1,15 +1,17 @@
-"""Advanced parallel agent coordination system.
+"""Parallel agent coordination system for distributed task execution.
 
-This module implements sophisticated coordination patterns for parallel agent execution,
-building on the I4 Vector Database Modernization research to create autonomous,
-self-optimizing agent orchestration with production-grade performance and reliability.
+This module provides a coordinator for managing parallel execution of tasks across
+multiple agents with health monitoring, circuit breaker patterns, and various
+coordination strategies (sequential, parallel, pipeline, hierarchical, adaptive).
 """
+
+from __future__ import annotations
 
 import asyncio
 import logging
 import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Any
 from uuid import uuid4
@@ -18,73 +20,108 @@ from pydantic import BaseModel, Field
 
 from src.services.agents.core import AgentState, BaseAgent, BaseAgentDependencies
 from src.services.cache.patterns import CircuitBreakerPattern
-from src.services.observability.tracking import PerformanceTracker
 
 
 logger = logging.getLogger(__name__)
 
 
-def _raise_unknown_coordination_strategy(strategy: str) -> None:
-    """Raise ValueError for unknown coordination strategy."""
-    msg = f"Unknown coordination strategy: {strategy}"
-    raise ValueError(msg)
-
-
-def _raise_circuit_breaker_open_for_agent(agent_name: str) -> None:
-    """Raise RuntimeError for agent circuit breaker open."""
-    msg = f"Circuit breaker open for agent {agent_name}"
-    raise RuntimeError(msg)
-
-
 class CoordinationStrategy(str, Enum):
-    """Agent coordination strategies for different workload types."""
+    """Enumeration of available agent coordination strategies.
 
-    SEQUENTIAL = "sequential"  # One agent at a time
-    PARALLEL = "parallel"  # All agents simultaneously
-    PIPELINE = "pipeline"  # Sequential with overlap
-    HIERARCHICAL = "hierarchical"  # Coordinator-worker pattern
-    ADAPTIVE = "adaptive"  # Dynamic strategy selection
+    Attributes:
+        SEQUENTIAL: Execute tasks one after another.
+        PARALLEL: Execute tasks simultaneously.
+        PIPELINE: Execute tasks in dependency order with overlap.
+        HIERARCHICAL: Use coordinator agents for task delegation.
+        ADAPTIVE: Automatically choose optimal strategy based on task characteristics.
+    """
+
+    SEQUENTIAL = "sequential"
+    PARALLEL = "parallel"
+    PIPELINE = "pipeline"
+    HIERARCHICAL = "hierarchical"
+    ADAPTIVE = "adaptive"
 
 
 class TaskPriority(str, Enum):
-    """Task priority levels for resource allocation."""
+    """Enumeration of task priority levels for scheduling.
 
-    CRITICAL = "critical"  # Immediate execution required
-    HIGH = "high"  # High priority, minimal delay
-    NORMAL = "normal"  # Standard priority
-    LOW = "low"  # Background processing
-    BATCH = "batch"  # Batch processing when resources available
+    Attributes:
+        CRITICAL: Highest priority, execute immediately.
+        HIGH: High priority tasks.
+        NORMAL: Standard priority.
+        LOW: Low priority tasks.
+        BATCH: Lowest priority, execute during idle periods.
+    """
+
+    CRITICAL = "critical"
+    HIGH = "high"
+    NORMAL = "normal"
+    LOW = "low"
+    BATCH = "batch"
 
 
 class AgentRole(str, Enum):
-    """Agent roles in coordinated execution."""
+    """Enumeration of agent roles in the coordination system.
 
-    COORDINATOR = "coordinator"  # Orchestrates other agents
-    SPECIALIST = "specialist"  # Specialized domain agent
-    WORKER = "worker"  # Generic processing agent
-    MONITOR = "monitor"  # Health and performance monitoring
-    BACKUP = "backup"  # Failover agent
+    Attributes:
+        COORDINATOR: High-level coordination and delegation.
+        SPECIALIST: Domain-specific task execution.
+        WORKER: General-purpose task execution.
+        MONITOR: Health monitoring and reporting.
+        BACKUP: Standby agents for failover.
+    """
+
+    COORDINATOR = "coordinator"
+    SPECIALIST = "specialist"
+    WORKER = "worker"
+    MONITOR = "monitor"
+    BACKUP = "backup"
 
 
-@dataclass
-class TaskDefinition:
-    """Definition of a coordinated task."""
+@dataclass(slots=True)
+class TaskDefinition:  # pylint: disable=too-many-instance-attributes
+    """Definition of a coordinated task with execution requirements.
+
+    Attributes:
+        task_id: Unique identifier for the task.
+        description: Human-readable description of the task.
+        priority: Priority level for task scheduling.
+        estimated_duration_ms: Expected execution time in milliseconds.
+        dependencies: List of task IDs that must complete before this task.
+        required_capabilities: List of agent capabilities required for execution.
+        input_data: Dictionary of input data for task execution.
+        timeout_ms: Optional timeout in milliseconds.
+        retry_count: Number of retry attempts made so far.
+        max_retries: Maximum number of retry attempts allowed.
+    """
 
     task_id: str
     description: str
     priority: TaskPriority
     estimated_duration_ms: float
-    dependencies: list[str]  # Task IDs this depends on
-    required_capabilities: list[str]  # Required agent capabilities
+    dependencies: list[str]
+    required_capabilities: list[str]
     input_data: dict[str, Any]
     timeout_ms: float | None = None
     retry_count: int = 0
     max_retries: int = 3
 
 
-@dataclass
+@dataclass(slots=True)
 class AgentAssignment:
-    """Assignment of agent to specific task."""
+    """Assignment of an agent to a specific task with timing information.
+
+    Attributes:
+        agent_name: Name of the assigned agent.
+        task_id: ID of the assigned task.
+        assigned_at: Timestamp when the assignment was made.
+        estimated_completion: Expected completion timestamp.
+        actual_start: Actual start timestamp, None if not started.
+        actual_completion: Actual completion timestamp, None if not completed.
+        status: Current assignment status
+            (assigned, running, completed, failed, cancelled).
+    """
 
     agent_name: str
     task_id: str
@@ -96,20 +133,30 @@ class AgentAssignment:
 
 
 class CoordinationMetrics(BaseModel):
-    """Metrics for coordination performance analysis."""
+    """Metrics for coordination performance analysis and monitoring.
+
+    Attributes:
+        total_tasks: Total number of tasks submitted.
+        completed_tasks: Number of successfully completed tasks.
+        failed_tasks: Number of failed tasks.
+        avg_completion_time_ms: Average task completion time in milliseconds.
+        max_completion_time_ms: Maximum task completion time in milliseconds.
+        parallelism_achieved: Actual parallelism achieved (0.0-1.0).
+        resource_utilization: Agent resource utilization (0.0-1.0).
+        coordination_overhead_ms: Time spent on coordination activities.
+        task_success_rate: Ratio of successful tasks (0.0-1.0).
+        strategy_effectiveness: Effectiveness of chosen strategies (0.0-1.0).
+        adaptation_success_rate: Success rate of adaptive strategy selection.
+    """
 
     total_tasks: int = 0
     completed_tasks: int = 0
     failed_tasks: int = 0
     avg_completion_time_ms: float = 0.0
     max_completion_time_ms: float = 0.0
-
-    # Parallel execution metrics
-    parallelism_achieved: float = 0.0  # Actual vs. theoretical maximum
-    resource_utilization: float = 0.0  # Average agent utilization
+    parallelism_achieved: float = 0.0
+    resource_utilization: float = 0.0
     coordination_overhead_ms: float = 0.0
-
-    # Quality metrics
     task_success_rate: float = 0.0
     strategy_effectiveness: float = 0.0
     adaptation_success_rate: float = 0.0
@@ -118,33 +165,135 @@ class CoordinationMetrics(BaseModel):
 class AgentCoordinationResult(BaseModel):
     """Result of agent coordination execution."""
 
-    coordination_id: str = Field(..., description="Unique coordination identifier")
-    success: bool = Field(..., description="Whether coordination succeeded")
-    strategy_used: CoordinationStrategy = Field(
-        ..., description="Coordination strategy used"
-    )
-    execution_time_seconds: float = Field(..., description="Total execution time")
-    task_results: dict[str, Any] = Field(
-        default_factory=dict, description="Individual task results"
-    )
-    metrics: CoordinationMetrics = Field(
-        default_factory=CoordinationMetrics, description="Performance metrics"
-    )
-    error_message: str | None = Field(None, description="Error message if failed")
-    agent_assignments: list[AgentAssignment] = Field(
-        default_factory=list, description="Agent task assignments"
-    )
+    coordination_id: str = Field(...)
+    success: bool = Field(...)
+    strategy_used: CoordinationStrategy = Field(...)
+    execution_time_seconds: float = Field(...)
+    task_results: dict[str, Any] = Field(default_factory=dict)
+    metrics: CoordinationMetrics = Field(default_factory=CoordinationMetrics)
+    error_message: str | None = None
+    agent_assignments: list[AgentAssignment] = Field(default_factory=list)
+
+
+# ---- Strategy selection -----------------------------------------------------
+
+
+def _priority_score(priority: TaskPriority) -> int:
+    order = {
+        TaskPriority.CRITICAL: 4,
+        TaskPriority.HIGH: 3,
+        TaskPriority.NORMAL: 2,
+        TaskPriority.LOW: 1,
+        TaskPriority.BATCH: 0,
+    }
+    return order.get(priority, 2)
+
+
+def choose_coordination_strategy(tasks: list[TaskDefinition]) -> CoordinationStrategy:
+    """Choose optimal coordination strategy using simple heuristics.
+
+    Uses task characteristics like dependencies, priority, and estimated duration
+    to select the most appropriate coordination strategy.
+
+    Args:
+        tasks: List of task definitions to analyze.
+
+    Returns:
+        The recommended coordination strategy.
+    """
+    if not tasks or len(tasks) == 1:
+        return CoordinationStrategy.SEQUENTIAL
+
+    has_deps = any(t.dependencies for t in tasks)
+    avg_ms = sum(t.estimated_duration_ms for t in tasks) / len(tasks)
+    hi_or_crit = sum(1 for t in tasks if _priority_score(t.priority) >= 3)
+
+    if has_deps and len(tasks) > 3:
+        return CoordinationStrategy.PIPELINE
+    if hi_or_crit > len(tasks) / 2:
+        return CoordinationStrategy.HIERARCHICAL
+    if avg_ms < 1000.0:
+        return CoordinationStrategy.PARALLEL
+    return CoordinationStrategy.PARALLEL
+
+
+# ---- Config & State to avoid R0902 -----------------------------------------
+
+
+@dataclass(slots=True)
+class CoordinatorConfig:
+    """Coordinator configuration values."""
+
+    max_parallel_agents: int
+    default_strategy: CoordinationStrategy
+    enable_circuit_breaker: bool
+    health_check_interval_ms: float
+
+
+@dataclass(slots=True)
+class AgentRegistry:
+    """Agent registration and health state management.
+
+    Attributes:
+        available_agents: Dictionary mapping agent names to agent instances.
+        agent_capabilities: Dictionary mapping agent names to capability sets.
+        agent_roles: Dictionary mapping agent names to their roles.
+        agent_health_status: Dictionary mapping agent names to health status.
+        circuit_breakers: Dictionary mapping agent names to circuit breaker instances.
+    """
+
+    available_agents: dict[str, BaseAgent]
+    agent_capabilities: dict[str, set[str]]
+    agent_roles: dict[str, AgentRole]
+    agent_health_status: dict[str, bool]
+    circuit_breakers: dict[str, CircuitBreakerPattern]  # pylint: disable=too-many-instance-attributes
+
+
+@dataclass(slots=True)
+class TaskQueues:
+    """Task management queues for different execution states.
+
+    Attributes:
+        pending_tasks: Queue of tasks waiting for execution.
+        running_tasks: Dictionary mapping task IDs to current assignments.
+        completed_tasks: List of successfully completed task assignments.
+        failed_tasks: List of failed task assignments.
+    """
+
+    pending_tasks: list[TaskDefinition]
+    running_tasks: dict[str, AgentAssignment]
+    completed_tasks: list[AgentAssignment]
+    failed_tasks: list[AgentAssignment]
+
+
+@dataclass(slots=True)
+class CoordinatorState:
+    """Mutable runtime state for the coordinator.
+
+    Attributes:
+        agents: Registry of available agents and their state.
+        tasks: Task queues for different execution phases.
+        metrics: Performance and coordination metrics.
+    """
+
+    agents: AgentRegistry
+    tasks: TaskQueues
+    metrics: CoordinationMetrics
 
 
 class ParallelAgentCoordinator:
-    """Advanced coordinator for parallel agent execution.
+    """Coordinator for parallel agent exec with health monitoring and fault tolerance.
 
-    Implements sophisticated coordination patterns including:
-    - Dynamic strategy selection based on workload characteristics
-    - Intelligent load balancing across available agents
-    - Fault tolerance with automatic failover and recovery
-    - Performance optimization through adaptive scheduling
-    - Real-time monitoring and health management
+    Manages coordination of tasks across multiple agents using various strategies.
+    Provides health monitoring, circuit breaker patterns, and automatic task scheduling
+    based on agent capabilities and availability.
+
+    Attributes:
+        config: Immutable configuration settings.
+        state: Mutable runtime state.
+        _coordination_active: Whether coordination loops are running.
+        _health_monitor_task: Background health monitoring task.
+        _coordination_task: Background coordination task.
     """
 
     def __init__(
@@ -153,46 +302,47 @@ class ParallelAgentCoordinator:
         default_strategy: CoordinationStrategy = CoordinationStrategy.ADAPTIVE,
         enable_circuit_breaker: bool = True,
         health_check_interval_ms: float = 5000.0,
-    ):
+    ) -> None:
         """Initialize the parallel agent coordinator.
 
         Args:
-            max_parallel_agents: Maximum number of agents to run in parallel
-            default_strategy: Default coordination strategy
-            enable_circuit_breaker: Enable circuit breaker for fault tolerance
-            health_check_interval_ms: Interval for agent health checks
-
+            max_parallel_agents: Maximum number of agents that can execute in parallel.
+            default_strategy: Default coordination strategy to use.
+            enable_circuit_breaker: Whether to enable circuit breaker pattern for
+                fault tolerance.
+            health_check_interval_ms: Interval between agent health checks in
+                milliseconds.
         """
-        self.max_parallel_agents = max_parallel_agents
-        self.default_strategy = default_strategy
-        self.enable_circuit_breaker = enable_circuit_breaker
-        self.health_check_interval_ms = health_check_interval_ms
+        self.config = CoordinatorConfig(
+            max_parallel_agents=max_parallel_agents,
+            default_strategy=default_strategy,
+            enable_circuit_breaker=enable_circuit_breaker,
+            health_check_interval_ms=health_check_interval_ms,
+        )
+        self.state = CoordinatorState(
+            agents=AgentRegistry(
+                available_agents={},
+                agent_capabilities={},
+                agent_roles={},
+                agent_health_status={},
+                circuit_breakers={},
+            ),
+            tasks=TaskQueues(
+                pending_tasks=[],
+                running_tasks={},
+                completed_tasks=[],
+                failed_tasks=[],
+            ),
+            metrics=CoordinationMetrics(),
+        )
 
-        # Agent management
-        self.available_agents: dict[str, BaseAgent] = {}
-        self.agent_capabilities: dict[str, set[str]] = {}
-        self.agent_roles: dict[str, AgentRole] = {}
-        self.agent_health_status: dict[str, bool] = {}
-
-        # Task and execution management
-        self.pending_tasks: list[TaskDefinition] = []
-        self.running_tasks: dict[str, AgentAssignment] = {}
-        self.completed_tasks: list[AgentAssignment] = []
-        self.failed_tasks: list[AgentAssignment] = []
-
-        # Performance and monitoring
-        self.metrics = CoordinationMetrics()
-        self.performance_tracker = PerformanceTracker()
-        self.circuit_breakers: dict[str, CircuitBreakerPattern] = {}
-
-        # State management
         self._coordination_active = False
         self._health_monitor_task: asyncio.Task | None = None
         self._coordination_task: asyncio.Task | None = None
 
         logger.info(
-            "ParallelAgentCoordinator initialized with "
-            f"max_parallel={max_parallel_agents}"
+            "ParallelAgentCoordinator initialized with max_parallel=%d",
+            self.config.max_parallel_agents,
         )
 
     async def register_agent(
@@ -204,105 +354,84 @@ class ParallelAgentCoordinator:
         """Register an agent for coordinated execution.
 
         Args:
-            agent: Agent instance to register
-            capabilities: List of agent capabilities
-            role: Agent role in coordination
-
+            agent: The agent instance to register.
+            capabilities: List of capabilities this agent provides.
+            role: The role this agent should play in coordination.
         """
-        agent_name = agent.name
+        name = agent.name
+        st = self.state
+        st.agents.available_agents[name] = agent
+        st.agents.agent_capabilities[name] = set(capabilities)
+        st.agents.agent_roles[name] = role
+        st.agents.agent_health_status[name] = True
 
-        self.available_agents[agent_name] = agent
-        self.agent_capabilities[agent_name] = set(capabilities)
-        self.agent_roles[agent_name] = role
-        self.agent_health_status[agent_name] = True
-
-        # Initialize circuit breaker for agent
-        if self.enable_circuit_breaker:
-            self.circuit_breakers[agent_name] = CircuitBreakerPattern(
+        if self.config.enable_circuit_breaker:
+            st.agents.circuit_breakers[name] = CircuitBreakerPattern(
                 failure_threshold=3, recovery_timeout=30.0, expected_exception=Exception
             )
 
         logger.info(
-            f"Agent {agent_name} registered with capabilities: {capabilities}, "
-            f"role: {role}"
+            "Agent %s registered with capabilities=%s role=%s", name, capabilities, role
         )
 
     async def unregister_agent(self, agent_name: str) -> None:
-        """Unregister an agent from coordination.
+        """Unregister an agent and cancel its running tasks.
 
         Args:
-            agent_name: Name of agent to unregister
-
+            agent_name: Name of the agent to unregister.
         """
-        # Cancel any running tasks for this agent
-        tasks_to_cancel = [
+        st = self.state
+        to_cancel = [
             task_id
-            for task_id, assignment in self.running_tasks.items()
+            for task_id, assignment in st.tasks.running_tasks.items()
             if assignment.agent_name == agent_name
         ]
-
-        for task_id in tasks_to_cancel:
+        for task_id in to_cancel:
             await self._cancel_task(task_id, reason="Agent unregistered")
 
-        # Remove agent from all registries
-        self.available_agents.pop(agent_name, None)
-        self.agent_capabilities.pop(agent_name, None)
-        self.agent_roles.pop(agent_name, None)
-        self.agent_health_status.pop(agent_name, None)
-        self.circuit_breakers.pop(agent_name, None)
+        st.agents.available_agents.pop(agent_name, None)
+        st.agents.agent_capabilities.pop(agent_name, None)
+        st.agents.agent_roles.pop(agent_name, None)
+        st.agents.agent_health_status.pop(agent_name, None)
+        st.agents.circuit_breakers.pop(agent_name, None)
 
-        logger.info(f"Agent {agent_name} unregistered")
+        logger.info("Agent %s unregistered", agent_name)
 
     async def submit_task(self, task: TaskDefinition) -> str:
-        """Submit a task for coordinated execution.
+        """Submit a task for coordination.
 
         Args:
-            task: Task definition to execute
+            task: The task definition to submit.
 
         Returns:
-            Task ID for tracking
-
+            The task ID for tracking.
         """
-        self.pending_tasks.append(task)
-        self.metrics.total_tasks += 1
+        st = self.state
+        st.tasks.pending_tasks.append(task)
+        st.metrics.total_tasks += 1
+        logger.debug("Task %s submitted with priority %s", task.task_id, task.priority)
 
-        logger.debug(f"Task {task.task_id} submitted with priority {task.priority}")
-
-        # Trigger coordination if not already active
         if not self._coordination_active:
             await self.start_coordination()
-
         return task.task_id
 
     async def start_coordination(self) -> None:
-        """Start the coordination system."""
+        """Start coordination and health monitoring loops."""
         if self._coordination_active:
             return
-
         self._coordination_active = True
-
-        # Start health monitoring
         self._health_monitor_task = asyncio.create_task(self._health_monitor_loop())
-
-        # Start coordination loop
         self._coordination_task = asyncio.create_task(self._coordination_loop())
-
         logger.info("Parallel agent coordination started")
 
     async def stop_coordination(self) -> None:
-        """Stop the coordination system."""
+        """Stop all background coordination loops."""
         self._coordination_active = False
-
-        # Cancel running tasks
         if self._health_monitor_task:
             self._health_monitor_task.cancel()
-
         if self._coordination_task:
             self._coordination_task.cancel()
-
-        # Wait for tasks to complete or timeout
-        await asyncio.sleep(1.0)
-
+        await asyncio.sleep(0.1)
         logger.info("Parallel agent coordination stopped")
 
     async def execute_coordinated_workflow(
@@ -311,558 +440,401 @@ class ParallelAgentCoordinator:
         strategy: CoordinationStrategy | None = None,
         timeout_seconds: float | None = None,
     ) -> dict[str, Any]:
-        """Execute a coordinated workflow of multiple tasks.
+        """Execute a set of tasks using the chosen coordination strategy.
 
         Args:
-            tasks: List of tasks to execute
-            strategy: Coordination strategy to use
-            timeout_seconds: Maximum time to wait for completion
+            tasks: List of task definitions to execute.
+            strategy: Coordination strategy to use, defaults to configured strategy.
+            timeout_seconds: Optional timeout for the entire workflow.
 
         Returns:
-            Workflow execution results
-
+            Dictionary containing workflow results with success status, execution time,
+            and task results.
         """
         workflow_id = str(uuid4())
-        strategy = strategy or self.default_strategy
-        start_time = time.time()
+        chosen = strategy or self.config.default_strategy
+        start = time.time()
 
         logger.info(
-            f"Starting coordinated workflow {workflow_id} with {len(tasks)} tasks "
-            f"using {strategy} strategy"
+            "Starting coordinated workflow %s with %d tasks using %s",
+            workflow_id,
+            len(tasks),
+            chosen.value,
         )
 
         try:
-            # Submit all tasks
-            task_ids = []
+            ids: list[str] = []
             for task in tasks:
-                task_id = await self.submit_task(task)
-                task_ids.append(task_id)
+                ids.append(await self.submit_task(task))
 
-            # Wait for completion based on strategy
-            if strategy == CoordinationStrategy.SEQUENTIAL:
-                results = await self._execute_sequential(task_ids, timeout_seconds)
-            elif strategy == CoordinationStrategy.PARALLEL:
-                results = await self._execute_parallel(task_ids, timeout_seconds)
-            elif strategy == CoordinationStrategy.PIPELINE:
-                results = await self._execute_pipeline(task_ids, timeout_seconds)
-            elif strategy == CoordinationStrategy.HIERARCHICAL:
-                results = await self._execute_hierarchical(task_ids, timeout_seconds)
-            elif strategy == CoordinationStrategy.ADAPTIVE:
-                # Select best strategy based on task characteristics
-                optimal_strategy = await self._select_optimal_strategy(tasks)
+            if chosen == CoordinationStrategy.SEQUENTIAL:
+                results = await self._execute_sequential(ids, timeout_seconds)
+            elif chosen == CoordinationStrategy.PARALLEL:
+                results = await self._execute_parallel(ids, timeout_seconds)
+            elif chosen == CoordinationStrategy.PIPELINE:
+                results = await self._execute_pipeline(ids, timeout_seconds)
+            elif chosen == CoordinationStrategy.HIERARCHICAL:
+                results = await self._execute_hierarchical(ids, timeout_seconds)
+            elif chosen == CoordinationStrategy.ADAPTIVE:
+                optimal = await self._select_optimal_strategy(tasks)
                 results = await self.execute_coordinated_workflow(
-                    tasks, optimal_strategy, timeout_seconds
+                    tasks, optimal, timeout_seconds
                 )
             else:
-                _raise_unknown_coordination_strategy(strategy)
+                raise ValueError(f"Unknown strategy: {chosen}")
 
-            execution_time = time.time() - start_time
-
-            # Calculate workflow-level metrics
-            successful_tasks = sum(
-                1 for r in results.values() if r.get("success", False)
-            )
-            success_rate = successful_tasks / len(tasks) if tasks else 0.0
+            elapsed = time.time() - start
+            successful = sum(1 for r in results.values() if r.get("success"))
+            success_rate = successful / len(tasks) if tasks else 0.0
 
             return {
                 "workflow_id": workflow_id,
-                "success": success_rate > 0.8,  # 80% success threshold
-                "strategy_used": strategy,
-                "execution_time_seconds": execution_time,
+                "success": success_rate >= 0.8,
+                "strategy_used": chosen,
+                "execution_time_seconds": elapsed,
                 "task_results": results,
                 "metrics": {
                     "total_tasks": len(tasks),
-                    "successful_tasks": successful_tasks,
+                    "successful_tasks": successful,
                     "success_rate": success_rate,
-                    "avg_task_time": execution_time / len(tasks) if tasks else 0.0,
+                    "avg_task_time": (elapsed / len(tasks)) if tasks else 0.0,
                 },
             }
 
-        except Exception as e:
-            logger.exception(f"Coordinated workflow {workflow_id} failed")
+        except (ValueError, RuntimeError) as exc:
+            logger.exception("Coordinated workflow %s failed", workflow_id)
             return {
                 "workflow_id": workflow_id,
                 "success": False,
-                "error": str(e),
-                "strategy_used": strategy,
-                "execution_time_seconds": time.time() - start_time,
+                "error": str(exc),
+                "strategy_used": chosen,
+                "execution_time_seconds": time.time() - start,
             }
 
     async def get_coordination_status(self) -> dict[str, Any]:
-        """Get current coordination system status.
+        """Return a snapshot of coordinator state for monitoring.
 
         Returns:
-            Comprehensive status information
-
+            Dictionary containing current coordination status including agent counts,
+            task queue lengths, and performance metrics.
         """
+        st = self.state
         return {
             "coordination_active": self._coordination_active,
-            "registered_agents": len(self.available_agents),
-            "healthy_agents": sum(
-                1 for status in self.agent_health_status.values() if status
-            ),
-            "pending_tasks": len(self.pending_tasks),
-            "running_tasks": len(self.running_tasks),
-            "completed_tasks": len(self.completed_tasks),
-            "failed_tasks": len(self.failed_tasks),
-            "metrics": self.metrics.model_dump(),
-            "agent_status": {
-                name: {
-                    "healthy": self.agent_health_status.get(name, False),
-                    "role": self.agent_roles.get(name, "unknown"),
-                    "capabilities": list(self.agent_capabilities.get(name, set())),
-                    "circuit_breaker_open": (
-                        self.circuit_breakers.get(
-                            name, CircuitBreakerPattern()
-                        ).is_open()
-                        if self.enable_circuit_breaker
-                        else False
-                    ),
-                }
-                for name in self.available_agents
-            },
+            "registered_agents": len(st.agents.available_agents),
+            "healthy_agents": sum(st.agents.agent_health_status.values()),
+            "pending_tasks": len(st.tasks.pending_tasks),
+            "running_tasks": len(st.tasks.running_tasks),
+            "completed_tasks": len(st.tasks.completed_tasks),
+            "failed_tasks": len(st.tasks.failed_tasks),
+            "metrics": st.metrics.model_dump(),
         }
 
+    # ---- internal loops -----------------------------------------------------
+
     async def _coordination_loop(self) -> None:
-        """Main coordination loop for task scheduling and execution."""
+        """Main coordination loop processing tasks and monitoring."""
         while self._coordination_active:
             try:
                 await self._process_pending_tasks()
                 await self._monitor_running_tasks()
                 await self._update_metrics()
-
-                # Short delay to prevent busy waiting
-                await asyncio.sleep(0.1)
-
+                await asyncio.sleep(0.05)
             except asyncio.CancelledError:
                 break
-            except Exception:
-                logger.exception("Error in coordination loop: %s")
-                await asyncio.sleep(1.0)  # Longer delay on error
+            except Exception:  # pragma: no cover - safety
+                logger.exception("Error in coordination loop")
+                await asyncio.sleep(0.5)
 
     async def _health_monitor_loop(self) -> None:
-        """Health monitoring loop for agent status tracking."""
+        """Background loop for monitoring agent health status."""
         while self._coordination_active:
             try:
                 await self._check_agent_health()
-                await asyncio.sleep(self.health_check_interval_ms / 1000.0)
-
+                await asyncio.sleep(self.config.health_check_interval_ms / 1000.0)
             except asyncio.CancelledError:
                 break
-            except Exception:
-                logger.exception("Error in health monitor loop: %s")
-                await asyncio.sleep(5.0)  # Longer delay on error
+            except Exception:  # pragma: no cover - safety
+                logger.exception("Error in health monitor loop")
+                await asyncio.sleep(1.0)
+
+    # ---- scheduling ---------------------------------------------------------
 
     async def _process_pending_tasks(self) -> None:
-        """Process pending tasks for scheduling."""
-        if not self.pending_tasks:
+        """Process pending tasks and assign them to available agents."""
+        st = self.state
+        if not st.tasks.pending_tasks:
             return
 
-        # Sort by priority and dependencies
-        sorted_tasks = sorted(
-            self.pending_tasks, key=lambda t: (t.priority.value, len(t.dependencies))
-        )
+        def _key(t: TaskDefinition) -> tuple[str, int]:
+            return (t.priority.value, len(t.dependencies))
 
-        tasks_to_remove = []
+        sorted_tasks = sorted(st.tasks.pending_tasks, key=_key)
+        to_remove: list[TaskDefinition] = []
 
         for task in sorted_tasks:
-            # Check if dependencies are satisfied
             if not await self._dependencies_satisfied(task):
                 continue
 
-            # Find available agent for task
             agent_name = await self._find_suitable_agent(task)
             if agent_name is None:
-                continue  # No suitable agent available
+                continue
 
-            # Assign task to agent
             assignment = AgentAssignment(
                 agent_name=agent_name,
                 task_id=task.task_id,
-                assigned_at=datetime.now(tz=datetime.timezone.utc),
-                estimated_completion=datetime.now(tz=datetime.timezone.utc)
-                + timedelta(milliseconds=task.estimated_duration_ms),
+                assigned_at=datetime.now(tz=UTC),
+                estimated_completion=(
+                    datetime.now(tz=UTC)
+                    + timedelta(milliseconds=task.estimated_duration_ms)
+                ),
             )
 
-            self.running_tasks[task.task_id] = assignment
-            tasks_to_remove.append(task)
+            st.tasks.running_tasks[task.task_id] = assignment
+            to_remove.append(task)
 
-            # Start task execution
-            execution_task = asyncio.create_task(self._execute_task(task, assignment))
-            # Store reference to prevent task garbage collection
-            task_id = (
-                task.task_id
-            )  # Capture task_id to avoid closure over loop variable
-            execution_task.add_done_callback(
-                lambda _, tid=task_id: logger.debug(
-                    f"Task execution completed for {tid}"
+            exec_task = asyncio.create_task(self._execute_task(task, assignment))
+            exec_task.add_done_callback(
+                lambda _t, tid=task.task_id: logger.debug(
+                    "Task execution completed for %s", tid
                 )
             )
 
-            # Respect parallel execution limit
-            if len(self.running_tasks) >= self.max_parallel_agents:
+            if len(st.tasks.running_tasks) >= self.config.max_parallel_agents:
                 break
 
-        # Remove scheduled tasks from pending
-        for task in tasks_to_remove:
-            self.pending_tasks.remove(task)
+        for task in to_remove:
+            st.tasks.pending_tasks.remove(task)
 
     async def _execute_task(
         self, task: TaskDefinition, assignment: AgentAssignment
     ) -> None:
-        """Execute a specific task with an assigned agent.
-
-        Args:
-            task: Task to execute
-            assignment: Agent assignment details
-
-        """
-        agent_name = assignment.agent_name
-        agent = self.available_agents[agent_name]
-
-        assignment.actual_start = datetime.now(tz=datetime.timezone.utc)
+        """Execute a task using the assigned agent with circuit breaker protection."""
+        st = self.state
+        name = assignment.agent_name
+        agent = st.agents.available_agents[name]
+        assignment.actual_start = datetime.now(tz=UTC)
         assignment.status = "running"
 
         try:
-            # Check circuit breaker
             if (
-                self.enable_circuit_breaker
-                and self.circuit_breakers[agent_name].is_open()
+                self.config.enable_circuit_breaker
+                and st.agents.circuit_breakers[name].is_open()
             ):
-                _raise_circuit_breaker_open_for_agent(agent_name)
+                raise RuntimeError(f"Circuit breaker open for agent {name}")
 
-            # Create agent dependencies
             deps = BaseAgentDependencies(
-                client_manager=None,  # Will be provided by context
-                config=None,  # Will be provided by context
-                session_state=AgentState(session_id=task.task_id),
+                client_manager=None,
+                config=None,
+                session_state=AgentState(session_id=task.task_id, user_id=None),
             )
 
-            # Execute task with timeout
-            # timeout_seconds = (task.timeout_ms or 30000) / 1000.0
-
-            # result = await asyncio.wait_for(
-            #     agent.execute(task.description, deps, task.input_data),
-            #     timeout=timeout_seconds,
-            # )
-            # Placeholder for the commented asyncio.wait_for call
             await agent.execute(task.description, deps, task.input_data)
 
-            assignment.actual_completion = datetime.now(tz=datetime.timezone.utc)
+            assignment.actual_completion = datetime.now(tz=UTC)
             assignment.status = "completed"
 
-            # Track success in circuit breaker
-            if self.enable_circuit_breaker:
-                await self.circuit_breakers[agent_name].call(lambda: True)
+            if self.config.enable_circuit_breaker:
+                await st.agents.circuit_breakers[name].call(lambda: True)
 
-            self.completed_tasks.append(assignment)
-            self.metrics.completed_tasks += 1
-
+            st.tasks.completed_tasks.append(assignment)
+            st.metrics.completed_tasks += 1
             logger.debug(
-                f"Task {task.task_id} completed successfully by agent {agent_name}"
+                "Task %s completed successfully by agent %s", task.task_id, name
             )
 
         except TimeoutError:
             assignment.status = "failed"
-            assignment.actual_completion = datetime.now(tz=datetime.timezone.utc)
+            assignment.actual_completion = datetime.now(tz=UTC)
+            st.tasks.failed_tasks.append(assignment)
+            st.metrics.failed_tasks += 1
+            logger.warning("Task %s timed out for agent %s", task.task_id, name)
 
-            self.failed_tasks.append(assignment)
-            self.metrics.failed_tasks += 1
-
-            logger.warning(f"Task {task.task_id} timed out for agent {agent_name}")
-
-            # Consider retry if within limits
             if task.retry_count < task.max_retries:
                 task.retry_count += 1
-                self.pending_tasks.append(task)
+                st.tasks.pending_tasks.append(task)
                 logger.info(
-                    f"Retrying task {task.task_id} (attempt {task.retry_count + 1})"
+                    "Retrying task %s (attempt %d)", task.task_id, task.retry_count + 1
                 )
 
-        except Exception as e:
+        except Exception:  # pragma: no cover - safety
             assignment.status = "failed"
-            assignment.actual_completion = datetime.now(tz=datetime.timezone.utc)
-
-            self.failed_tasks.append(assignment)
-            self.metrics.failed_tasks += 1
-
-            logger.exception("Task {task.task_id} failed for agent {agent_name}")
-
-            # Track failure in circuit breaker
-            if self.enable_circuit_breaker:
-                try:
-                    # Create a lambda that captures the exception to test
-                    # circuit breaker
-                    exception_to_throw = e
-                    await self.circuit_breakers[agent_name].call(
-                        lambda: (_ for _ in ()).throw(exception_to_throw)
-                    )
-                except (asyncio.CancelledError, TimeoutError, RuntimeError):  # nosec # Expected to fail for circuit breaker testing
-                    pass
-
+            assignment.actual_completion = datetime.now(tz=UTC)
+            st.tasks.failed_tasks.append(assignment)
+            st.metrics.failed_tasks += 1
+            logger.exception("Task %s failed for agent %s", task.task_id, name)
         finally:
-            # Remove from running tasks
-            self.running_tasks.pop(task.task_id, None)
+            st.tasks.running_tasks.pop(task.task_id, None)
 
     async def _dependencies_satisfied(self, task: TaskDefinition) -> bool:
-        """Check if task dependencies are satisfied.
-
-        Args:
-            task: Task to check
-
-        Returns:
-            True if all dependencies are completed
-
-        """
+        """Check if all task dependencies have been completed."""
+        st = self.state
         if not task.dependencies:
             return True
-
-        completed_task_ids = {assignment.task_id for assignment in self.completed_tasks}
-
-        return all(dep_id in completed_task_ids for dep_id in task.dependencies)
+        completed_ids = {a.task_id for a in st.tasks.completed_tasks}
+        return all(dep_id in completed_ids for dep_id in task.dependencies)
 
     async def _find_suitable_agent(self, task: TaskDefinition) -> str | None:
-        """Find a suitable agent for the given task.
-
-        Args:
-            task: Task requiring execution
-
-        Returns:
-            Agent name if suitable agent found, None otherwise
-
-        """
-        # Filter by health status and availability
-        healthy_agents = [
-            name
-            for name, status in self.agent_health_status.items()
-            if status
-            and name not in [a.agent_name for a in self.running_tasks.values()]
+        """Find an available agent that can handle the task requirements."""
+        st = self.state
+        busy = {a.agent_name for a in st.tasks.running_tasks.values()}
+        healthy_free = [
+            n for n, ok in st.agents.agent_health_status.items() if ok and n not in busy
         ]
-
-        if not healthy_agents:
+        if not healthy_free:
             return None
 
-        # Filter by capabilities
-        capable_agents = [
-            name
-            for name in healthy_agents
+        capable = [
+            n
+            for n in healthy_free
             if all(
-                capability in self.agent_capabilities.get(name, set())
-                for capability in task.required_capabilities
+                c in st.agents.agent_capabilities.get(n, set())
+                for c in task.required_capabilities
             )
         ]
-
-        if not capable_agents:
+        if not capable:
             return None
 
-        # Prefer coordinator agents for complex tasks
-        if task.priority == TaskPriority.CRITICAL:
-            coordinator_agents = [
-                name
-                for name in capable_agents
-                if self.agent_roles.get(name) == AgentRole.COORDINATOR
+        if task.priority in (TaskPriority.CRITICAL, TaskPriority.HIGH):
+            coords = [
+                n
+                for n in capable
+                if st.agents.agent_roles.get(n) == AgentRole.COORDINATOR
             ]
-            if coordinator_agents:
-                return coordinator_agents[0]
-
-        # Select agent with best performance history
-        # For now, return first available
-        return capable_agents[0]
+            if coords:
+                return coords[0]
+        return capable[0]
 
     async def _monitor_running_tasks(self) -> None:
-        """Monitor running tasks for completion and timeouts."""
-        current_time = datetime.now(tz=datetime.timezone.utc)
-
-        for task_id, assignment in list(self.running_tasks.items()):
-            # Check for timeouts
-            if assignment.estimated_completion < current_time:
-                logger.warning(f"Task {task_id} estimated completion exceeded")
+        """Monitor running tasks for estimated completion time violations."""
+        st = self.state
+        now = datetime.now(tz=UTC)
+        for task_id, assignment in list(st.tasks.running_tasks.items()):
+            if assignment.estimated_completion < now:
+                logger.warning("Task %s estimated completion exceeded", task_id)
 
     async def _check_agent_health(self) -> None:
-        """Check health status of all registered agents."""
-        for agent_name, agent in self.available_agents.items():
+        """Perform health checks on all registered agents."""
+        st = self.state
+        for name, agent in st.agents.available_agents.items():
             try:
-                # Simple health check - could be enhanced with agent-specific checks
-                is_healthy = hasattr(agent, "is_initialized") and agent.is_initialized
-                self.agent_health_status[agent_name] = is_healthy
-
-            except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
-                logger.warning(f"Health check failed for agent {agent_name}: {e}")
-                self.agent_health_status[agent_name] = False
+                st.agents.agent_health_status[name] = bool(
+                    getattr(agent, "is_initialized", False)
+                )
+            except Exception as exc:  # pragma: no cover - safety
+                logger.warning("Health check failed for agent %s: %s", name, exc)
+                st.agents.agent_health_status[name] = False
 
     async def _update_metrics(self) -> None:
-        """Update coordination performance metrics."""
-        if self.metrics.total_tasks == 0:
+        """Update coordination system performance metrics."""
+        st = self.state
+        if st.metrics.total_tasks == 0:
             return
 
-        # Calculate success rate
-        self.metrics.task_success_rate = (
-            self.metrics.completed_tasks / self.metrics.total_tasks
+        st.metrics.task_success_rate = (
+            st.metrics.completed_tasks / st.metrics.total_tasks
         )
 
-        # Calculate average completion time
-        if self.completed_tasks:
-            completion_times = []
-            for assignment in self.completed_tasks:
-                if assignment.actual_start and assignment.actual_completion:
-                    duration = (
-                        assignment.actual_completion - assignment.actual_start
-                    ).total_seconds() * 1000
-                    completion_times.append(duration)
-
-            if completion_times:
-                self.metrics.avg_completion_time_ms = sum(completion_times) / len(
-                    completion_times
+        durations: list[float] = []
+        for a in st.tasks.completed_tasks:
+            if a.actual_start and a.actual_completion:
+                durations.append(
+                    (a.actual_completion - a.actual_start).total_seconds() * 1000.0
                 )
-                self.metrics.max_completion_time_ms = max(completion_times)
 
-        # Calculate resource utilization
-        if self.available_agents:
-            active_agents = len(self.running_tasks)
-            self.metrics.resource_utilization = active_agents / len(
-                self.available_agents
+        if durations:
+            st.metrics.avg_completion_time_ms = sum(durations) / len(durations)
+            st.metrics.max_completion_time_ms = max(durations)
+
+        if st.agents.available_agents:
+            st.metrics.resource_utilization = len(st.tasks.running_tasks) / len(
+                st.agents.available_agents
             )
 
     async def _cancel_task(self, task_id: str, reason: str = "Cancelled") -> None:
-        """Cancel a running task.
-
-        Args:
-            task_id: ID of task to cancel
-            reason: Cancellation reason
-
-        """
-        if task_id in self.running_tasks:
-            assignment = self.running_tasks[task_id]
+        """Cancel a running task with the specified reason."""
+        st = self.state
+        if task_id in st.tasks.running_tasks:
+            assignment = st.tasks.running_tasks[task_id]
             assignment.status = "cancelled"
-            assignment.actual_completion = datetime.now(tz=datetime.timezone.utc)
+            assignment.actual_completion = datetime.now(tz=UTC)
+            st.tasks.failed_tasks.append(assignment)
+            st.tasks.running_tasks.pop(task_id, None)
+            logger.info("Task %s cancelled: %s", task_id, reason)
 
-            self.failed_tasks.append(assignment)
-            self.running_tasks.pop(task_id)
-
-            logger.info(f"Task {task_id} cancelled: {reason}")
+    # ---- strategy exec ------------------------------------------------------
 
     async def _execute_sequential(
         self, task_ids: list[str], timeout_seconds: float | None
     ) -> dict[str, Any]:
-        """Execute tasks sequentially."""
-        results = {}
-        start_time = time.time()
-
+        """Execute tasks in sequential order with optional timeout."""
+        st = self.state
+        results: dict[str, Any] = {}
+        start = time.time()
         for task_id in task_ids:
-            if timeout_seconds and (time.time() - start_time) > timeout_seconds:
+            if timeout_seconds and (time.time() - start) > timeout_seconds:
+                results["timeout"] = True
                 break
 
-            # Wait for this specific task to complete
-            while task_id in self.running_tasks or task_id in [
-                t.task_id for t in self.pending_tasks
+            while task_id in st.tasks.running_tasks or task_id in [
+                t.task_id for t in st.tasks.pending_tasks
             ]:
-                await asyncio.sleep(0.1)
-                if timeout_seconds and (time.time() - start_time) > timeout_seconds:
+                await asyncio.sleep(0.05)
+                if timeout_seconds and (time.time() - start) > timeout_seconds:
+                    results["timeout"] = True
                     break
 
-            # Collect result
-            completed_assignment = next(
-                (a for a in self.completed_tasks if a.task_id == task_id), None
+            completed = next(
+                (a for a in st.tasks.completed_tasks if a.task_id == task_id), None
             )
-            if completed_assignment:
-                results[task_id] = {"success": True, "assignment": completed_assignment}
-            else:
-                results[task_id] = {"success": False, "error": "Task not completed"}
-
+            results[task_id] = {"success": bool(completed), "assignment": completed}
         return results
 
     async def _execute_parallel(
         self, task_ids: list[str], timeout_seconds: float | None
     ) -> dict[str, Any]:
-        """Execute tasks in parallel."""
-        results = {}
-        start_time = time.time()
+        """Execute tasks in parallel with optional timeout."""
+        st = self.state
+        results: dict[str, Any] = {}
+        start = time.time()
 
-        # Wait for all tasks to complete or timeout
-        while task_ids and (
-            not timeout_seconds or (time.time() - start_time) < timeout_seconds
+        remaining = list(task_ids)
+        while remaining and (
+            not timeout_seconds or (time.time() - start) < timeout_seconds
         ):
-            # Check for completed tasks
-            completed_ids = []
-            for task_id in task_ids:
-                if task_id not in self.running_tasks and task_id not in [
-                    t.task_id for t in self.pending_tasks
+            done: list[str] = []
+            for tid in remaining:
+                if tid not in st.tasks.running_tasks and tid not in [
+                    t.task_id for t in st.tasks.pending_tasks
                 ]:
-                    completed_assignment = next(
-                        (a for a in self.completed_tasks if a.task_id == task_id), None
+                    completed = next(
+                        (a for a in st.tasks.completed_tasks if a.task_id == tid), None
                     )
-                    if completed_assignment:
-                        results[task_id] = {
-                            "success": True,
-                            "assignment": completed_assignment,
-                        }
-                    else:
-                        results[task_id] = {
-                            "success": False,
-                            "error": "Task not completed",
-                        }
-                    completed_ids.append(task_id)
+                    results[tid] = {"success": bool(completed), "assignment": completed}
+                    done.append(tid)
+            for tid in done:
+                remaining.remove(tid)
+            if remaining:
+                await asyncio.sleep(0.05)
 
-            # Remove completed tasks
-            for task_id in completed_ids:
-                task_ids.remove(task_id)
-
-            if task_ids:
-                await asyncio.sleep(0.1)
-
-        # Handle remaining tasks as timed out
-        for task_id in task_ids:
-            results[task_id] = {"success": False, "error": "Timed out"}
-
+        for tid in remaining:
+            results[tid] = {"success": False, "error": "Timed out"}
         return results
 
     async def _execute_pipeline(
         self, task_ids: list[str], timeout_seconds: float | None
     ) -> dict[str, Any]:
-        """Execute tasks in pipeline mode with overlap."""
-        # Pipeline execution allows next task to start when previous is 50% complete
-        # For now, implement as sequential - can be enhanced
+        """Execute tasks in pipeline mode (sequential execution)."""
         return await self._execute_sequential(task_ids, timeout_seconds)
 
     async def _execute_hierarchical(
         self, task_ids: list[str], timeout_seconds: float | None
     ) -> dict[str, Any]:
-        """Execute tasks using hierarchical coordination."""
-        # Hierarchical execution uses coordinator agents to manage worker agents
-        # For now, implement as parallel - can be enhanced
+        """Execute tasks in hierarchical mode (parallel execution)."""
         return await self._execute_parallel(task_ids, timeout_seconds)
 
     async def _select_optimal_strategy(
         self, tasks: list[TaskDefinition]
     ) -> CoordinationStrategy:
-        """Select optimal coordination strategy based on task characteristics.
-
-        Args:
-            tasks: Tasks to analyze
-
-        Returns:
-            Optimal coordination strategy
-
-        """
-        if not tasks:
-            return CoordinationStrategy.SEQUENTIAL
-
-        # Analyze task characteristics
-        has_dependencies = any(task.dependencies for task in tasks)
-        high_priority_count = sum(
-            1
-            for task in tasks
-            if task.priority in [TaskPriority.CRITICAL, TaskPriority.HIGH]
-        )
-        avg_duration = sum(task.estimated_duration_ms for task in tasks) / len(tasks)
-
-        # Decision logic for strategy selection
-        if len(tasks) == 1:
-            return CoordinationStrategy.SEQUENTIAL
-        if has_dependencies and len(tasks) > 3:
-            return CoordinationStrategy.PIPELINE
-        if high_priority_count > len(tasks) / 2:  # >50% high priority
-            return CoordinationStrategy.HIERARCHICAL
-        if avg_duration < 1000:  # Short tasks benefit from parallel execution
-            return CoordinationStrategy.PARALLEL
-        return CoordinationStrategy.PARALLEL  # Default for most cases
+        """Select the optimal coordination strategy for the given tasks."""
+        return choose_coordination_strategy(tasks)

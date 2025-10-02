@@ -1,14 +1,8 @@
-"""Pure Pydantic-AI native agentic RAG system.
+"""Public API for agent services."""
 
-This module provides autonomous agents for intelligent query processing,
-tool composition, and multi-agent coordination using native patterns only.
-"""
+from __future__ import annotations
 
-from .agentic_orchestrator import (
-    AgenticOrchestrator,
-    get_orchestrator,
-    orchestrate_tools,
-)
+from .agentic_orchestrator import AgenticOrchestrator
 from .core import (
     AgentState,
     BaseAgent,
@@ -18,8 +12,7 @@ from .core import (
 from .dynamic_tool_discovery import (
     DynamicToolDiscovery,
     ToolCapability,
-    discover_tools_for_task,
-    get_discovery_engine,
+    ToolCapabilityType,
 )
 from .query_orchestrator import QueryOrchestrator
 
@@ -32,9 +25,6 @@ __all__ = [
     "DynamicToolDiscovery",
     "QueryOrchestrator",
     "ToolCapability",
+    "ToolCapabilityType",
     "create_agent_dependencies",
-    "discover_tools_for_task",
-    "get_discovery_engine",
-    "get_orchestrator",
-    "orchestrate_tools",
 ]

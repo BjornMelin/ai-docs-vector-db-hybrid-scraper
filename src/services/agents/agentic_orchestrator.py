@@ -1,14 +1,10 @@
-"""
-Pydantic-AI orchestrator.
+"""Agentic orchestrator for dynamic tool composition.
 
-This module implements the clean solution defined in our research,
-replacing the 950-line ToolCompositionEngine with ~150-300 lines of patterns.
-
-Based on research findings:
-- G1-G5: Pydantic-AI capabilities validation (98% confidence)
-- J3: Dynamic Tool Composition Engine research (96% confidence)
-- COMPREHENSIVE_SYNTHESIS_REPORT.md: Complete modernization strategy
+Works with or without ``pydantic_ai`` installed. When unavailable, a deterministic
+fallback path returns structured mock results so upstream systems remain stable.
 """
+
+from __future__ import annotations
 
 import asyncio
 import logging
@@ -17,64 +13,39 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-
-try:
-    from pydantic_ai import Agent, RunContext
-
-    PYDANTIC_AI_AVAILABLE = True
-except ImportError:
-    PYDANTIC_AI_AVAILABLE = False
-    Agent = None
-    RunContext = None
-
+from ._compat import load_pydantic_ai
 from .core import BaseAgent, BaseAgentDependencies
+from .dynamic_tool_discovery import DynamicToolDiscovery
 
 
 logger = logging.getLogger(__name__)
+
+_PYA_AVAILABLE, _AgentCls, _RunCtx = load_pydantic_ai()
 
 
 class ToolRequest(BaseModel):
     """Request for autonomous tool orchestration."""
 
     task: str = Field(..., description="Task description or query")
-    constraints: dict[str, Any] = Field(
-        default_factory=dict, description="Performance constraints"
-    )
-    context: dict[str, Any] = Field(
-        default_factory=dict, description="Additional context"
-    )
+    constraints: dict[str, Any] = Field(default_factory=dict)
+    context: dict[str, Any] = Field(default_factory=dict)
 
 
 class ToolResponse(BaseModel):
     """Response from autonomous tool orchestration."""
 
-    success: bool = Field(..., description="Whether orchestration succeeded")
-    results: dict[str, Any] = Field(
-        default_factory=dict, description="Orchestration results"
-    )
-    tools_used: list[str] = Field(
-        default_factory=list, description="Tools selected and executed"
-    )
-    reasoning: str = Field(..., description="Agent decision reasoning")
-    latency_ms: float = Field(..., description="Total execution time")
-    confidence: float = Field(..., description="Confidence in results")
+    success: bool = Field(...)
+    results: dict[str, Any] = Field(default_factory=dict)
+    tools_used: list[str] = Field(default_factory=list)
+    reasoning: str = Field(...)
+    latency_ms: float = Field(...)
+    confidence: float = Field(...)
 
 
 class AgenticOrchestrator(BaseAgent):
-    """Pydantic-AI orchestrator for tool composition.
+    """Pydantic-AI orchestrator for tool composition."""
 
-    This replaces the 950-line ToolCompositionEngine with orchestration
-    using Pydantic-AI patterns only.
-    """
-
-    def __init__(self, model: str = "gpt-4o-mini", temperature: float = 0.1):
-        """Initialize the agentic orchestrator.
-
-        Args:
-            model: LLM model for autonomous decisions
-            temperature: Generation temperature for tool selection
-
-        """
+    def __init__(self, model: str = "gpt-4o-mini", temperature: float = 0.1) -> None:
         super().__init__(
             name="agentic_orchestrator",
             model=model,
@@ -83,74 +54,41 @@ class AgenticOrchestrator(BaseAgent):
         )
 
     def get_system_prompt(self) -> str:
-        """Define orchestration behavior."""
-        return """You are a tool orchestrator with the following
-capabilities:
+        return (
+            "You are a tool orchestrator. Analyze the task, select optimal tools, "
+            "execute them (sequential/parallel), and explain your reasoning."
+        )
 
-1. ANALYSIS
-    - Analyze user requests to understand intent and requirements
-    - Assess available tools and their capabilities dynamically
-    - Select tool combinations based on context and constraints
-
-2. EXECUTION
-    - Choose execution strategies (sequential, parallel, or hybrid)
-    - Make real-time decisions based on intermediate results
-    - Adapt approach if initial tools don't provide expected results
-
-3. PERFORMANCE OPTIMIZATION
-    - Balance speed, quality, and resource constraints
-    - Learn from execution patterns to improve future decisions
-    - Provide clear reasoning for tool selection and orchestration choices
-
-Your goal is to provide the most effective tool orchestration for each task while
-maintaining high performance and reliability. Always explain your reasoning."""
-
-    async def initialize_tools(self, deps: BaseAgentDependencies) -> None:
-        """Initialize with dynamic tool discovery."""
-        # Check fallback status
+    async def initialize_tools(self, deps: BaseAgentDependencies) -> None:  # noqa: ARG002
+        """Register orchestration helpers on the pydantic-ai agent if available."""
         fallback_reason = getattr(self, "_fallback_reason", None)
-
-        if not PYDANTIC_AI_AVAILABLE or self.agent is None:
+        if not _PYA_AVAILABLE or self.agent is None:
             logger.warning(
-                "AgenticOrchestrator using fallback mode (reason: "
-                f"{fallback_reason or 'pydantic_ai_unavailable'})"
+                "AgenticOrchestrator fallback mode active (reason: %s)",
+                fallback_reason or "pydantic_ai_unavailable",
             )
             return
 
-        # Set up Pydantic-AI tool discovery and orchestration
-        @self.agent.tool_plain
+        @self.agent.tool_plain  # type: ignore[reportAttributeAccessIssue]
         async def orchestrate_tools(request: ToolRequest) -> ToolResponse:
-            """Main orchestration tool for task execution."""
             return await self._orchestrate_autonomous(request, deps)
 
-        @self.agent.tool_plain
+        @self.agent.tool_plain  # type: ignore[reportAttributeAccessIssue]
         async def discover_available_tools() -> dict[str, Any]:
-            """Discover and assess available MCP tools dynamically."""
             return await self._discover_tools(deps)
 
-        @self.agent.tool_plain
+        @self.agent.tool_plain  # type: ignore[reportAttributeAccessIssue]
         async def execute_tool_chain(
             tools: list[str], input_data: dict[str, Any]
         ) -> dict[str, Any]:
-            """Execute selected tools with chaining."""
             return await self._execute_chain(tools, input_data, deps)
 
-        logger.info("AgenticOrchestrator initialized with Pydantic-AI patterns")
+        logger.info("AgenticOrchestrator initialized with Pydantic-AI tools")
 
     async def orchestrate(
         self, task: str, constraints: dict[str, Any], deps: BaseAgentDependencies
     ) -> ToolResponse:
-        """Main entry point for tool orchestration.
-
-        Args:
-            task: Task description or query
-            constraints: Performance and quality constraints
-            deps: Agent dependencies
-
-        Returns:
-            Orchestration response with results and reasoning
-
-        """
+        """Main entry point for tool orchestration."""
         if not self._initialized:
             await self.initialize(deps)
 
@@ -160,30 +98,26 @@ maintaining high performance and reliability. Always explain your reasoning."""
             context={"session_id": deps.session_state.session_id},
         )
 
-        if not PYDANTIC_AI_AVAILABLE or self.agent is None:
+        if not _PYA_AVAILABLE or self.agent is None:
             return await self._fallback_orchestrate(request, deps)
 
-        # Execute using native Pydantic-AI agent
         try:
-            result = await self.agent.run(
+            result = await self.agent.run(  # type: ignore[attr-defined]
                 f"Orchestrate tools for task: {task}", deps=deps
             )
-
-            # Parse response into structured format
-            if hasattr(result, "data") and isinstance(result.data, ToolResponse):
-                response = result.data
+            data = getattr(result, "data", None)
+            if isinstance(data, ToolResponse):
+                response = data
             else:
-                # Create response from agent output
                 response = ToolResponse(
                     success=True,
-                    results={"agent_response": str(result.data)},
+                    results={"agent_response": str(data)},
                     tools_used=["agent"],
                     reasoning="Pydantic-AI agent orchestration",
                     latency_ms=0.0,
                     confidence=0.8,
                 )
 
-            # Update session state
             deps.session_state.increment_tool_usage("agentic_orchestrator")
             deps.session_state.add_interaction(
                 role="orchestrator",
@@ -194,38 +128,31 @@ maintaining high performance and reliability. Always explain your reasoning."""
                     "confidence": response.confidence,
                 },
             )
+            return response
 
-        except Exception as e:  # noqa: BLE001
+        except (RuntimeError, ValueError) as exc:
             logger.exception("Orchestration failed")
             return ToolResponse(
                 success=False,
-                results={"error": str(e)},
+                results={"error": str(exc)},
                 tools_used=[],
-                reasoning=f"Orchestration failed: {e}",
+                reasoning=f"Orchestration failed: {exc}",
                 latency_ms=0.0,
                 confidence=0.0,
             )
 
-        return response
-
     async def _orchestrate_autonomous(
         self, request: ToolRequest, deps: BaseAgentDependencies
     ) -> ToolResponse:
-        """Core orchestration logic."""
-        start_time = time.time()
-
+        """Core orchestration logic (when pydantic-ai available)."""
+        start = time.time()
         try:
-            # Step 1: Analyze task and discover tools
-            available_tools = await self._discover_tools(deps)
-
-            # Step 2: Tool selection based on task
-            selected_tools = self._select_tools_for_task(
-                request.task, available_tools, request.constraints
+            available = await self._discover_tools(deps)
+            selected = self._select_tools_for_task(
+                request.task, available, request.constraints
             )
-
-            # Step 3: Execute tool chain
             results = await self._execute_chain(
-                selected_tools,
+                selected,
                 {
                     "task": request.task,
                     "constraints": request.constraints,
@@ -233,228 +160,187 @@ maintaining high performance and reliability. Always explain your reasoning."""
                 },
                 deps,
             )
-
-            latency_ms = (time.time() - start_time) * 1000
-
+            latency_ms = (time.time() - start) * 1000.0
             return ToolResponse(
                 success=True,
                 results=results,
-                tools_used=selected_tools,
-                reasoning=self._generate_reasoning(
-                    request.task, selected_tools, results
-                ),
+                tools_used=selected,
+                reasoning=self._generate_reasoning(request.task, selected, results),
                 latency_ms=latency_ms,
-                confidence=self._calculate_confidence(results, selected_tools),
+                confidence=self._calculate_confidence(results, selected),
             )
-
-        except (
-            asyncio.CancelledError,
-            TimeoutError,
-            RuntimeError,
-        ) as e:  # noqa: BLE001
-            latency_ms = (time.time() - start_time) * 1000
+        except Exception as exc:  # pragma: no cover - safety
+            latency_ms = (time.time() - start) * 1000.0
             return ToolResponse(
                 success=False,
-                results={"error": str(e)},
+                results={"error": str(exc)},
                 tools_used=[],
-                reasoning=f"Orchestration failed due to: {e}",
+                reasoning=f"Orchestration failed due to: {exc}",
                 latency_ms=latency_ms,
                 confidence=0.0,
             )
 
-    async def _discover_tools(self, _deps: BaseAgentDependencies) -> dict[str, Any]:
-        """Dynamic tool discovery based on J3 research findings."""
-        # This would integrate with actual MCP tool registry
-        # For now, return core tools available in the system
+    async def _discover_tools(self, deps: BaseAgentDependencies) -> dict[str, Any]:
+        """Discover tools via the shared DynamicToolDiscovery engine."""
+        engine = DynamicToolDiscovery()
+        await engine.initialize_discovery(deps)
+        # Return a light-weight index for selection heuristics.
         return {
-            "hybrid_search": {
-                "capabilities": ["search", "retrieval"],
-                "performance": {"latency_ms": 150, "accuracy": 0.85},
-                "description": "Hybrid vector and text search",
-            },
-            "rag_generation": {
-                "capabilities": ["generation", "synthesis"],
-                "performance": {"latency_ms": 800, "accuracy": 0.90},
-                "description": "RAG-based answer generation",
-            },
-            "content_analysis": {
-                "capabilities": ["analysis", "classification"],
-                "performance": {"latency_ms": 200, "accuracy": 0.88},
-                "description": "Content analysis and classification",
-            },
+            t.name: {
+                "capability": t.capability_type.value,
+                "description": t.description,
+                "latency_ms": (t.metrics.average_latency_ms if t.metrics else 0.0),
+            }
+            for t in engine.discovered_tools.values()
         }
 
     def _select_tools_for_task(
-        self, task: str, _available_tools: dict[str, Any], constraints: dict[str, Any]
+        self, task: str, available: dict[str, Any], constraints: dict[str, Any]
     ) -> list[str]:
-        """Tool selection based on task analysis."""
-        task_lower = task.lower()
-        selected = []
+        """Select tools using simple keyword heuristics plus constraints."""
+        tl = task.lower()
+        selected: list[str] = []
 
-        # Rule-based tool selection (would be enhanced with ML in production)
-        keywords_search = ["search", "find", "lookup"]
-        if any(keyword in task_lower for keyword in keywords_search):
+        if (
+            any(k in tl for k in ["search", "find", "lookup"])
+            and "hybrid_search" in available
+        ):
             selected.append("hybrid_search")
-
-        keywords_generate = ["generate", "answer", "explain"]
-        if any(keyword in task_lower for keyword in keywords_generate):
-            if "hybrid_search" not in selected:
+        if any(k in tl for k in ["generate", "answer", "explain"]):
+            if "hybrid_search" in available and "hybrid_search" not in selected:
                 selected.append("hybrid_search")
-            selected.append("rag_generation")
-
-        keywords_analyze = ["analyze", "classify", "assess"]
-        if any(keyword in task_lower for keyword in keywords_analyze):
+            if "rag_generation" in available:
+                selected.append("rag_generation")
+        if (
+            any(k in tl for k in ["analyze", "classify", "assess"])
+            and "content_analysis" in available
+        ):
             selected.append("content_analysis")
-
-        # Fallback to search if no specific tools selected
-        if not selected:
+        if not selected and "hybrid_search" in available:
             selected.append("hybrid_search")
 
-        # Apply constraints (e.g., max latency)
         if constraints.get("max_latency_ms", 5000) < 1000:
-            # Remove slow tools for speed requirements
             selected = [t for t in selected if t != "rag_generation"]
-
         return selected
 
     async def _execute_chain(
-        self, tools: list[str], input_data: dict[str, Any], deps: BaseAgentDependencies
+        self,
+        tools: list[str],
+        input_data: dict[str, Any],
+        _deps: BaseAgentDependencies,
     ) -> dict[str, Any]:
-        """Execute selected tools with chaining."""
-        results = {}
-        context = input_data.copy()
-
-        for tool_name in tools:
+        """Execute a chain of tools sequentially."""
+        results: dict[str, Any] = {}
+        context = dict(input_data)
+        for name in tools:
             try:
-                # Mock execution - would integrate with actual MCP tools
-                tool_result = await self._execute_tool(tool_name, context, deps)
-                results[f"{tool_name}_result"] = tool_result
-
-                # Update context for next tool
-                context.update(tool_result)
-
-            except (
-                asyncio.CancelledError,
-                TimeoutError,
-                RuntimeError,
-            ) as e:  # noqa: BLE001
-                logger.warning(f"Tool {tool_name} failed: {e}")
-                results[f"{tool_name}_error"] = str(e)
-
+                out = await self._execute_tool(name, context)
+                results[f"{name}_result"] = out
+                context.update(out)
+            except Exception as exc:  # pragma: no cover - safety
+                logger.warning("Tool %s failed: %s", name, exc)
+                results[f"{name}_error"] = str(exc)
         return results
 
     async def _execute_tool(
-        self, tool_name: str, context: dict[str, Any], _deps: BaseAgentDependencies
+        self, tool_name: str, context: dict[str, Any]
     ) -> dict[str, Any]:
-        """Execute individual tool (mock implementation)."""
-        # Simulate tool execution
+        """Mock tool execution (replace with MCP integration)."""
         await asyncio.sleep(0.1)
-
         return {
             "tool": tool_name,
             "result": f"Mock result from {tool_name}",
-            "input_keys": list(context.keys()),
-            "timestamp": asyncio.get_event_loop().time(),
+            "input_keys": sorted(context.keys()),
+            "loop_time": asyncio.get_running_loop().time(),
         }
 
     def _generate_reasoning(
         self, task: str, tools_used: list[str], results: dict[str, Any]
     ) -> str:
-        """Generate clear reasoning for tool selection and execution."""
-        reasoning = (
-            f"For task '{task}', I selected {len(tools_used)} tools: "
+        """Generate reasoning text for orchestration decisions."""
+        reason = (
+            f"For task '{task}', selected {len(tools_used)} tool(s): "
             f"{', '.join(tools_used)}. "
         )
-
         if "hybrid_search" in tools_used:
-            reasoning += "Used hybrid search for information retrieval. "
+            reason += "Used hybrid search for information retrieval. "
         if "rag_generation" in tools_used:
-            reasoning += "Applied RAG generation for comprehensive answers. "
+            reason += "Applied RAG generation for comprehensive answers. "
         if "content_analysis" in tools_used:
-            reasoning += "Performed content analysis for deeper insights. "
-
-        successful_tools = len([k for k in results if not k.endswith("_error")])
-        reasoning += f"Successfully executed {successful_tools} tools."
-
-        return reasoning
+            reason += "Performed content analysis for deeper insights. "
+        ok = len([k for k in results if not k.endswith("_error")])
+        reason += f"Successfully executed {ok} steps."
+        return reason
 
     def _calculate_confidence(
         self, results: dict[str, Any], tools_used: list[str]
     ) -> float:
-        """Calculate confidence score based on execution success."""
-        if not results:
+        """Calculate confidence score based on tool execution results."""
+        if not results or not tools_used:
             return 0.0
-
         successful = len([k for k in results if not k.endswith("_error")])
-        total = len(tools_used)
-
-        if total == 0:
-            return 0.0
-
-        base_confidence = successful / total
-
-        # Boost confidence for multi-tool success
+        base = successful / len(tools_used) if tools_used else 0.0
         if successful > 1:
-            base_confidence = min(base_confidence * 1.1, 1.0)
-
-        return round(base_confidence, 2)
+            base = min(base * 1.1, 1.0)
+        return round(base, 2)
 
     async def _fallback_orchestrate(
         self, request: ToolRequest, deps: BaseAgentDependencies
     ) -> ToolResponse:
-        """Fallback orchestration when Pydantic-AI unavailable."""
+        """Heuristic fallback orchestration used when pydantic-ai isn't available."""
         fallback_reason = getattr(self, "_fallback_reason", "unknown")
-        logger.warning(f"Using fallback orchestration mode (reason: {fallback_reason})")
-        start_time = time.time()
+        logger.warning("Using fallback orchestrator (reason: %s)", fallback_reason)
+        start = time.time()
+        tl = request.task.lower()
 
-        # Enhanced fallback logic with context-aware responses
-        task_lower = request.task.lower()
-
-        # Determine appropriate fallback response based on task type
-        keywords_search = ["search", "find", "retrieve"]
-        if any(keyword in task_lower for keyword in keywords_search):
-            fallback_tools = ["mock_search_tool"]
-            result_data = {
-                "search_results": f"Mock search results for: {request.task}",
-                "result_count": 5,
-                "search_type": "fallback_search",
-            }
-            reasoning = f"Fallback search orchestration for task: {request.task}"
-            confidence = 0.7
-        elif any(
-            keyword in task_lower for keyword in ["analyze", "examine", "evaluate"]
-        ):
-            fallback_tools = ["mock_analysis_tool"]
-            result_data = {
-                "analysis_results": f"Mock analysis of: {request.task}",
-                "confidence_score": 0.65,
-                "analysis_type": "fallback_analysis",
-            }
-            reasoning = f"Fallback analysis orchestration for task: {request.task}"
-            confidence = 0.65
-        elif any(
-            keyword in task_lower for keyword in ["generate", "create", "compose"]
-        ):
-            fallback_tools = ["mock_generation_tool"]
-            result_data = {
-                "generated_content": f"Mock generated content for: {request.task}",
-                "word_count": 150,
-                "generation_type": "fallback_generation",
-            }
-            reasoning = f"Fallback generation orchestration for task: {request.task}"
-            confidence = 0.6
+        if any(k in tl for k in ["search", "find", "retrieve"]):
+            tools, result_data, conf = (
+                ["mock_search_tool"],
+                {
+                    "search_results": f"Mock search results for: {request.task}",
+                    "result_count": 5,
+                    "search_type": "fallback_search",
+                },
+                0.7,
+            )
+            strategy = "Fallback search orchestration"
+        elif any(k in tl for k in ["analyze", "examine", "evaluate"]):
+            tools, result_data, conf = (
+                ["mock_analysis_tool"],
+                {
+                    "analysis_results": f"Mock analysis of: {request.task}",
+                    "confidence_score": 0.65,
+                    "analysis_type": "fallback_analysis",
+                },
+                0.65,
+            )
+            strategy = "Fallback analysis orchestration"
+        elif any(k in tl for k in ["generate", "create", "compose"]):
+            tools, result_data, conf = (
+                ["mock_generation_tool"],
+                {
+                    "generated_content": (
+                        f"Mock generated content for: {request.task}"
+                    ),
+                    "word_count": 150,
+                    "generation_type": "fallback_generation",
+                },
+                0.6,
+            )
+            strategy = "Fallback generation orchestration"
         else:
-            fallback_tools = ["mock_general_tool"]
-            result_data = {
-                "general_response": f"Mock response for task: {request.task}",
-                "task_type": "general",
-                "processing_mode": "fallback",
-            }
-            reasoning = f"Fallback general orchestration for task: {request.task}"
-            confidence = 0.5
+            tools, result_data, conf = (
+                ["mock_general_tool"],
+                {
+                    "general_response": f"Mock response for task: {request.task}",
+                    "task_type": "general",
+                    "processing_mode": "fallback",
+                },
+                0.5,
+            )
+            strategy = "Fallback general orchestration"
 
-        latency_ms = (time.time() - start_time) * 1000
-
+        latency_ms = (time.time() - start) * 1000.0
         response = ToolResponse(
             success=True,
             results={
@@ -462,13 +348,11 @@ maintaining high performance and reliability. Always explain your reasoning."""
                 "fallback_reason": fallback_reason,
                 **result_data,
             },
-            tools_used=fallback_tools,
-            reasoning=f"{reasoning} (fallback mode - reason: {fallback_reason})",
+            tools_used=tools,
+            reasoning=f"{strategy} (fallback: {fallback_reason})",
             latency_ms=latency_ms,
-            confidence=confidence,
+            confidence=conf,
         )
-
-        # Update session state even in fallback mode
         deps.session_state.increment_tool_usage("agentic_orchestrator")
         deps.session_state.add_interaction(
             role="orchestrator",
@@ -481,32 +365,4 @@ maintaining high performance and reliability. Always explain your reasoning."""
                 "fallback_reason": fallback_reason,
             },
         )
-
         return response
-
-
-# Global orchestrator instance for singleton pattern
-class _OrchestratorSingleton:
-    """Singleton holder for orchestrator instance."""
-
-    _instance: AgenticOrchestrator | None = None
-
-    @classmethod
-    def get_instance(cls) -> AgenticOrchestrator:
-        """Get the singleton orchestrator instance."""
-        if cls._instance is None:
-            cls._instance = AgenticOrchestrator()
-        return cls._instance
-
-
-def get_orchestrator() -> AgenticOrchestrator:
-    """Get singleton orchestrator instance."""
-    return _OrchestratorSingleton.get_instance()
-
-
-async def orchestrate_tools(
-    task: str, constraints: dict[str, Any], deps: BaseAgentDependencies
-) -> ToolResponse:
-    """Convenient function for tool orchestration."""
-    orchestrator = get_orchestrator()
-    return await orchestrator.orchestrate(task, constraints, deps)

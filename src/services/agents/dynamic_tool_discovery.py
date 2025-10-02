@@ -1,17 +1,14 @@
-"""
-Dynamic Tool Discovery Engine - J3 Research Implementation.
+"""Dynamic Tool Discovery Engine."""
 
-This module implements tool discovery and capability assessment
-based on J3 research findings for tool orchestration.
-"""
+from __future__ import annotations
 
-import asyncio
 import logging
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from .core import BaseAgent, BaseAgentDependencies
 
@@ -31,7 +28,7 @@ class ToolCapabilityType(str, Enum):
     ORCHESTRATION = "orchestration"
 
 
-@dataclass
+@dataclass(slots=True)
 class ToolMetrics:
     """Performance metrics for a tool."""
 
@@ -45,705 +42,255 @@ class ToolMetrics:
 class ToolCapability(BaseModel):
     """Tool capability definition."""
 
-    name: str = Field(..., description="Tool name")
-    capability_type: ToolCapabilityType = Field(
-        ..., description="Primary capability type"
-    )
-    description: str = Field(..., description="Tool description")
-    input_types: list[str] = Field(..., description="Supported input types")
-    output_types: list[str] = Field(..., description="Supported output types")
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    # Performance characteristics
-    metrics: ToolMetrics | None = Field(None, description="Performance metrics")
-    requirements: dict[str, Any] = Field(
-        default_factory=dict, description="Tool requirements"
-    )
-    constraints: dict[str, Any] = Field(
-        default_factory=dict, description="Tool constraints"
-    )
+    name: str = Field(...)
+    capability_type: ToolCapabilityType = Field(...)
+    description: str = Field(...)
+    input_types: list[str] = Field(...)
+    output_types: list[str] = Field(...)
 
-    # Compatibility and dependencies
-    compatible_tools: list[str] = Field(
-        default_factory=list, description="Compatible tools for chaining"
-    )
-    dependencies: list[str] = Field(
-        default_factory=list, description="Required dependencies"
-    )
+    metrics: ToolMetrics | None = Field(None)
+    requirements: dict[str, Any] = Field(default_factory=dict)
+    constraints: dict[str, Any] = Field(default_factory=dict)
 
-    # Quality indicators
-    confidence_score: float = Field(
-        0.8, description="Confidence in capability assessment"
-    )
-    last_updated: str = Field(..., description="Last capability assessment update")
+    compatible_tools: list[str] = Field(default_factory=list)
+    dependencies: list[str] = Field(default_factory=list)
+
+    confidence_score: float = Field(0.8)
+    last_updated: str = Field(...)
 
 
 class DynamicToolDiscovery(BaseAgent):
-    """Dynamic tool discovery engine with capability assessment.
+    """Dynamic tool discovery engine with capability assessment."""
 
-    Based on J3 research findings for tool orchestration with
-    performance-based selection and capability evaluation.
-    """
-
-    def __init__(self, model: str = "gpt-4o-mini", temperature: float = 0.1):
-        """Initialize the dynamic tool discovery engine.
-
-        Args:
-            model: LLM model for capability assessment
-            temperature: Generation temperature for tool evaluation
-
-        """
+    def __init__(self, model: str = "gpt-4o-mini", temperature: float = 0.1) -> None:
         super().__init__(
             name="dynamic_tool_discovery",
             model=model,
             temperature=temperature,
             max_tokens=2000,
         )
-
         self.discovered_tools: dict[str, ToolCapability] = {}
         self.tool_performance_history: dict[str, list[ToolMetrics]] = {}
         self.capability_cache: dict[str, ToolCapability] = {}
 
     def get_system_prompt(self) -> str:
-        """Define tool discovery behavior."""
         return (
-            "You are a tool discovery engine with the following "
-            "capabilities:\n\n"
-            "1. TOOL ASSESSMENT\n"
-            "   - Analyze tool capabilities and performance characteristics\n"
-            "   - Assess compatibility between different tools for chaining\n"
-            "   - Evaluate tool suitability for specific task requirements\n\n"
-            "2. DYNAMIC CAPABILITY EVALUATION\n"
-            "   - Real-time assessment of tool performance and reliability\n"
-            "   - Learning from execution feedback to improve capability models\n"
-            "   - Adaptive scoring based on success patterns and failure analysis\n\n"
-            "3. PERFORMANCE-DRIVEN SELECTION\n"
-            "   - Select optimal tools based on performance requirements\n"
-            "   - Balance speed, quality, cost, and reliability constraints\n"
-            "   - Recommend tool combinations for complex workflows\n\n"
-            "Your goal is to provide tool discovery and capability "
-            "assessment for agent systems, enabling optimal tool "
-            "selection and orchestration."
+            "You are a tool discovery engine: assess capabilities, compatibility, "
+            "and performance to recommend optimal tools and chains."
         )
 
-    async def initialize_tools(self, _deps: BaseAgentDependencies) -> None:
-        """Initialize tool discovery capabilities.
-
-        Args:
-            deps: Agent dependencies for tool initialization
-
-        """
-        # Check if we're in fallback mode
-        fallback_reason = getattr(self, "_fallback_reason", None)
-        if fallback_reason:
-            logger.info(
-                f"DynamicToolDiscovery tools initialized in fallback mode "
-                f"(reason: {fallback_reason})"
-            )
+    async def initialize_tools(self, deps: BaseAgentDependencies) -> None:
+        """Initialize discovery (noop if in fallback)."""
+        reason = getattr(self, "_fallback_reason", None)
+        if reason:
+            logger.info("DynamicToolDiscovery in fallback mode (reason: %s)", reason)
         else:
-            logger.info("DynamicToolDiscovery tools initialized (discovery-based)")
+            logger.info("DynamicToolDiscovery tools initialized")
 
     async def initialize_discovery(self, deps: BaseAgentDependencies) -> None:
-        """Initialize tool discovery with system scanning.
-
-        Args:
-            deps: Agent dependencies for tool scanning
-
-        """
+        """Initialize discovery by scanning system and setting compatibility."""
         if not self._initialized:
             await self.initialize(deps)
-
-        # Discover available tools from the system
-        await self._scan_available_tools(deps)
-
-        # Initialize performance monitoring
-        await self._initialize_performance_tracking()
-
+        await self._scan_available_tools()
+        await self._assess_tool_compatibility()
         logger.info(
-            f"DynamicToolDiscovery initialized with {len(self.discovered_tools)} tools"
+            "DynamicToolDiscovery initialized with %d tools", len(self.discovered_tools)
         )
 
-    async def _scan_available_tools(self, _deps: BaseAgentDependencies) -> None:
-        """Scan system for available tools and assess capabilities.
+    async def _scan_available_tools(self) -> None:
+        """Scan system for available tools and seed capabilities."""
+        now = datetime.now(tz=UTC).isoformat()
 
-        Args:
-            deps: Agent dependencies for system access
-
-        """
-        # Core tools available in the system
-        core_tools = {
+        core_tools: dict[str, dict[str, Any]] = {
             "hybrid_search": {
                 "capability_type": ToolCapabilityType.SEARCH,
                 "description": "Hybrid vector and text search with reranking",
                 "input_types": ["text", "query"],
                 "output_types": ["search_results", "ranked_documents"],
-                "metrics": ToolMetrics(
-                    average_latency_ms=150.0,
-                    success_rate=0.94,
-                    accuracy_score=0.87,
-                    cost_per_execution=0.02,
-                    reliability_score=0.92,
-                ),
+                "metrics": ToolMetrics(150.0, 0.94, 0.87, 0.02, 0.92),
             },
             "rag_generation": {
                 "capability_type": ToolCapabilityType.GENERATION,
                 "description": "RAG-based answer generation with context synthesis",
                 "input_types": ["text", "context", "search_results"],
                 "output_types": ["generated_text", "synthesized_answer"],
-                "metrics": ToolMetrics(
-                    average_latency_ms=800.0,
-                    success_rate=0.91,
-                    accuracy_score=0.89,
-                    cost_per_execution=0.05,
-                    reliability_score=0.88,
-                ),
+                "metrics": ToolMetrics(800.0, 0.91, 0.89, 0.05, 0.88),
             },
             "content_analysis": {
                 "capability_type": ToolCapabilityType.ANALYSIS,
                 "description": "Content analysis and classification",
                 "input_types": ["text", "documents"],
                 "output_types": ["analysis_results", "classifications"],
-                "metrics": ToolMetrics(
-                    average_latency_ms=200.0,
-                    success_rate=0.93,
-                    accuracy_score=0.85,
-                    cost_per_execution=0.01,
-                    reliability_score=0.90,
-                ),
+                "metrics": ToolMetrics(200.0, 0.93, 0.85, 0.01, 0.90),
             },
         }
 
-        # Convert to ToolCapability objects
-        for tool_name, tool_data in core_tools.items():
-            capability = ToolCapability(
-                name=tool_name,
-                capability_type=tool_data["capability_type"],
-                description=tool_data["description"],
-                input_types=tool_data["input_types"],
-                output_types=tool_data["output_types"],
-                metrics=tool_data["metrics"],
-                last_updated=asyncio.get_event_loop().time().__str__(),
+        for name, data in core_tools.items():
+            cap = ToolCapability(
+                name=name,
+                capability_type=data["capability_type"],
+                description=data["description"],
+                input_types=data["input_types"],
+                output_types=data["output_types"],
+                metrics=data["metrics"],
+                confidence_score=0.8,  # explicit for Pyright
+                last_updated=now,
             )
-
-            self.discovered_tools[tool_name] = capability
-            self.tool_performance_history[tool_name] = [tool_data["metrics"]]
-
-        # Assess tool compatibility
-        await self._assess_tool_compatibility()
+            self.discovered_tools[name] = cap
+            self.tool_performance_history[name] = [data["metrics"]]
 
     async def _assess_tool_compatibility(self) -> None:
         """Assess compatibility between tools for chaining."""
         for tool_name, tool in self.discovered_tools.items():
-            compatible = []
-
-            # Define compatibility rules
+            compatible: list[str] = []
             if tool.capability_type == ToolCapabilityType.SEARCH:
-                # Search tools are compatible with generation and analysis
                 compatible.extend(
                     [
-                        name
-                        for name, other in self.discovered_tools.items()
+                        n
+                        for n, other in self.discovered_tools.items()
                         if other.capability_type
-                        in [ToolCapabilityType.GENERATION, ToolCapabilityType.ANALYSIS]
-                        and name != tool_name
+                        in (ToolCapabilityType.GENERATION, ToolCapabilityType.ANALYSIS)
+                        and n != tool_name
                     ]
                 )
-
             elif tool.capability_type == ToolCapabilityType.ANALYSIS:
-                # Analysis tools can feed into search or generation
                 compatible.extend(
                     [
-                        name
-                        for name, other in self.discovered_tools.items()
+                        n
+                        for n, other in self.discovered_tools.items()
                         if other.capability_type
-                        in [ToolCapabilityType.SEARCH, ToolCapabilityType.GENERATION]
-                        and name != tool_name
+                        in (ToolCapabilityType.SEARCH, ToolCapabilityType.GENERATION)
+                        and n != tool_name
                     ]
                 )
-
             tool.compatible_tools = compatible
-
-    async def _initialize_performance_tracking(self) -> None:
-        """Initialize performance tracking for discovered tools."""
-        logger.info("Initialized performance tracking for tool capability assessment")
 
     async def discover_tools_for_task(
         self, task_description: str, requirements: dict[str, Any]
     ) -> list[ToolCapability]:
-        """Discover and rank tools suitable for a specific task.
-
-        Args:
-            task_description: Description of the task to perform
-            requirements: Performance and quality requirements
-
-        Returns:
-            List of suitable tools ranked by suitability score
-
-        """
-        # Check if we're in fallback mode
-        fallback_reason = getattr(self, "_fallback_reason", None)
-        if fallback_reason:
-            return await self._fallback_discover_tools(task_description, requirements)
-
-        suitable_tools = []
-
+        """Return suitable tools ranked by suitability score."""
+        suitable: list[ToolCapability] = []
         for tool in self.discovered_tools.values():
-            suitability_score = await self._calculate_suitability_score(
+            score = await self._calculate_suitability_score(
                 tool, task_description, requirements
             )
-
-            if suitability_score > 0.5:  # Threshold for tool selection
-                tool_copy = tool.model_copy()
-                tool_copy.confidence_score = suitability_score
-                suitable_tools.append(tool_copy)
-
-        # Sort by suitability score
-        suitable_tools.sort(key=lambda t: t.confidence_score, reverse=True)
-
-        return suitable_tools
+            if score > 0.5:
+                copy = tool.model_copy()
+                copy.confidence_score = score
+                suitable.append(copy)
+        suitable.sort(key=lambda t: t.confidence_score, reverse=True)
+        return suitable
 
     async def _calculate_suitability_score(
         self, tool: ToolCapability, task_description: str, requirements: dict[str, Any]
     ) -> float:
-        """Calculate tool suitability score for a specific task.
+        """Score suitability without long boolean chains (R0916)."""
+        s = task_description.lower()
 
-        Args:
-            tool: Tool capability to evaluate
-            task_description: Description of the task
-            requirements: Performance requirements
+        def match(kind: ToolCapabilityType, *keywords: str) -> bool:
+            return any(k in s for k in keywords) and tool.capability_type == kind
 
-        Returns:
-            Suitability score between 0 and 1
+        cap_match = any(
+            [
+                match(ToolCapabilityType.SEARCH, "search", "find", "lookup"),
+                match(ToolCapabilityType.GENERATION, "generate", "compose", "answer"),
+                match(ToolCapabilityType.ANALYSIS, "analyze", "classify", "assess"),
+            ]
+        )
 
-        """
-        score = 0.0
+        score = 0.4 if cap_match else 0.0
 
-        # Base capability match
-        task_lower = task_description.lower()
-        if (
-            (
-                "search" in task_lower
-                and tool.capability_type == ToolCapabilityType.SEARCH
-            )
-            or (
-                "generate" in task_lower
-                and tool.capability_type == ToolCapabilityType.GENERATION
-            )
-            or (
-                "analyze" in task_lower
-                and tool.capability_type == ToolCapabilityType.ANALYSIS
-            )
-        ):
-            score += 0.4
-
-        # Performance requirements
         if tool.metrics:
-            # Latency requirement
             if "max_latency_ms" in requirements:
-                max_latency = requirements["max_latency_ms"]
-                if tool.metrics.average_latency_ms <= max_latency:
-                    score += 0.2
-                else:
-                    score -= 0.1  # Penalty for exceeding latency
-
-            # Quality requirement
-            if "min_accuracy" in requirements:
-                min_accuracy = requirements["min_accuracy"]
-                if tool.metrics.accuracy_score >= min_accuracy:
-                    score += 0.2
-
-            # Cost requirement
-            if "max_cost" in requirements:
-                max_cost = requirements["max_cost"]
-                if tool.metrics.cost_per_execution <= max_cost:
-                    score += 0.1
-
-            # Reliability bonus
+                score += (
+                    0.2
+                    if tool.metrics.average_latency_ms <= requirements["max_latency_ms"]
+                    else -0.1
+                )
+            if (
+                "min_accuracy" in requirements
+                and tool.metrics.accuracy_score >= requirements["min_accuracy"]
+            ):
+                score += 0.2
+            if (
+                "max_cost" in requirements
+                and tool.metrics.cost_per_execution <= requirements["max_cost"]
+            ):
+                score += 0.1
             score += tool.metrics.reliability_score * 0.1
 
         return min(score, 1.0)
 
-    async def update_tool_performance(
-        self, tool_name: str, execution_metrics: ToolMetrics
-    ) -> None:
-        """Update tool performance metrics based on execution feedback.
-
-        Args:
-            tool_name: Name of the tool
-            execution_metrics: Latest execution metrics
-
-        """
-        if tool_name in self.tool_performance_history:
-            self.tool_performance_history[tool_name].append(execution_metrics)
-
-            # Update rolling average metrics
-            recent_metrics = self.tool_performance_history[tool_name][
-                -10:
-            ]  # Last 10 executions
-            avg_metrics = self._calculate_average_metrics(recent_metrics)
-
-            if tool_name in self.discovered_tools:
-                self.discovered_tools[tool_name].metrics = avg_metrics
-                self.discovered_tools[tool_name].last_updated = (
-                    asyncio.get_event_loop().time().__str__()
-                )
-
-            logger.debug(f"Updated performance metrics for tool: {tool_name}")
-
-    def _calculate_average_metrics(
-        self, metrics_list: list[ToolMetrics]
-    ) -> ToolMetrics:
-        """Calculate average metrics from a list of tool metrics.
-
-        Args:
-            metrics_list: List of tool metrics
-
-        Returns:
-            Averaged tool metrics
-
-        """
-        if not metrics_list:
-            return ToolMetrics(0.0, 0.0, 0.0, 0.0, 0.0)
-
-        return ToolMetrics(
-            average_latency_ms=sum(m.average_latency_ms for m in metrics_list)
-            / len(metrics_list),
-            success_rate=sum(m.success_rate for m in metrics_list) / len(metrics_list),
-            accuracy_score=sum(m.accuracy_score for m in metrics_list)
-            / len(metrics_list),
-            cost_per_execution=sum(m.cost_per_execution for m in metrics_list)
-            / len(metrics_list),
-            reliability_score=sum(m.reliability_score for m in metrics_list)
-            / len(metrics_list),
-        )
-
     async def get_tool_recommendations(
         self, task_type: str, constraints: dict[str, Any]
     ) -> dict[str, Any]:
-        """Get intelligent tool recommendations for a task type.
-
-        Args:
-            task_type: Type of task to perform
-            constraints: Performance and resource constraints
-
-        Returns:
-            Tool recommendations with reasoning
-
-        """
-        # Check if we're in fallback mode
-        fallback_reason = getattr(self, "_fallback_reason", None)
-        if fallback_reason:
-            return await self._fallback_get_recommendations(task_type, constraints)
-
-        recommendations = {
+        """Return recommendations with reasoning and optional tool chains."""
+        recommendations: dict[str, Any] = {
             "primary_tools": [],
             "secondary_tools": [],
             "tool_chains": [],
             "reasoning": "",
         }
-
-        # Find suitable tools
-        suitable_tools = await self.discover_tools_for_task(task_type, constraints)
-
-        if suitable_tools:
+        suitable = await self.discover_tools_for_task(task_type, constraints)
+        if suitable:
             recommendations["primary_tools"] = [
                 {
-                    "name": tool.name,
-                    "suitability_score": tool.confidence_score,
-                    "capability_type": tool.capability_type.value,
-                    "estimated_latency_ms": tool.metrics.average_latency_ms
-                    if tool.metrics
-                    else 0,
+                    "name": t.name,
+                    "suitability_score": t.confidence_score,
+                    "capability_type": t.capability_type.value,
+                    "estimated_latency_ms": (
+                        t.metrics.average_latency_ms if t.metrics else 0.0
+                    ),
                 }
-                for tool in suitable_tools[:3]  # Top 3 tools
+                for t in suitable[:3]
             ]
-
-            # Generate tool chains for complex tasks
-            if len(suitable_tools) > 1:
+            if len(suitable) > 1:
                 recommendations["tool_chains"] = await self._generate_tool_chains(
-                    suitable_tools
+                    suitable
                 )
-
-            # Generate reasoning
-            best_tool = suitable_tools[0]
+            best = suitable[0]
+            sr = best.metrics.success_rate if best.metrics else 0.0
             recommendations["reasoning"] = (
-                f"Recommended '{best_tool.name}' as primary tool based on "
-                f"{best_tool.confidence_score:.2f} suitability score. "
-                f"Tool specializes in {best_tool.capability_type.value} with "
-                f"{best_tool.metrics.success_rate:.2f} success rate."
+                f"Recommended {best.name} ({best.capability_type.value}) with "
+                f"{best.confidence_score:.2f} suitability; success≈{sr:.2f}."
             )
-
         return recommendations
 
     async def _generate_tool_chains(
         self, tools: list[ToolCapability]
     ) -> list[dict[str, Any]]:
-        """Generate intelligent tool chains from available tools.
+        """Generate compatible tool chains from available tools."""
+        chains: list[dict[str, Any]] = []
+        search = [t for t in tools if t.capability_type == ToolCapabilityType.SEARCH]
+        gen = [t for t in tools if t.capability_type == ToolCapabilityType.GENERATION]
+        ana = [t for t in tools if t.capability_type == ToolCapabilityType.ANALYSIS]
 
-        Args:
-            tools: List of available tools
-
-        Returns:
-            List of recommended tool chains
-
-        """
-        chains = []
-
-        # Simple chaining logic - can be enhanced with ML
-        search_tools = [
-            t for t in tools if t.capability_type == ToolCapabilityType.SEARCH
-        ]
-        generation_tools = [
-            t for t in tools if t.capability_type == ToolCapabilityType.GENERATION
-        ]
-        analysis_tools = [
-            t for t in tools if t.capability_type == ToolCapabilityType.ANALYSIS
-        ]
-
-        # Search → Generation chain
-        if search_tools and generation_tools:
+        if search and gen:
             chains.append(
                 {
-                    "chain": [search_tools[0].name, generation_tools[0].name],
+                    "chain": [search[0].name, gen[0].name],
                     "type": "search_then_generate",
                     "estimated_total_latency_ms": (
                         (
-                            search_tools[0].metrics.average_latency_ms
-                            if search_tools[0].metrics
+                            search[0].metrics.average_latency_ms
+                            if search[0].metrics
                             else 0
                         )
-                        + (
-                            generation_tools[0].metrics.average_latency_ms
-                            if generation_tools[0].metrics
-                            else 0
-                        )
+                        + (gen[0].metrics.average_latency_ms if gen[0].metrics else 0)
                     ),
                 }
             )
-
-        # Analysis → Search → Generation chain
-        if analysis_tools and search_tools and generation_tools:
+        if ana and search and gen:
             chains.append(
                 {
-                    "chain": [
-                        analysis_tools[0].name,
-                        search_tools[0].name,
-                        generation_tools[0].name,
-                    ],
+                    "chain": [ana[0].name, search[0].name, gen[0].name],
                     "type": "analyze_search_generate",
-                    "estimated_total_latency_ms": (
-                        (
-                            analysis_tools[0].metrics.average_latency_ms
-                            if analysis_tools[0].metrics
-                            else 0
-                        )
-                        + (
-                            search_tools[0].metrics.average_latency_ms
-                            if search_tools[0].metrics
-                            else 0
-                        )
-                        + (
-                            generation_tools[0].metrics.average_latency_ms
-                            if generation_tools[0].metrics
-                            else 0
-                        )
-                    ),
-                }
-            )
-
-        return chains
-
-    async def _fallback_discover_tools(
-        self, task_description: str, _requirements: dict[str, Any]
-    ) -> list[ToolCapability]:
-        """Fallback tool discovery when agent is in fallback mode.
-
-        Args:
-            task_description: Description of the task to perform
-            requirements: Performance and quality requirements
-
-        Returns:
-            List of mock suitable tools
-
-        """
-        fallback_reason = getattr(self, "_fallback_reason", "unknown")
-        logger.info(f"Using fallback tool discovery (reason: {fallback_reason})")
-
-        # Create mock tools based on task analysis
-        mock_tools = []
-        task_lower = task_description.lower()
-
-        # Mock hybrid search tool
-        if any(keyword in task_lower for keyword in ["search", "find", "retrieve"]):
-            mock_tool = ToolCapability(
-                name="mock_hybrid_search",
-                capability_type=ToolCapabilityType.SEARCH,
-                description="Mock hybrid search tool (fallback mode)",
-                input_types=["text", "query"],
-                output_types=["search_results"],
-                metrics=ToolMetrics(
-                    average_latency_ms=200.0,
-                    success_rate=0.85,
-                    accuracy_score=0.80,
-                    cost_per_execution=0.01,
-                    reliability_score=0.85,
-                ),
-                confidence_score=0.85,
-                last_updated="fallback_mode",
-            )
-            mock_tools.append(mock_tool)
-
-        # Mock analysis tool
-        if any(keyword in task_lower for keyword in ["analyze", "examine", "evaluate"]):
-            mock_tool = ToolCapability(
-                name="mock_content_analysis",
-                capability_type=ToolCapabilityType.ANALYSIS,
-                description="Mock content analysis tool (fallback mode)",
-                input_types=["text", "documents"],
-                output_types=["analysis_results"],
-                metrics=ToolMetrics(
-                    average_latency_ms=300.0,
-                    success_rate=0.80,
-                    accuracy_score=0.75,
-                    cost_per_execution=0.02,
-                    reliability_score=0.80,
-                ),
-                confidence_score=0.80,
-                last_updated="fallback_mode",
-            )
-            mock_tools.append(mock_tool)
-
-        # Mock generation tool
-        if any(keyword in task_lower for keyword in ["generate", "create", "compose"]):
-            mock_tool = ToolCapability(
-                name="mock_content_generation",
-                capability_type=ToolCapabilityType.GENERATION,
-                description="Mock content generation tool (fallback mode)",
-                input_types=["text", "context"],
-                output_types=["generated_content"],
-                metrics=ToolMetrics(
-                    average_latency_ms=500.0,
-                    success_rate=0.75,
-                    accuracy_score=0.70,
-                    cost_per_execution=0.05,
-                    reliability_score=0.75,
-                ),
-                confidence_score=0.75,
-                last_updated="fallback_mode",
-            )
-            mock_tools.append(mock_tool)
-
-        # Default fallback tool if no specific tools matched
-        if not mock_tools:
-            mock_tool = ToolCapability(
-                name="mock_general_tool",
-                capability_type=ToolCapabilityType.SEARCH,
-                description="Mock general purpose tool (fallback mode)",
-                input_types=["text"],
-                output_types=["results"],
-                metrics=ToolMetrics(
-                    average_latency_ms=250.0,
-                    success_rate=0.70,
-                    accuracy_score=0.65,
-                    cost_per_execution=0.02,
-                    reliability_score=0.70,
-                ),
-                confidence_score=0.70,
-                last_updated="fallback_mode",
-            )
-            mock_tools.append(mock_tool)
-
-        return mock_tools
-
-    async def _fallback_get_recommendations(
-        self, task_type: str, constraints: dict[str, Any]
-    ) -> dict[str, Any]:
-        """Fallback tool recommendations when agent is in fallback mode.
-
-        Args:
-            task_type: Type of task to perform
-            constraints: Performance and resource constraints
-
-        Returns:
-            Mock tool recommendations
-
-        """
-        fallback_reason = getattr(self, "_fallback_reason", "unknown")
-        logger.info(f"Using fallback tool recommendations (reason: {fallback_reason})")
-
-        # Get fallback tools
-        fallback_tools = await self._fallback_discover_tools(task_type, constraints)
-
-        return {
-            "primary_tools": [
-                {
-                    "name": tool.name,
-                    "suitability_score": tool.confidence_score,
-                    "capability_type": tool.capability_type.value,
-                    "estimated_latency_ms": tool.metrics.average_latency_ms
-                    if tool.metrics
-                    else 0,
-                    "fallback_mode": True,
-                }
-                for tool in fallback_tools[:2]  # Top 2 fallback tools
-            ],
-            "secondary_tools": [],
-            "tool_chains": [
-                {
-                    "chain": [tool.name for tool in fallback_tools],
-                    "type": "fallback_chain",
                     "estimated_total_latency_ms": sum(
-                        tool.metrics.average_latency_ms if tool.metrics else 0
-                        for tool in fallback_tools
+                        (t.metrics.average_latency_ms if t.metrics else 0.0)
+                        for t in (ana[0], search[0], gen[0])
                     ),
                 }
-            ]
-            if len(fallback_tools) > 1
-            else [],
-            "reasoning": (
-                f"Using fallback mode recommendations (reason: {fallback_reason}). "
-                f"Identified {len(fallback_tools)} mock tools suitable for "
-                f"'{task_type}' tasks. "
-                "These are simulated capabilities that will provide basic "
-                "functionality."
-            ),
-            "fallback_mode": True,
-        }
-
-
-# Global discovery engine instance
-class _DiscoveryEngineSingleton:
-    """Singleton holder for discovery engine instance."""
-
-    _instance: DynamicToolDiscovery | None = None
-
-    @classmethod
-    def get_instance(cls) -> DynamicToolDiscovery:
-        """Get the singleton discovery engine instance."""
-        if cls._instance is None:
-            cls._instance = DynamicToolDiscovery()
-        return cls._instance
-
-
-def get_discovery_engine() -> DynamicToolDiscovery:
-    """Get singleton discovery engine instance."""
-    return _DiscoveryEngineSingleton.get_instance()
-
-
-async def discover_tools_for_task(
-    task: str, requirements: dict[str, Any], deps: BaseAgentDependencies
-) -> list[ToolCapability]:
-    """Convenient function for dynamic tool discovery.
-
-    Args:
-        task: Task description
-        requirements: Performance requirements
-        deps: Agent dependencies
-
-    Returns:
-        List of suitable tools for the task
-
-    """
-    engine = get_discovery_engine()
-    if not engine.is_initialized:
-        await engine.initialize_discovery(deps)
-    return await engine.discover_tools_for_task(task, requirements)
+            )
+        return chains
