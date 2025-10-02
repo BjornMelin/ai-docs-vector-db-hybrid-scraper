@@ -1,12 +1,10 @@
-"""Vector store adapters and shared data structures."""
+"""Vector store data structures exposed as public API."""
 
-from .adapter import QdrantVectorAdapter
-from .adapter_base import CollectionSchema, TextDocument, VectorMatch, VectorRecord
+from .types import CollectionSchema, TextDocument, VectorMatch, VectorRecord
 
 
 __all__ = [
     "CollectionSchema",
-    "QdrantVectorAdapter",
     "TextDocument",
     "VectorMatch",
     "VectorRecord",
