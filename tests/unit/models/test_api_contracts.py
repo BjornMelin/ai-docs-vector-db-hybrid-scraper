@@ -4,6 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from src.models.api_contracts import (
+    AdvancedSearchRequest,
     AnalyticsRequest,
     AnalyticsResponse,
     BulkDocumentRequest,
@@ -35,7 +36,7 @@ class TestMCPRequest:
     def test_forbids_extra_fields(self):
         """Test that extra fields are forbidden."""
         with pytest.raises(ValidationError):
-            MCPRequest(extra_field="not allowed")
+            MCPRequest(extra_field="not allowed")  # type: ignore
 
     def test_empty_request(self):
         """Test creating empty request."""
@@ -50,12 +51,12 @@ class TestMCPResponse:
         """Test that required fields are enforced."""
         # Missing success
         with pytest.raises(ValidationError) as exc_info:
-            MCPResponse(timestamp=123.45)
+            MCPResponse(timestamp=123.45)  # type: ignore
         assert "success" in str(exc_info.value)
 
         # Missing timestamp
         with pytest.raises(ValidationError) as exc_info:
-            MCPResponse(success=True)
+            MCPResponse(success=True)  # type: ignore
         assert "timestamp" in str(exc_info.value)
 
     def test_valid_response(self):
@@ -67,7 +68,7 @@ class TestMCPResponse:
     def test_forbids_extra_fields(self):
         """Test that extra fields are forbidden."""
         with pytest.raises(ValidationError):
-            MCPResponse(success=True, timestamp=123.45, extra_field="not allowed")
+            MCPResponse(success=True, timestamp=123.45, extra_field="not allowed")  # type: ignore
 
 
 class TestErrorResponse:
@@ -108,6 +109,20 @@ class TestSearchRequest:
         request = SearchRequest(query="test")
         assert request.query == "test"
         assert request.collection_name == "documents"
+        assert request.limit == 10
+        assert request.score_threshold == 0.0
+        assert request.enable_hyde is False
+        assert request.filters is None
+
+
+class TestAdvancedSearchRequest:
+    """Test AdvancedSearchRequest model."""
+
+    def test_default_values(self):
+        """Test default field values."""
+        request = AdvancedSearchRequest(query="test")
+        assert request.query == "test"
+        assert request.collection_name == "documents"
         assert request.search_strategy == "hybrid"
         assert request.limit == 10
         assert request.accuracy_level == "balanced"
@@ -118,25 +133,25 @@ class TestSearchRequest:
     def test_search_strategy_field(self):
         """Test search_strategy field."""
         # Any string is accepted as search strategy
-        request = SearchRequest(query="test", search_strategy="dense")
+        request = AdvancedSearchRequest(query="test", search_strategy="dense")
         assert request.search_strategy == "dense"
 
-        request = SearchRequest(query="test", search_strategy="multi_stage")
+        request = AdvancedSearchRequest(query="test", search_strategy="multi_stage")
         assert request.search_strategy == "multi_stage"
 
     def test_accuracy_level_field(self):
         """Test accuracy_level field."""
         # Any string is accepted as accuracy level
-        request = SearchRequest(query="test", accuracy_level="fast")
+        request = AdvancedSearchRequest(query="test", accuracy_level="fast")
         assert request.accuracy_level == "fast"
 
-        request = SearchRequest(query="test", accuracy_level="exact")
+        request = AdvancedSearchRequest(query="test", accuracy_level="exact")
         assert request.accuracy_level == "exact"
 
     def test_hyde_config_field(self):
         """Test hyde_config field accepts any dict."""
         hyde_config = {"temperature": 0.7, "max_tokens": 100}
-        request = SearchRequest(query="test", hyde_config=hyde_config)
+        request = AdvancedSearchRequest(query="test", hyde_config=hyde_config)
         assert request.hyde_config == hyde_config
 
 
@@ -152,9 +167,9 @@ class TestSearchResultItem:
 
         # Missing required fields
         with pytest.raises(ValidationError):
-            SearchResultItem(score=0.95)  # Missing id
+            SearchResultItem(score=0.95)  # type: ignore # Missing id
         with pytest.raises(ValidationError):
-            SearchResultItem(id="123")  # Missing score
+            SearchResultItem(id="123")  # type: ignore # Missing score
 
     def test_optional_fields(self):
         """Test optional fields with defaults."""
@@ -195,7 +210,7 @@ class TestSearchResponse:
         response = SearchResponse(timestamp=123.45)
         assert response.success is True
         assert response.results == []
-        assert response._total_count == 0
+        assert response.total_count == 0
         assert response.query_time_ms == 0.0
         assert response.search_strategy == "unknown"
         assert response.cache_hit is False
@@ -209,13 +224,13 @@ class TestSearchResponse:
         response = SearchResponse(
             timestamp=123.45,
             results=results,
-            _total_count=2,
+            total_count=2,
             query_time_ms=15.5,
             search_strategy="hybrid",
             cache_hit=True,
         )
         assert len(response.results) == 2
-        assert response._total_count == 2
+        assert response.total_count == 2
         assert response.query_time_ms == 15.5
         assert response.search_strategy == "hybrid"
         assert response.cache_hit is True
@@ -231,7 +246,7 @@ class TestDocumentRequest:
 
         # Missing required field
         with pytest.raises(ValidationError):
-            DocumentRequest()
+            DocumentRequest()  # type: ignore
 
     def test_default_values(self):
         """Test default field values."""
@@ -268,7 +283,7 @@ class TestBulkDocumentRequest:
 
         # Missing required field
         with pytest.raises(ValidationError):
-            BulkDocumentRequest()
+            BulkDocumentRequest()  # type: ignore
 
     def test_urls_constraints(self):
         """Test urls field constraints."""
@@ -357,7 +372,7 @@ class TestBulkDocumentResponse:
         assert response.success is True
         assert response.processed_count == 0
         assert response.failed_count == 0
-        assert response._total_chunks == 0
+        assert response.total_chunks == 0
         assert response.processing_time_ms == 0.0
         assert response.results == []
         assert response.errors == []
@@ -384,14 +399,14 @@ class TestBulkDocumentResponse:
             timestamp=123.45,
             processed_count=2,
             failed_count=1,
-            _total_chunks=8,
+            total_chunks=8,
             processing_time_ms=500.0,
             results=results,
             errors=errors,
         )
         assert response.processed_count == 2
         assert response.failed_count == 1
-        assert response._total_chunks == 8
+        assert response.total_chunks == 8
         assert len(response.results) == 2
         assert len(response.errors) == 1
 
@@ -516,7 +531,7 @@ class TestListCollectionsResponse:
         response = ListCollectionsResponse(timestamp=123.45)
         assert response.success is True
         assert response.collections == []
-        assert response._total_count == 0
+        assert response.total_count == 0
 
     def test_with_collections(self):
         """Test response with collections."""
@@ -527,10 +542,10 @@ class TestListCollectionsResponse:
         response = ListCollectionsResponse(
             timestamp=123.45,
             collections=collections,
-            _total_count=2,
+            total_count=2,
         )
         assert len(response.collections) == 2
-        assert response._total_count == 2
+        assert response.total_count == 2
 
 
 class TestAnalyticsRequest:
