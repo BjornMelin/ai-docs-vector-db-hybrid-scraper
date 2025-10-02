@@ -9,7 +9,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from langchain_core.callbacks.manager import AsyncCallbackManagerForRetrieverRun
 from langchain_core.documents import Document
+from langchain_core.embeddings import Embeddings
 
+from src.services.rag.models import RAGConfig
 from src.services.rag.retriever import VectorServiceRetriever
 
 
@@ -70,7 +72,13 @@ def test_with_search_kwargs_creates_new_instance() -> None:
     """with_search_kwargs must return a new retriever with overrides applied."""
 
     vector_store = _make_vector_store_mock()
-    retriever = VectorServiceRetriever(vector_store, "docs", k=3)
+    rag_config = RAGConfig(compression_enabled=False)
+    retriever = VectorServiceRetriever(
+        vector_store,
+        "docs",
+        k=3,
+        rag_config=rag_config,
+    )
 
     overridden = retriever.with_search_kwargs(k=7, filters={"category": "api"})
 
@@ -81,6 +89,63 @@ def test_with_search_kwargs_creates_new_instance() -> None:
     # Ensure original instance unchanged
     assert retriever._k == 3
     assert retriever._filters is None
+
+
+@pytest.mark.asyncio
+async def test_compression_pipeline_filters_documents(monkeypatch) -> None:
+    """Compression should remove low-similarity documents via LangChain pipeline."""
+
+    class _StubEmbeddings(Embeddings):
+        def __init__(self, *_, **__):
+            return
+
+        def embed_documents(self, texts):
+            return [[1.0, 0.0] if "keep" in text else [0.0, 1.0] for text in texts]
+
+        def embed_query(self, text):
+            _ = text
+            return [1.0, 0.0]
+
+    monkeypatch.setattr(
+        "src.services.rag.retriever.FastEmbedEmbeddings", _StubEmbeddings
+    )
+
+    match_keep = SimpleNamespace(
+        id="doc-keep",
+        score=0.9,
+        payload={"content": "please keep this", "title": "Keep"},
+    )
+    match_drop = SimpleNamespace(
+        id="doc-drop",
+        score=0.6,
+        payload={"content": "discard me", "title": "Drop"},
+    )
+
+    vector_store = _make_vector_store_mock()
+    vector_store.config = SimpleNamespace(fastembed=SimpleNamespace(model="stub-model"))
+    vector_store.search_documents.return_value = [match_keep, match_drop]
+
+    rag_config = RAGConfig(
+        compression_enabled=True,
+        compression_similarity_threshold=0.7,
+    )
+    retriever = VectorServiceRetriever(
+        vector_store,
+        "docs",
+        rag_config=rag_config,
+    )
+
+    documents = await retriever._aget_relevant_documents(
+        "retain important",
+        run_manager=AsyncCallbackManagerForRetrieverRun.get_noop_manager(),
+    )
+
+    assert len(documents) == 1
+    assert documents[0].metadata["source_id"] == "doc-keep"
+    stats = retriever.compression_stats
+    assert stats is not None
+    assert stats.documents_compressed == 1
+    assert stats.tokens_after <= stats.tokens_before
 
 
 def test_get_relevant_documents_sync_path_runs_event_loop(monkeypatch) -> None:
