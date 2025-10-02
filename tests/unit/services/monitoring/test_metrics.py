@@ -7,6 +7,7 @@ import pytest
 from prometheus_client.registry import CollectorRegistry
 
 from src.services.monitoring.metrics import MetricsConfig, MetricsRegistry
+from src.services.query_processing.rag.compression import CompressionStats
 
 
 class TestMetricsConfig:
@@ -72,6 +73,11 @@ class TestMetricsRegistry:
             "embedding_cost",
             "cache_hits",
             "cache_misses",
+            "grouping_requests",
+            "grouping_latency",
+            "compression_ratio",
+            "compression_tokens",
+            "compression_documents",
             "service_health",
         ]
 
@@ -144,6 +150,27 @@ class TestMetricsRegistry:
         registry.record_cache_miss("embedding")
         assert "cache_hits" in registry._metrics
         assert "cache_misses" in registry._metrics
+
+    def test_record_grouping_attempt(self, registry):
+        """Test recording grouped query metrics."""
+
+        registry.record_grouping_attempt("docs", "applied", duration_ms=12.5)
+        registry.record_grouping_attempt("docs", "fallback")
+        registry.record_grouping_attempt("docs", "disabled")
+        assert "grouping_requests" in registry._metrics
+        assert "grouping_latency" in registry._metrics
+
+    def test_record_compression_stats(self, registry):
+        """Test recording compression statistics."""
+
+        stats = CompressionStats(
+            documents_processed=2,
+            documents_compressed=1,
+            tokens_before=100,
+            tokens_after=40,
+        )
+        registry.record_compression_stats("docs", stats)
+        assert "compression_ratio" in registry._metrics
 
     def test_update_qdrant_metrics(self, registry):
         """Test Qdrant-specific metrics."""

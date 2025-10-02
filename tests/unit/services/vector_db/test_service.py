@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
@@ -299,8 +300,10 @@ async def test_search_documents_uses_query_groups_when_supported(
         payload={"_grouping": {"applied": True, "group_id": "doc-1"}},
     )
     adapter_mock.query_groups.return_value = ([grouped_match], True)
+    adapter_mock.get_collection_info.return_value = SimpleNamespace(
+        payload_schema={}, status="green", vectors_count=0, points_count=0
+    )
     service._adapter = adapter_mock
-    service._grouping_indexes.add(("docs", "doc_id"))
 
     matches = await service.search_documents("docs", "query", limit=1)
 
@@ -336,6 +339,27 @@ async def test_ensure_collection_uses_adapter(
     adapter_mock = AsyncMock(spec=QdrantVectorAdapter)
     service._adapter = adapter_mock
 
+    adapter_mock.collection_exists.return_value = False
+
     await service.ensure_collection(collection_schema)
 
+    adapter_mock.collection_exists.assert_awaited_once_with(collection_schema.name)
     adapter_mock.create_collection.assert_awaited_once_with(collection_schema)
+
+
+@pytest.mark.asyncio
+async def test_ensure_collection_noop_when_existing(
+    initialized_vector_store_service,
+    collection_schema,
+) -> None:
+    """ensure_collection returns early if the collection is present."""
+
+    service: VectorStoreService = initialized_vector_store_service
+    adapter_mock = AsyncMock(spec=QdrantVectorAdapter)
+    adapter_mock.collection_exists.return_value = True
+    service._adapter = adapter_mock
+
+    await service.ensure_collection(collection_schema)
+
+    adapter_mock.collection_exists.assert_awaited_once_with(collection_schema.name)
+    adapter_mock.create_collection.assert_not_awaited()

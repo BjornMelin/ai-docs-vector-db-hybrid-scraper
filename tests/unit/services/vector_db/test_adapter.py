@@ -35,25 +35,19 @@ def adapter(qdrant_client_mock: AsyncMock) -> QdrantVectorAdapter:
 
 
 @pytest.mark.asyncio
-async def test_create_collection_recreates_existing(
+async def test_create_collection_noop_when_existing(
     adapter: QdrantVectorAdapter,
     qdrant_client_mock: AsyncMock,
     collection_schema: CollectionSchema,
 ) -> None:
-    """Existing collections should be dropped then recreated with schema."""
+    """Existing collections should not be dropped or recreated."""
 
     qdrant_client_mock.collection_exists.return_value = True
 
     await adapter.create_collection(collection_schema)
 
-    qdrant_client_mock.delete_collection.assert_awaited_once_with(
-        collection_schema.name
-    )
-    qdrant_client_mock.create_collection.assert_awaited_once()
-    kwargs = qdrant_client_mock.create_collection.call_args.kwargs
-    vector_params: models.VectorParams = kwargs["vectors_config"]
-    assert vector_params.size == collection_schema.vector_size
-    assert vector_params.distance == models.Distance.COSINE
+    qdrant_client_mock.delete_collection.assert_not_awaited()
+    qdrant_client_mock.create_collection.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -69,6 +63,24 @@ async def test_create_collection_skips_drop_when_absent(
     await adapter.create_collection(collection_schema)
 
     qdrant_client_mock.delete_collection.assert_not_awaited()
+    qdrant_client_mock.create_collection.assert_awaited_once()
+    kwargs = qdrant_client_mock.create_collection.call_args.kwargs
+    vector_params: models.VectorParams = kwargs["vectors_config"]
+    assert vector_params.size == collection_schema.vector_size
+    assert vector_params.distance == models.Distance.COSINE
+
+
+@pytest.mark.asyncio
+async def test_collection_exists_proxy(
+    adapter: QdrantVectorAdapter,
+    qdrant_client_mock: AsyncMock,
+) -> None:
+    """collection_exists should delegate to the client."""
+
+    qdrant_client_mock.collection_exists.return_value = True
+
+    assert await adapter.collection_exists("docs") is True
+    qdrant_client_mock.collection_exists.assert_awaited_once_with("docs")
 
 
 @pytest.mark.asyncio
@@ -303,11 +315,10 @@ def test_normalize_match_value_accepts_simple_types() -> None:
     assert _normalize_match_value("tag") == "tag"
 
 
-def test_normalize_match_value_rejects_float() -> None:
-    """Non-supported types should raise TypeError."""
+def test_normalize_match_value_accepts_float() -> None:
+    """Floating point values should be accepted for numeric filters."""
 
-    with pytest.raises(TypeError):
-        _normalize_match_value(0.5)
+    assert _normalize_match_value(0.5) == 0.5
 
 
 def test_normalize_match_any_validates_sequences() -> None:
@@ -317,11 +328,11 @@ def test_normalize_match_any_validates_sequences() -> None:
     assert list(result) == ["a", "b"]
 
 
-def test_normalize_match_any_rejects_mixed_types() -> None:
-    """Mixed sequences should raise TypeError."""
+def test_normalize_match_any_accepts_mixed_types() -> None:
+    """Mixed sequences should normalize to the native Qdrant value variants."""
 
-    with pytest.raises(TypeError):
-        _normalize_match_any(["a", 1])
+    result = _normalize_match_any(["a", 1])
+    assert list(result) == ["a", 1]
 
 
 def test_filter_from_mapping_none() -> None:
