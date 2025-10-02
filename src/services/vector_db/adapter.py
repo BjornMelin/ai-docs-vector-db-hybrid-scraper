@@ -31,14 +31,10 @@ class QdrantVectorAdapter(VectorAdapter):
         return bool(self._supports_query_groups)
 
     async def create_collection(self, schema: CollectionSchema) -> None:
-        """Create the collection if it does not exist, otherwise ensure schema."""
+        """Create the collection if it does not already exist."""
 
-        if await self._client.collection_exists(schema.name):
-            try:
-                await self._client.delete_collection(schema.name)
-            except UnexpectedResponse as exc:  # pragma: no cover - defensive
-                if exc.status_code != 404:
-                    raise
+        if await self.collection_exists(schema.name):
+            return
         vectors_config = models.VectorParams(
             size=schema.vector_size,
             distance=_distance_from_string(schema.distance),
@@ -56,6 +52,11 @@ class QdrantVectorAdapter(VectorAdapter):
             vectors_config=vectors_config,
             sparse_vectors_config=sparse_config,
         )
+
+    async def collection_exists(self, name: str) -> bool:
+        """Return True if the collection is already present."""
+
+        return bool(await self._client.collection_exists(name))
 
     async def drop_collection(self, name: str, *, missing_ok: bool = True) -> None:
         """Drop a collection.
@@ -187,6 +188,8 @@ class QdrantVectorAdapter(VectorAdapter):
                 id=str(point.id),
                 score=point.score,
                 payload=point.payload,
+                raw_score=point.score,
+                collection=collection,
             )
             for point in query_response.points
         ]
@@ -248,6 +251,8 @@ class QdrantVectorAdapter(VectorAdapter):
                     id=str(hit.id),
                     score=hit.score,
                     payload=payload,
+                    raw_score=hit.score,
+                    collection=collection,
                 )
             )
         return matches, True
@@ -301,6 +306,8 @@ class QdrantVectorAdapter(VectorAdapter):
                 id=str(point.id),
                 score=point.score,
                 payload=point.payload,
+                raw_score=point.score,
+                collection=collection,
             )
             for point in result.points
         ]

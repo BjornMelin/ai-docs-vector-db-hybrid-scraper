@@ -1,4 +1,4 @@
-"""Lightweight performance tracking helpers."""
+"""Performance tracking helpers."""
 
 from __future__ import annotations
 
@@ -9,14 +9,25 @@ from typing import Any
 
 @dataclass
 class PerformanceTracker:
-    """Track average processing time and per-strategy usage."""
+    """Track average processing time and per-strategy usage.
+
+    Attributes:
+        total_operations: Total number of operations recorded.
+        total_duration_ms: Total duration in milliseconds.
+        counters: Dictionary of operation counts by label.
+    """
 
     total_operations: int = 0
     total_duration_ms: float = 0.0
     counters: dict[str, int] = field(default_factory=dict)
 
     def record(self, duration_ms: float, *, label: str | None = None) -> None:
-        """Record a single execution duration."""
+        """Record a single execution duration.
+
+        Args:
+            duration_ms: Duration in milliseconds.
+            label: Optional label for categorizing operations.
+        """
 
         self.total_operations += 1
         self.total_duration_ms += duration_ms
@@ -25,7 +36,11 @@ class PerformanceTracker:
 
     @property
     def average_duration_ms(self) -> float:
-        """Return the average duration in milliseconds."""
+        """Return the average duration in milliseconds.
+
+        Returns:
+            Average duration or 0.0 if no operations recorded.
+        """
 
         if self.total_operations == 0:
             return 0.0

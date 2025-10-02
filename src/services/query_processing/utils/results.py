@@ -19,7 +19,15 @@ T = TypeVar("T")
 
 
 def _tokenize(content: str, stop_words: Collection[str]) -> set[str]:
-    """Tokenize text content while filtering stop words."""
+    """Tokenize text content while filtering stop words.
+
+    Args:
+        content: Text to tokenize.
+        stop_words: Words to exclude from tokens.
+
+    Returns:
+        Set of filtered tokens.
+    """
 
     normalized_stop_words = {word.lower() for word in stop_words}
     return {

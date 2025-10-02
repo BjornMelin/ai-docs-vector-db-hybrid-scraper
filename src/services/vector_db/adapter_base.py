@@ -43,6 +43,9 @@ class VectorMatch:
     score: float
     payload: Mapping[str, Any] | None
     vector: Sequence[float] | None = None
+    raw_score: float | None = None
+    collection: str | None = None
+    normalized_score: float | None = None
 
 
 @dataclass(slots=True)
@@ -68,6 +71,10 @@ class VectorAdapter(ABC):
     @abstractmethod
     async def list_collections(self) -> list[str]:
         """Return the available collection identifiers."""
+
+    @abstractmethod
+    async def collection_exists(self, name: str) -> bool:
+        """Return True when the supplied collection identifier is present."""
 
     @abstractmethod
     async def upsert(
@@ -111,6 +118,36 @@ class VectorAdapter(ABC):
         filters: Mapping[str, Any] | None = None,
     ) -> list[VectorMatch]:
         """Execute a hybrid sparse/dense search if supported."""
+
+    def supports_query_groups(self) -> bool:
+        """Return True when server-side grouping capabilities are available."""
+
+        return False
+
+    async def query_groups(  # pylint: disable=too-many-arguments
+        self,
+        collection: str,
+        vector: Sequence[float],
+        *,
+        group_by: str,
+        limit: int = 10,
+        group_size: int = 1,
+        filters: Mapping[str, Any] | None = None,
+    ) -> tuple[list[VectorMatch], bool]:
+        """Attempt a grouped query returning matches and a success flag.
+
+        Base adapters default to a regular similarity search and report that
+        grouping was not applied. Concrete implementations should override this
+        when the backend supports server-side grouping primitives.
+        """
+
+        matches = await self.query(
+            collection,
+            vector,
+            limit=limit,
+            filters=filters,
+        )
+        return matches, False
 
     @abstractmethod
     async def get_collection_stats(self, name: str) -> Mapping[str, Any]:

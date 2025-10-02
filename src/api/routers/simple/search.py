@@ -28,9 +28,7 @@ class SimpleSearchRequest(BaseModel):
 
     query: str = Field(..., min_length=1, max_length=500, description="Search query")
     limit: int = Field(default=10, ge=1, le=25, description="Maximum results to return")
-    collection_name: str = Field(
-        default="documents", description="Collection to search"
-    )
+    collection: str = Field(default="documents", description="Collection to search")
 
 
 class SimpleSearchResponse(BaseModel):
@@ -77,9 +75,12 @@ async def _perform_search(
     vector_service = await _get_vector_store_service(factory)
     started = perf_counter()
     matches = await vector_service.search_documents(
-        request.collection_name,
+        request.collection,
         request.query,
         limit=request.limit,
+        group_by="doc_id",
+        group_size=1,
+        normalize_scores=True,
     )
     processing_time_ms = (perf_counter() - started) * 1000
     results = [_vector_match_to_result(match) for match in matches]
@@ -102,7 +103,7 @@ async def search_documents_get(
     request = SimpleSearchRequest(
         query=q,
         limit=limit,
-        collection_name=collection,
+        collection=collection,
     )
     return await search_documents(request, factory)
 
@@ -161,11 +162,21 @@ def _vector_match_to_result(match: VectorMatch) -> dict[str, Any]:
     """Normalize a vector match into the simple search response format."""
 
     payload = dict(match.payload or {})
+    grouping = payload.get("_grouping") or {}
+    collection = (
+        payload.get("collection") or payload.get("_collection") or match.collection
+    )
     result: dict[str, Any] = {
         "id": match.id,
-        "score": match.score,
+        "score": match.raw_score if match.raw_score is not None else match.score,
+        "raw_score": match.raw_score,
+        "normalized_score": match.normalized_score,
+        "collection": collection,
+        "group": grouping if grouping else None,
         "payload": payload,
     }
     if match.vector is not None:
         result["vector"] = list(match.vector)
+    if result["group"] is None:
+        result.pop("group")
     return result

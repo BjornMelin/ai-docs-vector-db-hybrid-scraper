@@ -6,11 +6,6 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.contracts.retrieval import SearchRecord
-from src.services.query_processing.models import (
-    QueryIntentClassification as ServiceQueryIntentClassification,
-    QueryPreprocessingResult as ServiceQueryPreprocessingResult,
-    SearchStrategySelection as ServiceSearchStrategySelection,
-)
 
 
 SearchResult = SearchRecord
@@ -346,23 +341,23 @@ class ContentIntelligenceResult(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Advanced Query Processing Responses
+# Query Processing Responses
 # ---------------------------------------------------------------------------
 
 
-class QueryIntentResult(ServiceQueryIntentClassification):
+class QueryIntentResult(BaseModel):
     """Result of query intent classification."""
 
     model_config = ConfigDict(use_enum_values=True, extra="allow")
 
 
-class QueryPreprocessingResult(ServiceQueryPreprocessingResult):
+class QueryPreprocessingResult(BaseModel):
     """Result of query preprocessing."""
 
     model_config = ConfigDict(extra="allow")
 
 
-class SearchStrategyResult(ServiceSearchStrategySelection):
+class SearchStrategyResult(BaseModel):
     """Result of search strategy selection."""
 
     model_config = ConfigDict(use_enum_values=True, extra="allow")

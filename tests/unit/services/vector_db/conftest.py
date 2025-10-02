@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock
 import pytest
 from qdrant_client import AsyncQdrantClient
 
-from src.config.models import QdrantConfig
+from src.config.models import QdrantConfig, ScoreNormalizationStrategy
 from src.infrastructure.client_manager import ClientManager
 from src.services.embeddings.base import EmbeddingProvider
 from src.services.vector_db.adapter_base import CollectionSchema, TextDocument
@@ -129,9 +129,15 @@ def config_stub() -> Any:
     class _FastEmbedConfig:
         model = "stub-model"
 
+    class _QueryProcessingConfig:
+        enable_score_normalization = False
+        score_normalization_strategy = ScoreNormalizationStrategy.MIN_MAX
+        score_normalization_epsilon = 1e-6
+
     class _Config:
         fastembed = _FastEmbedConfig()
         qdrant = QdrantConfig(enable_grouping=False)
+        query_processing = _QueryProcessingConfig()
 
     return _Config()
 

@@ -47,6 +47,24 @@ class SearchRecord(BaseModel):
     content_intelligence_analyzed: bool | None = Field(
         default=None, description="Flag indicating content intelligence analysis"
     )
+    collection: str | None = Field(
+        default=None, description="Source collection identifier"
+    )
+    raw_score: float | None = Field(
+        default=None, description="Unnormalized similarity score"
+    )
+    normalized_score: float | None = Field(
+        default=None, description="Normalized similarity score"
+    )
+    group_id: str | None = Field(
+        default=None, description="Grouping identifier such as doc_id"
+    )
+    group_rank: int | None = Field(
+        default=None, ge=1, description="Rank of the result within its group"
+    )
+    grouping_applied: bool | None = Field(
+        default=None, description="Whether server-side grouping was applied"
+    )
 
     model_config = ConfigDict(extra="allow")
 
