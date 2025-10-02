@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Shadow parity coverage for vector grouping fallback and score normalisation across
+  `tests/unit/services/vector_db/test_service.py` and the new RAG retriever
+  suites to lock in Phase A behaviour.
+- `tests/data/rag/golden_set.jsonl` and `scripts/eval/rag_golden_eval.py` to
+  provide a reproducible RAG regression harness leveraged by CI and manual
+  comparison runs.
 - Introduced `.github/dependabot.yml` to automate weekly updates for GitHub Actions and Python dependencies.
 - Documented CI branch-protection guidance and pinned action examples across developer and security guides.
 - Captured the comprehensive unit-test refactor roadmap in `planning/unit_test_refactor_plan.md` covering fixture cleanup,
@@ -17,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   record, and technical debt register for the new suites.
 
 ### Changed
+- `VectorServiceRetriever` now pre-chunks documents with
+  `RecursiveCharacterTextSplitter`, using `tiktoken` when available, before the
+  LangChain compression pipeline to keep token reductions deterministic while
+  retaining metrics wiring.
 - Canonicalized query-processing payloads around the shared `SearchRecord` model and
   updated MCP response adapters to subclass the service-layer Pydantic types,
   eliminating duplicate DTO maintenance.
