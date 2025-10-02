@@ -12,6 +12,14 @@ if TYPE_CHECKING:  # pragma: no cover - type checking only
 
 
 def _normalize_metric(metric: str | SimilarityMetric) -> str:
+    """Normalize metric name to lowercase string.
+
+    Args:
+        metric: Metric name or enum value.
+
+    Returns:
+        Normalized metric name as lowercase string.
+    """
     # Check if metric is an enum member by checking if it has a 'value' attribute
     value = getattr(metric, "value", None)
     if value is not None:
@@ -24,7 +32,16 @@ def distance_for_metric(
     vector_b: np.ndarray,
     metric: str | SimilarityMetric,
 ) -> float:
-    """Compute distance between two vectors using the requested metric."""
+    """Compute distance between two vectors using the requested metric.
+
+    Args:
+        vector_a: First vector.
+        vector_b: Second vector.
+        metric: Distance metric to use (cosine, manhattan, or euclidean).
+
+    Returns:
+        Distance value between vectors.
+    """
 
     normalized = _normalize_metric(metric)
 
@@ -41,7 +58,14 @@ def distance_for_metric(
 
 
 def sklearn_metric_for(metric: str | SimilarityMetric) -> str:
-    """Return the metric name expected by scikit-learn."""
+    """Return the metric name expected by scikit-learn.
+
+    Args:
+        metric: Metric name or enum value.
+
+    Returns:
+        Scikit-learn compatible metric name.
+    """
 
     normalized = _normalize_metric(metric)
 

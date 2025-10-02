@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from enum import Enum
 
 from numpy import array
 from pydantic import BaseModel, Field
@@ -109,6 +110,14 @@ class ResultClusteringService:
             for cluster_id, items in sorted(groups.items())
         ]
         return ResultClusteringResponse(clusters=clusters)
+
+
+class SimilarityMetric(Enum):
+    """Enum for similarity metrics used in vector operations."""
+
+    COSINE = "cosine"
+    MANHATTAN = "manhattan"
+    EUCLIDEAN = "euclidean"
 
 
 __all__ = [
