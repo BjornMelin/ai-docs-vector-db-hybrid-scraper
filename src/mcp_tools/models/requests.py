@@ -191,20 +191,151 @@ class FilteredSearchRequest(BaseModel):
     collection: str = Field(default="documentation", description="Collection to search")
     limit: int = Field(default=10, ge=1, le=100, description="Number of results")
 
-    # Filters
     filters: dict[str, Any] = Field(
         ..., description="Filters to apply using indexed fields"
     )
     search_accuracy: SearchAccuracy = Field(
         default=SearchAccuracy.BALANCED, description="Search accuracy"
     )
-
-    # Options
-    enable_reranking: bool = Field(default=True, description="Enable reranking")
     include_metadata: bool = Field(
         default=True, description="Include metadata in results"
     )
-    score_threshold: float = Field(default=0.0, description="Minimum score threshold")
+    score_threshold: float = Field(
+        default=0.0, ge=0.0, le=1.0, description="Minimum similarity score"
+    )
+
+
+class TemporalFilterRequest(BaseModel):
+    """Temporal filtering request leveraging Qdrant filters."""
+
+    query: str = Field(..., description="Search query")
+    collection: str = Field(default="documentation", description="Collection to search")
+    limit: int = Field(default=10, ge=1, le=100, description="Number of results")
+    start_date: str | None = Field(None, description="Start date (ISO format)")
+    end_date: str | None = Field(None, description="End date (ISO format)")
+    time_window: str | None = Field(
+        None, description="Relative window such as '7d', '12h', '4w'"
+    )
+    time_field: str = Field(
+        default="created_at", description="Payload timestamp field to filter on"
+    )
+    freshness_weight: float = Field(
+        0.0, ge=0.0, le=1.0, description="Optional freshness boost weight"
+    )
+    search_accuracy: SearchAccuracy = Field(
+        default=SearchAccuracy.BALANCED, description="Search accuracy"
+    )
+    include_metadata: bool = Field(
+        default=True, description="Include metadata in results"
+    )
+
+
+class ContentTypeFilterRequest(BaseModel):
+    """Content type filtering request."""
+
+    query: str = Field(..., description="Search query")
+    collection: str = Field(default="documentation", description="Collection to search")
+    limit: int = Field(default=10, ge=1, le=100, description="Number of results")
+    allowed_types: list[str] = Field(
+        default_factory=list, description="Content types to include"
+    )
+    exclude_types: list[str] = Field(
+        default_factory=list, description="Content types to exclude"
+    )
+    priority_types: list[str] = Field(
+        default_factory=list, description="Types to prioritise in the response"
+    )
+    search_accuracy: SearchAccuracy = Field(
+        default=SearchAccuracy.BALANCED, description="Search accuracy"
+    )
+    include_metadata: bool = Field(
+        default=True, description="Include metadata in results"
+    )
+
+
+class MetadataFilterRequest(BaseModel):
+    """Generic metadata filter request."""
+
+    query: str = Field(..., description="Search query")
+    collection: str = Field(default="documentation", description="Collection to search")
+    limit: int = Field(default=10, ge=1, le=100, description="Number of results")
+    metadata_filters: dict[str, Any] = Field(
+        ..., description="Dictionary of metadata filters"
+    )
+    filter_operator: str = Field(
+        default="AND", description="Logical operator: AND or OR"
+    )
+    exact_match: bool = Field(
+        default=True, description="Use exact matching when possible"
+    )
+    case_sensitive: bool = Field(
+        default=False, description="Case-sensitive matching for strings"
+    )
+    search_accuracy: SearchAccuracy = Field(
+        default=SearchAccuracy.BALANCED, description="Search accuracy"
+    )
+    include_metadata: bool = Field(
+        default=True, description="Include metadata in results"
+    )
+
+
+class SimilarityFilterRequest(BaseModel):
+    """Similarity range filtering request."""
+
+    query: str = Field(..., description="Search query")
+    collection: str = Field(default="documentation", description="Collection to search")
+    limit: int = Field(default=10, ge=1, le=100, description="Number of results")
+    min_similarity: float = Field(
+        0.0, ge=0.0, le=1.0, description="Minimum similarity score"
+    )
+    max_similarity: float = Field(
+        1.0, ge=0.0, le=1.0, description="Maximum similarity score"
+    )
+    boost_recent: bool = Field(default=False, description="Boost more recent documents")
+    adaptive_threshold: bool = Field(
+        default=False, description="Adjust minimum score dynamically"
+    )
+    search_accuracy: SearchAccuracy = Field(
+        default=SearchAccuracy.BALANCED, description="Search accuracy"
+    )
+    include_metadata: bool = Field(
+        default=True, description="Include metadata in results"
+    )
+
+
+class CompositeFilterRequest(BaseModel):
+    """Composite filter request combining multiple configurations."""
+
+    query: str = Field(..., description="Search query")
+    collection: str = Field(default="documentation", description="Collection to search")
+    limit: int = Field(default=10, ge=1, le=100, description="Number of results")
+    operator: str = Field(
+        default="AND", description="Logical operator to combine filters"
+    )
+    temporal_config: dict[str, Any] | None = Field(
+        default=None, description="Temporal filter configuration"
+    )
+    content_type_config: dict[str, Any] | None = Field(
+        default=None, description="Content type filter configuration"
+    )
+    metadata_config: dict[str, Any] | None = Field(
+        default=None, description="Metadata filter configuration"
+    )
+    similarity_config: dict[str, Any] | None = Field(
+        default=None, description="Similarity filter configuration"
+    )
+    nested_logic: bool = Field(
+        default=False, description="Allow nested boolean expressions"
+    )
+    optimize_order: bool = Field(
+        default=True, description="Optimize filter evaluation order"
+    )
+    search_accuracy: SearchAccuracy = Field(
+        default=SearchAccuracy.BALANCED, description="Search accuracy"
+    )
+    include_metadata: bool = Field(
+        default=True, description="Include metadata in results"
+    )
 
 
 # Advanced Search Request Models for Query API

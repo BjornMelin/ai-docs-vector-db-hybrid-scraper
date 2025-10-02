@@ -23,18 +23,21 @@ class FirecrawlClientProvider:
         firecrawl_client: AsyncFirecrawlApp,
     ):
         """Initialize the Firecrawl client provider."""
+
         self._client = firecrawl_client
         self._healthy = True
 
     @property
     def client(self) -> AsyncFirecrawlApp | None:
         """Get the Firecrawl client if available and healthy."""
+
         if not self._healthy:
             return None
         return self._client
 
     async def health_check(self) -> bool:
         """Check Firecrawl client health."""
+
         try:
             if not self._client:
                 return False
@@ -45,9 +48,9 @@ class FirecrawlClientProvider:
             logger.warning("Firecrawl health check failed: %s", e)
             self._healthy = False
             return False
-        else:
-            self._healthy = True
-            return True
+
+        self._healthy = True
+        return True
 
     async def scrape_url(
         self, url: str, params: dict[str, Any] | None = None
@@ -60,11 +63,8 @@ class FirecrawlClientProvider:
 
         Returns:
             Scraped content
-
-        Raises:
-            RuntimeError: If client is unhealthy
-
         """
+
         if not self.client:
             msg = "Firecrawl client is not available or unhealthy"
             raise RuntimeError(msg)
@@ -82,11 +82,8 @@ class FirecrawlClientProvider:
 
         Returns:
             Crawl job information
-
-        Raises:
-            RuntimeError: If client is unhealthy
-
         """
+
         if not self.client:
             msg = "Firecrawl client is not available or unhealthy"
             raise RuntimeError(msg)
@@ -101,11 +98,8 @@ class FirecrawlClientProvider:
 
         Returns:
             Job status and results
-
-        Raises:
-            RuntimeError: If client is unhealthy
-
         """
+
         if not self.client:
             msg = "Firecrawl client is not available or unhealthy"
             raise RuntimeError(msg)
@@ -123,11 +117,8 @@ class FirecrawlClientProvider:
 
         Returns:
             Search results
-
-        Raises:
-            RuntimeError: If client is unhealthy
-
         """
+
         if not self.client:
             msg = "Firecrawl client is not available or unhealthy"
             raise RuntimeError(msg)

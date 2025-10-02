@@ -4,14 +4,12 @@ This module implements an intelligent caching architecture with L1 (in-memory)
 and L2 (Redis) tiers, automatic cache warming, and comprehensive performance tracking.
 """
 
-import asyncio
 import hashlib
 import json
 import logging
 import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import redis.asyncio as redis
 
@@ -258,9 +256,11 @@ class PerformanceCache:
     async def _initialize_warming_services(self) -> tuple[Any, Any]:
         """Initialize services needed for cache warming."""
         try:
-            config = Config()
+            if Config is None or QdrantSearch is None:
+                return None, None
+            config = Config()  # type: ignore
             # Note: This would need proper client injection in production
-            search_service = QdrantSearch(None, config)
+            search_service = QdrantSearch(None, config)  # type: ignore
             return config, search_service
         except Exception as e:
             logger.error("Cache warming initialization failed: %s", e)
@@ -336,7 +336,7 @@ class PerformanceCache:
         """
         if pattern:
             # Clear matching L1 entries
-            keys_to_remove = [key for key in self.l1_cache.keys() if pattern in key]
+            keys_to_remove = [key for key in self.l1_cache if pattern in key]
             for key in keys_to_remove:
                 del self.l1_cache[key]
                 if key in self.l1_access_times:

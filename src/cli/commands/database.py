@@ -445,7 +445,7 @@ def search_collection(
             progress.update(task, description="Searching collection...")
             # Perform search
             results = asyncio.run(
-                db_manager.search_vectors(
+                db_manager.search_documents(
                     collection_name=collection_name,
                     query_vector=query_vector,
                     limit=limit,

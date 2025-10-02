@@ -7,7 +7,7 @@ from typing import Generic, TypeVar
 T = TypeVar("T")
 
 
-class CacheInterface(ABC, Generic[T]):
+class CacheInterface(Generic[T], ABC):  # noqa: UP046 - keep Generic[T] while targeting Py3.11
     """Abstract base class for cache implementations."""
 
     @abstractmethod
@@ -93,6 +93,7 @@ class CacheInterface(ABC, Generic[T]):
         Returns:
             Dictionary mapping keys to values (None if not found)
         """
+
         results = {}
         for key in keys:
             results[key] = await self.get(key)
@@ -115,6 +116,7 @@ class CacheInterface(ABC, Generic[T]):
         Returns:
             Dictionary mapping keys to success status
         """
+
         results = {}
         for key, value in items.items():
             results[key] = await self.set(key, value, ttl)
@@ -132,6 +134,7 @@ class CacheInterface(ABC, Generic[T]):
         Returns:
             Dictionary mapping keys to deletion status
         """
+
         results = {}
         for key in keys:
             results[key] = await self.delete(key)

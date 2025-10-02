@@ -1,0 +1,250 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONUNBUFFERED: "1"
+  UV_SYSTEM_PYTHON: "1"
+
+jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      python: ${{ steps.filter.outputs.python }}
+      tests: ${{ steps.filter.outputs.tests }}
+      config: ${{ steps.filter.outputs.config }}
+      docs: ${{ steps.filter.outputs.docs }}
+      dependencies: ${{ steps.filter.outputs.dependencies }}
+      workflows: ${{ steps.filter.outputs.workflows }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Detect file changes
+        id: filter
+        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
+        with:
+          filters: |
+            python:
+              - 'src/**/*.py'
+              - 'scripts/**/*.py'
+            tests:
+              - 'tests/**'
+            config:
+              - 'pyproject.toml'
+              - 'uv.lock'
+              - 'config/**'
+            docs:
+              - 'docs/**'
+              - '*.md'
+            dependencies:
+              - 'requirements*.txt'
+              - 'pyproject.toml'
+              - 'uv.lock'
+            workflows:
+              - '.github/workflows/**'
+              - '.github/actions/**'
+
+  lint:
+    name: Lint & static analysis
+    runs-on: ubuntu-latest
+    needs: changes
+    if: >-
+      github.event_name == 'pull_request' ||
+      github.event_name == 'workflow_dispatch' ||
+      needs.changes.outputs.python == 'true' ||
+      needs.changes.outputs.tests == 'true' ||
+      needs.changes.outputs.config == 'true' ||
+      needs.changes.outputs.dependencies == 'true' ||
+      needs.changes.outputs.workflows == 'true'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Prepare workspace
+        uses: ./.github/actions/checkout-and-setup
+        with:
+          python-version: "3.12"
+          cache-suffix: "-lint"
+
+      - name: Ruff format (check)
+        run: uv run ruff format --check .
+
+      - name: Ruff lint
+        run: uv run ruff check .
+
+      - name: Pylint
+        run: uv run pylint --fail-under=9.5 src scripts
+
+      - name: Pyright
+        run: uv run pyright
+
+  tests:
+    name: Test suite (${{ matrix.profile }})
+    runs-on: ubuntu-latest
+    needs:
+      - changes
+      - lint
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - profile: simple
+            pytest_profile: ci
+            allow_failure: false
+          - profile: enterprise
+            pytest_profile: quick
+            allow_failure: true
+    continue-on-error: ${{ matrix.allow_failure }}
+    if: >-
+      always() &&
+      (needs.lint.result == 'success' || needs.lint.result == 'skipped') &&
+      (
+        github.event_name == 'pull_request' ||
+        github.event_name == 'workflow_dispatch' ||
+        needs.changes.outputs.python == 'true' ||
+        needs.changes.outputs.tests == 'true' ||
+        needs.changes.outputs.config == 'true' ||
+        needs.changes.outputs.dependencies == 'true'
+      )
+    env:
+      PYTEST_BENCHMARK_DISABLE: "1"
+      AI_DOCS_MODE: ${{ matrix.profile }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Prepare workspace
+        uses: ./.github/actions/checkout-and-setup
+        with:
+          python-version: "3.12"
+          cache-suffix: "-tests"
+
+      - name: Prepare runtime directories
+        run: |
+          mkdir -p tests/fixtures/{cache,data,logs}
+          mkdir -p logs cache data
+
+      - name: Run test suite
+        run: uv run python scripts/dev.py test --profile ${{ matrix.pytest_profile }}
+
+      - name: Upload coverage artifact
+        if: matrix.profile == 'simple'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: coverage-xml-${{ matrix.profile }}
+          path: coverage.xml
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload to Codecov
+        if: matrix.profile == 'simple' && success() && github.repository_owner != 'dependabot'
+        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
+        with:
+          files: coverage.xml
+          fail_ci_if_error: false
+
+  build:
+    name: Build package
+    runs-on: ubuntu-latest
+    needs:
+      - changes
+      - lint
+      - tests
+    if: >-
+      always() &&
+      (needs.tests.result == 'success' || needs.tests.result == 'skipped') &&
+      (
+        github.event_name == 'pull_request' ||
+        github.event_name == 'workflow_dispatch' ||
+        needs.changes.outputs.python == 'true' ||
+        needs.changes.outputs.config == 'true' ||
+        needs.changes.outputs.dependencies == 'true'
+      )
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Prepare workspace
+        uses: ./.github/actions/checkout-and-setup
+        with:
+          python-version: "3.12"
+          cache-suffix: "-build"
+
+      - name: Build distributions
+        run: uv build
+
+      - name: Verify metadata
+        run: |
+          uv tool install twine
+          uv tool run twine check dist/*
+
+      - name: Upload distribution artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7
+
+  audit:
+    name: Security audit
+    runs-on: ubuntu-latest
+    needs:
+      - changes
+      - lint
+    if: >-
+      needs.lint.result == 'success' &&
+      (
+        github.event_name == 'pull_request' ||
+        github.event_name == 'workflow_dispatch' ||
+        needs.changes.outputs.python == 'true' ||
+        needs.changes.outputs.dependencies == 'true'
+      )
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Prepare workspace
+        uses: ./.github/actions/checkout-and-setup
+        with:
+          python-version: "3.12"
+          cache-suffix: "-audit"
+
+      - name: Install security tooling
+        run: |
+          uv tool install pip-audit bandit
+
+      - name: Run pip-audit
+        run: uv tool run pip-audit --progress-spinner=off --format=json --output=pip-audit.json
+
+      - name: Run Bandit
+        run: uv tool run bandit -q -r src -f json -o bandit-report.json
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: security-reports
+          path: |
+            pip-audit.json
+            bandit-report.json
+          retention-days: 7

@@ -1,297 +1,208 @@
 #!/usr/bin/env python3
+# ruff: noqa: E402, I001
+
 """RAG Integration Patterns Demonstration.
 
-This script demonstrates the modern RAG implementation patterns integrated
-into the AI Documentation Vector DB Hybrid Scraper system. It showcases:
+This script demonstrates the updated LangChain-backed RAG pipeline that now
+retrieves context directly from the vector adapter. It showcases:
 
-1. Function-based dependency injection for RAG services
-2. Circuit breaker patterns for LLM API resilience
-3. Integration with existing vector search and embedding services
-4. Modern RAG patterns with source attribution and confidence scoring
-5. Portfolio-worthy implementation for 2025 AI/ML opportunities
+1. Initialising the shared VectorStoreService and LangChain retriever
+2. Executing the RAG generator via the function-based dependency wrappers
+3. Emitting metrics and managing cache endpoints
 
 Usage:
     python examples/rag_integration_demo.py
 """
 
-import asyncio
-import logging
+from __future__ import annotations
 
-# Add the src directory to the path
+import asyncio
 import sys
 from pathlib import Path
 
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+SRC_ROOT = Path(__file__).parent.parent / "src"
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
 
-from src.config import get_config
-from src.infrastructure.client_manager import ClientManager
-from src.services.dependencies import (
-    RAGRequest,
+from src.config import Config, get_config  # pylint: disable=wrong-import-position
+from src.infrastructure.client_manager import (  # pylint: disable=wrong-import-position
+    ClientManager,
+)
+from src.services.dependencies import (  # pylint: disable=wrong-import-position
     RAGResponse,
+    RAGRequest,
     clear_rag_cache,
     generate_rag_answer,
     get_rag_metrics,
 )
+from src.services.errors import EmbeddingServiceError  # pylint: disable=wrong-import-position
+from src.services.rag import (  # pylint: disable=wrong-import-position
+    RAGConfig as ServiceRAGConfig,
+    RAGGenerator,
+    initialise_rag_generator,
+)
 
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-
-async def demonstrate_rag_patterns():
-    """Demonstrate modern RAG integration patterns."""
+def _print_banner() -> None:
+    """Display the demonstration banner."""
 
     print("🚀 RAG Integration Patterns Demonstration")
     print("=" * 50)
 
-    # Load configuration
-    config = get_config()
 
-    # Check if RAG is enabled
+def _print_configuration(config: Config) -> None:
+    """Print the active RAG configuration."""
+
+    print(f"✅ RAG enabled with model: {config.rag.model}")
+    print(
+        "🔧 Configuration: "
+        f"{config.rag.max_tokens} max tokens, {config.rag.temperature} temperature"
+    )
+    print()
+
+
+async def _initialise_generator(
+    client_manager: ClientManager, config: Config
+) -> tuple[RAGGenerator, ServiceRAGConfig]:
+    """Initialise the vector-backed RAG generator."""
+
+    vector_store = await client_manager.get_vector_store_service()
+    generator, rag_config = await initialise_rag_generator(config, vector_store)
+    print("✅ RAG generator initialised successfully")
+    return generator, rag_config
+
+
+def _display_initial_metrics(generator: RAGGenerator) -> None:
+    """Print initial generator metrics."""
+
+    metrics = generator.get_metrics()
+    print(f"📊 Initial metrics: {metrics.generation_count} generations recorded")
+    print()
+
+
+def _demo_rag_request(rag_config: ServiceRAGConfig) -> RAGRequest:
+    """Create the sample RAG request used in the demo."""
+
+    request = RAGRequest(
+        query=("How do I use type hints with FastAPI and Pydantic for API validation?"),
+        include_sources=True,
+        search_results=[],
+        max_tokens=None,
+        temperature=None,
+    )
+    print("📋 Pattern 2: Function-based Dependency Injection")
+    print("-" * 40)
+    print(f"🔍 Query: {request.query}")
+    print(f"📚 Retrieving up to {rag_config.retriever_top_k} documents")
+    print()
+    return request
+
+
+def _display_answer(response: RAGResponse) -> None:
+    """Pretty-print the generated answer and metadata."""
+
+    print("✅ RAG answer generated successfully")
+    if response.confidence_score is not None:
+        print(f"🎯 Confidence Score: {response.confidence_score:.2f}")
+    print(f"📊 Sources Used: {response.sources_used}")
+    print(f"⏱️  Generation Time: {response.generation_time_ms:.1f} ms")
+    print()
+
+    print("💬 Generated Answer:")
+    print("-" * 20)
+    print(response.answer)
+    print()
+
+    if response.sources:
+        print("📖 Source Attribution:")
+        print("-" * 20)
+        for idx, source in enumerate(response.sources, 1):
+            relevance = source.get("relevance_score")
+            score_text = f" (Score: {relevance:.2f})" if relevance else ""
+            print(f"{idx}. {source['title']}{score_text}")
+            excerpt = source.get("excerpt")
+            if excerpt:
+                print(f"   {excerpt[:100]}...")
+            if source.get("url"):
+                print(f"   🔗 {source['url']}")
+            print()
+
+    if response.metrics:
+        print("📈 Quality Metrics:")
+        print("-" * 20)
+        metrics = response.metrics
+        print(f"• Generation Time: {metrics['generation_time_ms']:.1f} ms")
+        if metrics.get("total_tokens") is not None:
+            print(f"• Total Tokens: {metrics['total_tokens']}")
+        print()
+
+
+async def _run_rag_workflow(
+    rag_request: RAGRequest, rag_generator: RAGGenerator
+) -> None:
+    """Execute the answer generation workflow and display results."""
+
+    print("📋 Pattern 3: RAG Answer Generation with Circuit Breaker")
+    print("-" * 40)
+    try:
+        response: RAGResponse = await generate_rag_answer(rag_request, rag_generator)
+    except EmbeddingServiceError as err:
+        print("⚠️  Retrieval produced no context; add documents to the vector store.")
+        print(f"   Details: {err}")
+        print()
+        return
+
+    _display_answer(response)
+
+
+async def _display_observability(rag_generator: RAGGenerator) -> None:
+    """Showcase metrics and cache helpers."""
+
+    print("📋 Pattern 4: Metrics & Observability")
+    print("-" * 40)
+    metrics = await get_rag_metrics(rag_generator)
+    for key, value in metrics.items():
+        print(f"• {key}: {value}")
+    print()
+
+    print("📋 Pattern 5: Cache Management")
+    print("-" * 40)
+    cache_result = await clear_rag_cache(rag_generator)
+    print(f"🧹 Cache Clear Result: {cache_result['message']}")
+    print()
+
+
+async def demonstrate_rag_patterns() -> None:
+    """Demonstrate the updated LangChain-enabled RAG workflow."""
+
+    _print_banner()
+    config = get_config()
     if not config.rag.enable_rag:
         print("❌ RAG is not enabled in configuration")
         print("💡 To enable RAG, set AI_DOCS_RAG__ENABLE_RAG=true in your .env file")
         return
 
-    print(f"✅ RAG enabled with model: {config.rag.model}")
-    print(
-        f"🔧 Configuration: {config.rag.max_tokens} max tokens, "
-        f"{config.rag.temperature} temperature"
-    )
-    print()
+    _print_configuration(config)
 
-    # Initialize client manager
     client_manager = ClientManager.from_unified_config()
     await client_manager.initialize()
 
+    rag_generator: RAGGenerator | None = None
     try:
-        # Pattern 1: Direct Service Integration
         print("📋 Pattern 1: Direct Service Integration")
         print("-" * 40)
+        rag_generator, rag_config = await _initialise_generator(client_manager, config)
+        _display_initial_metrics(rag_generator)
 
-        rag_generator = await client_manager.get_rag_generator()
-        print("✅ RAG generator initialized successfully")
-
-        # Get initial metrics
-        initial_metrics = rag_generator.get_metrics()
-        print(f"📊 Initial metrics: {initial_metrics['generation_count']} generations")
-        print()
-
-        # Pattern 2: Function-based Dependency Injection
-        print("📋 Pattern 2: Function-based Dependency Injection")
-        print("-" * 40)
-
-        # Create sample search results (simulating vector search output)
-        sample_search_results = [
-            {
-                "id": "doc_1",
-                "title": "FastAPI Documentation - Getting Started",
-                "content": (
-                    "FastAPI is a modern, fast (high-performance), web framework "
-                    "for building APIs with Python 3.7+ based on standard Python "
-                    "type hints. It provides automatic API documentation, data "
-                    "validation, and serialization."
-                ),
-                "url": "https://fastapi.tiangolo.com/tutorial/",
-                "score": 0.95,
-                "metadata": {"type": "documentation", "framework": "fastapi"},
-            },
-            {
-                "id": "doc_2",
-                "title": "Pydantic Models and Validation",
-                "content": (
-                    "Pydantic provides runtime type checking and data validation "
-                    "using Python type annotations. It automatically validates "
-                    "data, converts types, and provides detailed error messages "
-                    "for invalid data."
-                ),
-                "url": "https://docs.pydantic.dev/",
-                "score": 0.87,
-                "metadata": {"type": "documentation", "framework": "pydantic"},
-            },
-            {
-                "id": "doc_3",
-                "title": "Python Type Hints Best Practices",
-                "content": (
-                    "Type hints in Python help with code clarity, IDE support, "
-                    "and static analysis. They don't affect runtime performance "
-                    "but significantly improve developer experience and code "
-                    "maintainability."
-                ),
-                "url": "https://docs.python.org/3/library/typing.html",
-                "score": 0.82,
-                "metadata": {"type": "documentation", "language": "python"},
-            },
-        ]
-
-        # Create RAG request
-        rag_request = RAGRequest(
-            query=(
-                "How do I use type hints with FastAPI and Pydantic for API validation?"
-            ),
-            search_results=sample_search_results,
-            include_sources=True,
-            require_high_confidence=False,
-            max_context_results=3,
-        )
-
-        print(f"🔍 Query: {rag_request.query}")
-        print(f"📚 Using {len(rag_request.search_results)} search results as context")
-        print()
-
-        # Pattern 3: RAG Answer Generation with Error Handling
-        print("📋 Pattern 3: RAG Answer Generation with Circuit Breaker")
-        print("-" * 40)
-
-        try:
-            # Use function-based dependency injection pattern
-            response: RAGResponse = await generate_rag_answer(
-                rag_request, rag_generator
-            )
-
-            print("✅ RAG answer generated successfully")
-            print(f"🎯 Confidence Score: {response.confidence_score:.2f}")
-            print(f"📊 Sources Used: {response.sources_used}")
-            print(f"⏱️  Generation Time: {response.generation_time_ms:.1f}ms")
-            print()
-
-            print("💬 Generated Answer:")
-            print("-" * 20)
-            print(response.answer)
-            print()
-
-            # Pattern 4: Source Attribution and Metrics
-            if response.sources:
-                print("📖 Source Attribution:")
-                print("-" * 20)
-                for i, source in enumerate(response.sources, 1):
-                    print(
-                        f"{i}. {source['title']} "
-                        f"(Score: {source['relevance_score']:.2f})"
-                    )
-                    print(f"   {source['excerpt'][:100]}...")
-                    if source["url"]:
-                        print(f"   🔗 {source['url']}")
-                    print()
-
-            # Pattern 5: Advanced Metrics and Quality Assessment
-            if response.metrics:
-                print("📈 Quality Metrics:")
-                print("-" * 20)
-                metrics = response.metrics
-                print(f"• Context Utilization: {metrics['context_utilization']:.2f}")
-                print(f"• Source Diversity: {metrics['source_diversity']:.2f}")
-                print(f"• Answer Length: {metrics['answer_length']} characters")
-                print(f"• Tokens Used: {metrics['tokens_used']}")
-                print(f"• Estimated Cost: ${metrics['cost_estimate']:.4f}")
-                print()
-
-            # Pattern 6: Follow-up Questions (Portfolio Feature)
-            if response.follow_up_questions:
-                print("❓ Follow-up Questions:")
-                print("-" * 20)
-                for question in response.follow_up_questions:
-                    print(f"• {question}")
-                print()
-
-        except (ValueError, RuntimeError, OSError) as e:
-            print("❌ RAG generation failed: %s", e)
-            print("🔧 This might be due to missing OpenAI API key or network issues")
-            print()
-
-        # Pattern 7: Service Metrics and Monitoring
-        print("📋 Pattern 7: Service Metrics and Monitoring")
-        print("-" * 40)
-
-        final_metrics = await get_rag_metrics(rag_generator)
-        print("📊 RAG Service Metrics:")
-        for key, value in final_metrics.items():
-            if isinstance(value, float):
-                print(f"• {key.replace('_', ' ').title()}: {value:.2f}")
-            else:
-                print(f"• {key.replace('_', ' ').title()}: {value}")
-        print()
-
-        # Pattern 8: Cache Management
-        print("📋 Pattern 8: Cache Management")
-        print("-" * 40)
-
-        cache_result = await clear_rag_cache(rag_generator)
-        print(f"🗑️  Cache Status: {cache_result['status']}")
-        print(f"💬 Message: {cache_result['message']}")
-        print()
-
-        # Pattern 9: Health Monitoring
-        print("📋 Pattern 9: Health Monitoring")
-        print("-" * 40)
-
-        health_status = await client_manager.get_health_status()
-        if "rag_generator" in health_status:
-            rag_health = health_status["rag_generator"]
-            print(f"🏥 RAG Service Health: {rag_health.get('state', 'unknown')}")
-            print(f"🔧 Last Check: {rag_health.get('last_check', 'never')}")
-            if rag_health.get("last_error"):
-                print(f"❌ Last Error: {rag_health['last_error']}")
-        else:
-            print("🏥 RAG Service Health: Not monitored")
-        print()
-
-        print("🎉 RAG Integration Patterns Demonstration Complete!")
-        print()
-        print("💼 Portfolio Value:")
-        print("• Modern RAG implementation with LLM integration")
-        print("• Function-based dependency injection patterns")
-        print("• Circuit breaker resilience for production systems")
-        print("• Comprehensive metrics and observability")
-        print("• Source attribution and confidence scoring")
-        print("• Enterprise-ready error handling and monitoring")
-
+        rag_request = _demo_rag_request(rag_config)
+        await _run_rag_workflow(rag_request, rag_generator)
+        await _display_observability(rag_generator)
     finally:
-        await client_manager.cleanup()
-
-
-async def demonstrate_integration_with_search():
-    """Demonstrate RAG integration with existing search capabilities."""
-
-    print("\n🔍 RAG + Vector Search Integration")
-    print("=" * 50)
-
-    config = get_config()
-    if not config.rag.enable_rag:
-        print("❌ RAG not enabled - skipping integration demo")
-        return
-
-    client_manager = ClientManager.from_unified_config()
-    await client_manager.initialize()
-
-    try:
-        # This would typically integrate with the existing vector search
-        print("💡 Integration Points:")
-        print("• Vector search results → RAG context")
-        print("• HyDE query expansion → Enhanced RAG context")
-        print("• Content intelligence → Source quality scoring")
-        print("• Embedding services → Semantic similarity")
-        print("• Qdrant collections → Multi-source retrieval")
-        print()
-
-        print("🏗️  Architecture Benefits:")
-        print("• Unified service dependency pattern")
-        print("• Consistent error handling and resilience")
-        print("• Shared observability and metrics")
-        print("• Function-based composition")
-        print("• Production-ready patterns")
-
-    finally:
+        if rag_generator and rag_generator.llm_client_available:
+            await rag_generator.cleanup()
         await client_manager.cleanup()
 
 
 if __name__ == "__main__":
-    """Main execution."""
-    print("🤖 AI Documentation Vector DB - RAG Integration Patterns")
-    print("🎯 Demonstrating 2025 RAG implementation best practices")
-    print()
-
     asyncio.run(demonstrate_rag_patterns())
-    asyncio.run(demonstrate_integration_with_search())

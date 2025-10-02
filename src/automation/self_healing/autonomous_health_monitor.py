@@ -14,7 +14,7 @@ from typing import Any
 
 import psutil
 
-from src.services.circuit_breaker.modern import ModernCircuitBreakerManager
+from src.services.circuit_breaker import CircuitBreakerManager
 from src.services.monitoring.health import HealthCheckManager, HealthStatus
 from src.services.observability.performance import get_performance_monitor
 
@@ -113,7 +113,9 @@ class FailurePredictionEngine:
                 if prediction and prediction.risk_level != FailureRiskLevel.MINIMAL:
                     predictions.append(prediction)
             except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
-                logger.warning(f"Failed to generate prediction for {failure_type}: {e}")
+                logger.warning(
+                    "Failed to generate prediction for %s: %s", failure_type, e
+                )
 
         return sorted(
             predictions, key=lambda p: self._risk_priority(p.risk_level), reverse=True
@@ -591,7 +593,7 @@ class AutonomousHealthMonitor:
     def __init__(
         self,
         health_manager: HealthCheckManager,
-        circuit_breaker_manager: ModernCircuitBreakerManager,
+        circuit_breaker_manager: CircuitBreakerManager,
     ):
         """Initialize autonomous health monitor.
 
@@ -776,7 +778,7 @@ class AutonomousHealthMonitor:
 
         if issues_detected:
             logger.warning(
-                f"Current health issues detected: {', '.join(issues_detected)}"
+                "Current health issues detected: %s", "; ".join(issues_detected)
             )
 
             # Record in remediation history
@@ -802,8 +804,8 @@ class AutonomousHealthMonitor:
             return
 
         logger.warning(
-            f"High-risk failure predictions detected: "
-            f"{len(high_risk_predictions)} predictions"
+            "High-risk failure predictions detected: %d predictions",
+            len(high_risk_predictions),
         )
 
         for prediction in high_risk_predictions:
@@ -812,16 +814,18 @@ class AutonomousHealthMonitor:
     async def handle_prediction(self, prediction: FailurePrediction):
         """Handle individual failure prediction."""
         logger.warning(
-            f"Prediction: {prediction.failure_type} - "
-            f"Risk: {prediction.risk_level.value} - "
-            f"Confidence: {prediction.confidence.value} - "
-            f"Time to failure: {prediction.time_to_failure_minutes} minutes"
+            "Prediction: %s - Risk: %s - Confidence: %s - Time to failure: %s minutes",
+            prediction.failure_type,
+            prediction.risk_level.value,
+            prediction.confidence.value,
+            prediction.time_to_failure_minutes,
         )
 
         # Log recommended actions
         logger.info(
-            f"Recommended actions for {prediction.failure_type}: "
-            f"{', '.join(prediction.recommended_actions)}"
+            "Recommended actions for %s: %s",
+            prediction.failure_type,
+            ", ".join(prediction.recommended_actions),
         )
 
         # For now, we log the prediction and recommendations
@@ -861,8 +865,8 @@ class AutonomousHealthMonitor:
         # Log circuit breaker optimization recommendations
         if stressed_services:
             logger.info(
-                f"Recommend reviewing circuit breaker configurations for: "
-                f"{', '.join(set(stressed_services))}"
+                "Recommend reviewing circuit breaker configurations for: %s",
+                ", ".join(set(stressed_services)),
             )
 
     async def generate_health_insights(

@@ -1147,8 +1147,8 @@ class IntelligentChaosOrchestrator:
                     await self.update_resilience_model(experiment_results)
 
                     logger.info(
-                        f"Chaos session completed: {len(experiment_results)} "
-                        f"experiments executed"
+                        "Chaos session completed: %d experiments executed",
+                        len(experiment_results),
                     )
                 else:
                     logger.info("Skipping chaos testing due to system state")
@@ -1277,7 +1277,7 @@ class IntelligentChaosOrchestrator:
                 if self.safety_mode and not await self._validate_experiment_safety(
                     experiment
                 ):
-                    logger.warning(f"Skipping unsafe experiment: {experiment.name}")
+                    logger.warning("Skipping unsafe experiment: %s", experiment.name)
                     continue
 
                 # Execute experiment
@@ -1296,7 +1296,7 @@ class IntelligentChaosOrchestrator:
         self, experiment: ChaosExperiment
     ) -> ChaosResult:
         """Execute a single chaos experiment with comprehensive monitoring."""
-        logger.info(f"Executing chaos experiment: {experiment.name}")
+        logger.info("Executing chaos experiment: %s", experiment.name)
 
         # Create pre-experiment system snapshot
         pre_experiment_snapshot = (
@@ -1873,13 +1873,15 @@ class IntelligentChaosOrchestrator:
 
         # Log resilience status
         logger.info("=== Resilience Status ===")
-        logger.info(f"Overall Resilience: {latest_assessment.overall_resilience.value}")
-        logger.info(f"Resilience Score: {latest_assessment.resilience_score:.2f}")
         logger.info(
-            f"Identified Weaknesses: {len(latest_assessment.identified_weaknesses)}"
+            "Overall Resilience: %s", latest_assessment.overall_resilience.value
         )
-        logger.info(f"Component Scores: {latest_assessment.component_scores}")
-        logger.info(f"Focus Areas: {latest_assessment.recommended_focus_areas}")
+        logger.info("Resilience Score: %.2f", latest_assessment.resilience_score)
+        logger.info(
+            "Identified Weaknesses: %d", len(latest_assessment.identified_weaknesses)
+        )
+        logger.info("Component Scores: %s", latest_assessment.component_scores)
+        logger.info("Focus Areas: %s", latest_assessment.recommended_focus_areas)
         logger.info("=== End Resilience Status ===")
 
         # Log recent experiment summary
@@ -1889,8 +1891,9 @@ class IntelligentChaosOrchestrator:
                 1 for exp in recent_experiments if exp.experiment_result.success
             )
             logger.info(
-                f"Recent Chaos Testing: {successful}/{len(recent_experiments)} "
-                f"experiments successful"
+                "Recent Chaos Testing: %d/%d experiments successful",
+                successful,
+                len(recent_experiments),
             )
 
     async def get_orchestration_status(self) -> dict[str, Any]:

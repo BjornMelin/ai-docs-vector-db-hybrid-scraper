@@ -67,10 +67,12 @@ async def crawl_url(
         if result.get("success"):
             tier = result.get("tier_used", "unknown")
             time_ms = result.get("automation_time_ms", 0)
-            logger.info(f"Successfully crawled {url} using {tier} in {time_ms}ms")
+            logger.info("Successfully crawled %s using %s in %dms", url, tier, time_ms)
         else:
             logger.warning(
-                f"Failed to crawl {url}: {result.get('error', 'Unknown error')}",
+                "Failed to crawl %s: %s",
+                url,
+                result.get("error", "Unknown error"),
             )
 
     except HTTPException:
@@ -124,24 +126,27 @@ async def crawl_site(
 
         if result.get("success"):
             logger.info(
-                f"Successfully crawled {result.get('total_pages', 0)} pages from {url} "
-                f"using {result.get('provider', 'unknown')} provider",
+                "Successfully crawled %d pages from %s using %s provider",
+                result.get("total_pages", 0),
+                url,
+                result.get("provider", "unknown"),
             )
         else:
             logger.warning(
-                f"Site crawl failed for {url}: {result.get('error', 'Unknown error')}",
+                "Site crawl failed for %s: %s",
+                url,
+                result.get("error", "Unknown error"),
             )
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"Site crawling failed for {url}")
+        logger.exception("Site crawling failed for %s", url)
         raise HTTPException(
             status_code=500,
             detail=f"Site crawling failed: {e!s}",
         ) from e
-    else:
-        return result
+    return result
 
 
 async def get_crawl_metrics(
@@ -159,22 +164,18 @@ async def get_crawl_metrics(
 
     Raises:
         HTTPException: If metrics retrieval fails
-
     """
     try:
         if not crawling_client:
             return {}
 
         metrics = crawling_client.get_metrics()
-        logger.debug(
-            f"Retrieved crawl metrics for {len(metrics)} tiers",
-        )  # TODO: Convert f-string to logging format
+        logger.debug("Retrieved crawl metrics for %d tiers", len(metrics))
 
     except (ConnectionError, OSError, PermissionError):
         logger.exception("Crawl metrics retrieval failed")
         return {}
-    else:
-        return metrics
+    return metrics
 
 
 async def get_recommended_tool(
@@ -204,14 +205,12 @@ async def get_recommended_tool(
             _raise_url_required()
 
         recommendation = await crawling_client.get_recommended_tool(url)
-        logger.debug(
-            f"Recommended tool for {url}: {recommendation}",
-        )  # TODO: Convert f-string to logging format
+        logger.debug("Recommended tool for %s: %s", url, recommendation)
 
     except HTTPException:
         raise
     except (ConnectionError, OSError, PermissionError):
-        logger.exception(f"Tool recommendation failed for {url}")
+        logger.exception("Tool recommendation failed for %s", url)
         return "crawl4ai"  # Graceful fallback
     else:
         return recommendation
@@ -232,22 +231,18 @@ async def get_provider_info(
 
     Raises:
         HTTPException: If provider info retrieval fails
-
     """
     try:
         if not crawling_client:
             return {}
 
         info = crawling_client.get_provider_info()
-        logger.debug(
-            f"Retrieved provider info for {len(info)} tools",
-        )  # TODO: Convert f-string to logging format
+        logger.debug("Retrieved provider info for %d tools", len(info))
 
     except (ConnectionError, OSError, PermissionError):
         logger.exception("Provider info retrieval failed")
         return {}
-    else:
-        return info
+    return info
 
 
 async def get_tier_metrics(
@@ -265,22 +260,18 @@ async def get_tier_metrics(
 
     Raises:
         HTTPException: If tier metrics retrieval fails
-
     """
     try:
         if not crawling_client:
             return {}
 
         metrics = crawling_client.get_tier_metrics()
-        logger.debug(
-            f"Retrieved tier metrics for {len(metrics)} tiers",
-        )  # TODO: Convert f-string to logging format
+        logger.debug("Retrieved tier metrics for %d tiers", len(metrics))
 
     except (ConnectionError, OSError, PermissionError):
         logger.exception("Tier metrics retrieval failed")
         return {}
-    else:
-        return metrics
+    return metrics
 
 
 # New function-based capabilities
@@ -333,9 +324,7 @@ async def batch_crawl_urls(
         processed_results = []
         for i, result in enumerate(results):
             if isinstance(result, Exception):
-                logger.error(
-                    f"URL {urls[i]} failed: {result}",
-                )  # TODO: Convert f-string to logging format
+                logger.error("URL %s failed: %s", urls[i], result)
                 processed_results.append(
                     {
                         "success": False,
@@ -350,8 +339,10 @@ async def batch_crawl_urls(
 
         successful_count = sum(1 for r in processed_results if r.get("success", False))
         logger.info(
-            f"Batch crawled {len(urls)} URLs with {successful_count} successes "
-            f"using max {max_parallel} parallel operations",
+            "Batch crawled %d URLs with %d successes using max %d parallel operations",
+            len(urls),
+            successful_count,
+            max_parallel,
         )
 
     except HTTPException:
@@ -362,8 +353,7 @@ async def batch_crawl_urls(
             status_code=500,
             detail=f"Batch crawling failed: {e!s}",
         ) from e
-    else:
-        return processed_results
+    return processed_results
 
 
 async def validate_url(url: str) -> dict[str, Any]:
@@ -376,7 +366,6 @@ async def validate_url(url: str) -> dict[str, Any]:
 
     Returns:
         Validation result with status and details
-
     """
     try:
         if not url:
@@ -413,19 +402,18 @@ async def validate_url(url: str) -> dict[str, Any]:
             }
 
     except Exception as e:
-        logger.exception(f"URL validation failed for {url}")
+        logger.exception("URL validation failed for %s", url)
         return {"valid": False, "error": f"Validation error: {e!s}", "details": {}}
-    else:
-        return {
-            "valid": True,
-            "details": {
-                "scheme": parsed.scheme,
-                "domain": parsed.netloc,
-                "path": parsed.path,
-                "query": parsed.query,
-                "fragment": parsed.fragment,
-            },
-        }
+    return {
+        "valid": True,
+        "details": {
+            "scheme": parsed.scheme,
+            "domain": parsed.netloc,
+            "path": parsed.path,
+            "query": parsed.query,
+            "fragment": parsed.fragment,
+        },
+    }
 
 
 async def estimate_crawl_cost(
@@ -442,7 +430,6 @@ async def estimate_crawl_cost(
 
     Returns:
         Cost estimation with time and resource requirements
-
     """
     try:
         if not urls:

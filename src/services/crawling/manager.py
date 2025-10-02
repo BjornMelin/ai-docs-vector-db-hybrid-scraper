@@ -1,7 +1,7 @@
 """Crawl manager with 5-tier browser automation via UnifiedBrowserManager."""
 
 import logging
-from typing import Any
+from typing import Any, Literal, cast
 
 from src.config import Config
 from src.services.browser.unified_manager import (
@@ -12,6 +12,16 @@ from src.services.errors import CrawlServiceError
 
 
 logger = logging.getLogger(__name__)
+
+TierType = Literal[
+    "auto",
+    "lightweight",
+    "crawl4ai",
+    "crawl4ai_enhanced",
+    "browser_use",
+    "playwright",
+    "firecrawl",
+]
 
 
 class CrawlManager:
@@ -28,8 +38,8 @@ class CrawlManager:
         Args:
             config: Unified configuration with crawl provider settings
             rate_limiter: Optional RateLimitManager instance for rate limiting
-
         """
+
         self.config = config
         self.rate_limiter = rate_limiter
         self._unified_browser_manager: Any = None
@@ -47,8 +57,8 @@ class CrawlManager:
 
         Raises:
             CrawlServiceError: If UnifiedBrowserManager initialization fails
-
         """
+
         if self._initialized:
             return
 
@@ -103,20 +113,30 @@ class CrawlManager:
                 - automation_time_ms: Time taken for automation in milliseconds
                 - url: Source URL
                 - error: Error message if scraping failed
-
-        Raises:
-            CrawlServiceError: If manager not initialized
-
         """
+
         if not self._initialized:
             msg = "Manager not initialized"
             raise CrawlServiceError(msg)
 
         try:
             # Create unified request
+            allowed_tiers = {
+                "auto",
+                "lightweight",
+                "crawl4ai",
+                "crawl4ai_enhanced",
+                "browser_use",
+                "playwright",
+                "firecrawl",
+            }
+            tier = cast(
+                TierType,
+                preferred_provider if preferred_provider in allowed_tiers else "auto",
+            )
             request = UnifiedScrapingRequest(
                 url=url,
-                tier=preferred_provider if preferred_provider else "auto",
+                tier=tier,
                 interaction_required=False,
                 timeout=30000,
             )
@@ -160,8 +180,8 @@ class CrawlManager:
 
         Returns:
             Dictionary with metrics for each tier including success rates and timing
-
         """
+
         if not self._unified_browser_manager:
             return {}
 
@@ -177,8 +197,8 @@ class CrawlManager:
 
         Returns:
             Recommended tool name based on UnifiedBrowserManager analysis
-
         """
+
         if not self._unified_browser_manager:
             return "crawl4ai"  # Default fallback
 
@@ -206,18 +226,13 @@ class CrawlManager:
                 - total_pages: Number of pages crawled
                 - provider: Name of tool used
                 - error: Error message if crawl failed
-
-        Raises:
-            CrawlServiceError: If manager not initialized
-
         """
+
         if not self._initialized:
             msg = "Manager not initialized"
             raise CrawlServiceError(msg)
 
-        logger.info(
-            f"Starting site crawl of {url} with max {max_pages} pages"
-        )  # TODO: Convert f-string to logging format
+        logger.info("Starting site crawl of %s with max %d pages", url, max_pages)
 
         try:
             return await self._execute_site_crawl(url, max_pages, preferred_provider)
@@ -237,8 +252,8 @@ class CrawlManager:
 
         Returns:
             Tool information including tier assignments and metrics
-
         """
+
         if not self._unified_browser_manager:
             return {}
 
@@ -286,8 +301,8 @@ class CrawlManager:
 
         Returns:
             Tier performance metrics for all 5 tiers
-
         """
+
         if not self._unified_browser_manager:
             return {}
 
@@ -312,8 +327,8 @@ class CrawlManager:
                 - urls: List of discovered URLs
                 - total: Total number of URLs found
                 - error: Error message if mapping failed
-
         """
+
         if not self._initialized:
             msg = "Manager not initialized"
             raise CrawlServiceError(msg)
@@ -340,6 +355,7 @@ class CrawlManager:
         self, url: str, max_pages: int, preferred_provider: str | None
     ) -> dict[str, object]:
         """Execute site crawling with link discovery."""
+
         pages = []
         crawled_urls = set()
         urls_to_crawl = [url]
@@ -388,6 +404,7 @@ class CrawlManager:
         urls_to_crawl: list,
     ) -> None:
         """Extract links from result and queue them for crawling."""
+
         links = result.get("metadata", {}).get("links", [])
         if not isinstance(links, list):
             return

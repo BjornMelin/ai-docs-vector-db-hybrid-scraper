@@ -1,17 +1,18 @@
-import typing
-
-
 """DragonflyDB cache implementation with advanced performance optimizations."""
 
 import json
 import logging
 import zlib
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import redis.asyncio as redis
 from redis.asyncio.retry import Retry
 from redis.backoff import ExponentialBackoff
-from redis.exceptions import ConnectionError, RedisError, TimeoutError
+from redis.exceptions import (
+    ConnectionError as RedisConnectionError,
+    RedisError,
+    TimeoutError as RedisTimeoutError,
+)
 
 from .base import CacheInterface
 
@@ -19,12 +20,16 @@ from .base import CacheInterface
 logger = logging.getLogger(__name__)
 
 # Import monitoring registry for metrics integration
+if TYPE_CHECKING:
+    from ..monitoring.metrics import get_metrics_registry
+
 try:
     from ..monitoring.metrics import get_metrics_registry
 
     MONITORING_AVAILABLE = True
 except ImportError:
     MONITORING_AVAILABLE = False
+    get_metrics_registry = None  # type: ignore
 
 
 class DragonflyCache(CacheInterface[Any]):
@@ -59,6 +64,7 @@ class DragonflyCache(CacheInterface[Any]):
             enable_compression: Enable value compression
             compression_threshold: Minimum size for compression
         """
+
         self.redis_url = redis_url
         self.default_ttl = default_ttl
         self.key_prefix = key_prefix
@@ -72,7 +78,7 @@ class DragonflyCache(CacheInterface[Any]):
             retry_strategy = Retry(
                 backoff=ExponentialBackoff(base=0.1, cap=1.0),
                 retries=max_retries,
-                supported_errors=(ConnectionError, TimeoutError),
+                supported_errors=(RedisConnectionError, RedisTimeoutError),
             )
 
         # Create optimized connection pool for DragonflyDB
@@ -90,16 +96,17 @@ class DragonflyCache(CacheInterface[Any]):
 
         # Initialize metrics registry if available
         self.metrics_registry = None
-        if MONITORING_AVAILABLE:
+        if MONITORING_AVAILABLE and get_metrics_registry is not None:
             try:
                 self.metrics_registry = get_metrics_registry()
                 logger.debug("DragonflyDB cache monitoring enabled")
-            except (ConnectionError, OSError, PermissionError) as e:
+            except (RedisConnectionError, OSError, PermissionError) as e:
                 logger.debug("DragonflyDB cache monitoring disabled: %s", e)
 
     @property
     async def client(self) -> redis.Redis:
         """Get DragonflyDB client with lazy initialization."""
+
         if self._client is None:
             self._client = redis.Redis(connection_pool=self.pool)
             # Test connection and ensure DragonflyDB is responding
@@ -109,10 +116,12 @@ class DragonflyCache(CacheInterface[Any]):
 
     def _make_key(self, key: str) -> str:
         """Create full key with prefix."""
+
         return f"{self.key_prefix}{key}" if self.key_prefix else key
 
     def _serialize(self, value: Any) -> bytes:
         """Serialize value for storage with optional compression."""
+
         # Convert to JSON string then encode
         json_str = json.dumps(value, separators=(",", ":"), ensure_ascii=False)
         data = json_str.encode("utf-8")
@@ -127,6 +136,7 @@ class DragonflyCache(CacheInterface[Any]):
 
     def _deserialize(self, data: bytes) -> Any:
         """Deserialize value from storage."""
+
         if not data:
             return None
 
@@ -140,6 +150,7 @@ class DragonflyCache(CacheInterface[Any]):
 
     async def get(self, key: str) -> Any | None:
         """Get value from DragonflyDB."""
+
         # Monitor cache operations with Prometheus if available
         if self.metrics_registry:
             decorator = self.metrics_registry.monitor_cache_performance(
@@ -154,6 +165,7 @@ class DragonflyCache(CacheInterface[Any]):
 
     async def _execute_get(self, key: str) -> Any | None:
         """Execute the actual get operation."""
+
         try:
             client = await self.client
             full_key = self._make_key(key)
@@ -177,6 +189,7 @@ class DragonflyCache(CacheInterface[Any]):
         xx: bool = False,
     ) -> bool:
         """Set value in DragonflyDB with TTL and conditional options."""
+
         # Monitor cache operations with Prometheus if available
         if self.metrics_registry:
             decorator = self.metrics_registry.monitor_cache_performance(
@@ -198,6 +211,7 @@ class DragonflyCache(CacheInterface[Any]):
         xx: bool = False,
     ) -> bool:
         """Execute the actual set operation."""
+
         try:
             client = await self.client
             full_key = self._make_key(key)
@@ -224,6 +238,7 @@ class DragonflyCache(CacheInterface[Any]):
 
     async def delete(self, key: str) -> bool:
         """Delete value from DragonflyDB."""
+
         try:
             client = await self.client
             full_key = self._make_key(key)
@@ -236,6 +251,7 @@ class DragonflyCache(CacheInterface[Any]):
 
     async def exists(self, key: str) -> bool:
         """Check if key exists in DragonflyDB."""
+
         try:
             client = await self.client
             full_key = self._make_key(key)
@@ -248,6 +264,7 @@ class DragonflyCache(CacheInterface[Any]):
 
     async def clear(self) -> int:
         """Clear cache entries with prefix."""
+
         try:
             client = await self.client
 
@@ -271,6 +288,7 @@ class DragonflyCache(CacheInterface[Any]):
 
     async def size(self) -> int:
         """Get approximate cache size."""
+
         try:
             client = await self.client
 
@@ -297,6 +315,7 @@ class DragonflyCache(CacheInterface[Any]):
 
     async def initialize(self) -> None:
         """Initialize DragonflyDB connection and verify connectivity."""
+
         try:
             client = await self.client
             # Test connection
@@ -316,6 +335,7 @@ class DragonflyCache(CacheInterface[Any]):
     # Batch operations using DragonflyDB's superior pipeline performance
     async def get_many(self, keys: list[str]) -> dict[str, Any | None]:
         """Get multiple values using optimized pipeline."""
+
         try:
             client = await self.client
             results = {}
@@ -350,6 +370,7 @@ class DragonflyCache(CacheInterface[Any]):
         ttl: int | None = None,
     ) -> dict[str, bool]:
         """Set multiple values using optimized pipeline."""
+
         try:
             client = await self.client
             results = {}
@@ -385,6 +406,7 @@ class DragonflyCache(CacheInterface[Any]):
 
     async def delete_many(self, keys: list[str]) -> dict[str, bool]:
         """Delete multiple values efficiently."""
+
         try:
             client = await self.client
             results = {}
@@ -420,6 +442,7 @@ class DragonflyCache(CacheInterface[Any]):
     # DragonflyDB-specific optimized methods
     async def mget(self, keys: list[str]) -> list[Any | None]:
         """Get multiple values efficiently using MGET."""
+
         try:
             client = await self.client
             full_keys = [self._make_key(key) for key in keys]
@@ -442,6 +465,7 @@ class DragonflyCache(CacheInterface[Any]):
 
     async def mset(self, mapping: dict[str, Any], ttl: int | None = None) -> bool:
         """Set multiple values efficiently using MSET + EXPIRE."""
+
         try:
             client = await self.client
 
@@ -470,6 +494,7 @@ class DragonflyCache(CacheInterface[Any]):
 
     async def ttl(self, key: str) -> int:
         """Get remaining TTL for a key in seconds."""
+
         try:
             client = await self.client
             full_key = self._make_key(key)
@@ -482,6 +507,7 @@ class DragonflyCache(CacheInterface[Any]):
 
     async def expire(self, key: str, ttl: int) -> bool:
         """Set new TTL for existing key."""
+
         try:
             client = await self.client
             full_key = self._make_key(key)
@@ -494,6 +520,7 @@ class DragonflyCache(CacheInterface[Any]):
 
     async def scan_keys(self, pattern: str, count: int = 100) -> list[str]:
         """Scan keys matching pattern (DragonflyDB optimized)."""
+
         try:
             client = await self.client
             full_pattern = f"{self.key_prefix}{pattern}" if self.key_prefix else pattern
@@ -518,6 +545,7 @@ class DragonflyCache(CacheInterface[Any]):
 
     async def get_memory_usage(self, key: str) -> int:
         """Get memory usage of a key (DragonflyDB feature)."""
+
         try:
             client = await self.client
             full_key = self._make_key(key)

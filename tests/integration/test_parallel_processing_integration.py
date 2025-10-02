@@ -1,14 +1,12 @@
 """Integration tests for parallel processing system with dependency injection."""
 
 import logging
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock
 
 import pytest
 
-from src.config import Settings
-from src.config.settings import CacheConfig
 from src.infrastructure.client_manager import ClientManager
-from src.infrastructure.container import initialize_container, shutdown_container
+from src.services.cache import CacheManager
 from src.services.embeddings.parallel import ParallelConfig
 from src.services.processing.parallel_integration import (
     OptimizationConfig,
@@ -24,26 +22,6 @@ class TestParallelProcessingIntegration:
     """Test parallel processing system integration with DI container."""
 
     @pytest.fixture
-    async def mock_config(self):
-        """Create mock configuration for testing."""
-        config = Mock(spec=Settings)
-        config.openai = Mock()
-        config.openai.api_key = "test-key"
-        config.qdrant = Mock()
-        config.qdrant.url = "http://localhost:6333"
-        config.qdrant.api_key = None
-        config.qdrant.timeout = 30.0
-        config.qdrant.prefer_grpc = False
-        config.cache = Mock()
-        config.cache.dragonfly_url = "redis://localhost:6379"
-        config.cache.redis_pool_size = 20
-        config.firecrawl = Mock()
-        config.firecrawl.api_key = "test-key"
-        config.performance = Mock()
-        config.performance.max_retries = 3
-        return config
-
-    @pytest.fixture
     async def mock_embedding_manager(self):
         """Create mock embedding manager for testing."""
         manager = AsyncMock()
@@ -51,18 +29,29 @@ class TestParallelProcessingIntegration:
         manager.generate_embeddings_batch = AsyncMock(
             return_value={"embeddings": [[0.1] * 384, [0.2] * 384]}
         )
+        manager.cache_manager = AsyncMock(spec=CacheManager)
+        manager.cache_manager.embedding_cache = None
+        manager.cache_manager.search_cache = None
         return manager
 
     @pytest.fixture
-    async def container_with_parallel_processing(self, mock_config):
-        """Initialize container with parallel processing system."""
-        # Initialize container
-        container = await initialize_container(mock_config)
+    async def container_with_parallel_processing(self, mock_embedding_manager):
+        """Provide a lightweight container facade for tests."""
 
-        yield container
+        class _StubContainer:
+            def wire(self, modules: list[str]):  # noqa: D401
+                """Stub wire method; dependency injection is no-op for tests."""
 
-        # Cleanup
-        await shutdown_container()
+            def shutdown_resources(self):  # noqa: D401
+                """Stub shutdown method for cleanup compatibility."""
+
+            def parallel_processing_system(self) -> ParallelProcessingSystem:
+                return ParallelProcessingSystem(
+                    embedding_manager=mock_embedding_manager,
+                    config=OptimizationConfig(),
+                )
+
+        return _StubContainer()
 
     @pytest.mark.asyncio
     async def test_parallel_processing_system_initialization(
@@ -250,19 +239,19 @@ class TestParallelProcessingIntegration:
             )
 
             # Create custom configuration
+            mock_cache_manager = AsyncMock(spec=CacheManager)
+            mock_cache_manager.embedding_cache = None
+            mock_cache_manager.search_cache = None
             custom_config = OptimizationConfig(
                 enable_parallel_processing=True,
-                enable_intelligent_caching=True,
+                enable_caching=True,
                 enable_optimized_algorithms=True,
                 parallel_config=ParallelConfig(
                     max_concurrent_tasks=25,
                     batch_size_per_worker=5,
                     adaptive_batching=True,
                 ),
-                cache_config=CacheConfig(
-                    max_memory_mb=128,
-                    enable_compression=True,
-                ),
+                cache_manager=mock_cache_manager,
                 performance_monitoring=True,
                 auto_optimization=False,  # Disable auto-optimization for testing
             )
@@ -276,8 +265,8 @@ class TestParallelProcessingIntegration:
             # Verify configuration
             assert parallel_system.config.enable_parallel_processing is True
             assert parallel_system.config.auto_optimization is False
-            assert parallel_system.config.parallel_config.max_concurrent_tasks == 25
-            assert parallel_system.config.cache_config.max_memory_mb == 128
+            assert parallel_system.config.parallel_config.max_concurrent_tasks == 25  # pyright: ignore[reportOptionalMemberAccess]
+            assert parallel_system.cache_manager is mock_cache_manager
 
             # Test system status
             status = await parallel_system.get_system_status()
@@ -296,8 +285,8 @@ class TestParallelProcessingPerformance:
         self, benchmark, mock_embedding_manager
     ):
         """Benchmark parallel vs sequential processing performance."""
-        # This would be a more comprehensive benchmark in a real scenario
-        # For now, we'll just verify the system can handle load
+        # More robust benchmark in a real scenario
+        # For now - just verify the system can handle load
 
         test_documents = [
             {

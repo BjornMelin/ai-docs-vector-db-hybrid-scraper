@@ -9,6 +9,7 @@ from typing import Any
 import aiohttp
 import redis.asyncio as redis
 from dependency_injector import containers, providers
+from dependency_injector.providers import Singleton  # pylint: disable=no-name-in-module
 from dependency_injector.wiring import Provide
 from firecrawl import AsyncFirecrawlApp
 from openai import AsyncOpenAI
@@ -64,7 +65,7 @@ def _create_qdrant_client(config: Any) -> AsyncQdrantClient:
         qdrant_config = getattr(config, "qdrant", None)
         url = getattr(qdrant_config, "url", None) or "http://localhost:6333"
         api_key = getattr(qdrant_config, "api_key", None)
-        timeout = getattr(qdrant_config, "timeout", None) or 30.0
+        timeout = float(getattr(qdrant_config, "timeout", None) or 30.0)
         prefer_grpc = getattr(qdrant_config, "prefer_grpc", None) or False
         return AsyncQdrantClient(
             url=url, api_key=api_key, timeout=timeout, prefer_grpc=prefer_grpc
@@ -142,7 +143,7 @@ def _create_parallel_processing_system(embedding_manager: Any) -> Any:
         # Create optimization configuration
         config = OptimizationConfig(
             enable_parallel_processing=True,
-            enable_intelligent_caching=True,
+            enable_caching=True,
             enable_optimized_algorithms=True,
             performance_monitoring=True,
             auto_optimization=True,
@@ -165,75 +166,75 @@ def _create_parallel_processing_system(embedding_manager: Any) -> Any:
     return MockParallelProcessingSystem()
 
 
-class ApplicationContainer(containers.DeclarativeContainer):
+class ApplicationContainer(containers.DeclarativeContainer):  # pylint: disable=c-extension-no-member
     """Application dependency injection container."""
 
     # Configuration
-    config = providers.Configuration()
+    config = providers.Configuration()  # pylint: disable=c-extension-no-member
 
     # Core client providers - using Factory for safe initialization
-    openai_client = providers.Factory(
+    openai_client = providers.Factory(  # pylint: disable=c-extension-no-member
         _create_openai_client,
         config=config,
     )
 
-    qdrant_client = providers.Factory(
+    qdrant_client = providers.Factory(  # pylint: disable=c-extension-no-member
         _create_qdrant_client,
         config=config,
     )
 
-    redis_client = providers.Factory(
+    redis_client = providers.Factory(  # pylint: disable=c-extension-no-member
         _create_redis_client,
         config=config,
     )
 
-    firecrawl_client = providers.Factory(
+    firecrawl_client = providers.Factory(  # pylint: disable=c-extension-no-member
         _create_firecrawl_client,
         config=config,
     )
 
     # HTTP client with session management
-    http_client = providers.Resource(
+    http_client = providers.Resource(  # pylint: disable=c-extension-no-member
         _create_http_client,
     )
 
     # Client provider layer
-    openai_provider = providers.Singleton(
+    openai_provider = Singleton(
         "src.infrastructure.clients.openai_client.OpenAIClientProvider",
         openai_client=openai_client,
     )
 
-    qdrant_provider = providers.Singleton(
+    qdrant_provider = Singleton(
         "src.infrastructure.clients.qdrant_client.QdrantClientProvider",
         qdrant_client=qdrant_client,
     )
 
-    redis_provider = providers.Singleton(
+    redis_provider = Singleton(
         "src.infrastructure.clients.redis_client.RedisClientProvider",
         redis_client=redis_client,
     )
 
-    firecrawl_provider = providers.Singleton(
+    firecrawl_provider = Singleton(
         "src.infrastructure.clients.firecrawl_client.FirecrawlClientProvider",
         firecrawl_client=firecrawl_client,
     )
 
-    http_provider = providers.Singleton(
+    http_provider = Singleton(
         "src.infrastructure.clients.http_client.HTTPClientProvider",
         http_client=http_client,
     )
 
     # Parallel processing system
-    parallel_processing_system = providers.Factory(
+    parallel_processing_system = providers.Factory(  # pylint: disable=c-extension-no-member
         _create_parallel_processing_system,
-        embedding_manager=providers.DelegatedFactory(
+        embedding_manager=providers.DelegatedFactory(  # pylint: disable=c-extension-no-member
             "src.services.embeddings.manager.EmbeddingManager"
         ),
     )
 
     # Lifecycle management
-    startup_tasks = providers.List()
-    shutdown_tasks = providers.List()
+    startup_tasks = providers.List()  # pylint: disable=c-extension-no-member
+    shutdown_tasks = providers.List()  # pylint: disable=c-extension-no-member
 
 
 class ContainerManager:
@@ -251,16 +252,18 @@ class ContainerManager:
 
         Returns:
             Initialized container
-
         """
+
         if self._initialized:
+            if self.container is None:
+                raise RuntimeError("Container manager in inconsistent state")
             return self.container
 
         self.container = ApplicationContainer()
         self.container.config.from_dict(self._config_to_dict(config))
 
         # Initialize resource providers
-        await self.container.init_resources()
+        await self.container.init_resources()  # pyright: ignore[reportGeneralTypeIssues]
 
         self._initialized = True
         logger.info("Dependency injection container initialized")
@@ -268,8 +271,8 @@ class ContainerManager:
 
     async def shutdown(self) -> None:
         """Shutdown the container and cleanup resources."""
-        if self.container and self._initialized:
-            await self.container.shutdown_resources()
+        if self._initialized and self.container is not None:
+            await self.container.shutdown_resources()  # pyright: ignore[reportGeneralTypeIssues]
             self.container = None
             self._initialized = False
             logger.info("Dependency injection container shutdown")

@@ -4,13 +4,18 @@ Simplified search endpoints optimized for solo developers.
 """
 
 import logging
-from typing import Any
+from time import perf_counter
+from typing import Annotated, Any, cast
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from src.architecture.service_factory import get_service
-from src.models.requests import SearchRequest
+from src.architecture.service_factory import (
+    ModeAwareServiceFactory,
+    get_request_service_factory,
+)
+from src.services.vector_db import VectorMatch
+from src.services.vector_db.service import VectorStoreService
 
 
 logger = logging.getLogger(__name__)
@@ -23,9 +28,7 @@ class SimpleSearchRequest(BaseModel):
 
     query: str = Field(..., min_length=1, max_length=500, description="Search query")
     limit: int = Field(default=10, ge=1, le=25, description="Maximum results to return")
-    collection_name: str = Field(
-        default="documents", description="Collection to search"
-    )
+    collection: str = Field(default="documents", description="Collection to search")
 
 
 class SimpleSearchResponse(BaseModel):
@@ -39,15 +42,23 @@ class SimpleSearchResponse(BaseModel):
     )
 
 
+FactoryDependency = Annotated[
+    ModeAwareServiceFactory, Depends(get_request_service_factory)
+]
+
+
 @router.post("/search", response_model=SimpleSearchResponse)
-async def search_documents(request: SimpleSearchRequest) -> SimpleSearchResponse:
+async def search_documents(
+    request: SimpleSearchRequest,
+    factory: FactoryDependency,
+) -> SimpleSearchResponse:
     """Search documents using simple vector search.
 
     This endpoint provides basic vector search functionality without advanced features
     like reranking, query expansion, or hybrid search.
     """
     try:
-        return await _perform_search(request)
+        return await _perform_search(request, factory)
     except Exception as e:
         logger.exception("Search failed")
         # Return generic error message to prevent information disclosure
@@ -57,32 +68,33 @@ async def search_documents(request: SimpleSearchRequest) -> SimpleSearchResponse
         ) from e
 
 
-async def _perform_search(request: SimpleSearchRequest) -> SimpleSearchResponse:
+async def _perform_search(
+    request: SimpleSearchRequest, factory: ModeAwareServiceFactory
+) -> SimpleSearchResponse:
     """Perform search with service lookup and response conversion."""
-    # Get search service
-    search_service = await get_service("search_service")
-
-    # Convert to internal search request
-    internal_request = SearchRequest(
-        query=request.query,
+    vector_service = await _get_vector_store_service(factory)
+    started = perf_counter()
+    matches = await vector_service.search_documents(
+        request.collection,
+        request.query,
         limit=request.limit,
-        collection_name=request.collection_name,
+        group_by="doc_id",
+        group_size=1,
+        normalize_scores=True,
     )
-
-    # Perform search
-    response = await search_service.search(internal_request)
-
-    # Convert to simple response
+    processing_time_ms = (perf_counter() - started) * 1000
+    results = [_vector_match_to_result(match) for match in matches]
     return SimpleSearchResponse(
-        query=response.query,
-        results=response.results,
-        total_count=response.total_count,
-        processing_time_ms=response.processing_time_ms,
+        query=request.query,
+        results=results,
+        total_count=len(results),
+        processing_time_ms=processing_time_ms,
     )
 
 
 @router.get("/search")
 async def search_documents_get(
+    factory: FactoryDependency,
     q: str = Query(..., min_length=1, max_length=500, description="Search query"),
     limit: int = Query(default=10, ge=1, le=25, description="Maximum results"),
     collection: str = Query(default="documents", description="Collection to search"),
@@ -91,16 +103,18 @@ async def search_documents_get(
     request = SimpleSearchRequest(
         query=q,
         limit=limit,
-        collection_name=collection,
+        collection=collection,
     )
-    return await search_documents(request)
+    return await search_documents(request, factory)
 
 
 @router.get("/search/health")
-async def search_health() -> dict[str, Any]:
+async def search_health(
+    factory: FactoryDependency,
+) -> dict[str, Any]:
     """Get search service health status."""
     try:
-        stats = await _get_search_stats()
+        stats = await _get_search_stats(factory)
     except Exception as e:
         logger.exception("Search health check failed")
         return {
@@ -115,7 +129,54 @@ async def search_health() -> dict[str, Any]:
     }
 
 
-async def _get_search_stats() -> dict[str, Any]:
+async def _get_search_stats(factory: ModeAwareServiceFactory) -> dict[str, Any]:
     """Get search service statistics."""
-    search_service = await get_service("search_service")
-    return search_service.get_search_stats()
+    vector_service = await _get_vector_store_service(factory)
+    collections = await vector_service.list_collections()
+    stats: dict[str, Any] = {"collections": collections}
+    default_collection = "documents"
+    if default_collection in collections:
+        try:
+            stats["default_collection"] = default_collection
+            stats["default_collection_stats"] = await vector_service.collection_stats(
+                default_collection
+            )
+        except Exception as exc:  # pragma: no cover - defensive logging branch
+            stats["default_collection_error"] = str(exc)
+    return stats
+
+
+async def _get_vector_store_service(
+    factory: ModeAwareServiceFactory,
+) -> VectorStoreService:
+    """Resolve the initialized vector store service from the factory."""
+
+    service = await factory.get_service("vector_db_service")
+    if not isinstance(service, VectorStoreService):  # pragma: no cover - safety net
+        msg = "Vector DB service is not a VectorStoreService instance"
+        raise TypeError(msg)
+    return cast(VectorStoreService, service)
+
+
+def _vector_match_to_result(match: VectorMatch) -> dict[str, Any]:
+    """Normalize a vector match into the simple search response format."""
+
+    payload = dict(match.payload or {})
+    grouping = payload.get("_grouping") or {}
+    collection = (
+        payload.get("collection") or payload.get("_collection") or match.collection
+    )
+    result: dict[str, Any] = {
+        "id": match.id,
+        "score": match.raw_score if match.raw_score is not None else match.score,
+        "raw_score": match.raw_score,
+        "normalized_score": match.normalized_score,
+        "collection": collection,
+        "group": grouping if grouping else None,
+        "payload": payload,
+    }
+    if match.vector is not None:
+        result["vector"] = list(match.vector)
+    if result["group"] is None:
+        result.pop("group")
+    return result

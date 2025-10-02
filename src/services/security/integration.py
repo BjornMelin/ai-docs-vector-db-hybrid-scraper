@@ -17,9 +17,11 @@ import os
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI
+from fastapi.exceptions import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from starlette import status
 
 from src.config.security import SecurityConfig
 from src.services.security.ai_security import AISecurityValidator
@@ -175,9 +177,7 @@ class SecurityManager:
             ],
         )
 
-        logger.info(
-            f"CORS configured with origins: {allowed_origins}"
-        )  # TODO: Convert f-string to logging format
+        logger.info("CORS configured with origins: %s", allowed_origins)
 
     async def get_security_status(self) -> dict[str, Any]:
         """Get comprehensive security status.

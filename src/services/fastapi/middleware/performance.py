@@ -373,9 +373,7 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
                         "cpu_percent": cpu_percent,
                     }
                 except (subprocess.SubprocessError, OSError, TimeoutError) as e:
-                    logger.warning(
-                        f"Failed to get system metrics: {e}"
-                    )  # TODO: Convert f-string to logging format
+                    logger.warning("Failed to get system metrics: %s", e)
 
             return summary
 

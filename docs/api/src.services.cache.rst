@@ -36,18 +36,10 @@ src.services.cache.embedding\_cache module
    :show-inheritance:
    :undoc-members:
 
-src.services.cache.intelligent module
--------------------------------------
+src.services.cache.persistent_cache module
+------------------------------------------
 
-.. automodule:: src.services.cache.intelligent
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-src.services.cache.local\_cache module
---------------------------------------
-
-.. automodule:: src.services.cache.local_cache
+.. automodule:: src.services.cache.persistent_cache
    :members:
    :show-inheritance:
    :undoc-members:
@@ -64,14 +56,6 @@ src.services.cache.metrics module
 ---------------------------------
 
 .. automodule:: src.services.cache.metrics
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-src.services.cache.modern module
---------------------------------
-
-.. automodule:: src.services.cache.modern
    :members:
    :show-inheritance:
    :undoc-members:

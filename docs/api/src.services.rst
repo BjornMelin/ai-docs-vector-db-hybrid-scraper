@@ -33,7 +33,6 @@ Subpackages
    src.services.query_processing
    src.services.rag
    src.services.security
-   src.services.simple
    src.services.task_queue
    src.services.utilities
    src.services.vector_db

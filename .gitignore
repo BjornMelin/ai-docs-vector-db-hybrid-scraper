@@ -87,6 +87,7 @@ crawl4ai_scraper.log
 config/local_*.json
 temp/
 /cache/
+!src/services/cache/
 .crawl4ai_cache/
 
 # Node.js (if using any JS tools)
@@ -107,7 +108,7 @@ repomix-output.*
 
 # Runtime directories and files
 logs/
-cache/
+/cache/
 data/
 worktrees/
 coverage.json
@@ -252,3 +253,5 @@ CLAUDE.md
 
 # Archived artifacts
 .archived/
+tmp/
+agent-logs/

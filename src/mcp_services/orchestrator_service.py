@@ -27,10 +27,9 @@ logger = logging.getLogger(__name__)
 
 
 class OrchestratorService:
-    """FastMCP 2.0+ orchestrator service with multi-service coordination.
+    """FastMCP 2.0+ orchestrator service for multi-service coordination.
 
-    Implements coordination between domain-specific services
-    for multi-agent workflows and service composition.
+    Coordinates between domain-specific services for multi-service workflows.
     """
 
     def __init__(self, name: str = "orchestrator-service"):
@@ -38,26 +37,19 @@ class OrchestratorService:
 
         Args:
             name: Service name for MCP registration
-
         """
+
         self.mcp = FastMCP(
             name,
             instructions="""
-            Central orchestrator service for multi-service coordination.
+            Orchestrator service for multi-service coordination.
 
-            Features:
-            - Multi-service workflow orchestration and coordination
-            - Service selection and load balancing
-            - Cross-service state management and synchronization
-            - Service composition for complex workflows
-            - Performance optimization across service boundaries
-            - Unified error handling and fault tolerance
-
-            Capabilities:
-            - Dynamic service discovery and capability assessment
-            - Workflow decomposition and service routing
-            - Fault-tolerant multi-service coordination
-            - Performance correlation and optimization across services
+            Provides tools for:
+            - Multi-service workflow orchestration
+            - Service selection and routing
+            - Cross-service state management
+            - Service composition for workflows
+            - Error handling across services
             """,
         )
         self.client_manager: ClientManager | None = None
@@ -77,8 +69,8 @@ class OrchestratorService:
 
         Args:
             client_manager: Shared client manager instance
-
         """
+
         self.client_manager = client_manager
 
         # Initialize domain-specific services
@@ -90,10 +82,11 @@ class OrchestratorService:
         # Register orchestrator tools
         await self._register_orchestrator_tools()
 
-        logger.info("OrchestratorService initialized with multi-service coordination")
+        logger.info("OrchestratorService initialized")
 
     async def _initialize_domain_services(self) -> None:
         """Initialize all domain-specific services."""
+
         if not self.client_manager:
             msg = "OrchestratorService not initialized"
             raise RuntimeError(msg)
@@ -124,6 +117,7 @@ class OrchestratorService:
         self, service_name: str, service, task
     ) -> None:
         """Initialize a single service and assign it to the appropriate attribute."""
+
         await task
         if service_name == "search":
             self.search_service = service
@@ -141,6 +135,7 @@ class OrchestratorService:
 
     async def _initialize_agentic_orchestration(self) -> None:
         """Initialize agentic orchestration components."""
+
         if not self.client_manager:
             return
 
@@ -159,6 +154,7 @@ class OrchestratorService:
 
     async def _register_orchestrator_tools(self) -> None:
         """Register orchestrator-specific MCP tools."""
+
         if not self.client_manager:
             msg = "OrchestratorService not initialized"
             raise RuntimeError(msg)
@@ -178,10 +174,13 @@ class OrchestratorService:
 
             Returns:
                 Workflow execution results with service coordination details
-
             """
+
             if not self.agentic_orchestrator:
                 return {"error": "Agentic orchestrator not initialized"}
+
+            if not self.client_manager:
+                return {"error": "Client manager not initialized"}
 
             # Use AgenticOrchestrator for workflow coordination
             deps = create_agent_dependencies(
@@ -281,8 +280,8 @@ class OrchestratorService:
 
         Returns:
             Configured FastMCP server for this service
-
         """
+
         return self.mcp
 
     async def get_service_info(self) -> dict[str, Any]:
@@ -290,8 +289,8 @@ class OrchestratorService:
 
         Returns:
             Service metadata and capability information
-
         """
+
         return {
             "service": "orchestrator",
             "version": "2.0",
@@ -299,24 +298,10 @@ class OrchestratorService:
                 "multi_service_coordination",
                 "workflow_orchestration",
                 "service_composition",
-                "cross_service_optimization",
-                "unified_error_handling",
-                "coordination",
-            ],
-            "autonomous_features": [
-                "service_discovery",
-                "routing",
-                "fault_tolerant_coordination",
-                "performance_optimization",
+                "cross_service_management",
+                "error_handling",
             ],
             "status": "active",
-            "research_basis": "FASTMCP_2_0_SERVER_COMPOSITION",
-            "coordinated_services": [
-                "search",
-                "document",
-                "analytics",
-                "system",
-            ],
         }
 
     async def get_all_services(self) -> dict[str, Any]:
@@ -324,8 +309,8 @@ class OrchestratorService:
 
         Returns:
             Information about all domain-specific services
-
         """
+
         services_info = {}
 
         services = [

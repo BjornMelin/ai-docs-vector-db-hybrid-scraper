@@ -1,358 +1,146 @@
 """Tests for query intent classifier."""
 
-from unittest.mock import AsyncMock
-
 import pytest
 
-from src.services.query_processing.intent_classifier import QueryIntentClassifier
-from src.services.query_processing.models import (
-    QueryComplexity,
-    QueryIntent,
+from src.services.query_processing.intent_classifier import (
     QueryIntentClassification,
+    QueryIntentClassifier,
 )
-
-
-@pytest.fixture
-def mock_embedding_manager():
-    """Create a mock embedding manager."""
-    manager = AsyncMock()
-    # Return embeddings for query + 14 reference embeddings (one per intent)
-    embeddings = [[0.1] * 768]  # Query embedding
-    embeddings.extend(
-        [[0.2 + i * 0.01] * 768 for i in range(14)]
-    )  # 14 reference embeddings
-
-    manager.generate_embeddings = AsyncMock(
-        return_value={"success": True, "embeddings": embeddings}
-    )
-    return manager
-
-
-@pytest.fixture
-def intent_classifier(mock_embedding_manager):
-    """Create an intent classifier instance."""
-    return QueryIntentClassifier(mock_embedding_manager)
-
-
-@pytest.fixture
-async def initialized_classifier(intent_classifier):
-    """Create an initialized intent classifier."""
-    await intent_classifier.initialize()
-    return intent_classifier
 
 
 class TestQueryIntentClassifier:
     """Test the QueryIntentClassifier class."""
 
-    def test_initialization(self, intent_classifier):
+    def test_initialization(self):
         """Test classifier initialization."""
-        assert intent_classifier.embedding_manager is not None
-        assert intent_classifier._initialized is False
+        classifier = QueryIntentClassifier()
+        assert classifier.keyword_map is not None
+        assert "install" in classifier.keyword_map
 
     @pytest.mark.asyncio
-    async def test_initialize(self, intent_classifier):
+    async def test_initialize(self):
         """Test classifier initialization."""
-        await intent_classifier.initialize()
-        assert intent_classifier._initialized is True
+        classifier = QueryIntentClassifier()
+        await classifier.initialize()
+        # No-op method, just ensure it doesn't raise
 
     @pytest.mark.asyncio
-    async def test_classify_conceptual_query(self, initialized_classifier):
-        """Test classifying a conceptual query."""
-        query = "What is machine learning and how does it work?"
+    async def test_classify_procedural_query(self):
+        """Test classifying a procedural query."""
+        classifier = QueryIntentClassifier()
+        await classifier.initialize()
 
-        result = await initialized_classifier.classify_query_advanced(query)
+        query = "How to install Python packages?"
+        result = await classifier.classify(query)
 
         assert isinstance(result, QueryIntentClassification)
-        assert result.primary_intent == QueryIntent.CONCEPTUAL
-        assert result.confidence_scores[QueryIntent.CONCEPTUAL] > 0.0
-        assert result.complexity_level in [
-            QueryComplexity.SIMPLE,
-            QueryComplexity.MODERATE,
-            QueryComplexity.COMPLEX,
-            QueryComplexity.EXPERT,
-        ]
+        assert result.primary_intent == "procedural"
+        assert result.confidence == 0.7
 
     @pytest.mark.asyncio
-    async def test_classify_procedural_query(self, initialized_classifier):
-        """Test classifying a procedural query."""
-        query = "How to implement authentication in Python step by step?"
-
-        result = await initialized_classifier.classify_query_advanced(query)
-
-        assert result.primary_intent == QueryIntent.PROCEDURAL
-        assert result.confidence_scores[QueryIntent.PROCEDURAL] > 0.0
-
-    @pytest.mark.asyncio
-    async def test_classify_factual_query(self, initialized_classifier):
-        """Test classifying a factual query."""
-        query = "What version of Python supports async/await?"
-
-        result = await initialized_classifier.classify_query_advanced(query)
-
-        assert result.primary_intent == QueryIntent.FACTUAL
-        assert result.confidence_scores[QueryIntent.FACTUAL] > 0.0
-
-    @pytest.mark.asyncio
-    async def test_classify_troubleshooting_query(self, initialized_classifier):
+    async def test_classify_troubleshooting_query(self):
         """Test classifying a troubleshooting query."""
-        query = "Getting ImportError when trying to import pandas, how to fix?"
+        classifier = QueryIntentClassifier()
+        await classifier.initialize()
 
-        result = await initialized_classifier.classify_query_advanced(query)
+        query = "Getting error when importing module"
+        result = await classifier.classify(query)
 
-        # Should detect troubleshooting intent (may be primary or secondary)
-        all_intents = [result.primary_intent, *result.secondary_intents]
-        assert QueryIntent.TROUBLESHOOTING in all_intents
-        assert result.confidence_scores[QueryIntent.TROUBLESHOOTING] > 0.0
+        assert isinstance(result, QueryIntentClassification)
+        assert result.primary_intent == "troubleshooting"
+        assert result.confidence == 0.7
 
     @pytest.mark.asyncio
-    async def test_classify_comparative_query(self, initialized_classifier):
+    async def test_classify_conceptual_query(self):
+        """Test classifying a conceptual query."""
+        classifier = QueryIntentClassifier()
+        await classifier.initialize()
+
+        query = "Why does this happen?"
+        result = await classifier.classify(query)
+
+        assert isinstance(result, QueryIntentClassification)
+        assert result.primary_intent == "conceptual"
+        assert result.confidence == 0.7
+
+    @pytest.mark.asyncio
+    async def test_classify_comparative_query(self):
         """Test classifying a comparative query."""
-        query = "React vs Vue vs Angular - which is better for large projects?"
+        classifier = QueryIntentClassifier()
+        await classifier.initialize()
 
-        result = await initialized_classifier.classify_query_advanced(query)
+        query = "Compare Python vs JavaScript"
+        result = await classifier.classify(query)
 
-        assert result.primary_intent == QueryIntent.COMPARATIVE
-        assert result.confidence_scores[QueryIntent.COMPARATIVE] > 0.0
-
-    @pytest.mark.asyncio
-    async def test_classify_architectural_query(self, initialized_classifier):
-        """Test classifying an architectural query."""
-        query = "How to design a scalable microservices architecture?"
-
-        result = await initialized_classifier.classify_query_advanced(query)
-
-        assert result.primary_intent == QueryIntent.ARCHITECTURAL
-        assert result.confidence_scores[QueryIntent.ARCHITECTURAL] > 0.0
+        assert isinstance(result, QueryIntentClassification)
+        assert result.primary_intent == "comparative"
+        assert result.confidence == 0.7
 
     @pytest.mark.asyncio
-    async def test_classify_performance_query(self, initialized_classifier):
-        """Test classifying a performance query."""
-        query = "How to optimize database query performance and reduce latency?"
+    async def test_classify_general_query(self):
+        """Test classifying a general query."""
+        classifier = QueryIntentClassifier()
+        await classifier.initialize()
 
-        result = await initialized_classifier.classify_query_advanced(query)
+        query = "Python programming language"
+        result = await classifier.classify(query)
 
-        # Should detect performance intent (may be primary or secondary)
-        all_intents = [result.primary_intent, *result.secondary_intents]
-        assert QueryIntent.PERFORMANCE in all_intents
-        assert result.confidence_scores[QueryIntent.PERFORMANCE] > 0.0
-
-    @pytest.mark.asyncio
-    async def test_classify_security_query(self, initialized_classifier):
-        """Test classifying a security query."""
-        query = "How to implement OAuth 2.0 authentication securely?"
-
-        result = await initialized_classifier.classify_query_advanced(query)
-
-        # Should detect security intent (may be primary or secondary)
-        all_intents = [result.primary_intent, *result.secondary_intents]
-        assert QueryIntent.SECURITY in all_intents
-        assert result.confidence_scores[QueryIntent.SECURITY] > 0.0
+        assert isinstance(result, QueryIntentClassification)
+        assert result.primary_intent == "general"
+        assert result.confidence == 0.3
 
     @pytest.mark.asyncio
-    async def test_classify_integration_query(self, initialized_classifier):
-        """Test classifying an integration query."""
-        query = "How to integrate with third-party REST API using webhooks?"
+    async def test_classify_case_insensitive(self):
+        """Test that classification is case insensitive."""
+        classifier = QueryIntentClassifier()
+        await classifier.initialize()
 
-        result = await initialized_classifier.classify_query_advanced(query)
+        query = "HOW TO INSTALL PYTHON"
+        result = await classifier.classify(query)
 
-        assert result.primary_intent == QueryIntent.INTEGRATION
-        assert result.confidence_scores[QueryIntent.INTEGRATION] > 0.0
+        assert isinstance(result, QueryIntentClassification)
+        assert result.primary_intent == "procedural"
+        assert result.confidence == 0.7
 
-    @pytest.mark.asyncio
-    async def test_classify_best_practices_query(self, initialized_classifier):
-        """Test classifying a best practices query."""
-        query = "What are the best practices for Python code organization?"
 
-        result = await initialized_classifier.classify_query_advanced(query)
+class TestQueryIntentClassification:
+    """Test the QueryIntentClassification model."""
 
-        assert result.primary_intent == QueryIntent.BEST_PRACTICES
-        assert result.confidence_scores[QueryIntent.BEST_PRACTICES] > 0.0
-
-    @pytest.mark.asyncio
-    async def test_classify_code_review_query(self, initialized_classifier):
-        """Test classifying a code review query."""
-        query = "Please review my Python code and suggest improvements"
-
-        result = await initialized_classifier.classify_query_advanced(query)
-
-        assert result.primary_intent == QueryIntent.CODE_REVIEW
-        assert result.confidence_scores[QueryIntent.CODE_REVIEW] > 0.0
-
-    @pytest.mark.asyncio
-    async def test_classify_migration_query(self, initialized_classifier):
-        """Test classifying a migration query."""
-        query = "How to migrate from Python 2.7 to Python 3.9?"
-
-        result = await initialized_classifier.classify_query_advanced(query)
-
-        # Should detect migration intent (may be primary or secondary)
-        all_intents = [result.primary_intent, *result.secondary_intents]
-        assert QueryIntent.MIGRATION in all_intents
-        assert result.confidence_scores[QueryIntent.MIGRATION] > 0.0
-
-    @pytest.mark.asyncio
-    async def test_classify_debugging_query(self, initialized_classifier):
-        """Test classifying a debugging query."""
-        query = "How to debug memory leaks using profiling tools?"
-
-        result = await initialized_classifier.classify_query_advanced(query)
-
-        # Should detect debugging intent (may be primary or secondary)
-        all_intents = [result.primary_intent, *result.secondary_intents]
-        assert QueryIntent.DEBUGGING in all_intents
-        assert result.confidence_scores[QueryIntent.DEBUGGING] > 0.0
-
-    @pytest.mark.asyncio
-    async def test_classify_configuration_query(self, initialized_classifier):
-        """Test classifying a configuration query."""
-        query = "How to configure Django settings for production environment?"
-
-        result = await initialized_classifier.classify_query_advanced(query)
-
-        assert result.primary_intent == QueryIntent.CONFIGURATION
-        assert result.confidence_scores[QueryIntent.CONFIGURATION] > 0.0
-
-    @pytest.mark.asyncio
-    async def test_secondary_intents(self, initialized_classifier):
-        """Test detection of secondary intents."""
-        query = "How to optimize React performance and debug rendering issues?"
-
-        result = await initialized_classifier.classify_query_advanced(query)
-
-        # Should detect both performance and debugging intents
-        assert len(result.secondary_intents) > 0
-        assert any(
-            intent in [QueryIntent.PERFORMANCE, QueryIntent.DEBUGGING]
-            for intent in result.secondary_intents
+    def test_valid_classification(self):
+        """Test creating a valid classification."""
+        classification = QueryIntentClassification(
+            primary_intent="procedural",
+            confidence=0.8,
         )
 
-    @pytest.mark.asyncio
-    async def test_complexity_assessment(self, initialized_classifier):
-        """Test query complexity assessment."""
-        # Simple query
-        simple_result = await initialized_classifier.classify_query_advanced(
-            "What is Python?"
+        assert classification.primary_intent == "procedural"
+        assert classification.confidence == 0.8
+
+    def test_default_confidence(self):
+        """Test default confidence value."""
+        classification = QueryIntentClassification(primary_intent="general")
+
+        assert classification.primary_intent == "general"
+        assert classification.confidence == 0.5
+
+    def test_confidence_validation(self):
+        """Test confidence score validation."""
+        # Valid confidence
+        classification = QueryIntentClassification(
+            primary_intent="procedural",
+            confidence=0.5,
         )
-        assert simple_result.complexity_level in [
-            QueryComplexity.SIMPLE,
-            QueryComplexity.MODERATE,
-            QueryComplexity.COMPLEX,
-            QueryComplexity.EXPERT,
-        ]
+        assert classification.confidence == 0.5
 
-        # Complex query
-        complex_query = (
-            "How to design a distributed microservices architecture "
-            "with event sourcing, CQRS, and saga patterns for handling "
-            "cross-service transactions in a high-throughput system?"
+        # Test edge cases
+        min_conf = QueryIntentClassification(
+            primary_intent="procedural",
+            confidence=0.0,
         )
-        complex_result = await initialized_classifier.classify_query_advanced(
-            complex_query
+        assert min_conf.confidence == 0.0
+
+        max_conf = QueryIntentClassification(
+            primary_intent="procedural",
+            confidence=1.0,
         )
-        assert complex_result.complexity_level in [
-            QueryComplexity.COMPLEX,
-            QueryComplexity.EXPERT,
-        ]
-
-    @pytest.mark.asyncio
-    async def test_domain_detection(self, initialized_classifier):
-        """Test technical domain detection."""
-        query = "How to implement React hooks with TypeScript?"
-
-        result = await initialized_classifier.classify_query_advanced(query)
-
-        assert result.domain_category is not None
-        assert result.domain_category in ["web_development", "backend", "mobile"]
-
-    @pytest.mark.asyncio
-    async def test_context_extraction(self, initialized_classifier):
-        """Test context information extraction."""
-        query = "How to fix Python 3.9 ImportError in Django production?"
-        context = {"framework": ["django"], "urgency": "high"}
-
-        result = await initialized_classifier.classify_query_advanced(query, context)
-
-        assert result.classification_reasoning is not None
-        assert len(result.classification_reasoning) > 0
-
-    @pytest.mark.asyncio
-    async def test_suggested_followups(self, initialized_classifier):
-        """Test generation of suggested follow-up questions."""
-        query = "What is Docker?"
-
-        result = await initialized_classifier.classify_query_advanced(query)
-
-        assert len(result.suggested_followups) > 0
-        assert all(isinstance(followup, str) for followup in result.suggested_followups)
-
-    @pytest.mark.asyncio
-    async def test_requires_context_detection(self, initialized_classifier):
-        """Test detection of queries that require additional context."""
-        # Vague query should require context
-        vague_result = await initialized_classifier.classify_query_advanced("Fix it")
-        assert vague_result.requires_context is True
-
-        # Complex architectural query should require context
-        arch_query = "Design microservices architecture"
-        arch_result = await initialized_classifier.classify_query_advanced(arch_query)
-        assert arch_result.requires_context is True
-
-    @pytest.mark.asyncio
-    async def test_empty_query_handling(self, initialized_classifier):
-        """Test handling of empty or whitespace-only queries."""
-        result = await initialized_classifier.classify_query_advanced("   ")
-
-        assert result.primary_intent == QueryIntent.FACTUAL  # Default fallback
-        assert result.confidence_scores[QueryIntent.FACTUAL] < 0.5
-
-    @pytest.mark.asyncio
-    async def test_semantic_classification_fallback(self, intent_classifier):
-        """Test fallback when semantic classification fails."""
-        # Mock embedding manager to fail
-        intent_classifier.embedding_manager.generate_embeddings = AsyncMock(
-            side_effect=Exception("Embedding failed")
-        )
-        await intent_classifier.initialize()
-
-        query = "What is machine learning?"
-        result = await intent_classifier.classify_query_advanced(query)
-
-        # Should still work with rule-based classification
-        assert result.primary_intent == QueryIntent.CONCEPTUAL
-        assert result.confidence_scores[QueryIntent.CONCEPTUAL] > 0.0
-
-    @pytest.mark.asyncio
-    async def test_uninitialized_classifier_error(self, intent_classifier):
-        """Test error when using uninitialized classifier."""
-        query = "test query"
-
-        with pytest.raises(RuntimeError, match="not initialized"):
-            await intent_classifier.classify_query_advanced(query)
-
-    @pytest.mark.asyncio
-    async def test_confidence_score_validation(self, initialized_classifier):
-        """Test that confidence scores are within valid range."""
-        query = "How to implement machine learning algorithms in Python?"
-
-        result = await initialized_classifier.classify_query_advanced(query)
-
-        # All confidence scores should be between 0 and 1
-        for score in result.confidence_scores.values():
-            assert 0.0 <= score <= 1.0
-
-    @pytest.mark.asyncio
-    async def test_classification_reasoning_content(self, initialized_classifier):
-        """Test that classification reasoning contains useful information."""
-        query = "What are the differences between SQL and NoSQL databases?"
-
-        result = await initialized_classifier.classify_query_advanced(query)
-
-        assert result.classification_reasoning is not None
-        assert len(result.classification_reasoning) > 10  # Should be descriptive
-        assert ":" in result.classification_reasoning  # Should contain scores
-
-    @pytest.mark.asyncio
-    async def test_cleanup(self, initialized_classifier):
-        """Test classifier cleanup."""
-        await initialized_classifier.cleanup()
-        assert initialized_classifier._initialized is False
+        assert max_conf.confidence == 1.0

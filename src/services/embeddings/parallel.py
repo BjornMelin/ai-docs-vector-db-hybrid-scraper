@@ -114,9 +114,7 @@ class ParallelProcessor:
 
         except* Exception as eg:
             # Handle task group exceptions
-            logger.exception(
-                "Parallel processing failed: "
-            )  # TODO: Convert f-string to logging format
+            logger.exception("Parallel processing failed: %s", eg)
             msg = f"Parallel processing failed: {eg}"
             raise EmbeddingServiceError(msg) from eg
 
@@ -161,9 +159,7 @@ class ParallelProcessor:
                 if enable_caching:
                     cached_results = await self._check_batch_cache(batch)
                     if cached_results:
-                        logger.debug(
-                            f"Cache hit for batch {batch_idx}"
-                        )  # TODO: Convert f-string to logging format
+                        logger.debug("Cache hit for batch %d", batch_idx)
                         return cached_results
 
                 # Process batch
@@ -183,20 +179,14 @@ class ParallelProcessor:
                 if enable_caching:
                     await self._cache_batch_results(batch, results)
 
-                logger.debug(
-                    f"Processed batch {batch_idx} with {len(batch)} items"
-                )  # TODO: Convert f-string to logging format
+                logger.debug("Processed batch %d with %d items", batch_idx, len(batch))
 
             except TimeoutError as e:
-                logger.exception(
-                    "Batch  processing timeout"
-                )  # TODO: Convert f-string to logging format
+                logger.exception("Batch %d processing timeout", batch_idx)
                 msg = f"Batch {batch_idx} processing timeout"
                 raise EmbeddingServiceError(msg) from e
             except Exception as e:
-                logger.exception(
-                    "Batch  processing failed: {e}"
-                )  # TODO: Convert f-string to logging format
+                logger.exception("Batch processing failed: %s", e)
                 msg = f"Batch processing failed: {e}"
                 raise EmbeddingServiceError(msg) from e
             else:

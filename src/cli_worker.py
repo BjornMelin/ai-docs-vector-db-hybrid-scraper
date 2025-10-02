@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
 """CLI script to run the ARQ task queue worker."""
 
-import asyncio
 import logging
 import sys
 
 import click
 from arq import run_worker
 
-from src.config.settings import get_config
 from src.services.task_queue.worker import WorkerSettings
 
 
@@ -31,32 +29,33 @@ def main(workers: int, max_jobs: int, queue: str):
     """Run the ARQ task queue worker."""
     logger.info("Starting ARQ task queue worker...")
 
-    # Load config
-    config = get_config()
-
-    # Update worker settings
-    WorkerSettings.max_jobs = max_jobs
-    WorkerSettings.queue_name = queue
-
     # Get Redis settings
     redis_settings = WorkerSettings.get_redis_settings()
 
     logger.info(
-        f"Worker configuration: workers={workers}, max_jobs={max_jobs}, queue={queue}"
+        "Worker configuration: workers=%d, max_jobs=%d, queue=%s",
+        workers,
+        max_jobs,
+        queue,
     )
     logger.info(
-        f"Connecting to Redis at {redis_settings.host}:{redis_settings.port} "
-        f"(database {redis_settings.database})"
+        "Connecting to Redis at %s:%d (database %d)",
+        redis_settings.host,
+        redis_settings.port,
+        redis_settings.database,
     )
 
-    # Run the worker
-    asyncio.run(
-        run_worker(
-            WorkerSettings,
-            redis_settings=redis_settings,
-            ctx={"config": config},
-        )
-    )
+    # Prepare worker settings as a class with dynamic attributes
+    class RuntimeWorkerSettings(WorkerSettings):
+        """Worker settings with runtime overrides."""
+
+    # Override class attributes for runtime configuration
+    RuntimeWorkerSettings.max_jobs = max_jobs
+    RuntimeWorkerSettings.queue_name = queue
+
+    # Run the worker - run_worker blocks and runs the event loop internally
+    # Type ignore needed because arq's type hints are overly restrictive
+    run_worker(RuntimeWorkerSettings)  # type: ignore[arg-type]
 
 
 if __name__ == "__main__":

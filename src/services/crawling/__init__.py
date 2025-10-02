@@ -1,14 +1,6 @@
-"""Crawling services package."""
+"""Crawl4AI service entry points."""
 
-from .base import CrawlProvider
-from .crawl4ai_provider import Crawl4AIProvider
-from .firecrawl_provider import FirecrawlProvider
-from .manager import CrawlManager
+from .c4a_provider import crawl_best_first, crawl_deep_bfs, crawl_page
 
 
-__all__ = [
-    "Crawl4AIProvider",
-    "CrawlManager",
-    "CrawlProvider",
-    "FirecrawlProvider",
-]
+__all__ = ["crawl_page", "crawl_deep_bfs", "crawl_best_first"]

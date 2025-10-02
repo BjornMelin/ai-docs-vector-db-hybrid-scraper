@@ -64,7 +64,7 @@ class TestAPIWorkflowValidation:
                     msg = (
                         f"HTTP {error_config['status_code']}: {error_config['message']}"
                     )
-                    raise httpx.HTTPStatusError(
+                    raise httpx.HTTPStatusError(  # type: ignore[possibly-unbound]
                         msg,
                         request=MagicMock(),
                         response=MagicMock(status_code=error_config["status_code"]),
@@ -560,7 +560,7 @@ class TestAPIWorkflowValidation:
             )
 
             # Analyze search quality
-            _total_results = sum(sr["results_count"] for sr in search_results)
+            total_results = sum(sr["results_count"] for sr in search_results)
             avg_search_time = sum(sr["search_time_ms"] for sr in search_results) / len(
                 search_results
             )
@@ -569,7 +569,7 @@ class TestAPIWorkflowValidation:
                 {
                     "step": "analyze_search_quality",
                     "success": True,
-                    "_total_results_returned": _total_results,
+                    "total_results_returned": total_results,
                     "avg_search_time_ms": avg_search_time,
                     "searches_with_results": len(
                         [sr for sr in search_results if sr["results_count"] > 0]
@@ -577,7 +577,7 @@ class TestAPIWorkflowValidation:
                 }
             )
 
-            assert _total_results > 0, "At least some search results should be returned"
+            assert total_results > 0, "At least some search results should be returned"
             assert avg_search_time < 1000, (
                 f"Average search time too high: {avg_search_time}ms"
             )
@@ -708,7 +708,7 @@ class TestAPIWorkflowValidation:
                         }
                     )
 
-                except (httpx.HTTPError, ValueError, KeyError) as e:
+                except (httpx.HTTPError, ValueError, KeyError) as e:  # type: ignore[possibly-unbound]
                     # Request failed
                     error_test_results.append(
                         {
@@ -938,7 +938,7 @@ class TestAPIWorkflowValidation:
                             "success": True,
                         }
                     )
-                except (httpx.HTTPError, ValueError, KeyError) as e:
+                except (httpx.HTTPError, ValueError, KeyError) as e:  # type: ignore[possibly-unbound]
                     rate_test_results.append(
                         {
                             "request_index": i,

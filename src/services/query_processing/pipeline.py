@@ -1,404 +1,141 @@
-"""Query Processing Pipeline.
+"""Final query processing pipeline wrapper around the search orchestrator.
 
-This module provides the main unified interface for the query
-processing system, orchestrating all components through a single entry point.
+This module provides a lightweight pipeline wrapper that delegates to the
+SearchOrchestrator, offering an interface for query processing
+operations with flexible request handling.
 """
 
-import asyncio
-import logging
-import subprocess
-import time
+from __future__ import annotations
+
 from typing import Any
 
 from src.services.base import BaseService
 
-from .models import QueryProcessingRequest, QueryProcessingResponse
-from .orchestrator import SearchOrchestrator as AdvancedSearchOrchestrator
-
-
-logger = logging.getLogger(__name__)
+from .models import SearchRequest, SearchResponse
+from .orchestrator import SearchOrchestrator
 
 
 class QueryProcessingPipeline(BaseService):
-    """Unified interface for advanced query processing pipeline.
+    """Lightweight pipeline that delegates to :class:`SearchOrchestrator`.
 
-    Provides a single entry point for all query processing operations,
-    coordinating intent classification, preprocessing, strategy selection,
-    and search execution through the orchestrator.
+    This pipeline provides an interface for search operations,
+    handling request coercion and delegation to the underlying orchestrator.
     """
 
-    def __init__(self, orchestrator: AdvancedSearchOrchestrator, config: Any = None):
+    def __init__(
+        self, orchestrator: SearchOrchestrator, config: Any | None = None
+    ) -> None:
         """Initialize the query processing pipeline.
 
         Args:
-            orchestrator: Query processing orchestrator instance
-            config: Optional configuration object
+            orchestrator: The search orchestrator to delegate operations to.
+            config: Optional configuration for the pipeline.
 
         Raises:
-            ValueError: If orchestrator is None
-
+            ValueError: If orchestrator is None.
         """
         if orchestrator is None:
-            msg = "Orchestrator cannot be None"
-            raise ValueError(msg)
-
+            raise ValueError("Orchestrator cannot be None")
         super().__init__(config)
         self.orchestrator = orchestrator
 
     async def initialize(self) -> None:
-        """Initialize the pipeline and all components."""
+        """Initialize the pipeline and its dependencies.
+
+        This method initializes the underlying orchestrator if not already
+        initialized and marks the pipeline as ready for processing.
+        """
         if self._initialized:
             return
+        await self.orchestrator.initialize()
+        self._initialized = True
 
-        try:
-            await self.orchestrator.initialize()
-            self._initialized = True
-            logger.info("QueryProcessingPipeline initialized successfully")
+    async def cleanup(self) -> None:  # pragma: no cover - symmetrical teardown
+        """Clean up pipeline resources.
 
-        except (AttributeError, ImportError, OSError):
-            logger.exception("Failed to initialize QueryProcessingPipeline")
-            raise
+        This method cleans up the underlying orchestrator and marks the
+        pipeline as uninitialized.
+        """
+        if not self._initialized:
+            return
+        await self.orchestrator.cleanup()
+        self._initialized = False
 
     async def process(
         self,
-        query_or_request,
-        collection_name: str = "documents",
-        limit: int = 10,
-        **kwargs,
-    ) -> QueryProcessingResponse:
-        """Process a query through the complete advanced pipeline.
-
-        This is the main entry point for query processing that coordinates
-        all pipeline components to deliver optimal search results.
+        request: SearchRequest | str | dict[str, Any],
+        *,
+        collection: str | None = None,
+        limit: int | None = None,
+        **override_kwargs: Any,
+    ) -> SearchResponse:
+        """Process a search request through the pipeline.
 
         Args:
-            query_or_request: Either a string query or QueryProcessingRequest object
-            collection_name: Target collection for search (used only if
-            query_or_request is string)
-            limit: Maximum number of results to return (used only if
-            query_or_request is string)
-            **kwargs: Additional processing options (used only if
-            query_or_request is string)
+            request: Search request as SearchRequest, string query, or dict.
+            collection: Optional collection override.
+            limit: Optional result limit override.
+            **override_kwargs: Additional keyword arguments to merge.
 
         Returns:
-            QueryProcessingResponse: Complete processing results
+            Search response containing results and metadata.
 
         Raises:
-            RuntimeError: If pipeline not initialized
-
+            RuntimeError: If pipeline is not initialized.
         """
         if not self._initialized:
-            msg = "QueryProcessingPipeline not initialized"
-            raise RuntimeError(msg)
+            raise RuntimeError("QueryProcessingPipeline not initialized")
 
-        # Handle both string query and QueryProcessingRequest
-        if isinstance(query_or_request, QueryProcessingRequest):
-            request = query_or_request
-        else:
-            # Handle empty query gracefully
-            if not query_or_request or not query_or_request.strip():
-                return QueryProcessingResponse(
-                    success=False,
-                    results=[],
-                    total_results=0,
-                    error="Empty query provided",
-                )
-
-            # Create processing request from parameters
-            request = QueryProcessingRequest(
-                query=query_or_request,
-                collection_name=collection_name,
-                limit=limit,
-                **kwargs,
-            )
-
-        # Process through orchestrator
-        return await self.orchestrator.process_query(request)
-
-    async def process_advanced(
-        self, request: QueryProcessingRequest
-    ) -> QueryProcessingResponse:
-        """Process a query with full advanced options.
-
-        Args:
-            request: Complete processing request with all options
-
-        Returns:
-            QueryProcessingResponse: Complete processing results
-
-        """
-        self._validate_initialized()
-        return await self.orchestrator.process_query(request)
-
-    async def process_batch(
-        self, requests: list[QueryProcessingRequest], max_concurrent: int = 5
-    ) -> list[QueryProcessingResponse]:
-        """Process multiple queries concurrently.
-
-        Args:
-            requests: List of processing requests
-            max_concurrent: Maximum concurrent processing
-
-        Returns:
-            list[QueryProcessingResponse]: Results for each query
-
-        """
-        self._validate_initialized()
-
-        semaphore = asyncio.Semaphore(max_concurrent)
-
-        async def process_single_request(
-            request: QueryProcessingRequest,
-        ) -> QueryProcessingResponse:
-            async with semaphore:
-                try:
-                    return await self.process(request)
-                except Exception as e:
-                    logger.exception("Batch processing failed for query '{request}'")
-                    return QueryProcessingResponse(
-                        success=False, results=[], total_results=0, error=str(e)
-                    )
-
-        # Execute all queries concurrently
-        tasks = [process_single_request(request) for request in requests]
-        return await asyncio.gather(*tasks)
-
-    async def analyze_query(
-        self,
-        query: str,
-        enable_preprocessing: bool = True,
-        enable_intent_classification: bool = True,
-    ) -> dict[str, Any]:
-        """Analyze a query without executing search.
-
-        Useful for understanding query characteristics and optimal processing
-        strategies without performing the actual search.
-
-        Args:
-            query: Query to analyze
-            enable_preprocessing: Whether to preprocess the query
-            enable_intent_classification: Whether to classify intent
-
-        Returns:
-            dict[str, Any]: Analysis results including intent and strategy
-
-        """
-        self._validate_initialized()
-
-        # Create request with minimal search (limit=1)
-        request = QueryProcessingRequest(
-            query=query,
-            collection_name="analysis",
-            limit=1,  # Minimal search for analysis
-            enable_preprocessing=enable_preprocessing,
-            enable_intent_classification=enable_intent_classification,
-            enable_strategy_selection=True,
+        search_request = self._coerce_request(
+            request,
+            collection_override=collection,
+            limit_override=limit,
+            extra_kwargs=override_kwargs,
         )
+        return await self.orchestrator.search(search_request)
 
-        # Process through orchestrator
-        response = await self.orchestrator.process_query(request)
+    @staticmethod
+    def _coerce_request(
+        request: SearchRequest | str | dict[str, Any],
+        *,
+        collection_override: str | None,
+        limit_override: int | None,
+        extra_kwargs: dict[str, Any],
+    ) -> SearchRequest:
+        """Coerce various request formats into a SearchRequest.
 
-        # Return analysis components
-        return {
-            "query": query,
-            "preprocessing": response.preprocessing_result,
-            "intent_classification": response.intent_classification,
-            "complexity": response.intent_classification.complexity_level
-            if response.intent_classification
-            else None,
-            "strategy": response.strategy_selection,
-            "processing_time_ms": response.total_processing_time_ms,
-        }
-
-    async def get_metrics(self) -> dict[str, Any]:
-        """Get comprehensive performance metrics.
-
-        Returns:
-            dict[str, Any]: Performance statistics and metrics
-
-        """
-        if not self._initialized:
-            return {
-                "total_queries": 0,
-                "successful_queries": 0,
-                "average_processing_time": 0.0,
-                "strategy_usage": {},
-            }
-
-        base_metrics = self.orchestrator.get_performance_stats()
-
-        # Return metrics in expected format
-        return {
-            "total_queries": base_metrics.get("total_queries", 0),
-            "successful_queries": base_metrics.get("successful_queries", 0),
-            "average_processing_time": base_metrics.get("average_processing_time", 0.0),
-            "strategy_usage": base_metrics.get("strategy_usage", {}),
-            "pipeline_initialized": self._initialized,
-        }
-
-    async def health_check(self) -> dict[str, Any]:
-        """Perform health check on all pipeline components.
+        Args:
+            request: Request in various formats (SearchRequest, str, or dict).
+            collection_override: Optional collection name to override.
+            limit_override: Optional result limit to override.
+            extra_kwargs: Additional keyword arguments to merge.
 
         Returns:
-            dict[str, Any]: Health status of all components
+            A standardized SearchRequest object.
 
+        Raises:
+            TypeError: If request type is not supported.
         """
-        health_status = {
-            "status": "healthy" if self._initialized else "unhealthy",
-            "pipeline_healthy": self._initialized,
-            "components": {},
-            "performance": {"initialized": self._initialized},
-        }
-
-        if self._initialized:
-            try:
-                # Test with a simple query
-                test_response = await self.analyze_query(
-                    "test query",
-                    enable_preprocessing=True,
-                    enable_intent_classification=True,
-                )
-
-                # Check component health based on successful analysis
-                intent_healthy = test_response.get("intent_classification") is not None
-                preprocessing_healthy = test_response.get("preprocessing") is not None
-                strategy_healthy = test_response.get("strategy") is not None
-
-                health_status["components"] = {
-                    "orchestrator": {
-                        "status": "healthy",
-                        "message": "Working correctly",
-                    },
-                    "intent_classifier": {
-                        "status": "healthy" if intent_healthy else "degraded",
-                        "message": "Classification working"
-                        if intent_healthy
-                        else "Classification issues",
-                    },
-                    "preprocessor": {
-                        "status": "healthy" if preprocessing_healthy else "degraded",
-                        "message": "Preprocessing working"
-                        if preprocessing_healthy
-                        else "Preprocessing issues",
-                    },
-                    "strategy_selector": {
-                        "status": "healthy" if strategy_healthy else "degraded",
-                        "message": "Selection working"
-                        if strategy_healthy
-                        else "Selection issues",
-                    },
-                }
-
-                # Overall status based on components
-                if not all(
-                    comp["status"] == "healthy"
-                    for comp in health_status["components"].values()
-                    if isinstance(comp, dict)
-                ):
-                    health_status["status"] = "degraded"
-
-            except Exception as e:
-                logger.exception("Health check failed")
-                health_status["status"] = "unhealthy"
-                health_status["components"] = {
-                    "orchestrator": {"status": "unhealthy", "message": str(e)},
-                    "error": str(e),
-                }
-
-        return health_status
-
-    async def warm_up(self) -> dict[str, Any]:
-        """Warm up the pipeline with test queries.
-
-        Useful for pre-loading models and caches before handling real traffic.
-
-        Returns:
-            dict[str, Any]: Warmup results including status and timing
-
-        """
-        self._validate_initialized()
-
-        start_time = time.time()
-
-        warmup_requests = [
-            QueryProcessingRequest(
-                query="What is machine learning?",
-                collection_name="warmup",
-                limit=1,
-                enable_preprocessing=True,
-                enable_intent_classification=True,
-            ),
-            QueryProcessingRequest(
-                query="How to implement authentication in Python?",
-                collection_name="warmup",
-                limit=1,
-                enable_preprocessing=True,
-                enable_intent_classification=True,
-            ),
-            QueryProcessingRequest(
-                query="Best practices for API design",
-                collection_name="warmup",
-                limit=1,
-                enable_preprocessing=True,
-                enable_intent_classification=True,
-            ),
-        ]
-
-        logger.info("Warming up query processing pipeline...")
-
-        try:
-            # Process warmup queries to initialize all components
-            responses = await self.process_batch(
-                requests=warmup_requests, max_concurrent=2
-            )
-
-            end_time = time.time()
-            warmup_time_ms = (end_time - start_time) * 1000
-
-            successful_warmups = sum(1 for resp in responses if resp.success)
-
-            logger.info("Pipeline warmup completed successfully")
-
-            return {
-                "status": "completed",
-                "warmup_time_ms": warmup_time_ms,
-                "queries_processed": len(responses),
-                "successful_queries": successful_warmups,
-                "components_warmed": [
-                    "orchestrator",
-                    "intent_classifier",
-                    "preprocessor",
-                    "strategy_selector",
-                ],
+        if isinstance(request, SearchRequest):
+            return request
+        if isinstance(request, str):
+            payload: dict[str, Any] = {
+                "query": request,
+                "collection": collection_override,
+                "limit": limit_override or 10,
             }
+            payload.update(extra_kwargs)
+            return SearchRequest(**payload)
+        if isinstance(request, dict):
+            payload = {**request}
+            if collection_override is not None:
+                payload.setdefault("collection", collection_override)
+            if limit_override is not None:
+                payload.setdefault("limit", limit_override)
+            payload.update(extra_kwargs)
+            return SearchRequest(**payload)
+        msg = f"Unsupported request type: {type(request)!r}"
+        raise TypeError(msg)
 
-        except (subprocess.SubprocessError, OSError, TimeoutError) as e:
-            end_time = time.time()
-            warmup_time_ms = (end_time - start_time) * 1000
 
-            logger.warning("Pipeline warmup had issues")
-
-            return {
-                "status": "partial",
-                "warmup_time_ms": warmup_time_ms,
-                "error": str(e),
-                "queries_processed": 0,
-                "successful_queries": 0,
-            }
-
-    async def cleanup(self) -> None:
-        """Cleanup pipeline and all components."""
-        if self._initialized:
-            await self.orchestrator.cleanup()
-            self._initialized = False
-            logger.info("QueryProcessingPipeline cleaned up")
-
-    async def __aenter__(self):
-        """Async context manager entry."""
-        await self.initialize()
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Async context manager exit."""
-        await self.cleanup()
-        return False
+__all__ = ["QueryProcessingPipeline"]

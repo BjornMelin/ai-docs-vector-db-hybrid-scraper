@@ -5,8 +5,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.mcp_tools.models.requests import SearchRequest
-from src.mcp_tools.models.responses import SearchResult
 from src.mcp_tools.tools import search
 
 
@@ -51,73 +49,117 @@ def context():
 
 @pytest.mark.asyncio
 async def test_register_tools_binds_search_documents(fake_mcp, client_manager, context):
-    """search_documents should delegate to search_documents_core."""
-    expected = [SearchResult(id="1", content="hit", score=0.9)]
-    request = SearchRequest(query="q")
+    """search_documents should call the vector service and filter by score."""
 
-    with patch(
-        "src.mcp_tools.tools.search.search_documents_core",
-        new=AsyncMock(return_value=expected),
-    ) as mock_core:
+    vector_service = AsyncMock()
+    vector_service.search_documents.return_value = [
+        SimpleNamespace(id="keep", score=0.92, payload={"content": "hit"}),
+        SimpleNamespace(id="drop", score=0.5, payload={"content": "low"}),
+    ]
+
+    patched_get = AsyncMock(return_value=vector_service)
+
+    with (
+        patch("src.mcp_tools.tools.search._get_vector_service", patched_get),
+        patch(
+            "src.mcp_tools.tools.search._format_match",
+            side_effect=lambda match, method=None: {
+                "id": match.id,
+                "score": match.score,
+                "payload": match.payload,
+            },
+        ),
+    ):
         search.register_tools(fake_mcp, client_manager)
 
-        result = await fake_mcp.registered["search_documents"](request, context)
+        result = await fake_mcp.registered["search_documents"](
+            query="test",
+            collection="docs",
+            limit=5,
+            score_threshold=0.9,
+            ctx=context,
+        )
 
-    assert result == expected
-    mock_core.assert_awaited_once_with(request, client_manager, context)
+    patched_get.assert_awaited()
+    vector_service.search_documents.assert_awaited_once_with(
+        "docs", "test", limit=5, filters=None
+    )
+    assert result == [{"id": "keep", "score": 0.92, "payload": {"content": "hit"}}]
 
 
 @pytest.mark.asyncio
-async def test_search_similar_returns_results(fake_mcp, client_manager, context):
-    """search_similar should retrieve a source vector and return similar results."""
-    qdrant = AsyncMock()
-    qdrant.get_points = AsyncMock(
-        return_value=[SimpleNamespace(vector=SimpleNamespace(dense=[0.1, 0.2]))]
-    )
-    qdrant.hybrid_search = AsyncMock(
-        return_value=[
-            {
-                "id": "source_doc",
-                "score": 1.0,
-                "payload": {"content": "source", "url": "https://example.com/src"},
+async def test_recommend_similar_returns_results(fake_mcp, client_manager, context):
+    """recommend_similar should return formatted matches excluding the seed."""
+
+    vector_service = AsyncMock()
+    vector_service.retrieve_documents.return_value = [
+        SimpleNamespace(
+            id="seed",
+            vector=[0.1, 0.2],
+            payload={"content": "src"},
+        )
+    ]
+    vector_service.recommend_similar.return_value = [
+        SimpleNamespace(id="seed", score=1.0, payload={}),
+        SimpleNamespace(id="match", score=0.95, payload={"content": "match"}),
+    ]
+
+    patched_get = AsyncMock(return_value=vector_service)
+
+    with (
+        patch("src.mcp_tools.tools.search._get_vector_service", patched_get),
+        patch(
+            "src.mcp_tools.tools.search._format_match",
+            side_effect=lambda match, method=None: {
+                "id": match.id,
+                "score": match.score,
+                "payload": match.payload,
+                "method": method,
             },
-            {"id": "similar", "score": 0.8, "payload": {"content": "match"}},
-        ]
-    )
-    client_manager.get_qdrant_service.return_value = qdrant
+        ),
+    ):
+        search.register_tools(fake_mcp, client_manager)
 
-    search.register_tools(fake_mcp, client_manager)
+        results = await fake_mcp.registered["recommend_similar"](
+            point_id="seed",
+            collection="docs",
+            limit=1,
+            score_threshold=0.5,
+            ctx=context,
+        )
 
-    results = await fake_mcp.registered["search_similar"](
-        query_id="source_doc",
-        collection="docs",
-        limit=1,
-        score_threshold=0.5,
-        ctx=context,
-    )
-
-    assert [result.id for result in results] == ["similar"]
-    qdrant.get_points.assert_awaited_once_with(
-        collection_name="docs",
-        point_ids=["source_doc"],
-        with_vectors=True,
+    vector_service.retrieve_documents.assert_awaited_once_with(
+        "docs",
+        ["seed"],
         with_payload=True,
+        with_vectors=True,
     )
-    qdrant.hybrid_search.assert_awaited_once()
+    vector_service.recommend_similar.assert_awaited_once()
+    assert results == [
+        {
+            "id": "match",
+            "score": 0.95,
+            "payload": {"content": "match"},
+            "method": "recommend_similar",
+        }
+    ]
 
 
 @pytest.mark.asyncio
-async def test_search_similar_raises_for_missing_source(
+async def test_recommend_similar_raises_for_missing_source(
     fake_mcp, client_manager, context
 ):
-    """search_similar should raise a ValueError when the source document is missing."""
-    qdrant = AsyncMock()
-    qdrant.get_points = AsyncMock(return_value=[])
-    client_manager.get_qdrant_service.return_value = qdrant
+    """recommend_similar should raise when the source document is missing."""
 
-    search.register_tools(fake_mcp, client_manager)
+    vector_service = AsyncMock()
+    vector_service.retrieve_documents.return_value = []
 
-    with pytest.raises(ValueError, match="Document missing-id not found"):
-        await fake_mcp.registered["search_similar"](
-            query_id="missing-id", collection="docs", limit=1, ctx=context
-        )
+    patched_get = AsyncMock(return_value=vector_service)
+
+    with patch("src.mcp_tools.tools.search._get_vector_service", patched_get):
+        search.register_tools(fake_mcp, client_manager)
+
+        with pytest.raises(ValueError, match="Document missing-id not found"):
+            await fake_mcp.registered["recommend_similar"](
+                point_id="missing-id", collection="docs", limit=1, ctx=context
+            )

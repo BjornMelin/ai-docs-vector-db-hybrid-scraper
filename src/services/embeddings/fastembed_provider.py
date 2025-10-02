@@ -125,8 +125,9 @@ class FastEmbedProvider(EmbeddingProvider):
             self._model = TextEmbedding(self.model_name)
             self._initialized = True
             logger.info(
-                f"FastEmbed initialized with model {self.model_name} "
-                f"({self._description})"
+                "FastEmbed initialized with model %s (%s)",
+                self.model_name,
+                self._description,
             )
         except Exception as e:
             msg = f"Failed to initialize FastEmbed: {e}"
@@ -186,9 +187,7 @@ class FastEmbedProvider(EmbeddingProvider):
                 else:
                     embeddings.append(list(embedding))
 
-            logger.debug(
-                f"Generated {len(embeddings)} embeddings locally"
-            )  # TODO: Convert f-string to logging format
+            logger.debug("Generated %d embeddings locally", len(embeddings))
 
         except Exception as e:
             msg = f"Failed to generate embeddings: {e}"
@@ -221,9 +220,7 @@ class FastEmbedProvider(EmbeddingProvider):
             # Initialize sparse model if needed
             if self._sparse_model is None:
                 self._sparse_model = SparseTextEmbedding(self._sparse_model_name)
-                logger.info(
-                    f"Initialized sparse model: {self._sparse_model_name}"
-                )  # TODO: Convert f-string to logging format
+                logger.info("Initialized sparse model: %s", self._sparse_model_name)
 
             # Generate sparse embeddings
             sparse_embeddings = []

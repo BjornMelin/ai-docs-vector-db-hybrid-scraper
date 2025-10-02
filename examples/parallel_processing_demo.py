@@ -21,7 +21,7 @@ import logging
 import time
 from typing import Any
 
-from src.config.settings import load_settings
+from src.config import load_config
 from src.infrastructure.client_manager import ClientManager
 from src.infrastructure.container import DependencyContext
 
@@ -38,7 +38,7 @@ async def demonstrate_system_integration():
     logger.info("🚀 Starting Unified Parallel Processing System Demo")
 
     # Load configuration
-    config = load_settings()
+    config = load_config()
 
     # Test 1: DI Container Integration
     logger.info("\n🔧 Testing DI Container Integration")
@@ -101,31 +101,31 @@ async def display_system_status(parallel_system: Any):
 
     # System health
     health = status.get("system_health", {})
-    logger.info(f"🏥 Health Status: {health.get('status', 'unknown')}")
-    logger.info(f"⏱️ Uptime: {health.get('uptime_seconds', 0):.1f} seconds")
-    logger.info(f"📝 Total Requests: {health.get('total_requests', 0)}")
-    logger.info(f"❌ Error Rate: {health.get('error_rate', 0):.2%}")
+    logger.info("🏥 Health Status: %s", health.get("status", "unknown"))
+    logger.info("⏱️ Uptime: %.1f seconds", health.get("uptime_seconds", 0))
+    logger.info("📝 Total Requests: %s", health.get("total_requests", 0))
+    logger.info("❌ Error Rate: %.2f%%", health.get("error_rate", 0) * 100)
 
     # Performance metrics
     perf = status.get("performance_metrics", {})
-    logger.info(f"⚡ Avg Response Time: {perf.get('avg_response_time_ms', 0):.1f} ms")
-    logger.info(f"🔄 Throughput: {perf.get('throughput_rps', 0):.1f} req/sec")
-    logger.info(f"💾 Cache Hit Rate: {perf.get('cache_hit_rate', 0):.2%}")
-    logger.info(f"🧠 Memory Usage: {perf.get('memory_usage_mb', 0):.1f} MB")
+    logger.info("⚡ Avg Response Time: %.1f ms", perf.get("avg_response_time_ms", 0))
+    logger.info("🔄 Throughput: %.1f req/sec", perf.get("throughput_rps", 0))
+    logger.info("💾 Cache Hit Rate: %.2f%%", perf.get("cache_hit_rate", 0) * 100)
+    logger.info("🧠 Memory Usage: %.1f MB", perf.get("memory_usage_mb", 0))
 
     # Optimization status
     opt = status.get("optimization_status", {})
     logger.info(
-        f"🚀 Parallel Processing: {'✅' if opt.get('parallel_processing') else '❌'}"
+        "🚀 Parallel Processing: %s", "✅" if opt.get("parallel_processing") else "❌"
     )
     logger.info(
-        f"🧮 Intelligent Caching: {'✅' if opt.get('intelligent_caching') else '❌'}"
+        "🧮 Intelligent Caching: %s", "✅" if opt.get("intelligent_caching") else "❌"
     )
     logger.info(
-        f"⚡ Optimized Algorithms: {'✅' if opt.get('optimized_algorithms') else '❌'}"
+        "⚡ Optimized Algorithms: %s", "✅" if opt.get("optimized_algorithms") else "❌"
     )
     logger.info(
-        f"🔧 Auto Optimization: {'✅' if opt.get('auto_optimization') else '❌'}"
+        "🔧 Auto Optimization: %s", "✅" if opt.get("auto_optimization") else "❌"
     )
 
 
@@ -184,7 +184,7 @@ async def demonstrate_document_processing(parallel_system: Any):
         },
     ]
 
-    logger.info(f"📄 Processing {len(test_documents)} documents...")
+    logger.info("📄 Processing %s documents...", len(test_documents))
 
     # Record start time
     start_time = time.time()
@@ -200,17 +200,17 @@ async def demonstrate_document_processing(parallel_system: Any):
     processing_time = time.time() - start_time
 
     # Display results
-    logger.info(f"✅ Processing completed in {processing_time:.2f} seconds")
+    logger.info("✅ Processing completed in %.2f seconds", processing_time)
 
     # Display processing statistics
     stats = results.get("processing_stats", {})
-    logger.info(f"📊 Documents processed: {stats.get('total_documents', 0)}")
-    logger.info(f"⏱️ Total processing time: {stats.get('processing_time_ms', 0):.1f} ms")
+    logger.info("📊 Documents processed: %s", stats.get("total_documents", 0))
+    logger.info("⏱️ Total processing time: %.1f ms", stats.get("processing_time_ms", 0))
     logger.info(
-        f"📈 Avg time per document: {stats.get('avg_time_per_document_ms', 0):.1f} ms"
+        "📈 Avg time per document: %.1f ms", stats.get("avg_time_per_document_ms", 0)
     )
     logger.info(
-        f"🚀 Throughput: {stats.get('throughput_docs_per_second', 0):.1f} docs/sec"
+        "🚀 Throughput: %.1f docs/sec", stats.get("throughput_docs_per_second", 0)
     )
 
     # Display optimization gains
@@ -223,12 +223,12 @@ async def demonstrate_document_processing(parallel_system: Any):
         if "text_analysis" in opt_gains:
             text_opt = opt_gains["text_analysis"]
             logger.info(
-                f"📝 Text Analysis: {text_opt.get('algorithm_complexity', 'Unknown')} "
-                "complexity"
+                "📝 Text Analysis: %s complexity",
+                text_opt.get("algorithm_complexity", "Unknown"),
             )
             logger.info(
-                f"   Avg processing time: "
-                f"{text_opt.get('avg_processing_time_ms', 0):.1f} ms"
+                "   Avg processing time: %.1f ms",
+                text_opt.get("avg_processing_time_ms", 0),
             )
 
         # Parallel processing efficiency
@@ -236,11 +236,11 @@ async def demonstrate_document_processing(parallel_system: Any):
         if "embeddings" in parallel_eff:
             embed_eff = parallel_eff["embeddings"]
             logger.info(
-                f"⚡ Embedding Generation: "
-                f"{embed_eff.get('speedup_achieved', 'Unknown')} speedup"
+                "⚡ Embedding Generation: %s speedup",
+                embed_eff.get("speedup_achieved", "Unknown"),
             )
             logger.info(
-                f"   Parallel efficiency: {embed_eff.get('efficiency', 'Unknown')}"
+                "   Parallel efficiency: %s", embed_eff.get("efficiency", "Unknown")
             )
 
         # Cache performance
@@ -248,11 +248,11 @@ async def demonstrate_document_processing(parallel_system: Any):
         if "embeddings" in cache_perf:
             embed_cache = cache_perf["embeddings"]
             logger.info(
-                f"💾 Embedding Cache: "
-                f"{embed_cache.get('cache_hit_rate', 0):.2%} hit rate"
+                "💾 Embedding Cache: %.2f%% hit rate",
+                embed_cache.get("cache_hit_rate", 0) * 100,
             )
-            logger.info(f"   Cache hits: {embed_cache.get('cache_hits', 0)}")
-            logger.info(f"   Cache misses: {embed_cache.get('cache_misses', 0)}")
+            logger.info("   Cache hits: %s", embed_cache.get("cache_hits", 0))
+            logger.info("   Cache misses: %s", embed_cache.get("cache_misses", 0))
 
 
 async def demonstrate_auto_optimization(parallel_system: Any):
@@ -271,12 +271,12 @@ async def demonstrate_auto_optimization(parallel_system: Any):
     if optimizations:
         logger.info("✅ Optimizations applied:")
         for opt in optimizations:
-            logger.info(f"   • {opt}")
+            logger.info("   • %s", opt)
     else:
         logger.info("ℹ️ No optimizations needed - system is already optimal")
 
     logger.info(
-        f"🕒 Optimization timestamp: {optimization_result.get('timestamp', 'Unknown')}"
+        "🕒 Optimization timestamp: %s", optimization_result.get("timestamp", "Unknown")
     )
 
 
@@ -289,10 +289,10 @@ async def display_final_metrics(parallel_system: Any):
     # Overall system performance
     perf = status.get("performance_metrics", {})
     logger.info(
-        f"🎯 Final Average Response Time: {perf.get('avg_response_time_ms', 0):.1f} ms"
+        "🎯 Final Average Response Time: %.1f ms", perf.get("avg_response_time_ms", 0)
     )
-    logger.info(f"🚀 Final Throughput: {perf.get('throughput_rps', 0):.1f} req/sec")
-    logger.info(f"💾 Final Cache Hit Rate: {perf.get('cache_hit_rate', 0):.2%}")
+    logger.info("🚀 Final Throughput: %.1f req/sec", perf.get("throughput_rps", 0))
+    logger.info("💾 Final Cache Hit Rate: %.2f%%", perf.get("cache_hit_rate", 0) * 100)
 
     # Achievement validation
     avg_response_time = perf.get("avg_response_time_ms", float("inf"))
@@ -305,15 +305,17 @@ async def display_final_metrics(parallel_system: Any):
         logger.info("✅ Target achieved: API response time < 100ms")
     else:
         logger.info(
-            f"⚠️ Target missed: API response time {avg_response_time:.1f}ms "
-            "(target: <100ms)"
+            "⚠️ Target missed: API response time %.1fms (target: <100ms)",
+            avg_response_time,
         )
 
     # Target: High cache efficiency
     if cache_hit_rate > 0.8:  # 80% hit rate
         logger.info("✅ Target achieved: High cache hit rate (>80%)")
     else:
-        logger.info(f"⚠️ Cache optimization opportunity: {cache_hit_rate:.2%} hit rate")
+        logger.info(
+            "⚠️ Cache optimization opportunity: %.2f%% hit rate", cache_hit_rate * 100
+        )
 
     # Component status
     logger.info("\n🏗️ Component Status:")
@@ -321,20 +323,20 @@ async def display_final_metrics(parallel_system: Any):
     if "parallel_processing" in status:
         pp_status = status["parallel_processing"]
         logger.info(
-            f"⚡ Parallel Processing: {pp_status.get('speedup_achieved', 'Active')}"
+            "⚡ Parallel Processing: %s", pp_status.get("speedup_achieved", "Active")
         )
 
     if "text_analysis" in status:
         ta_status = status["text_analysis"]
         logger.info(
-            f"📝 Text Analysis: O(n) complexity, {ta_status.get('hit_rate', 0):.2%} "
-            "cache hit rate"
+            "📝 Text Analysis: O(n) complexity, %.2f%% cache hit rate",
+            ta_status.get("hit_rate", 0) * 100,
         )
 
     if "caching_system" in status:
         cache_status = status["caching_system"]
         logger.info(
-            f"💾 Caching System: {cache_status.get('total_memory_mb', 0):.1f} MB used"
+            "💾 Caching System: %.1f MB used", cache_status.get("total_memory_mb", 0)
         )
 
 

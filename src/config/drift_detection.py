@@ -1,8 +1,4 @@
-"""Configuration drift detection module.
-
-This module provides backward compatibility for the drift detection system
-that is now unified in the main config system.
-"""
+"""Thin proxy exposing configuration drift detection utilities."""
 
 # Import everything from the unified drift system
 from .drift import (
@@ -17,11 +13,11 @@ from .drift import (
     run_drift_detection,
 )
 
-# Import DriftDetectionConfig from settings
-from .settings import DriftDetectionConfig
+# Import DriftDetectionConfig from models
+from .models import DriftDetectionConfig
 
 
-# Export everything for backward compatibility
+# Public re-exports to maintain a stable import surface
 __all__ = [
     "ConfigDriftDetector",
     "ConfigSnapshot",

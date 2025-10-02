@@ -12,11 +12,11 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from src.config import get_config
-from src.config.drift_detection import (
+from src.config import (
     ConfigDriftDetector,
-    DriftDetectionConfig as CoreDriftDetectionConfig,
+    DriftDetectionConfig,
     DriftSeverity,
+    get_config,
     initialize_drift_detector,
 )
 from src.services.observability.performance import get_performance_monitor
@@ -24,22 +24,30 @@ from src.services.observability.performance import get_performance_monitor
 
 # Import at top level to avoid import-outside-top-level violations
 try:
-    from src.services.task_queue.tasks import (
-        create_task,
-        schedule_drift_check,
-        trigger_drift_alert,
-    )
-except ImportError:
-    create_task = None
-    schedule_drift_check = None
-    trigger_drift_alert = None
+    from src.services.task_queue.tasks import create_task as _queue_create_task
+except ImportError:  # pragma: no cover - optional dependency
+    _queue_create_task = None
 
 
 logger = logging.getLogger(__name__)
 
 
+async def _enqueue_task(
+    task_name: str,
+    payload: dict[str, Any],
+    *,
+    delay: timedelta | None = None,
+) -> None:
+    """Best-effort task scheduling wrapper for optional task queue."""
+
+    if _queue_create_task is None:
+        logger.debug("Task queue unavailable; skipping task %s", task_name)
+        return
+    await _queue_create_task(task_name, payload, delay=delay)
+
+
 class ConfigDriftService:
-    """Background service for automated configuration drift detection."""
+    """Background service for automated config drift detection."""
 
     def __init__(self):
         """Initialize configuration drift service."""
@@ -52,7 +60,7 @@ class ConfigDriftService:
         """Set up the configuration drift detector with current config."""
         try:
             # Convert config to drift detection config
-            drift_config = CoreDriftDetectionConfig(
+            drift_config = DriftDetectionConfig(
                 enabled=self.config.drift_detection.enabled,
                 snapshot_interval_minutes=self.config.drift_detection.snapshot_interval_minutes,
                 comparison_interval_minutes=self.config.drift_detection.comparison_interval_minutes,
@@ -68,17 +76,11 @@ class ConfigDriftService:
                 integrate_with_task20_anomaly=self.config.drift_detection.integrate_with_task20_anomaly,
                 use_performance_monitoring=self.config.drift_detection.use_performance_monitoring,
                 enable_auto_remediation=self.config.drift_detection.enable_auto_remediation,
-                auto_remediation_severity_threshold=DriftSeverity(
-                    self.config.drift_detection.auto_remediation_severity_threshold
-                ),
+                auto_remediation_severity_threshold=self.config.drift_detection.auto_remediation_severity_threshold,
             )
 
             # Initialize with config directory path and interval
-            config_dir = (
-                Path(self.config.config_dir)
-                if hasattr(self.config, "config_dir")
-                else Path()
-            )
+            config_dir = Path(self.config.data_dir)
             self.drift_detector = initialize_drift_detector(
                 config_dir,
                 drift_config.snapshot_interval_minutes
@@ -128,8 +130,7 @@ class ConfigDriftService:
             return
 
         try:
-            # Create task for taking configuration snapshots
-            await create_task(
+            await _enqueue_task(
                 "config_drift_snapshot",
                 {},
                 delay=timedelta(
@@ -147,8 +148,7 @@ class ConfigDriftService:
             return
 
         try:
-            # Create task for comparing configurations
-            await create_task(
+            await _enqueue_task(
                 "config_drift_comparison",
                 {},
                 delay=timedelta(
@@ -190,10 +190,10 @@ class ConfigDriftService:
             else None
         )
 
+        context = monitoring_context or contextlib.nullcontext()
+
         try:
-            async with (
-                monitoring_context if monitoring_context else contextlib.nullcontext()
-            ):
+            with context:
                 for source in self.config.drift_detection.monitored_paths:
                     try:
                         snapshot = self.drift_detector.take_snapshot()
@@ -206,9 +206,7 @@ class ConfigDriftService:
                                 "timestamp": snapshot.timestamp.isoformat(),  # pylint: disable=no-member
                             }
                         )
-                        logger.debug(
-                            f"Took snapshot for {source}"
-                        )  # TODO: Convert f-string to logging format
+                        logger.debug("Took snapshot for %s", source)
 
                     except (ValueError, TypeError, UnicodeDecodeError) as e:
                         error_msg = f"Failed to snapshot {source}: {e}"
@@ -270,10 +268,10 @@ class ConfigDriftService:
             else None
         )
 
+        context = monitoring_context or contextlib.nullcontext()
+
         try:
-            async with (
-                monitoring_context if monitoring_context else contextlib.nullcontext()
-            ):
+            with context:
                 for source in self.config.drift_detection.monitored_paths:
                     try:
                         # Compare snapshots for this source
@@ -308,7 +306,7 @@ class ConfigDriftService:
 
                         if events:
                             logger.info(
-                                f"Detected {len(events)} drift events for {source}"
+                                "Detected %d drift events for %s", len(events), source
                             )
 
                     except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
@@ -355,19 +353,15 @@ class ConfigDriftService:
         """
         try:
             # Log remediation attempt
-            logger.info(
-                f"Attempting auto-remediation for drift event {event.id}"
-            )  # TODO: Convert f-string to logging format
+            logger.info("Attempting auto-remediation for drift event %s", event.id)
 
             # For now, just log the suggested remediation
             # In a full implementation, this would actually apply the changes
             if event.remediation_suggestion:
-                logger.info(
-                    f"Remediation suggestion: {event.remediation_suggestion}"
-                )  # TODO: Convert f-string to logging format
+                logger.info("Remediation suggestion: %s", event.remediation_suggestion)
 
             # Create a task to track the remediation
-            await create_task(
+            await _enqueue_task(
                 "config_drift_remediation",
                 {
                     "event_id": event.id,
@@ -375,14 +369,13 @@ class ConfigDriftService:
                     "drift_type": event.drift_type.value,
                     "suggestion": event.remediation_suggestion,
                 },
+                delay=None,
             )
 
         except (TimeoutError, OSError, PermissionError):
             logger.exception("Auto-remediation failed for event %s", event.id)
             return False
-
-        else:
-            return True
+        return True
 
     def _compare_snapshots_for_source(self, source: str) -> list[Any]:  # noqa: ARG002
         """Compare snapshots for a specific source and return drift events.
@@ -392,8 +385,8 @@ class ConfigDriftService:
 
         Returns:
             List of drift events detected for the source
-
         """
+
         if self.drift_detector is None:
             return []
 
@@ -409,8 +402,8 @@ class ConfigDriftService:
 
         Returns:
             True if alert should be sent
-
         """
+
         if not hasattr(event, "severity"):
             return False
 
@@ -423,8 +416,8 @@ class ConfigDriftService:
 
         Args:
             event: Drift event that triggered the alert
-
         """
+
         try:
             # In a real implementation, this would send alerts via:
             # - Email notifications
@@ -439,27 +432,6 @@ class ConfigDriftService:
                 event.source if hasattr(event, "source") else "unknown source",
             )
 
-            # Trigger alert task if available
-            if trigger_drift_alert:
-                task = asyncio.create_task(
-                    trigger_drift_alert(
-                        {
-                            "event_id": getattr(event, "id", "unknown"),
-                            "source": getattr(event, "source", "unknown"),
-                            "severity": (
-                                getattr(event, "severity", {}).value
-                                if hasattr(getattr(event, "severity", None), "value")
-                                else "unknown"
-                            ),
-                            "description": getattr(
-                                event, "description", "Configuration drift detected"
-                            ),
-                        }
-                    )
-                )
-                # Store reference to prevent garbage collection
-                task.add_done_callback(lambda _: None)
-
         except (AttributeError, TypeError, RuntimeError):
             logger.exception("Failed to send drift alert")
 
@@ -468,8 +440,8 @@ class ConfigDriftService:
 
         Returns:
             Dictionary with service status information
-
         """
+
         status = {
             "service_running": self.is_running,
             "drift_detection_enabled": self.config.drift_detection.enabled,
@@ -503,8 +475,8 @@ class ConfigDriftService:
 
         Returns:
             Dictionary with detection results
-
         """
+
         if self.drift_detector is None:
             msg = "Drift detector not initialized"
             raise RuntimeError(msg)
@@ -533,8 +505,16 @@ class ConfigDriftService:
             raise
 
 
-# Global service instance
-_drift_service: ConfigDriftService | None = None
+class DriftServiceSingleton:
+    """Singleton wrapper for ConfigDriftService to avoid global variables."""
+
+    _instance: ConfigDriftService | None = None
+
+    @classmethod
+    def get_instance(cls) -> ConfigDriftService:
+        if cls._instance is None:
+            cls._instance = ConfigDriftService()
+        return cls._instance
 
 
 def get_drift_service() -> ConfigDriftService:
@@ -542,33 +522,33 @@ def get_drift_service() -> ConfigDriftService:
 
     Returns:
         Global drift service instance
-
     """
-    global _drift_service
-    if _drift_service is None:
-        _drift_service = ConfigDriftService()
-    return _drift_service
+    return DriftServiceSingleton.get_instance()
 
 
 async def start_drift_service() -> None:
     """Start the global configuration drift service."""
+
     service = get_drift_service()
     await service.start()
 
 
 async def stop_drift_service() -> None:
     """Stop the global configuration drift service."""
+
     service = get_drift_service()
     await service.stop()
 
 
 async def get_drift_service_status() -> dict[str, Any]:
     """Get status of the global configuration drift service."""
+
     service = get_drift_service()
     return await service.get_service_status()
 
 
 async def run_manual_drift_detection() -> dict[str, Any]:
     """Run manual drift detection using the global service."""
+
     service = get_drift_service()
     return await service.run_manual_detection()

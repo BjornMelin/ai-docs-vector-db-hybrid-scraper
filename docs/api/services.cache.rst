@@ -36,10 +36,10 @@ services.cache.embedding\_cache module
    :show-inheritance:
    :undoc-members:
 
-services.cache.local\_cache module
-----------------------------------
+services.cache.persistent_cache module
+--------------------------------------
 
-.. automodule:: services.cache.local_cache
+.. automodule:: services.cache.persistent_cache
    :members:
    :show-inheritance:
    :undoc-members:

@@ -25,7 +25,6 @@ class RateLimiter:
         max_calls: Maximum number of calls allowed
         time_window: Time window in seconds
         burst_multiplier: Multiplier for burst capacity
-
     """
 
     def __init__(
@@ -40,8 +39,8 @@ class RateLimiter:
             max_calls: Maximum calls allowed in time window
             time_window: Time window in seconds (default: 60)
             burst_multiplier: Burst capacity multiplier (default: 1.5)
-
         """
+
         self.max_calls = max_calls
         self.time_window = time_window
         self.burst_multiplier = burst_multiplier
@@ -60,11 +59,8 @@ class RateLimiter:
 
         Args:
             tokens: Number of tokens to acquire (default: 1)
-
-        Raises:
-            APIError: If requested tokens exceed bucket capacity
-
         """
+
         if tokens > self.max_tokens:
             msg = f"Requested {tokens} tokens exceeds bucket capacity {self.max_tokens}"
             raise APIError(msg)
@@ -80,7 +76,7 @@ class RateLimiter:
             if self.tokens < tokens:
                 wait_time = (tokens - self.tokens) / self.refill_rate
                 logger.warning(
-                    f"Rate limit reached. Waiting {wait_time:.2f}s for {tokens} tokens"
+                    "Rate limit reached. Waiting %.2fs for %d tokens", wait_time, tokens
                 )
                 await asyncio.sleep(wait_time)
 
@@ -91,9 +87,7 @@ class RateLimiter:
 
             # Consume tokens
             self.tokens -= tokens
-            logger.debug(
-                f"Acquired {tokens} tokens. {self.tokens:.1f} remaining"
-            )  # TODO: Convert f-string to logging format
+            logger.debug("Acquired %d tokens. %.1f remaining", tokens, self.tokens)
 
 
 class RateLimitManager:
@@ -122,8 +116,8 @@ class RateLimitManager:
 
         Returns:
             RateLimiter instance
-
         """
+
         key = f"{provider}:{endpoint}" if endpoint else provider
 
         if key not in self.limiters:
@@ -143,8 +137,10 @@ class RateLimitManager:
             )
 
             logger.info(
-                f"Created rate limiter for {key}: "
-                f"{limits['max_calls']} calls per {limits['time_window']}s"
+                "Created rate limiter for %s: %d calls per %ds",
+                key,
+                limits["max_calls"],
+                limits["time_window"],
             )
 
         return self.limiters[key]
@@ -161,19 +157,10 @@ class RateLimitManager:
             provider: Provider name
             endpoint: Optional endpoint name
             tokens: Number of tokens to acquire
-
         """
+
         limiter = self.get_limiter(provider, endpoint)
         await limiter.acquire(tokens)
-
-
-# Note: RateLimitManager instances should be created by services
-# that inject the UnifiedConfig dependency rather than using global state.
-
-
-# Rate limiting decorators and global configuration functions have been removed
-# in favor of dependency injection. Services should create their own
-# RateLimitManager instances with the appropriate UnifiedConfig.
 
 
 class AdaptiveRateLimiter(RateLimiter):
@@ -197,8 +184,8 @@ class AdaptiveRateLimiter(RateLimiter):
             time_window: Time window in seconds
             min_rate: Minimum rate multiplier (default: 0.1)
             max_rate: Maximum rate multiplier (default: 2.0)
-
         """
+
         super().__init__(initial_max_calls, time_window)
         self.initial_max_calls = initial_max_calls
         self.min_rate = min_rate
@@ -215,8 +202,8 @@ class AdaptiveRateLimiter(RateLimiter):
         Args:
             status_code: HTTP status code
             headers: Response headers containing rate limit info
-
         """
+
         async with self._lock:
             if status_code == 429:  # Rate limited
                 # Reduce rate by 50%
@@ -224,7 +211,7 @@ class AdaptiveRateLimiter(RateLimiter):
                     self.min_rate, self.adjustment_factor * 0.5
                 )
                 logger.warning(
-                    f"Rate limit hit. Reducing rate to {self.adjustment_factor:.2f}x"
+                    "Rate limit hit. Reducing rate to %.2fx", self.adjustment_factor
                 )
             elif status_code < 300:  # Success
                 # Slowly increase rate by 5%
@@ -249,8 +236,9 @@ class AdaptiveRateLimiter(RateLimiter):
                         self.max_tokens = int(self.max_calls * self.burst_multiplier)
 
                         logger.debug(
-                            f"Adjusted rate limit: {self.max_calls} calls, "
-                            f"{remaining_calls} remaining"
+                            "Adjusted rate limit: %d calls, %d remaining",
+                            self.max_calls,
+                            remaining_calls,
                         )
                     except ValueError:
                         pass  # Invalid header values

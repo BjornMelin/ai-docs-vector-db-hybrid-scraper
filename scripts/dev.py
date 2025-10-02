@@ -102,6 +102,7 @@ def _coverage_arguments(enable: bool) -> list[str]:
         "--cov=src",
         "--cov-report=term-missing:skip-covered",
         "--cov-report=xml",
+        "--cov-fail-under=80",
     ]
 
 
@@ -122,6 +123,9 @@ def _build_pytest_command(
         raise ValueError(message) from exc
 
     command: list[str] = ["uv", "run", "pytest", *profile_cfg.args]
+
+    if "--benchmark-disable" not in command:
+        command.append("--benchmark-disable")
 
     if profile_cfg.uses_workers:
         command.extend(["-n", workers, "--dist", "worksteal"])
@@ -309,7 +313,7 @@ def _check_service_health(url: str) -> bool:
         return 200 <= response.status < 300
 
 
-def cmd_validate(args: argparse.Namespace) -> int:
+def cmd_validate(args: argparse.Namespace) -> int:  # pylint: disable=too-many-branches
     """Validate configuration, dependencies, and optionally documentation."""
 
     errors: list[str] = []

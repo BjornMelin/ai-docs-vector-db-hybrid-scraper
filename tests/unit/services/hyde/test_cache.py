@@ -7,12 +7,12 @@ import numpy as np
 import pytest
 
 from src.services.errors import APIError, EmbeddingServiceError
-from src.services.hyde.cache import HyDECache
+from src.services.hyde.cache import CacheEntryContext, HyDECache, SearchResultPayload
 from src.services.hyde.config import HyDEConfig
 from src.services.hyde.generator import GenerationResult
 
 
-class TestHyDECache:
+class TestHyDECache:  # pylint: disable=too-many-public-methods
     """Tests for HyDECache class."""
 
     @pytest.fixture
@@ -49,15 +49,15 @@ class TestHyDECache:
         assert cache._initialized is False
 
         # Check metrics initialization
-        assert cache.cache_hits == 0
-        assert cache.cache_misses == 0
-        assert cache.cache_sets == 0
-        assert cache.cache_errors == 0
+        assert cache.metrics.hits == 0
+        assert cache.metrics.misses == 0
+        assert cache.metrics.sets == 0
+        assert cache.metrics.errors == 0
 
         # Check cache key prefixes
-        assert cache.embedding_prefix == "test_hyde:embedding"
-        assert cache.documents_prefix == "test_hyde:documents"
-        assert cache.results_prefix == "test_hyde:results"
+        assert cache.prefixes.embedding == "test_hyde:embedding"
+        assert cache.prefixes.documents == "test_hyde:documents"
+        assert cache.prefixes.results == "test_hyde:results"
 
     @pytest.mark.asyncio
     async def test_initialize_success(self, cache, mock_cache_manager):
@@ -157,8 +157,8 @@ class TestHyDECache:
         result = await cache.get_hyde_embedding("test query", "python")
 
         assert result == [0.1, 0.2, 0.3]
-        assert cache.cache_hits == 1
-        assert cache.cache_misses == 0
+        assert cache.metrics.hits == 1
+        assert cache.metrics.misses == 0
 
     @pytest.mark.asyncio
     async def test_get_hyde_embedding_cache_hit_binary_format(
@@ -182,7 +182,7 @@ class TestHyDECache:
         assert abs(result[0] - 0.1) < 0.001
         assert abs(result[1] - 0.2) < 0.001
         assert abs(result[2] - 0.3) < 0.001
-        assert cache.cache_hits == 1
+        assert cache.metrics.hits == 1
 
     @pytest.mark.asyncio
     async def test_get_hyde_embedding_cache_hit_list_format(
@@ -197,7 +197,7 @@ class TestHyDECache:
         result = await cache.get_hyde_embedding("test query", "python")
 
         assert result == [0.1, 0.2, 0.3]
-        assert cache.cache_hits == 1
+        assert cache.metrics.hits == 1
 
     @pytest.mark.asyncio
     async def test_get_hyde_embedding_cache_miss(self, cache, mock_cache_manager):
@@ -208,8 +208,8 @@ class TestHyDECache:
         result = await cache.get_hyde_embedding("test query", "python")
 
         assert result is None
-        assert cache.cache_hits == 0
-        assert cache.cache_misses == 1
+        assert cache.metrics.hits == 0
+        assert cache.metrics.misses == 1
 
     @pytest.mark.asyncio
     async def test_get_hyde_embedding_invalid_format(self, cache, mock_cache_manager):
@@ -220,7 +220,7 @@ class TestHyDECache:
         result = await cache.get_hyde_embedding("test query", "python")
 
         assert result is None
-        assert cache.cache_misses == 1
+        assert cache.metrics.misses == 1
 
     @pytest.mark.asyncio
     async def test_get_hyde_embedding_error(self, cache, mock_cache_manager):
@@ -231,7 +231,7 @@ class TestHyDECache:
         result = await cache.get_hyde_embedding("test query", "python")
 
         assert result is None
-        assert cache.cache_errors == 1
+        assert cache.metrics.errors == 1
 
     @pytest.mark.asyncio
     async def test_get_hyde_embedding_not_initialized(self, cache):
@@ -253,12 +253,14 @@ class TestHyDECache:
             query="test query",
             embedding=embedding,
             hypothetical_docs=hypothetical_docs,
-            generation_metadata=metadata,
-            domain="python",
+            context=CacheEntryContext(
+                generation_metadata=metadata,
+                domain="python",
+            ),
         )
 
         assert result is True
-        assert cache.cache_sets == 1
+        assert cache.metrics.sets == 1
         mock_cache_manager.set.assert_called_once()
 
         # Check the cached data structure
@@ -289,6 +291,7 @@ class TestHyDECache:
             query="test query",
             embedding=embedding,
             hypothetical_docs=hypothetical_docs,
+            context=CacheEntryContext(domain="python"),
         )
 
         assert result is True
@@ -308,10 +311,11 @@ class TestHyDECache:
             query="test query",
             embedding=[0.1, 0.2, 0.3],
             hypothetical_docs=["doc1"],
+            context=CacheEntryContext(domain="python"),
         )
 
         assert result is False
-        assert cache.cache_errors == 1
+        assert cache.metrics.errors == 1
 
     @pytest.mark.asyncio
     async def test_get_hypothetical_documents_success(self, cache, mock_cache_manager):
@@ -324,7 +328,7 @@ class TestHyDECache:
         result = await cache.get_hypothetical_documents("test query", "python")
 
         assert result == cached_docs
-        assert cache.cache_hits == 1
+        assert cache.metrics.hits == 1
 
     @pytest.mark.asyncio
     async def test_get_hypothetical_documents_disabled(self, cache, mock_cache_manager):
@@ -345,7 +349,7 @@ class TestHyDECache:
         result = await cache.get_hypothetical_documents("test query", "python")
 
         assert result is None
-        assert cache.cache_misses == 1
+        assert cache.metrics.misses == 1
 
     @pytest.mark.asyncio
     async def test_get_hypothetical_documents_error(self, cache, mock_cache_manager):
@@ -356,7 +360,7 @@ class TestHyDECache:
         result = await cache.get_hypothetical_documents("test query", "python")
 
         assert result is None
-        assert cache.cache_errors == 1
+        assert cache.metrics.errors == 1
 
     @pytest.mark.asyncio
     async def test_set_hypothetical_documents_success(self, cache, mock_cache_manager):
@@ -376,11 +380,11 @@ class TestHyDECache:
             query="test query",
             documents=documents,
             generation_result=generation_result,
-            domain="python",
+            context=CacheEntryContext(domain="python"),
         )
 
         assert result is True
-        assert cache.cache_sets == 1
+        assert cache.metrics.sets == 1
 
         # Check cached data
         call_args = mock_cache_manager.set.call_args
@@ -433,7 +437,7 @@ class TestHyDECache:
         )
 
         assert result is False
-        assert cache.cache_errors == 1
+        assert cache.metrics.errors == 1
 
     @pytest.mark.asyncio
     async def test_get_search_results_success(self, cache, mock_cache_manager):
@@ -449,7 +453,7 @@ class TestHyDECache:
         )
 
         assert result == cached_results
-        assert cache.cache_hits == 1
+        assert cache.metrics.hits == 1
 
     @pytest.mark.asyncio
     async def test_get_search_results_miss(self, cache, mock_cache_manager):
@@ -463,7 +467,7 @@ class TestHyDECache:
         )
 
         assert result is None
-        assert cache.cache_misses == 1
+        assert cache.metrics.misses == 1
 
     @pytest.mark.asyncio
     async def test_get_search_results_error(self, cache, mock_cache_manager):
@@ -477,7 +481,7 @@ class TestHyDECache:
         )
 
         assert result is None
-        assert cache.cache_errors == 1
+        assert cache.metrics.errors == 1
 
     @pytest.mark.asyncio
     async def test_set_search_results_success(self, cache, mock_cache_manager):
@@ -492,12 +496,11 @@ class TestHyDECache:
             query="test query",
             collection_name="documents",
             search_params=search_params,
-            results=results,
-            search_metadata=search_metadata,
+            payload=SearchResultPayload(results=results, metadata=search_metadata),
         )
 
         assert result is True
-        assert cache.cache_sets == 1
+        assert cache.metrics.sets == 1
 
         # Check TTL is shorter for search results
         call_args = mock_cache_manager.set.call_args
@@ -514,11 +517,11 @@ class TestHyDECache:
             query="test query",
             collection_name="documents",
             search_params={},
-            results=[],
+            payload=SearchResultPayload(results=[]),
         )
 
         assert result is False
-        assert cache.cache_errors == 1
+        assert cache.metrics.errors == 1
 
     @pytest.mark.asyncio
     async def test_warm_cache_success(self, cache, mock_cache_manager):
@@ -634,10 +637,10 @@ class TestHyDECache:
     def test_get_cache_metrics(self, cache):
         """Test cache metrics calculation."""
         # Set some test values
-        cache.cache_hits = 8
-        cache.cache_misses = 2
-        cache.cache_sets = 5
-        cache.cache_errors = 1
+        cache.metrics.hits = 8
+        cache.metrics.misses = 2
+        cache.metrics.sets = 5
+        cache.metrics.errors = 1
 
         metrics = cache.get_cache_metrics()
 
@@ -664,17 +667,17 @@ class TestHyDECache:
     def test_reset_metrics(self, cache):
         """Test resetting cache metrics."""
         # Set some values
-        cache.cache_hits = 5
-        cache.cache_misses = 3
-        cache.cache_sets = 2
-        cache.cache_errors = 1
+        cache.metrics.hits = 5
+        cache.metrics.misses = 3
+        cache.metrics.sets = 2
+        cache.metrics.errors = 1
 
         cache.reset_metrics()
 
-        assert cache.cache_hits == 0
-        assert cache.cache_misses == 0
-        assert cache.cache_sets == 0
-        assert cache.cache_errors == 0
+        assert cache.metrics.hits == 0
+        assert cache.metrics.misses == 0
+        assert cache.metrics.sets == 0
+        assert cache.metrics.errors == 0
 
     @pytest.mark.asyncio
     async def test_embedding_cache_key_with_none_domain(

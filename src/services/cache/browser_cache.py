@@ -1,13 +1,9 @@
-import typing
-
-
 """Browser automation result caching for UnifiedBrowserManager.
 
 This module provides caching functionality for browser automation results
 to avoid redundant scrapes and improve performance.
 """
 
-import asyncio
 import hashlib
 import json
 import logging
@@ -16,6 +12,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from .base import CacheInterface
+from .persistent_cache import PersistentCacheManager
 
 
 logger = logging.getLogger(__name__)
@@ -24,6 +21,7 @@ logger = logging.getLogger(__name__)
 class BrowserCacheEntry:
     """Entry for browser automation cache."""
 
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     def __init__(
         self,
         url: str,
@@ -31,7 +29,7 @@ class BrowserCacheEntry:
         metadata: dict[str, Any],
         tier_used: str,
         timestamp: float | None = None,
-    ):
+    ) -> None:
         """Initialize cache entry.
 
         Args:
@@ -41,6 +39,7 @@ class BrowserCacheEntry:
             tier_used: Which tier was used for scraping
             timestamp: When the content was scraped
         """
+
         self.url = url
         self.content = content
         self.metadata = metadata
@@ -49,6 +48,7 @@ class BrowserCacheEntry:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for caching."""
+
         return {
             "url": self.url,
             "content": self.content,
@@ -60,6 +60,7 @@ class BrowserCacheEntry:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "BrowserCacheEntry":
         """Create from dictionary."""
+
         return cls(
             url=data["url"],
             content=data["content"],
@@ -77,23 +78,25 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
     based on content type and domain.
     """
 
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     def __init__(
         self,
-        local_cache: CacheInterface[str] | None = None,
+        local_cache: PersistentCacheManager | None = None,
         distributed_cache: CacheInterface[str] | None = None,
         default_ttl: int = 3600,  # 1 hour default
         dynamic_content_ttl: int = 300,  # 5 minutes for dynamic content
         static_content_ttl: int = 86400,  # 24 hours for static content
-    ):
+    ) -> None:
         """Initialize browser cache.
 
         Args:
-            local_cache: Local cache implementation
+        local_cache: Local persistent cache implementation
             distributed_cache: Distributed cache implementation
             default_ttl: Default TTL in seconds
             dynamic_content_ttl: TTL for dynamic content
             static_content_ttl: TTL for static content
         """
+
         self.local_cache = local_cache
         self.distributed_cache = distributed_cache
         self.default_ttl = default_ttl
@@ -144,8 +147,8 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
 
         Returns:
             Cache key string
-
         """
+
         return self._generate_cache_key(url, tier)
 
     def _determine_ttl(self, url: str, content_length: int) -> int:
@@ -228,6 +231,7 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
 
     async def _try_local_cache_get(self, key: str) -> BrowserCacheEntry | None:
         """Try to get entry from local cache."""
+
         if not self.local_cache:
             return None
         try:
@@ -243,6 +247,7 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
 
     async def _try_distributed_cache_get(self, key: str) -> BrowserCacheEntry | None:
         """Try to get entry from distributed cache with local promotion."""
+
         if not self.distributed_cache:
             return None
         try:
@@ -258,7 +263,7 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
     async def _process_distributed_cache_hit(
         self, key: str, cached_json: str
     ) -> BrowserCacheEntry:
-        """Process distributed cache hit by parsing data and promoting to local cache."""
+        """Process distributed cache hit by parsing data + promoting to local cache."""
         self._cache_stats["hits"] += 1
         data = json.loads(cached_json)
         entry = BrowserCacheEntry.from_dict(data)
@@ -274,7 +279,7 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
         if not self.local_cache:
             return
         try:
-            await self.local_cache.set(key, cached_json, ttl=300)  # 5 min local
+            await self.local_cache.set(key, cached_json, ttl_seconds=300)  # 5 min local
         except (ConnectionError, FileNotFoundError, OSError, PermissionError) as e:
             logger.warning("Error promoting to local cache for key %s: %s", key, e)
 
@@ -343,7 +348,9 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
         if not self.local_cache:
             return None
         try:
-            return await self.local_cache.set(key, cached_json, ttl=min(ttl, 3600))
+            return await self.local_cache.set(
+                key, cached_json, ttl_seconds=min(ttl, 3600)
+            )
         except (ConnectionError, RuntimeError, TimeoutError) as e:
             logger.warning("Error storing in local cache: %s", e)
             return False
@@ -414,7 +421,7 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
         """
         count = 0
 
-        # For now, we can only invalidate if using distributed cache with pattern support
+        # For now, we can only invalidate if using distributed cache + pattern support
         if self.distributed_cache and hasattr(
             self.distributed_cache, "invalidate_pattern"
         ):
@@ -424,8 +431,9 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
 
     async def _invalidate_distributed_pattern(self, pattern: str) -> int:
         """Invalidate pattern in distributed cache with error handling."""
+
         try:
-            count = await self.distributed_cache.invalidate_pattern(
+            count = await self.distributed_cache.invalidate_pattern(  # type: ignore
                 f"browser:*{pattern}*"
             )
         except (ConnectionError, OSError, PermissionError) as e:
@@ -437,11 +445,8 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
         return count
 
     def get_stats(self) -> dict[str, Any]:
-        """Get cache statistics.
+        """Get cache statistics."""
 
-        Returns:
-            Dictionary of cache statistics
-        """
         total_requests = self._cache_stats["hits"] + self._cache_stats["misses"]
         hit_rate = (
             self._cache_stats["hits"] / total_requests if total_requests > 0 else 0.0
@@ -520,14 +525,14 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
             try:
                 if await self.local_cache.exists(key):
                     return True
-            except (ConnectionError, RuntimeError, TimeoutError) as e:
+            except (ConnectionError, RuntimeError, TimeoutError):
                 pass
 
         # Check distributed cache
         if self.distributed_cache:
             try:
                 return await self.distributed_cache.exists(key)
-            except (ConnectionError, RuntimeError, TimeoutError) as e:
+            except (ConnectionError, RuntimeError, TimeoutError):
                 pass
 
         return False
@@ -538,11 +543,14 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
         Returns:
             Number of entries cleared
         """
+
         count = 0
 
         if self.local_cache:
             try:
-                count += await self.local_cache.clear()
+                local_cleared = await self.local_cache.clear()
+                if isinstance(local_cleared, int):
+                    count += local_cleared
             except (ConnectionError, RuntimeError, TimeoutError) as e:
                 logger.warning("Error clearing local cache: %s", e)
 
@@ -573,13 +581,13 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
         if self.distributed_cache:
             try:
                 return await self.distributed_cache.size()
-            except (ConnectionError, RuntimeError, TimeoutError) as e:
+            except (ConnectionError, RuntimeError, TimeoutError):
                 pass
 
         if self.local_cache:
             try:
                 return await self.local_cache.size()
-            except (ConnectionError, RuntimeError, TimeoutError) as e:
+            except (ConnectionError, RuntimeError, TimeoutError):
                 pass
 
         return 0

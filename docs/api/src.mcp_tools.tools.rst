@@ -36,10 +36,10 @@ src.mcp\_tools.tools.cache module
    :show-inheritance:
    :undoc-members:
 
-src.mcp\_tools.tools.collections module
----------------------------------------
+src.mcp\_tools.tools.collection\_management module
+-------------------------------------------------
 
-.. automodule:: src.mcp_tools.tools.collections
+.. automodule:: src.mcp_tools.tools.collection_management
    :members:
    :show-inheritance:
    :undoc-members:
@@ -108,14 +108,6 @@ src.mcp\_tools.tools.filtering module
    :show-inheritance:
    :undoc-members:
 
-src.mcp\_tools.tools.filtering\_tools module
---------------------------------------------
-
-.. automodule:: src.mcp_tools.tools.filtering_tools
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 src.mcp\_tools.tools.hybrid\_search module
 ------------------------------------------
 
@@ -160,14 +152,6 @@ src.mcp\_tools.tools.projects module
 ------------------------------------
 
 .. automodule:: src.mcp_tools.tools.projects
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-src.mcp\_tools.tools.query\_processing module
----------------------------------------------
-
-.. automodule:: src.mcp_tools.tools.query_processing
    :members:
    :show-inheritance:
    :undoc-members:

@@ -208,14 +208,14 @@ uv run pytest tests/unit/services/vector_db/ -v
 ### Coverage Analysis
 
 ```bash
-# Run unit tests with coverage
-uv run pytest tests/unit/ --cov=src --cov-report=html
+# Run unit tests with coverage (CI profile scoped to unit folder)
+python scripts/dev.py test --profile ci -- tests/unit/
 
-# Run coverage for specific modules
-uv run pytest tests/unit/services/ --cov=src.services --cov-report=term-missing
+# Run coverage for specific service tests
+python scripts/dev.py test --profile ci -- tests/unit/services/
 
-# Generate coverage report
-uv run pytest tests/unit/ --cov=src --cov-report=xml --cov-report=html
+# Generate XML/terminal coverage (produced automatically by the CI profile)
+python scripts/dev.py test --profile ci
 ```
 
 ### Parallel Execution

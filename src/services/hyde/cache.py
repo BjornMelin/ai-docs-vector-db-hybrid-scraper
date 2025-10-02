@@ -5,6 +5,7 @@ import hashlib
 import json
 import logging
 import time
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
@@ -12,7 +13,7 @@ import numpy as np
 
 try:
     import redis
-except ImportError:
+except ImportError:  # pragma: no cover - redis not installed in some environments
     redis = None
 
 from src.services.base import BaseService
@@ -25,6 +26,51 @@ from .generator import GenerationResult
 logger = logging.getLogger(__name__)
 
 
+if redis is not None:
+    RedisErrorType = redis.RedisError
+else:
+
+    class RedisErrorPlaceholder(Exception):  # noqa: N818
+        """Fallback redis error type when redis is unavailable."""
+
+    RedisErrorType = RedisErrorPlaceholder
+
+
+@dataclass(slots=True)
+class CacheMetrics:
+    """Metrics captured for HyDE cache operations."""
+
+    hits: int = 0
+    misses: int = 0
+    sets: int = 0
+    errors: int = 0
+
+
+@dataclass(slots=True)
+class CachePrefixes:
+    """Prefix values for cache namespaces."""
+
+    embedding: str
+    documents: str
+    results: str
+
+
+@dataclass(slots=True)
+class CacheEntryContext:
+    """Context for cache entries that share domain and metadata."""
+
+    domain: str | None = None
+    generation_metadata: dict[str, Any] | None = None
+
+
+@dataclass(slots=True)
+class SearchResultPayload:
+    """Payload for storing search results in the cache."""
+
+    results: list[dict[str, Any]]
+    metadata: dict[str, Any] | None = None
+
+
 def _raise_cache_test_failed() -> None:
     """Raise EmbeddingServiceError for failed cache test."""
     msg = "Cache test failed"
@@ -32,7 +78,7 @@ def _raise_cache_test_failed() -> None:
 
 
 class HyDECache(BaseService):
-    """Intelligent caching layer for HyDE embeddings and results."""
+    """Cache layer for HyDE embeddings and results using DragonflyDB."""
 
     def __init__(self, config: HyDEConfig, cache_manager: Any):
         """Initialize HyDE cache.
@@ -40,22 +86,20 @@ class HyDECache(BaseService):
         Args:
             config: HyDE configuration
             cache_manager: DragonflyCache or compatible cache manager
-
         """
-        super().__init__(config)
+
+        super().__init__(None)
         self.config = config
+        self.hyde_config = config
         self.cache_manager = cache_manager
 
-        # Cache metrics
-        self.cache_hits = 0
-        self.cache_misses = 0
-        self.cache_sets = 0
-        self.cache_errors = 0
-
-        # Cache key prefixes
-        self.embedding_prefix = f"{config.cache_prefix}:embedding"
-        self.documents_prefix = f"{config.cache_prefix}:documents"
-        self.results_prefix = f"{config.cache_prefix}:results"
+        # Cache metrics and prefixes
+        self.metrics = CacheMetrics()
+        self.prefixes = CachePrefixes(
+            embedding=f"{config.cache_prefix}:embedding",
+            documents=f"{config.cache_prefix}:documents",
+            results=f"{config.cache_prefix}:results",
+        )
 
     async def initialize(self) -> None:
         """Initialize cache."""
@@ -114,7 +158,7 @@ class HyDECache(BaseService):
         # Try to get cached data
         cached_data = await self._get_cached_embedding_data(cache_key)
         if cached_data is None:
-            self.cache_misses += 1
+            self.metrics.misses += 1
             return None
 
         # Process cached data
@@ -122,9 +166,9 @@ class HyDECache(BaseService):
             cached_data, cache_key, query
         )
         if embedding is not None:
-            self.cache_hits += 1
+            self.metrics.hits += 1
         else:
-            self.cache_misses += 1
+            self.metrics.misses += 1
 
         return embedding
 
@@ -132,8 +176,13 @@ class HyDECache(BaseService):
         """Get cached embedding data with error handling."""
         try:
             return await self.cache_manager.get(cache_key)
-        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
-            self.cache_errors += 1
+        except (
+            RedisErrorType,
+            ConnectionError,
+            TimeoutError,
+            ValueError,
+        ) as e:
+            self.metrics.errors += 1
             logger.warning("Cache get error for HyDE embedding: %s", e)
             return None
 
@@ -168,8 +217,8 @@ class HyDECache(BaseService):
         query: str,
         embedding: list[float],
         hypothetical_docs: list[str],
-        generation_metadata: dict[str, Any] | None = None,
-        domain: str | None = None,
+        *,
+        context: CacheEntryContext | None = None,
     ) -> bool:
         """Cache HyDE embedding with metadata.
 
@@ -177,8 +226,7 @@ class HyDECache(BaseService):
             query: Search query
             embedding: HyDE embedding vector
             hypothetical_docs: Generated hypothetical documents
-            generation_metadata: Metadata about generation process
-            domain: Optional domain hint
+            context: Domain and metadata context for the cache entry
 
         Returns:
             True if cached successfully
@@ -186,34 +234,34 @@ class HyDECache(BaseService):
         """
         self._validate_initialized()
 
-        cache_key = self._get_embedding_cache_key(query, domain)
+        resolved_context = context or CacheEntryContext()
+        cache_key = self._get_embedding_cache_key(query, resolved_context.domain)
 
         # Prepare cache data
-        cache_data = await self._prepare_cache_data(
-            query, embedding, hypothetical_docs, generation_metadata, domain
+        cache_data = self._prepare_cache_data(
+            query, embedding, hypothetical_docs, resolved_context
         )
 
         # Store in cache
         return await self._store_hyde_embedding(cache_key, cache_data, query)
 
-    async def _prepare_cache_data(
+    def _prepare_cache_data(
         self,
         query: str,
         embedding: list[float],
         hypothetical_docs: list[str],
-        generation_metadata: dict[str, Any] | None,
-        domain: str | None,
+        context: CacheEntryContext,
     ) -> dict[str, Any]:
         """Prepare cache data with binary encoding for embeddings."""
         cache_data = {
             "embedding": embedding,
             "query": query,
-            "domain": domain,
+            "domain": context.domain,
             "timestamp": time.time(),
             "hypothetical_docs": hypothetical_docs
             if self.config.cache_hypothetical_docs
             else [],
-            "metadata": generation_metadata or {},
+            "metadata": context.generation_metadata or {},
         }
 
         # Use binary format for embeddings to save space
@@ -233,17 +281,22 @@ class HyDECache(BaseService):
             success = await self.cache_manager.set(
                 cache_key, cache_data, ttl=self.config.cache_ttl_seconds
             )
-        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
-            self.cache_errors += 1
+        except (
+            RedisErrorType,
+            ConnectionError,
+            TimeoutError,
+            ValueError,
+        ) as e:
+            self.metrics.errors += 1
             logger.warning("Cache set error for HyDE embedding: %s", e)
             return False
+
+        if success:
+            self.metrics.sets += 1
+            logger.debug("Cached HyDE embedding for query: %s", query)
         else:
-            if success:
-                self.cache_sets += 1
-                logger.debug("Cached HyDE embedding for query: %s", query)
-            else:
-                logger.debug("Failed to cache HyDE embedding for query: %s", query)
-            return success
+            logger.debug("Failed to cache HyDE embedding for query: %s", query)
+        return success
 
     async def get_hypothetical_documents(
         self, query: str, domain: str | None = None
@@ -256,8 +309,8 @@ class HyDECache(BaseService):
 
         Returns:
             Cached documents or None if not found
-
         """
+
         if not self.config.cache_hypothetical_docs:
             return None
 
@@ -267,10 +320,10 @@ class HyDECache(BaseService):
         cached_docs = await self._get_cached_documents(cache_key, query)
 
         if cached_docs is not None:
-            self.cache_hits += 1
+            self.metrics.hits += 1
             return cached_docs
 
-        self.cache_misses += 1
+        self.metrics.misses += 1
         return None
 
     async def _get_cached_documents(
@@ -279,23 +332,28 @@ class HyDECache(BaseService):
         """Get cached documents with error handling."""
         try:
             cached_docs = await self.cache_manager.get(cache_key)
-        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
-            self.cache_errors += 1
+        except (
+            RedisErrorType,
+            ConnectionError,
+            TimeoutError,
+            ValueError,
+        ) as e:
+            self.metrics.errors += 1
             logger.warning("Cache get error for hypothetical documents: %s", e)
             return None
+        if cached_docs is not None:
+            logger.debug("Cache hit for hypothetical documents: %s", query)
         else:
-            if cached_docs is not None:
-                logger.debug("Cache hit for hypothetical documents: %s", query)
-            else:
-                logger.debug("Cache miss for hypothetical documents: %s", query)
-            return cached_docs
+            logger.debug("Cache miss for hypothetical documents: %s", query)
+        return cached_docs
 
     async def set_hypothetical_documents(
         self,
         query: str,
         documents: list[str],
         generation_result: GenerationResult,
-        domain: str | None = None,
+        *,
+        context: CacheEntryContext | None = None,
     ) -> bool:
         """Cache hypothetical documents with metadata.
 
@@ -303,52 +361,57 @@ class HyDECache(BaseService):
             query: Search query
             documents: Generated hypothetical documents
             generation_result: Full generation result with metadata
-            domain: Optional domain hint
+            context: Optional context providing domain information
 
         Returns:
             True if cached successfully
-
         """
+
         if not self.config.cache_hypothetical_docs:
             return True
 
         self._validate_initialized()
 
-        cache_key = self._get_documents_cache_key(query, domain)
+        resolved_context = context or CacheEntryContext()
+        cache_key = self._get_documents_cache_key(query, resolved_context.domain)
 
         cache_data = {
             "documents": documents,
             "query": query,
-            "domain": domain,
+            "domain": resolved_context.domain,
             "timestamp": time.time(),
             "generation_time": generation_result.generation_time,
             "tokens_used": generation_result.tokens_used,
             "diversity_score": generation_result.diversity_score,
         }
 
-        return await self._store_hypothetical_documents(cache_key, cache_data, query)
+        return await self._store_hypothetical_documents(cache_key, cache_data)
 
     async def _store_hypothetical_documents(
-        self, cache_key: str, cache_data: dict[str, Any], query: str
+        self, cache_key: str, cache_data: dict[str, Any]
     ) -> bool:
         """Store hypothetical documents in cache with error handling."""
         try:
             success = await self.cache_manager.set(
                 cache_key, cache_data, ttl=self.config.cache_ttl_seconds
             )
-        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
-            self.cache_errors += 1
+        except (
+            RedisErrorType,
+            ConnectionError,
+            TimeoutError,
+            ValueError,
+        ) as e:
+            self.metrics.errors += 1
             logger.warning("Cache set error for hypothetical documents: %s", e)
             return False
+
+        query = cache_data.get("query", "<unknown>")
+        if success:
+            self.metrics.sets += 1
+            logger.debug("Cached hypothetical documents for query: %s", query)
         else:
-            if success:
-                self.cache_sets += 1
-                logger.debug("Cached hypothetical documents for query: %s", query)
-            else:
-                logger.debug(
-                    "Failed to cache hypothetical documents for query: %s", query
-                )
-            return success
+            logger.debug("Failed to cache hypothetical documents for query: %s", query)
+        return success
 
     async def get_search_results(
         self, query: str, collection_name: str, search_params: dict[str, Any]
@@ -362,44 +425,49 @@ class HyDECache(BaseService):
 
         Returns:
             Cached results or None if not found
-
         """
+
         self._validate_initialized()
 
         cache_key = self._get_results_cache_key(query, collection_name, search_params)
         cached_results = await self._get_cached_search_results(cache_key, query)
 
         if cached_results is not None:
-            self.cache_hits += 1
+            self.metrics.hits += 1
             return cached_results
 
-        self.cache_misses += 1
+        self.metrics.misses += 1
         return None
 
     async def _get_cached_search_results(
         self, cache_key: str, query: str
     ) -> list[dict[str, Any]] | None:
         """Get cached search results with error handling."""
+
         try:
             cached_results = await self.cache_manager.get(cache_key)
-        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
-            self.cache_errors += 1
+        except (
+            RedisErrorType,
+            ConnectionError,
+            TimeoutError,
+            ValueError,
+        ) as e:
+            self.metrics.errors += 1
             logger.warning("Cache get error for search results: %s", e)
             return None
+
+        if cached_results is not None:
+            logger.debug("Cache hit for search results: %s", query)
         else:
-            if cached_results is not None:
-                logger.debug("Cache hit for search results: %s", query)
-            else:
-                logger.debug("Cache miss for search results: %s", query)
-            return cached_results
+            logger.debug("Cache miss for search results: %s", query)
+        return cached_results
 
     async def set_search_results(
         self,
         query: str,
         collection_name: str,
         search_params: dict[str, Any],
-        results: list[dict[str, Any]],
-        search_metadata: dict[str, Any] | None = None,
+        payload: SearchResultPayload,
     ) -> bool:
         """Cache search results.
 
@@ -407,48 +475,54 @@ class HyDECache(BaseService):
             query: Search query
             collection_name: Target collection
             search_params: Search parameters
-            results: Search results to cache
-            search_metadata: Optional metadata about the search
+            payload: Search results and optional metadata
 
         Returns:
             True if cached successfully
-
         """
+
         self._validate_initialized()
 
         cache_key = self._get_results_cache_key(query, collection_name, search_params)
 
         cache_data = {
-            "results": results,
+            "results": payload.results,
             "query": query,
             "collection_name": collection_name,
             "search_params": search_params,
             "timestamp": time.time(),
-            "metadata": search_metadata or {},
+            "metadata": payload.metadata or {},
         }
 
         # Use shorter TTL for search results
         ttl = min(self.config.cache_ttl_seconds // 2, 1800)  # Max 30 minutes
 
-        return await self._store_search_results(cache_key, cache_data, ttl, query)
+        return await self._store_search_results(cache_key, cache_data, ttl)
 
     async def _store_search_results(
-        self, cache_key: str, cache_data: dict[str, Any], ttl: int, query: str
+        self, cache_key: str, cache_data: dict[str, Any], ttl: int
     ) -> bool:
         """Store search results in cache with error handling."""
+
         try:
             success = await self.cache_manager.set(cache_key, cache_data, ttl=ttl)
-        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
-            self.cache_errors += 1
+        except (
+            RedisErrorType,
+            ConnectionError,
+            TimeoutError,
+            ValueError,
+        ) as e:
+            self.metrics.errors += 1
             logger.warning("Cache set error for search results: %s", e)
             return False
+
+        query = cache_data.get("query", "<unknown>")
+        if success:
+            self.metrics.sets += 1
+            logger.debug("Cached search results for query: %s", query)
         else:
-            if success:
-                self.cache_sets += 1
-                logger.debug("Cached search results for query: %s", query)
-            else:
-                logger.debug("Failed to cache search results for query: %s", query)
-            return success
+            logger.debug("Failed to cache search results for query: %s", query)
+        return success
 
     async def warm_cache(
         self, common_queries: list[str], domain: str | None = None
@@ -461,8 +535,8 @@ class HyDECache(BaseService):
 
         Returns:
             Dictionary mapping queries to warm-up success status
-
         """
+
         self._validate_initialized()
 
         results = {}
@@ -477,7 +551,12 @@ class HyDECache(BaseService):
                 else:
                     results[query] = False  # Needs generation
 
-            except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
+            except (
+                RedisErrorType,
+                ConnectionError,
+                TimeoutError,
+                ValueError,
+            ) as e:
                 logger.warning("Cache warm-up error for query '%s': %s", query, e)
                 results[query] = False
 
@@ -499,8 +578,8 @@ class HyDECache(BaseService):
 
         Returns:
             True if invalidation was successful
-
         """
+
         self._validate_initialized()
 
         try:
@@ -522,54 +601,57 @@ class HyDECache(BaseService):
                 "Invalidated %d cache entries for query: %s", success_count, query
             )
 
-        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
+        except (
+            RedisErrorType,
+            ConnectionError,
+            TimeoutError,
+            ValueError,
+        ) as e:
             logger.warning("Cache invalidation error for query '%s': %s", query, e)
             return False
 
-        else:
-            return success_count > 0
+        return success_count > 0
 
     def _get_embedding_cache_key(self, query: str, domain: str | None = None) -> str:
         """Generate cache key for HyDE embedding."""
         key_data = f"{query}:{domain or 'general'}"
         key_hash = hashlib.sha256(key_data.encode()).hexdigest()
-        return f"{self.embedding_prefix}:{key_hash}"
+        return f"{self.prefixes.embedding}:{key_hash}"
 
     def _get_documents_cache_key(self, query: str, domain: str | None = None) -> str:
         """Generate cache key for hypothetical documents."""
         key_data = f"{query}:{domain or 'general'}"
         key_hash = hashlib.sha256(key_data.encode()).hexdigest()
-        return f"{self.documents_prefix}:{key_hash}"
+        return f"{self.prefixes.documents}:{key_hash}"
 
     def _get_results_cache_key(
         self, query: str, collection_name: str, search_params: dict[str, Any]
     ) -> str:
         """Generate cache key for search results."""
+
         # Create deterministic key from parameters
         params_str = json.dumps(search_params, sort_keys=True)
         key_data = f"{query}:{collection_name}:{params_str}"
         key_hash = hashlib.sha256(key_data.encode()).hexdigest()
-        return f"{self.results_prefix}:{key_hash}"
+        return f"{self.prefixes.results}:{key_hash}"
 
     def get_cache_metrics(self) -> dict[str, Any]:
         """Get cache performance metrics."""
-        total_requests = self.cache_hits + self.cache_misses
-        hit_rate = self.cache_hits / total_requests if total_requests > 0 else 0.0
+
+        total_requests = self.metrics.hits + self.metrics.misses
+        hit_rate = self.metrics.hits / total_requests if total_requests > 0 else 0.0
 
         return {
-            "cache_hits": self.cache_hits,
-            "cache_misses": self.cache_misses,
-            "cache_sets": self.cache_sets,
-            "cache_errors": self.cache_errors,
+            "cache_hits": self.metrics.hits,
+            "cache_misses": self.metrics.misses,
+            "cache_sets": self.metrics.sets,
+            "cache_errors": self.metrics.errors,
             "hit_rate": hit_rate,
             "total_requests": total_requests,
-            "error_rate": self.cache_errors / max(total_requests, 1),
+            "error_rate": self.metrics.errors / max(total_requests, 1),
         }
 
     def reset_metrics(self) -> None:
         """Reset cache metrics."""
-        self.cache_hits = 0
-        self.cache_misses = 0
-        self.cache_sets = 0
-        self.cache_errors = 0
+        self.metrics = CacheMetrics()
         logger.debug("HyDE cache metrics reset")

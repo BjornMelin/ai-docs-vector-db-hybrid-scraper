@@ -18,7 +18,7 @@ from typing import Any
 
 import psutil
 
-from src.services.circuit_breaker.modern import ModernCircuitBreakerManager
+from src.services.circuit_breaker import CircuitBreakerManager
 from src.services.monitoring.health import HealthCheckManager
 
 
@@ -846,19 +846,20 @@ class RollbackManager:
         # Cleanup old checkpoints
         await self._cleanup_old_checkpoints()
 
-        logger.info(f"Created system checkpoint: {checkpoint_id} - {description}")
+        logger.info("Created system checkpoint: %s - %s", checkpoint_id, description)
         return checkpoint
 
     async def rollback_to_checkpoint(self, checkpoint_id: str) -> bool:
         """Rollback system to a previous checkpoint state."""
+
         if checkpoint_id not in self.checkpoints:
-            logger.error(f"Checkpoint {checkpoint_id} not found")
+            logger.error("Checkpoint %s not found", checkpoint_id)
             return False
 
         checkpoint = self.checkpoints[checkpoint_id]
 
         try:
-            logger.info(f"Rolling back to checkpoint: {checkpoint_id}")
+            logger.info("Rolling back to checkpoint: %s", checkpoint_id)
 
             # Rollback in reverse order of complexity
             await self._rollback_circuit_breakers(checkpoint.circuit_breaker_states)
@@ -962,7 +963,7 @@ class RollbackManager:
             for checkpoint_id, _ in checkpoints_to_remove:
                 del self.checkpoints[checkpoint_id]
 
-            logger.info(f"Cleaned up {len(checkpoints_to_remove)} old checkpoints")
+            logger.info("Cleaned up %d old checkpoints", len(checkpoints_to_remove))
 
 
 class AutoRemediationEngine:
@@ -973,7 +974,7 @@ class AutoRemediationEngine:
     def __init__(
         self,
         health_manager: HealthCheckManager,
-        circuit_breaker_manager: ModernCircuitBreakerManager,
+        circuit_breaker_manager: CircuitBreakerManager,
     ):
         """Initialize auto-remediation engine.
 
@@ -1005,13 +1006,13 @@ class AutoRemediationEngine:
 
     async def process_issue(self, issue: DetectedIssue) -> RemediationResult | None:
         """Process a detected issue and attempt automated remediation."""
-        logger.info(f"Processing issue: {issue.issue_id} - {issue.issue_type}")
+        logger.info("Processing issue: %s - %s", issue.issue_id, issue.issue_type)
 
         # 1. Find appropriate strategy
         strategy = await self._find_strategy(issue)
         if not strategy:
             logger.warning(
-                f"No remediation strategy found for issue type: {issue.issue_type}"
+                "No remediation strategy found for issue type: %s", issue.issue_type
             )
             return None
 
@@ -1019,8 +1020,9 @@ class AutoRemediationEngine:
         safety_result = await strategy.assess_safety(issue)
         if not safety_result.safe:
             logger.warning(
-                f"Issue {issue.issue_id} failed safety assessment: "
-                f"{', '.join(safety_result.blocking_factors)}"
+                "Issue %s failed safety assessment: %s",
+                issue.issue_id,
+                ", ".join(safety_result.blocking_factors),
             )
             return RemediationResult(
                 action_id=f"safety_blocked_{issue.issue_id}",
@@ -1036,8 +1038,8 @@ class AutoRemediationEngine:
         # 3. Check concurrency limits
         if len(self.active_remediations) >= self.max_concurrent_remediations:
             logger.warning(
-                f"Maximum concurrent remediations "
-                f"({self.max_concurrent_remediations}) reached"
+                "Maximum concurrent remediations (%d) reached",
+                self.max_concurrent_remediations,
             )
             return RemediationResult(
                 action_id=f"concurrency_limit_{issue.issue_id}",
@@ -1051,7 +1053,7 @@ class AutoRemediationEngine:
         actions = await strategy.generate_actions(issue)
         if not actions:
             logger.warning(
-                f"No remediation actions generated for issue: {issue.issue_id}"
+                "No remediation actions generated for issue: %s", issue.issue_id
             )
             return None
 
@@ -1095,8 +1097,9 @@ class AutoRemediationEngine:
             # Execute actions sequentially
             for action in actions:
                 logger.info(
-                    f"Executing remediation action: {action.action_type} "
-                    f"for {action.target_component}"
+                    "Executing remediation action: %s for %s",
+                    action.action_type,
+                    action.target_component,
                 )
 
                 # Execute action
@@ -1110,19 +1113,21 @@ class AutoRemediationEngine:
 
                     if validation_success:
                         logger.info(
-                            f"Remediation action {action.action_type} "
-                            f"completed successfully"
+                            "Remediation action %s completed successfully",
+                            action.action_type,
                         )
                         overall_result.actions_taken.extend(action_result.actions_taken)
                     else:
                         logger.warning(
-                            f"Remediation action {action.action_type} validation failed"
+                            "Remediation action %s validation failed",
+                            action.action_type,
                         )
                         # Don't rollback immediately, try next action
                 else:
                     logger.error(
-                        f"Remediation action {action.action_type} failed: "
-                        f"{action_result.error_message}"
+                        "Remediation action %s failed: %s",
+                        action.action_type,
+                        action_result.error_message,
                     )
                     # Continue with next action
 
@@ -1147,8 +1152,8 @@ class AutoRemediationEngine:
                 if rollback_success:
                     overall_result.status = RemediationStatus.ROLLED_BACK
                     logger.info(
-                        f"Successfully rolled back remediation for issue "
-                        f"{issue.issue_id}"
+                        "Successfully rolled back remediation for issue %s",
+                        issue.issue_id,
                     )
             except Exception:
                 logger.exception("Rollback failed: ")

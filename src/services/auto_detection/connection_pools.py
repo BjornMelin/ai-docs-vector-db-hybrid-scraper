@@ -65,9 +65,7 @@ class ConnectionPoolManager:
         if self._initialized:
             return
 
-        self.logger.info(
-            f"Initializing connection pools for {len(services)} services"
-        )  # TODO: Convert f-string to logging format
+        self.logger.info("Initializing connection pools for %d services", len(services))
 
         for service in services:
             try:
@@ -80,13 +78,11 @@ class ConnectionPoolManager:
 
             except (OSError, AttributeError, ConnectionError, ImportError):
                 self.logger.exception(
-                    f"Failed to initialize {service.service_type} pool"
+                    "Failed to initialize %s pool", service.service_type
                 )
 
         self._initialized = True
-        self.logger.info(
-            f"Connection pools initialized: {list(self._pools.keys())}"
-        )  # TODO: Convert f-string to logging format
+        self.logger.info("Connection pools initialized: %s", list(self._pools.keys()))
 
     async def cleanup(self) -> None:
         """Cleanup all connection pools."""
@@ -139,8 +135,8 @@ class ConnectionPoolManager:
             )
 
             self.logger.info(
-                f"Redis pool initialized: {service.host}:{service.port}"
-            )  # TODO: Convert f-string to logging format
+                "Redis pool initialized: %s:%s", service.host, service.port
+            )
 
         except ImportError:
             self.logger.warning("redis package not available, skipping Redis pool")
@@ -393,9 +389,7 @@ class ConnectionPoolManager:
                 await client.aclose()
 
         except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
-            self.logger.debug(
-                f"Redis health check failed: {e}"
-            )  # TODO: Convert f-string to logging format
+            self.logger.debug("Redis health check failed: %s", e)
             metrics.is_healthy = False
 
     async def _update_qdrant_health(self, metrics: PoolHealthMetrics) -> None:
@@ -418,9 +412,7 @@ class ConnectionPoolManager:
             )
 
         except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
-            self.logger.debug(
-                f"Qdrant health check failed: {e}"
-            )  # TODO: Convert f-string to logging format
+            self.logger.debug("Qdrant health check failed: %s", e)
             metrics.is_healthy = False
 
     async def _update_postgresql_health(self, metrics: PoolHealthMetrics) -> None:
@@ -432,9 +424,7 @@ class ConnectionPoolManager:
             metrics.library_stats = {"status": "configured_but_not_implemented"}
 
         except (ConnectionError, TimeoutError) as e:
-            self.logger.debug(
-                f"PostgreSQL health check failed: {e}"
-            )  # TODO: Convert f-string to logging format
+            self.logger.debug("PostgreSQL health check failed: %s", e)
             metrics.is_healthy = False
 
     async def _cleanup_pool(self, pool_name: str, pool: Any) -> None:
@@ -451,9 +441,7 @@ class ConnectionPoolManager:
             # PostgreSQL pool cleanup
             await pool.close()
 
-        self.logger.info(
-            f"Cleaned up {pool_name} pool"
-        )  # TODO: Convert f-string to logging format
+        self.logger.info("Cleaned up %s pool", pool_name)
 
     async def get_pool_stats(self) -> dict[str, Any]:
         """Get comprehensive pool statistics using library features."""
@@ -494,9 +482,7 @@ class ConnectionPoolManager:
                 # Would implement actual health check in real code
                 return True
         except (ConnectionError, TimeoutError) as e:
-            self.logger.debug(
-                f"Immediate health check failed for {pool_name}: {e}"
-            )  # TODO: Convert f-string to logging format
+            self.logger.debug("Immediate health check failed for %s: %s", pool_name, e)
             return False
 
         return False

@@ -1,43 +1,47 @@
-import typing
+"""Helpers for warming cache keys via asynchronous loaders."""
 
+from __future__ import annotations
 
-"""Cache warming functionality - V2 feature placeholder."""
-
-import logging
+from collections.abc import Awaitable, Callable, Iterable
 from typing import Any
 
-
-logger = logging.getLogger(__name__)
+from .persistent_cache import PersistentCacheManager
 
 
 class CacheWarmer:
-    """Cache warming strategies - To be implemented in V2.
+    """Warm cache entries by invoking asynchronous loader callbacks."""
 
-    V2 Features:
-    - Track query frequency in Redis sorted sets
-    - Periodic background tasks to warm popular queries
-    - Smart warming based on usage patterns
-    - Configurable warming schedules
-    - Integration with embedding and search services
-    """
+    def __init__(self, cache_manager: PersistentCacheManager) -> None:
+        """Store cache manager reference for warming operations."""
 
-    def __init__(self, cache_manager: Any):
-        """Initialize cache warmer (V2 placeholder)."""
         self.cache_manager = cache_manager
-        logger.info("Cache warming is a V2 feature - not implemented yet")
 
-    async def track_query(self, query: str, cache_type: str) -> None:
-        """Track query frequency (V2 placeholder)."""
-        # V2: Increment query count in Redis sorted set
+    async def warm_key(
+        self,
+        key: str,
+        loader: Callable[[], Awaitable[Any]],
+        *,
+        ttl: int | None = None,
+    ) -> bool:
+        """Populate a single key using ``loader`` if it is missing."""
 
-    async def warm_popular_queries(self, top_n: int = 100) -> int:
-        """Warm top N popular queries (V2 placeholder)."""
-        # V2: Get top queries from Redis
-        # V2: Generate embeddings/results for each
-        # V2: Store in cache
-        return 0
+        return await self.cache_manager.warm_one_key(key, loader, ttl_seconds=ttl)
 
-    async def get_popular_queries(self, cache_type: str, limit: int = 10) -> list[str]:
-        """Get most popular queries (V2 placeholder)."""
-        # V2: Return top queries from Redis sorted set
-        return []
+    async def warm_batch(
+        self,
+        items: Iterable[tuple[str, Callable[[], Awaitable[Any]], int | None]],
+    ) -> int:
+        """Warm multiple keys sequentially.
+
+        Args:
+            items: Iterable of ``(key, loader, ttl)`` tuples.
+
+        Returns:
+            Number of keys populated by this call.
+        """
+
+        populated = 0
+        for key, loader, ttl in items:
+            if await self.warm_key(key, loader, ttl=ttl):
+                populated += 1
+        return populated

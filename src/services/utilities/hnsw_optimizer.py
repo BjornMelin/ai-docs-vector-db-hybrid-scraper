@@ -24,8 +24,8 @@ class HNSWOptimizer(BaseService):
         Args:
             config: Unified configuration
             qdrant_service: QdrantService instance
-
         """
+
         super().__init__(config)
         self.config = config
         self.qdrant_service = qdrant_service
@@ -71,15 +71,17 @@ class HNSWOptimizer(BaseService):
 
         Returns:
             Search results with optimal ef value used
-
         """
+
         cache_key = f"{collection_name}:{time_budget_ms}:{min_ef}:{max_ef}"
 
         # Check cache for similar queries
         if cache_key in self.adaptive_ef_cache:
             cached_ef = self.adaptive_ef_cache[cache_key]["optimal_ef"]
             self.logger.debug(
-                f"Using cached optimal EF {cached_ef} for collection {collection_name}"
+                "Using cached optimal EF %d for collection %s",
+                cached_ef,
+                collection_name,
             )
 
             # Use cached ef directly
@@ -113,7 +115,9 @@ class HNSWOptimizer(BaseService):
         ef_values_tested = []
 
         self.logger.debug(
-            f"Starting adaptive EF for {collection_name} with budget {time_budget_ms}ms"
+            "Starting adaptive EF for %s with budget %dms",
+            collection_name,
+            time_budget_ms,
         )
 
         while current_ef <= max_ef:
@@ -135,9 +139,7 @@ class HNSWOptimizer(BaseService):
                 search_times.append(search_time_ms)
                 ef_values_tested.append(current_ef)
 
-                self.logger.debug(
-                    f"EF {current_ef}: {search_time_ms:.1f}ms"
-                )  # TODO: Convert f-string to logging format
+                self.logger.debug("EF %d: %.1fms", current_ef, search_time_ms)
 
                 # Update best results
                 best_ef = current_ef
@@ -147,8 +149,8 @@ class HNSWOptimizer(BaseService):
                 if search_time_ms >= time_budget_ms * 0.8:
                     # Close to budget limit, stop here
                     self.logger.debug(
-                        f"Stopping at EF {current_ef} due to time budget"
-                    )  # TODO: Convert f-string to logging format
+                        "Stopping at EF %d due to time budget", current_ef
+                    )
                     break
                 if search_time_ms < time_budget_ms * 0.5:
                     # Well within budget, try higher ef
@@ -158,9 +160,7 @@ class HNSWOptimizer(BaseService):
                     current_ef = min(current_ef + (step_size // 2), max_ef)
 
             except (ValueError, TypeError, UnicodeDecodeError) as e:
-                self.logger.warning(
-                    f"Search failed at EF {current_ef}: {e}"
-                )  # TODO: Convert f-string to logging format
+                self.logger.warning("Search failed at EF %d: %s", current_ef, e)
                 break
 
         final_search_time = search_times[-1] if search_times else 0
@@ -207,8 +207,8 @@ class HNSWOptimizer(BaseService):
 
         Returns:
             HNSW configuration dictionary
-
         """
+
         # Collection-specific optimization profiles
         configs = {
             "api_reference": {
@@ -280,11 +280,12 @@ class HNSWOptimizer(BaseService):
 
         Returns:
             Optimization results and recommendations
-
         """
+
         self.logger.info(
-            f"Optimizing HNSW parameters for collection {collection_name} "
-            f"(type: {collection_type})"
+            "Optimizing HNSW parameters for collection %s (type: %s)",
+            collection_name,
+            collection_type,
         )
 
         # Get recommended configuration
@@ -318,7 +319,7 @@ class HNSWOptimizer(BaseService):
 
         if needs_update:
             self.logger.info(
-                f"Collection {collection_name} would benefit from HNSW optimization"
+                "Collection %s would benefit from HNSW optimization", collection_name
             )
             optimization_result["update_recommendation"] = {
                 "action": "recreate_collection",
@@ -329,7 +330,7 @@ class HNSWOptimizer(BaseService):
             }
         else:
             self.logger.info(
-                f"Collection {collection_name} already has optimal HNSW configuration"
+                "Collection %s already has optimal HNSW configuration", collection_name
             )
             optimization_result["update_recommendation"] = {
                 "action": "no_update_needed",
@@ -348,8 +349,8 @@ class HNSWOptimizer(BaseService):
 
         Returns:
             Current HNSW configuration
-
         """
+
         try:
             # Access vector configuration
             vectors_config = collection_info.config.params.vectors
@@ -365,9 +366,7 @@ class HNSWOptimizer(BaseService):
                         ),
                     }
         except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
-            self.logger.debug(
-                f"Could not extract HNSW config: {e}"
-            )  # TODO: Convert f-string to logging format
+            self.logger.debug("Could not extract HNSW config: %s", e)
 
         # Return defaults if extraction fails
         return {
@@ -387,8 +386,8 @@ class HNSWOptimizer(BaseService):
 
         Returns:
             True if update is recommended
-
         """
+
         # Check significant differences
         m_diff = abs(current.get("m", 16) - recommended.get("m", 16))
         ef_construct_diff = abs(
@@ -409,8 +408,8 @@ class HNSWOptimizer(BaseService):
 
         Returns:
             Estimated improvements
-
         """
+
         current_m = current.get("m", 16)
         current_ef = current.get("ef_construct", 128)
         recommended_m = recommended.get("m", 16)
@@ -464,8 +463,8 @@ class HNSWOptimizer(BaseService):
 
         Returns:
             Performance metrics
-
         """
+
         search_times = []
 
         for query_vector in test_queries[:10]:  # Limit to 10 queries for performance
@@ -487,9 +486,7 @@ class HNSWOptimizer(BaseService):
                 search_times.append(search_time_ms)
 
             except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
-                self.logger.warning(
-                    f"Performance test query failed: {e}"
-                )  # TODO: Convert f-string to logging format
+                self.logger.warning("Performance test query failed: %s", e)
                 continue
 
         if search_times:
@@ -512,8 +509,8 @@ class HNSWOptimizer(BaseService):
 
         Returns:
             Cache statistics
-
         """
+
         return {
             "adaptive_ef_cache_size": len(self.adaptive_ef_cache),
             "performance_cache_size": len(self.performance_cache),

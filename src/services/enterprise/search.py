@@ -4,44 +4,30 @@ Full-featured search service with all advanced capabilities for enterprise deplo
 and portfolio demonstrations.
 """
 
-import asyncio
 import logging
 import time
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from src.architecture.service_factory import BaseService
 from src.models.requests import SearchRequest
 from src.models.vector_search import SearchResponse
+from src.services.vector_db.service import VectorStoreService
 
 
 # Optional imports for enterprise features
 try:
-    from src.services.analytics.search_analytics import SearchAnalyticsService
-    from src.services.embeddings.manager import EmbeddingManager
     from src.services.monitoring.metrics import MetricsCollector
     from src.services.query_processing.expansion import QueryExpansionService
     from src.services.query_processing.ranking import RankingService
-    from src.services.search.personalization import PersonalizationService
-    from src.services.vector_db.hybrid_search import HybridSearchService
-    from src.services.vector_db.service import VectorDBService
 except ImportError:
-    VectorDBService = None
-    HybridSearchService = None
-    RankingService = None
     QueryExpansionService = None
-    PersonalizationService = None
+    RankingService = None
     SearchAnalyticsService = None
     MetricsCollector = None
-    EmbeddingManager = None
 
 
 logger = logging.getLogger(__name__)
-
-
-def _raise_hybrid_search_service_not_available() -> None:
-    """Raise ImportError for HybridSearchService not available."""
-    msg = "HybridSearchService not available"
-    raise ImportError(msg)
 
 
 def _raise_ranking_service_not_available() -> None:
@@ -62,7 +48,7 @@ def _raise_metrics_collector_not_available() -> None:
     raise ImportError(msg)
 
 
-class EnterpriseSearchService(BaseService):
+class EnterpriseSearchService(BaseService):  # pylint: disable=too-many-instance-attributes
     """Full-featured search service for enterprise deployments.
 
     Features:
@@ -84,6 +70,10 @@ class EnterpriseSearchService(BaseService):
         self.enable_ab_testing = True
         self._search_metrics: dict[str, Any] = {}
         self._query_cache: dict[str, Any] = {}
+        self.vector_store: VectorStoreService | None = None
+        self.reranker = None
+        self.query_expander = None
+        self.metrics_collector = None
 
     async def initialize(self) -> None:
         """Initialize the enterprise search service."""
@@ -108,8 +98,9 @@ class EnterpriseSearchService(BaseService):
     async def cleanup(self) -> None:
         """Clean up search service resources."""
         # Clean up all components
-        if hasattr(self, "vector_db"):
-            await self.vector_db.cleanup()
+        if self.vector_store:
+            await self.vector_store.cleanup()
+            self.vector_store = None
         if hasattr(self, "reranker"):
             await self.reranker.cleanup()
         if hasattr(self, "query_expander"):
@@ -196,8 +187,7 @@ class EnterpriseSearchService(BaseService):
                 error=str(e),
             )
 
-        else:
-            return response
+        return response
 
     async def hybrid_search(
         self, request: SearchRequest, expanded_query: str | None = None
@@ -205,25 +195,29 @@ class EnterpriseSearchService(BaseService):
         """Perform hybrid vector + keyword search."""
         query = expanded_query or request.query
 
-        # Perform parallel vector and keyword searches
-        vector_task = self._perform_vector_search(request, query)
-        keyword_task = self._perform_keyword_search(request, query)
+        vector_store = self._require_vector_store()
+        collection = self._resolve_collection(request)
 
-        vector_results, keyword_results = await asyncio.gather(
-            vector_task, keyword_task, return_exceptions=True
-        )
+        try:
+            hybrid_matches = await vector_store.hybrid_search(
+                collection,
+                query,
+                sparse_vector=None,
+                limit=request.limit,
+            )
+        except Exception as exc:  # pragma: no cover - defensive log
+            logger.warning(
+                "Hybrid search failed (%s); falling back to dense search", exc
+            )
+            hybrid_matches = await vector_store.search_documents(
+                collection,
+                query,
+                limit=request.limit,
+            )
 
-        # Handle exceptions
-        if isinstance(vector_results, Exception):
-            logger.error("Vector search failed: %s", vector_results)
-            vector_results = []
-        if isinstance(keyword_results, Exception):
-            logger.error("Keyword search failed: %s", keyword_results)
-            keyword_results = []
-
-        # Fusion ranking (simplified)
+        vector_results = self._normalize_vector_matches(hybrid_matches)
+        keyword_results = await self._perform_keyword_search(request, query)
         fused_results = await self._fusion_rank(vector_results, keyword_results)
-
         return fused_results[: request.limit]
 
     async def expand_query(self, query: str) -> str:
@@ -240,10 +234,8 @@ class EnterpriseSearchService(BaseService):
 
         except Exception:
             logger.exception("Query expansion failed")
-            return query
 
-        else:
-            return query  # Would implement actual expansion logic
+        return query  # Would implement actual expansion logic
 
     async def rerank_results(
         self, results: list[dict[str, Any]], query: str
@@ -266,27 +258,27 @@ class EnterpriseSearchService(BaseService):
 
     async def _initialize_vector_search(self) -> None:
         """Initialize vector search components."""
-        if VectorDBService is None:
-            logger.warning("VectorDBService not available")
+        if self.vector_store:
             return
 
-        self.vector_db = VectorDBService()
-        await self.vector_db.initialize()
+        try:
+            self.vector_store = VectorStoreService()
+            await self.vector_store.initialize()
+        except Exception:  # pragma: no cover - defensive path
+            logger.exception("Failed to initialize vector store service")
+            self.vector_store = None
+            self.enable_hybrid_search = False
 
     async def _initialize_hybrid_search(self) -> None:
         """Initialize hybrid search components."""
-        if self.enable_hybrid_search:
-            try:
-                if HybridSearchService is None:
-                    _raise_hybrid_search_service_not_available()
+        if not self.enable_hybrid_search:
+            return
 
-                self.hybrid_searcher = HybridSearchService()
-                await self.hybrid_searcher.initialize()
-            except ImportError:
-                logger.warning(
-                    "Hybrid search not available, falling back to vector search"
-                )
-                self.enable_hybrid_search = False
+        if self.vector_store is None:
+            logger.warning(
+                "Vector store unavailable; disabling hybrid search capabilities"
+            )
+            self.enable_hybrid_search = False
 
     async def _initialize_reranking(self) -> None:
         """Initialize reranking components."""
@@ -337,19 +329,49 @@ class EnterpriseSearchService(BaseService):
         self, request: SearchRequest, query: str
     ) -> list[dict[str, Any]]:
         """Perform vector search."""
-        if EmbeddingManager is None:
-            msg = "EmbeddingManager not available"
-            raise ImportError(msg)
-
-        embedding_manager = EmbeddingManager()
-        embedding_result = await embedding_manager.generate_embeddings([query])
-        query_embedding = embedding_result["embeddings"][0]
-
-        return await self.vector_db.search(
-            query_vector=query_embedding,
+        vector_store = self._require_vector_store()
+        collection = self._resolve_collection(request)
+        matches = await vector_store.search_documents(
+            collection,
+            query,
             limit=request.limit,
-            collection_name=request.collection_name,
         )
+        return self._normalize_vector_matches(matches)
+
+    def _require_vector_store(self) -> VectorStoreService:
+        """Return the initialized vector store service."""
+
+        if self.vector_store is None:
+            msg = "VectorStoreService is not initialized"
+            raise RuntimeError(msg)
+        return self.vector_store
+
+    @staticmethod
+    def _resolve_collection(request: SearchRequest) -> str:
+        """Resolve the target collection for a search request."""
+
+        return request.collection_name or "documents"
+
+    @staticmethod
+    def _normalize_vector_matches(
+        matches: Sequence[Any],
+    ) -> list[dict[str, Any]]:
+        """Convert vector matches into plain dictionaries."""
+
+        normalized: list[dict[str, Any]] = []
+        for match in matches:
+            if isinstance(match, Mapping):
+                payload = dict(match.get("payload", {}) or {})
+                payload.setdefault("id", match.get("id"))
+                payload.setdefault("score", match.get("score", 0.0))
+                normalized.append(payload)
+                continue
+
+            payload = dict(getattr(match, "payload", {}) or {})
+            payload.setdefault("id", getattr(match, "id", None))
+            payload.setdefault("score", getattr(match, "score", 0.0))
+            normalized.append(payload)
+        return normalized
 
     async def _perform_keyword_search(
         self, _request: SearchRequest, _query: str

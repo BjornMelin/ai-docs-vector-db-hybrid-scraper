@@ -1,1104 +1,883 @@
-"""Unified QdrantService facade that delegates to focused modules.
+"""Vector store service backed by the Qdrant adapter."""
 
-This module provides a clean facade over the modularized Qdrant functionality,
-using the centralized ClientManager for all client operations.
-"""
+from __future__ import annotations
 
 import logging
+import statistics
+import time
+from collections.abc import Iterable, Mapping, Sequence
+from datetime import UTC, datetime
+from enum import Enum
 from typing import TYPE_CHECKING, Any
+from uuid import uuid4
 
-from src.config import Config
+from qdrant_client import models
+
+from src.config import get_config
+from src.config.models import QueryProcessingConfig, ScoreNormalizationStrategy
 from src.services.base import BaseService
-from src.services.errors import QdrantServiceError
+from src.services.embeddings.base import EmbeddingProvider
+from src.services.embeddings.fastembed_provider import FastEmbedProvider
+from src.services.errors import EmbeddingServiceError
+from src.services.monitoring.metrics import get_metrics_registry
 
-from .collections import QdrantCollections
-from .documents import QdrantDocuments
-from .indexing import QdrantIndexing
-from .search import QdrantSearch
+from .adapter import QdrantVectorAdapter
+from .adapter_base import CollectionSchema, TextDocument, VectorMatch, VectorRecord
+from .payload_schema import (
+    CanonicalPayload,
+    PayloadValidationError,
+    ensure_canonical_payload,
+)
 
-
-# Removed search interceptor (over-engineered deployment infrastructure)
 
 if TYPE_CHECKING:
     from src.infrastructure.client_manager import ClientManager
 
+
 logger = logging.getLogger(__name__)
 
 
-class QdrantService(BaseService):
-    """Enterprise-grade Qdrant vector database service with advanced search
-    capabilities.
+class VectorStoreService(BaseService):  # pylint: disable=too-many-public-methods
+    """High-level vector store operations built on top of Qdrant."""
 
-    This service provides a unified interface to Qdrant vector database operations with
-    sophisticated search algorithms, deployment infrastructure, and performance
-    optimization:
+    def __init__(
+        self,
+        config=None,
+        client_manager: ClientManager | None = None,
+        embeddings_provider: EmbeddingProvider | None = None,
+    ) -> None:
+        """Initialize the VectorStoreService."""
 
-    - **Hybrid Search**: Dense + sparse vector fusion with configurable algorithms
-      (RRF, DBSF)
-    - **Multi-Stage Retrieval**: Advanced retrieval strategies with weighted fusion
-    - **HyDE Search**: Hypothetical Document Embeddings for enhanced semantic matching
-    - **Enterprise Deployment**: A/B testing, blue-green deployment, canary releases
-    - **Performance Optimization**: HNSW tuning, quantization, payload indexing
-    - **Modular Architecture**: Focused modules for collections, search, indexing,
-      documents
+        config = config or get_config()
+        if client_manager is None:
+            from src.infrastructure.client_manager import (  # pylint: disable=import-outside-toplevel
+                ClientManager as _ClientManager,
+            )
 
-    The service automatically routes requests through deployment infrastructure when
-    enabled,
-    supporting enterprise features like feature flags, A/B testing, and canary
-    deployments
-    for production-grade vector search systems.
-    """
+            client_manager = _ClientManager()
+        if embeddings_provider is None:
+            model_name = getattr(config.fastembed, "model", "BAAI/bge-small-en-v1.5")
+            embeddings_provider = FastEmbedProvider(model_name=model_name)
 
-    def __init__(self, config: Config, client_manager: "ClientManager"):
-        """Initialize Qdrant service with modular components.
-
-        Args:
-            config: Unified configuration
-            client_manager: ClientManager instance for dependency injection
-
-        """
         super().__init__(config)
-        self.config: Config = config
         self._client_manager = client_manager
-
-        # Initialize focused modules (will be set after client initialization)
-        self._collections: QdrantCollections | None = None
-        self._search: QdrantSearch | None = None
-        self._indexing: QdrantIndexing | None = None
-        self._documents: QdrantDocuments | None = None
-
-        # Enterprise deployment infrastructure components (feature flag controlled)
-        self._feature_flag_manager = None
-        self._ab_testing_manager = None
-        self._blue_green_deployment = None
-        self._canary_deployment = None
+        self._embeddings = embeddings_provider
+        self._adapter: QdrantVectorAdapter | None = None
 
     async def initialize(self) -> None:
-        """Initialize all Qdrant modules with connection validation.
+        """Initialize the service and its dependencies."""
 
-        Raises:
-            QdrantServiceError: If initialization fails
-
-        """
-        if self._initialized:
+        if self.is_initialized():
             return
-
-        try:
-            client = await self._client_manager.get_qdrant_client()
-        except Exception as e:
-            self._initialized = False
-            msg = f"Failed to get Qdrant client: {e}"
-            raise QdrantServiceError(msg) from e
-
-        try:
-            self._initialize_qdrant_modules(client)
-        except Exception as e:
-            self._initialized = False
-            msg = f"Failed to initialize Qdrant modules: {e}"
-            raise QdrantServiceError(msg) from e
-
-        try:
-            await self._collections.initialize()
-        except Exception as e:
-            self._initialized = False
-            msg = f"Failed to initialize collections: {e}"
-            raise QdrantServiceError(msg) from e
-
-        try:
-            await self._initialize_deployment_services()
-        except (AttributeError, ConnectionError, ValueError, RuntimeError) as e:
-            logger.warning("Failed to initialize deployment services: %s", e)
-            # Don't fail initialization for optional deployment services
-
-        self._initialized = True
-        logger.info("QdrantService initialized with modular architecture")
-
-    def _initialize_qdrant_modules(self, client) -> None:
-        """Initialize all Qdrant modules with the shared client."""
-        self._collections = QdrantCollections(self.config, client)
-        self._search = QdrantSearch(client, self.config)
-        self._indexing = QdrantIndexing(client, self.config)
-        self._documents = QdrantDocuments(client, self.config)
-
-    async def _initialize_deployment_services(self) -> None:
-        """Initialize deployment services based on configuration and feature flags.
-
-        Conditionally initializes enterprise deployment services:
-        - Feature flag management
-        - A/B testing manager
-        - Blue-green deployment
-        - Canary deployment
-
-        Services are only initialized if enabled in configuration.
-        """
-        try:
-            await self._initialize_feature_flag_manager()
-        except (AttributeError, ConnectionError, ValueError, RuntimeError) as e:
-            logger.warning("Failed to initialize feature flag manager: %s", e)
-
-        try:
-            await self._initialize_ab_testing_manager()
-        except (AttributeError, ConnectionError, ValueError, RuntimeError) as e:
-            logger.warning("Failed to initialize A/B testing manager: %s", e)
-
-        try:
-            await self._initialize_deployment_routing()
-        except (AttributeError, ConnectionError, ValueError, RuntimeError) as e:
-            logger.warning("Failed to initialize deployment routing: %s", e)
-
-    async def _initialize_feature_flag_manager(self) -> None:
-        """Initialize feature flag manager if enabled."""
-        if not self.config.deployment.enable_feature_flags:
-            return
-
-        self._feature_flag_manager = (
-            await self._client_manager.get_feature_flag_manager()
-        )
-        logger.info("Initialized FeatureFlagManager for QdrantService")
-
-    async def _initialize_ab_testing_manager(self) -> None:
-        """Initialize A/B testing manager if enabled."""
-        if not self.config.deployment.enable_ab_testing:
-            return
-
-        self._ab_testing_manager = await self._client_manager.get_ab_testing_manager()
-        if self._ab_testing_manager:
-            logger.info("Initialized ABTestingManager for QdrantService")
-
-    async def _initialize_deployment_routing(self) -> None:
-        """Initialize deployment routing services if any are enabled."""
-        if not (
-            self.config.deployment.enable_blue_green
-            or self.config.deployment.enable_canary
-            or self.config.deployment.enable_ab_testing
-        ):
-            return
-
-        # Get deployment services and store references
-        blue_green = await self._client_manager.get_blue_green_deployment()
-        canary = await self._client_manager.get_canary_deployment()
-
-        # Store deployment services for routing decisions
-        self._blue_green_deployment = blue_green
-        self._canary_deployment = canary
-
-        logger.info("Initialized deployment services for QdrantService routing")
+        await self._client_manager.initialize()
+        client = await self._client_manager.get_qdrant_client()
+        self._adapter = QdrantVectorAdapter(client)
+        await self._embeddings.initialize()
+        self._mark_initialized()
 
     async def cleanup(self) -> None:
-        """Cleanup all Qdrant modules (delegated to ClientManager)."""
-        if self._collections:
-            await self._collections.cleanup()
-
-        # Note: ClientManager handles client cleanup, we just reset our references
-        self._collections = None
-        self._search = None
-        self._indexing = None
-        self._documents = None
-
-        # Reset deployment service references
-        self._feature_flag_manager = None
-        self._ab_testing_manager = None
-        self._blue_green_deployment = None
-        self._canary_deployment = None
-
-        self._initialized = False
-        logger.info("QdrantService cleanup completed")
-
-    # Collection Management API (delegates to QdrantCollections)
-
-    async def create_collection(
-        self,
-        collection_name: str,
-        vector_size: int,
-        distance: str = "Cosine",
-        sparse_vector_name: str | None = None,
-        enable_quantization: bool = True,
-        collection_type: str = "general",
-    ) -> bool:
-        """Create vector collection with optional quantization and sparse vectors.
-
-        Args:
-            collection_name: Name of the collection to create
-            vector_size: Dimension of the vectors to be stored
-            distance: Distance metric for similarity search (Cosine, Euclid, Dot)
-            sparse_vector_name: Optional name for sparse vector field
-            enable_quantization: Whether to enable vector quantization for storage
-                efficiency
-            collection_type: Type of collection for specialized configurations
-
-        Returns:
-            bool: True if collection created successfully
-
-        Raises:
-            QdrantServiceError: If collection creation fails
-
-        """
-        self._validate_initialized()
-
-        # Create the collection first
-        result = await self._collections.create_collection(
-            collection_name=collection_name,
-            vector_size=vector_size,
-            distance=distance,
-            sparse_vector_name=sparse_vector_name,
-            enable_quantization=enable_quantization,
-            collection_type=collection_type,
-        )
-
-        # Create payload indexes for optimal performance
-        if result:
-            try:
-                await self._indexing.create_payload_indexes(collection_name)
-                logger.info(
-                    "Payload indexes created for collection: %s", collection_name
-                )
-            except (ConnectionError, ValueError, AttributeError, RuntimeError) as e:
-                logger.warning(
-                    "Failed to create payload indexes for %s: %s. "
-                    "Collection created successfully but filtering may be slower.",
-                    collection_name,
-                    e,
-                )
-
-        return result
-
-    async def delete_collection(self, collection_name: str) -> bool:
-        """Delete a collection.
-
-        Args:
-            collection_name: Name of the collection to delete
-
-        Returns:
-            bool: True if collection deleted successfully
-
-        Raises:
-            QdrantServiceError: If collection deletion fails
-
-        """
-        self._validate_initialized()
-        return await self._collections.delete_collection(collection_name)
-
-    async def list_collections(self) -> list[str]:
-        """List all collection names.
-
-        Returns:
-            list[str]: List of collection names in the database
-
-        Raises:
-            QdrantServiceError: If listing collections fails
-
-        """
-        self._validate_initialized()
-        return await self._collections.list_collections()
-
-    async def list_collections_details(self) -> list[dict[str, object]]:
-        """List all collections with detailed information.
-
-        Returns:
-            list[dict[str, object]]: List of collection details including:
-                - name: Collection name
-                - vectors_count: Number of vectors
-                - indexed_vectors_count: Number of indexed vectors
-                - config: Collection configuration
-
-        Raises:
-            QdrantServiceError: If listing collection details fails
-
-        """
-        self._validate_initialized()
-        return await self._collections.list_collections_details()
-
-    async def get_collection_info(self, collection_name: str) -> dict[str, object]:
-        """Get collection information.
-
-        Args:
-            collection_name: Name of the collection to inspect
-
-        Returns:
-            dict[str, object]: Collection information including:
-                - status: Collection status
-                - vectors_count: Number of vectors
-                - indexed_vectors_count: Number of indexed vectors
-                - config: Collection configuration
-                - optimizer_status: HNSW optimizer status
-
-        Raises:
-            QdrantServiceError: If getting collection info fails
-
-        """
-        self._validate_initialized()
-        return await self._collections.get_collection_info(collection_name)
-
-    async def trigger_collection_optimization(self, collection_name: str) -> bool:
-        """Trigger optimization for a collection.
-
-        Args:
-            collection_name: Name of the collection to optimize
-
-        Returns:
-            bool: True if optimization triggered successfully
-
-        Raises:
-            QdrantServiceError: If optimization trigger fails
-
-        """
-        self._validate_initialized()
-        return await self._collections.trigger_collection_optimization(collection_name)
-
-    # Search API (delegates to QdrantSearch)
-
-    async def search(
-        self,
-        collection_name: str,
-        query_vector: list[float],
-        limit: int = 10,
-        filter_conditions: dict[str, Any] | None = None,
-        score_threshold: float | None = None,
-    ) -> list[dict[str, Any]]:
-        """Basic vector search method.
-
-        Args:
-            collection_name: Name of the collection to search
-            query_vector: Query vector for similarity search
-            limit: Maximum number of results
-            filter_conditions: Optional filter conditions
-            score_threshold: Optional score threshold
-
-        Returns:
-            List of search results
-
-        Raises:
-            QdrantServiceError: If search fails
-
-        """
-        if not self._search:
-            msg = "Search module not initialized"
-            raise QdrantServiceError(msg)
-
-        # Use filtered search if we have filter conditions, otherwise hybrid search
-        if filter_conditions:
-            return await self.filtered_search(
-                collection_name=collection_name,
-                query_vector=query_vector,
-                limit=limit,
-                filter_conditions=filter_conditions,
-                score_threshold=score_threshold,
-            )
-        # Use hybrid search as the default search method
-        return await self.hybrid_search(
-            collection_name=collection_name,
-            query_vector=query_vector,
-            limit=limit,
-            score_threshold=score_threshold or 0.0,
-        )
-
-    async def hybrid_search(
-        self,
-        collection_name: str,
-        query_vector: list[float],
-        sparse_vector: dict[int, float] | None = None,
-        limit: int = 10,
-        score_threshold: float = 0.0,
-        fusion_type: str = "rrf",
-        search_accuracy: str = "balanced",
-        user_id: str | None = None,
-        request_id: str | None = None,
-    ) -> list[dict[str, object]]:
-        """Perform hybrid search combining dense and sparse vectors.
-
-        Args:
-            collection_name: Name of the collection to search
-            query_vector: Dense query vector for similarity search
-            sparse_vector: Optional sparse vector for keyword matching
-            limit: Maximum number of results to return
-            score_threshold: Minimum score threshold for results
-            fusion_type: Fusion algorithm ("rrf" or "dbsf")
-            search_accuracy: Accuracy level ("balanced", "fast", "accurate")
-            user_id: Optional user ID for canary routing consistency
-            request_id: Optional request ID for canary metrics tracking
-
-        Returns:
-            list[dict[str, object]]: Search results with score and payload
-
-        Raises:
-            QdrantServiceError: If search fails
-
-        """
-        self._validate_initialized()
-
-        # Enterprise deployment routing: A/B testing and canary deployments
-        # This enables sophisticated production deployment strategies
-        # with gradual rollouts
-        if self._ab_testing_manager and user_id:
-            # Check for active A/B tests and route users to test variants
-            # This allows testing different search parameters and algorithms
-            variant = await self._ab_testing_manager.assign_user_to_variant(
-                test_id="hybrid_search_test", user_id=user_id
-            )
-            if variant and variant == "variant":
-                # Apply variant-specific search parameters for A/B testing
-                # Example: use higher accuracy for variant group to measure impact
-                search_accuracy = "accurate"
-
-        # Canary deployment routing for gradual rollout of search improvements
-        # Routes a percentage of users to the new version for safety validation
-        if self._canary_deployment and user_id:
-            canary_assignment = await self._canary_deployment.should_route_to_canary(
-                user_id
-            )
-            if canary_assignment:
-                # Route to canary version with enhanced monitoring and metrics
-                # This enables safe deployment of search algorithm changes
-                logger.debug(
-                    "Routing user %s to canary deployment for hybrid search", user_id
-                )
-
-        # Execute search with deployment tracking
-        result = await self._search.hybrid_search(
-            collection_name=collection_name,
-            query_vector=query_vector,
-            sparse_vector=sparse_vector,
-            limit=limit,
-            score_threshold=score_threshold,
-            fusion_type=fusion_type,
-            search_accuracy=search_accuracy,
-        )
-
-        # Track metrics for deployment monitoring
-        if self._ab_testing_manager and request_id:
-            await self._ab_testing_manager.track_conversion(
-                test_id="hybrid_search_test",
-                user_id=user_id or "anonymous",
-                event_type="search_executed",
-                request_id=request_id,
-            )
-
-        return result
-
-    async def multi_stage_search(
-        self,
-        collection_name: str,
-        stages: list[dict[str, object]],
-        limit: int = 10,
-        fusion_algorithm: str = "rrf",
-        search_accuracy: str = "balanced",
-        user_id: str | None = None,
-        request_id: str | None = None,
-    ) -> list[dict[str, object]]:
-        """Perform multi-stage retrieval with different strategies.
-
-        Args:
-            collection_name: Name of the collection to search
-            stages: List of search stage configurations, each containing:
-                - query_vector: Vector for this stage
-                - filters: Optional filters for this stage
-                - weight: Weight for this stage in fusion
-            limit: Maximum number of results to return
-            fusion_algorithm: Algorithm for combining results ("rrf" or "dbsf")
-            search_accuracy: Accuracy level ("balanced", "fast", "accurate")
-            user_id: Optional user ID for canary routing consistency
-            request_id: Optional request ID for canary metrics tracking
-
-        Returns:
-            list[dict[str, object]]: Fused search results
-
-        Raises:
-            QdrantServiceError: If multi-stage search fails
-
-        """
-        self._validate_initialized()
-
-        # Route search through deployment infrastructure if enabled
-        if self._ab_testing_manager and user_id:
-            # Check for active A/B tests
-            variant = await self._ab_testing_manager.assign_user_to_variant(
-                test_id="multi_stage_search_test", user_id=user_id
-            )
-            if variant and variant == "variant":
-                # Modify stages for A/B testing (e.g., add additional stage)
-                search_accuracy = "accurate"
-
-        # Check canary deployment routing
-        if self._canary_deployment and user_id:
-            canary_assignment = await self._canary_deployment.should_route_to_canary(
-                user_id
-            )
-            if canary_assignment:
-                logger.debug(
-                    "Routing user %s to canary deployment for multi-stage search",
-                    user_id,
-                )
-
-        # Execute search with deployment tracking
-        result = await self._search.multi_stage_search(
-            collection_name=collection_name,
-            stages=stages,
-            limit=limit,
-            fusion_algorithm=fusion_algorithm,
-            search_accuracy=search_accuracy,
-        )
-
-        # Track metrics for deployment monitoring
-        if self._ab_testing_manager and request_id:
-            await self._ab_testing_manager.track_conversion(
-                test_id="multi_stage_search_test",
-                user_id=user_id or "anonymous",
-                event_type="search_executed",
-                request_id=request_id,
-            )
-
-        return result
-
-    async def hyde_search(
-        self,
-        collection_name: str,
-        query: str,
-        query_embedding: list[float],
-        hypothetical_embeddings: list[list[float]],
-        limit: int = 10,
-        fusion_algorithm: str = "rrf",
-        search_accuracy: str = "balanced",
-        user_id: str | None = None,
-        request_id: str | None = None,
-    ) -> list[dict[str, object]]:
-        """Search using HyDE (Hypothetical Document Embeddings).
-
-        Args:
-            collection_name: Name of the collection to search
-            query: Original search query text
-            query_embedding: Embedding of the original query
-            hypothetical_embeddings: List of embeddings from hypothetical documents
-            limit: Maximum number of results to return
-            fusion_algorithm: Algorithm for combining results ("rrf" or "dbsf")
-            search_accuracy: Accuracy level ("balanced", "fast", "accurate")
-            user_id: Optional user ID for canary routing consistency
-            request_id: Optional request ID for canary metrics tracking
-
-        Returns:
-            list[dict[str, object]]: Search results combining query and hypothetical
-                matches
-
-        Raises:
-            QdrantServiceError: If HyDE search fails
-
-        """
-        self._validate_initialized()
-
-        # Route search through deployment infrastructure if enabled
-        if self._ab_testing_manager and user_id:
-            # Check for active A/B tests
-            variant = await self._ab_testing_manager.assign_user_to_variant(
-                test_id="hyde_search_test", user_id=user_id
-            )
-            if variant and variant == "variant":
-                # Modify HyDE parameters for A/B testing
-                search_accuracy = "accurate"
-
-        # Check canary deployment routing
-        if self._canary_deployment and user_id:
-            canary_assignment = await self._canary_deployment.should_route_to_canary(
-                user_id
-            )
-            if canary_assignment:
-                logger.debug(
-                    "Routing user %s to canary deployment for HyDE search", user_id
-                )
-
-        # Execute search with deployment tracking
-        result = await self._search.hyde_search(
-            collection_name=collection_name,
-            query=query,
-            query_embedding=query_embedding,
-            hypothetical_embeddings=hypothetical_embeddings,
-            limit=limit,
-            fusion_algorithm=fusion_algorithm,
-            search_accuracy=search_accuracy,
-        )
-
-        # Track metrics for deployment monitoring
-        if self._ab_testing_manager and request_id:
-            await self._ab_testing_manager.track_conversion(
-                test_id="hyde_search_test",
-                user_id=user_id or "anonymous",
-                event_type="search_executed",
-                request_id=request_id,
-            )
-
-        return result
-
-    async def filtered_search(
-        self,
-        collection_name: str,
-        query_vector: list[float],
-        filters: dict[str, object],
-        limit: int = 10,
-        search_accuracy: str = "balanced",
-        user_id: str | None = None,
-        request_id: str | None = None,
-    ) -> list[dict[str, object]]:
-        """Optimized filtered search using indexed payload fields.
-
-        Args:
-            collection_name: Name of the collection to search
-            query_vector: Query vector for similarity search
-            filters: Filter conditions for payload fields (e.g., {"key": "value"})
-            limit: Maximum number of results to return
-            search_accuracy: Accuracy level ("balanced", "fast", "accurate")
-            user_id: Optional user ID for canary routing consistency
-            request_id: Optional request ID for canary metrics tracking
-
-        Returns:
-            list[dict[str, object]]: Filtered search results
-
-        Raises:
-            QdrantServiceError: If filtered search fails
-
-        """
-        self._validate_initialized()
-
-        # Route search through deployment infrastructure if enabled
-        if self._ab_testing_manager and user_id:
-            # Check for active A/B tests
-            variant = await self._ab_testing_manager.assign_user_to_variant(
-                test_id="filtered_search_test", user_id=user_id
-            )
-            if variant and variant == "variant":
-                # Modify filtering for A/B testing
-                search_accuracy = "accurate"
-
-        # Check canary deployment routing
-        if self._canary_deployment and user_id:
-            canary_assignment = await self._canary_deployment.should_route_to_canary(
-                user_id
-            )
-            if canary_assignment:
-                logger.debug(
-                    "Routing user %s to canary deployment for filtered search", user_id
-                )
-
-        # Execute search with deployment tracking
-        result = await self._search.filtered_search(
-            collection_name=collection_name,
-            query_vector=query_vector,
-            filters=filters,
-            limit=limit,
-            search_accuracy=search_accuracy,
-        )
-
-        # Track metrics for deployment monitoring
-        if self._ab_testing_manager and request_id:
-            await self._ab_testing_manager.track_conversion(
-                test_id="filtered_search_test",
-                user_id=user_id or "anonymous",
-                event_type="search_executed",
-                request_id=request_id,
-            )
-
-        return result
-
-    # Indexing API (delegates to QdrantIndexing)
-
-    async def create_payload_indexes(self, collection_name: str) -> None:
-        """Create payload indexes on key metadata fields.
-
-        Args:
-            collection_name: Name of the collection to index
-
-        Raises:
-            QdrantServiceError: If index creation fails
-
-        """
-        self._validate_initialized()
-        await self._indexing.create_payload_indexes(collection_name)
-
-    async def list_payload_indexes(self, collection_name: str) -> list[str]:
-        """List all payload indexes in a collection.
-
-        Args:
-            collection_name: Name of the collection to inspect
-
-        Returns:
-            list[str]: List of indexed field names
-
-        Raises:
-            QdrantServiceError: If listing indexes fails
-
-        """
-        self._validate_initialized()
-        return await self._indexing.list_payload_indexes(collection_name)
-
-    async def drop_payload_index(self, collection_name: str, field_name: str) -> None:
-        """Drop a specific payload index.
-
-        Args:
-            collection_name: Name of the collection containing the index
-            field_name: Name of the field to drop index from
-
-        Raises:
-            QdrantServiceError: If dropping index fails
-
-        """
-        self._validate_initialized()
-        await self._indexing.drop_payload_index(collection_name, field_name)
-
-    async def reindex_collection(self, collection_name: str) -> None:
-        """Reindex all payload fields for a collection.
-
-        Args:
-            collection_name: Name of the collection to reindex
-
-        Raises:
-            QdrantServiceError: If reindexing fails
-
-        """
-        self._validate_initialized()
-        await self._indexing.reindex_collection(collection_name)
-
-    async def get_payload_index_stats(self, collection_name: str) -> dict[str, object]:
-        """Get statistics about payload indexes in a collection.
-
-        Args:
-            collection_name: Name of the collection to analyze
-
-        Returns:
-            dict[str, object]: Index statistics including:
-                - indexed_fields: List of indexed fields
-                - total_indexes: Total number of indexes
-                - index_sizes: Size of each index
-
-        Raises:
-            QdrantServiceError: If getting stats fails
-
-        """
-        self._validate_initialized()
-        return await self._indexing.get_payload_index_stats(collection_name)
-
-    async def validate_index_health(self, collection_name: str) -> dict[str, object]:
-        """Validate the health and status of payload indexes.
-
-        Args:
-            collection_name: Name of the collection to validate
-
-        Returns:
-            dict[str, object]: Health report including:
-                - healthy: Overall health status
-                - issues: List of any detected issues
-                - recommendations: Optimization recommendations
-
-        Raises:
-            QdrantServiceError: If validation fails
-
-        """
-        self._validate_initialized()
-        return await self._indexing.validate_index_health(collection_name)
-
-    async def get_index_usage_stats(self, collection_name: str) -> dict[str, object]:
-        """Get detailed usage statistics for payload indexes.
-
-        Args:
-            collection_name: Name of the collection to analyze
-
-        Returns:
-            dict[str, object]: Usage statistics including:
-                - query_count: Number of queries using indexes
-                - hit_rate: Index hit rate percentage
-                - performance_metrics: Query performance data
-
-        Raises:
-            QdrantServiceError: If getting stats fails
-
-        """
-        self._validate_initialized()
-        return await self._indexing.get_index_usage_stats(collection_name)
-
-    # Document API (delegates to QdrantDocuments)
-
-    async def upsert_points(
-        self,
-        collection_name: str,
-        points: list[dict[str, object]],
-        batch_size: int = 100,
-    ) -> bool:
-        """Upsert points with automatic batching.
-
-        Args:
-            collection_name: Name of the collection to upsert into
-            points: List of point dictionaries containing:
-                - id: Point ID (str or int)
-                - vector: Vector data (list[float])
-                - payload: Optional metadata (dict)
-            batch_size: Number of points to process per batch
-
-        Returns:
-            bool: True if all points upserted successfully
-
-        Raises:
-            QdrantServiceError: If upsert fails
-
-        """
-        self._validate_initialized()
-        return await self._documents.upsert_points(
-            collection_name=collection_name,
-            points=points,
-            batch_size=batch_size,
-        )
-
-    async def get_points(
-        self,
-        collection_name: str,
-        point_ids: list[str | int],
-        with_payload: bool = True,
-        with_vectors: bool = False,
-    ) -> list[dict[str, object]]:
-        """Retrieve specific points by their IDs.
-
-        Args:
-            collection_name: Name of the collection to retrieve from
-            point_ids: List of point IDs to retrieve
-            with_payload: Whether to include payload data
-            with_vectors: Whether to include vector data
-
-        Returns:
-            list[dict[str, object]]: Retrieved points with requested data
-
-        Raises:
-            QdrantServiceError: If retrieval fails
-
-        """
-        self._validate_initialized()
-        return await self._documents.get_points(
-            collection_name=collection_name,
-            point_ids=point_ids,
-            with_payload=with_payload,
-            with_vectors=with_vectors,
-        )
-
-    async def delete_points(
-        self,
-        collection_name: str,
-        point_ids: list[str | int] | None = None,
-        filter_condition: dict[str, object] | None = None,
-    ) -> bool:
-        """Delete points by IDs or filter condition.
-
-        Args:
-            collection_name: Name of the collection to delete from
-            point_ids: Optional list of specific point IDs to delete
-            filter_condition: Optional filter to delete matching points
-
-        Returns:
-            bool: True if deletion successful
-
-        Raises:
-            QdrantServiceError: If deletion fails
-
-        """
-        self._validate_initialized()
-        return await self._documents.delete_points(
-            collection_name=collection_name,
-            point_ids=point_ids,
-            filter_condition=filter_condition,
-        )
-
-    async def update_point_payload(
-        self,
-        collection_name: str,
-        point_id: str | int,
-        payload: dict[str, object],
-        replace: bool = False,
-    ) -> bool:
-        """Update payload for a specific point.
-
-        Args:
-            collection_name: Name of the collection containing the point
-            point_id: ID of the point to update
-            payload: New payload data to set or merge
-            replace: If True, replace entire payload; if False, merge with existing
-
-        Returns:
-            bool: True if update successful
-
-        Raises:
-            QdrantServiceError: If update fails
-
-        """
-        self._validate_initialized()
-        return await self._documents.update_point_payload(
-            collection_name=collection_name,
-            point_id=point_id,
-            payload=payload,
-            replace=replace,
-        )
-
-    async def count_points(
-        self,
-        collection_name: str,
-        filter_condition: dict[str, object] | None = None,
-        exact: bool = True,
-    ) -> int:
-        """Count points in collection with optional filtering.
-
-        Args:
-            collection_name: Name of the collection to count
-            filter_condition: Optional filter to count matching points only
-            exact: If True, return exact count; if False, return approximate
-
-        Returns:
-            int: Number of points matching the criteria
-
-        Raises:
-            QdrantServiceError: If counting fails
-
-        """
-        self._validate_initialized()
-        return await self._documents.count_points(
-            collection_name=collection_name,
-            filter_condition=filter_condition,
-            exact=exact,
-        )
-
-    async def scroll_points(
-        self,
-        collection_name: str,
-        limit: int = 100,
-        offset: str | int | None = None,
-        filter_condition: dict[str, object] | None = None,
-        with_payload: bool = True,
-        with_vectors: bool = False,
-    ) -> dict[str, object]:
-        """Scroll through points in a collection with pagination.
-
-        Args:
-            collection_name: Name of the collection to scroll through
-            limit: Maximum number of points per page
-            offset: Pagination offset (point ID or index)
-            filter_condition: Optional filter to scroll matching points only
-            with_payload: Whether to include payload data
-            with_vectors: Whether to include vector data
-
-        Returns:
-            dict[str, object]: Scroll results containing:
-                - points: List of points in current page
-                - next_page_offset: Offset for next page (if available)
-
-        Raises:
-            QdrantServiceError: If scrolling fails
-
-        """
-        self._validate_initialized()
-        return await self._documents.scroll_points(
-            collection_name=collection_name,
-            limit=limit,
-            offset=offset,
-            filter_condition=filter_condition,
-            with_payload=with_payload,
-            with_vectors=with_vectors,
-        )
-
-    async def clear_collection(self, collection_name: str) -> bool:
-        """Clear all points from a collection without deleting the collection.
-
-        Args:
-            collection_name: Name of the collection to clear
-
-        Returns:
-            bool: True if collection cleared successfully
-
-        Raises:
-            QdrantServiceError: If clearing fails
-
-        """
-        self._validate_initialized()
-        return await self._documents.clear_collection(collection_name)
-
-    # HNSW Optimization API (delegates to QdrantCollections for now)
-
-    async def create_collection_with_hnsw_optimization(
-        self,
-        collection_name: str,
-        vector_size: int,
-        collection_type: str = "general",
-        distance: str = "Cosine",
-        sparse_vector_name: str | None = None,
-        enable_quantization: bool = True,
-    ) -> bool:
-        """Create collection with optimized HNSW parameters.
-
-        Args:
-            collection_name: Name of the collection to create
-            vector_size: Dimension of the vectors to be stored
-            collection_type: Type for optimized HNSW settings
-                ("general", "code", "scientific")
-            distance: Distance metric for similarity search (Cosine, Euclid, Dot)
-            sparse_vector_name: Optional name for sparse vector field
-            enable_quantization: Whether to enable vector quantization
-
-        Returns:
-            bool: True if collection created successfully
-
-        Raises:
-            QdrantServiceError: If collection creation fails
-
-        """
-        self._validate_initialized()
-        return await self._collections.create_collection(
-            collection_name=collection_name,
-            vector_size=vector_size,
-            distance=distance,
-            sparse_vector_name=sparse_vector_name,
-            enable_quantization=enable_quantization,
-            collection_type=collection_type,
-        )
-
-    def get_hnsw_configuration_info(self, collection_type: str) -> dict[str, object]:
-        """Get HNSW configuration information for a collection type.
-
-        Args:
-            collection_type: Type of collection ("general", "code", "scientific")
-
-        Returns:
-            dict[str, object]: HNSW configuration including:
-                - m: Number of bi-directional links
-                - ef_construct: Size of dynamic list for construction
-                - full_scan_threshold: Threshold for full scan vs index
-
-        Raises:
-            QdrantServiceError: If getting configuration fails
-
-        """
-        self._validate_initialized()
-        return self._collections.get_hnsw_configuration_info(collection_type)
-
-    def _validate_initialized(self) -> None:
-        """Validate that the service is properly initialized.
-
-        Raises:
-            QdrantServiceError: If service is not initialized
-
-        """
-        if not self._initialized or not self._collections:
-            msg = "Service not initialized. Call initialize() first."
-            raise QdrantServiceError(msg)
+        """Clean up resources."""
+
+        if self._adapter:
+            self._adapter = None
+        await self._embeddings.cleanup()
+        self._mark_uninitialized()
 
     @property
-    def is_initialized(self) -> bool:
-        """Check if the service is properly initialized.
+    def embedding_dimension(self) -> int:
+        """Return the dimensionality of the dense embedding vectors."""
+
+        return self._embeddings.embedding_dimension
+
+    async def ensure_collection(self, schema: CollectionSchema) -> None:
+        """Ensure a collection exists with the given schema."""
+
+        adapter = self._require_adapter()
+        if await adapter.collection_exists(schema.name):
+            return
+        await adapter.create_collection(schema)
+
+    async def drop_collection(self, name: str) -> None:
+        """Drop a collection by name."""
+
+        adapter = self._require_adapter()
+        await adapter.drop_collection(name)
+
+    async def delete_collection(self, name: str) -> None:
+        """Backward-compatible alias for dropping a collection."""
+
+        await self.drop_collection(name)
+
+    async def list_collections(self) -> list[str]:
+        """List all collections."""
+
+        adapter = self._require_adapter()
+        return await adapter.list_collections()
+
+    async def get_collection_info(self, name: str) -> Mapping[str, Any]:
+        """Return raw collection metadata."""
+
+        adapter = self._require_adapter()
+        info = await adapter.get_collection_info(name)
+        return _serialize_collection_info(info)
+
+    async def get_payload_index_summary(self, name: str) -> Mapping[str, Any]:
+        """Return a summary of payload indexes for the collection."""
+
+        info = await self.get_collection_info(name)
+        payload_schema = info.get("payload_schema", {})
+        indexed_fields = sorted(payload_schema.keys())
+        return {
+            "indexed_fields_count": len(indexed_fields),
+            "indexed_fields": indexed_fields,
+            "payload_schema": payload_schema,
+            "points_count": info.get("points_count", 0),
+        }
+
+    async def ensure_payload_indexes(
+        self, name: str, definitions: Mapping[str, models.PayloadSchemaType]
+    ) -> Mapping[str, Any]:
+        """Ensure the expected payload indexes exist for the collection."""
+
+        adapter = self._require_adapter()
+        summary = await self.get_payload_index_summary(name)
+        existing_schema: Mapping[str, Mapping[str, Any]] = summary.get(
+            "payload_schema", {}
+        )
+        for field, schema in definitions.items():
+            if not _schema_matches(existing_schema.get(field), schema):
+                await adapter.create_payload_index(name, field, schema)
+        return await self.get_payload_index_summary(name)
+
+    async def drop_payload_indexes(self, name: str, fields: Iterable[str]) -> None:
+        """Drop the specified payload indexes if they exist."""
+
+        adapter = self._require_adapter()
+        summary = await self.get_payload_index_summary(name)
+        existing_fields = set(summary.get("indexed_fields", []))
+        for field in fields:
+            if field in existing_fields:
+                await adapter.delete_payload_index(name, field)
+
+    async def collection_stats(self, name: str) -> Mapping[str, Any]:
+        """Get statistics for a collection."""
+
+        adapter = self._require_adapter()
+        return await adapter.get_collection_stats(name)
+
+    async def add_document(
+        self,
+        collection: str,
+        content: str,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> str:
+        """Add a single document to the store."""
+
+        document_id = str(uuid4())
+        normalized_metadata = dict(metadata or {})
+        normalized_metadata.setdefault("doc_id", document_id)
+        normalized_metadata.setdefault(
+            "chunk_id", normalized_metadata.get("chunk_index", 0)
+        )
+        normalized_metadata.setdefault(
+            "tenant", normalized_metadata.get("tenant") or "default"
+        )
+        normalized_metadata.setdefault(
+            "source",
+            normalized_metadata.get("source")
+            or normalized_metadata.get("url")
+            or "inline",
+        )
+        normalized_metadata.setdefault("created_at", datetime.now(UTC).isoformat())
+
+        await self.upsert_documents(
+            collection,
+            [
+                TextDocument(
+                    id=document_id,
+                    content=content,
+                    metadata=normalized_metadata,
+                )
+            ],
+        )
+        return document_id
+
+    async def upsert_documents(
+        self,
+        collection: str,
+        documents: Sequence[TextDocument],
+        *,
+        batch_size: int | None = None,
+    ) -> None:
+        """Upsert documents into a collection.
+
+        Args:
+            collection: Name of the collection.
+            documents: Sequence of text documents to upsert.
+            batch_size: Optional batch size for upsert operation.
+        """
+
+        if not documents:
+            return
+        adapter = self._require_adapter()
+        try:
+            embeddings = await self._embeddings.generate_embeddings(
+                [document.content for document in documents]
+            )
+        except Exception as exc:  # pragma: no cover - provider-specific failures
+            msg = f"Failed to generate embeddings: {exc}"
+            raise EmbeddingServiceError(msg) from exc
+
+        records: list[VectorRecord] = []
+        for document, vector in zip(documents, embeddings, strict=True):
+            try:
+                canonical: CanonicalPayload = ensure_canonical_payload(
+                    document.metadata,
+                    content=document.content,
+                    id_hint=document.id,
+                )
+            except PayloadValidationError as exc:  # pragma: no cover - defensive
+                msg = f"Invalid payload for document '{document.id}': {exc}"
+                raise EmbeddingServiceError(msg) from exc
+
+            records.append(
+                VectorRecord(
+                    id=canonical.point_id,
+                    vector=vector,
+                    payload=canonical.payload,
+                )
+            )
+
+        await adapter.upsert(collection, records, batch_size=batch_size)
+
+    async def upsert_vectors(
+        self,
+        collection: str,
+        records: Sequence[VectorRecord],
+        *,
+        batch_size: int | None = None,
+    ) -> None:
+        """Upsert vector records into a collection.
+
+        Args:
+            collection: Name of the collection.
+            records: Sequence of vector records to upsert.
+            batch_size: Optional batch size for upsert operation.
+        """
+
+        adapter = self._require_adapter()
+        await adapter.upsert(collection, records, batch_size=batch_size)
+
+    async def get_document(
+        self,
+        collection: str,
+        document_id: str,
+    ) -> Mapping[str, Any] | None:
+        adapter = self._require_adapter()
+        records = await adapter.retrieve(
+            collection,
+            [document_id],
+            with_payload=True,
+            with_vectors=False,
+        )
+        if not records:
+            return None
+        payload = dict(records[0].payload or {})
+        payload.setdefault("id", records[0].id)
+        return payload
+
+    async def delete_document(self, collection: str, document_id: str) -> bool:
+        adapter = self._require_adapter()
+        await adapter.delete(collection, ids=[document_id])
+        return True
+
+    async def list_documents(
+        self,
+        collection: str,
+        *,
+        limit: int = 50,
+        offset: str | None = None,
+    ) -> tuple[list[Mapping[str, Any]], str | None]:
+        adapter = self._require_adapter()
+        records, next_offset = await adapter.scroll(
+            collection,
+            limit=limit,
+            offset=offset,
+            with_payload=True,
+            with_vectors=False,
+        )
+        documents: list[Mapping[str, Any]] = []
+        for record in records:
+            payload = dict(record.payload or {})
+            payload.setdefault("id", record.id)
+            documents.append(payload)
+        return documents, next_offset
+
+    async def clear_collection(self, collection: str) -> None:
+        schema = CollectionSchema(
+            name=collection,
+            vector_size=self._embeddings.embedding_dimension,
+            distance="cosine",
+        )
+        adapter = self._require_adapter()
+        await adapter.drop_collection(collection)
+        await adapter.create_collection(schema)
+
+    async def delete(
+        self,
+        collection: str,
+        *,
+        ids: Sequence[str] | None = None,
+        filters: Mapping[str, Any] | None = None,
+    ) -> None:
+        """Delete records from a collection.
+
+        Args:
+            collection: Name of the collection.
+            ids: Optional sequence of record IDs to delete.
+            filters: Optional filters for deletion.
+        """
+
+        adapter = self._require_adapter()
+        await adapter.delete(collection, ids=ids, filters=filters)
+
+    async def embed_query(self, query: str) -> Sequence[float]:
+        """Return the embedding vector for the supplied query string."""
+
+        await self.initialize()
+        try:
+            [embedding] = await self._embeddings.generate_embeddings([query])
+        except Exception as exc:  # pragma: no cover - surfaces consistent errors
+            msg = f"Failed to embed query: {exc}"
+            raise EmbeddingServiceError(msg) from exc
+        return embedding
+
+    async def embed_documents(self, texts: Sequence[str]) -> list[list[float]]:
+        """Return embedding vectors for the supplied document texts."""
+
+        await self.initialize()
+        try:
+            embeddings = await self._embeddings.generate_embeddings(list(texts))
+        except Exception as exc:  # pragma: no cover - surfaces consistent errors
+            msg = f"Failed to embed documents: {exc}"
+            raise EmbeddingServiceError(msg) from exc
+        return embeddings
+
+    async def get_embedding_manager(self) -> EmbeddingProvider:
+        """Expose the underlying embedding provider for legacy integrations."""
+
+        await self.initialize()
+        return self._embeddings
+
+    async def search_vectors(
+        self,
+        collection: str,
+        vector: Sequence[float],
+        *,
+        limit: int = 10,
+        filters: Mapping[str, Any] | None = None,
+        group_by: str | None = None,
+        group_size: int | None = None,
+        overfetch_multiplier: float | None = None,
+        normalize_scores: bool | None = None,
+    ) -> list[VectorMatch]:
+        """Search using a precomputed embedding vector."""
+
+        qdrant_cfg = getattr(self.config, "qdrant", None)
+        query_cfg: QueryProcessingConfig | None = getattr(
+            self.config, "query_processing", None
+        )
+
+        resolved_group_by = group_by or getattr(qdrant_cfg, "group_by_field", "doc_id")
+        resolved_group_size = max(
+            1, int(group_size or getattr(qdrant_cfg, "group_size", 1))
+        )
+        multiplier_default = float(getattr(qdrant_cfg, "groups_limit_multiplier", 2.0))
+        resolved_multiplier = overfetch_multiplier or multiplier_default
+        if resolved_multiplier <= 0:
+            resolved_multiplier = 1.0
+        effective_limit = max(
+            limit * resolved_group_size,
+            int(limit * resolved_multiplier),
+            limit,
+        )
+
+        matches, grouping_applied = await self._query_with_optional_grouping(
+            collection=collection,
+            vector=vector,
+            limit=effective_limit,
+            group_by=resolved_group_by,
+            group_size=resolved_group_size,
+            filters=filters,
+        )
+
+        matches = self._attach_collection_metadata(matches, collection)
+
+        if resolved_group_by and not grouping_applied:
+            matches = self._group_client_side(
+                matches,
+                group_by=resolved_group_by,
+                group_size=resolved_group_size,
+                limit=effective_limit,
+            )
+
+        matches = self._annotate_grouping_metadata(
+            matches,
+            group_by=resolved_group_by,
+            grouping_applied=grouping_applied,
+        )
+
+        should_normalize = normalize_scores
+        if should_normalize is None and query_cfg is not None:
+            should_normalize = query_cfg.enable_score_normalization
+        matches = self._normalize_scores(matches, enabled=should_normalize)
+
+        return matches[:limit]
+
+    async def search_documents(
+        self,
+        collection: str,
+        query: str,
+        *,
+        limit: int = 10,
+        filters: Mapping[str, Any] | None = None,
+        group_by: str | None = None,
+        group_size: int | None = None,
+        overfetch_multiplier: float | None = None,
+        normalize_scores: bool | None = None,
+    ) -> list[VectorMatch]:
+        """Search documents with optional grouping and score normalization."""
+
+        embedding = await self.embed_query(query)
+        return await self.search_vectors(
+            collection,
+            embedding,
+            limit=limit,
+            filters=filters,
+            group_by=group_by,
+            group_size=group_size,
+            overfetch_multiplier=overfetch_multiplier,
+            normalize_scores=normalize_scores,
+        )
+
+    async def supports_server_side_grouping(self) -> bool:
+        """Return True when the connected backend can execute QueryPointGroups."""
+
+        adapter = self._require_adapter()
+        ensure_capability = getattr(adapter, "_ensure_grouping_capability", None)
+        if callable(ensure_capability):  # pragma: no branch - simple capability probe
+            await ensure_capability()
+        supports = getattr(adapter, "supports_query_groups", None)
+        if callable(supports):
+            return bool(supports())
+        return False
+
+    async def _query_with_optional_grouping(
+        self,
+        collection: str,
+        vector: Sequence[float],
+        *,
+        limit: int,
+        group_by: str | None,
+        group_size: int,
+        filters: Mapping[str, Any] | None = None,
+    ) -> tuple[list[VectorMatch], bool]:
+        adapter = self._require_adapter()
+        qdrant_cfg = getattr(self.config, "qdrant", None)
+        grouping_enabled = bool(getattr(qdrant_cfg, "enable_grouping", False)) and bool(
+            group_by
+        )
+        grouping_applied = False
+        registry = None
+        try:
+            registry = get_metrics_registry()
+        except RuntimeError:  # pragma: no cover - monitoring disabled
+            registry = None
+
+        if grouping_enabled and group_by is not None:
+            ensure_capability = getattr(adapter, "_ensure_grouping_capability", None)
+            if callable(ensure_capability):
+                await ensure_capability()
+
+            supports_grouping = False
+            supports_method = getattr(adapter, "supports_query_groups", None)
+            if callable(supports_method):
+                supports_grouping = bool(supports_method())
+
+            if not supports_grouping:
+                grouping_enabled = False
+                if registry is not None:
+                    registry.record_grouping_attempt(collection, "unsupported")
+                logger.warning(
+                    "Disabling QueryPointGroups for %s: backend lacks support",
+                    collection,
+                )
+
+        if grouping_enabled and group_by is not None:
+            await self.ensure_payload_indexes(
+                collection,
+                {group_by: models.PayloadSchemaType.KEYWORD},
+            )
+
+            start_time = time.perf_counter()
+            matches, grouping_applied = await adapter.query_groups(
+                collection,
+                vector,
+                group_by=group_by,
+                limit=limit,
+                group_size=group_size,
+                filters=filters,
+            )
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            if registry is not None:
+                status = "applied" if grouping_applied else "fallback"
+                registry.record_grouping_attempt(
+                    collection, status, duration_ms=duration_ms
+                )
+            if grouping_applied:
+                return matches[:limit], True
+            return matches, False
+
+        matches = await adapter.query(
+            collection,
+            vector,
+            limit=limit,
+            filters=filters,
+        )
+        if registry is not None:
+            registry.record_grouping_attempt(collection, "disabled")
+        return matches, False
+
+    @staticmethod
+    def _attach_collection_metadata(
+        matches: list[VectorMatch], collection: str
+    ) -> list[VectorMatch]:
+        for match in matches:
+            match.collection = match.collection or collection
+            payload = dict(match.payload or {})
+            match.payload = payload
+        return matches
+
+    def _group_client_side(
+        self,
+        matches: list[VectorMatch],
+        *,
+        group_by: str,
+        group_size: int,
+        limit: int,
+    ) -> list[VectorMatch]:
+        groups: dict[str, list[VectorMatch]] = {}
+        for match in matches:
+            payload = dict(match.payload or {})
+            group_id = payload.get(group_by) or payload.get("doc_id")
+            if group_id is None:
+                group_id = match.id
+            payload.setdefault("doc_id", group_id)
+            match.payload = payload
+            groups.setdefault(str(group_id), []).append(match)
+
+        ordered_groups = sorted(
+            groups.items(),
+            key=lambda item: (item[1][0].raw_score or item[1][0].score),
+            reverse=True,
+        )
+
+        limited_matches: list[VectorMatch] = []
+        for _, group_matches in ordered_groups:
+            for group_rank, match in enumerate(group_matches[:group_size], start=1):
+                payload = dict(match.payload or {})
+                group_id = payload.get(group_by) or payload.get("doc_id") or match.id
+                payload["_grouping"] = {
+                    "applied": False,
+                    "group_id": group_id,
+                    "rank": group_rank,
+                }
+                payload.setdefault("doc_id", group_id)
+                match.payload = payload
+                limited_matches.append(match)
+            if len(limited_matches) >= limit:
+                break
+        return limited_matches
+
+    @staticmethod
+    def _annotate_grouping_metadata(
+        matches: list[VectorMatch],
+        *,
+        group_by: str | None,
+        grouping_applied: bool,
+    ) -> list[VectorMatch]:
+        if not group_by:
+            return matches
+        for rank, match in enumerate(matches, start=1):
+            payload = dict(match.payload or {})
+            group_info = dict(payload.get("_grouping") or {})
+            group_info.setdefault(
+                "group_id",
+                payload.get(group_by) or payload.get("doc_id") or match.id,
+            )
+            group_info.setdefault("rank", rank)
+            group_info.setdefault("applied", grouping_applied)
+            payload["_grouping"] = group_info
+            match.payload = payload
+        return matches
+
+    def _normalize_scores(
+        self, matches: list[VectorMatch], *, enabled: bool | None
+    ) -> list[VectorMatch]:
+        if not matches:
+            return matches
+
+        # Always record raw_score before normalization
+        for match in matches:
+            if match.raw_score is None:
+                match.raw_score = float(match.score)
+
+        if not enabled:
+            return matches
+
+        config = getattr(self, "config", None)
+        query_cfg: QueryProcessingConfig | None = getattr(
+            config, "query_processing", None
+        )
+        strategy = (
+            query_cfg.score_normalization_strategy
+            if query_cfg is not None
+            else ScoreNormalizationStrategy.MIN_MAX
+        )
+        if strategy == ScoreNormalizationStrategy.NONE:
+            return matches
+
+        scores = [float(match.raw_score or match.score) for match in matches]
+        epsilon = max(
+            float(
+                (query_cfg.score_normalization_epsilon if query_cfg else 1e-6) or 1e-6
+            ),
+            1e-9,
+        )
+
+        if strategy == ScoreNormalizationStrategy.MIN_MAX:
+            minimum = min(scores)
+            maximum = max(scores)
+            span = maximum - minimum
+            if span < epsilon:
+                for match in matches:
+                    match.score = 1.0
+                    match.normalized_score = 1.0
+                return matches
+            for match in matches:
+                normalized = ((match.raw_score or match.score) - minimum) / span
+                match.score = normalized
+                match.normalized_score = normalized
+            return matches
+
+        if strategy == ScoreNormalizationStrategy.Z_SCORE:
+            mean = statistics.fmean(scores)
+            std_dev = statistics.pstdev(scores) if len(scores) > 1 else 0.0
+            if std_dev < epsilon:
+                for match in matches:
+                    match.score = 0.0
+                    match.normalized_score = 0.0
+                return matches
+            for match in matches:
+                normalized = ((match.raw_score or match.score) - mean) / std_dev
+                match.score = normalized
+                match.normalized_score = normalized
+            return matches
+
+        return matches
+
+    async def search_vector(
+        self,
+        collection: str,
+        vector: Sequence[float],
+        *,
+        limit: int = 10,
+        filters: Mapping[str, Any] | None = None,
+    ) -> list[VectorMatch]:
+        """Search using a vector.
+
+        Args:
+            collection: Name of the collection.
+            vector: Vector to search with.
+            limit: Maximum number of results to return.
+            filters: Optional filters for the search.
 
         Returns:
-            bool: True if service is initialized and ready for use
-
+            List of vector matches.
         """
-        return self._initialized and self._collections is not None
 
-    async def get_client(self):
-        """Get the Qdrant client instance.
+        matches, _ = await self._query_with_optional_grouping(
+            collection,
+            vector,
+            limit=limit,
+            group_by=None,
+            group_size=1,
+            filters=filters,
+        )
+        return matches
+
+    async def hybrid_search(  # pylint: disable=too-many-arguments
+        self,
+        collection: str,
+        query: str,
+        sparse_vector: Mapping[int, float] | None = None,
+        *,
+        limit: int = 10,
+        filters: Mapping[str, Any] | None = None,
+    ) -> list[VectorMatch]:
+        """Perform hybrid search using dense and sparse vectors.
+
+        Args:
+            collection: Name of the collection.
+            query: Text query string.
+            sparse_vector: Optional sparse vector for hybrid search.
+            limit: Maximum number of results to return.
+            filters: Optional filters for the search.
 
         Returns:
-            The Qdrant client instance for direct operations
-
-        Raises:
-            QdrantServiceError: If service is not initialized
-
+            List of vector matches.
         """
-        self._validate_initialized()
-        return await self._client_manager.get_qdrant_client()
+
+        adapter = self._require_adapter()
+        dense_embedding, *_ = await self._embeddings.generate_embeddings([query])
+        return await adapter.hybrid_query(
+            collection,
+            dense_embedding,
+            sparse_vector,
+            limit=limit,
+            filters=filters,
+        )
+
+    async def retrieve_documents(
+        self,
+        collection: str,
+        ids: Sequence[str],
+        *,
+        with_payload: bool = True,
+        with_vectors: bool = False,
+    ) -> list[VectorMatch]:
+        """Retrieve specific documents by ID.
+
+        Args:
+            collection: Name of the collection.
+            ids: Sequence of record IDs to fetch.
+            with_payload: Include payload data.
+            with_vectors: Include stored vectors.
+
+        Returns:
+            List of vector matches with payloads and optional vectors.
+        """
+
+        adapter = self._require_adapter()
+        return await adapter.retrieve(
+            collection,
+            ids,
+            with_payload=with_payload,
+            with_vectors=with_vectors,
+        )
+
+    async def recommend_similar(  # pylint: disable=too-many-arguments
+        self,
+        collection: str,
+        *,
+        positive_ids: Sequence[str] | None = None,
+        vector: Sequence[float] | None = None,
+        limit: int = 10,
+        filters: Mapping[str, Any] | None = None,
+    ) -> list[VectorMatch]:
+        """Return records similar to the supplied identifiers or vector."""
+
+        adapter = self._require_adapter()
+        return await adapter.recommend(
+            collection,
+            positive_ids=positive_ids,
+            vector=vector,
+            limit=limit,
+            filters=filters,
+        )
+
+    async def scroll(  # pylint: disable=too-many-arguments
+        self,
+        collection: str,
+        *,
+        limit: int = 64,
+        offset: str | None = None,
+        filters: Mapping[str, Any] | None = None,
+        with_payload: bool = True,
+        with_vectors: bool = False,
+    ) -> tuple[list[VectorMatch], str | None]:
+        """Scroll through a collection with pagination."""
+
+        adapter = self._require_adapter()
+        return await adapter.scroll(
+            collection,
+            limit=limit,
+            offset=offset,
+            filters=filters,
+            with_payload=with_payload,
+            with_vectors=with_vectors,
+        )
+
+    def _require_adapter(self) -> QdrantVectorAdapter:
+        """Get the adapter, raising error if not initialized.
+
+        Returns:
+            The Qdrant vector adapter.
+        """
+
+        if not self._adapter:
+            msg = "VectorStoreService is not initialized"
+            raise EmbeddingServiceError(msg)
+        return self._adapter
+
+
+def _serialize_collection_info(info: models.CollectionInfo) -> Mapping[str, Any]:
+    """Convert a Qdrant CollectionInfo into a plain mapping."""
+
+    payload_schema_raw = getattr(info, "payload_schema", {}) or {}
+    payload_schema = {
+        name: _serialize_payload_schema_entry(entry)
+        for name, entry in payload_schema_raw.items()
+    }
+    return {
+        "status": getattr(info, "status", None),
+        "vectors_count": getattr(info, "vectors_count", None),
+        "points_count": getattr(info, "points_count", None),
+        "payload_schema": payload_schema,
+    }
+
+
+def _serialize_payload_schema_entry(entry: Any) -> Mapping[str, Any]:
+    """Normalize payload schema entries to serializable dictionaries."""
+
+    if entry is None:
+        return {}
+    if hasattr(entry, "to_dict"):
+        raw = entry.to_dict()
+    elif isinstance(entry, dict):
+        raw = dict(entry)
+    else:
+        raw = {
+            key: getattr(entry, key)
+            for key in dir(entry)
+            if not key.startswith("_") and not callable(getattr(entry, key))
+        }
+    data_type = raw.get("data_type") or raw.get("type")
+    if isinstance(data_type, (models.PayloadSchemaType, Enum)):
+        raw["data_type"] = data_type.value
+    return raw
+
+
+def _schema_matches(
+    existing: Mapping[str, Any] | None,
+    expected: models.PayloadSchemaType,
+) -> bool:
+    """Return True if an existing index matches the desired definition."""
+
+    if existing is None:
+        return False
+    current_type = existing.get("data_type") or existing.get("type")
+    target = expected.value
+    if isinstance(target, Enum):  # pragma: no cover - defensive
+        target = target.value
+    return bool(target == current_type)

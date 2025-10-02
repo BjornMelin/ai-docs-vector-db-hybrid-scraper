@@ -1,5 +1,8 @@
+# pylint: disable=too-many-public-methods,too-many-arguments,too-many-positional-arguments
 """Tests for HyDE query processing engine."""
 
+from types import SimpleNamespace
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -10,11 +13,22 @@ from src.services.hyde.cache import HyDECache
 from src.services.hyde.config import HyDEConfig, HyDEMetricsConfig, HyDEPromptConfig
 from src.services.hyde.engine import HyDEQueryEngine
 from src.services.hyde.generator import GenerationResult, HypotheticalDocumentGenerator
-from src.services.vector_db.service import QdrantService
+from src.services.vector_db.service import VectorStoreService
 
 
 class TestError(Exception):
     """Custom exception for this module."""
+
+
+def _vector_match(
+    *,
+    doc_id: str = "doc1",
+    score: float = 0.9,
+    payload: dict[str, Any] | None = None,
+) -> SimpleNamespace:
+    """Construct a lightweight vector match object for adapter stubs."""
+
+    return SimpleNamespace(id=doc_id, score=score, payload=payload or {})
 
 
 class TestHyDEQueryEngine:
@@ -66,13 +80,19 @@ class TestHyDEQueryEngine:
         manager.rerank_results = AsyncMock()
         return manager
 
+    @pytest.fixture(name="_mock_embedding_manager")
+    def embedding_manager_alias(self, mock_embedding_manager):
+        """Backward-compatible alias for embedding manager fixture."""
+        return mock_embedding_manager
+
     @pytest.fixture
-    def _mock_qdrant_service(self):
-        """Create mock Qdrant service."""
-        service = MagicMock(spec=QdrantService)
+    def mock_vector_store(self):
+        """Create mock vector store service."""
+        service = MagicMock(spec=VectorStoreService)
         service.initialize = AsyncMock()
-        service.hyde_search = AsyncMock()
-        service.filtered_search = AsyncMock()
+        service.hybrid_search = AsyncMock()
+        service.search_vector = AsyncMock()
+        service.search_documents = AsyncMock()
         return service
 
     @pytest.fixture
@@ -95,20 +115,21 @@ class TestHyDEQueryEngine:
         prompt_config,
         metrics_config,
         mock_embedding_manager,
-        _mock_qdrant_service,
+        mock_vector_store,
         mock_cache_manager,
         mock_llm_client,
     ):
         """Create HyDEQueryEngine instance."""
-        return HyDEQueryEngine(
+        engine = HyDEQueryEngine(
             config=hyde_config,
             prompt_config=prompt_config,
             metrics_config=metrics_config,
             embedding_manager=mock_embedding_manager,
-            qdrant_service=_mock_qdrant_service,
+            vector_store=mock_vector_store,
             cache_manager=mock_cache_manager,
             llm_client=mock_llm_client,
         )
+        return engine
 
     def test_init(
         self,
@@ -116,7 +137,7 @@ class TestHyDEQueryEngine:
         prompt_config,
         metrics_config,
         mock_embedding_manager,
-        _mock_qdrant_service,
+        mock_vector_store,
         mock_cache_manager,
         mock_llm_client,
     ):
@@ -126,7 +147,7 @@ class TestHyDEQueryEngine:
             prompt_config=prompt_config,
             metrics_config=metrics_config,
             embedding_manager=mock_embedding_manager,
-            qdrant_service=_mock_qdrant_service,
+            vector_store=mock_vector_store,
             cache_manager=mock_cache_manager,
             llm_client=mock_llm_client,
         )
@@ -135,7 +156,7 @@ class TestHyDEQueryEngine:
         assert engine.prompt_config == prompt_config
         assert engine.metrics_config == metrics_config
         assert engine.embedding_manager == mock_embedding_manager
-        assert engine.qdrant_service == _mock_qdrant_service
+        assert engine.vector_store == mock_vector_store
         assert engine._initialized is False
 
         # Check components are created
@@ -153,7 +174,7 @@ class TestHyDEQueryEngine:
 
     @pytest.mark.asyncio
     async def test_initialize_success(
-        self, engine, _mock_embedding_manager, _mock_qdrant_service
+        self, engine, _mock_embedding_manager, mock_vector_store
     ):
         """Test successful engine initialization."""
         # Mock successful initialization of components
@@ -180,13 +201,13 @@ class TestHyDEQueryEngine:
         assert engine._initialized is True
 
     @pytest.mark.asyncio
-    async def test_initialize_qdrant_service_no_initialize(
-        self, engine, _mock_qdrant_service
+    async def test_initialize_vector_store_no_initialize(
+        self, engine, mock_vector_store
     ):
         """Test initialization when Qdrant service has no initialize method."""
         engine.generator.initialize = AsyncMock()
         engine.cache.initialize = AsyncMock()
-        del _mock_qdrant_service.initialize
+        del mock_vector_store.initialize
 
         await engine.initialize()
 
@@ -245,7 +266,7 @@ class TestHyDEQueryEngine:
 
     @pytest.mark.asyncio
     async def test_search_hyde_disabled(
-        self, engine, _mock_qdrant_service, mock_embedding_manager
+        self, engine, mock_vector_store, mock_embedding_manager
     ):
         """Test  search when HyDE is disabled."""
         engine._initialized = True
@@ -255,14 +276,16 @@ class TestHyDEQueryEngine:
         mock_embedding_manager.generate_embeddings.return_value = {
             "embeddings": [[0.1, 0.2, 0.3]]
         }
-        mock_results = [{"id": "doc1", "score": 0.9}]
-        _mock_qdrant_service.filtered_search.return_value = mock_results
+        mock_results = [_vector_match(payload={})]
+        mock_vector_store.search_vector.return_value = mock_results
 
         results = await engine.enhanced_search("test query")
 
-        assert results == mock_results
+        assert len(results) == len(mock_results)
+        assert results[0]["id"] == mock_results[0].id
+        assert results[0]["score"] == pytest.approx(mock_results[0].score)
         assert engine.fallback_count == 0  # Not counted as fallback when disabled
-        _mock_qdrant_service.filtered_search.assert_called_once()
+        mock_vector_store.search_vector.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_search_success_with_cache_hit(self, engine, _mock_embedding_manager):
@@ -281,7 +304,7 @@ class TestHyDEQueryEngine:
 
     @pytest.mark.asyncio
     async def test_search_success_cache_miss(
-        self, engine, mock_embedding_manager, _mock_qdrant_service
+        self, engine, mock_embedding_manager, mock_vector_store
     ):
         """Test successful  search with cache miss."""
         engine._initialized = True
@@ -298,23 +321,25 @@ class TestHyDEQueryEngine:
         }
 
         # Mock search results
-        mock_results = [{"id": "doc1", "score": 0.9}]
-        _mock_qdrant_service.hyde_search.return_value = mock_results
+        mock_results = [_vector_match(payload={})]
+        mock_vector_store.search_vector.return_value = mock_results
 
         # Mock cache operations
         engine.cache.set_search_results = AsyncMock()
 
         results = await engine.enhanced_search("test query", use_cache=True)
 
-        assert results == mock_results
+        assert len(results) == len(mock_results)
+        assert results[0]["id"] == mock_results[0].id
+        assert results[0]["score"] == pytest.approx(mock_results[0].score)
         assert engine.search_count == 1
         assert engine.cache_hit_count == 0
-        _mock_qdrant_service.hyde_search.assert_called_once()
+        mock_vector_store.search_vector.assert_called_once()
         engine.cache.set_search_results.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_search_with_reranking(
-        self, engine, mock_embedding_manager, _mock_qdrant_service
+        self, engine, mock_embedding_manager, mock_vector_store
     ):
         """Test  search with reranking enabled."""
         engine._initialized = True
@@ -327,8 +352,11 @@ class TestHyDEQueryEngine:
             "embeddings": [[0.1, 0.2, 0.3]]
         }
 
-        initial_results = [{"id": "doc1", "score": 0.8}, {"id": "doc2", "score": 0.7}]
-        _mock_qdrant_service.hyde_search.return_value = initial_results
+        initial_results = [
+            _vector_match(doc_id="doc1", score=0.8),
+            _vector_match(doc_id="doc2", score=0.7),
+        ]
+        mock_vector_store.search_vector.return_value = initial_results
 
         # Mock reranking
         reranked_results = [{"id": "doc2", "score": 0.9}, {"id": "doc1", "score": 0.6}]
@@ -340,12 +368,12 @@ class TestHyDEQueryEngine:
 
         assert results == reranked_results
         mock_embedding_manager.rerank_results.assert_called_once_with(
-            "test query", initial_results
+            "test query", [{"id": "doc1", "score": 0.8}, {"id": "doc2", "score": 0.7}]
         )
 
     @pytest.mark.asyncio
     async def test_search_reranking_not_available(
-        self, engine, mock_embedding_manager, _mock_qdrant_service
+        self, engine, mock_embedding_manager, mock_vector_store
     ):
         """Test  search when reranking is not available."""
         engine._initialized = True
@@ -361,17 +389,18 @@ class TestHyDEQueryEngine:
         # Remove rerank_results method
         del mock_embedding_manager.rerank_results
 
-        initial_results = [{"id": "doc1", "score": 0.8}]
-        _mock_qdrant_service.hyde_search.return_value = initial_results
+        initial_results = [_vector_match(doc_id="doc1", score=0.8)]
+        mock_vector_store.search_vector.return_value = initial_results
         engine.cache.set_search_results = AsyncMock()
 
         results = await engine.enhanced_search("test query", use_cache=False)
 
-        assert results == initial_results  # Should return original results
+        expected = [{"id": "doc1", "score": 0.8}]
+        assert results == expected  # Should return original results
 
     @pytest.mark.asyncio
     async def test_search_reranking_error(
-        self, engine, mock_embedding_manager, _mock_qdrant_service
+        self, engine, mock_embedding_manager, mock_vector_store
     ):
         """Test  search when reranking fails."""
         engine._initialized = True
@@ -384,8 +413,8 @@ class TestHyDEQueryEngine:
             "embeddings": [[0.1, 0.2, 0.3]]
         }
 
-        initial_results = [{"id": "doc1", "score": 0.8}]
-        _mock_qdrant_service.hyde_search.return_value = initial_results
+        initial_results = [_vector_match(doc_id="doc1", score=0.8)]
+        mock_vector_store.search_vector.return_value = initial_results
 
         # Mock reranking error
         mock_embedding_manager.rerank_results.side_effect = Exception("Reranking error")
@@ -394,11 +423,12 @@ class TestHyDEQueryEngine:
 
         results = await engine.enhanced_search("test query", use_cache=False)
 
-        assert results == initial_results  # Should return original results on error
+        expected = [{"id": "doc1", "score": 0.8}]
+        assert results == expected  # Should return original results on error
 
     @pytest.mark.asyncio
     async def test_search_fallback_on_error(
-        self, engine, mock_embedding_manager, _mock_qdrant_service
+        self, engine, mock_embedding_manager, mock_vector_store
     ):
         """Test  search falls back on HyDE error."""
         engine._initialized = True
@@ -413,14 +443,17 @@ class TestHyDEQueryEngine:
         mock_embedding_manager.generate_embeddings.return_value = {
             "embeddings": [[0.1, 0.2, 0.3]]
         }
-        fallback_results = [{"id": "fallback_doc", "score": 0.7}]
-        _mock_qdrant_service.filtered_search.return_value = fallback_results
+        fallback_matches = [_vector_match(doc_id="fallback_doc", score=0.7)]
+        mock_vector_store.search_vector.return_value = fallback_matches
+        engine.cache.get_search_results = AsyncMock(return_value=None)
 
         results = await engine.enhanced_search("test query")
 
-        assert results == fallback_results
+        assert len(results) == len(fallback_matches)
+        assert results[0]["id"] == "fallback_doc"
+        assert results[0]["score"] == pytest.approx(0.7)
         assert engine.fallback_count == 1
-        _mock_qdrant_service.filtered_search.assert_called_once()
+        mock_vector_store.search_vector.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_search_error_no_fallback(self, engine):
@@ -582,45 +615,45 @@ class TestHyDEQueryEngine:
         assert "Failed to generate query embedding" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_perform_hyde_search_success(self, engine, _mock_qdrant_service):
+    async def test_perform_hybrid_search_success(self, engine, mock_vector_store):
         """Test successful HyDE search execution."""
         engine._initialized = True
 
         query_embedding = [0.1, 0.2, 0.3]
-        hyde_embedding = [0.4, 0.5, 0.6]
-        mock_results = [{"id": "doc1", "score": 0.9}]
+        mock_results = [_vector_match(payload={})]
 
-        _mock_qdrant_service.hyde_search.return_value = mock_results
+        mock_vector_store.search_vector.return_value = mock_results
 
-        results = await engine._perform_hyde_search(
+        results = await engine._perform_hybrid_search(
+            query="HyDE search",
             query_embedding=query_embedding,
-            hyde_embedding=hyde_embedding,
+            hyde_embedding=[0.4, 0.5, 0.6],
             collection_name="documents",
             limit=10,
             filters={"type": "doc"},
             search_accuracy="balanced",
         )
 
-        assert results == mock_results
-        _mock_qdrant_service.hyde_search.assert_called_once_with(
-            collection_name="documents",
-            query="HyDE search",
-            query_embedding=query_embedding,
-            hypothetical_embeddings=[hyde_embedding],
+        assert len(results) == len(mock_results)
+        assert results[0]["id"] == mock_results[0].id
+        assert results[0]["score"] == pytest.approx(mock_results[0].score)
+        mock_vector_store.search_vector.assert_awaited_once_with(
+            collection="documents",
+            vector=[0.4, 0.5, 0.6],
             limit=10,
-            fusion_algorithm=engine.config.fusion_algorithm,
-            search_accuracy="balanced",
+            filters={"type": "doc"},
         )
 
     @pytest.mark.asyncio
-    async def test_perform_hyde_search_error(self, engine, _mock_qdrant_service):
+    async def test_perform_hybrid_search_error(self, engine, mock_vector_store):
         """Test HyDE search execution error."""
         engine._initialized = True
 
-        _mock_qdrant_service.hyde_search.side_effect = Exception("Search error")
+        mock_vector_store.search_vector.side_effect = Exception("Search error")
 
         with pytest.raises(QdrantServiceError) as exc_info:
-            await engine._perform_hyde_search(
+            await engine._perform_hybrid_search(
+                query="HyDE search",
                 query_embedding=[0.1, 0.2, 0.3],
                 hyde_embedding=[0.4, 0.5, 0.6],
                 collection_name="documents",
@@ -633,7 +666,7 @@ class TestHyDEQueryEngine:
 
     @pytest.mark.asyncio
     async def test_fallback_search_success(
-        self, engine, mock_embedding_manager, _mock_qdrant_service
+        self, engine, mock_embedding_manager, mock_vector_store
     ):
         """Test successful fallback search."""
         engine._initialized = True
@@ -644,8 +677,8 @@ class TestHyDEQueryEngine:
         }
 
         # Mock search results
-        mock_results = [{"id": "doc1", "score": 0.8}]
-        _mock_qdrant_service.filtered_search.return_value = mock_results
+        mock_results = [_vector_match(score=0.8, payload={})]
+        mock_vector_store.search_vector.return_value = mock_results
 
         results = await engine._fallback_search(
             query="test query",
@@ -655,18 +688,19 @@ class TestHyDEQueryEngine:
             search_accuracy="balanced",
         )
 
-        assert results == mock_results
-        _mock_qdrant_service.filtered_search.assert_called_once_with(
-            collection_name="documents",
-            query_vector=[0.1, 0.2, 0.3],
-            filters={"type": "doc"},
+        assert len(results) == len(mock_results)
+        assert results[0]["id"] == mock_results[0].id
+        assert results[0]["score"] == pytest.approx(mock_results[0].score)
+        mock_vector_store.search_vector.assert_awaited_once_with(
+            collection="documents",
+            vector=[0.1, 0.2, 0.3],
             limit=10,
-            search_accuracy="balanced",
+            filters={"type": "doc"},
         )
 
     @pytest.mark.asyncio
     async def test_fallback_search_error(
-        self, engine, mock_embedding_manager, _mock_qdrant_service
+        self, engine, mock_embedding_manager, mock_vector_store
     ):
         """Test fallback search error."""
         engine._initialized = True
@@ -674,7 +708,7 @@ class TestHyDEQueryEngine:
         mock_embedding_manager.generate_embeddings.return_value = {
             "embeddings": [[0.1, 0.2, 0.3]]
         }
-        _mock_qdrant_service.filtered_search.side_effect = Exception("Search error")
+        mock_vector_store.search_vector.side_effect = Exception("Search error")
 
         with pytest.raises(EmbeddingServiceError) as exc_info:
             await engine._fallback_search(
@@ -710,7 +744,7 @@ class TestHyDEQueryEngine:
 
     @pytest.mark.asyncio
     async def test_search_ab_testing_control(
-        self, engine, mock_embedding_manager, _mock_qdrant_service
+        self, engine, mock_embedding_manager, mock_vector_store
     ):
         """Test  search with A/B testing - control group."""
         engine._initialized = True
@@ -723,19 +757,21 @@ class TestHyDEQueryEngine:
         mock_embedding_manager.generate_embeddings.return_value = {
             "embeddings": [[0.1, 0.2, 0.3]]
         }
-        mock_results = [{"id": "doc1", "score": 0.8}]
-        _mock_qdrant_service.filtered_search.return_value = mock_results
+        mock_results = [_vector_match(score=0.8, payload={})]
+        mock_vector_store.search_vector.return_value = mock_results
 
         results = await engine.enhanced_search("test query")
 
-        assert results == mock_results
+        assert len(results) == len(mock_results)
+        assert results[0]["id"] == mock_results[0].id
+        assert results[0]["score"] == pytest.approx(mock_results[0].score)
         assert engine.control_group_searches == 1
         assert engine.treatment_group_searches == 0
-        _mock_qdrant_service.filtered_search.assert_called_once()
+        mock_vector_store.search_vector.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_search_ab_testing_treatment(
-        self, engine, mock_embedding_manager, _mock_qdrant_service
+        self, engine, mock_embedding_manager, mock_vector_store
     ):
         """Test  search with A/B testing - treatment group."""
         engine._initialized = True
@@ -756,67 +792,19 @@ class TestHyDEQueryEngine:
         }
 
         # Mock search results
-        mock_results = [{"id": "doc1", "score": 0.9}]
-        _mock_qdrant_service.hyde_search.return_value = mock_results
+        mock_results = [_vector_match(payload={})]
+        mock_vector_store.search_vector.return_value = mock_results
 
         engine.cache.set_search_results = AsyncMock()
 
         results = await engine.enhanced_search("test query")
 
-        assert results == mock_results
+        assert len(results) == len(mock_results)
+        assert results[0]["id"] == mock_results[0].id
+        assert results[0]["score"] == pytest.approx(mock_results[0].score)
         assert engine.control_group_searches == 0
         assert engine.treatment_group_searches == 1
-        _mock_qdrant_service.hyde_search.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_batch_search_success(self, engine):
-        """Test successful batch search."""
-        engine._initialized = True
-
-        # Mock enhanced_search
-        async def mock_enhanced_search(query, **__kwargs):
-            return [{"id": f"doc_{query}", "score": 0.8}]
-
-        engine.enhanced_search = AsyncMock(side_effect=mock_enhanced_search)
-
-        queries = ["query1", "query2", "query3"]
-        results = await engine.batch_search(queries, max_concurrent=2)
-
-        assert len(results) == 3
-        assert results[0] == [{"id": "doc_query1", "score": 0.8}]
-        assert results[1] == [{"id": "doc_query2", "score": 0.8}]
-        assert results[2] == [{"id": "doc_query3", "score": 0.8}]
-
-        assert engine.enhanced_search.call_count == 3
-
-    @pytest.mark.asyncio
-    async def test_batch_search_with_errors(self, engine):
-        """Test batch search with some errors."""
-        engine._initialized = True
-
-        # Mock enhanced_search with some errors
-        async def mock_enhanced_search(query, **__kwargs):
-            if query == "error_query":
-                msg = "Search error"
-                raise TestError(msg)
-            return [{"id": f"doc_{query}", "score": 0.8}]
-
-        engine.enhanced_search = AsyncMock(side_effect=mock_enhanced_search)
-
-        queries = ["query1", "error_query", "query3"]
-        results = await engine.batch_search(queries)
-
-        assert len(results) == 3
-        assert results[0] == [{"id": "doc_query1", "score": 0.8}]
-        assert results[1] == []  # Error case returns empty list
-        assert results[2] == [{"id": "doc_query3", "score": 0.8}]
-
-    @pytest.mark.asyncio
-    async def test_batch_search_not_initialized(self, engine):
-        """Test batch search when not initialized."""
-
-        with pytest.raises(APIError):
-            await engine.batch_search(["query1", "query2"])
+        mock_vector_store.search_vector.assert_called_once()
 
     def test_get_performance_metrics(self, engine):
         """Test performance metrics calculation."""
@@ -834,7 +822,7 @@ class TestHyDEQueryEngine:
 
         metrics = engine.get_performance_metrics()
 
-        assert metrics["search_performance"]["_total_searches"] == 10
+        assert metrics["search_performance"]["total_searches"] == 10
         assert metrics["search_performance"]["avg_search_time"] == 2.0
         assert metrics["search_performance"]["cache_hit_rate"] == 0.3
         assert metrics["search_performance"]["fallback_rate"] == 0.2
@@ -867,7 +855,7 @@ class TestHyDEQueryEngine:
         assert "ab_testing" in metrics
         assert metrics["ab_testing"]["control_group_searches"] == 3
         assert metrics["ab_testing"]["treatment_group_searches"] == 7
-        assert metrics["ab_testing"]["_total_ab_searches"] == 10
+        assert metrics["ab_testing"]["total_ab_searches"] == 10
         assert metrics["ab_testing"]["treatment_percentage"] == 0.7
 
     def test_get_performance_metrics_zero_searches(self, engine):
@@ -877,7 +865,7 @@ class TestHyDEQueryEngine:
 
         metrics = engine.get_performance_metrics()
 
-        assert metrics["search_performance"]["_total_searches"] == 0
+        assert metrics["search_performance"]["total_searches"] == 0
         assert metrics["search_performance"]["avg_search_time"] == 0.0
         assert metrics["search_performance"]["cache_hit_rate"] == 0.0
         assert metrics["search_performance"]["fallback_rate"] == 0.0

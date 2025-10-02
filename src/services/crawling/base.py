@@ -19,7 +19,6 @@ class CrawlProvider(ABC):
 
         Returns:
             Scrape result with content and metadata
-
         """
 
     @abstractmethod
@@ -38,7 +37,6 @@ class CrawlProvider(ABC):
 
         Returns:
             Crawl result with pages and metadata
-
         """
 
     @abstractmethod

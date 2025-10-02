@@ -41,7 +41,7 @@ class TestSecureVectorModel:
         large_vector = [0.1] * 5000  # Exceeds 4096 limit
         with pytest.raises(DimensionError) as exc_info:
             SecureVectorModel(values=large_vector)
-        assert "Vector dimensions exceed allowed" in str(exc_info.value)
+        assert "Vector dimensions exceed maximum allowed" in str(exc_info.value)
 
     def test_invalid_values_rejected(self):
         """Test invalid values are rejected."""

@@ -5,8 +5,9 @@ Modern Python 3.13 implementation with async patterns for Qdrant operations.
 Provides comprehensive database management, search, and maintenance utilities
 """
 
-import asyncio
+import inspect
 import logging
+from collections.abc import Mapping
 from typing import Any
 
 import click
@@ -16,22 +17,20 @@ from rich.table import Table
 
 # Import unified configuration and service layer
 from src.config import get_config
+from src.contracts.retrieval import SearchRecord
 from src.infrastructure.client_manager import ClientManager
+from src.services.vector_db import CollectionSchema
+from src.services.vector_db.service import VectorStoreService
 from src.utils import async_command
 
 
 console = Console()
 
 
-class SearchResult(BaseModel):
+class SearchResult(SearchRecord):
     """Search result from vector database."""
 
-    id: int
-    score: float
-    url: str
-    title: str
-    content: str
-    metadata: dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] | None = Field(default_factory=dict)
 
 
 class CollectionInfo(BaseModel):
@@ -88,8 +87,7 @@ class VectorDBManager:
 
         # Override Qdrant URL if provided
         if self.qdrant_url:
-            # Get the current config and override URL
-            config = self.client_manager.config
+            config = get_config()
             config.qdrant.url = self.qdrant_url
 
         # Ensure ClientManager is initialized
@@ -98,17 +96,54 @@ class VectorDBManager:
 
         self._initialized = True
 
-    async def get_qdrant_service(self):
-        """Get QdrantService from ClientManager."""
-        if not self._initialized:
-            await self.initialize()
-        return await self.client_manager.get_qdrant_service()
+    @staticmethod
+    def _build_search_results(matches: list[Any]) -> list[SearchResult]:
+        """Convert vector search matches to CLI-friendly results."""
 
-    async def get_embedding_manager(self):
-        """Get EmbeddingManager from ClientManager."""
+        results: list[SearchResult] = []
+        for match in matches:
+            payload = dict(getattr(match, "payload", {}) or {})
+            results.append(
+                SearchResult(
+                    id=str(getattr(match, "id", "")),
+                    score=float(getattr(match, "score", 0.0) or 0.0),
+                    url=str(payload.get("url", "")),
+                    title=str(payload.get("title", payload.get("name", ""))),
+                    content=str(payload.get("content", "")),
+                    metadata=payload,
+                )
+            )
+        return results
+
+    async def get_vector_store_service(self) -> VectorStoreService:
+        """Get vector store service from ClientManager."""
         if not self._initialized:
             await self.initialize()
-        return await self.client_manager.get_embedding_manager()
+        return await self.client_manager.get_vector_store_service()
+
+    async def get_embedding_manager(self) -> Any:
+        """Expose embedding manager for backward compatibility paths."""
+
+        if not self._initialized:
+            await self.initialize()
+
+        vector_service = await self.get_vector_store_service()
+        if hasattr(vector_service, "get_embedding_manager"):
+            embedding_manager = vector_service.get_embedding_manager()
+            if inspect.isawaitable(embedding_manager):
+                embedding_manager = await embedding_manager
+            return embedding_manager
+
+        legacy_fetch = getattr(self.client_manager, "get_embedding_manager", None)
+        if callable(legacy_fetch):
+            embedding_manager = legacy_fetch()
+            if inspect.isawaitable(embedding_manager):
+                embedding_manager = await embedding_manager
+            if embedding_manager is not None:
+                return embedding_manager
+
+        msg = "Embedding manager access is not available in this configuration."
+        raise NotImplementedError(msg)
 
     async def cleanup(self) -> None:
         """Cleanup services (delegated to ClientManager)."""
@@ -120,8 +155,8 @@ class VectorDBManager:
         """List all collections."""
         try:
             await self.initialize()
-            qdrant_service = await self.get_qdrant_service()
-            return await qdrant_service.list_collections()
+            vector_service = await self.get_vector_store_service()
+            return await vector_service.list_collections()
         except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             console.print(f"❌ Error listing collections: {e}", style="red")
             return []
@@ -132,15 +167,13 @@ class VectorDBManager:
         """Create a new collection."""
         try:
             await self.initialize()
-            qdrant_service = await self.get_qdrant_service()
-            await qdrant_service.create_collection(
-                collection_name=collection_name,
+            vector_service = await self.get_vector_store_service()
+            schema = CollectionSchema(
+                name=collection_name,
                 vector_size=vector_size,
-                distance="Cosine",
+                distance="cosine",
             )
-            console.print(
-                f"✅ Successfully created collection: {collection_name}", style="green"
-            )
+            await vector_service.ensure_collection(schema)
             return True  # noqa: TRY300
         except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             console.print(
@@ -152,11 +185,8 @@ class VectorDBManager:
         """Delete a collection."""
         try:
             await self.initialize()
-            qdrant_service = await self.get_qdrant_service()
-            await qdrant_service.delete_collection(collection_name)
-            console.print(
-                f"✅ Successfully deleted collection: {collection_name}", style="green"
-            )
+            vector_service = await self.get_vector_store_service()
+            await vector_service.drop_collection(collection_name)
             return True  # noqa: TRY300
         except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             console.print(
@@ -168,16 +198,20 @@ class VectorDBManager:
         """Get information about a specific collection."""
         try:
             await self.initialize()
-            qdrant_service = await self.get_qdrant_service()
-            collection_info = await qdrant_service.get_collection_info(collection_name)
-
-            if not collection_info:
+            vector_service = await self.get_vector_store_service()
+            stats = await vector_service.collection_stats(collection_name)
+            if not stats:
                 return None
-
+            vectors_config = stats.get("vectors", {})
+            vector_size = 0
+            if isinstance(vectors_config, Mapping):
+                first_config = next(iter(vectors_config.values()), None)
+                if isinstance(first_config, Mapping):
+                    vector_size = int(first_config.get("size", 0))
             return CollectionInfo(
                 name=collection_name,
-                vector_count=collection_info.vector_count,
-                vector_size=collection_info.vector_size,
+                vector_count=int(stats.get("points_count", 0)),
+                vector_size=vector_size,
             )
         except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             console.print(
@@ -186,64 +220,74 @@ class VectorDBManager:
             )
             return None
 
+    async def search_documents(
+        self,
+        collection_name: str,
+        query: str,
+        limit: int = 5,
+    ) -> list[SearchResult]:
+        """Search for similar documents using dense embeddings."""
+        try:
+            await self.initialize()
+            vector_service = await self.get_vector_store_service()
+            matches = await vector_service.search_documents(
+                collection_name,
+                query,
+                limit=limit,
+            )
+            return self._build_search_results(matches)
+        except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
+            console.print(f"❌ Error searching collection: {e}", style="red")
+            return []
+
     async def search_vectors(
         self,
         collection_name: str,
         query_vector: list[float],
         limit: int = 5,
-        score_threshold: float = 0.0,
+        filters: Mapping[str, Any] | None = None,
     ) -> list[SearchResult]:
-        """Search for similar vectors."""
+        """Search using a pre-computed embedding vector."""
+
         try:
             await self.initialize()
-            qdrant_service = await self.get_qdrant_service()
-            search_results = await qdrant_service.search_vectors(
-                collection_name=collection_name,
-                query_vector=query_vector,
+            vector_service = await self.get_vector_store_service()
+            matches = await vector_service.search_vectors(
+                collection_name,
+                query_vector,
                 limit=limit,
-                score_threshold=score_threshold,
+                filters=filters,
             )
-
-            results = []
-            for result in search_results:
-                payload = result.payload or {}
-                results.append(
-                    SearchResult(
-                        id=result.id,
-                        score=result.score,
-                        url=payload.get("url", ""),
-                        title=payload.get("title", ""),
-                        content=payload.get("content", ""),
-                        metadata=payload,
-                    )
-                )
-
+            return self._build_search_results(matches)
         except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
-            console.print(f"❌ Error searching vectors: {e}", style="red")
+            console.print(f"❌ Error searching by vector: {e}", style="red")
             return []
-        else:
-            return results
 
     async def get_database_stats(self) -> DatabaseStats | None:
         """Get comprehensive database statistics."""
         try:
             await self.initialize()
-            qdrant_service = await self.get_qdrant_service()
-            collection_names = await qdrant_service.list_collections()
+            vector_service = await self.get_vector_store_service()
+            collection_names = await vector_service.list_collections()
             collections = []
             total_vectors = 0
 
             for collection_name in collection_names:
-                collection_info = await qdrant_service.get_collection_info(
-                    collection_name
-                )
-                if collection_info:
-                    total_vectors += collection_info.vector_count
+                stats = await vector_service.collection_stats(collection_name)
+                if stats:
+                    vector_count = int(stats.get("points_count", 0))
+                    total_vectors += vector_count
+                    vectors_config = stats.get("vectors", {})
+                    vector_size = 0
+                    if isinstance(vectors_config, Mapping):
+                        first_config = next(iter(vectors_config.values()), None)
+                        if isinstance(first_config, Mapping):
+                            vector_size = int(first_config.get("size", 0))
                     collections.append(
                         CollectionInfo(
                             name=collection_name,
-                            vector_count=collection_info.vector_count,
-                            vector_size=collection_info.vector_size,
+                            vector_count=vector_count,
+                            vector_size=vector_size,
                         )
                     )
 
@@ -262,21 +306,25 @@ class VectorDBManager:
             await self.initialize()
 
             # Get vector size before deletion
-            qdrant_service = await self.get_qdrant_service()
-            collection_info = await qdrant_service.get_collection_info(collection_name)
-            if not collection_info:
+            vector_service = await self.get_vector_store_service()
+            stats = await vector_service.collection_stats(collection_name)
+            if not stats:
                 console.print(f"❌ Collection {collection_name} not found", style="red")
                 return False
 
-            vector_size = collection_info.vector_size
+            vectors_config = stats.get("vectors", {})
+            vector_size = 0
+            if isinstance(vectors_config, Mapping):
+                first_config = next(iter(vectors_config.values()), None)
+                if isinstance(first_config, Mapping):
+                    vector_size = int(first_config.get("size", 0))
 
-            # Delete and recreate collection
-            await qdrant_service.delete_collection(collection_name)
-            await qdrant_service.create_collection(
-                collection_name=collection_name,
-                vector_size=vector_size,
-                distance="Cosine",
+            await vector_service.drop_collection(collection_name)
+            schema = CollectionSchema(
+                name=collection_name,
+                vector_size=vector_size or 1536,
             )
+            await vector_service.ensure_collection(schema)
 
             console.print(
                 f"✅ Successfully cleared collection: {collection_name}", style="green"
@@ -287,22 +335,11 @@ class VectorDBManager:
                 f"❌ Error clearing collection {collection_name}: {e}", style="red"
             )
             return False
-        else:
-            return True
+        return True
 
     async def get_stats(self) -> DatabaseStats | None:
         """Alias for get_database_stats for backward compatibility."""
         return await self.get_database_stats()
-
-
-async def create_embeddings(text: str, embedding_manager) -> list[float]:
-    """Create embeddings for text using EmbeddingManager."""
-    try:
-        embeddings = await embedding_manager.generate_embeddings([text])
-        return embeddings[0] if embeddings else []
-    except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
-        console.print(f"❌ Error creating embeddings: {e}", style="red")
-        return []
 
 
 def _create_manager_from_context(ctx) -> VectorDBManager:
@@ -361,7 +398,14 @@ async def create(ctx, collection_name, vector_size):
     """Create a new collection."""
     manager = _create_manager_from_context(ctx)
     try:
-        await manager.create_collection(collection_name, vector_size)
+        success = await manager.create_collection(
+            collection_name, vector_size=vector_size
+        )
+        if success:
+            console.print(
+                f"✅ Successfully created collection: {collection_name}",
+                style="green",
+            )
     finally:
         await manager.cleanup()
 
@@ -374,7 +418,12 @@ async def delete(ctx, collection_name):
     """Delete a collection."""
     manager = _create_manager_from_context(ctx)
     try:
-        await manager.delete_collection(collection_name)
+        success = await manager.delete_collection(collection_name)
+        if success:
+            console.print(
+                f"✅ Successfully deleted collection: {collection_name}",
+                style="green",
+            )
     finally:
         await manager.cleanup()
 
@@ -454,18 +503,11 @@ async def search(ctx, collection_name, query, limit):
     """Search for similar documents."""
     manager = _create_manager_from_context(ctx)
     try:
-        # Initialize manager to ensure embedding_manager is available
-        await manager.initialize()
-
-        # Create query embedding
-        embedding_manager = await manager.get_embedding_manager()
-        query_vector = await create_embeddings(query, embedding_manager)
-        if not query_vector:
-            console.print("Failed to create query embedding", style="red")
-            return
-
-        # Search
-        results = await manager.search_vectors(collection_name, query_vector, limit)
+        results = await manager.search_documents(
+            collection_name,
+            query,
+            limit=limit,
+        )
 
         if results:
             console.print(f"🔍 Search Results for: '{query}'", style="bold yellow")

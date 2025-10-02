@@ -6,7 +6,7 @@ from typing import cast
 
 import pytest
 
-from src.config import Environment, ObservabilityConfig, Settings
+from src.config import Config, Environment, ObservabilityConfig
 
 
 @pytest.fixture(name="default_config")
@@ -49,9 +49,9 @@ class TestObservabilityConfig:
         """Default instrumentation flags are enabled for supported integrations."""
         assert getattr(default_config, attribute) is True
 
-    def test_settings_embeds_observability_model(self) -> None:
-        """`Settings` exposes an instance of `ObservabilityConfig`."""
-        settings = Settings()
+    def test_config_embeds_observability_model(self) -> None:
+        """`Config` exposes an instance of `ObservabilityConfig`."""
+        settings = Config()
         observability_config = cast(
             ObservabilityConfig, object.__getattribute__(settings, "observability")
         )
@@ -110,12 +110,12 @@ class TestObservabilityConfig:
         assert config.instrument_sqlalchemy is False
 
 
-class TestSettingsIntegration:
+class TestConfigIntegration:
     """Verify observability configuration derived from application settings."""
 
     def test_development_defaults(self) -> None:
         """Development mode keeps observability disabled by default."""
-        settings = Settings(environment=Environment.DEVELOPMENT)
+        settings = Config(environment=Environment.DEVELOPMENT)
         observability_config = cast(
             ObservabilityConfig, object.__getattribute__(settings, "observability")
         )
@@ -124,7 +124,7 @@ class TestSettingsIntegration:
 
     def test_runtime_updates(self) -> None:
         """Runtime modifications to nested observability config are retained."""
-        settings = Settings()
+        settings = Config()
         observability_config = cast(
             ObservabilityConfig, object.__getattribute__(settings, "observability")
         )

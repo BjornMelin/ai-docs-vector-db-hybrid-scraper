@@ -1,12 +1,11 @@
-"""Simplified cache system using DragonflyDB with specialized cache layers."""
+"""Cache package exports for persistent cache implementation."""
 
 from .base import CacheInterface
 from .dragonfly_cache import DragonflyCache
 from .embedding_cache import EmbeddingCache
-from .local_cache import LocalCache
 from .manager import CacheManager, CacheType
-from .metrics import CacheMetrics
 from .patterns import CachePatterns
+from .persistent_cache import CacheStats, PersistentCacheManager
 from .search_cache import SearchResultCache
 from .warming import CacheWarmer
 
@@ -14,12 +13,12 @@ from .warming import CacheWarmer
 __all__ = [
     "CacheInterface",
     "CacheManager",
-    "CacheMetrics",
     "CachePatterns",
+    "CacheStats",
     "CacheType",
     "CacheWarmer",
     "DragonflyCache",
     "EmbeddingCache",
-    "LocalCache",
+    "PersistentCacheManager",
     "SearchResultCache",
 ]

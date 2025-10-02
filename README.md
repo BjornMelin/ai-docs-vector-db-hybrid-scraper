@@ -122,7 +122,7 @@ flowchart LR
 ### Vector Search & Retrieval
 
 - `src/services/vector_db/` wraps collection management, hybrid search orchestration, adaptive fusion, and payload indexing.
-- Dense embeddings via OpenAI or FastEmbed, optional sparse vectors via SPLADE, and reranking hooks are configurable through Pydantic settings (`src/config/settings.py`).
+- Dense embeddings via OpenAI or FastEmbed, optional sparse vectors via SPLADE, and reranking hooks are configurable through Pydantic models (`src/config/models.py`).
 - HyDE augmentation and caching live under `src/services/hyde/`, enabling query expansion for RAG pipelines.
 - Search responses return timing, scoring metadata, and diagnostics suitable for observability dashboards.
 
@@ -213,7 +213,7 @@ Stop with `docker compose down` when finished.
 
 ## Configuration
 
-- Configuration is defined with Pydantic models in `src/config/settings.py` and can be overridden via environment variables (`AI_DOCS__*`) or YAML files in `config/templates/`.
+- Configuration is defined with Pydantic models in `src/config/models.py` and can be overridden via environment variables (`AI_DOCS__*`) or YAML files in `config/templates/`.
 - Mode-aware settings enable or disable services such as advanced caching, A/B testing, and observability.
 - Detailed configuration guidance lives in `docs/developers/configuration.md` and operator runbooks under `docs/operators/`.
 
@@ -223,8 +223,8 @@ Stop with `docker compose down` when finished.
 # Quick unit + fast integration tests
 python scripts/dev.py test --profile quick
 
-# Full suite with coverage
-python scripts/dev.py test --profile full --coverage
+# Full suite with coverage (mirrors CI)
+python scripts/dev.py test --profile ci
 
 # Lint, format, type-check, and tests in one pass
 python scripts/dev.py quality

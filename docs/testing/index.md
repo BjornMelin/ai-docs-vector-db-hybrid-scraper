@@ -23,7 +23,7 @@ uv run pytest -n auto                    # Auto-detect CPU cores
 uv run pytest -n 4                       # Use 4 workers
 
 # Run with coverage
-uv run pytest --cov=src --cov-report=html
+uv run python scripts/dev.py test --profile ci
 
 # Debug failing tests
 uv run pytest tests/specific/test.py::test_function -xvs
@@ -41,5 +41,5 @@ uv run pytest tests/specific/test.py::test_function -xvs
 1. Write unit tests first (TDD)
 2. Run tests locally: `uv run pytest -m unit`
 3. Run integration tests: `uv run pytest -m integration`
-4. Check coverage: `uv run pytest --cov=src`
+4. Check coverage: `uv run python scripts/dev.py test --profile ci`
 5. Run full suite before PR: `uv run pytest`

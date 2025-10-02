@@ -65,9 +65,10 @@ class TestDocumentIngestionDataFlow:
             crawl_result = {
                 "success": True,
                 "url": url,
-                "content": f"<html><body><h1>Document {
-                    i + 1
-                }</h1><p>Content for document {i + 1}</p></body></html>",
+                "content": (
+                    f"<html><body><h1>Document {i + 1}</h1>"
+                    f"<p>Content for document {i + 1}</p></body></html>"
+                ),
                 "metadata": {
                     "status_code": 200,
                     "content_type": "text/html",
@@ -78,12 +79,7 @@ class TestDocumentIngestionDataFlow:
             }
             crawling_results.append(crawl_result)
 
-        services["crawl_manager"].bulk_scrape.return_value = {
-            "success_count": 3,
-            "failure_count": 0,
-            "results": crawling_results,
-            "_total_processing_time_ms": 3600,
-        }
+        services["crawl_manager"].scrape_url.return_value = crawling_results[0]
 
         # Stage 2: Content intelligence analysis
         content_analysis_results = []
@@ -110,18 +106,11 @@ class TestDocumentIngestionDataFlow:
             }
             content_analysis_results.append(analysis_result)
 
-        services["content_intelligence"].batch_analyze.return_value = {
-            "analyses": content_analysis_results,
-            "processing_stats": {
-                "_total_documents": 3,
-                "successful_analyses": 3,
-                "average_quality_score": 0.88,
-                "processing_time_ms": 2400,
-            },
-        }
+        services[
+            "content_intelligence"
+        ].analyze_content.return_value = content_analysis_results[0]
 
         # Stage 3: Embedding generation
-        [result["extracted_text"] for result in content_analysis_results]
         embedding_results = {
             "embeddings": [
                 [0.1, 0.2, 0.3] + [0.0] * 1533,  # 1536-dim embeddings
@@ -133,9 +122,7 @@ class TestDocumentIngestionDataFlow:
             "usage": {"_total_tokens": 150, "cost_usd": 0.0003},
             "processing_time_ms": 800,
         }
-        services[
-            "embedding_manager"
-        ].generate_embeddings.return_value = embedding_results
+        services["embedding_manager"].generate.return_value = embedding_results
 
         # Stage 4: Vector database storage
         vector_points = []
@@ -173,43 +160,46 @@ class TestDocumentIngestionDataFlow:
             "collection": "test_documents",
             "processing_time_ms": 150,
         }
-        services["vector_db_service"].batch_upsert.return_value = storage_result
+        services["vector_db_service"].upsert_documents.return_value = storage_result
 
         # Execute complete ingestion pipeline
         start_time = time.time()
 
         # Step 1: Bulk scraping
-        crawl_results = await services["crawl_manager"].bulk_scrape(
-            urls=urls,
-            config={"timeout": 30, "max_retries": 3, "tier_preference": "adaptive"},
-        )
+        crawl_results = []
+        for url in urls:
+            result = await services["crawl_manager"].scrape_url(
+                url=url,
+                config={"timeout": 30, "max_retries": 3, "tier_preference": "adaptive"},
+            )
+            crawl_results.append(result)
 
         # Step 2: Content analysis
-        raw_contents = [result["content"] for result in crawl_results["results"]]
-        analysis_results = await services["content_intelligence"].batch_analyze(
-            contents=raw_contents,
-            urls=urls,
-            options={
-                "extract_topics": True,
-                "assess_quality": True,
-                "detect_language": True,
-            },
-        )
+        analysis_results = []
+        for crawl_result in crawl_results:
+            result = await services["content_intelligence"].analyze_content(
+                content=crawl_result["content"],
+                url=crawl_result["url"],
+                options={
+                    "extract_topics": True,
+                    "assess_quality": True,
+                    "detect_language": True,
+                },
+            )
+            analysis_results.append(result)
 
         # Step 3: Embedding generation
-        analysis_texts = [
-            analysis["extracted_text"] for analysis in analysis_results["analyses"]
-        ]
-        embedding_data = await services["embedding_manager"].generate_embeddings(
-            texts=analysis_texts, batch_size=10
+        analysis_texts = [analysis["extracted_text"] for analysis in analysis_results]
+        embedding_data = await services["embedding_manager"].generate(
+            texts=analysis_texts
         )
 
         # Step 4: Vector storage preparation
         ingestion_points = []
         for i, (crawl_result, analysis, embedding) in enumerate(
             zip(
-                crawl_results["results"],
-                analysis_results["analyses"],
+                crawl_results,
+                analysis_results,
                 embedding_data["embeddings"],
                 strict=False,
             )
@@ -232,21 +222,21 @@ class TestDocumentIngestionDataFlow:
             ingestion_points.append(point)
 
         # Step 5: Vector database storage
-        final_storage = await services["vector_db_service"].batch_upsert(
-            collection="test_documents", points=ingestion_points, wait=True
+        final_storage = await services["vector_db_service"].upsert_documents(
+            collection="test_documents", documents=ingestion_points
         )
 
-        (time.time() - start_time) * 1000
+        _total_duration = (time.time() - start_time) * 1000
 
         # Verify complete pipeline execution
-        services["crawl_manager"].bulk_scrape.assert_called_once()
-        services["content_intelligence"].batch_analyze.assert_called_once()
-        services["embedding_manager"].generate_embeddings.assert_called_once()
-        services["vector_db_service"].batch_upsert.assert_called_once()
+        services["crawl_manager"].scrape_url.assert_called()
+        services["content_intelligence"].analyze_content.assert_called()
+        services["embedding_manager"].generate.assert_called()
+        services["vector_db_service"].upsert_documents.assert_called_once()
 
         # Verify data flow integrity
-        assert crawl_results["success_count"] == 3
-        assert analysis_results["processing_stats"]["successful_analyses"] == 3
+        assert len(crawl_results) == 3
+        assert len(analysis_results) == 3
         assert len(embedding_data["embeddings"]) == 3
         assert final_storage["points_upserted"] == 3
 
@@ -714,7 +704,7 @@ class TestSearchPipelineDataFlow:
             "results": final_results["results"],
             "answer": answer_data["answer"],
             "metadata": {
-                "_total_results": len(final_results["results"]),
+                "total_results": len(final_results["results"]),
                 "search_time_ms": _total_search_time,
                 "answer_confidence": answer_data["confidence"],
                 "processing_stages": {
@@ -775,7 +765,7 @@ class TestSearchPipelineDataFlow:
             "metadata": {
                 "cached": False,
                 "search_time_ms": 450,
-                "_total_results": 2,
+                "total_results": 2,
                 "generated_at": time.time(),
             },
         }
@@ -872,7 +862,7 @@ class TestSearchPipelineDataFlow:
             "metadata": {
                 "cached": False,
                 "search_time_ms": 450,
-                "_total_results": len(final_results["results"]),
+                "total_results": len(final_results["results"]),
                 "generated_at": time.time(),
             },
         }

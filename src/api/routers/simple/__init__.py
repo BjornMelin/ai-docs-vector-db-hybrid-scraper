@@ -1,6 +1,6 @@
-"""Simple mode API routers.
+"""Simple mode API routers."""
 
-Simplified API endpoints optimized for solo developers with minimal complexity.
-"""
+from src.api.routers.simple import documents, search
+
 
 __all__ = ["documents", "search"]

@@ -1,11 +1,11 @@
 """Specialized cache for search results with invalidation."""
 
-import hashlib
-import json
 import logging
 from typing import Any
 
+from ._bulk_delete import delete_in_batches
 from .dragonfly_cache import DragonflyCache
+from .persistent_cache import PersistentCacheManager
 
 
 logger = logging.getLogger(__name__)
@@ -32,6 +32,7 @@ class SearchResultCache:
         self.cache = cache
         self.default_ttl = default_ttl
 
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     async def get_search_results(
         self,
         query: str,
@@ -39,7 +40,7 @@ class SearchResultCache:
         filters: dict | None = None,
         limit: int = 10,
         search_type: str = "hybrid",
-        **params: Any,
+        params: dict | None = None,
     ) -> list[dict] | None:
         """Get cached search results.
 
@@ -49,32 +50,30 @@ class SearchResultCache:
             filters: Search filters
             limit: Number of results
             search_type: Type of search (dense, sparse, hybrid)
-            **params: Additional search parameters
+            params: Additional search parameters
 
         Returns:
             Cached search results or None if not found
         """
-        key = self._get_search_key(
-            query, collection_name, filters, limit, search_type, **params
+        key = self._build_search_key(
+            query, collection_name, filters, limit, search_type, params or {}
         )
 
         try:
             cached = await self.cache.get(key)
-            if cached:
-                logger.debug(f"Search cache hit for query: {query[:50]}...")
-
-                # Track popularity for cache optimization
+            if cached is not None:
+                logger.debug("Search cache hit for query: %s...", query[:50])
                 await self._increment_query_popularity(query)
-
                 return cached
 
-            logger.debug(f"Search cache miss for query: {query[:50]}...")
+            logger.debug("Search cache miss for query: %s...", query[:50])
             return None
 
         except (ConnectionError, RuntimeError, TimeoutError) as e:
-            logger.error(f"Error retrieving search results from cache: {e}")
+            logger.error("Error retrieving search results from cache: %s", e)
             return None
 
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     async def set_search_results(
         self,
         query: str,
@@ -84,7 +83,7 @@ class SearchResultCache:
         limit: int = 10,
         search_type: str = "hybrid",
         ttl: int | None = None,
-        **params: Any,
+        params: dict | None = None,
     ) -> bool:
         """Cache search results with TTL adjustment.
 
@@ -96,13 +95,13 @@ class SearchResultCache:
             limit: Number of results
             search_type: Type of search
             ttl: Custom TTL (uses popularity-adjusted default if None)
-            **params: Additional search parameters
+            params: Additional search parameters
 
         Returns:
             Success status
         """
-        key = self._get_search_key(
-            query, collection_name, filters, limit, search_type, **params
+        key = self._build_search_key(
+            query, collection_name, filters, limit, search_type, params or {}
         )
 
         try:
@@ -113,14 +112,14 @@ class SearchResultCache:
                 if popularity > 10:
                     # Popular queries get shorter TTL for fresher results
                     cache_ttl = self.default_ttl // 2
-                    logger.debug(f"Popular query ({popularity} hits): shorter TTL")
+                    logger.debug("Popular query (%s hits): shorter TTL", popularity)
                 elif popularity > 5:
                     # Moderately popular queries get normal TTL
                     cache_ttl = self.default_ttl
                 else:
                     # Unpopular queries get longer TTL
                     cache_ttl = self.default_ttl * 2
-                    logger.debug(f"Unpopular query ({popularity} hits): longer TTL")
+                    logger.debug("Unpopular query (%s hits): longer TTL", popularity)
             else:
                 cache_ttl = ttl
 
@@ -128,8 +127,10 @@ class SearchResultCache:
 
             if success:
                 logger.debug(
-                    f"Cached {len(results)} search results for query: {query[:50]}... "
-                    f"(TTL: {cache_ttl}s)"
+                    "Cached %s search results for query: %s... (TTL: %ss)",
+                    len(results),
+                    query[:50],
+                    cache_ttl,
                 )
 
                 # Track query for popularity statistics
@@ -138,7 +139,7 @@ class SearchResultCache:
             return success
 
         except (ConnectionError, OSError, PermissionError) as e:
-            logger.error(f"Error caching search results: {e}")
+            logger.error("Error caching search results: %s", e)
             return False
 
     async def invalidate_by_collection(self, collection_name: str) -> int:
@@ -157,27 +158,19 @@ class SearchResultCache:
 
             # Use DragonflyDB's efficient SCAN for pattern matching
             keys = await self.cache.scan_keys(pattern)
+            deleted_count = await delete_in_batches(self.cache, keys)
 
-            if keys:
-                # Delete in batches for efficiency
-                batch_size = 100
-                deleted_count = 0
-
-                for i in range(0, len(keys), batch_size):
-                    batch = keys[i : i + batch_size]
-                    results = await self.cache.delete_many(batch)
-                    deleted_count += sum(results.values())
-
+            if deleted_count:
                 logger.info(
-                    f"Invalidated {deleted_count} search cache entries for collection: "
-                    f"{collection_name}"
+                    "Invalidated %s search cache entries for collection: %s",
+                    deleted_count,
+                    collection_name,
                 )
-                return deleted_count
 
-            return 0
+            return deleted_count
 
         except (ConnectionError, OSError, PermissionError) as e:
-            logger.error(f"Error invalidating collection cache: {e}")
+            logger.error("Error invalidating collection cache: %s", e)
             return 0
 
     async def invalidate_by_query_pattern(self, query_pattern: str) -> int:
@@ -191,8 +184,9 @@ class SearchResultCache:
         """
         try:
             # Create hash pattern for query matching
-            pattern_hash = hashlib.sha256(query_pattern.encode()).hexdigest()
-            pattern = f"search:*:{pattern_hash}*"
+            base_key = PersistentCacheManager.search_key(query_pattern)
+            digest = base_key.partition(":")[2]
+            pattern = f"search:*:{digest}*"
 
             keys = await self.cache.scan_keys(pattern)
 
@@ -201,15 +195,16 @@ class SearchResultCache:
                 deleted_count = sum(results.values())
 
                 logger.info(
-                    f"Invalidated {deleted_count} search cache entries matching: "
-                    f"{query_pattern}"
+                    "Invalidated %s search cache entries matching: %s",
+                    deleted_count,
+                    query_pattern,
                 )
                 return deleted_count
 
             return 0
 
         except (ConnectionError, RuntimeError, TimeoutError) as e:
-            logger.error(f"Error invalidating query pattern cache: {e}")
+            logger.error("Error invalidating query pattern cache: %s", e)
             return 0
 
     async def get_popular_queries(self, limit: int = 10) -> list[tuple[str, int]]:
@@ -245,7 +240,7 @@ class SearchResultCache:
             return []
 
         except (ConnectionError, RuntimeError, TimeoutError) as e:
-            logger.error(f"Error getting popular queries: {e}")
+            logger.error("Error getting popular queries: %s", e)
             return []
 
     async def cleanup_expired_popularity(self) -> int:
@@ -268,16 +263,16 @@ class SearchResultCache:
                 results = await self.cache.delete_many(expired_keys)
                 deleted_count = sum(results.values())
 
-                logger.info(f"Cleaned up {deleted_count} expired popularity counters")
+                logger.info("Cleaned up %s expired popularity counters", deleted_count)
                 return deleted_count
 
             return 0
 
         except (ConnectionError, RuntimeError, TimeoutError) as e:
-            logger.error(f"Error cleaning up expired popularity: {e}")
+            logger.error("Error cleaning up expired popularity: %s", e)
             return 0
 
-    async def get_cache_stats(self) -> dict:
+    async def get_cache_stats(self) -> dict[str, Any]:
         """Get search cache statistics.
 
         Returns:
@@ -288,7 +283,7 @@ class SearchResultCache:
             search_keys = await self.cache.scan_keys("search:*")
             popularity_keys = await self.cache.scan_keys("popular:*")
 
-            stats = {
+            stats: dict[str, Any] = {
                 "total_search_results": len(search_keys),
                 "popularity_counters": len(popularity_keys),
                 "cache_size": await self.cache.size(),
@@ -317,12 +312,35 @@ class SearchResultCache:
             return stats
 
         except (ConnectionError, RuntimeError, TimeoutError) as e:
-            logger.error(f"Error getting cache stats: {e}")
+            logger.error("Error getting cache stats: %s", e)
             return {"error": str(e)}
 
-    async def get_stats(self) -> dict:
+    async def get_stats(self) -> dict[str, Any]:
         """Alias for get_cache_stats for compatibility."""
         return await self.get_cache_stats()
+
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
+    def _build_search_key(
+        self,
+        query: str,
+        collection_name: str,
+        filters: dict | None,
+        limit: int,
+        search_type: str,
+        params: dict | None,
+    ) -> str:
+        """Return deterministic key for search cache entries."""
+
+        payload = {
+            "collection": collection_name,
+            "filters": filters or {},
+            "limit": limit,
+            "search_type": search_type,
+            "params": params or {},
+        }
+        base_key = PersistentCacheManager.search_key(query, payload)
+        digest = base_key.partition(":")[2]
+        return f"search:{collection_name}:{digest}"
 
     def _get_search_key(
         self,
@@ -333,36 +351,11 @@ class SearchResultCache:
         search_type: str,
         **params: Any,
     ) -> str:
-        """Generate deterministic cache key for search.
+        """Backward-compatible wrapper for key generation."""
 
-        Args:
-            query: Search query text
-            collection_name: Collection name
-            filters: Search filters
-            limit: Result limit
-            search_type: Type of search
-            **params: Additional parameters
-
-        Returns:
-            Cache key
-        """
-        # Normalize query
-        normalized_query = query.lower().strip()
-
-        # Sort filters for consistency
-        sorted_filters = json.dumps(filters or {}, sort_keys=True)
-
-        # Sort additional parameters
-        sorted_params = json.dumps(params, sort_keys=True)
-
-        # Combine all parameters
-        key_data = (
-            f"{normalized_query}|{collection_name}|{sorted_filters}|{limit}|"
-            f"{search_type}|{sorted_params}"
+        return self._build_search_key(
+            query, collection_name, filters, limit, search_type, params or {}
         )
-        key_hash = hashlib.sha256(key_data.encode()).hexdigest()
-
-        return f"search:{collection_name}:{key_hash}"
 
     async def _get_query_popularity(self, query: str) -> int:
         """Get query popularity count.
@@ -374,12 +367,13 @@ class SearchResultCache:
             Number of times query was accessed
         """
         try:
-            key = f"popular:{hashlib.sha256(query.encode()).hexdigest()}"
+            digest = PersistentCacheManager.search_key(query)
+            key = f"popular:{digest.partition(':')[2]}"
             count = await self.cache.get(key)
             return int(count) if count else 0
 
         except (ConnectionError, OSError, PermissionError) as e:
-            logger.debug(f"Error getting query popularity: {e}")
+            logger.debug("Error getting query popularity: %s", e)
             return 0
 
     async def _increment_query_popularity(self, query: str) -> None:
@@ -389,7 +383,8 @@ class SearchResultCache:
             query: Query text
         """
         try:
-            key = f"popular:{hashlib.sha256(query.encode()).hexdigest()}"
+            digest = PersistentCacheManager.search_key(query)
+            key = f"popular:{digest.partition(':')[2]}"
 
             # Use atomic increment
             client = await self.cache.client
@@ -400,8 +395,9 @@ class SearchResultCache:
                 await client.expire(key, 86400)  # 24 hours
 
         except (ConnectionError, OSError, TimeoutError) as e:
-            logger.debug(f"Error tracking query popularity: {e}")
+            logger.debug("Error tracking query popularity: %s", e)
 
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     async def warm_popular_searches(
         self,
         queries: list[str],
@@ -426,7 +422,9 @@ class SearchResultCache:
         try:
             for query in queries:
                 # Check if already cached
-                key = self._get_search_key(query, collection_name, None, 10, "hybrid")
+                key = self._build_search_key(
+                    query, collection_name, None, 10, "hybrid", None
+                )
                 exists = await self.cache.exists(key)
 
                 if not exists:
@@ -438,16 +436,18 @@ class SearchResultCache:
                                 query, results, collection_name
                             )
                             warmed_count += 1
-                            logger.debug(f"Warmed search cache for: {query[:50]}...")
+                            logger.debug("Warmed search cache for: %s...", query[:50])
 
                     except (ConnectionError, OSError, PermissionError) as e:
-                        logger.warning(f"Failed to warm search for '{query}': {e}")
+                        logger.warning("Failed to warm search for '%s': %s", query, e)
 
             logger.info(
-                f"Search cache warming completed: {warmed_count}/{len(queries)} queries"
+                "Search cache warming completed: %s/%s queries",
+                warmed_count,
+                len(queries),
             )
             return warmed_count
 
         except (ConnectionError, RuntimeError, TimeoutError) as e:
-            logger.error(f"Error in search cache warming: {e}")
+            logger.error("Error in search cache warming: %s", e)
             return warmed_count

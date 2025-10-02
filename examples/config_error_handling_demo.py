@@ -1,7 +1,13 @@
-"""Demonstration of enhanced configuration error handling.
+"""Configuration error handling examples.
 
-This example shows how to use the enhanced configuration system with
-comprehensive error handling, retry logic, and graceful degradation.
+Demonstrates configuration system error handling including:
+- Loading with fallback configs
+- Validation error handling
+- Config reload with recovery
+- Change listener isolation
+- Graceful degradation
+- Async error handling
+- Backup and restore
 """
 
 import asyncio
@@ -9,15 +15,34 @@ import json
 import logging
 from pathlib import Path
 
-from src.config.config_manager import (
+from src.config import (
+    Config,
     ConfigManager,
-    create_and_load_config_async,
-)
-from src.config.core import Config, OpenAIConfig, QdrantConfig
-from src.config.error_handling import (
-    ConfigValidationError,
+    OpenAIConfig,
+    QdrantConfig,
     get_degradation_handler,
 )
+
+
+class ConfigValidationError(Exception):
+    """Configuration validation error."""
+
+    def __init__(self, message: str, validation_errors: dict | None = None):
+        super().__init__(message)
+        self.validation_errors = validation_errors or {}
+
+
+async def create_and_load_config_async(
+    config_class, config_file, enable_file_watching=False
+):
+    """Create and load config asynchronously."""
+    manager = ConfigManager(
+        config_class=config_class,
+        config_file=config_file,
+        enable_file_watching=enable_file_watching,
+    )
+    config = manager.get_config()
+    return manager, config
 
 
 # Setup logging to see error handling in action
@@ -70,7 +95,7 @@ def demonstrate_validation_error_handling():
     }
 
     try:
-        config_file.write_text(json.dumps(invalid_data))
+        config_file.write_text(json.dumps(invalid_data), encoding="utf-8")
 
         manager = ConfigManager(
             config_class=Config,
@@ -104,7 +129,7 @@ def demonstrate_reload_with_recovery():
             "openai": {"api_key": "sk-original-key"},
             "qdrant": {"url": "http://localhost:6333"},
         }
-        config_file.write_text(json.dumps(valid_config))
+        config_file.write_text(json.dumps(valid_config), encoding="utf-8")
 
         manager = ConfigManager(
             config_class=Config,
@@ -116,7 +141,7 @@ def demonstrate_reload_with_recovery():
         print(f"Original API key: {original_config.openai.api_key}")
 
         # Corrupt the config file
-        config_file.write_text("{invalid json")
+        config_file.write_text("{invalid json", encoding="utf-8")
 
         # Reload will fail but keep original config
         reload_success = manager.reload_config()
@@ -130,7 +155,7 @@ def demonstrate_reload_with_recovery():
             "openai": {"api_key": "sk-updated-key"},
             "qdrant": {"url": "http://localhost:6333"},
         }
-        config_file.write_text(json.dumps(fixed_config))
+        config_file.write_text(json.dumps(fixed_config), encoding="utf-8")
 
         # Now reload should work
         reload_success = manager.reload_config()
@@ -151,7 +176,9 @@ def demonstrate_change_listeners():
     config_file = Path("listener_demo.json")
 
     try:
-        config_file.write_text('{"openai": {"api_key": "sk-initial"}}')
+        config_file.write_text(
+            '{"openai": {"api_key": "sk-initial"}}', encoding="utf-8"
+        )
 
         manager = ConfigManager(
             config_class=Config,
@@ -178,7 +205,9 @@ def demonstrate_change_listeners():
         manager.add_change_listener(another_good_listener)
 
         # Update config - bad listener won't affect good ones
-        config_file.write_text('{"openai": {"api_key": "sk-updated"}}')
+        config_file.write_text(
+            '{"openai": {"api_key": "sk-updated"}}', encoding="utf-8"
+        )
         manager.reload_config()
 
     finally:
@@ -219,7 +248,9 @@ async def demonstrate_async_error_handling():
     config_file = Path("async_demo.json")
 
     try:
-        config_file.write_text('{"openai": {"api_key": "sk-async-test"}}')
+        config_file.write_text(
+            '{"openai": {"api_key": "sk-async-test"}}', encoding="utf-8"
+        )
 
         # Create and load config asynchronously
         manager, config = await create_and_load_config_async(
@@ -231,7 +262,9 @@ async def demonstrate_async_error_handling():
         print(f"Async loaded API key: {config.openai.api_key}")
 
         # Update and reload asynchronously
-        config_file.write_text('{"openai": {"api_key": "sk-async-updated"}}')
+        config_file.write_text(
+            '{"openai": {"api_key": "sk-async-updated"}}', encoding="utf-8"
+        )
 
         reload_success = await manager.reload_config_async()
         print(f"Async reload successful: {reload_success}")
@@ -272,7 +305,7 @@ def demonstrate_backup_and_restore():
         # Create multiple config versions
         for i in range(5):
             config_data = {"openai": {"api_key": f"sk-version-{i}"}}
-            config_file.write_text(json.dumps(config_data))
+            config_file.write_text(json.dumps(config_data), encoding="utf-8")
             manager.reload_config()
             print(f"Loaded version {i}")
 

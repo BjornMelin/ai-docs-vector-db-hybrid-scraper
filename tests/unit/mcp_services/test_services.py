@@ -12,7 +12,7 @@ from src.mcp_services.document_service import DocumentService
 from src.mcp_services.orchestrator_service import OrchestratorService
 from src.mcp_services.search_service import SearchService
 from src.mcp_services.system_service import SystemService
-from src.services.observability.ai_tracking import AIOperationTracker
+from src.services.observability import AIOperationTracker
 
 
 @pytest.fixture
@@ -43,15 +43,14 @@ async def test_search_service_registers_modules(client_manager):
     module = SimpleNamespace(register_tools=MagicMock())
     with patch.multiple(
         "src.mcp_services.search_service",
-        hybrid_search=module,
-        hyde_search=module,
-        multi_stage_search=module,
-        search_with_reranking=module,
+        search=module,
+        search_tools=module,
+        query_processing_tools=module,
         web_search=module,
     ):
         await service._register_search_tools()
 
-    assert module.register_tools.call_count == 5
+    assert module.register_tools.call_count == 4
 
 
 @pytest.mark.asyncio
@@ -63,7 +62,7 @@ async def test_document_service_registers_modules(client_manager):
     with patch.multiple(
         "src.mcp_services.document_service",
         document_management=module,
-        collections=module,
+        collection_management=module,
         projects=module,
         crawling=module,
         content_intelligence=module,
@@ -85,11 +84,10 @@ async def test_system_service_registers_modules(client_manager):
         configuration=module,
         cost_estimation=module,
         embeddings=module,
-        filtering=module,
     ):
         await service._register_system_tools()
 
-    assert module.register_tools.call_count == 5
+    assert module.register_tools.call_count == 4
 
 
 @pytest.mark.asyncio

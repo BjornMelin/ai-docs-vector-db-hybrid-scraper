@@ -1,14 +1,6 @@
 src.services.vector\_db package
 ===============================
 
-Subpackages
------------
-
-.. toctree::
-   :maxdepth: 4
-
-   src.services.vector_db.filters
-
 Submodules
 ----------
 

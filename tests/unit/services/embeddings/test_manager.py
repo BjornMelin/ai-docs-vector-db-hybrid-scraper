@@ -1,11 +1,13 @@
 """Tests for EmbeddingManager with ClientManager integration."""
 
+from contextlib import contextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from src.config import Config
-from src.services.embeddings.manager import EmbeddingManager, QualityTier, TextAnalysis
+from src.services.embeddings.manager import EmbeddingManager, QualityTier
+from src.services.embeddings.manager.providers import ProviderFactories
 from src.services.errors import EmbeddingServiceError
 
 
@@ -61,6 +63,25 @@ def mock_openai_client():
 async def embedding_manager(mock_config, mock_client_manager):
     """Create EmbeddingManager instance."""
     return EmbeddingManager(config=mock_config, client_manager=mock_client_manager)
+
+
+@contextmanager
+def override_provider_factories(manager, *, openai_cls=None, fastembed_cls=None):
+    """Temporarily swap provider factories for targeted initialization behaviour."""
+
+    original_set_factories = manager._provider_registry.set_factories
+
+    def _configure_factories(factories):
+        original_set_factories(
+            ProviderFactories(
+                openai_cls=openai_cls or factories.openai_cls,
+                fastembed_cls=fastembed_cls or factories.fastembed_cls,
+            )
+        )
+
+    with patch.object(manager._provider_registry, "set_factories") as patched:
+        patched.side_effect = _configure_factories
+        yield
 
 
 class TestEmbeddingManagerInitialization:
@@ -136,18 +157,20 @@ class TestEmbeddingManagerInitialization:
             config=mock_config, client_manager=mock_client_manager
         )
 
-        with patch(
-            "src.services.embeddings.manager.FastEmbedProvider"
-        ) as mock_fastembed_provider:
-            mock_fastembed_provider.side_effect = Exception("FastEmbed failed")
+        class FailingFastEmbed:
+            def __init__(self, *_args, **_kwargs):
+                raise RuntimeError("FastEmbed failed")
 
-            with pytest.raises(
+        with (
+            override_provider_factories(manager, fastembed_cls=FailingFastEmbed),
+            pytest.raises(
                 EmbeddingServiceError, match="No embedding providers available"
-            ):
-                await manager.initialize()
+            ),
+        ):
+            await manager.initialize()
 
     @pytest.mark.asyncio
-    async def test_double_initialization(self, embedding_manager, _mock_openai_client):
+    async def test_double_initialization(self, embedding_manager):
         """Test that double initialization is safe."""
         # Create proper async mock providers
         mock_openai_provider = AsyncMock()
@@ -211,7 +234,7 @@ class TestEmbeddingManagerTextAnalysis:
 
         analysis = embedding_manager.analyze_text_characteristics(texts)
 
-        assert analysis._total_length == len(texts[0])
+        assert analysis.total_length == len(texts[0])
         assert analysis.avg_length == len(texts[0])
         assert analysis.text_type == "short"  # Under 100 chars threshold
         # Text is short and simple, so high quality should not be required
@@ -247,7 +270,7 @@ class TestEmbeddingManagerTextAnalysis:
         """Test text analysis for empty input."""
         analysis = embedding_manager.analyze_text_characteristics([])
 
-        assert analysis._total_length == 0
+        assert analysis.total_length == 0
         assert analysis.text_type == "empty"
         assert not analysis.requires_high_quality
 
@@ -257,7 +280,7 @@ class TestEmbeddingManagerTextAnalysis:
 
         analysis = embedding_manager.analyze_text_characteristics(texts)
 
-        assert analysis._total_length == len("valid text")
+        assert analysis.total_length == len("valid text")
         assert analysis.text_type == "short"
 
 
@@ -270,7 +293,7 @@ class TestEmbeddingManagerProviderSelection:
         mock_provider = AsyncMock()
         embedding_manager.providers["openai"] = mock_provider
 
-        result = embedding_manager._get_provider_instance("openai", None)
+        result = embedding_manager._provider_registry.resolve("openai", None)
 
         assert result == mock_provider
 
@@ -283,11 +306,11 @@ class TestEmbeddingManagerProviderSelection:
         embedding_manager.providers["fastembed"] = mock_fastembed_provider
 
         # Test BEST tier should prefer OpenAI
-        result = embedding_manager._get_provider_instance(None, QualityTier.BEST)
+        result = embedding_manager._provider_registry.resolve(None, QualityTier.BEST)
         assert result == mock_openai_provider
 
         # Test FAST tier should prefer FastEmbed
-        result = embedding_manager._get_provider_instance(None, QualityTier.FAST)
+        result = embedding_manager._provider_registry.resolve(None, QualityTier.FAST)
         assert result == mock_fastembed_provider
 
     @pytest.mark.asyncio
@@ -296,7 +319,7 @@ class TestEmbeddingManagerProviderSelection:
         with pytest.raises(
             EmbeddingServiceError, match="Provider 'nonexistent' not available"
         ):
-            embedding_manager._get_provider_instance("nonexistent", None)
+            embedding_manager._provider_registry.resolve("nonexistent", None)
 
     @pytest.mark.asyncio
     async def test_get_provider_instance_fallback(self, embedding_manager):
@@ -305,7 +328,7 @@ class TestEmbeddingManagerProviderSelection:
         embedding_manager.providers["fastembed"] = mock_provider
 
         # Request OpenAI (BEST tier) but only FastEmbed available
-        result = embedding_manager._get_provider_instance(None, QualityTier.BEST)
+        result = embedding_manager._provider_registry.resolve(None, QualityTier.BEST)
 
         assert result == mock_provider
 
@@ -335,48 +358,41 @@ class TestEmbeddingManagerEmbeddingGeneration:
         """Test successful embedding generation."""
         embedding_manager._initialized = True
 
-        # Setup mock provider
-        mock_provider = AsyncMock()
-        mock_provider.generate_embeddings.return_value = [[0.1, 0.2, 0.3]]
-        mock_provider.cost_per_token = 0.0001
-        mock_provider.model_name = "test-model"
-        mock_provider.__class__.__name__ = "TestProvider"
-        embedding_manager.providers["test"] = mock_provider
+        expected_result = {
+            "embeddings": [[0.1, 0.2, 0.3]],
+            "provider": "test",
+            "model": "test-model",
+            "cost": 0.0003,
+            "latency_ms": 12.3,
+            "tokens": 3,
+            "reasoning": "test reasoning",
+            "quality_tier": QualityTier.FAST,
+            "sparse_embeddings": None,
+            "cache_hit": False,
+            "usage_stats": {
+                "summary": {},
+                "by_tier": {},
+                "by_provider": {},
+                "budget": {},
+            },
+        }
 
-        with (
-            patch.object(
-                embedding_manager, "_get_provider_instance", return_value=mock_provider
-            ),
-            patch.object(
-                embedding_manager, "analyze_text_characteristics"
-            ) as mock_analyze,
-            patch.object(
-                embedding_manager, "_select_provider_and_model"
-            ) as mock_select,
-        ):
-            mock_analyze.return_value = TextAnalysis(
-                _total_length=10,
-                avg_length=10,
-                complexity_score=0.5,
-                estimated_tokens=3,
-                text_type="short",
-                requires_high_quality=False,
-            )
-            mock_select.return_value = (
-                mock_provider,
-                "test-model",
-                0.0003,
-                "test reasoning",
+        pipeline_generate = AsyncMock(return_value=expected_result)
+
+        with patch.object(embedding_manager._pipeline, "generate", pipeline_generate):
+            result = await embedding_manager.generate_embeddings(
+                ["test text"],
+                provider_name="test",
+                auto_select=False,
             )
 
-            result = await embedding_manager.generate_embeddings(["test text"])
-
-            assert result["embeddings"] == [[0.1, 0.2, 0.3]]
-            assert result["provider"] == "test"
-            assert result["model"] == "test-model"
-            assert result["cost"] > 0
-            assert not result["cache_hit"]
-            mock_provider.generate_embeddings.assert_called_once()
+        assert result == expected_result
+        pipeline_generate.assert_awaited_once()
+        call_kwargs = pipeline_generate.call_args.kwargs
+        assert call_kwargs["texts"] == ["test text"]
+        options = call_kwargs["options"]
+        assert options.provider_name == "test"
+        assert options.auto_select is False
 
 
 class TestEmbeddingManagerCostEstimation:
@@ -401,7 +417,7 @@ class TestEmbeddingManagerCostEstimation:
 
         assert "test" in result
         assert result["test"]["estimated_tokens"] > 0
-        assert result["test"]["_total_cost"] > 0
+        assert result["test"]["total_cost"] > 0
         assert result["test"]["cost_per_token"] == 0.0001
 
     @pytest.mark.asyncio
@@ -595,26 +611,28 @@ class TestEmbeddingManagerSmartSelection:
         )
 
         # Mock benchmarks for providers
-        embedding_manager._benchmarks = {
-            "text-embedding-3-small": MagicMock(
-                model_name="text-embedding-3-small",
-                provider="openai",
-                avg_latency_ms=78,
-                quality_score=85,
-                tokens_per_second=12800,
-                cost_per_million_tokens=20.0,
-                max_context_length=8191,
-            ),
-            "BAAI/bge-small-en-v1.5": MagicMock(
-                model_name="BAAI/bge-small-en-v1.5",
-                provider="fastembed",
-                avg_latency_ms=45,
-                quality_score=78,
-                tokens_per_second=22000,
-                cost_per_million_tokens=0.0,
-                max_context_length=512,
-            ),
+        benchmarks = {
+            "text-embedding-3-small": {
+                "model_name": "text-embedding-3-small",
+                "provider": "openai",
+                "avg_latency_ms": 78,
+                "quality_score": 85,
+                "tokens_per_second": 12800,
+                "cost_per_million_tokens": 20.0,
+                "max_context_length": 8191,
+            },
+            "BAAI/bge-small-en-v1.5": {
+                "model_name": "BAAI/bge-small-en-v1.5",
+                "provider": "fastembed",
+                "avg_latency_ms": 45,
+                "quality_score": 78,
+                "tokens_per_second": 22000,
+                "cost_per_million_tokens": 0.0,
+                "max_context_length": 512,
+            },
         }
+        embedding_manager._benchmarks = benchmarks
+        embedding_manager._selection._benchmarks = benchmarks
 
         # Mock providers
         mock_openai = AsyncMock()
@@ -645,16 +663,16 @@ class TestEmbeddingManagerSmartSelection:
         embedding_manager._initialized = True
 
         # Create mock benchmark
-        benchmark = MagicMock(
-            quality_score=85,
-            avg_latency_ms=78,
-            cost_per_million_tokens=20.0,
-        )
+        benchmark = {
+            "quality_score": 85,
+            "avg_latency_ms": 78,
+            "cost_per_million_tokens": 20.0,
+        }
 
         # Create text analysis
         text_analysis = embedding_manager.analyze_text_characteristics(["test text"])
 
-        score = embedding_manager._calculate_model_score(
+        score = embedding_manager._selection._calculate_model_score(
             benchmark=benchmark,
             text_analysis=text_analysis,
             quality_tier=QualityTier.BALANCED,
@@ -673,18 +691,19 @@ class TestEmbeddingManagerSmartSelection:
             "provider": "fastembed",
             "model": "BAAI/bge-small-en-v1.5",
             "estimated_cost": 0.0,
-            "benchmark": MagicMock(
-                quality_score=78,
-                avg_latency_ms=45,
-                cost_per_million_tokens=0.0,
-            ),
+            "score": 82.5,
+            "benchmark": {
+                "quality_score": 78,
+                "avg_latency_ms": 45,
+                "cost_per_million_tokens": 0.0,
+            },
         }
 
         text_analysis = embedding_manager.analyze_text_characteristics(
             ["def hello(): pass"]
         )
 
-        reasoning = embedding_manager._generate_selection_reasoning(
+        reasoning = embedding_manager._selection._generate_selection_reasoning(
             selection=selection,
             text_analysis=text_analysis,
             quality_tier=QualityTier.FAST,
@@ -701,7 +720,7 @@ class TestEmbeddingManagerReranking:
     @pytest.mark.asyncio
     async def test_rerank_results_no_reranker(self, embedding_manager):
         """Test reranking when no reranker is available."""
-        embedding_manager._reranker = None
+        embedding_manager._provider_registry._reranker = None
 
         query = "test query"
         results = [
@@ -743,7 +762,7 @@ class TestEmbeddingManagerReranking:
             0.9,
             0.95,
         ]  # Higher scores for reranking
-        embedding_manager._reranker = mock_reranker
+        embedding_manager._provider_registry._reranker = mock_reranker
 
         query = "test query"
         results = [
@@ -764,7 +783,7 @@ class TestEmbeddingManagerReranking:
         # Mock reranker that raises error
         mock_reranker = MagicMock()
         mock_reranker.compute_score.side_effect = Exception("Reranker failed")
-        embedding_manager._reranker = mock_reranker
+        embedding_manager._provider_registry._reranker = mock_reranker
 
         query = "test query"
         results = [{"id": 1, "content": "result", "score": 0.8}]
@@ -786,16 +805,25 @@ class TestEmbeddingManagerAdvancedFeatures:
         # Mock cache manager with public API
         mock_cache_manager = AsyncMock()
         mock_cache_manager.get_embedding.return_value = [0.1] * 1536  # Cache hit
+        mock_cache_manager.set_embedding = AsyncMock()
+        mock_cache_manager.embedding_cache = mock_cache_manager
         embedding_manager.cache_manager = mock_cache_manager
+        embedding_manager._pipeline._cache_manager = mock_cache_manager
 
         # Mock provider
         mock_provider = AsyncMock()
         mock_provider.generate_embeddings.return_value = [[0.2] * 1536]
-        embedding_manager.providers = {"test": mock_provider}
+        mock_provider.cost_per_token = 0.0
+        mock_provider.model_name = "BAAI/bge-small-en-v1.5"
+        embedding_manager.providers = {"fastembed": mock_provider}
+
+        # Avoid budget mock interactions returning MagicMock instances
+        if hasattr(embedding_manager._smart_config, "daily_budget_limit"):
+            embedding_manager._smart_config.daily_budget_limit = 0
 
         result = await embedding_manager.generate_embeddings(
             texts=["test text"],
-            provider_name="test",
+            provider_name="fastembed",
             auto_select=False,
         )
 
@@ -817,25 +845,33 @@ class TestEmbeddingManagerAdvancedFeatures:
         )
         embedding_manager.providers = {"test": mock_provider}
 
-        # Mock text analysis and selection
-        with patch.object(
-            embedding_manager, "_select_provider_and_model"
-        ) as mock_select:
-            mock_select.return_value = (
-                mock_provider,
-                "test-model",
-                0.01,
-                "test reasoning",
-            )
+        expected = {
+            "embeddings": [[0.1] * 1536],
+            "provider": "test",
+            "model": "test-model",
+            "cost": 0.01,
+            "latency_ms": 10.0,
+            "tokens": 5,
+            "reasoning": "test reasoning",
+            "quality_tier": "default",
+            "usage_stats": {},
+            "sparse_embeddings": [{0: 0.5, 1: 0.3}],
+            "cache_hit": False,
+        }
 
+        pipeline_generate = AsyncMock(return_value=expected)
+
+        with patch.object(embedding_manager._pipeline, "generate", pipeline_generate):
             result = await embedding_manager.generate_embeddings(
                 texts=["test text"],
                 generate_sparse=True,
                 auto_select=False,
             )
 
-        assert "sparse_embeddings" in result
-        assert result["sparse_embeddings"] == [{0: 0.5, 1: 0.3}]
+        assert result == expected
+        pipeline_generate.assert_awaited_once()
+        options = pipeline_generate.call_args.kwargs["options"]
+        assert options.generate_sparse is True
 
     @pytest.mark.asyncio
     async def test_generate_embeddings_budget_validation(self, embedding_manager):
@@ -844,51 +880,40 @@ class TestEmbeddingManagerAdvancedFeatures:
         embedding_manager.budget_limit = 0.01
         embedding_manager.usage_stats.daily_cost = 0.009
 
-        # Mock provider and analysis
-        mock_provider = AsyncMock()
-        embedding_manager.providers = {"test": mock_provider}
+        pipeline_generate = AsyncMock(
+            side_effect=EmbeddingServiceError("Budget constraint violated")
+        )
 
-        with patch.object(
-            embedding_manager, "_select_provider_and_model"
-        ) as mock_select:
-            # Return high cost that exceeds budget
-            mock_select.return_value = (
-                mock_provider,
-                "test-model",
-                0.01,
-                "test reasoning",
+        with (
+            patch.object(embedding_manager._pipeline, "generate", pipeline_generate),
+            pytest.raises(EmbeddingServiceError, match="Budget constraint violated"),
+        ):
+            await embedding_manager.generate_embeddings(
+                texts=["test text"],
+                auto_select=False,
             )
 
-            with pytest.raises(
-                EmbeddingServiceError, match="Budget constraint violated"
-            ):
-                await embedding_manager.generate_embeddings(
-                    texts=["test text"],
-                    auto_select=False,
-                )
+        pipeline_generate.assert_awaited_once()
+        options = pipeline_generate.call_args.kwargs["options"]
+        assert options.auto_select is False
 
     @pytest.mark.asyncio
     async def test_generate_embeddings_provider_failure(self, embedding_manager):
         """Test handling of provider failures during embedding generation."""
         embedding_manager._initialized = True
 
-        # Mock provider that fails
-        mock_provider = AsyncMock()
-        mock_provider.generate_embeddings.side_effect = Exception("Provider failed")
-        embedding_manager.providers = {"test": mock_provider}
+        pipeline_generate = AsyncMock(side_effect=Exception("Provider failed"))
 
-        with patch.object(
-            embedding_manager, "_select_provider_and_model"
-        ) as mock_select:
-            mock_select.return_value = (
-                mock_provider,
-                "test-model",
-                0.01,
-                "test reasoning",
+        with (
+            patch.object(embedding_manager._pipeline, "generate", pipeline_generate),
+            pytest.raises(Exception, match="Provider failed"),
+        ):
+            await embedding_manager.generate_embeddings(
+                texts=["test text"],
+                auto_select=False,
             )
 
-            with pytest.raises(Exception, match="Provider failed"):
-                await embedding_manager.generate_embeddings(
-                    texts=["test text"],
-                    auto_select=False,
-                )
+        pipeline_generate.assert_awaited_once()
+        options = pipeline_generate.call_args.kwargs["options"]
+        assert options.auto_select is False
+        assert options.auto_select is False

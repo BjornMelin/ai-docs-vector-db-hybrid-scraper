@@ -1,397 +1,164 @@
-"""Tests for watchdog file monitoring integration.
+"""Tests for ConfigReloader integration and file watching."""
 
-Tests for the modernized configuration system that uses
-watchdog for file monitoring instead of custom reload mechanisms.
-"""
+from __future__ import annotations
 
 import asyncio
-import tempfile
-import time
+import json
+from collections.abc import Iterator
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
-from watchdog.events import FileSystemEvent
 
-from src.config import Config
+from src.config import Config, Environment
+from src.config.loader import get_config, reset_config, set_config
+from src.config.reloader import (
+    ConfigError,
+    ConfigLoadError,
+    ConfigReloader,
+    ReloadTrigger,
+)
 
 
-class TestWatchdogIntegration:
-    """Test watchdog file monitoring integration."""
+@pytest.fixture(autouse=True)
+def clean_config_state() -> Iterator[None]:
+    """Reset global Config cache before and after each test."""
 
-    @pytest.fixture
-    def temp_config_file(self):
-        """Create a temporary config file for testing."""
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            f.write('{"test_key": "test_value"}')
-            f.flush()
-            yield Path(f.name)
+    reset_config()
+    yield
+    reset_config()
 
-        # Cleanup
-        Path(f.name).unlink(missing_ok=True)
 
-    @pytest.mark.asyncio
-    async def test_file_watcher_setup(self, temp_config_file):
-        """Test that file watcher is properly set up.
-
-        Verifies that watchdog observer is configured correctly
-        for monitoring configuration files.
-        """
-        # This test would verify the watchdog setup
-        # Since we don't have the actual implementation, we test the pattern
-
-        with patch("watchdog.observers.Observer") as mock_observer:
-            mock_observer_instance = MagicMock()
-            mock_observer.return_value = mock_observer_instance
-
-            # Mock config initialization that sets up watchdog
-            _config = Config()
-
-            # In a real implementation, this would set up file watching
-            # config._setup_file_watcher(temp_config_file)
-
-            # For now, we'll just verify the pattern
-            assert (
-                mock_observer.called or not mock_observer.called
-            )  # Pattern verification
-
-    def test_file_change_event_handling(self):
-        """Test handling of file change events.
-
-        Verifies that file system events trigger appropriate
-        configuration reload behavior.
-        """
-        # Mock file system event
-        mock_event = MagicMock(spec=FileSystemEvent)
-        mock_event.event_type = "modified"
-        mock_event.src_path = "/path/to/config.json"
-        mock_event.is_directory = False
-
-        # Mock config reload handler
-        reload_handler = MagicMock()
-
-        # Test event filtering
-        def should_reload_config(event):
-            return (
-                event.event_type in ["modified", "moved"]
-                and not event.is_directory
-                and event.src_path.endswith(".json")
-            )
-
-        # Act
-        should_reload = should_reload_config(mock_event)
-        if should_reload:
-            reload_handler()
-
-        # Assert
-        assert should_reload is True
-        reload_handler.assert_called_once()
-
-    def test_file_event_filtering(self):
-        """Test that only relevant file events trigger reloads.
-
-        Verifies that the system filters file events appropriately
-        to avoid unnecessary reloads.
-        """
-        test_cases = [
-            # (event_type, src_path, is_directory, should_trigger)
-            ("modified", "/config/app.json", False, True),
-            ("created", "/config/new.json", False, True),
-            ("deleted", "/config/old.json", False, False),  # Don't reload on delete
-            ("modified", "/config/temp", True, False),  # Ignore directories
-            ("modified", "/config/app.txt", False, False),  # Ignore non-JSON
-            ("moved", "/config/app.json", False, True),  # Handle moves
-        ]
-
-        def should_handle_event(event_type, src_path, is_directory):
-            return (
-                event_type in ["modified", "created", "moved"]
-                and not is_directory
-                and src_path.endswith(".json")
-            )
-
-        for event_type, src_path, is_directory, expected in test_cases:
-            result = should_handle_event(event_type, src_path, is_directory)
-            assert result == expected, (
-                f"Failed for {event_type}, {src_path}, {is_directory}"
-            )
+class TestConfigReloaderFileWatching:
+    """Tests covering file watching behaviour for ConfigReloader."""
 
     @pytest.mark.asyncio
-    async def test_debounced_reload_behavior(self):
-        """Test debounced configuration reload.
+    async def test_enable_file_watching_triggers_reload(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        config_path = tmp_path / "config.json"
+        config_path.write_text("{}", encoding="utf-8")
 
-        Verifies that rapid file changes don't trigger excessive
-        reloads by using proper debouncing.
-        """
-        reload_counter = 0
-        last_reload_time = 0
-        debounce_delay = 0.1  # 100ms debounce
+        reloader = ConfigReloader(config_source=config_path)
 
-        async def debounced_reload():
-            nonlocal reload_counter, last_reload_time
-            current_time = time.time()
+        reload_calls: list[tuple[ReloadTrigger, Path | None]] = []
 
-            # Simple debounce logic
-            if current_time - last_reload_time > debounce_delay:
-                reload_counter += 1
-                last_reload_time = current_time
-                await asyncio.sleep(0.01)  # Simulate reload work
+        async def fake_reload_config(
+            *, trigger: ReloadTrigger, config_source: Path | None, force: bool = False
+        ) -> None:
+            reload_calls.append((trigger, config_source))
 
-        # Act: Simulate file changes with sufficient timing
-        await debounced_reload()  # First call - should trigger (counter = 1)
-        # Wait long enough to ensure we're outside debounce window
-        await asyncio.sleep(0.15)  # 150ms - clearly outside debounce window
-        await debounced_reload()  # Should trigger (counter = 2)
+        reloader.reload_config = fake_reload_config  # type: ignore[assignment]
 
-        # Assert: Should have exactly 2 reloads
-        assert reload_counter == 2
+        async def fake_awatch(path: Path, *, debounce: int):
+            yield {(None, str(config_path))}
+            await asyncio.sleep(0)
+
+        monkeypatch.setattr("src.config.reloader.awatch", fake_awatch)
+
+        await reloader.enable_file_watching(poll_interval=0)
+        await asyncio.sleep(0.05)
+
+        assert reload_calls
+        trigger, source = reload_calls[0]
+        assert trigger == ReloadTrigger.FILE_WATCH
+        assert source == config_path
+        assert reloader.is_file_watch_enabled() is False
 
     @pytest.mark.asyncio
-    async def test_config_reload_error_handling(self):
-        """Test error handling during configuration reload.
+    async def test_enable_file_watching_requires_dependency(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        config_path = tmp_path / "config.json"
+        config_path.write_text("{}", encoding="utf-8")
 
-        Verifies that reload errors don't crash the monitoring
-        system and are properly logged.
-        """
-        error_count = 0
+        reloader = ConfigReloader(config_source=config_path)
+        monkeypatch.setattr("src.config.reloader.awatch", None)
 
-        async def failing_reload():
-            nonlocal error_count
+        with pytest.raises(ConfigError):
+            await reloader.enable_file_watching()
+
+    @pytest.mark.asyncio
+    async def test_enable_file_watching_missing_source(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        missing_path = tmp_path / "missing.json"
+        reloader = ConfigReloader(config_source=missing_path)
+
+        async def dummy_awatch(*args, **kwargs):
+            yield set()
+
+        monkeypatch.setattr("src.config.reloader.awatch", dummy_awatch)
+
+        with pytest.raises(ConfigLoadError):
+            await reloader.enable_file_watching()
+
+    @pytest.mark.asyncio
+    async def test_disable_file_watching_cancels_task(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        config_path = tmp_path / "config.json"
+        config_path.write_text("{}", encoding="utf-8")
+
+        reloader = ConfigReloader(config_source=config_path)
+        start_event = asyncio.Event()
+        stop_event = asyncio.Event()
+
+        async def looping_awatch(path: Path, *, debounce: int):
+            start_event.set()
             try:
-                # Simulate config reload that fails
-                self._raise_config_error()
-            except (TimeoutError, ConnectionError, RuntimeError, ValueError):
-                error_count += 1
-                # In real implementation, this would be logged
-                # logger.error(f"Config reload failed: {e}")
-                # Don't re-raise - keep system stable
+                while True:
+                    await asyncio.sleep(0.01)
+                    yield {(None, str(config_path))}
+            finally:
+                stop_event.set()
 
-        # Act: Trigger failing reload
-        await failing_reload()
+        monkeypatch.setattr("src.config.reloader.awatch", looping_awatch)
 
-        # Assert: Error was handled gracefully
-        assert error_count == 1
+        async def fake_reload_config(
+            *, trigger: ReloadTrigger, config_source: Path | None, force: bool = False
+        ) -> None:
+            await asyncio.sleep(0)
 
-    def test_multiple_file_monitoring(self):
-        """Test monitoring multiple configuration files.
+        reloader.reload_config = fake_reload_config  # type: ignore[assignment]
 
-        Verifies that the system can monitor multiple config
-        files simultaneously.
-        """
-        watched_files = [
-            "/config/main.json",
-            "/config/database.json",
-            "/config/cache.json",
-        ]
+        await reloader.enable_file_watching(poll_interval=0)
+        await asyncio.wait_for(start_event.wait(), timeout=0.2)
+        assert reloader.is_file_watch_enabled() is True
 
-        reload_handlers = {file_path: MagicMock() for file_path in watched_files}
+        await reloader.disable_file_watching()
+        await asyncio.wait_for(stop_event.wait(), timeout=0.2)
+        assert reloader.is_file_watch_enabled() is False
 
-        def handle_file_event(file_path: str):
-            """Handle file change event for specific file."""
-            if file_path in reload_handlers:
-                reload_handlers[file_path]()
 
-        # Act: Simulate changes to different files
-        handle_file_event("/config/main.json")
-        handle_file_event("/config/database.json")
-        handle_file_event("/config/unknown.json")  # Not watched
-
-        # Assert: Only watched files triggered handlers
-        reload_handlers["/config/main.json"].assert_called_once()
-        reload_handlers["/config/database.json"].assert_called_once()
-        reload_handlers["/config/cache.json"].assert_not_called()
+class TestConfigReloaderOperations:
+    """Integration tests for reload and rollback flows."""
 
     @pytest.mark.asyncio
-    async def test_graceful_watcher_shutdown(self):
-        """Test graceful shutdown of file watcher.
+    async def test_reload_and_rollback_flow(self, tmp_path: Path) -> None:
+        initial = Config(environment=Environment.TESTING, app_name="initial")
+        set_config(initial)
 
-        Verifies that the file watcher stops cleanly when
-        the application shuts down.
-        """
-        # Mock observer
-        mock_observer = MagicMock()
-        mock_observer.is_alive.return_value = True
+        config_path = tmp_path / "config.json"
+        config_path.write_text(
+            json.dumps({"environment": "testing", "app_name": "updated"}),
+            encoding="utf-8",
+        )
 
-        async def shutdown_watcher(observer):
-            """Gracefully shutdown file watcher."""
-            observer.stop()
+        reloader = ConfigReloader(config_source=config_path)
+        operation = await reloader.reload_config(config_source=config_path)
 
-            # Wait for observer to stop using asyncio.timeout
-            try:
-                async with asyncio.timeout(5.0):
-                    await _wait_for_observer_shutdown(observer)
-            except TimeoutError:
-                # Force stop if graceful shutdown failed
-                observer.stop()
+        assert operation.success is True
+        assert get_config().app_name == "updated"
 
-        async def _wait_for_observer_shutdown(observer):
-            """Wait for observer to finish using event-based approach."""
-            shutdown_event = asyncio.Event()
+        backups = list(reloader.get_config_backups())
+        assert len(backups) == 1
+        backup_hash, _backup = backups[0]
 
-            def check_observer():
-                if not observer.is_alive():
-                    shutdown_event.set()
+        rollback_operation = await reloader.rollback_config(target_hash=backup_hash)
+        assert rollback_operation.success is True
+        assert get_config().app_name == "initial"
 
-            # Simulate the observer stopping after a short time
-            simulation_task = asyncio.create_task(
-                _simulate_observer_stop(observer, shutdown_event)
-            )
-            # Store reference to prevent task garbage collection
-            simulation_task.add_done_callback(lambda _: None)
-            await shutdown_event.wait()
-
-        async def _simulate_observer_stop(observer, event):
-            """Simulate observer stopping after a delay."""
-            await asyncio.sleep(0.05)  # Simulate some processing time
-            observer.is_alive.return_value = False
-            event.set()
-
-        # Act
-        await shutdown_watcher(mock_observer)
-
-        # Assert
-        mock_observer.stop.assert_called()
-
-    def test_configuration_validation_on_reload(self):
-        """Test that reloaded configuration is validated.
-
-        Verifies that configuration changes are validated
-        before being applied to prevent invalid configs.
-        """
-
-        def validate_config(config_data):
-            """Validate configuration data."""
-            required_keys = ["database_url", "api_key", "cache_size"]
-
-            if not isinstance(config_data, dict):
-                msg = "Config must be a dictionary"
-                raise TypeError(msg)
-
-            for key in required_keys:
-                if key not in config_data:
-                    msg = f"Missing required key: {key}"
-                    raise ValueError(msg)
-
-            # Validate specific values
-            if (
-                not isinstance(config_data["cache_size"], int)
-                or config_data["cache_size"] <= 0
-            ):
-                msg = "cache_size must be a positive integer"
-                raise ValueError(msg)
-
-            return True
-
-        # Test cases
-        valid_config = {
-            "database_url": "postgresql://localhost/test",
-            "api_key": "secret-key",
-            "cache_size": 1000,
-        }
-
-        invalid_configs = [
-            {},  # Missing keys
-            {"database_url": "test"},  # Missing other keys
-            {
-                "database_url": "test",
-                "api_key": "key",
-                "cache_size": -1,  # Invalid value
-            },
-        ]
-
-        # Act & Assert
-        assert validate_config(valid_config) is True
-
-        for invalid_config in invalid_configs:
-            with pytest.raises(ValueError, match=r".*"):
-                validate_config(invalid_config)
-
-    def _raise_config_error(self) -> None:
-        """Raise a configuration error."""
-        msg = "Invalid configuration format"
-        raise ValueError(msg)
-
-
-class TestConfigurationReloadPatterns:
-    """Test  configuration reload patterns."""
-
-    @pytest.mark.asyncio
-    async def test_atomic_config_updates(self):
-        """Test atomic configuration updates.
-
-        Verifies that configuration updates are atomic
-        to prevent inconsistent states during reload.
-        """
-
-        class AtomicConfig:
-            def __init__(self, initial_config):
-                self._config = initial_config.copy()
-                self._lock = asyncio.Lock()
-
-            async def update(self, new_config):
-                async with self._lock:
-                    # Validate before applying
-                    if not isinstance(new_config, dict):
-                        msg = "Invalid config format"
-                        raise TypeError(msg)
-
-                    # Apply atomically
-                    old_config = self._config.copy()
-                    try:
-                        self._config.update(new_config)
-                        # If we get here, update was successful
-                    except Exception:
-                        # Rollback on error
-                        self._config = old_config
-                        raise
-
-            def get(self, key, default=None):
-                return self._config.get(key, default)
-
-        # Test
-        config = AtomicConfig({"key1": "value1"})
-
-        # Successful update
-        await config.update({"key2": "value2"})
-        assert config.get("key1") == "value1"
-        assert config.get("key2") == "value2"
-
-        # Failed update shouldn't affect config
-        with pytest.raises(ValueError, match=r".*"):
-            await config.update("invalid_config")
-
-        # Config should remain unchanged
-        assert config.get("key1") == "value1"
-        assert config.get("key2") == "value2"
-
-    @pytest.mark.asyncio
-    async def test_config_change_notification(self):
-        """Test configuration change notification system.
-
-        Verifies that components are notified when
-        configuration changes occur.
-        """
-        notifications_received = []
-
-        class ConfigNotifier:
-            def __init__(self):
-                self._listeners = []
-
-            def add_listener(self, callback):
-                self._listeners.append(callback)
-
-            async def notify_change(self, key, old_value, new_value):
-                for listener in self._listeners:
-                    await listener(key, old_value, new_value)
-
-        async def config_listener(key, old_value, new_value):
-            notifications_received.append((key, old_value, new_value))
-
-        # Test
-        notifier = ConfigNotifier()
-        notifier.add_listener(config_listener)
-
-        await notifier.notify_change("cache_size", 1000, 2000)
-
-        assert len(notifications_received) == 1
-        assert notifications_received[0] == ("cache_size", 1000, 2000)
+        stats = reloader.get_reload_stats()
+        assert stats["total_operations"] == 2
+        assert stats["successful_operations"] == 2
+        assert stats["backups_available"] == 1

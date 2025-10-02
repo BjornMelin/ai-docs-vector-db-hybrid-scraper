@@ -118,9 +118,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
                 _raise_openai_api_key_not_configured()
 
             self._initialized = True
-            logger.info(
-                f"OpenAI client initialized with model {self.model_name}"
-            )  # TODO: Convert f-string to logging format
+            logger.info("OpenAI client initialized with model %s", self.model_name)
         except Exception as e:
             msg = f"Failed to initialize OpenAI client: {e}"
             raise EmbeddingServiceError(msg) from e
@@ -208,8 +206,10 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
                 embeddings.extend(batch_embeddings)
 
                 logger.debug(
-                    f"Generated embeddings for batch {i // batch_size + 1} "
-                    f"({len(batch)} texts)"
+                    "Generated embeddings for batch %d to %d (%d texts)",
+                    i + 1,
+                    min(i + batch_size, len(texts)),
+                    len(batch),
                 )
 
         except Exception as e:
@@ -354,7 +354,9 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
                 file_response.id, "/v1/embeddings", "24h"
             )
 
-            logger.info(f"Created batch job {batch_response.id} for {len(texts)} texts")
+            logger.info(
+                "Created batch job %s for %d texts", batch_response.id, len(texts)
+            )
 
         except Exception as e:
             msg = f"Failed to create batch job: {e}"

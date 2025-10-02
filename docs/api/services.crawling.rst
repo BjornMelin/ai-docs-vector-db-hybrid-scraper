@@ -4,26 +4,18 @@ services.crawling package
 Submodules
 ----------
 
-services.crawling.base module
------------------------------
+services.crawling.c4a_presets module
+------------------------------------
 
-.. automodule:: services.crawling.base
+.. automodule:: services.crawling.c4a_presets
    :members:
    :show-inheritance:
    :undoc-members:
 
-services.crawling.crawl4ai\_provider module
--------------------------------------------
+services.crawling.c4a_provider module
+-------------------------------------
 
-.. automodule:: services.crawling.crawl4ai_provider
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-services.crawling.extractors module
------------------------------------
-
-.. automodule:: services.crawling.extractors
+.. automodule:: services.crawling.c4a_provider
    :members:
    :show-inheritance:
    :undoc-members:

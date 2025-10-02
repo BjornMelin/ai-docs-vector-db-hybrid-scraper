@@ -5,27 +5,15 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from src.contracts.retrieval import SearchRecord
+from src.services.content_intelligence.models import ContentType as _ContentType
 
-class SearchResult(BaseModel):
-    """Search result with metadata"""
 
-    id: str
-    content: str
-    score: float
-    url: str | None = None
-    title: str | None = None
-    metadata: dict[str, Any] | None = None
+SearchResult = SearchRecord
+SearchResult.__doc__ = "Search result with metadata"
 
-    # Content Intelligence fields
-    content_type: str | None = None
-    content_confidence: float | None = None
-    quality_overall: float | None = None
-    quality_completeness: float | None = None
-    quality_relevance: float | None = None
-    quality_confidence: float | None = None
-    content_intelligence_analyzed: bool | None = None
-
-    model_config = ConfigDict(extra="allow")
+# Re-export ContentType for backward compatibility with earlier imports.
+ContentType = _ContentType
 
 
 class CrawlResult(BaseModel):
@@ -357,75 +345,30 @@ class ContentIntelligenceResult(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Advanced Query Processing Responses
+# Query Processing Responses
 # ---------------------------------------------------------------------------
 
 
 class QueryIntentResult(BaseModel):
     """Result of query intent classification."""
 
-    primary_intent: str = Field(..., description="Primary detected intent")
-    secondary_intents: list[str] = Field(
-        default_factory=list, description="Secondary intents detected"
-    )
-    confidence_scores: dict[str, float] = Field(
-        default_factory=dict, description="Confidence scores for each intent"
-    )
-    complexity_level: str = Field(..., description="Query complexity assessment")
-    domain_category: str | None = Field(
-        default=None, description="Detected technical domain"
-    )
-    classification_reasoning: str = Field(
-        ..., description="Explanation of classification decision"
-    )
-    requires_context: bool = Field(
-        default=False, description="Whether query requires additional context"
-    )
-    suggested_followups: list[str] = Field(
-        default_factory=list, description="Suggested follow-up questions"
-    )
+    model_config = ConfigDict(use_enum_values=True, extra="allow")
 
 
 class QueryPreprocessingResult(BaseModel):
     """Result of query preprocessing."""
 
-    original_query: str = Field(..., description="Original query before processing")
-    processed_query: str = Field(..., description="Query after preprocessing")
-    corrections_applied: list[str] = Field(
-        default_factory=list, description="Spelling corrections applied"
-    )
-    expansions_added: list[str] = Field(
-        default_factory=list, description="Synonym expansions added"
-    )
-    normalization_applied: bool = Field(
-        default=False, description="Whether text normalization was applied"
-    )
-    context_extracted: dict[str, Any] = Field(
-        default_factory=dict, description="Contextual information extracted"
-    )
-    preprocessing_time_ms: float = Field(
-        default=0.0, description="Preprocessing time in milliseconds"
-    )
+    model_config = ConfigDict(extra="allow")
 
 
 class SearchStrategyResult(BaseModel):
     """Result of search strategy selection."""
 
-    primary_strategy: str = Field(..., description="Selected primary strategy")
-    fallback_strategies: list[str] = Field(
-        default_factory=list, description="Fallback strategies in order"
-    )
-    matryoshka_dimension: int = Field(
-        ..., description="Selected Matryoshka embedding dimension"
-    )
-    confidence: float = Field(..., description="Confidence in strategy selection")
-    reasoning: str = Field(..., description="Reasoning for strategy choice")
-    estimated_quality: float = Field(..., description="Estimated result quality score")
-    estimated_latency_ms: float = Field(..., description="Estimated processing latency")
+    model_config = ConfigDict(use_enum_values=True, extra="allow")
 
 
-class AdvancedQueryProcessingResponse(BaseModel):
-    """Complete response from advanced query processing pipeline."""
+class QueryProcessingResponse(BaseModel):
+    """Complete response from query processing pipeline."""
 
     success: bool = Field(default=True, description="Whether processing succeeded")
     results: list[SearchResult] = Field(
@@ -470,6 +413,7 @@ class AdvancedQueryProcessingResponse(BaseModel):
 
     # Error handling
     error: str | None = Field(default=None, description="Error message if failed")
+    warnings: list[str] = Field(default_factory=list, description="Warning messages")
 
     model_config = ConfigDict(extra="allow")
 

@@ -1,126 +1,52 @@
-"""Modern HTTP mocking patterns using respx.
-
-Demonstrates proper boundary mocking for HTTP services using respx
-instead of implementation detail mocking.
-"""
+"""Modern HTTP mocking patterns validated against LightweightScraper."""
 
 import asyncio
+from types import SimpleNamespace
 
 import httpx
 import pytest
 import respx
 
-from src.config import Config
-
-
-class MockLightweightScraper:
-    """Mock scraper for testing HTTP patterns without complex dependencies."""
-
-    def __init__(self, config):
-        self.config = config
-        self._http_client = None
-        self._initialized = False
-
-    async def initialize(self):
-        """Initialize mock scraper."""
-        self._http_client = httpx.AsyncClient(follow_redirects=True)
-        self._initialized = True
-
-    async def scrape_url(self, url: str) -> dict:
-        """Mock scrape URL method that makes real HTTP calls."""
-        if not self._initialized:
-            msg = "Scraper not initialized"
-            raise RuntimeError(msg)
-
-        try:
-            response = await self._http_client.get(url)
-            response.raise_for_status()
-
-            # Simple content extraction
-            content = response.text
-            title = "Test Page"  # Simplified for testing
-
-            # Check if content is sufficient (more restrictive for testing)
-            if len(content.strip()) < 200:  # More realistic threshold
-                return {
-                    "success": False,
-                    "should_escalate": True,
-                    "error": "Insufficient content for lightweight processing",
-                    "url": url,
-                }
-
-            return {
-                "success": True,
-                "url": url,
-                "content": {
-                    "markdown": f"# {title}\n\n{content[:200]}...",
-                    "text": content,
-                },
-                "metadata": {
-                    "title": title,
-                    "tier": "lightweight",
-                },
-            }
-
-        except httpx.HTTPStatusError:
-            return {
-                "success": False,
-                "error": "HTTP error occurred",
-                "url": url,
-            }
-        except httpx.TimeoutException:
-            return {
-                "success": False,
-                "error": "Request timed out",
-                "url": url,
-            }
-
-    async def _analyze_url(self, url: str) -> str:
-        """Mock URL analysis."""
-        try:
-            response = await self._http_client.head(url, follow_redirects=True)
-
-            # Check content length
-            content_length = response.headers.get("content-length")
-            if content_length and int(content_length) > 1_000_000:
-                return "STREAMING_REQUIRED"
-
-            # Check for heavy JavaScript via CSP
-            csp = response.headers.get("content-security-policy", "")
-            if "unsafe-inline" in csp:
-                return "BROWSER_REQUIRED"
-
-        except (httpx.HTTPError, ValueError, KeyError):
-            return "BROWSER_REQUIRED"
-        else:
-            return "LIGHTWEIGHT_OK"
+from src.config import Config, Environment
+from src.services.browser.lightweight_scraper import (
+    ContentAnalysis,
+    LightweightScraper,
+    ScrapedContent,
+)
 
 
 class TestModernHTTPMocking:
-    """Test  HTTP mocking patterns with respx."""
+    """Test HTTP mocking patterns with respx and the real scraper."""
 
     @pytest.fixture
     def config(self) -> Config:
-        """Create test configuration."""
-        return Config()
+        """Create test configuration with browser automation hints."""
+        config = Config(environment=Environment.TESTING)
+        object.__setattr__(
+            config,
+            "browser_automation",
+            SimpleNamespace(
+                content_threshold=80,
+                lightweight_timeout=2.0,
+                max_retries=1,
+            ),
+        )
+        return config
 
     @pytest.fixture
-    async def scraper(self, config: Config) -> MockLightweightScraper:
-        """Create and initialize mock scraper."""
-        scraper = MockLightweightScraper(config)
+    async def scraper(self, config: Config):
+        """Create and initialize the real lightweight scraper."""
+        scraper = LightweightScraper(config)
         await scraper.initialize()
-        return scraper
+        yield scraper
+        await scraper.cleanup()
 
     @respx.mock
     @pytest.mark.asyncio
     async def test_successful_scraping_with_respx(
-        self, scraper: MockLightweightScraper
-    ):
-        """Test successful scraping using respx for HTTP mocking.
-
-        Demonstrates proper boundary mocking that tests behavior
-        without implementation details.
-        """
+        self, scraper: LightweightScraper
+    ) -> None:
+        """Test successful scraping using respx for HTTP mocking."""
         # Arrange: Mock HTTP responses at the boundary
         html_content = """
         <html>
@@ -132,6 +58,8 @@ class TestModernHTTPMocking:
                         threshold.</p>
                     <p>Another paragraph to ensure we have sufficient text content for
                         extraction.</p>
+                    <p>This page contains rich content to satisfy the lightweight
+                    scraper threshold and ensure headings are detected correctly.</p>
                 </div>
             </body>
         </html>
@@ -142,77 +70,67 @@ class TestModernHTTPMocking:
         )
 
         # Act
-        result = await scraper.scrape_url("https://test.example.com/page")
+        result = await scraper.scrape("https://test.example.com/page")
 
-        # Assert: Test observable behavior
-        assert result["success"] is True
-        assert result["url"] == "https://test.example.com/page"
-        assert "markdown" in result["content"]
-        assert "Main Title" in result["content"]["markdown"]
-        assert result["metadata"]["title"] == "Test Page"
-        assert result["metadata"]["tier"] == "lightweight"
+        # Assert: Should return structured scraped content
+        assert isinstance(result, ScrapedContent)
+        assert result.success is True
+        assert result.url == "https://test.example.com/page"
+        assert result.title == "Test Page"
+        assert any(h["text"] == "Main Title" for h in result.headings)
+        assert "This is a test paragraph" in result.text
 
     @respx.mock
     @pytest.mark.asyncio
-    async def test_head_analysis_size_limit(self, scraper: MockLightweightScraper):
-        """Test HEAD analysis for content size using respx.
+    async def test_can_handle_html_content(self, scraper: LightweightScraper) -> None:
+        """Test can_handle leverages HEAD analysis for HTML content."""
+        respx.head("https://docs.example.com").mock(
+            return_value=httpx.Response(
+                200,
+                headers={
+                    "content-type": "text/html",
+                    "content-length": "40000",
+                    "server": "nginx",
+                },
+            )
+        )
 
-        Tests the tier recommendation system with proper
-        boundary mocking.
-        """
-        # Arrange: Mock HEAD request for size analysis
+        analysis = await scraper.can_handle("https://docs.example.com")
+
+        assert isinstance(analysis, ContentAnalysis)
+        assert analysis.can_handle is True
+        assert analysis.size_estimate == 40000
+        assert any(
+            "HTML content type detected" in reason for reason in analysis.reasons
+        )
+
+    @respx.mock
+    @pytest.mark.asyncio
+    async def test_can_handle_detects_large_content(
+        self, scraper: LightweightScraper
+    ) -> None:
+        """Test that large content size reduces confidence for lightweight tier."""
         respx.head("https://large.example.com").mock(
             return_value=httpx.Response(
                 200,
                 headers={
                     "content-type": "text/html",
-                    "content-length": "2000000",  # 2MB
+                    "content-length": "2000000",
                 },
             )
         )
 
-        # Act
-        result = await scraper._analyze_url("https://large.example.com")
+        analysis = await scraper.can_handle("https://large.example.com")
 
-        # Assert
-        assert result == "STREAMING_REQUIRED"
-
-    @respx.mock
-    @pytest.mark.asyncio
-    async def test_javascript_detection_via_csp(self, scraper: MockLightweightScraper):
-        """Test JavaScript detection through CSP headers.
-
-        Demonstrates testing security-related functionality
-        with proper HTTP mocking.
-        """
-        # Arrange: Mock HEAD response with CSP indicating heavy JS
-        respx.head("https://js-heavy.example.com").mock(
-            return_value=httpx.Response(
-                200,
-                headers={
-                    "content-type": "text/html",
-                    "content-security-policy": "script-src 'unsafe-inline' 'self'",
-                },
-            )
-        )
-
-        # Act
-        result = await scraper._analyze_url("https://js-heavy.example.com")
-
-        # Assert
-        assert result == "BROWSER_REQUIRED"
+        assert analysis.can_handle is False
+        assert any("Large content size" in reason for reason in analysis.reasons)
 
     @respx.mock
     @pytest.mark.asyncio
     async def test_insufficient_content_escalation(
-        self, scraper: MockLightweightScraper
-    ):
-        """Test escalation when content is insufficient.
-
-        Tests the escalation logic for content that doesn't
-        meet lightweight tier requirements.
-        """
-        # Arrange: Mock response with minimal content
+        self, scraper: LightweightScraper
+    ) -> None:
+        """Test escalation when content is insufficient."""
         html_content = """
         <html>
             <body>
@@ -227,63 +145,37 @@ class TestModernHTTPMocking:
             return_value=httpx.Response(200, text=html_content)
         )
 
-        # Act
-        result = await scraper.scrape_url("https://example.com/short")
+        result = await scraper.scrape("https://example.com/short")
 
-        # Assert: Test escalation behavior
-        assert result["success"] is False
-        assert result["should_escalate"] is True
-        assert "Insufficient content" in result["error"]
+        assert result is None
 
     @respx.mock
     @pytest.mark.asyncio
-    async def test_http_error_handling(self, scraper: MockLightweightScraper):
-        """Test proper HTTP error handling.
-
-        Verifies that HTTP errors are properly handled and
-        result in appropriate error responses.
-        """
-        # Arrange: Mock HTTP error response
+    async def test_http_error_handling(self, scraper: LightweightScraper) -> None:
+        """Test proper HTTP error handling."""
         respx.get("https://error.example.com").mock(
             return_value=httpx.Response(404, text="Not Found")
         )
 
-        # Act
-        result = await scraper.scrape_url("https://error.example.com")
-
-        # Assert: Error should be properly handled
-        assert result["success"] is False
-        assert "error" in result
+        with pytest.raises(httpx.HTTPStatusError):
+            await scraper.scrape("https://error.example.com")
 
     @respx.mock
     @pytest.mark.asyncio
-    async def test_timeout_handling(self, scraper: MockLightweightScraper):
-        """Test timeout handling in HTTP requests.
-
-        Tests that network timeouts are properly handled
-        without crashing the service.
-        """
-        # Arrange: Mock timeout response
+    async def test_timeout_handling(self, scraper: LightweightScraper) -> None:
+        """Test timeout handling in HTTP requests."""
         respx.get("https://slow.example.com").mock(
             side_effect=httpx.TimeoutException("Request timed out")
         )
 
-        # Act
-        result = await scraper.scrape_url("https://slow.example.com")
+        result = await scraper.scrape("https://slow.example.com")
 
-        # Assert: Timeout should result in failure
-        assert result["success"] is False
-        assert "error" in result
+        assert result is None
 
     @respx.mock
     @pytest.mark.asyncio
-    async def test_redirect_following(self, scraper: MockLightweightScraper):
-        """Test that redirects are properly followed.
-
-        Tests the redirect handling behavior using respx
-        to mock the redirect chain.
-        """
-        # Arrange: Mock redirect chain
+    async def test_redirect_following(self, scraper: LightweightScraper) -> None:
+        """Test that redirects are properly followed."""
         respx.get("https://redirect.example.com").mock(
             return_value=httpx.Response(
                 302, headers={"location": "https://final.example.com"}
@@ -305,16 +197,15 @@ class TestModernHTTPMocking:
             return_value=httpx.Response(200, text=html_content)
         )
 
-        # Act
-        result = await scraper.scrape_url("https://redirect.example.com")
+        result = await scraper.scrape("https://redirect.example.com")
 
-        # Assert: Should successfully handle redirect
-        assert result["success"] is True
-        assert "Redirected Content" in result["content"]["markdown"]
+        assert isinstance(result, ScrapedContent)
+        assert "Redirected Content" in result.text
+        assert result.url == "https://redirect.example.com"
 
 
 class TestAsyncTestPatterns:
-    """Demonstrate  async test patterns."""
+    """Demonstrate async test patterns."""
 
     @pytest.mark.asyncio
     async def test_async_context_manager_pattern(self):

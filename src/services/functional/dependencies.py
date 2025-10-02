@@ -6,9 +6,14 @@ Uses yield dependencies for proper cleanup and circuit breaker patterns.
 
 import logging
 from collections.abc import AsyncGenerator
+from pathlib import Path
 from typing import TYPE_CHECKING, Annotated
 
-from fastapi import Depends
+
+try:
+    from fastapi import Depends  # type: ignore[reportAttributeAccessIssue]
+except ImportError as exc:  # pragma: no cover - FastAPI must be installed at runtime
+    raise ImportError("FastAPI is required for functional dependencies module") from exc
 
 from src.config import Config
 
@@ -26,8 +31,8 @@ async def get_config() -> Config:
 
     Returns:
         Config: Unified application configuration
-
     """
+
     return Config()
 
 
@@ -37,9 +42,11 @@ async def get_client_manager() -> AsyncGenerator["ClientManager"]:
 
     Yields:
         ClientManager: Initialized client manager
-
     """
-    from src.infrastructure.client_manager import ClientManager  # noqa: PLC0415
+
+    from src.infrastructure.client_manager import (  # pylint: disable=import-outside-toplevel
+        ClientManager,
+    )  # noqa: PLC0415
 
     client_manager = ClientManager()
     try:
@@ -60,18 +67,23 @@ async def get_cache_client(
 
     Yields:
         CacheManager: Initialized cache manager
-
     """
-    from src.services.cache.manager import CacheManager  # noqa: PLC0415
 
+    from src.services.cache.manager import (
+        CacheManager,  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
+    )
+
+    cache_root = Path(config.cache_dir) / "functional"
     cache_manager = CacheManager(
-        dragonfly_url=config.cache.dragonfly_url,
+        dragonfly_url=config.cache.redis_url,
         enable_local_cache=config.cache.enable_local_cache,
-        enable_distributed_cache=config.cache.enable_dragonfly_cache,
+        enable_distributed_cache=config.cache.enable_redis_cache,
         local_max_size=config.cache.local_max_size,
         local_max_memory_mb=config.cache.local_max_memory_mb,
         distributed_ttl_seconds={},  # Use defaults
         enable_metrics=True,
+        local_cache_path=cache_root,
+        memory_pressure_threshold=config.cache.memory_pressure_threshold,
     )
 
     try:
@@ -93,9 +105,11 @@ async def get_embedding_client(
 
     Yields:
         EmbeddingManager: Initialized embedding manager
-
     """
-    from src.services.embeddings.manager import EmbeddingManager  # noqa: PLC0415
+
+    from src.services.embeddings.manager import (  # pylint: disable=import-outside-toplevel
+        EmbeddingManager,
+    )  # noqa: PLC0415
 
     embedding_manager = EmbeddingManager(
         config=config,
@@ -123,33 +137,35 @@ async def get_vector_db_client(
         client_manager: Client manager for dependency injection
 
     Yields:
-        QdrantService: Initialized vector database client
-
+        VectorStoreService: Initialized vector database client
     """
-    from src.services.vector_db.service import QdrantService  # noqa: PLC0415
 
-    qdrant_manager = QdrantService(config, client_manager)
+    from src.services.vector_db.service import (  # pylint: disable=import-outside-toplevel
+        VectorStoreService,
+    )  # noqa: PLC0415
+
+    vector_service = VectorStoreService(config, client_manager, None)
 
     try:
-        await qdrant_manager.initialize()
-        yield qdrant_manager
+        await vector_service.initialize()
+        yield vector_service
     finally:
-        await qdrant_manager.cleanup()
+        await vector_service.cleanup()
 
 
 # Rate limiter dependency (optional)
 async def get_rate_limiter(
-    _config: Annotated[Config, Depends(get_config)],
+    config: Annotated[Config, Depends(get_config)],
 ) -> object | None:
     """Get rate limiter if configured.
 
     Args:
-        config: Application configuration
+        config: Application configuration. Included for future rate limiter wiring.
 
     Returns:
         RateLimitManager | None: Rate limiter or None if disabled
-
     """
+    _ = config  # Explicitly acknowledge dependency while keeping current stub.
     # Rate limiter implementation would go here
     # For now, return None to maintain compatibility
     return None
@@ -168,9 +184,11 @@ async def get_crawling_client(
 
     Yields:
         CrawlManager: Initialized crawl manager
-
     """
-    from src.services.crawling.manager import CrawlManager  # noqa: PLC0415
+
+    from src.services.crawling.manager import (
+        CrawlManager,  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
+    )
 
     crawl_manager = CrawlManager(
         config=config,

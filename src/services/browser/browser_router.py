@@ -56,8 +56,9 @@ class TierCircuitBreaker:
         if self.consecutive_failures >= threshold:
             self.is_open = True
             logger.warning(
-                f"Circuit breaker opened for {self.tier} after "
-                f"{self.consecutive_failures} consecutive failures"
+                "Circuit breaker opened for %s after %d consecutive failures",
+                self.tier,
+                self.consecutive_failures,
             )
 
     def can_attempt(self) -> bool:
@@ -71,7 +72,7 @@ class TierCircuitBreaker:
             duration = self.config.circuit_breaker_timeout_seconds
             if elapsed > duration:
                 logger.info(
-                    f"Circuit breaker reset for {self.tier} after {elapsed:.1f}s"
+                    "Circuit breaker reset for %s after %.1fs", self.tier, elapsed
                 )
                 self.is_open = False
                 self.consecutive_failures = 0
@@ -140,16 +141,12 @@ class EnhancedAutomationRouter(AutomationRouter):
                 url, domain, interaction_required, custom_actions
             )
 
-        logger.info(
-            f"Enhanced router selected {selected_tier} for {url}"
-        )  # TODO: Convert f-string to logging format
+        logger.info("Enhanced router selected %s for %s", selected_tier, url)
 
         # Check circuit breaker
         breaker = self.circuit_breakers.get(selected_tier)
         if breaker and not breaker.can_attempt():
-            logger.warning(
-                f"Circuit breaker open for {selected_tier}, using fallback"
-            )  # TODO: Convert f-string to logging format
+            logger.warning("Circuit breaker open for %s, using fallback", selected_tier)
             # Get first available fallback tier
             tier_config = self.routing_config.tier_configs.get(selected_tier)
             if tier_config and tier_config.fallback_tiers:
@@ -250,7 +247,7 @@ class EnhancedAutomationRouter(AutomationRouter):
                 tier = pref.preferred_tier
                 if tier in self._adapters or tier in ["crawl4ai_enhanced", "firecrawl"]:
                     logger.debug(
-                        f"Domain preference for {domain}: {tier} ({pref.reason})"
+                        "Domain preference for %s: %s (%s)", domain, tier, pref.reason
                     )
                     return tier
         return None
@@ -275,8 +272,11 @@ class EnhancedAutomationRouter(AutomationRouter):
                     best_match = tier_name
                     best_priority = pattern.priority
                     logger.debug(
-                        f"URL pattern match for {url}: {tier_name} "
-                        f"(priority={pattern.priority}, reason={pattern.reason})"
+                        "URL pattern match for %s: %s (priority=%d, reason=%s)",
+                        url,
+                        tier_name,
+                        pattern.priority,
+                        pattern.reason,
                     )
 
         return best_match
@@ -330,8 +330,10 @@ class EnhancedAutomationRouter(AutomationRouter):
 
             if best_tier:
                 logger.info(
-                    f"Performance-based selection for {domain}: {best_tier} "
-                    f"(score={best_score:.2f})"
+                    "Performance-based selection for %s: %s (score=%.2f)",
+                    domain,
+                    best_tier,
+                    best_score,
                 )
 
             return best_tier

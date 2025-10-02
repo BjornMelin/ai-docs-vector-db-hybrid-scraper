@@ -3,6 +3,7 @@
 import asyncio
 import contextlib
 import threading
+from typing import Any, cast
 
 import pytest
 
@@ -241,7 +242,7 @@ class TestCircuitBreakerDecorator:
             await sometimes_failing_func()
 
         # Access circuit breaker for testing
-        breaker = sometimes_failing_func._circuit_breaker
+        breaker = cast(Any, sometimes_failing_func).get_circuit_breaker()
         breaker.last_failure_time = 0  # Simulate timeout
 
         # Should recover on next call
@@ -261,7 +262,7 @@ class TestCircuitBreakerDecorator:
         await test_func()
 
         # Access metrics through attached circuit breaker
-        breaker = test_func._circuit_breaker
+        breaker = cast(Any, test_func).get_circuit_breaker()
         metrics = breaker.get_metrics()
         assert metrics["_total_requests"] == 1
         assert metrics["successful_requests"] == 1

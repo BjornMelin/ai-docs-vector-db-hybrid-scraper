@@ -194,15 +194,13 @@ class ServiceDiscovery:
                     return service
 
             except (TimeoutError, OSError, ConnectionError) as e:
-                self.logger.debug(
-                    f"Redis discovery failed for {host}:{port}: {e}"
-                )  # TODO: Convert f-string to logging format
+                self.logger.debug("Redis discovery failed for %s:%d: %s", host, port, e)
                 continue
             except (redis.RedisError, ValueError) as e:
                 # Catch any unexpected errors during Redis discovery
                 self.logger.debug(
-                    f"Unexpected Redis discovery error for {host}:{port}: {e}"
-                )  # TODO: Convert f-string to logging format
+                    "Unexpected Redis discovery error for %s:%d: %s", host, port, e
+                )
                 continue
 
         return None
@@ -269,14 +267,14 @@ class ServiceDiscovery:
 
             except (TimeoutError, OSError, ConnectionError, httpx.HTTPError) as e:
                 self.logger.debug(
-                    f"Qdrant discovery failed for {host}:{port}: {e}"
-                )  # TODO: Convert f-string to logging format
+                    "Qdrant discovery failed for %s:%d: %s", host, port, e
+                )
                 continue
             except httpx.TimeoutException as e:
                 # Catch any unexpected errors during Qdrant discovery
                 self.logger.debug(
-                    f"Unexpected Qdrant discovery error for {host}:{port}: {e}"
-                )  # TODO: Convert f-string to logging format
+                    "Unexpected Qdrant discovery error for %s:%d: %s", host, port, e
+                )
                 continue
 
         return None
@@ -333,8 +331,8 @@ class ServiceDiscovery:
 
             except (asyncpg.PostgresError, ConnectionError, TimeoutError) as e:
                 self.logger.debug(
-                    f"PostgreSQL discovery failed for {host}:{port}: {e}"
-                )  # TODO: Convert f-string to logging format
+                    "PostgreSQL discovery failed for %s:%d: %s", host, port, e
+                )
                 continue
 
         return None
@@ -397,9 +395,7 @@ class ServiceDiscovery:
             self.logger.warning("redis package not available for connection testing")
             return None
         except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
-            self.logger.debug(
-                f"Redis connection test failed: {e}"
-            )  # TODO: Convert f-string to logging format
+            self.logger.debug("Redis connection test failed: %s", e)
             return None
 
     async def _test_qdrant_connection(
@@ -436,9 +432,7 @@ class ServiceDiscovery:
             )
             return None
         except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
-            self.logger.debug(
-                f"Qdrant connection test failed: {e}"
-            )  # TODO: Convert f-string to logging format
+            self.logger.debug("Qdrant connection test failed: %s", e)
             return None
 
     async def _test_qdrant_grpc_availability(self, host: str, port: int) -> bool:
@@ -512,9 +506,7 @@ class ServiceDiscovery:
                     OSError,
                     ValueError,
                 ) as e:
-                    self.logger.debug(
-                        f"Database connection failed: {e}"
-                    )  # TODO: Convert f-string to logging format
+                    self.logger.debug("Database connection failed: %s", e)
                     continue  # Try next credential set
 
         except ImportError:
@@ -523,9 +515,7 @@ class ServiceDiscovery:
             )
             return None
         except (asyncpg.PostgresError, ConnectionError, TimeoutError) as e:
-            self.logger.debug(
-                f"PostgreSQL connection test failed: {e}"
-            )  # TODO: Convert f-string to logging format
+            self.logger.debug("PostgreSQL connection test failed: %s", e)
 
         return None
 
@@ -542,9 +532,7 @@ class ServiceDiscovery:
                 if parsed.hostname and parsed.port:
                     candidates.append((parsed.hostname, parsed.port))
             except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
-                logger.debug(
-                    f"Failed to parse Redis URL '{redis_url}': {e}"
-                )  # TODO: Convert f-string to logging format
+                logger.debug("Failed to parse Redis URL '%s': %s", redis_url, e)
 
         return candidates
 
@@ -602,9 +590,7 @@ class ServiceDiscovery:
         if service_type in self._discovery_cache:
             service, cache_time = self._discovery_cache[service_type]
             if time.time() - cache_time < self.config.cache_ttl_seconds:
-                self.logger.debug(
-                    f"Using cached {service_type} service"
-                )  # TODO: Convert f-string to logging format
+                self.logger.debug("Using cached %s service", service_type)
                 return service
 
         return None

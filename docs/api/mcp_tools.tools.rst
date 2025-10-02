@@ -1,14 +1,6 @@
 mcp\_tools.tools package
 ========================
 
-Subpackages
------------
-
-.. toctree::
-   :maxdepth: 4
-
-   mcp_tools.tools.helpers
-
 Submodules
 ----------
 
@@ -36,10 +28,10 @@ mcp\_tools.tools.cache module
    :show-inheritance:
    :undoc-members:
 
-mcp\_tools.tools.collections module
------------------------------------
+mcp\_tools.tools.collection\_management module
+---------------------------------------------
 
-.. automodule:: mcp_tools.tools.collections
+.. automodule:: mcp_tools.tools.collection_management
    :members:
    :show-inheritance:
    :undoc-members:
@@ -76,14 +68,6 @@ mcp\_tools.tools.embeddings module
    :show-inheritance:
    :undoc-members:
 
-mcp\_tools.tools.filtering\_tools module
-----------------------------------------
-
-.. automodule:: mcp_tools.tools.filtering_tools
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 mcp\_tools.tools.lightweight\_scrape module
 -------------------------------------------
 
@@ -104,14 +88,6 @@ mcp\_tools.tools.projects module
 --------------------------------
 
 .. automodule:: mcp_tools.tools.projects
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-mcp\_tools.tools.query\_processing module
------------------------------------------
-
-.. automodule:: mcp_tools.tools.query_processing
    :members:
    :show-inheritance:
    :undoc-members:

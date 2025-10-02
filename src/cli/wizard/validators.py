@@ -14,7 +14,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 
-from src.config.settings import Settings
+from src.config import Config
 
 
 console = Console()
@@ -176,7 +176,7 @@ class WizardValidator:
         errors = []
 
         try:
-            # Try to create Settings object with minimal required fields
+            # Try to create Config object with minimal required fields
             # Add defaults for missing required fields for validation
             validation_data = {
                 "environment": "development",
@@ -185,7 +185,7 @@ class WizardValidator:
                 **config_data,
             }
 
-            Settings(**validation_data)
+            Config(**validation_data)
 
         except ValidationError as e:
             for error in e.errors():
@@ -204,7 +204,7 @@ class WizardValidator:
         """Validate configuration and show user-friendly error messages.
 
         Args:
-            config_data: Settingsuration data to validate
+            config_data: Configuration data to validate
 
         Returns:
             True if valid, False otherwise
@@ -223,7 +223,7 @@ class WizardValidator:
             return
 
         error_text = Text()
-        error_text.append("Settingsuration validation failed:\n\n", style="bold red")
+        error_text.append("Configuration validation failed:\n\n", style="bold red")
 
         for i, error in enumerate(errors, 1):
             error_text.append(f"{i}. ", style="red")
@@ -341,9 +341,9 @@ class WizardValidator:
 
         """
         summary_text = Text()
-        summary_text.append("✅ Settingsuration is valid!\n\n", style="bold green")
+        summary_text.append("✅ Configuration is valid!\n\n", style="bold green")
 
-        summary_text.append("Settingsuration Summary:\n", style="bold")
+        summary_text.append("Configuration Summary:\n", style="bold")
 
         # Show key configuration points
         if hasattr(config, "qdrant"):
@@ -372,7 +372,7 @@ class WizardValidator:
 
         panel = Panel(
             summary_text,
-            title="✅ Settingsuration Valid",
+            title="✅ Configuration Valid",
             title_align="left",
             border_style="green",
             padding=(1, 2),

@@ -1,305 +1,134 @@
-"""Advanced Query Processing Models.
+"""Query processing data models for the final retrieval pipeline.
 
-This module defines all data models for the advanced query processing pipeline,
-including query intent classification, processing requests/responses, and
-configuration models for the centralized orchestrator.
+This module defines the core data models used throughout the query processing
+pipeline, including request and response structures for search operations.
 """
 
-from datetime import datetime
-from enum import Enum
+from __future__ import annotations
+
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
+
+from src.contracts.retrieval import SearchRecord
 
 
-class QueryIntent(str, Enum):
-    """Advanced query intent classification categories.
+class SearchRequest(BaseModel):
+    """Parameters controlling a search invocation.
 
-    Expanded from 4 basic categories to 14 total categories for comprehensive
-    query understanding and strategy selection.
+    This model encapsulates all parameters that can be used to customize
+    search behavior, including query processing options, result limits,
+    filtering, and features like RAG and personalization.
+
+    Attributes:
+        query: Search query text (minimum 1 character).
+        collection: Target collection identifier (optional).
+        limit: Maximum number of results to return (1-1000).
+        filters: Structured payload filters (optional).
+        enable_expansion: Whether to apply synonym-based expansion.
+        enable_personalization: Whether to enable preference-based ranking.
+        user_id: User identifier for personalization (optional).
+        user_preferences: Preference boosts keyed by category (optional).
+        normalize_scores: Whether to normalize result scores per request.
+        enable_rag: Whether to generate retrieval-augmented response.
+        rag_top_k: Number of documents to fetch for RAG context (optional).
+        rag_max_tokens: Maximum tokens for generated answer (optional).
+        group_by: Payload field used for server-side grouping.
+        group_size: Maximum hits per group (1-10).
+        overfetch_multiplier: Server-side overfetch multiplier for grouping.
     """
 
-    # Basic categories (existing)
-    CONCEPTUAL = "conceptual"  # High-level understanding questions
-    PROCEDURAL = "procedural"  # How-to and step-by-step queries
-    FACTUAL = "factual"  # Specific facts and data queries
-    TROUBLESHOOTING = "troubleshooting"  # Problem-solving queries
-
-    # Advanced categories (new)
-    COMPARATIVE = "comparative"  # Comparison between technologies/concepts
-    ARCHITECTURAL = "architectural"  # System design and architecture queries
-    PERFORMANCE = "performance"  # Optimization and performance-related queries
-    SECURITY = "security"  # Security-focused questions and concerns
-    INTEGRATION = "integration"  # API integration and compatibility queries
-    BEST_PRACTICES = "best_practices"  # Recommended approaches and patterns
-    CODE_REVIEW = "code_review"  # Code analysis and improvement suggestions
-    MIGRATION = "migration"  # Upgrade and migration guidance
-    DEBUGGING = "debugging"  # Error diagnosis and resolution
-    CONFIGURATION = "configuration"  # Setup and configuration assistance
-
-
-class QueryComplexity(str, Enum):
-    """Query complexity levels for adaptive processing."""
-
-    SIMPLE = "simple"  # Straightforward queries with single intent
-    MODERATE = "moderate"  # Multi-faceted queries requiring some analysis
-    COMPLEX = "complex"  # Advanced queries requiring comprehensive processing
-    EXPERT = "expert"  # Highly technical queries for expert-level responses
-
-
-class SearchStrategy(str, Enum):
-    """Available search strategies for query processing."""
-
-    SEMANTIC = "semantic"  # Pure semantic vector search
-    HYBRID = "hybrid"  # Dense + sparse vector combination
-    HYDE = "hyde"  # Hypothetical Document Embeddings
-    MULTI_STAGE = "multi_stage"  # Multi-stage retrieval
-    FILTERED = "filtered"  # Filtered search with payload constraints
-    RERANKED = "reranked"  # Search with BGE reranking
-    ADAPTIVE = "adaptive"  # Adaptive strategy based on query analysis
-
-
-class MatryoshkaDimension(int, Enum):
-    """Available Matryoshka embedding dimensions for dynamic selection."""
-
-    SMALL = 512  # Quick searches, simple queries
-    MEDIUM = 768  # Balanced performance/quality
-    LARGE = 1536  # Full quality, complex queries
-
-
-class QueryIntentClassification(BaseModel):
-    """Results of advanced query intent classification."""
-
-    primary_intent: QueryIntent = Field(
-        ..., description="Primary intent classification"
+    query: str = Field(..., min_length=1, description="Search query text")
+    collection: str | None = Field(
+        default=None,
+        min_length=1,
+        description="Target collection identifier",
     )
-    secondary_intents: list[QueryIntent] = Field(
-        default_factory=list, description="Secondary intents"
+    limit: int = Field(10, ge=1, le=1000, description="Result cap")
+    filters: dict[str, Any] | None = Field(
+        default=None, description="Structured payload filters"
     )
-    confidence_scores: dict[QueryIntent, float] = Field(
-        default_factory=dict, description="Confidence scores for each intent"
+    enable_expansion: bool = Field(
+        default=True, description="Apply synonym-based expansion"
     )
-    complexity_level: QueryComplexity = Field(
-        ..., description="Assessed query complexity"
+    enable_personalization: bool = Field(
+        default=False, description="Enable preference-based ranking"
     )
-    domain_category: str | None = Field(
-        default=None, description="Detected domain/technology category"
+    user_id: str | None = Field(
+        default=None, description="User identifier for personalization"
     )
-    classification_reasoning: str = Field(
-        default="", description="Explanation of classification decision"
+    user_preferences: dict[str, float] | None = Field(
+        default=None, description="Preference boosts keyed by category"
     )
-    requires_context: bool = Field(
-        default=False, description="Whether query requires additional context"
+    normalize_scores: bool = Field(
+        default=True, description="Normalize result scores per request"
     )
-    suggested_followups: list[str] = Field(
-        default_factory=list, description="Suggested follow-up questions"
+    enable_rag: bool = Field(
+        default=False, description="Generate retrieval-augmented response"
+    )
+    rag_top_k: int | None = Field(
+        default=None, ge=1, description="Documents to fetch for RAG context"
+    )
+    rag_max_tokens: int | None = Field(
+        default=None, ge=1, description="Maximum tokens for generated answer"
+    )
+    group_by: str = Field(
+        default="doc_id",
+        description="Payload field used for server-side grouping",
+    )
+    group_size: int = Field(
+        default=1, ge=1, le=10, description="Maximum hits per group"
+    )
+    overfetch_multiplier: float = Field(
+        default=2.0,
+        ge=1.0,
+        description="Server-side overfetch multiplier for grouping",
     )
 
-    model_config = ConfigDict(extra="forbid")
+
+class SearchResponse(BaseModel):
+    """Canonical response structure emitted by the search orchestrator.
+
+    This model contains the complete search response including results,
+    metadata about the search process, and optional generated content.
+
+    Attributes:
+        records: List of search records returned.
+        total_results: Number of records returned.
+        query: Processed query text.
+        processing_time_ms: Latency in milliseconds.
+        expanded_query: Expanded query string when expansion applied (optional).
+        features_used: List of features engaged during search.
+        grouping_applied: Whether server-side grouping was used.
+        generated_answer: Generated RAG answer when requested (optional).
+        answer_confidence: Confidence score for generated answer (optional).
+        answer_sources: Sources supporting the generated answer (optional).
+    """
+
+    records: list[SearchRecord]
+    total_results: int = Field(
+        default=0, ge=0, description="Number of records returned"
+    )
+    query: str = Field(..., description="Processed query text")
+    processing_time_ms: float = Field(..., ge=0.0, description="Latency in ms")
+    expanded_query: str | None = Field(
+        default=None, description="Expanded query string when expansion applied"
+    )
+    features_used: list[str] = Field(
+        default_factory=list, description="Features engaged during search"
+    )
+    grouping_applied: bool = Field(
+        default=False, description="Whether server-side grouping was used"
+    )
+    generated_answer: str | None = Field(
+        default=None, description="Generated RAG answer when requested"
+    )
+    answer_confidence: float | None = Field(
+        default=None, description="Confidence score for generated answer"
+    )
+    answer_sources: list[dict[str, Any]] | None = Field(
+        default=None, description="Sources supporting the generated answer"
+    )
 
 
-class QueryPreprocessingResult(BaseModel):
-    """Results of query preprocessing and enhancement."""
-
-    original_query: str = Field(..., description="Original input query")
-    processed_query: str = Field(..., description="Processed and enhanced query")
-    corrections_applied: list[str] = Field(
-        default_factory=list, description="Spelling/grammar corrections applied"
-    )
-    expansions_added: list[str] = Field(
-        default_factory=list, description="Synonym expansions added"
-    )
-    normalization_applied: bool = Field(
-        default=False, description="Whether text normalization was applied"
-    )
-    context_extracted: dict[str, Any] = Field(
-        default_factory=dict, description="Extracted contextual information"
-    )
-    preprocessing_time_ms: float = Field(
-        default=0.0, description="Time spent on preprocessing"
-    )
-
-    model_config = ConfigDict(extra="forbid")
-
-
-class SearchStrategySelection(BaseModel):
-    """Strategy selection results for query processing."""
-
-    primary_strategy: SearchStrategy = Field(
-        ..., description="Primary search strategy to use"
-    )
-    fallback_strategies: list[SearchStrategy] = Field(
-        default_factory=list, description="Fallback strategies in order of preference"
-    )
-    matryoshka_dimension: MatryoshkaDimension = Field(
-        ..., description="Selected embedding dimension"
-    )
-    confidence: float = Field(
-        ..., ge=0.0, le=1.0, description="Confidence in strategy selection"
-    )
-    reasoning: str = Field(default="", description="Reasoning for strategy selection")
-    estimated_quality: float = Field(
-        default=0.5, ge=0.0, le=1.0, description="Estimated search quality"
-    )
-    estimated_latency_ms: float = Field(
-        default=100.0, description="Estimated search latency"
-    )
-
-    model_config = ConfigDict(extra="forbid")
-
-
-class QueryProcessingRequest(BaseModel):
-    """Request for advanced query processing pipeline."""
-
-    query: str = Field(..., description="User query to process", min_length=1)
-    collection_name: str = Field(
-        default="documents", description="Target collection name"
-    )
-    limit: int = Field(
-        default=10, ge=1, le=100, description="Maximum results to return"
-    )
-
-    # Processing options
-    enable_preprocessing: bool = Field(
-        default=True, description="Enable query preprocessing"
-    )
-    enable_intent_classification: bool = Field(
-        default=True, description="Enable query intent classification"
-    )
-    enable_strategy_selection: bool = Field(
-        default=True, description="Enable automatic strategy selection"
-    )
-    enable_matryoshka_optimization: bool = Field(
-        default=True, description="Enable Matryoshka dimension optimization"
-    )
-
-    # Manual overrides
-    force_strategy: SearchStrategy | None = Field(
-        default=None, description="Force specific search strategy"
-    )
-    force_dimension: MatryoshkaDimension | None = Field(
-        default=None, description="Force specific embedding dimension"
-    )
-
-    # Context and constraints
-    user_context: dict[str, Any] = Field(
-        default_factory=dict, description="Additional user context"
-    )
-    filters: dict[str, Any] = Field(
-        default_factory=dict, description="Search filters to apply"
-    )
-    search_accuracy: str = Field(
-        default="balanced", description="Search accuracy level"
-    )
-    max_processing_time_ms: int = Field(
-        default=5000, description="Maximum processing time budget"
-    )
-
-    model_config = ConfigDict(extra="forbid")
-
-
-class QueryProcessingResponse(BaseModel):
-    """Response from advanced query processing pipeline."""
-
-    success: bool = Field(default=True, description="Whether processing succeeded")
-
-    # Core results
-    results: list[dict[str, Any]] = Field(
-        default_factory=list, description="Search results"
-    )
-    total_results: int = Field(default=0, description="Total matching documents")
-
-    # Processing insights
-    intent_classification: QueryIntentClassification | None = Field(
-        default=None, description="Query intent classification results"
-    )
-    preprocessing_result: QueryPreprocessingResult | None = Field(
-        default=None, description="Query preprocessing results"
-    )
-    strategy_selection: SearchStrategySelection | None = Field(
-        default=None, description="Strategy selection results"
-    )
-
-    # Performance metrics
-    total_processing_time_ms: float = Field(
-        default=0.0, description="Total processing time"
-    )
-    search_time_ms: float = Field(
-        default=0.0, description="Time spent on actual search"
-    )
-    strategy_selection_time_ms: float = Field(
-        default=0.0, description="Time spent on strategy selection"
-    )
-
-    # Quality indicators
-    confidence_score: float = Field(
-        default=0.0, ge=0.0, le=1.0, description="Overall confidence in results"
-    )
-    quality_score: float = Field(
-        default=0.0, ge=0.0, le=1.0, description="Estimated result quality"
-    )
-
-    # Debugging and transparency
-    processing_steps: list[str] = Field(
-        default_factory=list, description="Steps taken during processing"
-    )
-    fallback_used: bool = Field(
-        default=False, description="Whether fallback strategy was used"
-    )
-    cache_hit: bool = Field(default=False, description="Whether results were cached")
-
-    # Error handling
-    error: str | None = Field(default=None, description="Error message if failed")
-    warnings: list[str] = Field(default_factory=list, description="Warning messages")
-
-    model_config = ConfigDict(extra="forbid")
-
-
-class QueryAnalytics(BaseModel):
-    """Analytics data for query processing optimization."""
-
-    query_hash: str = Field(..., description="Hash of the query for tracking")
-    timestamp: datetime = Field(
-        default_factory=datetime.now, description="Processing timestamp"
-    )
-
-    # Query characteristics
-    query_length: int = Field(default=0, description="Length of query in characters")
-    query_word_count: int = Field(default=0, description="Number of words in query")
-    detected_language: str | None = Field(
-        default=None, description="Detected query language"
-    )
-
-    # Processing performance
-    total_time_ms: float = Field(default=0.0, description="Total processing time")
-    strategy_used: SearchStrategy = Field(..., description="Strategy used")
-    dimension_used: MatryoshkaDimension = Field(..., description="Dimension used")
-
-    # Results quality
-    results_count: int = Field(default=0, description="Number of results returned")
-    average_score: float = Field(default=0.0, description="Average result score")
-    user_satisfaction: float | None = Field(
-        default=None, description="User satisfaction score if available"
-    )
-
-    # A/B testing
-    experimental_group: str | None = Field(
-        default=None, description="Experimental group for A/B testing"
-    )
-
-    model_config = ConfigDict(extra="forbid")
-
-
-# Export all models
-__all__ = [
-    "MatryoshkaDimension",
-    "QueryAnalytics",
-    "QueryComplexity",
-    "QueryIntent",
-    "QueryIntentClassification",
-    "QueryPreprocessingResult",
-    "QueryProcessingRequest",
-    "QueryProcessingResponse",
-    "SearchStrategy",
-    "SearchStrategySelection",
-]
+__all__ = ["SearchRequest", "SearchResponse"]

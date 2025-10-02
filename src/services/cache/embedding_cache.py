@@ -1,12 +1,11 @@
-import typing
-
-
 """Specialized cache for embedding vectors with DragonflyDB optimizations."""
 
-import hashlib
 import logging
+from typing import Any
 
+from ._bulk_delete import delete_in_batches
 from .dragonfly_cache import DragonflyCache
+from .persistent_cache import PersistentCacheManager
 
 
 logger = logging.getLogger(__name__)
@@ -50,7 +49,7 @@ class EmbeddingCache:
         Returns:
             Cached embedding vector or None if not found
         """
-        key = self._get_key(text, model, provider, dimensions)
+        key = PersistentCacheManager.embedding_key(text, model, provider, dimensions)
 
         try:
             cached = await self.cache.get(key)
@@ -58,9 +57,9 @@ class EmbeddingCache:
                 # Validate dimensions if provided
                 if dimensions is not None and len(cached) != dimensions:
                     logger.warning(
-                        "Cached embedding dimensions mismatch: "
-                        "expected %d, got %d",
-                        dimensions, len(cached)
+                        "Cached embedding dimensions mismatch: expected %d, got %d",
+                        dimensions,
+                        len(cached),
                     )
                     return None
 
@@ -70,9 +69,10 @@ class EmbeddingCache:
             return None
 
         except (AttributeError, ConnectionError, RuntimeError, TimeoutError) as e:
-            logger.error(f"Error retrieving embedding from cache: {e}")
+            logger.error("Error retrieving embedding from cache: %s", e)
             return None
 
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     async def set_embedding(
         self,
         text: str,
@@ -95,7 +95,7 @@ class EmbeddingCache:
         Returns:
             Success status
         """
-        key = self._get_key(text, model, provider, dimensions)
+        key = PersistentCacheManager.embedding_key(text, model, provider, dimensions)
         cache_ttl = ttl or self.default_ttl
 
         try:
@@ -111,15 +111,38 @@ class EmbeddingCache:
 
             if success:
                 logger.debug(
-                    f"Cached embedding: {len(normalized_embedding)}D vector "
-                    f"for {model} ({provider})"
+                    "Cached embedding: %sD vector for %s (%s)",
+                    len(normalized_embedding),
+                    model,
+                    provider,
                 )
 
             return success
 
         except (AttributeError, ImportError, RuntimeError, ValueError) as e:
-            logger.error(f"Error caching embedding: {e}")
+            logger.error("Error caching embedding: %s", e)
             return False
+
+    def _get_key(
+        self,
+        text: str,
+        model: str,
+        provider: str,
+        dimensions: int | None = None,
+    ) -> str:
+        """Return deterministic embedding cache key.
+
+        Args:
+            text: Raw text used to generate the embedding.
+            model: Embedding model identifier.
+            provider: Provider backing the embedding request.
+            dimensions: Optional embedding dimensionality when the backend
+                exposes multiple sizes for the same model.
+
+        Returns:
+            Deterministic cache key compatible with ``PersistentCacheManager``.
+        """
+        return PersistentCacheManager.embedding_key(text, model, provider, dimensions)
 
     async def get_batch_embeddings(
         self,
@@ -145,7 +168,10 @@ class EmbeddingCache:
             return {}, []
 
         # Generate cache keys
-        keys = [self._get_key(text, model, provider, dimensions) for text in texts]
+        keys = [
+            PersistentCacheManager.embedding_key(text, model, provider, dimensions)
+            for text in texts
+        ]
 
         try:
             # Use DragonflyDB's optimized MGET
@@ -159,8 +185,11 @@ class EmbeddingCache:
                     # Validate dimensions if provided
                     if dimensions is not None and len(value) != dimensions:
                         logger.warning(
-                            f"Cached embedding dimensions mismatch for '{text[:50]}...': "
-                            f"expected {dimensions}, got {len(value)}"
+                            "Cached embedding dimensions mismatch for '%s...': "
+                            "expected %s, got %s",
+                            text[:50],
+                            dimensions,
+                            len(value),
                         )
                         missing.append(text)
                     else:
@@ -169,16 +198,19 @@ class EmbeddingCache:
                     missing.append(text)
 
             logger.debug(
-                f"Batch embedding cache: {len(cached)} hits, {len(missing)} misses"
+                "Batch embedding cache: %s hits, %s misses",
+                len(cached),
+                len(missing),
             )
 
             return cached, missing
 
         except (AttributeError, ConnectionError, RuntimeError, TimeoutError) as e:
-            logger.error(f"Error in batch embedding retrieval: {e}")
+            logger.error("Error in batch embedding retrieval: %s", e)
             # Return all as missing on error
             return {}, texts
 
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     async def set_batch_embeddings(
         self,
         embeddings: dict[str, list[float]],
@@ -213,18 +245,23 @@ class EmbeddingCache:
             for text, embedding in embeddings.items():
                 # Validate embedding
                 if not embedding or not isinstance(embedding, list):
-                    logger.warning(f"Skipping invalid embedding for '{text[:50]}...'")
+                    logger.warning("Skipping invalid embedding for '%s...'", text[:50])
                     continue
 
                 # Validate dimensions if provided
                 if dimensions is not None and len(embedding) != dimensions:
                     logger.warning(
-                        f"Skipping embedding with wrong dimensions for '{text[:50]}...': "
-                        f"expected {dimensions}, got {len(embedding)}"
+                        "Skipping embedding with wrong dimensions for '%s...': "
+                        "expected %s, got %s",
+                        text[:50],
+                        dimensions,
+                        len(embedding),
                     )
                     continue
 
-                key = self._get_key(text, model, provider, dimensions)
+                key = PersistentCacheManager.embedding_key(
+                    text, model, provider, dimensions
+                )
                 mapping[key] = [float(x) for x in embedding]
 
             if not mapping:
@@ -236,13 +273,16 @@ class EmbeddingCache:
 
             if success:
                 logger.debug(
-                    f"Batch cached {len(mapping)} embeddings for {model} ({provider})"
+                    "Batch cached %s embeddings for %s (%s)",
+                    len(mapping),
+                    model,
+                    provider,
                 )
 
             return success
 
         except (AttributeError, ConnectionError, ImportError, RuntimeError) as e:
-            logger.error(f"Error in batch embedding caching: {e}")
+            logger.error("Error in batch embedding caching: %s", e)
             return False
 
     async def warm_cache(
@@ -271,26 +311,32 @@ class EmbeddingCache:
 
             # Check which queries are not cached
             for query in common_queries:
-                key = self._get_key(query, model, provider, dimensions)
+                key = PersistentCacheManager.embedding_key(
+                    query, model, provider, dimensions
+                )
                 exists = await self.cache.exists(key)
                 if not exists:
                     missing_texts.append(query)
 
             if missing_texts:
                 logger.info(
-                    f"Cache warming: {len(missing_texts)} queries need embedding "
-                    f"generation for {model} ({provider})"
+                    "Cache warming: %s queries need embedding generation for %s (%s)",
+                    len(missing_texts),
+                    model,
+                    provider,
                 )
             else:
                 logger.info(
-                    f"Cache warming: all {len(common_queries)} queries already cached "
-                    f"for {model} ({provider})"
+                    "Cache warming: all %s queries already cached for %s (%s)",
+                    len(common_queries),
+                    model,
+                    provider,
                 )
 
             return missing_texts
 
         except (ConnectionError, ImportError, RuntimeError, TimeoutError) as e:
-            logger.error(f"Error in cache warming: {e}")
+            logger.error("Error in cache warming: %s", e)
             return common_queries  # Return all as missing on error
 
     async def invalidate_model(
@@ -313,27 +359,20 @@ class EmbeddingCache:
 
             # Use cache scan to find matching keys
             keys = await self.cache.scan_keys(pattern)
+            deleted_count = await delete_in_batches(self.cache, keys)
 
-            if keys:
-                # Delete in batches for efficiency
-                batch_size = 100
-                deleted_count = 0
-
-                for i in range(0, len(keys), batch_size):
-                    batch = keys[i : i + batch_size]
-                    results = await self.cache.delete_many(batch)
-                    deleted_count += sum(results.values())
-
+            if deleted_count:
                 logger.info(
-                    f"Invalidated {deleted_count} cached embeddings for "
-                    f"{model} ({provider})"
+                    "Invalidated %s cached embeddings for %s (%s)",
+                    deleted_count,
+                    model,
+                    provider,
                 )
-                return deleted_count
 
-            return 0
+            return deleted_count
 
         except (AttributeError, ConnectionError, ImportError, RuntimeError) as e:
-            logger.error(f"Error invalidating model cache: {e}")
+            logger.error("Error invalidating model cache: %s", e)
             return 0
 
     async def get_cache_stats(self) -> dict:
@@ -347,7 +386,7 @@ class EmbeddingCache:
             pattern = "emb:*"
             keys = await self.cache.scan_keys(pattern)
 
-            stats = {
+            stats: dict[str, Any] = {
                 "total_embeddings": len(keys),
                 "cache_size": await self.cache.size(),
             }
@@ -369,7 +408,7 @@ class EmbeddingCache:
                             models.get(f"{provider}:{model}", 0) + 1
                         )
 
-                except (ImportError, RuntimeError, ValueError) as e:
+                except (ImportError, RuntimeError, ValueError):
                     continue
 
             stats["by_provider"] = providers
@@ -378,38 +417,9 @@ class EmbeddingCache:
             return stats
 
         except (ConnectionError, ImportError, RuntimeError, TimeoutError) as e:
-            logger.error(f"Error getting cache stats: {e}")
+            logger.error("Error getting cache stats: %s", e)
             return {"error": str(e)}
 
     async def get_stats(self) -> dict:
         """Alias for get_cache_stats for compatibility."""
         return await self.get_cache_stats()
-
-    def _get_key(
-        self,
-        text: str,
-        model: str,
-        provider: str,
-        dimensions: int | None = None,
-    ) -> str:
-        """Generate cache key for embedding.
-
-        Uses content-based hashing to ensure deduplication.
-
-        Args:
-            text: Text content
-            model: Model name
-            provider: Embedding provider
-            dimensions: Embedding dimensions
-
-        Returns:
-            Cache key
-        """
-        # Normalize text for consistent hashing (using SHA256 for security)
-        normalized_text = text.lower().strip()
-        text_hash = hashlib.sha256(normalized_text.encode()).hexdigest()
-
-        # Include dimensions in key if provided
-        if dimensions is not None:
-            return f"emb:{provider}:{model}:{dimensions}:{text_hash}"
-        return f"emb:{provider}:{model}:{text_hash}"

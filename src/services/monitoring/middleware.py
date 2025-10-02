@@ -84,9 +84,7 @@ class PrometheusMiddleware:
                     if hasattr(metrics, "requests"):
                         self.instrumentator.add(metrics.requests())
             except AttributeError as e:
-                logger.warning(
-                    f"Could not add request/response size metrics: {e}"
-                )  # TODO: Convert f-string to logging format
+                logger.warning("Could not add request/response size metrics: %s", e)
                 # Add basic request count metric as fallback
                 try:
                     if hasattr(metrics, "requests"):

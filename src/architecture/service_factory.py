@@ -4,9 +4,16 @@ This module provides a factory pattern for creating services based on the curren
 application mode, enabling different implementations for simple vs enterprise modes.
 """
 
+# pylint: disable=unnecessary-ellipsis
+
+import inspect
 import logging
 from abc import ABC, abstractmethod
 from typing import Any, Protocol, TypeVar
+
+from fastapi import Request
+
+from src.services.lifecycle import LifecycleTracker, ServiceLifecycle
 
 from .modes import ApplicationMode, get_current_mode, get_mode_config
 
@@ -52,8 +59,8 @@ class ModeAwareServiceFactory:
 
         Args:
             mode: Application mode to use. If None, detects from environment.
-
         """
+
         self.mode = mode or get_current_mode()
         self.mode_config = get_mode_config(self.mode)
         self._service_registry: dict[str, dict[str, type[ServiceProtocol]]] = {}
@@ -92,8 +99,8 @@ class ModeAwareServiceFactory:
         Args:
             name: Service name
             implementation: Service implementation for both modes
-
         """
+
         self.register_service(name, implementation, implementation)
 
     async def get_service(self, name: str) -> ServiceProtocol:
@@ -104,13 +111,8 @@ class ModeAwareServiceFactory:
 
         Returns:
             Initialized service instance
-
-        Raises:
-            ServiceNotEnabledError: If service not enabled in current mode
-            ServiceNotFoundError: If service not registered
-            ServiceInitializationError: If service initialization fails
-
         """
+
         # Check if service is enabled in current mode
         if name not in self.mode_config.enabled_services:
             msg = f"Service '{name}' not enabled in {self.mode.value} mode"
@@ -126,23 +128,26 @@ class ModeAwareServiceFactory:
         # Create and initialize service instance
         try:
             service = service_class()
-            await service.initialize()
-
-            # Cache the initialized service
-            self._service_instances[name] = service
-            self._initialization_status[name] = True
-
-            logger.info("Initialized service '%s' in %s mode", name, self.mode.value)
-
+            initialize = getattr(service, "initialize", None)
+            if callable(initialize):
+                result = initialize()
+                if inspect.isawaitable(result):
+                    await result
         except Exception as e:
             self._initialization_status[name] = False
             msg = f"Failed to initialize service '{name}': {e}"
             raise ServiceInitializationError(msg) from e
-        else:
-            return service
+
+        # Cache the initialized service when successful
+        self._service_instances[name] = service
+        self._initialization_status[name] = True
+
+        logger.info("Initialized service '%s' in %s mode", name, self.mode.value)
+        return service
 
     def _get_service_class(self, name: str) -> type[ServiceProtocol]:
         """Get the service class for the current mode."""
+
         if name not in self._service_registry:
             msg = f"Service '{name}' not registered"
             raise ServiceNotFoundError(msg)
@@ -178,8 +183,8 @@ class ModeAwareServiceFactory:
 
         Returns:
             Service instance or None if not available
-
         """
+
         try:
             return await self.get_service(name)
         except (
@@ -198,8 +203,8 @@ class ModeAwareServiceFactory:
 
         Returns:
             True if service is available and can be instantiated
-
         """
+
         try:
             # Check if enabled in current mode
             if name not in self.mode_config.enabled_services:
@@ -210,16 +215,15 @@ class ModeAwareServiceFactory:
 
         except (ServiceNotFoundError, ServiceNotEnabledError):
             return False
-        else:
-            return True
+        return True
 
     def get_available_services(self) -> list[str]:
         """Get list of services available in the current mode.
 
         Returns:
             list of service names available in current mode
-
         """
+
         return [
             service_name
             for service_name in self.mode_config.enabled_services
@@ -234,8 +238,8 @@ class ModeAwareServiceFactory:
 
         Returns:
             Dictionary with service status information
-
         """
+
         return {
             "name": name,
             "available": self.is_service_available(name),
@@ -252,8 +256,8 @@ class ModeAwareServiceFactory:
 
         Returns:
             True if service is registered
-
         """
+
         return name in self._service_registry
 
     def get_registered_service_implementations(
@@ -266,11 +270,8 @@ class ModeAwareServiceFactory:
 
         Returns:
             Dictionary mapping mode names to implementation classes
-
-        Raises:
-            ServiceNotFoundError: If service not registered
-
         """
+
         if name not in self._service_registry:
             msg = f"Service '{name}' not registered"
             raise ServiceNotFoundError(msg)
@@ -307,12 +308,12 @@ class ModeAwareServiceFactory:
         }
 
 
-class BaseService(ABC):
+class BaseService(ABC, LifecycleTracker, ServiceLifecycle):
     """Abstract base class for mode-aware services."""
 
     def __init__(self):
         """Initialize the mode-aware service."""
-        self._initialized = False
+        LifecycleTracker.__init__(self)
         self._cleanup_called = False
 
     @abstractmethod
@@ -327,18 +328,14 @@ class BaseService(ABC):
     def get_service_name(self) -> str:
         """Get the service name."""
 
-    def is_initialized(self) -> bool:
-        """Check if service is initialized."""
-        return self._initialized
-
     def _mark_initialized(self) -> None:
         """Mark service as initialized."""
-        self._initialized = True
+        LifecycleTracker._mark_initialized(self)
 
     def _mark_cleanup(self) -> None:
         """Mark service as cleaned up."""
         self._cleanup_called = True
-        self._initialized = False
+        LifecycleTracker._mark_uninitialized(self)
 
 
 # Global service factory instance
@@ -368,6 +365,25 @@ def get_service_factory() -> ModeAwareServiceFactory:
 def reset_service_factory() -> None:
     """Reset the global service factory instance."""
     _ServiceFactorySingleton.reset_instance()
+
+
+def set_service_factory(factory: ModeAwareServiceFactory) -> None:
+    """Bind the provided factory as the global singleton reference."""
+
+    _ServiceFactorySingleton._instance = factory
+
+
+def get_request_service_factory(request: Request) -> ModeAwareServiceFactory:
+    """Return the service factory bound to the current FastAPI app."""
+
+    factory = getattr(request.app.state, "service_factory", None)
+    if factory is None:
+        raise RuntimeError("Service factory is not attached to application state")
+    if not isinstance(factory, ModeAwareServiceFactory):
+        raise TypeError(
+            "Application state service_factory is not a ModeAwareServiceFactory"
+        )
+    return factory
 
 
 async def get_service(name: str) -> ServiceProtocol:

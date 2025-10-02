@@ -1,19 +1,20 @@
 """Crawling manager service coordinator."""
 
+from __future__ import annotations
+
 import asyncio
 import logging
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from dependency_injector.wiring import Provide, inject
 
 from src.infrastructure.container import ApplicationContainer
-from src.services.crawling.manager import CrawlManager as CoreManager
+from src.services.crawling.manager import CrawlManager
 from src.services.errors import CrawlServiceError
 
 
 if TYPE_CHECKING:
     from src.config import Config
-    from src.services.crawling.manager import CrawlManager as CoreCrawlManager
 
 logger = logging.getLogger(__name__)
 
@@ -27,13 +28,13 @@ class CrawlingManager:
 
     def __init__(self):
         """Initialize crawling manager."""
-        self._core_manager: CoreCrawlManager | None = None
+        self._core_manager: CrawlManager | None = None
         self._initialized = False
 
     @inject
     async def initialize(
         self,
-        config: "Config" = Provide[ApplicationContainer.config],
+        config: Config = Provide[ApplicationContainer.config],
     ) -> None:
         """Initialize crawling manager using dependency injection.
 
@@ -45,9 +46,9 @@ class CrawlingManager:
             return
 
         try:
-            self._core_manager = CoreManager(
+            self._core_manager = CrawlManager(
                 config=config,
-                rate_limiter=None,  # TODO: Add rate limiter injection
+                rate_limiter=None,
             )
             await self._core_manager.initialize()
 
@@ -55,9 +56,7 @@ class CrawlingManager:
             logger.info("CrawlingManager service initialized with 5-tier automation")
 
         except Exception as e:
-            logger.exception(
-                "Failed to initialize CrawlingManager: ",
-            )  # TODO: Convert f-string to logging format
+            logger.exception("Failed to initialize CrawlingManager")
             msg = f"Failed to initialize crawling manager: {e}"
             raise CrawlServiceError(msg) from e
 
@@ -102,9 +101,7 @@ class CrawlingManager:
         try:
             return await self._core_manager.scrape_url(url, preferred_provider)
         except Exception as e:
-            logger.exception(
-                "URL scraping failed for : {e}",
-            )  # TODO: Convert f-string to logging format
+            logger.exception("URL scraping failed for %s", url)
             return {
                 "success": False,
                 "error": f"Scraping failed: {e}",
@@ -148,9 +145,7 @@ class CrawlingManager:
                 preferred_provider,
             )
         except Exception as e:
-            logger.exception(
-                "Site crawling failed for : {e}",
-            )  # TODO: Convert f-string to logging format
+            logger.exception("Site crawling failed for %s", url)
             return {
                 "success": False,
                 "error": f"Site crawl failed: {e}",
@@ -180,8 +175,10 @@ class CrawlingManager:
             return await self._core_manager.get_recommended_tool(url)
         except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             logger.warning(
-                f"Tool recommendation failed for {url}: {e}",
-            )  # TODO: Convert f-string to logging format
+                "Tool recommendation failed for %s: %s",
+                url,
+                e,
+            )
             return "crawl4ai"  # Default fallback
 
     async def map_url(
@@ -212,8 +209,10 @@ class CrawlingManager:
             return await self._core_manager.map_url(url, include_subdomains)
         except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             logger.warning(
-                f"URL mapping failed for {url}: {e}",
-            )  # TODO: Convert f-string to logging format
+                "URL mapping failed for %s: %s",
+                url,
+                e,
+            )
             return {
                 "success": False,
                 "error": f"URL mapping failed: {e}",
@@ -221,7 +220,7 @@ class CrawlingManager:
                 "total": 0,
             }
 
-    def get_metrics(self) -> dict[str, dict]:
+    def get_metrics(self) -> dict[str, dict[str, Any]]:
         """Get performance metrics for all tiers.
 
         Returns:
@@ -237,12 +236,10 @@ class CrawlingManager:
         try:
             return self._core_manager.get_metrics()
         except (ValueError, TypeError, UnicodeDecodeError) as e:
-            logger.warning(
-                f"Failed to get crawling metrics: {e}",
-            )  # TODO: Convert f-string to logging format
+            logger.warning("Failed to get crawling metrics: %s", e)
             return {}
 
-    def get_provider_info(self) -> dict[str, dict]:
+    def get_provider_info(self) -> dict[str, dict[str, Any]]:
         """Get information about available automation tools.
 
         Returns:
@@ -258,12 +255,10 @@ class CrawlingManager:
         try:
             return self._core_manager.get_provider_info()
         except (ValueError, TypeError, UnicodeDecodeError) as e:
-            logger.warning(
-                f"Failed to get provider info: {e}",
-            )  # TODO: Convert f-string to logging format
+            logger.warning("Failed to get provider info: %s", e)
             return {}
 
-    def get_tier_metrics(self) -> dict[str, dict]:
+    def get_tier_metrics(self) -> dict[str, dict[str, Any]]:
         """Get performance metrics for each tier.
 
         Returns:
@@ -279,9 +274,7 @@ class CrawlingManager:
         try:
             return self._core_manager.get_tier_metrics()
         except (ValueError, TypeError, UnicodeDecodeError) as e:
-            logger.warning(
-                f"Failed to get tier metrics: {e}",
-            )  # TODO: Convert f-string to logging format
+            logger.warning("Failed to get tier metrics: %s", e)
             return {}
 
     async def get_status(self) -> dict[str, Any]:
@@ -304,14 +297,12 @@ class CrawlingManager:
                 status["metrics"] = self.get_metrics()
                 status["tier_metrics"] = self.get_tier_metrics()
             except (ValueError, TypeError, UnicodeDecodeError) as e:
-                logger.warning(
-                    f"Failed to get crawling status: {e}",
-                )  # TODO: Convert f-string to logging format
+                logger.warning("Failed to get crawling status: %s", e)
                 status["error"] = str(e)
 
         return status
 
-    def get_core_manager(self) -> Optional["CoreCrawlManager"]:
+    def get_core_manager(self) -> CrawlManager | None:
         """Get core crawl manager instance.
 
         Returns:
@@ -373,11 +364,10 @@ class CrawlingManager:
                     "text": content,
                     "metadata": metadata,
                 }
+            return extracted
 
         except Exception as e:
-            logger.exception(
-                "Content extraction failed for : {e}",
-            )  # TODO: Convert f-string to logging format
+            logger.exception("Content extraction failed for %s", url)
             return {
                 "success": False,
                 "error": f"Content extraction failed: {e}",
@@ -385,9 +375,6 @@ class CrawlingManager:
                 "content_type": content_type,
                 "content": None,
             }
-
-        else:
-            return extracted
 
     async def bulk_scrape(
         self,
@@ -435,11 +422,10 @@ class CrawlingManager:
                     )
                 else:
                     processed_results.append(result)
+            return processed_results
 
         except Exception as e:
-            logger.exception(
-                "Bulk scraping failed: ",
-            )  # TODO: Convert f-string to logging format
+            logger.exception("Bulk scraping failed")
             # Return error results for all URLs
             return [
                 {
@@ -451,5 +437,3 @@ class CrawlingManager:
                 }
                 for url in urls
             ]
-        else:
-            return processed_results
