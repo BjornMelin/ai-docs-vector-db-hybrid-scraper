@@ -19,6 +19,7 @@ class QdrantVectorAdapter(VectorAdapter):
 
         self._client = client
         self._supports_query_groups: bool | None = None
+        self._sparse_vector_names: dict[str, str] = {}
 
     async def _ensure_grouping_capability(self) -> None:
         if self._supports_query_groups is not None:
@@ -52,6 +53,8 @@ class QdrantVectorAdapter(VectorAdapter):
             vectors_config=vectors_config,
             sparse_vectors_config=sparse_config,
         )
+        if schema.requires_sparse:
+            self._sparse_vector_names[schema.name] = "sparse"
 
     async def collection_exists(self, name: str) -> bool:
         """Return True if the collection is already present."""
@@ -119,14 +122,29 @@ class QdrantVectorAdapter(VectorAdapter):
 
         if not records:
             return
-        points = [
-            models.PointStruct(
-                id=record.id,
-                vector=list(record.vector),
-                payload=dict(record.payload or {}),
+        sparse_name: str | None = None
+        if any(record.sparse_vector for record in records):
+            sparse_name = await self._get_sparse_vector_name(collection)
+        points: list[models.PointStruct] = []
+        for record in records:
+            dense_vector = list(record.vector)
+            vector_payload: Any = dense_vector
+            sparse_payload = record.sparse_vector
+            if sparse_payload:
+                name = sparse_name or await self._get_sparse_vector_name(collection)
+                vector_payload = {
+                    "default": dense_vector,
+                    name: _normalize_sparse_vector_input(
+                        cast(Mapping[str, Any] | models.SparseVector, sparse_payload)
+                    ),
+                }
+            points.append(
+                models.PointStruct(
+                    id=record.id,
+                    vector=vector_payload,
+                    payload=dict(record.payload or {}),
+                )
             )
-            for record in records
-        ]
         upsert_kwargs: dict[str, Any] = {}
         if batch_size is not None:
             upsert_kwargs["batch_size"] = batch_size
@@ -276,6 +294,7 @@ class QdrantVectorAdapter(VectorAdapter):
                 filters=filters,
             )
 
+        sparse_name = await self._get_sparse_vector_name(collection)
         prefetch_queries = [
             models.Prefetch(
                 query=list(dense_vector),
@@ -288,7 +307,7 @@ class QdrantVectorAdapter(VectorAdapter):
                     indices=list(sparse_vector.keys()),
                     values=list(sparse_vector.values()),
                 ),
-                using="default",
+                using=sparse_name,
                 limit=max(limit, 20),
                 filter=_filter_from_mapping(filters),
             ),
@@ -388,6 +407,35 @@ class QdrantVectorAdapter(VectorAdapter):
             for point in results
         ]
 
+    async def _get_sparse_vector_name(self, collection: str) -> str:
+        """Return the configured sparse vector name for the collection."""
+
+        cached = self._sparse_vector_names.get(collection)
+        if cached:
+            return cached
+
+        try:
+            info = await self._client.get_collection(collection_name=collection)
+        except UnexpectedResponse:
+            name = "sparse"
+        else:
+            params = getattr(getattr(info, "config", None), "params", None)
+            sparse_config = getattr(params, "sparse_vectors", None)
+            if isinstance(sparse_config, Mapping) and sparse_config:
+                for candidate in ("sparse", "default_sparse"):
+                    if candidate in sparse_config:
+                        name = candidate
+                        break
+                else:
+                    name = next(iter(sparse_config))
+                    if name == "default":
+                        name = "sparse"
+            else:
+                name = "sparse"
+
+        self._sparse_vector_names[collection] = name
+        return name
+
     async def scroll(  # pylint: disable=too-many-arguments
         self,
         collection: str,
@@ -416,6 +464,87 @@ class QdrantVectorAdapter(VectorAdapter):
             for point in points
         ]
         return matches, cast(str | None, next_offset)
+
+
+def _normalize_sparse_vector_input(
+    sparse_vector: Mapping[str, Any] | models.SparseVector,
+) -> models.SparseVector:
+    """Convert supported sparse vector payloads into :class:`SparseVector`."""
+
+    if isinstance(sparse_vector, models.SparseVector):
+        return sparse_vector
+    if not isinstance(sparse_vector, Mapping):
+        msg = "Unsupported sparse vector type for Qdrant upsert: %s"
+        raise TypeError(msg % type(sparse_vector).__name__)
+
+    if "indices" in sparse_vector and "values" in sparse_vector:
+        indices_raw = sparse_vector.get("indices", [])
+        values_raw = sparse_vector.get("values", [])
+    else:
+        indices_raw = list(sparse_vector.keys())
+        values_raw = list(sparse_vector.values())
+
+    indices = _coerce_sparse_indices(indices_raw)
+    values = _coerce_sparse_values(values_raw)
+
+    if len(indices) != len(values):
+        msg = "Sparse vector indices and values must be the same length"
+        raise ValueError(msg)
+
+    return models.SparseVector(indices=indices, values=values)
+
+
+def _coerce_sparse_indices(raw_indices: Any) -> list[int]:
+    """Normalize sparse vector indices into a list of integers."""
+
+    values = _iterable_to_list(raw_indices, field_name="indices")
+    coerced: list[int] = []
+    for value in values:
+        if isinstance(value, bool):
+            msg = "Sparse vector indices cannot be boolean values"
+            raise TypeError(msg)
+        try:
+            coerced.append(int(value))
+        except (TypeError, ValueError) as exc:
+            msg = "Sparse vector indices must be integers"
+            raise TypeError(msg) from exc
+    return coerced
+
+
+def _coerce_sparse_values(raw_values: Any) -> list[float]:
+    """Normalize sparse vector weights into a list of floats."""
+
+    values = _iterable_to_list(raw_values, field_name="values")
+    coerced: list[float] = []
+    for value in values:
+        if isinstance(value, bool):
+            msg = "Sparse vector values cannot be boolean"
+            raise TypeError(msg)
+        try:
+            coerced.append(float(value))
+        except (TypeError, ValueError) as exc:
+            msg = "Sparse vector values must be numeric"
+            raise TypeError(msg) from exc
+    return coerced
+
+
+def _iterable_to_list(raw: Any, *, field_name: str) -> list[Any]:
+    """Convert supported iterables into a list, rejecting invalid types."""
+
+    if raw is None:
+        return []
+    if isinstance(raw, Mapping):
+        msg = "Sparse vector %s must be a sequence, not a mapping"
+        raise TypeError(msg % field_name)
+    if isinstance(raw, (str, bytes)):
+        msg = "Sparse vector %s must be an iterable of numeric values"
+        raise TypeError(msg % field_name)
+    if isinstance(raw, Sequence):
+        return list(raw)
+    if isinstance(raw, Iterable):
+        return list(raw)
+    msg = "Sparse vector %s must be iterable"
+    raise TypeError(msg % field_name)
 
 
 def _distance_from_string(metric: str) -> models.Distance:

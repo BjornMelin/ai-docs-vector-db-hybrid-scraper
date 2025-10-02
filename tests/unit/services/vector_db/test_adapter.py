@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from types import SimpleNamespace
 from typing import Any, cast
 from unittest.mock import AsyncMock
@@ -121,7 +122,12 @@ async def test_upsert_builds_points(
 
     records = [
         VectorRecord(id="1", vector=(0.1, 0.2), payload={"tag": "a"}),
-        VectorRecord(id="2", vector=(0.3, 0.4), payload={"tag": "b"}),
+        VectorRecord(
+            id="2",
+            vector=(0.3, 0.4),
+            payload={"tag": "b"},
+            sparse_vector={"indices": [0, 2], "values": [0.6, 0.4]},
+        ),
     ]
 
     await adapter.upsert("docs", records, batch_size=10)
@@ -134,6 +140,13 @@ async def test_upsert_builds_points(
     assert len(points) == 2
     assert points[0].id == "1"
     assert points[0].payload == {"tag": "a"}
+    assert points[0].vector == [0.1, 0.2]
+    assert isinstance(points[1].vector, dict)
+    assert points[1].vector["default"] == [0.3, 0.4]
+    sparse_vector = points[1].vector["sparse"]
+    assert isinstance(sparse_vector, models.SparseVector)
+    assert sparse_vector.indices == [0, 2]
+    assert sparse_vector.values == [0.6, 0.4]
 
 
 @pytest.mark.asyncio
@@ -146,6 +159,34 @@ async def test_upsert_ignores_empty_batch(
     await adapter.upsert("docs", [])
 
     qdrant_client_mock.upsert.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_upsert_accepts_sparse_mapping(
+    adapter: QdrantVectorAdapter,
+    qdrant_client_mock: AsyncMock,
+) -> None:
+    """Mapping-style sparse vectors should be converted to SparseVector objects."""
+
+    sparse_payload = cast(Mapping[str, Any], {3: 0.2, 7: 0.5})
+    records = [
+        VectorRecord(
+            id="sparse",
+            vector=(0.9, 0.1),
+            sparse_vector=sparse_payload,
+        )
+    ]
+
+    await adapter.upsert("docs", records)
+
+    qdrant_client_mock.upsert.assert_awaited_once()
+    point = qdrant_client_mock.upsert.call_args.kwargs["points"][0]
+    assert isinstance(point.vector, dict)
+    assert point.vector["default"] == [0.9, 0.1]
+    sparse_vector = point.vector["sparse"]
+    assert isinstance(sparse_vector, models.SparseVector)
+    assert sparse_vector.indices == [3, 7]
+    assert sparse_vector.values == [0.2, 0.5]
 
 
 @pytest.mark.asyncio
@@ -192,10 +233,13 @@ async def test_query_returns_vector_matches(
 
     matches = await adapter.query("docs", [0.1, 0.2, 0.3], limit=2)
 
-    assert matches == [
-        VectorMatch(id="1", score=0.9, payload={"title": "A"}, vector=None),
-        VectorMatch(id="2", score=0.8, payload={"title": "B"}, vector=None),
-    ]
+    assert len(matches) == 2
+    assert matches[0].id == "1"
+    assert matches[0].payload == {"title": "A"}
+    assert matches[0].raw_score == 0.9
+    assert matches[0].collection == "docs"
+    assert matches[1].id == "2"
+    assert matches[1].raw_score == 0.8
 
 
 @pytest.mark.asyncio
