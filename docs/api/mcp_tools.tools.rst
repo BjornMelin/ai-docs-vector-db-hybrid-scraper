@@ -1,14 +1,6 @@
 mcp\_tools.tools package
 ========================
 
-Subpackages
------------
-
-.. toctree::
-   :maxdepth: 4
-
-   mcp_tools.tools.helpers
-
 Submodules
 ----------
 
@@ -96,14 +88,6 @@ mcp\_tools.tools.projects module
 --------------------------------
 
 .. automodule:: mcp_tools.tools.projects
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-mcp\_tools.tools.query\_processing module
------------------------------------------
-
-.. automodule:: mcp_tools.tools.query_processing
    :members:
    :show-inheritance:
    :undoc-members:

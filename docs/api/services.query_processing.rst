@@ -60,26 +60,10 @@ services.query\_processing.pipeline module
    :show-inheritance:
    :undoc-members:
 
-services.query\_processing.preprocessor module
-----------------------------------------------
-
-.. automodule:: services.query_processing.preprocessor
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 services.query\_processing.ranking module
 -----------------------------------------
 
 .. automodule:: services.query_processing.ranking
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-services.query\_processing.strategy\_selector module
-----------------------------------------------------
-
-.. automodule:: services.query_processing.strategy_selector
    :members:
    :show-inheritance:
    :undoc-members:

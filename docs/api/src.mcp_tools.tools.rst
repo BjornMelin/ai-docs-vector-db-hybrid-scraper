@@ -156,14 +156,6 @@ src.mcp\_tools.tools.projects module
    :show-inheritance:
    :undoc-members:
 
-src.mcp\_tools.tools.query\_processing module
----------------------------------------------
-
-.. automodule:: src.mcp_tools.tools.query_processing
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 src.mcp\_tools.tools.query\_processing\_tools module
 ----------------------------------------------------
 
