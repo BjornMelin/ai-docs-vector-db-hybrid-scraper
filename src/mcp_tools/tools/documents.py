@@ -15,8 +15,8 @@ from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.models.requests import BatchRequest, DocumentRequest
 from src.mcp_tools.models.responses import AddDocumentResponse, DocumentBatchResponse
 from src.security import SecurityValidator
-from src.services.vector_db.adapter_base import CollectionSchema, TextDocument
 from src.services.vector_db.service import VectorStoreService
+from src.services.vector_db.types import CollectionSchema, TextDocument
 
 
 logger = logging.getLogger(__name__)
