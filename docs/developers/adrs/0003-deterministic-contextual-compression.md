@@ -29,3 +29,4 @@
 
 - Future enhancements may add language-specific sentence splitters and richer evaluation datasets. Alert thresholds should be reviewed after production telemetry stabilizes.
 - A follow-up task will integrate compression metrics into central observability dashboards and document recommended alert rules in the operations playbook.
+- 2025-10-03 update: pipeline now prepends a `RecursiveCharacterTextSplitter` (tiktoken-aware when available) so compression operates on deterministic sub-chunks before embedding filters, preserving library-first alignment.

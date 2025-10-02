@@ -17,6 +17,7 @@ from langchain_core.callbacks.manager import (
 )
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 
 try:
@@ -26,6 +27,11 @@ except ModuleNotFoundError as exc:  # pragma: no cover - dependency guard
     raise ImportError(
         "FastEmbedEmbeddings requires the 'langchain-community' package."
     ) from exc
+
+try:  # pragma: no cover - optional dependency
+    import tiktoken
+except ModuleNotFoundError:  # pragma: no cover - fallback for minimal installs
+    tiktoken = None  # type: ignore[assignment]
 
 from src.services.monitoring.metrics import get_metrics_registry
 from src.services.rag.models import RAGConfig
@@ -117,8 +123,6 @@ class VectorServiceRetriever(BaseRetriever):
         *,
         run_manager: CallbackManagerForRetrieverRun | None = None,
     ) -> list[Document]:
-        """Synchronously fetch relevant documents."""
-
         try:
             asyncio.get_running_loop()
         except RuntimeError:
@@ -139,8 +143,6 @@ class VectorServiceRetriever(BaseRetriever):
         *,
         run_manager: AsyncCallbackManagerForRetrieverRun,
     ) -> list[Document]:
-        """Return documents retrieved for ``query``."""
-
         if not self._vector_service.is_initialized():
             await self._vector_service.initialize()
 
@@ -180,7 +182,19 @@ class VectorServiceRetriever(BaseRetriever):
             model_name=cast(str, model_name or "BAAI/bge-small-en-v1.5")
         )
 
+        if tiktoken is not None:
+            splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
+                chunk_size=max(50, rag_config.compression_absolute_max_tokens),
+                chunk_overlap=0,
+            )
+        else:
+            splitter = RecursiveCharacterTextSplitter(
+                chunk_size=max(50, rag_config.compression_absolute_max_tokens),
+                chunk_overlap=0,
+            )
+
         transformers = [
+            splitter,
             EmbeddingsRedundantFilter(embeddings=embeddings),
             EmbeddingsFilter(
                 embeddings=embeddings,
@@ -201,7 +215,7 @@ class VectorServiceRetriever(BaseRetriever):
 
         stats = CompressionStats(documents_processed=len(documents))
         stats.tokens_before = sum(
-            self._estimate_tokens(doc.page_content) for doc in documents
+            _estimate_tokens(doc.page_content) for doc in documents
         )
 
         try:
@@ -220,7 +234,7 @@ class VectorServiceRetriever(BaseRetriever):
             )
 
         stats.tokens_after = sum(
-            self._estimate_tokens(doc.page_content) for doc in compressed_docs
+            _estimate_tokens(doc.page_content) for doc in compressed_docs
         )
         stats.documents_compressed = max(
             0, stats.documents_processed - len(compressed_docs)
@@ -236,8 +250,16 @@ class VectorServiceRetriever(BaseRetriever):
 
         return compressed_docs
 
-    @staticmethod
-    def _estimate_tokens(content: str) -> int:
-        """Approximate token count using whitespace segmentation."""
 
-        return max(1, len(content.split()))
+def _estimate_tokens(content: str) -> int:
+    """Estimate token count using tiktoken when available."""
+
+    if not content:
+        return 0
+    if tiktoken is not None:  # pragma: no branch - quick exit when installed
+        encoding = tiktoken.get_encoding("cl100k_base")
+        return len(encoding.encode(content))
+    return max(1, len(content.split()))
+
+
+__all__ = ["VectorServiceRetriever", "CompressionStats"]
