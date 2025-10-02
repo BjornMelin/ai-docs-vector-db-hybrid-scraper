@@ -240,6 +240,13 @@ class ObservabilityTestDataFactory:
         return metrics
 
     @staticmethod
+    def create_service_metrics_scenario(
+        service_name: str = "api_gateway",
+    ) -> list[Metric]:
+        """Create a realistic metrics scenario for a service."""
+        return ObservabilityTestDataFactory.create_service_metrics_suite(service_name)
+
+    @staticmethod
     def create_sample_log_entry(
         level: str = "INFO",
         service: str = "test_service",
@@ -426,4 +433,3 @@ class ObservabilityTestDataFactory:
                 "error": "Cache service unreachable",
             },
         }
-

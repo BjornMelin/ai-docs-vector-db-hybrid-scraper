@@ -70,7 +70,28 @@ class MockDistributedTracer:
     ) -> TraceSpan:
         """Start a new span in the trace."""
         span_id = str(uuid.uuid4())
-        trace_id = trace_id or str(uuid.uuid4())
+
+        # Determine trace_id: use provided, or inherit from parent, or generate new
+        if trace_id is None and parent_span_id is not None:
+            # Find parent span to inherit trace_id
+            parent_span = None
+            for trace_spans in self.trace_storage.values():
+                for span in trace_spans:
+                    if span.span_id == parent_span_id:
+                        parent_span = span
+                        break
+                if parent_span:
+                    break
+            # Also check current spans
+            if not parent_span:
+                for span in self.spans:
+                    if span.span_id == parent_span_id:
+                        parent_span = span
+                        break
+
+            trace_id = parent_span.trace_id if parent_span else str(uuid.uuid4())
+        elif trace_id is None:
+            trace_id = str(uuid.uuid4())
 
         span = TraceSpan(
             trace_id=trace_id,
@@ -160,6 +181,14 @@ class MockMetricsCollector:
     def get_metrics_by_type(self, metric_type: str) -> list[Metric]:
         """Get all metrics of a specific type."""
         return [m for m in self.metrics if m.metric_type == metric_type]
+
+    def get_metrics(self, name: str) -> list[Metric]:
+        """Alias for get_metrics_by_name for backward compatibility."""
+        return self.get_metrics_by_name(name)
+
+    def get_all_metrics(self) -> list[Metric]:
+        """Get all stored metrics."""
+        return self.metrics.copy()
 
     def clear(self) -> None:
         """Clear all stored metrics."""
