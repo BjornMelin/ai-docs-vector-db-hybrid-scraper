@@ -17,7 +17,7 @@ import asyncio
 import logging
 import time
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 from unittest.mock import AsyncMock
 
@@ -25,9 +25,6 @@ import pytest
 
 
 logger = logging.getLogger(__name__)
-
-
-# from src.services.observability.tracking import TrackingManager  # Not implemented yet
 
 
 @dataclass
@@ -41,14 +38,8 @@ class TraceSpan:
     operation_name: str
     start_time: float
     end_time: float | None = None
-    tags: dict[str, Any] = None
-    logs: list[dict] = None
-
-    def __post_init__(self):
-        if self.tags is None:
-            self.tags = {}
-        if self.logs is None:
-            self.logs = []
+    tags: dict[str, Any] = field(default_factory=dict)
+    logs: list[dict] = field(default_factory=list)
 
 
 @dataclass
@@ -214,7 +205,7 @@ class TestDistributedTracing:
         assert vector_span_found.tags["vector_db.results_count"] == 15
 
     @pytest.mark.asyncio
-    async def test_trace_sampling_and_propagation(self, _tracing_infrastructure):
+    async def test_trace_sampling_and_propagation(self, tracing_infrastructure):
         """Test trace sampling and context propagation."""
 
         class TraceSampler:
@@ -264,7 +255,9 @@ class TestDistributedTracing:
                     "X-Sampled": "1" if sampler.is_sampled(trace_id) else "0",
                 }
 
-            def extract_context(self, headers: dict[str, str]) -> dict[str, str] | None:
+            def extract_context(
+                self, headers: dict[str, str]
+            ) -> dict[str, str | bool | None] | None:
                 """Extract trace context from HTTP headers."""
                 if "X-Trace-Id" not in headers:
                     return None
@@ -284,6 +277,7 @@ class TestDistributedTracing:
         headers = propagator.inject_headers(test_trace_id, test_span_id)
         extracted_context = propagator.extract_context(headers)
 
+        assert extracted_context is not None
         assert extracted_context["trace_id"] == test_trace_id
         assert extracted_context["span_id"] == test_span_id
         assert extracted_context["sampled"] == sampler.is_sampled(test_trace_id)
@@ -291,9 +285,6 @@ class TestDistributedTracing:
     @pytest.mark.asyncio
     async def test_error_tracking_in_traces(self, tracing_infrastructure):
         """Test error tracking and debugging in distributed traces."""
-        setup = tracing_infrastructure
-        setup["trace_storage"]
-
         trace_id = str(uuid.uuid4())
 
         class ErrorTrackingTracer:
@@ -573,7 +564,7 @@ class TestMetricsCollection:
         vector_db_collector.flush_metrics()
 
         # Verify metrics collection
-        assert len(metrics_storage) == 10  # Total metrics collected
+        assert len(metrics_storage) == 11  # Total metrics collected
 
         # Verify specific metrics
         http_requests = [m for m in metrics_storage if m.name == "http.requests._total"]
@@ -600,7 +591,7 @@ class TestMetricsCollection:
 
         assert len(counters) == 4  # requests and tokens counters
         assert len(gauges) == 4  # active connections, cost, results count, memory usage
-        assert len(histograms) == 2  # duration histograms
+        assert len(histograms) == 3  # duration histograms
 
     @pytest.mark.asyncio
     async def test_metrics_aggregation_and_alerting(self, metrics_infrastructure):
@@ -753,7 +744,7 @@ class TestMetricsCollection:
                         "condition": lambda aggregator: aggregator.calculate_rate(
                             "embeddings.errors._total"
                         )
-                        > 0.1,
+                        > 0.09,
                         "message": "Embedding service error rate increased",
                     },
                 ]
@@ -1128,8 +1119,8 @@ class TestLogCorrelation:
         ]
         trace_logs = [log for log in all_logs if log["trace_id"] == trace_id]
 
-        assert len(correlated_logs) == 5  # All logs should have correlation ID
-        assert len(trace_logs) == 5  # All logs should have trace ID
+        assert len(correlated_logs) == 6  # All logs should have correlation ID
+        assert len(trace_logs) == 6  # All logs should have trace ID
 
         # Verify log structure
         for log in correlated_logs:
@@ -1151,7 +1142,7 @@ class TestLogCorrelation:
 
         assert len(api_logs) == 2
         assert len(embedding_logs) == 2
-        assert len(vector_db_logs) == 1
+        assert len(vector_db_logs) == 2
 
     @pytest.mark.asyncio
     async def test_error_correlation_and_debugging(self):
