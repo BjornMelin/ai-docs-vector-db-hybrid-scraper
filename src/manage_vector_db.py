@@ -5,6 +5,7 @@ Modern Python 3.13 implementation with async patterns for Qdrant operations.
 Provides comprehensive database management, search, and maintenance utilities
 """
 
+import inspect
 import logging
 from collections.abc import Mapping
 from typing import Any
@@ -95,11 +96,54 @@ class VectorDBManager:
 
         self._initialized = True
 
+    @staticmethod
+    def _build_search_results(matches: list[Any]) -> list[SearchResult]:
+        """Convert vector search matches to CLI-friendly results."""
+
+        results: list[SearchResult] = []
+        for match in matches:
+            payload = dict(getattr(match, "payload", {}) or {})
+            results.append(
+                SearchResult(
+                    id=str(getattr(match, "id", "")),
+                    score=float(getattr(match, "score", 0.0) or 0.0),
+                    url=str(payload.get("url", "")),
+                    title=str(payload.get("title", payload.get("name", ""))),
+                    content=str(payload.get("content", "")),
+                    metadata=payload,
+                )
+            )
+        return results
+
     async def get_vector_store_service(self) -> VectorStoreService:
         """Get vector store service from ClientManager."""
         if not self._initialized:
             await self.initialize()
         return await self.client_manager.get_vector_store_service()
+
+    async def get_embedding_manager(self) -> Any:
+        """Expose embedding manager for backward compatibility paths."""
+
+        if not self._initialized:
+            await self.initialize()
+
+        vector_service = await self.get_vector_store_service()
+        if hasattr(vector_service, "get_embedding_manager"):
+            embedding_manager = vector_service.get_embedding_manager()
+            if inspect.isawaitable(embedding_manager):
+                embedding_manager = await embedding_manager
+            return embedding_manager
+
+        legacy_fetch = getattr(self.client_manager, "get_embedding_manager", None)
+        if callable(legacy_fetch):
+            embedding_manager = legacy_fetch()
+            if inspect.isawaitable(embedding_manager):
+                embedding_manager = await embedding_manager
+            if embedding_manager is not None:
+                return embedding_manager
+
+        msg = "Embedding manager access is not available in this configuration."
+        raise NotImplementedError(msg)
 
     async def cleanup(self) -> None:
         """Cleanup services (delegated to ClientManager)."""
@@ -191,22 +235,32 @@ class VectorDBManager:
                 query,
                 limit=limit,
             )
-            results = []
-            for match in matches:
-                payload = match.payload or {}
-                results.append(
-                    SearchResult(
-                        id=match.id,
-                        score=match.score,
-                        url=str(payload.get("url", "")),
-                        title=str(payload.get("title", payload.get("name", ""))),
-                        content=str(payload.get("content", "")),
-                        metadata=dict(payload),
-                    )
-                )
-            return results
+            return self._build_search_results(matches)
         except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             console.print(f"❌ Error searching collection: {e}", style="red")
+            return []
+
+    async def search_vectors(
+        self,
+        collection_name: str,
+        query_vector: list[float],
+        limit: int = 5,
+        filters: Mapping[str, Any] | None = None,
+    ) -> list[SearchResult]:
+        """Search using a pre-computed embedding vector."""
+
+        try:
+            await self.initialize()
+            vector_service = await self.get_vector_store_service()
+            matches = await vector_service.search_vectors(
+                collection_name,
+                query_vector,
+                limit=limit,
+                filters=filters,
+            )
+            return self._build_search_results(matches)
+        except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
+            console.print(f"❌ Error searching by vector: {e}", style="red")
             return []
 
     async def get_database_stats(self) -> DatabaseStats | None:

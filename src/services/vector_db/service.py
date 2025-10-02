@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import statistics
 import time
 from collections.abc import Iterable, Mapping, Sequence
@@ -31,6 +32,9 @@ from .payload_schema import (
 
 if TYPE_CHECKING:
     from src.infrastructure.client_manager import ClientManager
+
+
+logger = logging.getLogger(__name__)
 
 
 class VectorStoreService(BaseService):  # pylint: disable=too-many-public-methods
@@ -98,6 +102,11 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
 
         adapter = self._require_adapter()
         await adapter.drop_collection(name)
+
+    async def delete_collection(self, name: str) -> None:
+        """Backward-compatible alias for dropping a collection."""
+
+        await self.drop_collection(name)
 
     async def list_collections(self) -> list[str]:
         """List all collections."""
@@ -354,10 +363,16 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
             raise EmbeddingServiceError(msg) from exc
         return embeddings
 
-    async def search_documents(
+    async def get_embedding_manager(self) -> EmbeddingProvider:
+        """Expose the underlying embedding provider for legacy integrations."""
+
+        await self.initialize()
+        return self._embeddings
+
+    async def search_vectors(
         self,
         collection: str,
-        query: str,
+        vector: Sequence[float],
         *,
         limit: int = 10,
         filters: Mapping[str, Any] | None = None,
@@ -366,9 +381,7 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         overfetch_multiplier: float | None = None,
         normalize_scores: bool | None = None,
     ) -> list[VectorMatch]:
-        """Search documents with optional grouping and score normalization."""
-
-        embedding = await self.embed_query(query)
+        """Search using a precomputed embedding vector."""
 
         qdrant_cfg = getattr(self.config, "qdrant", None)
         query_cfg: QueryProcessingConfig | None = getattr(
@@ -391,7 +404,7 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
 
         matches, grouping_applied = await self._query_with_optional_grouping(
             collection=collection,
-            vector=embedding,
+            vector=vector,
             limit=effective_limit,
             group_by=resolved_group_by,
             group_size=resolved_group_size,
@@ -421,6 +434,44 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
 
         return matches[:limit]
 
+    async def search_documents(
+        self,
+        collection: str,
+        query: str,
+        *,
+        limit: int = 10,
+        filters: Mapping[str, Any] | None = None,
+        group_by: str | None = None,
+        group_size: int | None = None,
+        overfetch_multiplier: float | None = None,
+        normalize_scores: bool | None = None,
+    ) -> list[VectorMatch]:
+        """Search documents with optional grouping and score normalization."""
+
+        embedding = await self.embed_query(query)
+        return await self.search_vectors(
+            collection,
+            embedding,
+            limit=limit,
+            filters=filters,
+            group_by=group_by,
+            group_size=group_size,
+            overfetch_multiplier=overfetch_multiplier,
+            normalize_scores=normalize_scores,
+        )
+
+    async def supports_server_side_grouping(self) -> bool:
+        """Return True when the connected backend can execute QueryPointGroups."""
+
+        adapter = self._require_adapter()
+        ensure_capability = getattr(adapter, "_ensure_grouping_capability", None)
+        if callable(ensure_capability):  # pragma: no branch - simple capability probe
+            await ensure_capability()
+        supports = getattr(adapter, "supports_query_groups", None)
+        if callable(supports):
+            return bool(supports())
+        return False
+
     async def _query_with_optional_grouping(
         self,
         collection: str,
@@ -442,6 +493,25 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
             registry = get_metrics_registry()
         except RuntimeError:  # pragma: no cover - monitoring disabled
             registry = None
+
+        if grouping_enabled and group_by is not None:
+            ensure_capability = getattr(adapter, "_ensure_grouping_capability", None)
+            if callable(ensure_capability):
+                await ensure_capability()
+
+            supports_grouping = False
+            supports_method = getattr(adapter, "supports_query_groups", None)
+            if callable(supports_method):
+                supports_grouping = bool(supports_method())
+
+            if not supports_grouping:
+                grouping_enabled = False
+                if registry is not None:
+                    registry.record_grouping_attempt(collection, "unsupported")
+                logger.warning(
+                    "Disabling QueryPointGroups for %s: backend lacks support",
+                    collection,
+                )
 
         if grouping_enabled and group_by is not None:
             await self.ensure_payload_indexes(

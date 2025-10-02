@@ -198,6 +198,14 @@ class ClientManager:  # pylint: disable=too-many-public-methods
         self._vector_store_service = service
         return service
 
+    async def get_qdrant_service(self) -> VectorStoreService:
+        """Backward-compatible alias for legacy callers."""
+
+        logger.warning(
+            "get_qdrant_service() is deprecated; use get_vector_store_service() instead"
+        )
+        return await self.get_vector_store_service()
+
     async def get_redis_client(self):
         provider = self._providers.get("redis")
         if not provider:

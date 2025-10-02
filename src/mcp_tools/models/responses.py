@@ -6,10 +6,14 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.contracts.retrieval import SearchRecord
+from src.services.content_intelligence.models import ContentType as _ContentType
 
 
 SearchResult = SearchRecord
 SearchResult.__doc__ = "Search result with metadata"
+
+# Re-export ContentType for backward compatibility with earlier imports.
+ContentType = _ContentType
 
 
 class CrawlResult(BaseModel):

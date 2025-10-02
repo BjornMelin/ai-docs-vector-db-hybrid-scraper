@@ -65,7 +65,7 @@ def _create_qdrant_client(config: Any) -> AsyncQdrantClient:
         qdrant_config = getattr(config, "qdrant", None)
         url = getattr(qdrant_config, "url", None) or "http://localhost:6333"
         api_key = getattr(qdrant_config, "api_key", None)
-        timeout = int(getattr(qdrant_config, "timeout", None) or 30)
+        timeout = float(getattr(qdrant_config, "timeout", None) or 30.0)
         prefer_grpc = getattr(qdrant_config, "prefer_grpc", None) or False
         return AsyncQdrantClient(
             url=url, api_key=api_key, timeout=timeout, prefer_grpc=prefer_grpc
