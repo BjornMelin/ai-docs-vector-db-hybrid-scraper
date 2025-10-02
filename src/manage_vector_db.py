@@ -16,6 +16,7 @@ from rich.table import Table
 
 # Import unified configuration and service layer
 from src.config import get_config
+from src.contracts.retrieval import SearchRecord
 from src.infrastructure.client_manager import ClientManager
 from src.services.vector_db import CollectionSchema
 from src.services.vector_db.service import VectorStoreService
@@ -25,15 +26,10 @@ from src.utils import async_command
 console = Console()
 
 
-class SearchResult(BaseModel):
+class SearchResult(SearchRecord):
     """Search result from vector database."""
 
-    id: str
-    score: float
-    url: str
-    title: str
-    content: str
-    metadata: dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] | None = Field(default_factory=dict)
 
 
 class CollectionInfo(BaseModel):

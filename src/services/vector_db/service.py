@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import statistics
 import time
 from collections.abc import Iterable, Mapping, Sequence
 from datetime import UTC, datetime
@@ -12,6 +13,7 @@ from uuid import uuid4
 from qdrant_client import models
 
 from src.config import get_config
+from src.config.models import QueryProcessingConfig, ScoreNormalizationStrategy
 from src.services.base import BaseService
 from src.services.embeddings.base import EmbeddingProvider
 from src.services.embeddings.fastembed_provider import FastEmbedProvider
@@ -57,7 +59,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         self._client_manager = client_manager
         self._embeddings = embeddings_provider
         self._adapter: QdrantVectorAdapter | None = None
-        self._grouping_indexes: set[tuple[str, str]] = set()
 
     async def initialize(self) -> None:
         """Initialize the service and its dependencies."""
@@ -88,6 +89,8 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         """Ensure a collection exists with the given schema."""
 
         adapter = self._require_adapter()
+        if await adapter.collection_exists(schema.name):
+            return
         await adapter.create_collection(schema)
 
     async def drop_collection(self, name: str) -> None:
@@ -358,39 +361,81 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         *,
         limit: int = 10,
         filters: Mapping[str, Any] | None = None,
+        group_by: str | None = None,
+        group_size: int | None = None,
+        overfetch_multiplier: float | None = None,
+        normalize_scores: bool | None = None,
     ) -> list[VectorMatch]:
-        """Search documents using a text query.
-
-        Args:
-            collection: Name of the collection.
-            query: Text query string.
-            limit: Maximum number of results to return.
-            filters: Optional filters for the search.
-
-        Returns:
-            List of vector matches.
-        """
+        """Search documents with optional grouping and score normalization."""
 
         embedding = await self.embed_query(query)
-        matches, _ = await self._query_with_optional_grouping(
-            collection,
-            embedding,
-            limit=limit,
+
+        qdrant_cfg = getattr(self.config, "qdrant", None)
+        query_cfg: QueryProcessingConfig | None = getattr(
+            self.config, "query_processing", None
+        )
+
+        resolved_group_by = group_by or getattr(qdrant_cfg, "group_by_field", "doc_id")
+        resolved_group_size = max(
+            1, int(group_size or getattr(qdrant_cfg, "group_size", 1))
+        )
+        multiplier_default = float(getattr(qdrant_cfg, "groups_limit_multiplier", 2.0))
+        resolved_multiplier = overfetch_multiplier or multiplier_default
+        if resolved_multiplier <= 0:
+            resolved_multiplier = 1.0
+        effective_limit = max(
+            limit * resolved_group_size,
+            int(limit * resolved_multiplier),
+            limit,
+        )
+
+        matches, grouping_applied = await self._query_with_optional_grouping(
+            collection=collection,
+            vector=embedding,
+            limit=effective_limit,
+            group_by=resolved_group_by,
+            group_size=resolved_group_size,
             filters=filters,
         )
-        return matches
 
-    async def _query_with_optional_grouping(  # pylint: disable=too-many-locals
+        matches = self._attach_collection_metadata(matches, collection)
+
+        if resolved_group_by and not grouping_applied:
+            matches = self._group_client_side(
+                matches,
+                group_by=resolved_group_by,
+                group_size=resolved_group_size,
+                limit=effective_limit,
+            )
+
+        matches = self._annotate_grouping_metadata(
+            matches,
+            group_by=resolved_group_by,
+            grouping_applied=grouping_applied,
+        )
+
+        should_normalize = normalize_scores
+        if should_normalize is None and query_cfg is not None:
+            should_normalize = query_cfg.enable_score_normalization
+        matches = self._normalize_scores(matches, enabled=should_normalize)
+
+        return matches[:limit]
+
+    async def _query_with_optional_grouping(
         self,
         collection: str,
         vector: Sequence[float],
         *,
         limit: int,
+        group_by: str | None,
+        group_size: int,
         filters: Mapping[str, Any] | None = None,
     ) -> tuple[list[VectorMatch], bool]:
         adapter = self._require_adapter()
         qdrant_cfg = getattr(self.config, "qdrant", None)
-        grouping_enabled = bool(getattr(qdrant_cfg, "enable_grouping", False))
+        grouping_enabled = bool(getattr(qdrant_cfg, "enable_grouping", False)) and bool(
+            group_by
+        )
         grouping_applied = False
         registry = None
         try:
@@ -398,29 +443,18 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         except RuntimeError:  # pragma: no cover - monitoring disabled
             registry = None
 
-        if grouping_enabled:
-            group_by_field = getattr(qdrant_cfg, "group_by_field", "doc_id")
-            group_size = max(1, int(getattr(qdrant_cfg, "group_size", 1)))
-            limit_multiplier = float(
-                getattr(qdrant_cfg, "groups_limit_multiplier", 2.0)
+        if grouping_enabled and group_by is not None:
+            await self.ensure_payload_indexes(
+                collection,
+                {group_by: models.PayloadSchemaType.KEYWORD},
             )
-            limit_multiplier = limit_multiplier if limit_multiplier > 0 else 1.0
-            groups_limit = max(limit, int(limit * limit_multiplier))
-
-            index_key = (collection, group_by_field)
-            if index_key not in self._grouping_indexes:
-                await self.ensure_payload_indexes(
-                    collection,
-                    {group_by_field: models.PayloadSchemaType.KEYWORD},
-                )
-                self._grouping_indexes.add(index_key)
 
             start_time = time.perf_counter()
             matches, grouping_applied = await adapter.query_groups(
                 collection,
                 vector,
-                group_by=group_by_field,
-                limit=groups_limit,
+                group_by=group_by,
+                limit=limit,
                 group_size=group_size,
                 filters=filters,
             )
@@ -443,6 +477,144 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         if registry is not None:
             registry.record_grouping_attempt(collection, "disabled")
         return matches, False
+
+    @staticmethod
+    def _attach_collection_metadata(
+        matches: list[VectorMatch], collection: str
+    ) -> list[VectorMatch]:
+        for match in matches:
+            match.collection = match.collection or collection
+            payload = dict(match.payload or {})
+            match.payload = payload
+        return matches
+
+    def _group_client_side(
+        self,
+        matches: list[VectorMatch],
+        *,
+        group_by: str,
+        group_size: int,
+        limit: int,
+    ) -> list[VectorMatch]:
+        groups: dict[str, list[VectorMatch]] = {}
+        for match in matches:
+            payload = dict(match.payload or {})
+            group_id = payload.get(group_by) or payload.get("doc_id")
+            if group_id is None:
+                group_id = match.id
+            payload.setdefault("doc_id", group_id)
+            match.payload = payload
+            groups.setdefault(str(group_id), []).append(match)
+
+        ordered_groups = sorted(
+            groups.items(),
+            key=lambda item: (item[1][0].raw_score or item[1][0].score),
+            reverse=True,
+        )
+
+        limited_matches: list[VectorMatch] = []
+        for _, group_matches in ordered_groups:
+            for group_rank, match in enumerate(group_matches[:group_size], start=1):
+                payload = dict(match.payload or {})
+                group_id = payload.get(group_by) or payload.get("doc_id") or match.id
+                payload["_grouping"] = {
+                    "applied": False,
+                    "group_id": group_id,
+                    "rank": group_rank,
+                }
+                payload.setdefault("doc_id", group_id)
+                match.payload = payload
+                limited_matches.append(match)
+            if len(limited_matches) >= limit:
+                break
+        return limited_matches
+
+    @staticmethod
+    def _annotate_grouping_metadata(
+        matches: list[VectorMatch],
+        *,
+        group_by: str | None,
+        grouping_applied: bool,
+    ) -> list[VectorMatch]:
+        if not group_by:
+            return matches
+        for rank, match in enumerate(matches, start=1):
+            payload = dict(match.payload or {})
+            group_info = dict(payload.get("_grouping") or {})
+            group_info.setdefault(
+                "group_id",
+                payload.get(group_by) or payload.get("doc_id") or match.id,
+            )
+            group_info.setdefault("rank", rank)
+            group_info.setdefault("applied", grouping_applied)
+            payload["_grouping"] = group_info
+            match.payload = payload
+        return matches
+
+    def _normalize_scores(
+        self, matches: list[VectorMatch], *, enabled: bool | None
+    ) -> list[VectorMatch]:
+        if not matches:
+            return matches
+
+        # Always record raw_score before normalization
+        for match in matches:
+            if match.raw_score is None:
+                match.raw_score = float(match.score)
+
+        if not enabled:
+            return matches
+
+        config = getattr(self, "config", None)
+        query_cfg: QueryProcessingConfig | None = getattr(
+            config, "query_processing", None
+        )
+        strategy = (
+            query_cfg.score_normalization_strategy
+            if query_cfg is not None
+            else ScoreNormalizationStrategy.MIN_MAX
+        )
+        if strategy == ScoreNormalizationStrategy.NONE:
+            return matches
+
+        scores = [float(match.raw_score or match.score) for match in matches]
+        epsilon = max(
+            float(
+                (query_cfg.score_normalization_epsilon if query_cfg else 1e-6) or 1e-6
+            ),
+            1e-9,
+        )
+
+        if strategy == ScoreNormalizationStrategy.MIN_MAX:
+            minimum = min(scores)
+            maximum = max(scores)
+            span = maximum - minimum
+            if span < epsilon:
+                for match in matches:
+                    match.score = 1.0
+                    match.normalized_score = 1.0
+                return matches
+            for match in matches:
+                normalized = ((match.raw_score or match.score) - minimum) / span
+                match.score = normalized
+                match.normalized_score = normalized
+            return matches
+
+        if strategy == ScoreNormalizationStrategy.Z_SCORE:
+            mean = statistics.fmean(scores)
+            std_dev = statistics.pstdev(scores) if len(scores) > 1 else 0.0
+            if std_dev < epsilon:
+                for match in matches:
+                    match.score = 0.0
+                    match.normalized_score = 0.0
+                return matches
+            for match in matches:
+                normalized = ((match.raw_score or match.score) - mean) / std_dev
+                match.score = normalized
+                match.normalized_score = normalized
+            return matches
+
+        return matches
 
     async def search_vector(
         self,
@@ -468,6 +640,8 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
             collection,
             vector,
             limit=limit,
+            group_by=None,
+            group_size=1,
             filters=filters,
         )
         return matches

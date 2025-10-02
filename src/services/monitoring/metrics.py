@@ -9,7 +9,7 @@ import functools
 import logging
 import time
 from collections.abc import Callable
-from typing import Any, TypeVar
+from typing import Any, TypeVar, cast
 
 import psutil
 import redis
@@ -91,6 +91,21 @@ class MetricsRegistry:
             registry=self.registry,
         )
 
+        self._metrics["grouping_requests"] = Counter(
+            f"{namespace}_grouping_requests_total",
+            "Number of grouped query attempts partitioned by outcome",
+            ["collection", "status"],
+            registry=self.registry,
+        )
+
+        self._metrics["grouping_latency"] = Histogram(
+            f"{namespace}_grouping_latency_seconds",
+            "Latency of grouped query execution in seconds",
+            ["collection"],
+            buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0),
+            registry=self.registry,
+        )
+
         # === Embedding Generation Metrics ===
         self._metrics["embedding_duration"] = Histogram(
             f"{namespace}_embedding_generation_duration_seconds",
@@ -126,6 +141,28 @@ class MetricsRegistry:
             "Size of embedding generation batches",
             ["provider"],
             buckets=(1, 5, 10, 25, 50, 100, 250, 500, 1000),
+            registry=self.registry,
+        )
+
+        self._metrics["compression_ratio"] = Histogram(
+            f"{namespace}_compression_token_ratio",
+            "Ratio of tokens retained after contextual compression",
+            ["collection"],
+            buckets=(0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0),
+            registry=self.registry,
+        )
+
+        self._metrics["compression_tokens"] = Counter(
+            f"{namespace}_compression_tokens_total",
+            "Total tokens observed before and after compression",
+            ["collection", "kind"],
+            registry=self.registry,
+        )
+
+        self._metrics["compression_documents"] = Counter(
+            f"{namespace}_compression_documents_total",
+            "Number of documents processed by contextual compression",
+            ["collection", "status"],
             registry=self.registry,
         )
 
@@ -317,7 +354,6 @@ class MetricsRegistry:
 
         Returns:
             Decorated function with search performance monitoring
-
         """
 
         def decorator(func: F) -> F:
@@ -379,7 +415,9 @@ class MetricsRegistry:
                     ).observe(duration)
                     self._metrics["search_concurrent"].dec()
 
-            return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
+            return cast(
+                F, async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
+            )
 
         return decorator
 
@@ -394,7 +432,6 @@ class MetricsRegistry:
 
         Returns:
             Decorated function with embedding monitoring
-
         """
 
         def decorator(func: F) -> F:
@@ -439,7 +476,9 @@ class MetricsRegistry:
                         provider=provider, model=model
                     ).observe(duration)
 
-            return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
+            return cast(
+                F, async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
+            )
 
         return decorator
 
@@ -454,7 +493,6 @@ class MetricsRegistry:
 
         Returns:
             Decorated function with cache monitoring
-
         """
 
         def decorator(func: F) -> F:
@@ -465,9 +503,8 @@ class MetricsRegistry:
                 except (ConnectionError, RuntimeError, TimeoutError):
                     self._record_cache_miss(cache_type, cache_name)
                     raise
-                else:
-                    self._record_cache_result(cache_type, cache_name, result)
-                    return result
+                self._record_cache_result(cache_type, cache_name, result)
+                return result
 
             @functools.wraps(func)
             def sync_wrapper(*args, **kwargs):
@@ -476,11 +513,12 @@ class MetricsRegistry:
                 except (ConnectionError, RuntimeError, TimeoutError):
                     self._record_cache_miss(cache_type, cache_name)
                     raise
-                else:
-                    self._record_cache_result(cache_type, cache_name, result)
-                    return result
+                self._record_cache_result(cache_type, cache_name, result)
+                return result
 
-            return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
+            return cast(
+                F, async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
+            )
 
         return decorator
 
@@ -495,7 +533,6 @@ class MetricsRegistry:
 
         Returns:
             Decorated function with cache performance monitoring
-
         """
 
         def decorator(func: F) -> F:
@@ -531,7 +568,9 @@ class MetricsRegistry:
                         cache_type, operation, start_time
                     )
 
-            return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
+            return cast(
+                F, async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
+            )
 
         return decorator
 
@@ -541,7 +580,6 @@ class MetricsRegistry:
         Args:
             cache_layer: Cache layer (local, distributed)
             cache_type: Type of cache data (embeddings, crawl, search, etc.)
-
         """
         self._metrics["cache_hits"].labels(
             cache_layer=cache_layer, cache_type=cache_type
@@ -555,6 +593,50 @@ class MetricsRegistry:
 
         """
         self._metrics["cache_misses"].labels(cache_type=cache_type).inc()
+
+    def record_grouping_attempt(
+        self, collection: str, status: str, *, duration_ms: float | None = None
+    ) -> None:
+        """Record the outcome of a server-side grouping attempt."""
+
+        if not self.config.enabled:
+            return
+        self._metrics["grouping_requests"].labels(
+            collection=collection, status=status
+        ).inc()
+        if duration_ms is not None:
+            duration_seconds = max(duration_ms / 1000.0, 0.0)
+            self._metrics["grouping_latency"].labels(collection=collection).observe(
+                duration_seconds
+            )
+
+    def record_compression_stats(self, collection: str, stats: Any) -> None:
+        """Record deterministic compression statistics."""
+
+        if not self.config.enabled:
+            return
+
+        tokens_before = getattr(stats, "tokens_before", 0)
+        tokens_after = getattr(stats, "tokens_after", 0)
+        documents_processed = getattr(stats, "documents_processed", 0)
+        documents_compressed = getattr(stats, "documents_compressed", 0)
+        ratio = 1.0
+        if tokens_before > 0:
+            ratio = max(0.0, min(1.0, tokens_after / tokens_before))
+            self._metrics["compression_tokens"].labels(
+                collection=collection, kind="before"
+            ).inc(tokens_before)
+        if tokens_after > 0:
+            self._metrics["compression_tokens"].labels(
+                collection=collection, kind="after"
+            ).inc(tokens_after)
+
+        self._metrics["compression_ratio"].labels(collection=collection).observe(ratio)
+
+        status = "compressed" if documents_compressed else "unchanged"
+        self._metrics["compression_documents"].labels(
+            collection=collection, status=status
+        ).inc(documents_processed)
 
     def _record_embedding_success(self, provider: str, model: str, result) -> None:
         """Record successful embedding request.
@@ -727,7 +809,7 @@ class MetricsRegistry:
             self._update_local_cache_stats(cache_manager)
             self._update_distributed_cache_stats(cache_manager)
         except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
-            logging.getLogger(__name__).warning(f"Failed to update cache stats: {e}")
+            logging.getLogger(__name__).warning("Failed to update cache stats: %s", e)
 
     def record_embedding_cost(self, provider: str, model: str, cost: float) -> None:
         """Record embedding generation cost.
@@ -736,7 +818,6 @@ class MetricsRegistry:
             provider: Embedding provider
             model: Model name
             cost: Cost in USD
-
         """
         self._metrics["embedding_cost"].labels(provider=provider, model=model).inc(cost)
 
@@ -746,7 +827,6 @@ class MetricsRegistry:
         Args:
             provider: Embedding provider
             depth: Current queue depth
-
         """
         self._metrics["embedding_queue_depth"].labels(provider=provider).set(depth)
 
@@ -756,7 +836,6 @@ class MetricsRegistry:
         Args:
             service: Service name
             healthy: Whether service is healthy
-
         """
         self._metrics["service_health"].labels(service=service).set(1 if healthy else 0)
 
@@ -766,7 +845,6 @@ class MetricsRegistry:
         Args:
             dependency: Dependency name (qdrant, redis, etc.)
             healthy: Whether dependency is healthy
-
         """
         self._metrics["dependency_health"].labels(dependency=dependency).set(
             1 if healthy else 0
@@ -781,7 +859,6 @@ class MetricsRegistry:
             collection: Collection name
             size: Number of vectors
             memory_usage: Memory usage in bytes
-
         """
         self._metrics["qdrant_collection_size"].labels(collection=collection).set(size)
         self._metrics["qdrant_memory_usage"].labels(collection=collection).set(
@@ -797,7 +874,6 @@ class MetricsRegistry:
             operation: Operation type (insert, search, delete, etc.)
             collection: Collection name
             success: Whether operation succeeded
-
         """
         status = "success" if success else "error"
         self._metrics["qdrant_operations"].labels(
@@ -811,7 +887,6 @@ class MetricsRegistry:
             queue: Queue name
             status: Task status (pending, running, complete, failed)
             size: Number of tasks
-
         """
         self._metrics["task_queue_size"].labels(queue=queue, status=status).set(size)
 
@@ -824,7 +899,6 @@ class MetricsRegistry:
             task_name: Name of the task
             duration_seconds: Execution duration
             success: Whether task succeeded
-
         """
         status = "success" if success else "error"
         self._metrics["task_execution_duration"].labels(
@@ -838,7 +912,6 @@ class MetricsRegistry:
         Args:
             queue: Queue name
             count: Number of active workers
-
         """
         self._metrics["worker_active"].labels(queue=queue).set(count)
 
@@ -851,7 +924,6 @@ class MetricsRegistry:
             tier: Browser tier name
             duration_seconds: Request duration
             success: Whether request succeeded
-
         """
         status = "success" if success else "error"
         self._metrics["browser_requests"].labels(tier=tier, status=status).inc()
@@ -865,7 +937,6 @@ class MetricsRegistry:
         Args:
             tier: Browser tier name
             healthy: Whether tier is healthy
-
         """
         self._metrics["browser_tier_health"].labels(tier=tier).set(1 if healthy else 0)
 
@@ -882,7 +953,6 @@ class MetricsRegistry:
 
         Returns:
             Prometheus metric object or None if not found
-
         """
         return self._metrics.get(name)
 
@@ -915,7 +985,6 @@ def get_metrics_registry() -> MetricsRegistry:
 
     Raises:
         RuntimeError: If registry not initialized
-
     """
     return _MetricsRegistrySingleton.get_instance()
 
@@ -928,6 +997,5 @@ def initialize_metrics(config: MetricsConfig) -> MetricsRegistry:
 
     Returns:
         Initialized MetricsRegistry instance
-
     """
     return _MetricsRegistrySingleton.initialize_instance(config)
