@@ -282,6 +282,108 @@ async def test_search_vector_passthrough(
 
 
 @pytest.mark.asyncio
+async def test_search_documents_client_side_grouping_fallback(
+    client_manager_stub,
+    qdrant_client_mock,
+    embeddings_provider_stub,
+    config_stub,
+) -> None:
+    """Grouping disabled, service should group client-side and annotate metadata."""
+
+    client_manager_stub._qdrant_client = qdrant_client_mock
+    service = await initialize_vector_store_service(
+        config_stub,
+        client_manager_stub,
+        embeddings_provider_stub,
+    )
+    adapter_mock = AsyncMock(spec=QdrantVectorAdapter)
+    adapter_mock.query.return_value = [
+        VectorMatch(
+            id="chunk-1",
+            score=0.9,
+            raw_score=0.9,
+            payload={"doc_id": "doc-1", "content": "alpha"},
+        ),
+        VectorMatch(
+            id="chunk-2",
+            score=0.8,
+            raw_score=0.8,
+            payload={"doc_id": "doc-1", "content": "beta"},
+        ),
+        VectorMatch(
+            id="chunk-3",
+            score=0.5,
+            raw_score=0.5,
+            payload={"doc_id": "doc-2", "content": "gamma"},
+        ),
+    ]
+    service._adapter = adapter_mock
+
+    results = await service.search_documents(
+        collection="docs",
+        query="test",
+        limit=2,
+        group_by="doc_id",
+        group_size=1,
+        normalize_scores=False,
+    )
+
+    adapter_mock.query.assert_awaited_once()
+    assert len(results) == 2
+    first, second = results
+    assert first.payload["_grouping"]["applied"] is False
+    assert first.payload["_grouping"]["group_id"] == "doc-1"
+    assert first.payload["_grouping"]["rank"] == 1
+    assert second.payload["_grouping"]["group_id"] == "doc-2"
+    assert {match.id for match in results} == {"chunk-1", "chunk-3"}
+
+
+@pytest.mark.asyncio
+async def test_search_documents_normalizes_scores_when_enabled(
+    client_manager_stub,
+    qdrant_client_mock,
+    embeddings_provider_stub,
+    config_stub,
+) -> None:
+    """Score normalisation should populate normalized_score and update score."""
+
+    client_manager_stub._qdrant_client = qdrant_client_mock
+    config_stub.query_processing.enable_score_normalization = True  # type: ignore[attr-defined]
+    service = await initialize_vector_store_service(
+        config_stub,
+        client_manager_stub,
+        embeddings_provider_stub,
+    )
+    adapter_mock = AsyncMock(spec=QdrantVectorAdapter)
+    adapter_mock.query.return_value = [
+        VectorMatch(
+            id="chunk-1",
+            score=0.9,
+            raw_score=0.9,
+            payload={"doc_id": "doc-1", "content": "alpha"},
+        ),
+        VectorMatch(
+            id="chunk-2",
+            score=0.8,
+            raw_score=0.8,
+            payload={"doc_id": "doc-2", "content": "beta"},
+        ),
+    ]
+    service._adapter = adapter_mock
+
+    results = await service.search_documents(
+        collection="docs",
+        query="test",
+        limit=2,
+        normalize_scores=True,
+    )
+
+    assert [match.raw_score for match in results] == [0.9, 0.8]
+    assert [match.normalized_score for match in results] == [1.0, 0.0]
+    assert [match.score for match in results] == [1.0, 0.0]
+
+
+@pytest.mark.asyncio
 async def test_search_documents_uses_query_groups_when_supported(
     initialized_vector_store_service,
 ) -> None:

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "rangeStrategy": "bump",
+  "packageRules": [
+    {
+      "matchPackageNames": [
+        "langchain",
+        "langchain-core",
+        "langchain-community",
+        "langchain-openai",
+        "fastembed",
+        "qdrant-client"
+      ],
+      "groupName": "retrieval-stack",
+      "schedule": ["before 07:00 on monday"],
+      "minimumReleaseAge": "14 days",
+      "description": "Updates to the retrieval/RAG stack are grouped and scheduled to allow coordinated regression testing."
+    }
+  ]
+}
