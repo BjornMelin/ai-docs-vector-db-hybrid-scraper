@@ -33,8 +33,8 @@ class CircuitBreakerManager:
         Args:
             redis_url: Redis URL for distributed state storage
             config: Application configuration for circuit breaker settings
-
         """
+
         self.redis_url = redis_url
         self.config = config
 
@@ -81,8 +81,8 @@ class CircuitBreakerManager:
 
         Returns:
             Circuit breaker instance for the service
-
         """
+
         if service_name not in self._breakers:
             async with self._lock:
                 if service_name not in self._breakers:
@@ -116,8 +116,8 @@ class CircuitBreakerManager:
         Raises:
             CircuitBreakerOpenError: If the circuit breaker is open
             Exception: Any exception raised by the function
-
         """
+
         breaker = await self.get_breaker(service_name)
 
         async with breaker:
@@ -132,7 +132,6 @@ class CircuitBreakerManager:
 
         Returns:
             Decorator function
-
         """
 
         def decorator_func(
@@ -155,8 +154,8 @@ class CircuitBreakerManager:
 
         Returns:
             Dictionary with circuit breaker status information
-
         """
+
         if service_name not in self._breakers:
             return {"status": "not_initialized"}
 
@@ -175,6 +174,7 @@ class CircuitBreakerManager:
         self, service_name: str, breaker: Any
     ) -> dict[str, Any]:
         """Extract status information from circuit breaker."""
+
         return {
             "service_name": service_name,
             "state": str(breaker.state),
@@ -192,8 +192,8 @@ class CircuitBreakerManager:
 
         Returns:
             True if reset was successful, False otherwise
-
         """
+
         try:
             return await self._attempt_breaker_reset(service_name)
         except Exception:
@@ -202,6 +202,7 @@ class CircuitBreakerManager:
 
     async def _attempt_breaker_reset(self, service_name: str) -> bool:
         """Attempt to reset circuit breaker for service."""
+
         breaker = await self.get_breaker(service_name)
         if not hasattr(breaker, "reset"):
             logger.warning(
@@ -218,8 +219,8 @@ class CircuitBreakerManager:
 
         Returns:
             Dictionary mapping service names to their circuit breaker status
-
         """
+
         statuses = {}
         for service_name in self._breakers:
             statuses[service_name] = await self.get_breaker_status(service_name)
@@ -237,6 +238,7 @@ class CircuitBreakerManager:
 
     async def _cleanup_resources(self) -> None:
         """Clean up circuit breaker manager resources."""
+
         self._breakers.clear()
         logger.info("CircuitBreakerManager closed successfully")
 
@@ -253,6 +255,6 @@ def create_circuit_breaker_manager(
 
     Returns:
         CircuitBreakerManager instance
-
     """
+
     return CircuitBreakerManager(redis_url, config)
