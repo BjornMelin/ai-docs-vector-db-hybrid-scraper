@@ -214,7 +214,7 @@ uv run pytest tests/integration/mcp_services/ -k performance -v
 
 - **`mock_client_manager`** - Mock ClientManager for service testing
 - **`mock_observability_components`** - Enterprise observability mocks
-- **`mock_agentic_orchestrator`** - AgenticOrchestrator for workflow testing
+- **`graph_runner_stub`** - LangGraph GraphRunner stub for workflow testing
 - **`mock_discovery_engine`** - DynamicToolDiscovery for service optimization
 - **`sample_service_capabilities`** - Test data for capability validation
 

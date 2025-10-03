@@ -4,58 +4,34 @@ src.services.agents package
 Submodules
 ----------
 
-src.services.agents.agentic\_orchestrator module
-------------------------------------------------
-
-.. automodule:: src.services.agents.agentic_orchestrator
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-src.services.agents.coordination module
----------------------------------------
-
-.. automodule:: src.services.agents.coordination
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-src.services.agents.core module
--------------------------------
-
-.. automodule:: src.services.agents.core
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-src.services.agents.dynamic\_tool\_discovery module
----------------------------------------------------
+src.services.agents.dynamic_tool_discovery module
+-------------------------------------------------
 
 .. automodule:: src.services.agents.dynamic_tool_discovery
    :members:
    :show-inheritance:
    :undoc-members:
 
-src.services.agents.integration module
---------------------------------------
+src.services.agents.langgraph_runner module
+-------------------------------------------
 
-.. automodule:: src.services.agents.integration
+.. automodule:: src.services.agents.langgraph_runner
    :members:
    :show-inheritance:
    :undoc-members:
 
-src.services.agents.query\_orchestrator module
-----------------------------------------------
+src.services.agents.retrieval module
+------------------------------------
 
-.. automodule:: src.services.agents.query_orchestrator
+.. automodule:: src.services.agents.retrieval
    :members:
    :show-inheritance:
    :undoc-members:
 
-src.services.agents.tool\_orchestration module
-----------------------------------------------
+src.services.agents.tool_execution_service module
+-------------------------------------------------
 
-.. automodule:: src.services.agents.tool_orchestration
+.. automodule:: src.services.agents.tool_execution_service
    :members:
    :show-inheritance:
    :undoc-members:
