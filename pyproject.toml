@@ -109,6 +109,10 @@ dependencies = [
     "langchain-core>=0.3.76",
     "langchain-community>=0.3.12,<0.4.0",
     "langchain-qdrant>=0.2.0,<0.4.0",
+    "langchain-mcp-adapters>=0.1.10,<0.2.0",
+    "playwright>=1.55.0,<2.0.0",
+    "rebrowser-playwright>=1.47.0,<2.0.0",
+    "tf_playwright_stealth>=1.2.0,<2.0.0",
     "langgraph>=0.6.0,<0.7.0",
 ]
 
@@ -163,7 +167,11 @@ accessibility = [
 ]
 
 # Browser automation (essential for web scraping)
-browser = ["playwright>=1.55.0,<2.0.0"]
+browser = [
+    "playwright>=1.55.0,<2.0.0",
+    "rebrowser-playwright>=1.47.0,<2.0.0",
+    "tf_playwright_stealth>=1.2.0,<2.0.0",
+]
 
 # LLM integrations (core AI functionality)
 llm = [

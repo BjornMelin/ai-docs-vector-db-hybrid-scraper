@@ -57,6 +57,7 @@ dependencies = [
     { name = "langchain" },
     { name = "langchain-community" },
     { name = "langchain-core" },
+    { name = "langchain-mcp-adapters" },
     { name = "langchain-openai" },
     { name = "langchain-qdrant" },
     { name = "langgraph" },
@@ -66,6 +67,7 @@ dependencies = [
     { name = "opentelemetry-api" },
     { name = "opentelemetry-instrumentation-fastapi" },
     { name = "opentelemetry-sdk" },
+    { name = "playwright" },
     { name = "prometheus-client" },
     { name = "prometheus-fastapi-instrumentator" },
     { name = "psutil" },
@@ -81,6 +83,7 @@ dependencies = [
     { name = "pyyaml" },
     { name = "qdrant-client", extra = ["fastembed"] },
     { name = "questionary" },
+    { name = "rebrowser-playwright" },
     { name = "redis", extra = ["hiredis"] },
     { name = "respx" },
     { name = "rich" },
@@ -92,6 +95,7 @@ dependencies = [
     { name = "starlette" },
     { name = "taskipy" },
     { name = "tenacity" },
+    { name = "tf-playwright-stealth" },
     { name = "tomli-w" },
     { name = "tool" },
     { name = "tqdm" },
@@ -149,11 +153,13 @@ all = [
     { name = "pytest-mock" },
     { name = "pytest-timeout" },
     { name = "pytest-xdist" },
+    { name = "rebrowser-playwright" },
     { name = "responses" },
     { name = "ruff" },
     { name = "schemathesis" },
     { name = "selenium" },
     { name = "testcontainers" },
+    { name = "tf-playwright-stealth" },
     { name = "torch" },
     { name = "torchaudio" },
     { name = "torchvision" },
@@ -168,6 +174,8 @@ all = [
 ]
 browser = [
     { name = "playwright" },
+    { name = "rebrowser-playwright" },
+    { name = "tf-playwright-stealth" },
 ]
 contract = [
     { name = "factory-boy" },
@@ -305,6 +313,7 @@ requires-dist = [
     { name = "langchain-community", specifier = ">=0.3.12,<0.4.0" },
     { name = "langchain-core", specifier = ">=0.3.76" },
     { name = "langchain-google-genai", marker = "extra == 'llm'", specifier = ">=2.1.12,<3.0.0" },
+    { name = "langchain-mcp-adapters", specifier = ">=0.1.10,<0.2.0" },
     { name = "langchain-openai", specifier = ">=0.3.33,<1.0.0" },
     { name = "langchain-qdrant", specifier = ">=0.2.0,<0.4.0" },
     { name = "langgraph", specifier = ">=0.6.0,<0.7.0" },
@@ -327,6 +336,7 @@ requires-dist = [
     { name = "opentelemetry-instrumentation-starlette", marker = "extra == 'observability'", specifier = ">=0.58b0,<0.59.0" },
     { name = "opentelemetry-sdk", specifier = ">=1.37.0,<2.0.0" },
     { name = "opentelemetry-sdk", marker = "extra == 'observability'", specifier = ">=1.37.0,<2.0.0" },
+    { name = "playwright", specifier = ">=1.55.0,<2.0.0" },
     { name = "playwright", marker = "extra == 'accessibility'", specifier = ">=1.55.0,<2.0.0" },
     { name = "playwright", marker = "extra == 'browser'", specifier = ">=1.55.0,<2.0.0" },
     { name = "polars", marker = "extra == 'dataframe'", specifier = ">=1.33.1,<2.0.0" },
@@ -356,6 +366,8 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0.2,<7.0.0" },
     { name = "qdrant-client", extras = ["fastembed"], specifier = ">=1.15.1,<1.15.2" },
     { name = "questionary", specifier = ">=2.1.1,<3.0.0" },
+    { name = "rebrowser-playwright", specifier = ">=1.47.0,<2.0.0" },
+    { name = "rebrowser-playwright", marker = "extra == 'browser'", specifier = ">=1.47.0,<2.0.0" },
     { name = "redis", extras = ["hiredis"], specifier = ">=5.3.1,<6.0.0" },
     { name = "responses", marker = "extra == 'contract'", specifier = ">=0.25.8,<0.26.0" },
     { name = "respx", specifier = ">=0.22.0,<0.23.0" },
@@ -372,6 +384,8 @@ requires-dist = [
     { name = "taskipy", specifier = ">=1.14.1,<2.0.0" },
     { name = "tenacity", specifier = ">=9.1.2,<10.0.0" },
     { name = "testcontainers", marker = "extra == 'dev'", specifier = ">=4.8.1,<5.0.0" },
+    { name = "tf-playwright-stealth", specifier = ">=1.2.0,<2.0.0" },
+    { name = "tf-playwright-stealth", marker = "extra == 'browser'", specifier = ">=1.2.0,<2.0.0" },
     { name = "tomli-w", specifier = ">=1.2.0,<2.0.0" },
     { name = "tool", specifier = ">=0.8.0" },
     { name = "torch", marker = "extra == 'gpu'", specifier = ">=2.8.0,<2.9.0" },
@@ -2897,6 +2911,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/09/38/8b3a71c729bd03e9eb0fd8bdb19e06a074c35bc2eaa61b1b9edfa863f38d/langchain_google_genai-2.1.12.tar.gz", hash = "sha256:4a98371e545eb97fcdf483086a4aebbb8eceeb9597ca5a9c4c35e92f4fbbd271", size = 77566, upload-time = "2025-09-17T01:27:11.747Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e1/8d/9dd9653e5414e73cae3480e5947bbbbd94ba7fa824efdf46e7ff2c0faef2/langchain_google_genai-2.1.12-py3-none-any.whl", hash = "sha256:4c07630419a8fbe7a2ec512c6dea68289663bfe7d5fae0ba431d2cd59a0d0880", size = 50746, upload-time = "2025-09-17T01:27:10.653Z" },
+]
+
+[[package]]
+name = "langchain-mcp-adapters"
+version = "0.1.10"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "langchain-core" },
+    { name = "mcp" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/73/75/78a5b9f900973376151f1cdce3617502c5991a1f3158244dbd2edcfa4b09/langchain_mcp_adapters-0.1.10.tar.gz", hash = "sha256:ef963bb64526b156de75fb48bb2f921e4f571f9d996185afcacc1d2f5c72fd8d", size = 23062, upload-time = "2025-09-19T15:36:21.877Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/12/4e/995bb694373d1cab3bfb7d8680714a3cd1eee4e927fc19065473415c6cf0/langchain_mcp_adapters-0.1.10-py3-none-any.whl", hash = "sha256:ed15229d46e816d8b5686f9d645af9d5aa5bb2895ea49a23b1a65f3e4225a992", size = 15749, upload-time = "2025-09-19T15:36:20.994Z" },
 ]
 
 [[package]]
@@ -5683,6 +5711,25 @@ wheels = [
 [package.optional-dependencies]
 cgraph = [
     { name = "cupy-cuda12x", marker = "sys_platform != 'darwin'" },
+]
+
+[[package]]
+name = "rebrowser-playwright"
+version = "1.52.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "greenlet" },
+    { name = "pyee" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0a/90/1c9ecdb44b81c1b46d284ebd9d5ef27b5567a66192856e001c67caf2e02d/rebrowser_playwright-1.52.0-py3-none-macosx_10_13_x86_64.whl", hash = "sha256:ab47150ee1ab2efe2c5738b631cf366b46bcef3e2d3a72405fec564d8b13d424", size = 39281549, upload-time = "2025-05-09T05:23:03.415Z" },
+    { url = "https://files.pythonhosted.org/packages/fa/47/e5e44a9ddb7ab3f7305eced9ada7df72472abfe5e84165fcf35f220ab5aa/rebrowser_playwright-1.52.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:5dbf5ee4d6b34fba163e975c88bf34f6badb56290aa091510e422da4932c1e24", size = 37633283, upload-time = "2025-05-09T05:23:07.197Z" },
+    { url = "https://files.pythonhosted.org/packages/49/ca/bc3a206788195218f15b9a44b51b74c651f0f17c29a925226434ea28bd3f/rebrowser_playwright-1.52.0-py3-none-macosx_11_0_universal2.whl", hash = "sha256:ddd095e39e0ff68972307bd1fbe40f4a9e44fa4dbf121926b707a6b019ec9945", size = 39281549, upload-time = "2025-05-09T05:23:11.893Z" },
+    { url = "https://files.pythonhosted.org/packages/12/91/9fbff3e85dd2fd765452b1d287ef4ae93a96b669385228fa8e516085f7ca/rebrowser_playwright-1.52.0-py3-none-manylinux1_x86_64.whl", hash = "sha256:b9d27ee9fbacd597fb36a38c39d142f9a9a8837230c66207f5c15c727d3a1d91", size = 44811642, upload-time = "2025-05-09T05:23:18.006Z" },
+    { url = "https://files.pythonhosted.org/packages/43/67/8c6e02660ae209790cd73ecd99f6cacd2b85da19139d1e158f332f6a471e/rebrowser_playwright-1.52.0-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:065c70e1901928b16f07d26161f3c2d8f672e9176ddae055b9e802a591d88166", size = 44210930, upload-time = "2025-05-09T05:23:25.674Z" },
+    { url = "https://files.pythonhosted.org/packages/e7/0f/595b60ca41c5f381147b041d90a720aa3820d17156d3cda9b4f2a29d1acc/rebrowser_playwright-1.52.0-py3-none-win32.whl", hash = "sha256:928519b50dab08e14ac286334d96b7b09cd1090253c996c14042ecb6fb302776", size = 34509460, upload-time = "2025-05-09T05:23:32.715Z" },
+    { url = "https://files.pythonhosted.org/packages/e0/f3/023969defc1fe4178e38c45805e3a77f44d79def9db5329c5f3506fe2d18/rebrowser_playwright-1.52.0-py3-none-win_amd64.whl", hash = "sha256:e945020f49abb498e0d3965ba106fdc2d7afa13dbe98e789fbd3aab90bb811c2", size = 34509464, upload-time = "2025-05-09T05:23:39.103Z" },
+    { url = "https://files.pythonhosted.org/packages/f0/59/7155d058949baed2f10ae9f5dcb4416afc89d3ff6daadaa50d01d2035fd8/rebrowser_playwright-1.52.0-py3-none-win_arm64.whl", hash = "sha256:9bed76a49ce51feb65ca1f5e7df92302152e52893de4df472c998416d9806119", size = 30359272, upload-time = "2025-05-09T05:23:45.476Z" },
 ]
 
 [[package]]
