@@ -51,3 +51,21 @@ Phase 5. All metrics share the namespace configured via `MetricsConfig.namespace
 - The CI gate script consumes fixtures in
   `tests/data/compression_gate_samples.json` and enforces KPI thresholds during
   pipeline runs.
+
+## Browser Automation Metrics
+
+| Metric                            | Type      | Labels                                | Description                                               |
+| --------------------------------- | --------- | ------------------------------------- | --------------------------------------------------------- |
+| `*_browser_requests_total`        | Counter   | `tier`, `status` (`success`, `error`) | Total browser automation attempts per tier and outcome.   |
+| `*_browser_response_time_seconds` | Histogram | `tier`                                | Response time distribution for browser executions.        |
+| `*_browser_challenges_total`      | Counter   | `tier`, `runtime`, `outcome`          | Bot-detection challenges observed (`detected`, `solved`). |
+| `*_browser_tier_health_status`    | Gauge     | `tier`                                | Current health signal (1 healthy, 0 unhealthy) per tier.  |
+
+**Operational guidance**
+
+- Alert when `outcome="detected"` exceeds 10% of `*_browser_requests_total`
+  for a tier over a 15-minute window.
+- Track `runtime` to confirm undetected tiers are only invoked on hardened
+  domains; sudden spikes may signal routing or proxy regressions.
+- Combine `*_browser_challenges_total` with `*_browser_response_time_seconds` to
+  monitor captcha solve latency.
