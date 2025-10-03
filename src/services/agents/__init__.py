@@ -15,6 +15,8 @@ from .dynamic_tool_discovery import (
     ToolCapabilityType,
 )
 from .query_orchestrator import QueryOrchestrator
+from .retrieval import RetrievalHelper, RetrievalQuery, RetrievedDocument
+from .tool_execution_service import ToolExecutionService
 
 
 __all__ = [
@@ -23,6 +25,10 @@ __all__ = [
     "BaseAgent",
     "BaseAgentDependencies",
     "DynamicToolDiscovery",
+    "RetrievedDocument",
+    "RetrievalHelper",
+    "RetrievalQuery",
+    "ToolExecutionService",
     "QueryOrchestrator",
     "ToolCapability",
     "ToolCapabilityType",

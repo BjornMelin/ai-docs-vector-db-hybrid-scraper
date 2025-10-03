@@ -1,23 +1,27 @@
-"""Dynamic Tool Discovery Engine."""
+"""Dynamic discovery of MCP tool capabilities with TTL caching."""
+
+# pylint: disable=import-error
 
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Any
+from typing import Any, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from .core import BaseAgent, BaseAgentDependencies
+from src.infrastructure.client_manager import ClientManager
+from src.services.errors import APIError
 
 
 logger = logging.getLogger(__name__)
 
 
 class ToolCapabilityType(str, Enum):
-    """Types of tool capabilities."""
+    """Categories describing the primary function of an MCP tool."""
 
     SEARCH = "search"
     RETRIEVAL = "retrieval"
@@ -26,271 +30,194 @@ class ToolCapabilityType(str, Enum):
     CLASSIFICATION = "classification"
     SYNTHESIS = "synthesis"
     ORCHESTRATION = "orchestration"
+    UNKNOWN = "unknown"
 
 
 @dataclass(slots=True)
 class ToolMetrics:
-    """Performance metrics for a tool."""
+    """Lightweight telemetry snapshot for a tool."""
 
-    average_latency_ms: float
-    success_rate: float
-    accuracy_score: float
-    cost_per_execution: float
-    reliability_score: float
+    average_latency_ms: float = 0.0
+    success_rate: float = 0.0
+    accuracy_score: float = 0.0
+    cost_per_execution: float = 0.0
+    reliability_score: float = 0.0
 
 
 class ToolCapability(BaseModel):
-    """Tool capability definition."""
+    """Structured representation of an MCP tool capability."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    name: str = Field(...)
-    capability_type: ToolCapabilityType = Field(...)
-    description: str = Field(...)
-    input_types: list[str] = Field(...)
-    output_types: list[str] = Field(...)
-
-    metrics: ToolMetrics | None = Field(None)
+    name: str
+    capability_type: ToolCapabilityType
+    description: str = ""
+    input_types: list[str] = Field(default_factory=list)
+    output_types: list[str] = Field(default_factory=list)
     requirements: dict[str, Any] = Field(default_factory=dict)
     constraints: dict[str, Any] = Field(default_factory=dict)
-
     compatible_tools: list[str] = Field(default_factory=list)
     dependencies: list[str] = Field(default_factory=list)
+    metrics: ToolMetrics | None = None
+    confidence_score: float = Field(default=0.6)
+    last_updated: str = Field(default_factory=lambda: datetime.now(tz=UTC).isoformat())
 
-    confidence_score: float = Field(0.8)
-    last_updated: str = Field(...)
 
+class DynamicToolDiscovery:
+    """Discover and cache MCP tools exposed by MultiServerMCPClient."""
 
-class DynamicToolDiscovery(BaseAgent):
-    """Dynamic tool discovery engine with capability assessment."""
+    def __init__(
+        self,
+        client_manager: ClientManager,
+        *,
+        cache_ttl_seconds: int = 60,
+        telemetry_hook: Callable[[ToolCapability], None] | None = None,
+    ) -> None:
+        self._client_manager = client_manager
+        self._cache_ttl = timedelta(seconds=max(1, cache_ttl_seconds))
+        self._telemetry_hook = telemetry_hook
+        self._last_refresh: datetime | None = None
+        self._capabilities: dict[str, ToolCapability] = {}
 
-    def __init__(self, model: str = "gpt-4o-mini", temperature: float = 0.1) -> None:
-        super().__init__(
-            name="dynamic_tool_discovery",
-            model=model,
-            temperature=temperature,
-            max_tokens=2000,
+    async def refresh(self) -> None:
+        """Refresh cached capabilities when the TTL expires."""
+
+        now = datetime.now(tz=UTC)
+        if self._last_refresh and now - self._last_refresh < self._cache_ttl:
+            return
+
+        await self._scan_available_tools(timestamp=now.isoformat())
+        self._assess_tool_compatibility()
+        self._last_refresh = datetime.now(tz=UTC)
+        logger.info("DynamicToolDiscovery refreshed %d tools", len(self._capabilities))
+
+    def get_capabilities(self) -> Sequence[ToolCapability]:
+        """Return the currently cached capabilities."""
+
+        return tuple(self._capabilities.values())
+
+    async def _scan_available_tools(self, *, timestamp: str) -> None:
+        """Populate the internal cache by querying every configured MCP server."""
+
+        self._capabilities.clear()
+        try:
+            client = await cast(Any, self._client_manager).get_mcp_client()
+        except APIError as exc:
+            logger.warning("Skipping tool discovery; MCP client unavailable: %s", exc)
+            return
+
+        for server_name, connection in client.connections.items():
+            try:
+                async with cast(Any, client).session(server_name) as session:
+                    tools = await session.list_tools()
+            except Exception:  # pragma: no cover - defensive guard
+                logger.exception(
+                    "Failed to list tools from MCP server '%s'", server_name
+                )
+                continue
+
+            transport = connection.get("transport")
+            for tool in tools:
+                capability = self._build_capability(
+                    tool=tool,
+                    server_name=server_name,
+                    transport=transport,
+                    timestamp=timestamp,
+                )
+                self._capabilities[capability.name] = capability
+                if self._telemetry_hook:
+                    try:
+                        self._telemetry_hook(capability)
+                    except (
+                        Exception
+                    ):  # pragma: no cover - telemetry must never break discovery
+                        logger.exception(
+                            "Telemetry hook failed for tool '%s'", capability.name
+                        )
+
+    def _build_capability(
+        self,
+        *,
+        tool: Any,
+        server_name: str,
+        transport: str | None,
+        timestamp: str,
+    ) -> ToolCapability:
+        """Convert raw MCP tool metadata into a `ToolCapability`."""
+
+        description = tool.description or tool.title or tool.name
+        capability_type = self._infer_capability_type(tool.name, description)
+        input_types = self._extract_schema_keys(tool.inputSchema, "payload")
+        output_types = self._extract_schema_keys(tool.outputSchema, "content")
+
+        return ToolCapability(
+            name=tool.name,
+            capability_type=capability_type,
+            description=description or "",
+            input_types=input_types,
+            output_types=output_types,
+            requirements={"server": server_name},
+            constraints={"transport": transport or "unknown"},
+            last_updated=timestamp,
         )
-        self.discovered_tools: dict[str, ToolCapability] = {}
-        self.tool_performance_history: dict[str, list[ToolMetrics]] = {}
-        self.capability_cache: dict[str, ToolCapability] = {}
 
-    def get_system_prompt(self) -> str:
-        return (
-            "You are a tool discovery engine: assess capabilities, compatibility, "
-            "and performance to recommend optimal tools and chains."
-        )
+    @staticmethod
+    def _infer_capability_type(
+        name: str, description: str | None
+    ) -> ToolCapabilityType:
+        """Heuristically classify a tool based on its metadata."""
 
-    async def initialize_tools(self, deps: BaseAgentDependencies) -> None:
-        """Initialize discovery (noop if in fallback)."""
-        reason = getattr(self, "_fallback_reason", None)
-        if reason:
-            logger.info("DynamicToolDiscovery in fallback mode (reason: %s)", reason)
-        else:
-            logger.info("DynamicToolDiscovery tools initialized")
+        text = f"{name} {(description or '').lower()}".lower()
+        keyword_map: list[tuple[ToolCapabilityType, tuple[str, ...]]] = [
+            (ToolCapabilityType.SEARCH, ("search", "retrieve", "lookup", "query")),
+            (ToolCapabilityType.RETRIEVAL, ("vector", "embedding")),
+            (
+                ToolCapabilityType.GENERATION,
+                ("generate", "answer", "compose", "summarize"),
+            ),
+            (ToolCapabilityType.ANALYSIS, ("analyze", "assess", "score", "inspect")),
+            (ToolCapabilityType.CLASSIFICATION, ("classify", "tag", "label")),
+            (ToolCapabilityType.SYNTHESIS, ("synthes", "combine")),
+            (ToolCapabilityType.ORCHESTRATION, ("orchestrate", "coordinate")),
+        ]
+        for capability, keywords in keyword_map:
+            if any(term in text for term in keywords):
+                return capability
+        return ToolCapabilityType.UNKNOWN
 
-    async def initialize_discovery(self, deps: BaseAgentDependencies) -> None:
-        """Initialize discovery by scanning system and setting compatibility."""
-        if not self._initialized:
-            await self.initialize(deps)
-        await self._scan_available_tools()
-        await self._assess_tool_compatibility()
-        logger.info(
-            "DynamicToolDiscovery initialized with %d tools", len(self.discovered_tools)
-        )
+    @staticmethod
+    def _extract_schema_keys(schema: Any, default_key: str) -> list[str]:
+        """Return JSON schema property keys or a default placeholder."""
 
-    async def _scan_available_tools(self) -> None:
-        """Scan system for available tools and seed capabilities."""
-        now = datetime.now(tz=UTC).isoformat()
+        if not schema or not isinstance(schema, dict):
+            return [default_key]
+        properties = schema.get("properties")
+        if isinstance(properties, dict) and properties:
+            return sorted(properties.keys())
+        return [default_key]
 
-        core_tools: dict[str, dict[str, Any]] = {
-            "hybrid_search": {
-                "capability_type": ToolCapabilityType.SEARCH,
-                "description": "Hybrid vector and text search with reranking",
-                "input_types": ["text", "query"],
-                "output_types": ["search_results", "ranked_documents"],
-                "metrics": ToolMetrics(150.0, 0.94, 0.87, 0.02, 0.92),
-            },
-            "rag_generation": {
-                "capability_type": ToolCapabilityType.GENERATION,
-                "description": "RAG-based answer generation with context synthesis",
-                "input_types": ["text", "context", "search_results"],
-                "output_types": ["generated_text", "synthesized_answer"],
-                "metrics": ToolMetrics(800.0, 0.91, 0.89, 0.05, 0.88),
-            },
-            "content_analysis": {
-                "capability_type": ToolCapabilityType.ANALYSIS,
-                "description": "Content analysis and classification",
-                "input_types": ["text", "documents"],
-                "output_types": ["analysis_results", "classifications"],
-                "metrics": ToolMetrics(200.0, 0.93, 0.85, 0.01, 0.90),
-            },
-        }
+    def _assess_tool_compatibility(self) -> None:
+        """Populate `compatible_tools` with simple chaining heuristics."""
 
-        for name, data in core_tools.items():
-            cap = ToolCapability(
-                name=name,
-                capability_type=data["capability_type"],
-                description=data["description"],
-                input_types=data["input_types"],
-                output_types=data["output_types"],
-                metrics=data["metrics"],
-                confidence_score=0.8,  # explicit for Pyright
-                last_updated=now,
-            )
-            self.discovered_tools[name] = cap
-            self.tool_performance_history[name] = [data["metrics"]]
-
-    async def _assess_tool_compatibility(self) -> None:
-        """Assess compatibility between tools for chaining."""
-        for tool_name, tool in self.discovered_tools.items():
-            compatible: list[str] = []
-            if tool.capability_type == ToolCapabilityType.SEARCH:
-                compatible.extend(
-                    [
-                        n
-                        for n, other in self.discovered_tools.items()
-                        if other.capability_type
-                        in (ToolCapabilityType.GENERATION, ToolCapabilityType.ANALYSIS)
-                        and n != tool_name
-                    ]
+        for tool_name, tool in self._capabilities.items():
+            compatible: set[str] = set()
+            if tool.capability_type in {
+                ToolCapabilityType.SEARCH,
+                ToolCapabilityType.RETRIEVAL,
+            }:
+                compatible.update(
+                    other_name
+                    for other_name, other in self._capabilities.items()
+                    if other.capability_type
+                    in {ToolCapabilityType.GENERATION, ToolCapabilityType.ANALYSIS}
+                    and other_name != tool_name
                 )
             elif tool.capability_type == ToolCapabilityType.ANALYSIS:
-                compatible.extend(
-                    [
-                        n
-                        for n, other in self.discovered_tools.items()
-                        if other.capability_type
-                        in (ToolCapabilityType.SEARCH, ToolCapabilityType.GENERATION)
-                        and n != tool_name
-                    ]
+                compatible.update(
+                    other_name
+                    for other_name, other in self._capabilities.items()
+                    if other.capability_type
+                    in {ToolCapabilityType.SEARCH, ToolCapabilityType.RETRIEVAL}
+                    and other_name != tool_name
                 )
-            tool.compatible_tools = compatible
-
-    async def discover_tools_for_task(
-        self, task_description: str, requirements: dict[str, Any]
-    ) -> list[ToolCapability]:
-        """Return suitable tools ranked by suitability score."""
-        suitable: list[ToolCapability] = []
-        for tool in self.discovered_tools.values():
-            score = await self._calculate_suitability_score(
-                tool, task_description, requirements
-            )
-            if score > 0.5:
-                copy = tool.model_copy()
-                copy.confidence_score = score
-                suitable.append(copy)
-        suitable.sort(key=lambda t: t.confidence_score, reverse=True)
-        return suitable
-
-    async def _calculate_suitability_score(
-        self, tool: ToolCapability, task_description: str, requirements: dict[str, Any]
-    ) -> float:
-        """Score suitability without long boolean chains (R0916)."""
-        s = task_description.lower()
-
-        def match(kind: ToolCapabilityType, *keywords: str) -> bool:
-            return any(k in s for k in keywords) and tool.capability_type == kind
-
-        cap_match = any(
-            [
-                match(ToolCapabilityType.SEARCH, "search", "find", "lookup"),
-                match(ToolCapabilityType.GENERATION, "generate", "compose", "answer"),
-                match(ToolCapabilityType.ANALYSIS, "analyze", "classify", "assess"),
-            ]
-        )
-
-        score = 0.4 if cap_match else 0.0
-
-        if tool.metrics:
-            if "max_latency_ms" in requirements:
-                score += (
-                    0.2
-                    if tool.metrics.average_latency_ms <= requirements["max_latency_ms"]
-                    else -0.1
-                )
-            if (
-                "min_accuracy" in requirements
-                and tool.metrics.accuracy_score >= requirements["min_accuracy"]
-            ):
-                score += 0.2
-            if (
-                "max_cost" in requirements
-                and tool.metrics.cost_per_execution <= requirements["max_cost"]
-            ):
-                score += 0.1
-            score += tool.metrics.reliability_score * 0.1
-
-        return min(score, 1.0)
-
-    async def get_tool_recommendations(
-        self, task_type: str, constraints: dict[str, Any]
-    ) -> dict[str, Any]:
-        """Return recommendations with reasoning and optional tool chains."""
-        recommendations: dict[str, Any] = {
-            "primary_tools": [],
-            "secondary_tools": [],
-            "tool_chains": [],
-            "reasoning": "",
-        }
-        suitable = await self.discover_tools_for_task(task_type, constraints)
-        if suitable:
-            recommendations["primary_tools"] = [
-                {
-                    "name": t.name,
-                    "suitability_score": t.confidence_score,
-                    "capability_type": t.capability_type.value,
-                    "estimated_latency_ms": (
-                        t.metrics.average_latency_ms if t.metrics else 0.0
-                    ),
-                }
-                for t in suitable[:3]
-            ]
-            if len(suitable) > 1:
-                recommendations["tool_chains"] = await self._generate_tool_chains(
-                    suitable
-                )
-            best = suitable[0]
-            sr = best.metrics.success_rate if best.metrics else 0.0
-            recommendations["reasoning"] = (
-                f"Recommended {best.name} ({best.capability_type.value}) with "
-                f"{best.confidence_score:.2f} suitability; success≈{sr:.2f}."
-            )
-        return recommendations
-
-    async def _generate_tool_chains(
-        self, tools: list[ToolCapability]
-    ) -> list[dict[str, Any]]:
-        """Generate compatible tool chains from available tools."""
-        chains: list[dict[str, Any]] = []
-        search = [t for t in tools if t.capability_type == ToolCapabilityType.SEARCH]
-        gen = [t for t in tools if t.capability_type == ToolCapabilityType.GENERATION]
-        ana = [t for t in tools if t.capability_type == ToolCapabilityType.ANALYSIS]
-
-        if search and gen:
-            chains.append(
-                {
-                    "chain": [search[0].name, gen[0].name],
-                    "type": "search_then_generate",
-                    "estimated_total_latency_ms": (
-                        (
-                            search[0].metrics.average_latency_ms
-                            if search[0].metrics
-                            else 0
-                        )
-                        + (gen[0].metrics.average_latency_ms if gen[0].metrics else 0)
-                    ),
-                }
-            )
-        if ana and search and gen:
-            chains.append(
-                {
-                    "chain": [ana[0].name, search[0].name, gen[0].name],
-                    "type": "analyze_search_generate",
-                    "estimated_total_latency_ms": sum(
-                        (t.metrics.average_latency_ms if t.metrics else 0.0)
-                        for t in (ana[0], search[0], gen[0])
-                    ),
-                }
-            )
-        return chains
+            tool.compatible_tools = sorted(compatible)
