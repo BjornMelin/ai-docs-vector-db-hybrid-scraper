@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Published `docs/observability/rag_metrics_catalog.md` documenting the
+  OpenTelemetry-aligned RAG metrics (stage latency, answer funnel, token
+  telemetry) and dashboard guardrails.
+- Extended the RAG evaluation harness to emit deterministic Prometheus snapshots
+  alongside golden-set similarity scores for CI regression analysis.
 - Introduced a LangGraph `StateGraph` pipeline that chains retrieval, grading, and generation for RAG queries.
 - Replaced the bespoke FastEmbed provider with a LangChain FastEmbed wrapper and refreshed unit coverage for embeddings.
 - Shadow parity coverage for vector grouping fallback and score normalisation across
@@ -25,6 +30,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   record, and technical debt register for the new suites.
 
 ### Changed
+- Metrics registry now exposes stage-level latency, answer, error, and token
+  counters for LangGraph pipelines; `docs/observability/query_processing_metrics.md`
+  and ADR 0007 describe the new instrumentation and SemVer impact.
+- `scripts/eval/rag_golden_eval.py` now initialises an in-memory metrics registry,
+  exposes a JSON metrics export, and ships table-driven tests for deterministic
+  harness behaviour.
 - Search orchestrator delegates RAG execution to the LangGraph pipeline, reusing contextual compression and vector service retrievers.
 - Migrated VectorStoreService, MCP ingestion, and database manager paths onto LangChain's QdrantVectorStore to share the normalisation/grouping pipeline.
 - SearchOrchestrator now owns expansion and personalisation helpers directly; MCP tools were updated to invoke the unified service without legacy stages.
