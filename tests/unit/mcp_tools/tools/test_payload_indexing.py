@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock
 import pytest
 
 from src.mcp_tools.tools.payload_indexing import register_tools
-from src.services.vector_db.adapter_base import VectorMatch
+from src.services.vector_db.types import VectorMatch
 
 
 @pytest.fixture(autouse=True)
