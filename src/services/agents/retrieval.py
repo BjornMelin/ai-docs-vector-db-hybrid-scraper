@@ -11,7 +11,14 @@ from src.services.vector_db.types import VectorMatch
 
 @dataclass(slots=True)
 class RetrievalQuery:
-    """Parameters for retrieving supporting documents."""
+    """Parameters describing a retrieval request.
+
+    Attributes:
+        collection: Name of the target vector collection.
+        text: Natural-language query text.
+        top_k: Maximum number of results to return.
+        filters: Optional metadata filter for vector search.
+    """
 
     collection: str
     text: str
@@ -21,7 +28,14 @@ class RetrievalQuery:
 
 @dataclass(slots=True)
 class RetrievedDocument:
-    """Normalised representation of a retrieved document."""
+    """Normalised representation of a retrieved document.
+
+    Attributes:
+        id: Identifier of the retrieved vector record.
+        score: Similarity score provided by the vector service.
+        payload: Optional metadata payload stored alongside the vector.
+        raw: Original match object returned by the vector service.
+    """
 
     id: str
     score: float
@@ -30,13 +44,21 @@ class RetrievedDocument:
 
 
 class RetrievalHelper:
-    """Perform Qdrant-backed retrieval via the client manager."""
+    """Query the configured vector store through the client manager."""
 
     def __init__(self, client_manager: ClientManager) -> None:
         self._client_manager = client_manager
 
     async def fetch(self, query: RetrievalQuery) -> Sequence[RetrievedDocument]:
-        """Execute a dense retrieval query against the configured vector store."""
+        """Execute a dense retrieval query against the configured vector store.
+
+        Args:
+            query: Retrieval parameters including collection name, query text,
+                document limit, and optional metadata filters.
+
+        Returns:
+            Sequence of ``RetrievedDocument`` items sorted by similarity score.
+        """
 
         service = await self._client_manager.get_vector_store_service()
         matches = await service.search_documents(
