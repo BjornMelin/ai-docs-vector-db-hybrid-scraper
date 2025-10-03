@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Captured ADR 0009 documenting the tiered Playwright anti-bot stack and exported the new browser metrics section in `docs/observability/query_processing_metrics.md` with challenge counters.
 - Published `docs/observability/rag_metrics_catalog.md` documenting the
   OpenTelemetry-aligned RAG metrics (stage latency, answer funnel, token
   telemetry) and dashboard guardrails.
@@ -30,6 +31,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   record, and technical debt register for the new suites.
 
 ### Changed
+- LangGraph GraphRunner now emits structured metrics/errors, enforces optional
+  run timeouts, and surfaces discovery/tool telemetry across MCP entry points;
+  MCP orchestrator and tests were refreshed to exercise the new pipeline.
 - Metrics registry now exposes stage-level latency, answer, error, and token
   counters for LangGraph pipelines; `docs/observability/query_processing_metrics.md`
   and ADR 0007 describe the new instrumentation and SemVer impact.
@@ -52,12 +56,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Simplified query processing by replacing the `QueryProcessingPipeline`
   wrapper with `SearchRequest.from_input`, updating the RAG evaluation harness
   and orchestrator tests to use the shared entrypoint.
+- Extended browser monitoring with the `*_browser_challenges_total` counter
+  and propagated tier/runtime challenge labels through `BrowserAutomationMonitor`.
 - Hardened LangGraph observability by switching the compression retriever to
   `ainvoke`, registering OpenTelemetry callbacks, and recording metrics via the
   shared registry with dedicated unit coverage.
 - Hardened converter helpers and tests to use `model_dump(mode="json")`
   fallbacks, normalizing mocked inputs while preserving the JSON contract
   snapshot tracked in `tests/unit/mcp_tools/tools/test_response_converter_helpers.py`.
+- Rebuilt the Playwright automation stack as a tiered pipeline (baseline
+  stealth + Rebrowser undetected tier + ScrapeOps-compatible proxies +
+  CapMonster integration), surfaced challenge outcomes in metadata, and
+  refreshed unit coverage to validate tier escalation and captcha flows.
 - Added focused unit coverage for `SearchRecord` normalization and documentation
   of the new ownership boundaries in
   `docs/query_processing_response_contract.md`.

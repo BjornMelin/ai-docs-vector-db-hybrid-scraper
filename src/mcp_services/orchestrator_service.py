@@ -25,7 +25,7 @@ from .system_service import SystemService
 logger = logging.getLogger(__name__)
 
 
-class OrchestratorService:
+class OrchestratorService:  # pylint: disable=too-many-instance-attributes
     """FastMCP service coordinating domain-specific MCP tools."""
 
     def __init__(self, name: str = "orchestrator-service") -> None:
@@ -105,6 +105,7 @@ class OrchestratorService:
             discovery=discovery,
             tool_service=tool_service,
             retrieval_helper=retrieval_helper,
+            run_timeout_seconds=30.0,
         )
         await discovery.refresh(force=True)
         logger.info("Initialised LangGraph runner for orchestrator")
@@ -114,7 +115,7 @@ class OrchestratorService:
             msg = "OrchestratorService not initialized"
             raise RuntimeError(msg)
 
-        @self.mcp.tool()
+        @self.mcp.tool()  # pylint: disable=no-value-for-parameter
         async def orchestrate_multi_service_workflow(
             workflow_description: str,
             services_required: list[str] | None = None,
@@ -146,7 +147,7 @@ class OrchestratorService:
                 "errors": outcome.errors,
             }
 
-        @self.mcp.tool()
+        @self.mcp.tool()  # pylint: disable=no-value-for-parameter
         async def get_service_capabilities() -> dict[str, Any]:
             """Return capabilities for each domain service."""
 
@@ -174,7 +175,7 @@ class OrchestratorService:
                     }
             return capabilities
 
-        @self.mcp.tool()
+        @self.mcp.tool()  # pylint: disable=no-value-for-parameter
         async def optimize_service_performance() -> dict[str, Any]:
             """Refresh tool discovery information for optimisation workflows."""
 
