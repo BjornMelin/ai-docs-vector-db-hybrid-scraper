@@ -42,6 +42,9 @@ legacy DTOs.
 Key changes:
 
 - Remove `src/services/query_processing/clustering.py` and the `utils/` package.
+- Remove `src/services/query_processing/pipeline.py`, directing callers to
+  instantiate `SearchOrchestrator` and normalise inputs via
+  `SearchRequest.from_input`.
 - Drop the associated unit suites now superseded by orchestrator coverage.
 - Ensure MCP tools, ingestion scripts, and the database manager call the
   LangChain-powered vector service directly without legacy helpers.

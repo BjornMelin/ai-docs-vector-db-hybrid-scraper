@@ -28,14 +28,6 @@ src.services.query\_processing.orchestrator module
    :show-inheritance:
    :undoc-members:
 
-src.services.query\_processing.pipeline module
-----------------------------------------------
-
-.. automodule:: src.services.query_processing.pipeline
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 Module contents
 ---------------
 

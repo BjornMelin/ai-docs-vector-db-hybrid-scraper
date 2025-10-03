@@ -11,7 +11,7 @@ import pytest
 from src.mcp_tools.models.requests import BatchRequest, DocumentRequest
 from src.mcp_tools.models.responses import AddDocumentResponse
 from src.mcp_tools.tools import documents
-from src.services.vector_db.adapter_base import CollectionSchema, TextDocument
+from src.services.vector_db.types import CollectionSchema, TextDocument
 
 
 class DummyContentType:

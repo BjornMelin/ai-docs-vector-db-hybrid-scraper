@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock
 import pytest
 
 from src.mcp_tools.tools.search import register_tools
-from src.services.vector_db.adapter_base import VectorMatch
+from src.services.vector_db.types import VectorMatch
 
 
 @pytest.fixture()
@@ -17,10 +17,9 @@ def mock_vector_service() -> Mock:
     service.is_initialized.return_value = True
     service.initialize = AsyncMock()
     service.search_documents = AsyncMock()
-    service.hybrid_search = AsyncMock()
-    service.scroll = AsyncMock()
-    service.retrieve_documents = AsyncMock()
-    service.recommend_similar = AsyncMock()
+    service.list_documents = AsyncMock()
+    service.get_document = AsyncMock()
+    service.recommend = AsyncMock()
     return service
 
 
@@ -118,14 +117,14 @@ async def test_hybrid_search_forwards_filters(
     mock_vector_service: Mock,
     mock_context: Mock,
 ) -> None:
-    mock_vector_service.hybrid_search.return_value = [_match("hybrid", 0.8)]
+    mock_vector_service.search_documents.return_value = [_match("hybrid", 0.8)]
     results = await register["hybrid_search"](
         query="hybrid",
         limit=1,
         filter_conditions={"stage": {"gte": 2}},
         ctx=mock_context,
     )
-    mock_vector_service.hybrid_search.assert_awaited_once_with(
+    mock_vector_service.search_documents.assert_awaited_once_with(
         "documentation",
         "hybrid",
         limit=1,
@@ -140,8 +139,11 @@ async def test_scroll_collection_formats_payload(
     mock_vector_service: Mock,
     mock_context: Mock,
 ) -> None:
-    mock_vector_service.scroll.return_value = (
-        [_match("doc-1"), _match("doc-2")],
+    mock_vector_service.list_documents.return_value = (
+        [
+            {"id": "doc-1", "content": "first"},
+            {"id": "doc-2", "content": "second"},
+        ],
         "cursor",
     )
     payload = await register["scroll_collection"](
@@ -150,7 +152,7 @@ async def test_scroll_collection_formats_payload(
         ctx=mock_context,
     )
     assert payload["count"] == 2
-    assert payload["points"][0]["id"] == "doc-1"
+    assert payload["documents"][0]["id"] == "doc-1"
     assert payload["next_page_offset"] == "cursor"
 
 
@@ -160,10 +162,8 @@ async def test_recommend_similar_excludes_seed_and_applies_threshold(
     mock_vector_service: Mock,
     mock_context: Mock,
 ) -> None:
-    mock_vector_service.retrieve_documents.return_value = [
-        _match("seed", vector=(0.1, 0.2)),
-    ]
-    mock_vector_service.recommend_similar.return_value = [
+    mock_vector_service.get_document.return_value = {"id": "seed"}
+    mock_vector_service.recommend.return_value = [
         _match("seed", 1.0),
         _match("candidate-1", 0.9),
         _match("candidate-2", 0.4),
@@ -174,9 +174,9 @@ async def test_recommend_similar_excludes_seed_and_applies_threshold(
         score_threshold=0.5,
         ctx=mock_context,
     )
-    mock_vector_service.recommend_similar.assert_awaited_once_with(
+    mock_vector_service.recommend.assert_awaited_once_with(
         "documentation",
-        vector=(0.1, 0.2),
+        positive_ids=["seed"],
         limit=6,
         filters=None,
     )
@@ -190,8 +190,8 @@ async def test_recommend_similar_raises_when_document_missing(
     mock_vector_service: Mock,
     mock_context: Mock,
 ) -> None:
-    mock_vector_service.retrieve_documents.return_value = []
-    with pytest.raises(ValueError, match="Document missing"):
+    mock_vector_service.get_document.return_value = None
+    with pytest.raises(ValueError, match="Document missing not found"):
         await register["recommend_similar"](
             point_id="missing",
             ctx=mock_context,
@@ -204,7 +204,7 @@ async def test_reranked_search_adds_rrf_metadata(
     mock_vector_service: Mock,
     mock_context: Mock,
 ) -> None:
-    mock_vector_service.hybrid_search.return_value = [
+    mock_vector_service.search_documents.return_value = [
         _match("first", 0.9),
         _match("second", 0.8),
     ]
@@ -223,7 +223,7 @@ async def test_multi_stage_search_deduplicates_by_score(
     mock_vector_service: Mock,
     mock_context: Mock,
 ) -> None:
-    mock_vector_service.hybrid_search.side_effect = [
+    mock_vector_service.search_documents.side_effect = [
         [_match("dup", 0.4), _match("unique", 0.3)],
         [_match("dup", 0.9)],
     ]

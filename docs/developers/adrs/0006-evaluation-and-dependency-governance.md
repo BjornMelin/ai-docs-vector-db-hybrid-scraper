@@ -16,9 +16,10 @@ lacked automated regression checks and had loosely specified dependency ranges.
 1. **Golden Evaluation Harness**
    - Maintain a lightweight golden dataset (`tests/data/rag/golden_set.jsonl`).
    - Provide a standard evaluation script (`scripts/eval/rag_golden_eval.py`)
-     that executes the QueryProcessingPipeline with RAG enabled and emits
-     similarity scores. The function is intentionally framework neutral so it
-     will continue to work after the LangChain migration.
+     that executes the `SearchOrchestrator` with RAG enabled using
+     `SearchRequest.from_input` for normalisation and emits similarity scores.
+     The function remains framework neutral so it will continue to work after
+     the LangChain migration.
    - Integrate richer metrics (RAGAS or LangChain evaluators) once the
      LangChain pipeline is in place.
 

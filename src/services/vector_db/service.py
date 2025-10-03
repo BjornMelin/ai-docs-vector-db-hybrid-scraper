@@ -1,17 +1,20 @@
-"""Vector store service backed by the Qdrant adapter."""
+"""Vector store service implemented on top of LangChain's Qdrant integration."""
+# pylint: disable=too-many-arguments,too-many-return-statements,too-many-branches,too-many-locals
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import statistics
-import time
 from collections.abc import Iterable, Mapping, Sequence
 from datetime import UTC, datetime
 from enum import Enum
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 from uuid import uuid4
 
-from qdrant_client import models
+from langchain_core.documents import Document
+from langchain_qdrant import QdrantVectorStore, RetrievalMode
+from qdrant_client import AsyncQdrantClient, QdrantClient, models
 
 from src.config import get_config
 from src.config.models import QueryProcessingConfig, ScoreNormalizationStrategy
@@ -21,16 +24,15 @@ from src.services.embeddings.fastembed_provider import FastEmbedProvider
 from src.services.errors import EmbeddingServiceError
 from src.services.monitoring.metrics import get_metrics_registry
 
-from .adapter import QdrantVectorAdapter
-from .adapter_base import CollectionSchema, TextDocument, VectorMatch, VectorRecord
 from .payload_schema import (
     CanonicalPayload,
     PayloadValidationError,
     ensure_canonical_payload,
 )
+from .types import CollectionSchema, TextDocument, VectorMatch, VectorRecord
 
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover - import cycle guard
     from src.infrastructure.client_manager import ClientManager
 
 
@@ -38,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 
 class VectorStoreService(BaseService):  # pylint: disable=too-many-public-methods
-    """High-level vector store operations built on top of Qdrant."""
+    """High-level vector store wrapper using LangChain's QdrantVectorStore."""
 
     def __init__(
         self,
@@ -46,8 +48,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         client_manager: ClientManager | None = None,
         embeddings_provider: EmbeddingProvider | None = None,
     ) -> None:
-        """Initialize the VectorStoreService."""
-
         config = config or get_config()
         if client_manager is None:
             from src.infrastructure.client_manager import (  # pylint: disable=import-outside-toplevel
@@ -62,67 +62,96 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         super().__init__(config)
         self._client_manager = client_manager
         self._embeddings = embeddings_provider
-        self._adapter: QdrantVectorAdapter | None = None
+        self._async_client: AsyncQdrantClient | None = None
+        self._sync_client: QdrantClient | None = None
+        self._vector_store: QdrantVectorStore | None = None
 
     async def initialize(self) -> None:
-        """Initialize the service and its dependencies."""
+        """Initialize Qdrant clients and embeddings."""
 
         if self.is_initialized():
             return
+
         await self._client_manager.initialize()
-        client = await self._client_manager.get_qdrant_client()
-        self._adapter = QdrantVectorAdapter(client)
+        self._async_client = await self._client_manager.get_qdrant_client()
         await self._embeddings.initialize()
+        cfg = self._require_qdrant_config()
+        adapter = self._require_embedding_adapter()
+        self._sync_client = self._build_sync_client(cfg)
+        self._vector_store = QdrantVectorStore(
+            client=self._sync_client,
+            collection_name=cfg.collection_name,
+            embedding=adapter,
+            retrieval_mode=RetrievalMode.DENSE,
+        )
         self._mark_initialized()
+        logger.info("VectorStoreService initialised via LangChain QdrantVectorStore")
 
     async def cleanup(self) -> None:
-        """Clean up resources."""
+        """Release Qdrant clients and embeddings."""
 
-        if self._adapter:
-            self._adapter = None
+        self._vector_store = None
+        self._sync_client = None
+        self._async_client = None
         await self._embeddings.cleanup()
         self._mark_uninitialized()
 
     @property
     def embedding_dimension(self) -> int:
-        """Return the dimensionality of the dense embedding vectors."""
+        """Return the dimensionality of the dense embeddings."""
 
         return self._embeddings.embedding_dimension
 
     async def ensure_collection(self, schema: CollectionSchema) -> None:
-        """Ensure a collection exists with the given schema."""
+        """Ensure a collection with the supplied schema exists."""
 
-        adapter = self._require_adapter()
-        if await adapter.collection_exists(schema.name):
+        client = self._require_async_client()
+        if await client.collection_exists(schema.name):
             return
-        await adapter.create_collection(schema)
+        vectors_config = models.VectorParams(
+            size=schema.vector_size,
+            distance=_distance_from_string(schema.distance),
+        )
+        sparse_config = None
+        if schema.requires_sparse:
+            sparse_config = {
+                "default": models.SparseVectorParams(
+                    index=models.SparseIndexParams(),
+                )
+            }
+        await client.create_collection(
+            collection_name=schema.name,
+            vectors_config=vectors_config,
+            sparse_vectors_config=sparse_config,
+        )
 
     async def drop_collection(self, name: str) -> None:
-        """Drop a collection by name."""
+        """Drop a collection if it exists."""
 
-        adapter = self._require_adapter()
-        await adapter.drop_collection(name)
+        client = self._require_async_client()
+        await client.delete_collection(name)
 
     async def delete_collection(self, name: str) -> None:
-        """Backward-compatible alias for dropping a collection."""
+        """Backward-compatible alias for drop_collection."""
 
         await self.drop_collection(name)
 
     async def list_collections(self) -> list[str]:
-        """List all collections."""
+        """Return the identifiers for all collections."""
 
-        adapter = self._require_adapter()
-        return await adapter.list_collections()
+        client = self._require_async_client()
+        response = await client.get_collections()
+        return [collection.name for collection in response.collections]
 
     async def get_collection_info(self, name: str) -> Mapping[str, Any]:
-        """Return raw collection metadata."""
+        """Fetch raw collection metadata."""
 
-        adapter = self._require_adapter()
-        info = await adapter.get_collection_info(name)
+        client = self._require_async_client()
+        info = await client.get_collection(collection_name=name)
         return _serialize_collection_info(info)
 
     async def get_payload_index_summary(self, name: str) -> Mapping[str, Any]:
-        """Return a summary of payload indexes for the collection."""
+        """Return a payload index summary for the supplied collection."""
 
         info = await self.get_collection_info(name)
         payload_schema = info.get("payload_schema", {})
@@ -135,35 +164,47 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         }
 
     async def ensure_payload_indexes(
-        self, name: str, definitions: Mapping[str, models.PayloadSchemaType]
+        self,
+        name: str,
+        definitions: Mapping[str, models.PayloadSchemaType],
     ) -> Mapping[str, Any]:
-        """Ensure the expected payload indexes exist for the collection."""
+        """Ensure payload indexes with the requested schemas exist."""
 
-        adapter = self._require_adapter()
+        client = self._require_async_client()
         summary = await self.get_payload_index_summary(name)
         existing_schema: Mapping[str, Mapping[str, Any]] = summary.get(
             "payload_schema", {}
         )
         for field, schema in definitions.items():
             if not _schema_matches(existing_schema.get(field), schema):
-                await adapter.create_payload_index(name, field, schema)
+                await client.create_payload_index(
+                    collection_name=name,
+                    field_name=field,
+                    field_schema=schema,
+                    wait=True,
+                )
         return await self.get_payload_index_summary(name)
 
     async def drop_payload_indexes(self, name: str, fields: Iterable[str]) -> None:
-        """Drop the specified payload indexes if they exist."""
+        """Drop payload indexes for the given fields if present."""
 
-        adapter = self._require_adapter()
+        client = self._require_async_client()
         summary = await self.get_payload_index_summary(name)
         existing_fields = set(summary.get("indexed_fields", []))
         for field in fields:
             if field in existing_fields:
-                await adapter.delete_payload_index(name, field)
+                await client.delete_payload_index(
+                    collection_name=name,
+                    field_name=field,
+                    wait=True,
+                )
 
     async def collection_stats(self, name: str) -> Mapping[str, Any]:
-        """Get statistics for a collection."""
+        """Return statistics for a collection."""
 
-        adapter = self._require_adapter()
-        return await adapter.get_collection_stats(name)
+        client = self._require_async_client()
+        info = await client.get_collection(collection_name=name)
+        return _serialize_collection_info(info)
 
     async def add_document(
         self,
@@ -171,7 +212,7 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         content: str,
         metadata: Mapping[str, Any] | None = None,
     ) -> str:
-        """Add a single document to the store."""
+        """Add a single document and return its identifier."""
 
         document_id = str(uuid4())
         normalized_metadata = dict(metadata or {})
@@ -209,29 +250,24 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         *,
         batch_size: int | None = None,
     ) -> None:
-        """Upsert documents into a collection.
-
-        Args:
-            collection: Name of the collection.
-            documents: Sequence of text documents to upsert.
-            batch_size: Optional batch size for upsert operation.
-        """
+        """Upsert a batch of documents via LangChain vector store."""
 
         if not documents:
             return
-        adapter = self._require_adapter()
-        try:
-            embeddings = await self._embeddings.generate_embeddings(
-                [document.content for document in documents]
-            )
-        except Exception as exc:  # pragma: no cover - provider-specific failures
-            msg = f"Failed to generate embeddings: {exc}"
-            raise EmbeddingServiceError(msg) from exc
 
-        records: list[VectorRecord] = []
-        for document, vector in zip(documents, embeddings, strict=True):
+        await self.ensure_collection(
+            CollectionSchema(
+                name=collection,
+                vector_size=self.embedding_dimension,
+            )
+        )
+
+        store = self._require_vector_store(collection)
+        texts = [document.content for document in documents]
+        canonical_payloads: list[CanonicalPayload] = []
+        for document in documents:
             try:
-                canonical: CanonicalPayload = ensure_canonical_payload(
+                payload = ensure_canonical_payload(
                     document.metadata,
                     content=document.content,
                     id_hint=document.id,
@@ -239,89 +275,17 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
             except PayloadValidationError as exc:  # pragma: no cover - defensive
                 msg = f"Invalid payload for document '{document.id}': {exc}"
                 raise EmbeddingServiceError(msg) from exc
+            canonical_payloads.append(payload)
 
-            records.append(
-                VectorRecord(
-                    id=canonical.point_id,
-                    vector=vector,
-                    payload=canonical.payload,
-                )
-            )
+        ids = [payload.point_id for payload in canonical_payloads]
+        metadatas = [payload.payload for payload in canonical_payloads]
 
-        await adapter.upsert(collection, records, batch_size=batch_size)
-
-    async def upsert_vectors(
-        self,
-        collection: str,
-        records: Sequence[VectorRecord],
-        *,
-        batch_size: int | None = None,
-    ) -> None:
-        """Upsert vector records into a collection.
-
-        Args:
-            collection: Name of the collection.
-            records: Sequence of vector records to upsert.
-            batch_size: Optional batch size for upsert operation.
-        """
-
-        adapter = self._require_adapter()
-        await adapter.upsert(collection, records, batch_size=batch_size)
-
-    async def get_document(
-        self,
-        collection: str,
-        document_id: str,
-    ) -> Mapping[str, Any] | None:
-        adapter = self._require_adapter()
-        records = await adapter.retrieve(
-            collection,
-            [document_id],
-            with_payload=True,
-            with_vectors=False,
+        await asyncio.to_thread(
+            store.add_texts,
+            texts=texts,
+            metadatas=metadatas,
+            ids=ids,
         )
-        if not records:
-            return None
-        payload = dict(records[0].payload or {})
-        payload.setdefault("id", records[0].id)
-        return payload
-
-    async def delete_document(self, collection: str, document_id: str) -> bool:
-        adapter = self._require_adapter()
-        await adapter.delete(collection, ids=[document_id])
-        return True
-
-    async def list_documents(
-        self,
-        collection: str,
-        *,
-        limit: int = 50,
-        offset: str | None = None,
-    ) -> tuple[list[Mapping[str, Any]], str | None]:
-        adapter = self._require_adapter()
-        records, next_offset = await adapter.scroll(
-            collection,
-            limit=limit,
-            offset=offset,
-            with_payload=True,
-            with_vectors=False,
-        )
-        documents: list[Mapping[str, Any]] = []
-        for record in records:
-            payload = dict(record.payload or {})
-            payload.setdefault("id", record.id)
-            documents.append(payload)
-        return documents, next_offset
-
-    async def clear_collection(self, collection: str) -> None:
-        schema = CollectionSchema(
-            name=collection,
-            vector_size=self._embeddings.embedding_dimension,
-            distance="cosine",
-        )
-        adapter = self._require_adapter()
-        await adapter.drop_collection(collection)
-        await adapter.create_collection(schema)
 
     async def delete(
         self,
@@ -330,109 +294,139 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         ids: Sequence[str] | None = None,
         filters: Mapping[str, Any] | None = None,
     ) -> None:
-        """Delete records from a collection.
+        """Delete points by identifiers or filter."""
 
-        Args:
-            collection: Name of the collection.
-            ids: Optional sequence of record IDs to delete.
-            filters: Optional filters for deletion.
-        """
+        client = self._require_async_client()
+        if ids:
+            await client.delete(
+                collection_name=collection,
+                points_selector=models.PointIdsList(points=list(ids)),
+            )
+            return
+        if filters:
+            filter_obj = _filter_from_mapping(filters)
+            if filter_obj is not None:
+                await client.delete(
+                    collection_name=collection,
+                    points_selector=models.FilterSelector(filter=filter_obj),
+                )
 
-        adapter = self._require_adapter()
-        await adapter.delete(collection, ids=ids, filters=filters)
+    async def upsert_vectors(
+        self,
+        collection: str,
+        records: Sequence[VectorRecord],
+        *,
+        batch_size: int | None = None,
+    ) -> None:
+        """Insert or update pre-embedded vectors."""
+
+        if not records:
+            return
+
+        await self.ensure_collection(
+            CollectionSchema(
+                name=collection,
+                vector_size=self.embedding_dimension,
+                requires_sparse=any(record.sparse_vector for record in records),
+            )
+        )
+
+        client = self._require_async_client()
+        points: list[models.PointStruct] = []
+        for record in records:
+            dense_vector = list(record.vector)
+            vector_payload: Any = dense_vector
+            if record.sparse_vector:
+                vector_payload = {
+                    "default": dense_vector,
+                    "sparse": models.SparseVector(
+                        indices=list(record.sparse_vector.keys()),
+                        values=list(record.sparse_vector.values()),
+                    ),
+                }
+            points.append(
+                models.PointStruct(
+                    id=record.id,
+                    vector=vector_payload,
+                    payload=dict(record.payload or {}),
+                )
+            )
+
+        await client.upsert(
+            collection_name=collection,
+            points=points,
+        )
+
+    async def get_document(
+        self,
+        collection: str,
+        document_id: str,
+    ) -> Mapping[str, Any] | None:
+        """Fetch a document payload by identifier."""
+
+        client = self._require_async_client()
+        records = await client.retrieve(
+            collection_name=collection,
+            ids=[document_id],
+            with_payload=True,
+            with_vectors=False,
+        )
+        if not records:
+            return None
+        payload = dict(records[0].payload or {})
+        payload.setdefault("id", document_id)
+        return payload
+
+    async def delete_document(self, collection: str, document_id: str) -> bool:
+        """Delete a document by identifier."""
+
+        before = await self.get_document(collection, document_id)
+        if before is None:
+            return False
+        await self.delete(collection, ids=[document_id])
+        return True
+
+    async def list_documents(
+        self,
+        collection: str,
+        *,
+        limit: int,
+        offset: str | None = None,
+    ) -> tuple[list[dict[str, Any]], str | None]:
+        """List documents with pagination support."""
+
+        client = self._require_async_client()
+        points, next_offset = await client.scroll(
+            collection_name=collection,
+            limit=limit,
+            offset=offset,
+            with_payload=True,
+            with_vectors=False,
+        )
+        documents = [dict(point.payload or {}) for point in points]
+        for point, payload in zip(points, documents, strict=False):
+            payload.setdefault("id", str(point.id))
+        next_token = str(next_offset) if next_offset is not None else None
+        return documents, next_token
 
     async def embed_query(self, query: str) -> Sequence[float]:
-        """Return the embedding vector for the supplied query string."""
+        """Generate an embedding for the supplied query."""
 
-        await self.initialize()
         try:
             [embedding] = await self._embeddings.generate_embeddings([query])
-        except Exception as exc:  # pragma: no cover - surfaces consistent errors
+        except Exception as exc:  # pragma: no cover - provider-specific failures
             msg = f"Failed to embed query: {exc}"
             raise EmbeddingServiceError(msg) from exc
         return embedding
 
     async def embed_documents(self, texts: Sequence[str]) -> list[list[float]]:
-        """Return embedding vectors for the supplied document texts."""
+        """Generate embeddings for documents."""
 
-        await self.initialize()
         try:
-            embeddings = await self._embeddings.generate_embeddings(list(texts))
-        except Exception as exc:  # pragma: no cover - surfaces consistent errors
+            return await self._embeddings.generate_embeddings(list(texts))
+        except Exception as exc:  # pragma: no cover - provider-specific failures
             msg = f"Failed to embed documents: {exc}"
             raise EmbeddingServiceError(msg) from exc
-        return embeddings
-
-    async def get_embedding_manager(self) -> EmbeddingProvider:
-        """Expose the underlying embedding provider for legacy integrations."""
-
-        await self.initialize()
-        return self._embeddings
-
-    async def search_vectors(
-        self,
-        collection: str,
-        vector: Sequence[float],
-        *,
-        limit: int = 10,
-        filters: Mapping[str, Any] | None = None,
-        group_by: str | None = None,
-        group_size: int | None = None,
-        overfetch_multiplier: float | None = None,
-        normalize_scores: bool | None = None,
-    ) -> list[VectorMatch]:
-        """Search using a precomputed embedding vector."""
-
-        qdrant_cfg = getattr(self.config, "qdrant", None)
-        query_cfg: QueryProcessingConfig | None = getattr(
-            self.config, "query_processing", None
-        )
-
-        resolved_group_by = group_by or getattr(qdrant_cfg, "group_by_field", "doc_id")
-        resolved_group_size = max(
-            1, int(group_size or getattr(qdrant_cfg, "group_size", 1))
-        )
-        multiplier_default = float(getattr(qdrant_cfg, "groups_limit_multiplier", 2.0))
-        resolved_multiplier = overfetch_multiplier or multiplier_default
-        if resolved_multiplier <= 0:
-            resolved_multiplier = 1.0
-        effective_limit = max(
-            limit * resolved_group_size,
-            int(limit * resolved_multiplier),
-            limit,
-        )
-
-        matches, grouping_applied = await self._query_with_optional_grouping(
-            collection=collection,
-            vector=vector,
-            limit=effective_limit,
-            group_by=resolved_group_by,
-            group_size=resolved_group_size,
-            filters=filters,
-        )
-
-        matches = self._attach_collection_metadata(matches, collection)
-
-        if resolved_group_by and not grouping_applied:
-            matches = self._group_client_side(
-                matches,
-                group_by=resolved_group_by,
-                group_size=resolved_group_size,
-                limit=effective_limit,
-            )
-
-        matches = self._annotate_grouping_metadata(
-            matches,
-            group_by=resolved_group_by,
-            grouping_applied=grouping_applied,
-        )
-
-        should_normalize = normalize_scores
-        if should_normalize is None and query_cfg is not None:
-            should_normalize = query_cfg.enable_score_normalization
-        matches = self._normalize_scores(matches, enabled=should_normalize)
-
-        return matches[:limit]
 
     async def search_documents(
         self,
@@ -445,32 +439,184 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         group_size: int | None = None,
         overfetch_multiplier: float | None = None,
         normalize_scores: bool | None = None,
-    ) -> list[VectorMatch]:
-        """Search documents with optional grouping and score normalization."""
+    ) -> list[VectorMatch]:  # pylint: disable=too-many-arguments
+        """Execute a dense similarity search with optional grouping."""
 
-        embedding = await self.embed_query(query)
-        return await self.search_vectors(
+        vector = await self.embed_query(query)
+        matches, grouping_applied = await self._query_with_optional_grouping(
             collection,
-            embedding,
+            vector,
             limit=limit,
-            filters=filters,
             group_by=group_by,
-            group_size=group_size,
+            group_size=group_size or 1,
+            filters=filters,
             overfetch_multiplier=overfetch_multiplier,
-            normalize_scores=normalize_scores,
         )
+        matches = self._annotate_grouping_metadata(
+            matches,
+            group_by=group_by,
+            grouping_applied=grouping_applied,
+        )
+        matches = self._normalize_scores(matches, enabled=normalize_scores)
+        return matches
 
-    async def supports_server_side_grouping(self) -> bool:
-        """Return True when the connected backend can execute QueryPointGroups."""
+    async def search_vector(
+        self,
+        collection: str,
+        vector: Sequence[float],
+        *,
+        limit: int = 10,
+        filters: Mapping[str, Any] | None = None,
+    ) -> list[VectorMatch]:
+        """Perform a similarity search using a precomputed vector."""
 
-        adapter = self._require_adapter()
-        ensure_capability = getattr(adapter, "_ensure_grouping_capability", None)
-        if callable(ensure_capability):  # pragma: no branch - simple capability probe
-            await ensure_capability()
-        supports = getattr(adapter, "supports_query_groups", None)
-        if callable(supports):
-            return bool(supports())
-        return False
+        matches, _ = await self._query_with_optional_grouping(
+            collection,
+            vector,
+            limit=limit,
+            group_by=None,
+            group_size=1,
+            filters=filters,
+            overfetch_multiplier=None,
+        )
+        return matches
+
+    async def hybrid_search(
+        self,
+        collection: str,
+        dense_vector: Sequence[float],
+        sparse_vector: Mapping[int, float] | None = None,
+        *,
+        limit: int = 10,
+        filters: Mapping[str, Any] | None = None,
+    ) -> list[VectorMatch]:  # pylint: disable=too-many-arguments
+        """Perform a hybrid search when sparse vectors are supplied."""
+
+        if not sparse_vector:
+            return await self.search_vector(
+                collection,
+                dense_vector,
+                limit=limit,
+                filters=filters,
+            )
+
+        client = self._require_async_client()
+        query_filter = _filter_from_mapping(filters)
+        sparse_query = models.SparseVector(
+            indices=list(sparse_vector.keys()),
+            values=list(sparse_vector.values()),
+        )
+        dense_prefetch: dict[str, Any] = {
+            "query": list(dense_vector),
+            "using": "default",
+            "limit": max(limit, 20),
+        }
+        sparse_prefetch: dict[str, Any] = {
+            "query": sparse_query,
+            "using": "sparse",
+            "limit": max(limit, 20),
+        }
+        if query_filter is not None:
+            dense_prefetch["filter"] = query_filter
+            sparse_prefetch["filter"] = query_filter
+        result = await client.query_points(
+            collection_name=collection,
+            prefetch=[
+                models.Prefetch(**dense_prefetch),
+                models.Prefetch(**sparse_prefetch),
+            ],
+            query=models.FusionQuery(fusion=models.Fusion.RRF),
+            limit=limit,
+            with_payload=True,
+            with_vectors=False,
+        )
+        matches: list[VectorMatch] = []
+        for point in result.points:
+            matches.append(
+                VectorMatch(
+                    id=str(point.id),
+                    score=point.score,
+                    payload=point.payload,
+                    raw_score=point.score,
+                    collection=collection,
+                )
+            )
+        return matches
+
+    async def recommend(
+        self,
+        collection: str,
+        *,
+        positive_ids: Sequence[str] | None = None,
+        vector: Sequence[float] | None = None,
+        limit: int = 10,
+        filters: Mapping[str, Any] | None = None,
+    ) -> list[VectorMatch]:
+        """Return records related to supplied positive examples."""
+
+        if not positive_ids and vector is None:
+            msg = "`positive_ids` or `vector` must be provided for recommend"
+            raise ValueError(msg)
+
+        client = self._require_async_client()
+        recommend_kwargs: dict[str, Any] = {
+            "collection_name": collection,
+            "limit": limit,
+            "with_payload": True,
+            "with_vectors": False,
+            "query_filter": _filter_from_mapping(filters),
+        }
+        if positive_ids:
+            recommend_kwargs["positive"] = list(positive_ids)
+        if vector is not None:
+            recommend_kwargs["query_vector"] = list(vector)
+        if recommend_kwargs["query_filter"] is None:
+            recommend_kwargs.pop("query_filter")
+
+        results = await client.recommend(**recommend_kwargs)
+        matches: list[VectorMatch] = []
+        for point in results:
+            matches.append(
+                VectorMatch(
+                    id=str(point.id),
+                    score=point.score,
+                    payload=point.payload,
+                    raw_score=point.score,
+                    collection=collection,
+                )
+            )
+        return matches
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+
+    def _require_async_client(self) -> AsyncQdrantClient:
+        if self._async_client is None:
+            msg = "VectorStoreService not initialised"
+            raise RuntimeError(msg)
+        return self._async_client
+
+    def _require_vector_store(self, collection: str) -> QdrantVectorStore:
+        if self._vector_store is None:
+            msg = "VectorStoreService not initialised"
+            raise RuntimeError(msg)
+        # LangChain's vector store keeps the collection name; override if needed.
+        self._vector_store.collection_name = collection
+        return self._vector_store
+
+    def _require_qdrant_config(self) -> Any:
+        cfg = getattr(self.config, "qdrant", None)
+        if cfg is None:
+            msg = "Qdrant configuration missing"
+            raise EmbeddingServiceError(msg)
+        return cfg
+
+    def _require_embedding_adapter(self) -> Any:
+        adapter = getattr(self._embeddings, "langchain_embeddings", None)
+        if adapter is None:
+            msg = "Embedding provider does not expose LangChain embeddings"
+            raise EmbeddingServiceError(msg)
+        return adapter
 
     async def _query_with_optional_grouping(
         self,
@@ -480,83 +626,119 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         limit: int,
         group_by: str | None,
         group_size: int,
-        filters: Mapping[str, Any] | None = None,
-    ) -> tuple[list[VectorMatch], bool]:
-        adapter = self._require_adapter()
-        qdrant_cfg = getattr(self.config, "qdrant", None)
-        grouping_enabled = bool(getattr(qdrant_cfg, "enable_grouping", False)) and bool(
-            group_by
-        )
-        grouping_applied = False
+        filters: Mapping[str, Any] | None,
+        overfetch_multiplier: float | None,
+    ) -> tuple[list[VectorMatch], bool]:  # pylint: disable=too-many-arguments,too-many-locals
         registry = None
         try:
             registry = get_metrics_registry()
-        except RuntimeError:  # pragma: no cover - monitoring disabled
+        except RuntimeError:  # pragma: no cover - monitoring optional
             registry = None
 
-        if grouping_enabled and group_by is not None:
-            ensure_capability = getattr(adapter, "_ensure_grouping_capability", None)
-            if callable(ensure_capability):
-                await ensure_capability()
+        cfg = self._require_qdrant_config()
+        grouping_enabled = bool(group_by) and bool(
+            getattr(cfg, "enable_grouping", False)
+        )
 
-            supports_grouping = False
-            supports_method = getattr(adapter, "supports_query_groups", None)
-            if callable(supports_method):
-                supports_grouping = bool(supports_method())
-
-            if not supports_grouping:
-                grouping_enabled = False
-                if registry is not None:
-                    registry.record_grouping_attempt(collection, "unsupported")
-                logger.warning(
-                    "Disabling QueryPointGroups for %s: backend lacks support",
-                    collection,
-                )
-
-        if grouping_enabled and group_by is not None:
-            await self.ensure_payload_indexes(
-                collection,
-                {group_by: models.PayloadSchemaType.KEYWORD},
-            )
-
-            start_time = time.perf_counter()
-            matches, grouping_applied = await adapter.query_groups(
+        if grouping_enabled and group_by:
+            matches, applied = await self._query_with_server_grouping(
                 collection,
                 vector,
                 group_by=group_by,
-                limit=limit,
                 group_size=group_size,
+                limit=limit,
                 filters=filters,
             )
-            duration_ms = (time.perf_counter() - start_time) * 1000
+            if applied:
+                if registry is not None:
+                    registry.record_grouping_attempt(collection, "applied")
+                return matches, True
             if registry is not None:
-                status = "applied" if grouping_applied else "fallback"
-                registry.record_grouping_attempt(
-                    collection, status, duration_ms=duration_ms
-                )
-            if grouping_applied:
-                return matches[:limit], True
+                registry.record_grouping_attempt(collection, "fallback")
+
+        fetch_limit = int(limit * (overfetch_multiplier or 2.0))
+        store = self._require_vector_store(collection)
+        vector_filter = _filter_from_mapping(filters)
+        to_thread_kwargs: dict[str, Any] = {
+            "vector": list(vector),
+            "k": fetch_limit,
+        }
+        if vector_filter is not None:
+            to_thread_kwargs["filter"] = vector_filter
+        documents_with_scores = await asyncio.to_thread(
+            store.similarity_search_with_score_by_vector,
+            **to_thread_kwargs,
+        )
+        matches = [
+            _document_to_match(collection, document, score)
+            for document, score in documents_with_scores
+        ]
+
+        if grouping_enabled and group_by:
+            matches = self._group_client_side(
+                matches,
+                group_by=group_by,
+                group_size=group_size,
+                limit=limit,
+            )
             return matches, False
 
-        matches = await adapter.query(
-            collection,
-            vector,
-            limit=limit,
-            filters=filters,
-        )
         if registry is not None:
             registry.record_grouping_attempt(collection, "disabled")
-        return matches, False
+        return matches[:limit], False
 
-    @staticmethod
-    def _attach_collection_metadata(
-        matches: list[VectorMatch], collection: str
-    ) -> list[VectorMatch]:
-        for match in matches:
-            match.collection = match.collection or collection
-            payload = dict(match.payload or {})
-            match.payload = payload
-        return matches
+    async def _query_with_server_grouping(
+        self,
+        collection: str,
+        vector: Sequence[float],
+        *,
+        group_by: str,
+        group_size: int,
+        limit: int,
+        filters: Mapping[str, Any] | None,
+    ) -> tuple[list[VectorMatch], bool]:  # pylint: disable=too-many-arguments
+        client = self._require_async_client()
+        cfg = self._require_qdrant_config()
+        if not getattr(cfg, "enable_grouping", False):
+            return [], False
+
+        query_filter = _filter_from_mapping(filters)
+
+        try:
+            response = await client.query_points_groups(
+                collection_name=collection,
+                group_by=group_by,
+                query=list(vector),
+                limit=limit,
+                group_size=group_size,
+                query_filter=query_filter,
+                with_payload=True,
+                with_vectors=False,
+            )
+        except Exception:  # pragma: no cover - driver-specific fallbacks
+            return [], False
+
+        matches: list[VectorMatch] = []
+        for group in getattr(response, "groups", []) or []:
+            hits = getattr(group, "hits", [])
+            if not hits:
+                continue
+            hit = hits[0]
+            payload: dict[str, Any] = dict(hit.payload or {})
+            payload["_grouping"] = {
+                "applied": True,
+                "group_id": getattr(group, "id", None),
+            }
+            matches.append(
+                VectorMatch(
+                    id=str(hit.id),
+                    score=hit.score,
+                    payload=payload,
+                    raw_score=hit.score,
+                    collection=collection,
+                )
+            )
+        return matches, bool(matches)
 
     def _group_client_side(
         self,
@@ -568,11 +750,11 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
     ) -> list[VectorMatch]:
         groups: dict[str, list[VectorMatch]] = {}
         for match in matches:
-            payload = dict(match.payload or {})
+            payload: dict[str, Any] = dict(match.payload or {})
             group_id = payload.get(group_by) or payload.get("doc_id")
             if group_id is None:
                 group_id = match.id
-            payload.setdefault("doc_id", group_id)
+            payload["doc_id"] = group_id
             match.payload = payload
             groups.setdefault(str(group_id), []).append(match)
 
@@ -592,15 +774,15 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
                     "group_id": group_id,
                     "rank": group_rank,
                 }
-                payload.setdefault("doc_id", group_id)
+                payload["doc_id"] = group_id
                 match.payload = payload
                 limited_matches.append(match)
             if len(limited_matches) >= limit:
                 break
         return limited_matches
 
-    @staticmethod
     def _annotate_grouping_metadata(
+        self,
         matches: list[VectorMatch],
         *,
         group_by: str | None,
@@ -609,25 +791,23 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         if not group_by:
             return matches
         for rank, match in enumerate(matches, start=1):
-            payload = dict(match.payload or {})
-            group_info = dict(payload.get("_grouping") or {})
-            group_info.setdefault(
-                "group_id",
-                payload.get(group_by) or payload.get("doc_id") or match.id,
+            payload: dict[str, Any] = dict(match.payload or {})
+            group_info: dict[str, Any] = dict(payload.get("_grouping") or {})
+            group_info["group_id"] = (
+                payload.get(group_by) or payload.get("doc_id") or match.id
             )
-            group_info.setdefault("rank", rank)
-            group_info.setdefault("applied", grouping_applied)
+            group_info["rank"] = rank
+            group_info["applied"] = grouping_applied
             payload["_grouping"] = group_info
             match.payload = payload
         return matches
 
     def _normalize_scores(
         self, matches: list[VectorMatch], *, enabled: bool | None
-    ) -> list[VectorMatch]:
+    ) -> list[VectorMatch]:  # pylint: disable=too-many-branches,too-many-return-statements
         if not matches:
             return matches
 
-        # Always record raw_score before normalization
         for match in matches:
             if match.raw_score is None:
                 match.raw_score = float(match.score)
@@ -635,9 +815,8 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         if not enabled:
             return matches
 
-        config = getattr(self, "config", None)
         query_cfg: QueryProcessingConfig | None = getattr(
-            config, "query_processing", None
+            self.config, "query_processing", None
         )
         strategy = (
             query_cfg.score_normalization_strategy
@@ -686,198 +865,105 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
 
         return matches
 
-    async def search_vector(
-        self,
-        collection: str,
-        vector: Sequence[float],
-        *,
-        limit: int = 10,
-        filters: Mapping[str, Any] | None = None,
-    ) -> list[VectorMatch]:
-        """Search using a vector.
-
-        Args:
-            collection: Name of the collection.
-            vector: Vector to search with.
-            limit: Maximum number of results to return.
-            filters: Optional filters for the search.
-
-        Returns:
-            List of vector matches.
-        """
-
-        matches, _ = await self._query_with_optional_grouping(
-            collection,
-            vector,
-            limit=limit,
-            group_by=None,
-            group_size=1,
-            filters=filters,
-        )
-        return matches
-
-    async def hybrid_search(  # pylint: disable=too-many-arguments
-        self,
-        collection: str,
-        query: str,
-        sparse_vector: Mapping[int, float] | None = None,
-        *,
-        limit: int = 10,
-        filters: Mapping[str, Any] | None = None,
-    ) -> list[VectorMatch]:
-        """Perform hybrid search using dense and sparse vectors.
-
-        Args:
-            collection: Name of the collection.
-            query: Text query string.
-            sparse_vector: Optional sparse vector for hybrid search.
-            limit: Maximum number of results to return.
-            filters: Optional filters for the search.
-
-        Returns:
-            List of vector matches.
-        """
-
-        adapter = self._require_adapter()
-        dense_embedding, *_ = await self._embeddings.generate_embeddings([query])
-        return await adapter.hybrid_query(
-            collection,
-            dense_embedding,
-            sparse_vector,
-            limit=limit,
-            filters=filters,
+    def _build_sync_client(self, cfg: Any) -> QdrantClient:
+        timeout = getattr(cfg, "timeout", 30)
+        return QdrantClient(
+            url=str(getattr(cfg, "url", "http://localhost:6333")),
+            api_key=getattr(cfg, "api_key", None),
+            timeout=int(timeout) if timeout is not None else None,
+            prefer_grpc=bool(
+                getattr(cfg, "prefer_grpc", False) or getattr(cfg, "use_grpc", False)
+            ),
+            grpc_port=int(getattr(cfg, "grpc_port", 6334)),
         )
 
-    async def retrieve_documents(
-        self,
-        collection: str,
-        ids: Sequence[str],
-        *,
-        with_payload: bool = True,
-        with_vectors: bool = False,
-    ) -> list[VectorMatch]:
-        """Retrieve specific documents by ID.
 
-        Args:
-            collection: Name of the collection.
-            ids: Sequence of record IDs to fetch.
-            with_payload: Include payload data.
-            with_vectors: Include stored vectors.
-
-        Returns:
-            List of vector matches with payloads and optional vectors.
-        """
-
-        adapter = self._require_adapter()
-        return await adapter.retrieve(
-            collection,
-            ids,
-            with_payload=with_payload,
-            with_vectors=with_vectors,
-        )
-
-    async def recommend_similar(  # pylint: disable=too-many-arguments
-        self,
-        collection: str,
-        *,
-        positive_ids: Sequence[str] | None = None,
-        vector: Sequence[float] | None = None,
-        limit: int = 10,
-        filters: Mapping[str, Any] | None = None,
-    ) -> list[VectorMatch]:
-        """Return records similar to the supplied identifiers or vector."""
-
-        adapter = self._require_adapter()
-        return await adapter.recommend(
-            collection,
-            positive_ids=positive_ids,
-            vector=vector,
-            limit=limit,
-            filters=filters,
-        )
-
-    async def scroll(  # pylint: disable=too-many-arguments
-        self,
-        collection: str,
-        *,
-        limit: int = 64,
-        offset: str | None = None,
-        filters: Mapping[str, Any] | None = None,
-        with_payload: bool = True,
-        with_vectors: bool = False,
-    ) -> tuple[list[VectorMatch], str | None]:
-        """Scroll through a collection with pagination."""
-
-        adapter = self._require_adapter()
-        return await adapter.scroll(
-            collection,
-            limit=limit,
-            offset=offset,
-            filters=filters,
-            with_payload=with_payload,
-            with_vectors=with_vectors,
-        )
-
-    def _require_adapter(self) -> QdrantVectorAdapter:
-        """Get the adapter, raising error if not initialized.
-
-        Returns:
-            The Qdrant vector adapter.
-        """
-
-        if not self._adapter:
-            msg = "VectorStoreService is not initialized"
-            raise EmbeddingServiceError(msg)
-        return self._adapter
+# ----------------------------------------------------------------------
+# Helper utilities
 
 
-def _serialize_collection_info(info: models.CollectionInfo) -> Mapping[str, Any]:
-    """Convert a Qdrant CollectionInfo into a plain mapping."""
+def _document_to_match(
+    collection: str,
+    document: Document,
+    score: float,
+) -> VectorMatch:
+    payload: dict[str, Any] = dict(document.metadata or {})
+    payload.setdefault("page_content", document.page_content)
+    identifier = (
+        payload.get("point_id")
+        or payload.get("doc_id")
+        or getattr(document, "id", None)
+        or uuid4().hex
+    )
+    return VectorMatch(
+        id=str(identifier),
+        score=score,
+        payload=payload,
+        raw_score=score,
+        collection=collection,
+    )
 
-    payload_schema_raw = getattr(info, "payload_schema", {}) or {}
-    payload_schema = {
-        name: _serialize_payload_schema_entry(entry)
-        for name, entry in payload_schema_raw.items()
-    }
+
+def _serialize_collection_info(info: Any) -> Mapping[str, Any]:
+    config = getattr(info, "config", None)
+    payload_schema = (
+        cast(dict[str, Any], getattr(config, "payload_schema", {})) if config else {}
+    )
+    config_payload = (
+        config.dict() if (config is not None and hasattr(config, "dict")) else {}
+    )
     return {
-        "status": getattr(info, "status", None),
-        "vectors_count": getattr(info, "vectors_count", None),
-        "points_count": getattr(info, "points_count", None),
+        "points_count": getattr(info, "points_count", 0),
+        "indexed_vectors": getattr(info, "indexed_vectors_count", 0),
         "payload_schema": payload_schema,
+        "config": config_payload,
     }
-
-
-def _serialize_payload_schema_entry(entry: Any) -> Mapping[str, Any]:
-    """Normalize payload schema entries to serializable dictionaries."""
-
-    if entry is None:
-        return {}
-    if hasattr(entry, "to_dict"):
-        raw = entry.to_dict()
-    elif isinstance(entry, dict):
-        raw = dict(entry)
-    else:
-        raw = {
-            key: getattr(entry, key)
-            for key in dir(entry)
-            if not key.startswith("_") and not callable(getattr(entry, key))
-        }
-    data_type = raw.get("data_type") or raw.get("type")
-    if isinstance(data_type, (models.PayloadSchemaType, Enum)):
-        raw["data_type"] = data_type.value
-    return raw
 
 
 def _schema_matches(
-    existing: Mapping[str, Any] | None,
-    expected: models.PayloadSchemaType,
+    existing: Mapping[str, Any] | None, schema: models.PayloadSchemaType
 ) -> bool:
-    """Return True if an existing index matches the desired definition."""
-
-    if existing is None:
+    if not existing:
         return False
-    current_type = existing.get("data_type") or existing.get("type")
-    target = expected.value
-    if isinstance(target, Enum):  # pragma: no cover - defensive
-        target = target.value
-    return bool(target == current_type)
+    return existing.get("type") == schema.value if isinstance(schema, Enum) else False
+
+
+def _distance_from_string(name: str) -> models.Distance:
+    mapping = {
+        "cosine": models.Distance.COSINE,
+        "dot": models.Distance.DOT,
+        "euclid": models.Distance.EUCLID,
+        "manhattan": models.Distance.MANHATTAN,
+    }
+    return mapping.get(name.lower(), models.Distance.COSINE)
+
+
+def _filter_from_mapping(filters: Mapping[str, Any] | None) -> models.Filter | None:
+    if not filters:
+        return None
+    must_conditions = []
+    for key, value in filters.items():
+        if isinstance(value, Mapping):
+            must_conditions.append(
+                models.FieldCondition(
+                    key=key,
+                    range=models.Range(**value),
+                )
+            )
+        elif isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+            must_conditions.append(
+                models.FieldCondition(
+                    key=key,
+                    match=models.MatchAny(any=list(value)),
+                )
+            )
+        else:
+            must_conditions.append(
+                models.FieldCondition(
+                    key=key,
+                    match=models.MatchValue(
+                        value=cast("models.ValueVariants", value),
+                    ),
+                )
+            )
+    return models.Filter(must=must_conditions)

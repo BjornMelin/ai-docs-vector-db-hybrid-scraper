@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Introduced a LangGraph `StateGraph` pipeline that chains retrieval, grading, and generation for RAG queries.
+- Replaced the bespoke FastEmbed provider with a LangChain FastEmbed wrapper and refreshed unit coverage for embeddings.
 - Shadow parity coverage for vector grouping fallback and score normalisation across
   `tests/unit/services/vector_db/test_service.py` and the new RAG retriever
   suites to lock in Phase A behaviour.
@@ -23,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   record, and technical debt register for the new suites.
 
 ### Changed
+- Search orchestrator delegates RAG execution to the LangGraph pipeline, reusing contextual compression and vector service retrievers.
+- Migrated VectorStoreService, MCP ingestion, and database manager paths onto LangChain's QdrantVectorStore to share the normalisation/grouping pipeline.
+- SearchOrchestrator now owns expansion and personalisation helpers directly; MCP tools were updated to invoke the unified service without legacy stages.
 - `VectorServiceRetriever` now pre-chunks documents with
   `RecursiveCharacterTextSplitter`, using `tiktoken` when available, before the
   LangChain compression pipeline to keep token reductions deterministic while
@@ -33,6 +38,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refined MCP tool registrars to route all success and error paths through the
   shared response converter, returning consistent warnings metadata and
   serializing enums via the canonical service models.
+- Simplified query processing by replacing the `QueryProcessingPipeline`
+  wrapper with `SearchRequest.from_input`, updating the RAG evaluation harness
+  and orchestrator tests to use the shared entrypoint.
+- Hardened LangGraph observability by switching the compression retriever to
+  `ainvoke`, registering OpenTelemetry callbacks, and recording metrics via the
+  shared registry with dedicated unit coverage.
 - Hardened converter helpers and tests to use `model_dump(mode="json")`
   fallbacks, normalizing mocked inputs while preserving the JSON contract
   snapshot tracked in `tests/unit/mcp_tools/tools/test_response_converter_helpers.py`.
@@ -73,10 +84,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pinned the regression workflow `uv` dependency to `0.2.37` to stabilize CI setup.
 
 ### Removed
+- Deleted query_processing clustering, expansion, ranking, and utils modules plus their tests in favour of the final LangChain-backed stack.
 - Deleted support for the deprecated `AI_DOCS_DEPLOYMENT__TIER` environment variable in favor of `AI_DOCS_MODE` as the sole mode selector.
 - Removed the flaky async configuration validation unit suite that only exercised mock sleep-based helpers.
 - Dropped the Hypothesis-based embedding property suite and the associated strategies/fixtures from `tests/conftest.py` to
   eliminate duplicated utilities and randomness.
+- Removed the `QueryProcessingPipeline` wrapper; callers should invoke
+  `SearchOrchestrator` directly and normalise inputs with
+  `SearchRequest.from_input` (**SemVer: MAJOR**).
 
 ### Security
 - Applied SHA pinning across composite actions and documentation snippets, aligning with GitHub’s secure-use guidance to mitigate supply-chain risk.

@@ -3,15 +3,15 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
-from typing import Any
-from unittest.mock import AsyncMock
+from typing import Any, cast
 
 import pytest
 
-from src.services.query_processing.expansion import QueryExpansionResult
 from src.services.query_processing.models import SearchRequest
 from src.services.query_processing.orchestrator import SearchOrchestrator
-from src.services.vector_db.adapter_base import VectorMatch
+from src.services.rag import RAGConfig as ServiceRAGConfig
+from src.services.vector_db.service import VectorStoreService
+from src.services.vector_db.types import VectorMatch
 
 
 class VectorServiceStub:
@@ -62,7 +62,9 @@ class VectorServiceStub:
 @pytest.mark.asyncio
 async def test_search_returns_results_with_collection_field() -> None:
     service = VectorServiceStub("articles")
-    orchestrator = SearchOrchestrator(vector_store_service=service)  # type: ignore
+    orchestrator = SearchOrchestrator(
+        vector_store_service=cast(VectorStoreService, service)
+    )
     await orchestrator.initialize()
 
     request = SearchRequest(
@@ -87,7 +89,9 @@ async def test_search_returns_results_with_collection_field() -> None:
 async def test_search_uses_list_collections_when_default_missing() -> None:
     service = VectorServiceStub("knowledge")
     service.config = SimpleNamespace()  # no qdrant section
-    orchestrator = SearchOrchestrator(vector_store_service=service)  # type: ignore
+    orchestrator = SearchOrchestrator(
+        vector_store_service=cast(VectorStoreService, service)
+    )
     await orchestrator.initialize()
 
     request = SearchRequest(
@@ -105,26 +109,65 @@ async def test_search_uses_list_collections_when_default_missing() -> None:
 @pytest.mark.asyncio
 async def test_query_expansion_applied_when_enabled(monkeypatch) -> None:
     service = VectorServiceStub("docs")
-    orchestrator = SearchOrchestrator(vector_store_service=service)  # type: ignore
+    orchestrator = SearchOrchestrator(
+        vector_store_service=cast(VectorStoreService, service)
+    )
     await orchestrator.initialize()
 
-    expansion_result = QueryExpansionResult(
-        original_query="python",
-        expanded_query="python OR programming",
-        expanded_terms=[],
-        confidence_score=0.7,
-    )
-    mock_expand = AsyncMock(return_value=expansion_result)
-    monkeypatch.setattr(
-        type(orchestrator._expansion_service),  # pylint: disable=protected-access
-        "expand_query",
-        mock_expand,
-    )
-
-    request = SearchRequest(query="python", limit=10, enable_expansion=True)
+    request = SearchRequest(query="install widget", limit=10, enable_expansion=True)
 
     result = await orchestrator.search(request)
 
-    assert result.query == "python OR programming"
+    assert "setup" in result.query
+    assert "widgets" in result.query
     assert "query_expansion" in result.features_used
-    mock_expand.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_search_with_rag_pipeline(monkeypatch) -> None:
+    service = VectorServiceStub("docs")
+    rag_config = ServiceRAGConfig()
+
+    captured: dict[str, Any] = {}
+
+    class DummyPipeline:  # noqa: D401 - simple stub
+        """Stub pipeline capturing invocation arguments."""
+
+        def __init__(self, vector_service) -> None:  # pragma: no cover - simple
+            assert vector_service is service
+
+        async def run(self, **kwargs: Any) -> dict[str, Any]:
+            captured.update(kwargs)
+            return {
+                "answer": "Synthesised result",
+                "confidence": 0.42,
+                "sources": [{"source_id": "doc-1"}],
+            }
+
+    monkeypatch.setattr(
+        "src.services.query_processing.orchestrator.LangGraphRAGPipeline",
+        DummyPipeline,
+    )
+
+    orchestrator = SearchOrchestrator(
+        vector_store_service=cast(VectorStoreService, service),
+        rag_config=rag_config,
+    )
+    await orchestrator.initialize()
+
+    request = SearchRequest(
+        query="vector rag",
+        limit=3,
+        enable_expansion=False,
+        enable_rag=True,
+        rag_top_k=2,
+    )
+
+    result = await orchestrator.search(request)
+
+    assert result.generated_answer == "Synthesised result"
+    assert result.answer_confidence == pytest.approx(0.42)
+    assert result.answer_sources == [{"source_id": "doc-1"}]
+    assert "rag_answer_generation" in result.features_used
+    assert captured["query"] == "vector rag"
+    assert len(captured["prefetched_records"]) == 1

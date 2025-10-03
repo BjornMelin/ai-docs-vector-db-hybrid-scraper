@@ -10,7 +10,7 @@ Usage:
     uv run python scripts/eval/rag_golden_eval.py --dataset tests/data/rag/golden_set.jsonl
 
 Notes:
-    * The script requires a fully initialised QueryProcessingPipeline.  Provide
+    * The script requires a fully initialised SearchOrchestrator.  Provide
       the usual configuration (e.g., via environment variables) before running.
     * Scores are based on simple string similarity; replace ``_score_answer``
       with a richer metric (e.g., RAGAS, LangChain evaluators) once the
@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Any
 
 from src.infrastructure.client_manager import ClientManager
-from src.services.query_processing import QueryProcessingPipeline, SearchOrchestrator
+from src.services.query_processing import SearchOrchestrator, SearchRequest
 
 
 @dataclass(slots=True)
@@ -41,15 +41,14 @@ class GoldenExample:
     metadata: dict[str, Any]
 
 
-async def _load_pipeline() -> QueryProcessingPipeline:
-    """Instantiate and initialize the shared query processing pipeline."""
+async def _load_orchestrator() -> SearchOrchestrator:
+    """Instantiate and initialize the shared search orchestrator."""
 
     client_manager = ClientManager()
     vector_service = await client_manager.get_vector_store_service()
     orchestrator = SearchOrchestrator(vector_store_service=vector_service)
-    pipeline = QueryProcessingPipeline(orchestrator)
-    await pipeline.initialize()
-    return pipeline
+    await orchestrator.initialize()
+    return orchestrator
 
 
 def _score_answer(predicted: str, expected: str) -> float:
@@ -85,22 +84,23 @@ async def _run(dataset_path: Path) -> None:
     if not examples:
         raise RuntimeError("Golden dataset is empty")
 
-    pipeline = await _load_pipeline()
+    orchestrator = await _load_orchestrator()
 
     scores: list[tuple[GoldenExample, float, str]] = []
     for example in examples:
-        response = await pipeline.process(
+        request = SearchRequest.from_input(
             example.query,
             enable_rag=True,
             limit=5,
         )
+        response = await orchestrator.search(request)
         predicted = response.generated_answer or " ".join(
             record.content for record in response.records
         )
         score = _score_answer(predicted, example.expected_answer)
         scores.append((example, score, predicted))
 
-    await pipeline.cleanup()
+    await orchestrator.cleanup()
 
     print("=== RAG Golden Set Evaluation ===")
     for example, score, predicted in scores:

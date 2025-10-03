@@ -8,38 +8,37 @@ Augmented Generation) to deliver search results.
 from __future__ import annotations
 
 import logging
+import re
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
 from src.contracts.retrieval import SearchRecord
 from src.services.base import BaseService
 from src.services.rag import (
+    LangGraphRAGPipeline,
     RAGConfig as ServiceRAGConfig,
-    RAGGenerator,
-    RAGRequest,
-    RAGResult,
-    VectorServiceRetriever,
 )
-from src.services.vector_db.adapter_base import VectorMatch
 from src.services.vector_db.service import VectorStoreService
+from src.services.vector_db.types import VectorMatch
 
-from .expansion import (
-    QueryExpansionRequest,
-    QueryExpansionResult,
-    QueryExpansionService,
-)
 from .models import SearchRequest, SearchResponse
-from .ranking import (
-    PersonalizedRankingRequest,
-    PersonalizedRankingResponse,
-    PersonalizedRankingService,
-)
 
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_MAX_EXPANDED_TERMS = 10
+_DEFAULT_SYNONYMS: dict[str, tuple[str, ...]] = {
+    "install": ("setup", "configure"),
+    "configuration": ("settings", "setup"),
+    "error": ("issue", "problem"),
+    "update": ("upgrade", "patch"),
+    "delete": ("remove", "uninstall"),
+    "create": ("make", "build"),
+    "performance": ("speed", "throughput"),
+    "security": ("auth", "authorization"),
+}
 
 
 @dataclass(slots=True)
@@ -65,8 +64,6 @@ class SearchOrchestrator(BaseService):
         self,
         vector_store_service: VectorStoreService | None = None,
         *,
-        expansion_service: QueryExpansionService | None = None,
-        ranking_service: PersonalizedRankingService | None = None,
         rag_config: ServiceRAGConfig | None = None,
     ) -> None:
         """Initialize the search orchestrator.
@@ -81,13 +78,8 @@ class SearchOrchestrator(BaseService):
         self._vector_store_service: VectorStoreService = (
             vector_store_service or VectorStoreService()
         )
-        self._expansion_service: QueryExpansionService = (
-            expansion_service or QueryExpansionService()
-        )
-        self._ranking_service: PersonalizedRankingService = (
-            ranking_service or PersonalizedRankingService()
-        )
         self._rag_config = rag_config
+        self._rag_pipeline: LangGraphRAGPipeline | None = None
 
     async def initialize(self) -> None:
         """Initialize all dependent services.
@@ -98,8 +90,6 @@ class SearchOrchestrator(BaseService):
         if self._initialized:
             return
         await self._vector_store_service.initialize()
-        await self._expansion_service.initialize()
-        await self._ranking_service.initialize()
         self._initialized = True
 
     async def cleanup(self) -> None:  # pragma: no cover - symmetrical teardown
@@ -206,16 +196,14 @@ class SearchOrchestrator(BaseService):
         if not request.enable_expansion:
             return query, None
 
-        max_expanded_terms = min(DEFAULT_MAX_EXPANDED_TERMS, request.limit)
-        expansion_request = QueryExpansionRequest(
-            original_query=query,
-            max_expanded_terms=max_expanded_terms,
+        expanded_query = _expand_query_terms(
+            query,
+            max_terms=min(DEFAULT_MAX_EXPANDED_TERMS, request.limit),
         )
-        expansion: QueryExpansionResult = await self._expansion_service.expand_query(
-            expansion_request
-        )
+        if expanded_query is None:
+            return query, None
         features_used.append("query_expansion")
-        return expansion.expanded_query, expansion.expanded_query
+        return expanded_query, expanded_query
 
     async def _maybe_apply_personalization(
         self,
@@ -227,36 +215,41 @@ class SearchOrchestrator(BaseService):
 
         if not (request.enable_personalization and records):
             return records
+        preferences = request.user_preferences or {}
+        if not preferences:
+            return records
 
-        ranking_request = PersonalizedRankingRequest(
-            user_id=request.user_id,
-            results=[record.model_dump() for record in records],
-            preferences=request.user_preferences,
-        )
-        ranking_response: PersonalizedRankingResponse = (
-            await self._ranking_service.rank_results(ranking_request)
-        )
+        base_scores = [float(record.score) for record in records]
+        metadata = [dict(record.metadata or {}) for record in records]
+        adjusted_scores = _apply_preferences(base_scores, metadata, preferences)
+        normalized_scores = _normalize_scores(adjusted_scores)
+
+        ranked = list(zip(records, normalized_scores, strict=False))
+        ranked.sort(key=lambda item: item[1], reverse=True)
+
         features_used.append("personalized_ranking")
 
-        ranked_records: list[SearchRecord] = []
-        for item in ranking_response.ranked_results:
-            payload = dict(item.metadata)
-            ranked_records.append(
+        personalized: list[SearchRecord] = []
+        for record, score in ranked:
+            payload = dict(record.metadata or {})
+            payload.setdefault("preferences", preferences)
+            personalized.append(
                 SearchRecord(
-                    id=item.result_id,
-                    content=item.content,
-                    title=item.title,
-                    score=item.final_score,
+                    id=record.id,
+                    content=record.content,
+                    title=record.title,
+                    score=score,
                     metadata=payload,
-                    raw_score=item.metadata.get("raw_score"),
-                    normalized_score=item.metadata.get("normalized_score"),
-                    collection=payload.get("collection"),
-                    group_id=payload.get("_grouping", {}).get("group_id"),
-                    group_rank=payload.get("_grouping", {}).get("rank"),
-                    grouping_applied=payload.get("_grouping", {}).get("applied"),
+                    url=record.url,
+                    content_type=record.content_type,
+                    raw_score=record.raw_score,
+                    normalized_score=score,
+                    group_id=record.group_id,
+                    group_rank=record.group_rank,
+                    grouping_applied=record.grouping_applied,
                 )
             )
-        return ranked_records
+        return personalized
 
     async def _maybe_generate_rag_outputs(
         self,
@@ -307,14 +300,21 @@ class SearchOrchestrator(BaseService):
         """
         records: list[SearchRecord] = []
         for match in matches:
-            payload = dict(match.payload or {})
-            source_collection = (
-                payload.get("collection")
-                or payload.get("_collection")
-                or match.collection
-                or collection
+            payload: dict[str, Any] = dict(match.payload or {})
+            source_collection_value = payload.get("collection") or payload.get(
+                "_collection"
             )
-            group_info = payload.get("_grouping") or {}
+            if isinstance(source_collection_value, str):
+                source_collection = source_collection_value
+            elif isinstance(match.collection, str):
+                source_collection = match.collection
+            else:
+                source_collection = collection
+
+            group_info_raw = payload.get("_grouping")
+            group_info: dict[str, Any] = (
+                dict(group_info_raw) if isinstance(group_info_raw, Mapping) else {}
+            )
             normalized_score = match.normalized_score if normalize_applied else None
             score_value = (
                 normalized_score
@@ -323,9 +323,17 @@ class SearchOrchestrator(BaseService):
             )
             record = SearchRecord(
                 id=match.id,
-                content=payload.get("content") or payload.get("text") or "",
-                title=payload.get("title") or payload.get("name"),
-                url=payload.get("url"),
+                content=str(payload.get("content") or payload.get("text") or ""),
+                title=(
+                    payload["title"]
+                    if isinstance(payload.get("title"), str)
+                    else (
+                        payload["name"]
+                        if isinstance(payload.get("name"), str)
+                        else None
+                    )
+                ),
+                url=payload.get("url") if isinstance(payload.get("url"), str) else None,
                 metadata=payload,
                 score=score_value,
                 raw_score=float(match.raw_score or score_value),
@@ -370,19 +378,11 @@ class SearchOrchestrator(BaseService):
         request: SearchRequest,
         collection: str,
     ) -> dict[str, Any] | None:
-        """Generate a RAG answer using the search results.
+        """Generate a RAG answer using the LangGraph pipeline."""
 
-        Args:
-            query: The search query.
-            records: Search records to use as context.
-            request: Original search request with RAG parameters.
-            collection: Collection identifier used for retrieval.
-
-        Returns:
-            Dictionary containing answer, confidence, and sources, or None if RAG fails.
-        """
         if self._rag_config is None:
             return None
+
         rag_config = ServiceRAGConfig(
             model=self._rag_config.model,
             temperature=self._rag_config.temperature,
@@ -390,35 +390,91 @@ class SearchOrchestrator(BaseService):
             retriever_top_k=request.rag_top_k or self._rag_config.retriever_top_k,
             include_sources=self._rag_config.include_sources,
             confidence_from_scores=self._rag_config.confidence_from_scores,
+            compression_enabled=self._rag_config.compression_enabled,
+            compression_similarity_threshold=self._rag_config.compression_similarity_threshold,
+            compression_mmr_lambda=self._rag_config.compression_mmr_lambda,
+            compression_token_ratio=self._rag_config.compression_token_ratio,
+            compression_absolute_max_tokens=self._rag_config.compression_absolute_max_tokens,
+            compression_min_sentences=self._rag_config.compression_min_sentences,
+            compression_max_sentences=self._rag_config.compression_max_sentences,
         )
-        retriever = VectorServiceRetriever(
-            vector_service=self._vector_store_service,
-            collection=collection,
-            k=rag_config.retriever_top_k,
-            rag_config=rag_config,
-        )
-        rag_generator = RAGGenerator(rag_config, retriever)
-        await rag_generator.initialize()
-        rag_request = RAGRequest(
-            query=query,
-            top_k=rag_config.retriever_top_k,
-            filters=request.filters,
-            max_tokens=rag_config.max_tokens,
-            temperature=rag_config.temperature,
-            include_sources=rag_config.include_sources,
-        )
+
+        if self._rag_pipeline is None:
+            self._rag_pipeline = LangGraphRAGPipeline(self._vector_store_service)
+
         try:
-            rag_result: RAGResult = await rag_generator.generate_answer(rag_request)
+            return await self._rag_pipeline.run(
+                query=query,
+                request=request,
+                rag_config=rag_config,
+                collection=collection,
+                prefetched_records=records,
+            )
         except Exception:  # pragma: no cover - defensive
-            logger.exception("RAG generation failed")
+            logger.exception("LangGraph RAG pipeline failed")
             return None
-        finally:
-            await rag_generator.cleanup()
-        return {
-            "answer": rag_result.answer,
-            "confidence": rag_result.confidence_score,
-            "sources": [source.model_dump() for source in rag_result.sources],
-        }
+
+
+def _split_terms(query: str) -> list[str]:
+    return re.findall(r"[A-Za-z0-9_]+", query.lower())
+
+
+def _expand_query_terms(query: str, *, max_terms: int) -> str | None:
+    seen: set[str] = set()
+    expansions: list[str] = []
+
+    for term in _split_terms(query):
+        if term in seen:
+            continue
+        seen.add(term)
+        expansions.append(term)
+
+        for variant in (f"{term}s", f"{term}ing"):
+            if variant not in seen:
+                seen.add(variant)
+                expansions.append(variant)
+
+        for synonym in _DEFAULT_SYNONYMS.get(term, ()):  # type: ignore[arg-type]
+            if synonym not in seen:
+                seen.add(synonym)
+                expansions.append(synonym)
+
+        if len(expansions) >= max_terms:
+            break
+
+    if len(expansions) <= 1:
+        return None
+    additional = " OR ".join(expansions[1:])
+    return f"{query} ({additional})" if additional else None
+
+
+def _apply_preferences(
+    base_scores: list[float],
+    metadata: list[dict[str, Any]],
+    preferences: Mapping[str, float],
+) -> list[float]:
+    mapping = {key.lower(): float(value) for key, value in preferences.items()}
+    adjusted: list[float] = []
+    for score, meta in zip(base_scores, metadata, strict=False):
+        boost = 0.0
+        categories = meta.get("categories") if isinstance(meta, dict) else None
+        if isinstance(categories, list):
+            for category in categories:
+                if isinstance(category, str):
+                    boost += mapping.get(category.lower(), 0.0)
+        adjusted.append(score + 0.1 * boost)
+    return adjusted
+
+
+def _normalize_scores(scores: list[float]) -> list[float]:
+    if not scores:
+        return []
+    minimum = min(scores)
+    maximum = max(scores)
+    if minimum == maximum:
+        return [1.0 for _ in scores]
+    span = maximum - minimum
+    return [(score - minimum) / span for score in scores]
 
 
 __all__ = ["SearchOrchestrator", "SearchRequest", "SearchResponse"]

@@ -1,467 +1,229 @@
-"""Unit tests for :class:`VectorStoreService`."""
+"""Unit tests for the LangChain-backed VectorStoreService."""
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import AsyncIterator
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from langchain_core.documents import Document
 
-from src.services.errors import EmbeddingServiceError
-from src.services.vector_db.adapter import QdrantVectorAdapter
-from src.services.vector_db.adapter_base import (
-    VectorMatch,
-    VectorRecord,
-)
 from src.services.vector_db.service import VectorStoreService
-from tests.unit.services.vector_db.conftest import initialize_vector_store_service
+from src.services.vector_db.types import CollectionSchema, TextDocument, VectorRecord
+from tests.unit.services.vector_db.conftest import (
+    ClientManagerStub,
+    EmbeddingProviderStub,
+    build_vector_store_service,
+)
 
 
-@pytest.mark.asyncio
-async def test_initialize_creates_adapter(
-    embeddings_provider_stub,
-    client_manager_stub,
-    qdrant_client_mock,
-    config_stub,
-) -> None:
-    """Service initialize should construct the adapter once and mark state."""
+class StubVectorStore:
+    """Minimal stand-in for LangChain's QdrantVectorStore."""
 
-    client_manager_stub._qdrant_client = qdrant_client_mock
-    service = await initialize_vector_store_service(
-        config_stub,
-        client_manager_stub,
-        embeddings_provider_stub,
+    def __init__(self, *, collection_name: str, **_: object) -> None:  # noqa: D401
+        self.collection_name = collection_name
+        self.add_calls: list[tuple[list[str], list[dict[str, object]], list[str]]] = []
+        self.search_return: list[tuple[Document, float]] = []
+
+    def add_texts(
+        self,
+        *,
+        texts: list[str],
+        metadatas: list[dict[str, object]],
+        ids: list[str],
+    ) -> None:
+        self.add_calls.append((texts, metadatas, ids))
+
+    def similarity_search_with_score_by_vector(
+        self,
+        *,
+        vector: list[float],
+        k: int,
+        vector_filter: object | None = None,
+    ) -> list[tuple[Document, float]]:
+        _ = (vector, k, vector_filter)
+        return self.search_return or [
+            (
+                Document(page_content="stub", metadata={"doc_id": "doc-1"}),
+                0.42,
+            )
+        ]
+
+
+@pytest.fixture
+async def initialized_service(
+    monkeypatch: pytest.MonkeyPatch,
+) -> AsyncIterator[VectorStoreService]:
+    """Provide an initialized VectorStoreService with stubbed dependencies."""
+
+    embeddings = EmbeddingProviderStub(dimension=3)
+
+    async_client = AsyncMock()
+    async_client.collection_exists.return_value = True
+    async_client.upsert.return_value = None
+    async_client.collection_exists.return_value = True
+    client_manager = ClientManagerStub(async_client)
+
+    stub_store = StubVectorStore(collection_name="documents")
+    monkeypatch.setattr(
+        "src.services.vector_db.service.QdrantVectorStore",
+        lambda **kwargs: stub_store,
+    )
+    monkeypatch.setattr(
+        "src.services.vector_db.service.VectorStoreService._build_sync_client",
+        lambda self, cfg: MagicMock(),
+    )
+    monkeypatch.setattr(
+        "src.services.vector_db.service.get_metrics_registry",
+        lambda: SimpleNamespace(record_grouping_attempt=lambda *args, **kwargs: None),
     )
 
-    assert isinstance(service._require_adapter(), QdrantVectorAdapter)
-    assert client_manager_stub.initialize_calls == 1
-    assert embeddings_provider_stub.initialized is True
-
-
-@pytest.mark.asyncio
-async def test_initialize_is_idempotent(
-    embeddings_provider_stub,
-    client_manager_stub,
-    qdrant_client_mock,
-    config_stub,
-) -> None:
-    """Double initialization should not re-invoke dependencies."""
-
-    client_manager_stub._qdrant_client = qdrant_client_mock
-    service = await initialize_vector_store_service(
-        config_stub,
-        client_manager_stub,
-        embeddings_provider_stub,
+    config = SimpleNamespace(
+        fastembed=SimpleNamespace(model="stub"),
+        qdrant=SimpleNamespace(
+            url="http://localhost:6333",
+            api_key=None,
+            timeout=1.0,
+            prefer_grpc=False,
+            use_grpc=False,
+            grpc_port=6334,
+            collection_name="documents",
+            enable_grouping=False,
+        ),
+        query_processing=SimpleNamespace(
+            enable_score_normalization=False,
+            score_normalization_strategy=None,
+            score_normalization_epsilon=1e-6,
+        ),
     )
+
+    service = build_vector_store_service(config, client_manager, embeddings)
     await service.initialize()
-
-    assert client_manager_stub.initialize_calls == 1
-
-
-@pytest.mark.asyncio
-async def test_cleanup_resets_state(
-    embeddings_provider_stub,
-    client_manager_stub,
-    qdrant_client_mock,
-    config_stub,
-) -> None:
-    """Cleanup should release adapter and embeddings provider."""
-
-    client_manager_stub._qdrant_client = qdrant_client_mock
-    service = await initialize_vector_store_service(
-        config_stub,
-        client_manager_stub,
-        embeddings_provider_stub,
-    )
-    await service.cleanup()
-
-    assert embeddings_provider_stub.cleaned_up is True
-    with pytest.raises(EmbeddingServiceError, match="not initialized"):
-        service._require_adapter()
+    try:
+        yield service
+    finally:
+        await service.cleanup()
 
 
 @pytest.mark.asyncio
-async def test_add_document_upserts_vector(
-    initialized_vector_store_service,
-    embeddings_provider_stub,
+async def test_initialize_sets_vector_store(
+    initialized_service: VectorStoreService,
 ) -> None:
-    """Adding a document should upsert a VectorRecord via the adapter."""
+    """Vector store should be initialised once with configured collection name."""
 
-    service: VectorStoreService = initialized_vector_store_service
-    adapter_mock = AsyncMock(spec=QdrantVectorAdapter)
-    service._adapter = adapter_mock
-
-    document_id = await service.add_document(
-        "docs",
-        "example text",
-        metadata={"topic": "testing"},
-    )
-
-    adapter_mock.upsert.assert_awaited_once()
-    args, kwargs = adapter_mock.upsert.call_args
-    assert args[0] == "docs"
-    records: Sequence[VectorRecord] = args[1]
-    assert len(records) == 1
-    record = records[0]
-    assert len(record.id) == 32
-    payload = record.payload or {}
-    assert payload["doc_id"] == document_id
-    assert payload["topic"] == "testing"
-    assert payload["chunk_id"] == 0
-    assert payload["tenant"] == "default"
-    assert payload["source"] == "inline"
-    assert "content_hash" in payload
-    assert "created_at" in payload
-    assert kwargs["batch_size"] is None
+    service = initialized_service
+    assert service.is_initialized()
+    assert service.embedding_dimension == 3
 
 
 @pytest.mark.asyncio
-async def test_upsert_documents_handles_batch_size(
-    initialized_vector_store_service,
-    embeddings_provider_stub,
-    sample_documents,
+async def test_ensure_collection_creates_when_missing(
+    initialized_service: VectorStoreService,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Upsert should forward batch size and reuse embedding provider output."""
+    """ensure_collection should call the async client when collection missing."""
 
-    service: VectorStoreService = initialized_vector_store_service
-    adapter_mock = AsyncMock(spec=QdrantVectorAdapter)
-    service._adapter = adapter_mock
+    client = initialized_service._async_client
+    assert isinstance(client, AsyncMock)
+    client.collection_exists.return_value = False
 
-    await service.upsert_documents(
-        "docs",
-        sample_documents,
-        batch_size=64,
-    )
+    schema = CollectionSchema(name="new", vector_size=3)
+    await initialized_service.ensure_collection(schema)
 
-    adapter_mock.upsert.assert_awaited_once()
-    _, kwargs = adapter_mock.upsert.call_args
-    assert kwargs["batch_size"] == 64
+    client.create_collection.assert_awaited_once()
 
 
 @pytest.mark.asyncio
-async def test_upsert_documents_raises_on_embedding_failure(
-    embeddings_provider_stub,
-    client_manager_stub,
-    qdrant_client_mock,
-    sample_documents,
-    config_stub,
+async def test_upsert_documents_invokes_vector_store(
+    initialized_service: VectorStoreService,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Embedding failures should surface as EmbeddingServiceError."""
+    """Upserting documents should delegate to the LangChain vector store."""
 
-    async def _raise(_: Sequence[str]) -> list[list[float]]:
-        raise RuntimeError("boom")
+    store = initialized_service._vector_store
+    assert isinstance(store, StubVectorStore)
 
-    embeddings_provider_stub.generate_embeddings = _raise
-    client_manager_stub._qdrant_client = qdrant_client_mock
-    service = await initialize_vector_store_service(
-        config_stub,
-        client_manager_stub,
-        embeddings_provider_stub,
-    )
-    service._adapter = AsyncMock(spec=QdrantVectorAdapter)
+    async def _immediate(func, /, *args, **kwargs):
+        return func(*args, **kwargs)
 
-    with pytest.raises(EmbeddingServiceError, match="Failed to generate embeddings"):
-        await service.upsert_documents("docs", sample_documents)
+    monkeypatch.setattr("asyncio.to_thread", _immediate)
 
-
-@pytest.mark.asyncio
-async def test_get_document_returns_payload(
-    initialized_vector_store_service,
-) -> None:
-    """Fetching a document should unwrap payload and preserve id."""
-
-    service: VectorStoreService = initialized_vector_store_service
-    match = VectorMatch(id="doc-1", score=0.8, payload={"foo": "bar"})
-    adapter_mock = AsyncMock(spec=QdrantVectorAdapter)
-    adapter_mock.retrieve.return_value = [match]
-    service._adapter = adapter_mock
-
-    payload = await service.get_document("docs", "doc-1")
-
-    assert payload == {"foo": "bar", "id": "doc-1"}
-    adapter_mock.retrieve.assert_awaited_once_with(
-        "docs",
-        ["doc-1"],
-        with_payload=True,
-        with_vectors=False,
-    )
-
-
-@pytest.mark.asyncio
-async def test_list_documents_includes_ids(
-    initialized_vector_store_service,
-) -> None:
-    """list_documents should inject IDs into returned payloads."""
-
-    service: VectorStoreService = initialized_vector_store_service
-    matches = [
-        VectorMatch(id="doc-1", score=0.9, payload={"topic": "async"}),
-        VectorMatch(id="doc-2", score=0.7, payload={"topic": "sync"}),
-    ]
-    adapter_mock = AsyncMock(spec=QdrantVectorAdapter)
-    adapter_mock.scroll.return_value = (matches, "next")
-    service._adapter = adapter_mock
-
-    documents, cursor = await service.list_documents("docs", limit=2)
-
-    assert cursor == "next"
-    assert documents == [
-        {"topic": "async", "id": "doc-1"},
-        {"topic": "sync", "id": "doc-2"},
+    docs = [
+        TextDocument(id="doc-1", content="alpha", metadata={"tenant": "acme"}),
+        TextDocument(id="doc-2", content="beta", metadata={}),
     ]
 
+    await initialized_service.upsert_documents("documents", docs)
+
+    assert len(store.add_calls) == 1
+    texts, metadatas, ids = store.add_calls[0]
+    assert texts == ["alpha", "beta"]
+    assert ids[0] != ids[1]
+    assert metadatas[0]["tenant"] == "acme"
+    assert "created_at" in metadatas[0]
+
 
 @pytest.mark.asyncio
-async def test_hybrid_search_merges_embeddings(
-    initialized_vector_store_service,
-    embeddings_provider_stub,
+async def test_upsert_vectors_calls_qdrant_async_client(
+    initialized_service: VectorStoreService,
 ) -> None:
-    """Hybrid search should request embeddings and call adapter.hybrid_query."""
+    """upsert_vectors should prepare PointStruct payloads for Async client."""
 
-    service: VectorStoreService = initialized_vector_store_service
-    adapter_mock = AsyncMock(spec=QdrantVectorAdapter)
-    adapter_mock.hybrid_query.return_value = [
-        VectorMatch(id="doc-1", score=0.5, payload={}),
-    ]
-    service._adapter = adapter_mock
+    service = initialized_service
+    async_client = service._async_client
+    assert isinstance(async_client, AsyncMock)
 
-    results = await service.hybrid_search(
-        "docs",
-        "test query",
-        sparse_vector={1: 0.3},
+    await service.upsert_vectors(
+        "documents",
+        [
+            VectorRecord(
+                id="doc-1",
+                vector=[0.1, 0.2, 0.3],
+                payload={"foo": "bar"},
+            )
+        ],
+    )
+
+    async_client.upsert.assert_awaited_once()
+    _, kwargs = async_client.upsert.call_args
+    assert kwargs["collection_name"] == "documents"
+    points = list(kwargs["points"])
+    assert len(points) == 1
+    point = points[0]
+    assert point.payload["foo"] == "bar"
+
+
+@pytest.mark.asyncio
+async def test_search_documents_returns_vector_matches(
+    initialized_service: VectorStoreService,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """search_documents should normalise results from the vector store."""
+
+    store = initialized_service._vector_store
+    assert isinstance(store, StubVectorStore)
+
+    result_doc = Document(
+        page_content="alpha",
+        metadata={"doc_id": "doc-123", "topic": "testing"},
+    )
+    store.search_return = [(result_doc, 0.87)]
+
+    async def _immediate(func, /, *args, **kwargs):
+        return func(*args, **kwargs)
+
+    monkeypatch.setattr("asyncio.to_thread", _immediate)
+
+    matches = await initialized_service.search_documents(
+        "documents",
+        query="alpha",
         limit=5,
     )
 
-    assert len(results) == 1
-    adapter_mock.hybrid_query.assert_awaited_once()
-    _, kwargs = adapter_mock.hybrid_query.call_args
-    assert kwargs["limit"] == 5
-
-
-@pytest.mark.asyncio
-async def test_search_documents_returns_adapter_matches(
-    initialized_vector_store_service,
-) -> None:
-    """search_documents should embed the query and return adapter results."""
-
-    service: VectorStoreService = initialized_vector_store_service
-    adapter_mock = AsyncMock(spec=QdrantVectorAdapter)
-    adapter_mock.query.return_value = [
-        VectorMatch(id="x", score=0.42, payload={"title": "Doc"}),
-    ]
-    service._adapter = adapter_mock
-
-    matches = await service.search_documents("docs", "query", limit=3)
-
-    assert matches[0].id == "x"
-    adapter_mock.query.assert_awaited_once()
-    adapter_mock.query_groups.assert_not_called()
-
-
-@pytest.mark.asyncio
-async def test_search_vector_passthrough(
-    initialized_vector_store_service,
-) -> None:
-    """search_vector should forward dense vectors directly to adapter.query."""
-
-    service: VectorStoreService = initialized_vector_store_service
-    adapter_mock = AsyncMock(spec=QdrantVectorAdapter)
-    adapter_mock.query.return_value = []
-    service._adapter = adapter_mock
-
-    await service.search_vector("docs", [0.1, 0.2, 0.3], limit=2)
-
-    adapter_mock.query.assert_awaited_once_with(
-        "docs",
-        [0.1, 0.2, 0.3],
-        limit=2,
-        filters=None,
-    )
-    adapter_mock.query_groups.assert_not_called()
-
-
-@pytest.mark.asyncio
-async def test_search_documents_client_side_grouping_fallback(
-    client_manager_stub,
-    qdrant_client_mock,
-    embeddings_provider_stub,
-    config_stub,
-) -> None:
-    """Grouping disabled, service should group client-side and annotate metadata."""
-
-    client_manager_stub._qdrant_client = qdrant_client_mock
-    service = await initialize_vector_store_service(
-        config_stub,
-        client_manager_stub,
-        embeddings_provider_stub,
-    )
-    adapter_mock = AsyncMock(spec=QdrantVectorAdapter)
-    adapter_mock.query.return_value = [
-        VectorMatch(
-            id="chunk-1",
-            score=0.9,
-            raw_score=0.9,
-            payload={"doc_id": "doc-1", "content": "alpha"},
-        ),
-        VectorMatch(
-            id="chunk-2",
-            score=0.8,
-            raw_score=0.8,
-            payload={"doc_id": "doc-1", "content": "beta"},
-        ),
-        VectorMatch(
-            id="chunk-3",
-            score=0.5,
-            raw_score=0.5,
-            payload={"doc_id": "doc-2", "content": "gamma"},
-        ),
-    ]
-    service._adapter = adapter_mock
-
-    results = await service.search_documents(
-        collection="docs",
-        query="test",
-        limit=2,
-        group_by="doc_id",
-        group_size=1,
-        normalize_scores=False,
-    )
-
-    adapter_mock.query.assert_awaited_once()
-    assert len(results) == 2
-    first, second = results
-    assert first.payload["_grouping"]["applied"] is False
-    assert first.payload["_grouping"]["group_id"] == "doc-1"
-    assert first.payload["_grouping"]["rank"] == 1
-    assert second.payload["_grouping"]["group_id"] == "doc-2"
-    assert {match.id for match in results} == {"chunk-1", "chunk-3"}
-
-
-@pytest.mark.asyncio
-async def test_search_documents_normalizes_scores_when_enabled(
-    client_manager_stub,
-    qdrant_client_mock,
-    embeddings_provider_stub,
-    config_stub,
-) -> None:
-    """Score normalisation should populate normalized_score and update score."""
-
-    client_manager_stub._qdrant_client = qdrant_client_mock
-    config_stub.query_processing.enable_score_normalization = True  # type: ignore[attr-defined]
-    service = await initialize_vector_store_service(
-        config_stub,
-        client_manager_stub,
-        embeddings_provider_stub,
-    )
-    adapter_mock = AsyncMock(spec=QdrantVectorAdapter)
-    adapter_mock.query.return_value = [
-        VectorMatch(
-            id="chunk-1",
-            score=0.9,
-            raw_score=0.9,
-            payload={"doc_id": "doc-1", "content": "alpha"},
-        ),
-        VectorMatch(
-            id="chunk-2",
-            score=0.8,
-            raw_score=0.8,
-            payload={"doc_id": "doc-2", "content": "beta"},
-        ),
-    ]
-    service._adapter = adapter_mock
-
-    results = await service.search_documents(
-        collection="docs",
-        query="test",
-        limit=2,
-        normalize_scores=True,
-    )
-
-    assert [match.raw_score for match in results] == [0.9, 0.8]
-    assert [match.normalized_score for match in results] == [1.0, 0.0]
-    assert [match.score for match in results] == [1.0, 0.0]
-
-
-@pytest.mark.asyncio
-async def test_search_documents_uses_query_groups_when_supported(
-    initialized_vector_store_service,
-) -> None:
-    """Grouping should be used when enabled and supported by the adapter."""
-
-    service: VectorStoreService = initialized_vector_store_service
-    config = service.config
-    assert config is not None
-    config.qdrant.enable_grouping = True
-    config.qdrant.group_by_field = "doc_id"
-    adapter_mock = AsyncMock(spec=QdrantVectorAdapter)
-    adapter_mock.supports_query_groups.return_value = True
-    grouped_match = VectorMatch(
-        id="doc-1",
-        score=0.9,
-        payload={"_grouping": {"applied": True, "group_id": "doc-1"}},
-    )
-    adapter_mock.query_groups.return_value = ([grouped_match], True)
-    adapter_mock.get_collection_info.return_value = SimpleNamespace(
-        payload_schema={}, status="green", vectors_count=0, points_count=0
-    )
-    service._adapter = adapter_mock
-
-    matches = await service.search_documents("docs", "query", limit=1)
-
-    adapter_mock.query_groups.assert_awaited_once()
-    adapter_mock.query.assert_not_called()
-    assert matches == [grouped_match]
-
-
-@pytest.mark.asyncio
-async def test_delete_document_forwards_to_adapter(
-    initialized_vector_store_service,
-) -> None:
-    """Deleting a document should call adapter.delete with ids."""
-
-    service: VectorStoreService = initialized_vector_store_service
-    adapter_mock = AsyncMock(spec=QdrantVectorAdapter)
-    service._adapter = adapter_mock
-
-    deleted = await service.delete_document("docs", "doc-9")
-
-    assert deleted is True
-    adapter_mock.delete.assert_awaited_once_with("docs", ids=["doc-9"])
-
-
-@pytest.mark.asyncio
-async def test_ensure_collection_uses_adapter(
-    initialized_vector_store_service,
-    collection_schema,
-) -> None:
-    """ensure_collection delegates to the adapter."""
-
-    service: VectorStoreService = initialized_vector_store_service
-    adapter_mock = AsyncMock(spec=QdrantVectorAdapter)
-    service._adapter = adapter_mock
-
-    adapter_mock.collection_exists.return_value = False
-
-    await service.ensure_collection(collection_schema)
-
-    adapter_mock.collection_exists.assert_awaited_once_with(collection_schema.name)
-    adapter_mock.create_collection.assert_awaited_once_with(collection_schema)
-
-
-@pytest.mark.asyncio
-async def test_ensure_collection_noop_when_existing(
-    initialized_vector_store_service,
-    collection_schema,
-) -> None:
-    """ensure_collection returns early if the collection is present."""
-
-    service: VectorStoreService = initialized_vector_store_service
-    adapter_mock = AsyncMock(spec=QdrantVectorAdapter)
-    adapter_mock.collection_exists.return_value = True
-    service._adapter = adapter_mock
-
-    await service.ensure_collection(collection_schema)
-
-    adapter_mock.collection_exists.assert_awaited_once_with(collection_schema.name)
-    adapter_mock.create_collection.assert_not_awaited()
+    assert len(matches) == 1
+    match = matches[0]
+    assert match.id == "doc-123"
+    assert match.payload is not None
+    assert match.payload["topic"] == "testing"
+    assert pytest.approx(match.score) == 0.87

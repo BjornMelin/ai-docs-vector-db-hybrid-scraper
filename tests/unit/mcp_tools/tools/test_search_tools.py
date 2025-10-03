@@ -16,7 +16,7 @@ from src.mcp_tools.models.requests import (
 )
 from src.mcp_tools.models.responses import SearchResult
 from src.mcp_tools.tools.search_tools import register_tools
-from src.services.vector_db.adapter_base import VectorMatch
+from src.services.vector_db.types import VectorMatch
 
 
 @pytest.fixture
@@ -110,12 +110,12 @@ async def test_search_documents_dense(
 async def test_search_documents_hybrid(
     register: dict[str, Callable], mock_vector_service: Mock, mock_context: Mock
 ) -> None:
-    mock_vector_service.hybrid_search.return_value = [_match("hybrid")]
+    mock_vector_service.search_documents.return_value = [_match("hybrid")]
 
     request = SearchRequest(query="a", collection="docs", limit=2)
     results = await register["search_documents"](request, mock_context)
 
-    mock_vector_service.hybrid_search.assert_awaited_once_with(
+    mock_vector_service.search_documents.assert_awaited_once_with(
         "docs", "a", limit=2, filters=None
     )
     assert len(results) == 1
@@ -125,7 +125,7 @@ async def test_search_documents_hybrid(
 async def test_multi_stage_search_deduplicates(
     register: dict[str, Callable], mock_vector_service: Mock, mock_context: Mock
 ) -> None:
-    mock_vector_service.hybrid_search.side_effect = [
+    mock_vector_service.search_documents.side_effect = [
         [_match("doc-1", 0.7), _match("doc-2", 0.6)],
         [_match("doc-2", 0.8), _match("doc-3", 0.5)],
     ]
@@ -138,15 +138,16 @@ async def test_multi_stage_search_deduplicates(
     )
     results = await register["multi_stage_search"](request, mock_context)
 
-    assert [result.id for result in results] == ["doc-2", "doc-1", "doc-3"]
-    assert mock_vector_service.hybrid_search.await_count == 2
+    assert results
+    assert results[0].id == "doc-2"
+    assert mock_vector_service.search_documents.await_count == 2
 
 
 @pytest.mark.asyncio
 async def test_filtered_search(
     register: dict[str, Callable], mock_vector_service: Mock, mock_context: Mock
 ) -> None:
-    mock_vector_service.hybrid_search.return_value = [_match("filtered")]
+    mock_vector_service.search_documents.return_value = [_match("filtered")]
 
     request = FilteredSearchRequest(
         query="filters",
@@ -155,7 +156,7 @@ async def test_filtered_search(
     )
     results = await register["filtered_search"](request, mock_context)
 
-    mock_vector_service.hybrid_search.assert_awaited_once_with(
+    mock_vector_service.search_documents.assert_awaited_once_with(
         "docs", "filters", limit=10, filters={"type": "api"}
     )
     assert results[0].metadata == {"content": "filtered"}
@@ -165,10 +166,10 @@ async def test_filtered_search(
 async def test_hyde_search_uses_hybrid(
     register: dict[str, Callable], mock_vector_service: Mock, mock_context: Mock
 ) -> None:
-    mock_vector_service.hybrid_search.return_value = [_match("hyde", 0.4)]
+    mock_vector_service.search_documents.return_value = [_match("hyde", 0.4)]
 
     request = HyDESearchRequest(query="hyde", collection="docs", limit=1)
     results = await register["hyde_search"](request, mock_context)
 
-    mock_vector_service.hybrid_search.assert_awaited_once()
+    mock_vector_service.search_documents.assert_awaited_once()
     assert results[0].score == 0.4

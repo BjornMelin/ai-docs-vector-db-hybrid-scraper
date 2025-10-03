@@ -15,11 +15,12 @@ def vector_service() -> Mock:
     service = Mock()
     service.is_initialized.return_value = True
     service.ensure_collection = AsyncMock()
+    service.drop_collection = AsyncMock()
     service.collection_stats = AsyncMock(return_value={"points_count": 3})
     service.list_documents = AsyncMock(return_value=([{"id": "1"}], None))
     service.list_collections = AsyncMock(return_value=["workspace_docs", "other"])
     service.delete = AsyncMock()
-    service.clear_collection = AsyncMock()
+    service.embedding_dimension = 1536
     return service
 
 
@@ -111,8 +112,10 @@ async def test_manage_lifecycle_optimize_resets_collection(
 ) -> None:
     response = await tools["manage_document_lifecycle"]("docs", "optimize", ctx=context)
 
-    vector_service.clear_collection.assert_awaited_once_with("docs")
+    vector_service.drop_collection.assert_awaited_once_with("docs")
+    vector_service.ensure_collection.assert_awaited()
     assert response["status"] == "recreated"
+    assert response["vector_size"] == 1536
 
 
 @pytest.mark.asyncio

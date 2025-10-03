@@ -1,5 +1,7 @@
 """Project management MCP tools backed by the consolidated vector service."""
 
+# pylint: disable=too-many-statements  # tool registration defines closures to reuse the shared client manager.
+
 from __future__ import annotations
 
 import logging
@@ -13,8 +15,8 @@ from src.config import SearchStrategy
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.models.requests import ProjectRequest
 from src.mcp_tools.models.responses import OperationStatus, ProjectInfo, SearchResult
-from src.services.vector_db.adapter_base import CollectionSchema, VectorMatch
-from src.services.vector_db.service import VectorStoreService
+from src.mcp_tools.tools._shared import ensure_vector_service, match_to_result
+from src.services.vector_db.types import CollectionSchema
 
 
 logger = logging.getLogger(__name__)
@@ -26,13 +28,6 @@ _TIER_VECTOR_SIZE = {
 }
 
 
-async def _get_vector_service(client_manager: ClientManager) -> VectorStoreService:
-    service = await client_manager.get_vector_store_service()
-    if not service.is_initialized():
-        await service.initialize()
-    return service
-
-
 def _timestamp() -> str:
     return datetime.now(tz=UTC).isoformat()
 
@@ -40,18 +35,6 @@ def _timestamp() -> str:
 def _collection_schema(collection: str, tier: str) -> CollectionSchema:
     vector_size = _TIER_VECTOR_SIZE.get(tier, _TIER_VECTOR_SIZE["balanced"])
     return CollectionSchema(name=collection, vector_size=vector_size, distance="cosine")
-
-
-def _match_to_result(match: VectorMatch) -> SearchResult:
-    payload = dict(match.payload or {})
-    return SearchResult(
-        id=match.id,
-        content=str(payload.get("content", "")),
-        score=float(match.score),
-        url=payload.get("url"),
-        title=payload.get("title"),
-        metadata=payload or None,
-    )
 
 
 def register_tools(mcp, client_manager: ClientManager) -> None:
@@ -64,7 +47,7 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
         """Create a new project with a dedicated vector collection."""
 
         project_storage = await client_manager.get_project_storage()  # type: ignore[attr-defined]
-        vector_service = await _get_vector_service(client_manager)
+        vector_service = await ensure_vector_service(client_manager)
 
         project_id = str(uuid4())
         collection_name = f"project_{project_id}"
@@ -94,7 +77,7 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
         """Return all projects with lightweight collection statistics."""
 
         project_storage = await client_manager.get_project_storage()  # type: ignore[attr-defined]
-        vector_service = await _get_vector_service(client_manager)
+        vector_service = await ensure_vector_service(client_manager)
 
         projects = await project_storage.list_projects()
         enriched: list[ProjectInfo] = []
@@ -164,7 +147,7 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
 
         collection_name = project.get("collection")
         if delete_collection and collection_name:
-            vector_service = await _get_vector_service(client_manager)
+            vector_service = await ensure_vector_service(client_manager)
             await vector_service.drop_collection(collection_name)
             if ctx:
                 message = (
@@ -203,15 +186,16 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
             msg = f"Project {project_id} is missing a collection reference"
             raise ValueError(msg)
 
-        vector_service = await _get_vector_service(client_manager)
-        if strategy == SearchStrategy.DENSE:
-            matches = await vector_service.search_documents(
-                collection, query, limit=limit
-            )
-        else:
-            matches = await vector_service.hybrid_search(collection, query, limit=limit)
+        vector_service = await ensure_vector_service(client_manager)
+        matches = await vector_service.search_documents(
+            collection,
+            query,
+            limit=limit,
+        )
 
-        results = [_match_to_result(match) for match in matches[:limit]]
+        results = [
+            match_to_result(match, include_metadata=True) for match in matches[:limit]
+        ]
         if ctx:
             summary = (
                 f"Project search returned {len(results)} results for project "
