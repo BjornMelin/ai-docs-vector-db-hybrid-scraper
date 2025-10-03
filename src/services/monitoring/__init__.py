@@ -12,11 +12,13 @@ from .health import HealthCheckManager
 from .initialization import initialize_monitoring_system, setup_fastmcp_monitoring
 from .metrics import MetricsRegistry
 from .middleware import PrometheusMiddleware
+from .telemetry_repository import get_telemetry_repository
 
 
 __all__ = [
     "HealthCheckManager",
     "MetricsRegistry",
+    "get_telemetry_repository",
     "PrometheusMiddleware",
     "initialize_monitoring_system",
     "setup_fastmcp_monitoring",

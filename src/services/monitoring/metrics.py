@@ -4,6 +4,8 @@ This module provides a comprehensive metrics collection system using Prometheus
 with support for vector search, embeddings, cache, and ML model performance monitoring.
 """
 
+# pylint: disable=too-many-lines,too-many-public-methods,too-many-arguments
+
 import asyncio
 import functools
 import logging
@@ -167,7 +169,7 @@ class MetricsRegistry:
             registry=self.registry,
         )
 
-        self._metrics["rag_generation_tokens"] = Counter(
+        self._metrics["rag_generation_tokens_total"] = Counter(
             f"{namespace}_rag_generation_tokens_total",
             "Token usage observed during RAG generation grouped by type",
             ["model", "token_type"],
@@ -185,6 +187,28 @@ class MetricsRegistry:
             f"{namespace}_compression_documents_total",
             "Number of documents processed by contextual compression",
             ["collection", "status"],
+            registry=self.registry,
+        )
+
+        self._metrics["rag_stage_latency_seconds"] = Histogram(
+            f"{namespace}_rag_stage_latency_seconds",
+            "Latency observed for each stage within the RAG pipeline",
+            ["collection", "stage"],
+            buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0),
+            registry=self.registry,
+        )
+
+        self._metrics["rag_answers_total"] = Counter(
+            f"{namespace}_rag_answers_total",
+            "RAG answer outcomes partitioned by status",
+            ["collection", "status"],
+            registry=self.registry,
+        )
+
+        self._metrics["rag_errors_total"] = Counter(
+            f"{namespace}_rag_errors_total",
+            "RAG pipeline errors grouped by stage and type",
+            ["collection", "stage", "error_type"],
             registry=self.registry,
         )
 
@@ -304,6 +328,13 @@ class MetricsRegistry:
             "Browser automation response times",
             ["tier"],
             buckets=(0.5, 1.0, 2.0, 5.0, 10.0, 30.0, 60.0),
+            registry=self.registry,
+        )
+
+        self._metrics["browser_challenges"] = Counter(
+            f"{namespace}_browser_challenges_total",
+            "Bot-detection challenges observed by tier/runtime",
+            ["tier", "runtime", "outcome"],
             registry=self.registry,
         )
 
@@ -665,9 +696,38 @@ class MetricsRegistry:
             ):
                 if value is None:
                     continue
-                self._metrics["rag_generation_tokens"].labels(
+                self._metrics["rag_generation_tokens_total"].labels(
                     model=model, token_type=token_type
                 ).inc(max(float(value), 0.0))
+
+    def record_rag_stage_latency(
+        self, collection: str, stage: str, duration_seconds: float
+    ) -> None:
+        """Record latency for an individual RAG stage."""
+
+        if not self.config.enabled:
+            return
+        self._metrics["rag_stage_latency_seconds"].labels(
+            collection=collection, stage=stage
+        ).observe(max(duration_seconds, 0.0))
+
+    def record_rag_answer(self, collection: str, status: str) -> None:
+        """Record RAG answer outcome status."""
+
+        if not self.config.enabled:
+            return
+        self._metrics["rag_answers_total"].labels(
+            collection=collection, status=status
+        ).inc()
+
+    def record_rag_error(self, collection: str, stage: str, error_type: str) -> None:
+        """Record a RAG pipeline error at a given stage."""
+
+        if not self.config.enabled:
+            return
+        self._metrics["rag_errors_total"].labels(
+            collection=collection, stage=stage, error_type=error_type
+        ).inc()
 
     def record_compression_stats(self, collection: str, stats: Any) -> None:
         """Record deterministic compression statistics."""
@@ -754,13 +814,9 @@ class MetricsRegistry:
 
         """
         if result is not None:
-            self._metrics["cache_hits"].labels(
-                cache_type=cache_type, cache_name=cache_name
-            ).inc()
+            self.record_cache_hit(cache_name, cache_type)
         else:
-            self._metrics["cache_misses"].labels(
-                cache_type=cache_type, cache_name=cache_name
-            ).inc()
+            self.record_cache_miss(cache_type)
 
     def _record_cache_miss(self, cache_type: str, cache_name: str) -> None:
         """Record cache miss.
@@ -770,9 +826,7 @@ class MetricsRegistry:
             cache_name: Name of cache
 
         """
-        self._metrics["cache_misses"].labels(
-            cache_type=cache_type, cache_name=cache_name
-        ).inc()
+        self.record_cache_miss(cache_type)
 
     def _record_cache_operation_success(self, cache_type: str, operation: str) -> None:
         """Record successful cache operation.
@@ -975,7 +1029,13 @@ class MetricsRegistry:
         self._metrics["worker_active"].labels(queue=queue).set(count)
 
     def record_browser_request(
-        self, tier: str, duration_seconds: float, success: bool
+        self,
+        tier: str,
+        duration_seconds: float,
+        success: bool,
+        *,
+        runtime: str | None = None,
+        challenge: str | None = None,
     ) -> None:
         """Record browser automation request metrics.
 
@@ -989,6 +1049,11 @@ class MetricsRegistry:
         self._metrics["browser_response_time"].labels(tier=tier).observe(
             duration_seconds
         )
+        if challenge:
+            runtime_label = runtime or "unknown"
+            self._metrics["browser_challenges"].labels(
+                tier=tier, runtime=runtime_label, outcome=challenge
+            ).inc()
 
     def update_browser_tier_health(self, tier: str, healthy: bool) -> None:
         """Update browser tier health status.
@@ -1058,3 +1123,9 @@ def initialize_metrics(config: MetricsConfig) -> MetricsRegistry:
         Initialized MetricsRegistry instance
     """
     return _MetricsRegistrySingleton.initialize_instance(config)
+
+
+def set_metrics_registry(instance: MetricsRegistry) -> None:
+    """Force the global metrics registry singleton to the provided instance."""
+
+    _MetricsRegistrySingleton._instance = instance

@@ -7,7 +7,7 @@ import pytest
 from prometheus_client.registry import CollectorRegistry
 
 from src.services.monitoring.metrics import MetricsConfig, MetricsRegistry
-from src.services.query_processing.rag.compression import CompressionStats
+from src.services.rag.retriever import CompressionStats
 
 
 class TestMetricsConfig:
@@ -193,8 +193,18 @@ class TestMetricsRegistry:
 
     def test_browser_metrics(self, registry):
         """Test browser automation metrics."""
-        registry.record_browser_request("premium", duration_seconds=1.2, success=True)
+        registry.record_browser_request(
+            "premium", duration_seconds=1.2, success=True, runtime="baseline"
+        )
+        registry.record_browser_request(
+            "premium",
+            duration_seconds=1.5,
+            success=False,
+            runtime="undetected",
+            challenge="detected",
+        )
         registry.update_browser_tier_health("basic", healthy=True)
 
         assert "browser_response_time" in registry._metrics
         assert "browser_tier_health" in registry._metrics
+        assert "browser_challenges" in registry._metrics
