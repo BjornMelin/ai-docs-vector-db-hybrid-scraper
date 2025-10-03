@@ -159,6 +159,28 @@ class MetricsRegistry:
             registry=self.registry,
         )
 
+        self._metrics["rag_generation_latency"] = Histogram(
+            f"{namespace}_rag_generation_latency_seconds",
+            "Latency of retrieval-augmented generations in seconds",
+            ["collection", "model"],
+            buckets=(0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 20.0),
+            registry=self.registry,
+        )
+
+        self._metrics["rag_generation_tokens"] = Counter(
+            f"{namespace}_rag_generation_tokens_total",
+            "Token usage observed during RAG generation grouped by type",
+            ["model", "token_type"],
+            registry=self.registry,
+        )
+
+        self._metrics["rag_generation_confidence"] = Histogram(
+            f"{namespace}_rag_generation_confidence",
+            "Confidence heuristics emitted by the RAG pipeline",
+            ["collection"],
+            buckets=(0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0),
+            registry=self.registry,
+        )
         self._metrics["compression_documents"] = Counter(
             f"{namespace}_compression_documents_total",
             "Number of documents processed by contextual compression",
@@ -609,6 +631,43 @@ class MetricsRegistry:
             self._metrics["grouping_latency"].labels(collection=collection).observe(
                 duration_seconds
             )
+
+    def record_rag_generation_stats(
+        self,
+        *,
+        collection: str,
+        model: str,
+        latency_ms: float,
+        token_metrics: Any | None,
+        confidence: float | None,
+    ) -> None:
+        """Record latency, token usage, and confidence for RAG operations."""
+
+        if not self.config.enabled:
+            return
+
+        latency_seconds = max(latency_ms / 1000.0, 0.0)
+        self._metrics["rag_generation_latency"].labels(
+            collection=collection, model=model
+        ).observe(latency_seconds)
+
+        if confidence is not None:
+            clamped = max(0.0, min(confidence, 1.0))
+            self._metrics["rag_generation_confidence"].labels(
+                collection=collection
+            ).observe(clamped)
+
+        if token_metrics is not None:
+            for token_type, value in (
+                ("prompt", getattr(token_metrics, "prompt_tokens", None)),
+                ("completion", getattr(token_metrics, "completion_tokens", None)),
+                ("total", getattr(token_metrics, "total_tokens", None)),
+            ):
+                if value is None:
+                    continue
+                self._metrics["rag_generation_tokens"].labels(
+                    model=model, token_type=token_type
+                ).inc(max(float(value), 0.0))
 
     def record_compression_stats(self, collection: str, stats: Any) -> None:
         """Record deterministic compression statistics."""

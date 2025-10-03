@@ -1,6 +1,7 @@
 """Retrieval-Augmented Generation (RAG) services."""
 
 from .generator import RAGGenerator
+from .langgraph_pipeline import LangGraphRAGPipeline
 from .models import (
     AnswerMetrics,
     RAGConfig,
@@ -14,6 +15,7 @@ from .utils import build_default_rag_config, initialise_rag_generator
 
 
 __all__ = [
+    "LangGraphRAGPipeline",
     "AnswerMetrics",
     "RAGConfig",
     "RAGGenerator",
