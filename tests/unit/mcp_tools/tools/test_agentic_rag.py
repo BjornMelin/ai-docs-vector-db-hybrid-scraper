@@ -37,12 +37,12 @@ graph_module = _load_module(
 MODULE_PATH = ROOT / "src/mcp_tools/tools/agentic_rag.py"
 spec = importlib.util.spec_from_file_location("agentic_rag_under_test", MODULE_PATH)
 assert spec and spec.loader
-agentic_rag = importlib.util.module_from_spec(spec)
+agentic_rag: Any = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = agentic_rag
 spec.loader.exec_module(agentic_rag)  # type: ignore[arg-type]
 
 if not hasattr(agentic_rag, "telemetry"):
-    setattr(agentic_rag, "telemetry", types.SimpleNamespace(reset=lambda: None))
+    agentic_rag.telemetry = types.SimpleNamespace(reset=lambda: None)
 
 GraphAnalysisOutcome = cast(Any, graph_module.GraphAnalysisOutcome)
 GraphSearchOutcome = cast(Any, graph_module.GraphSearchOutcome)

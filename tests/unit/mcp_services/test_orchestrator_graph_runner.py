@@ -8,7 +8,7 @@ import importlib.util
 import sys
 import types
 from pathlib import Path
-from typing import Any, Dict, cast
+from typing import Any, cast
 
 import pytest
 
@@ -57,7 +57,7 @@ class _ToolsModule(types.ModuleType):
 
 tools_stub = _ToolsModule("src.mcp_tools.tools")
 sys.modules["src.mcp_tools.tools"] = tools_stub
-services_pkg = types.ModuleType("src.mcp_services")
+services_pkg: Any = types.ModuleType("src.mcp_services")
 services_pkg.__path__ = []  # type: ignore[attr-defined]
 sys.modules["src.mcp_services"] = services_pkg
 analytics_module = _load_module(
@@ -76,11 +76,11 @@ system_module = _load_module(
     "src.mcp_services.system_service",
     "src/mcp_services/system_service.py",
 )
-setattr(services_pkg, "analytics_service", analytics_module)
-setattr(services_pkg, "document_service", document_module)
-setattr(services_pkg, "search_service", search_module)
-setattr(services_pkg, "system_service", system_module)
-orchestrator_module = _load_module(
+services_pkg.analytics_service = analytics_module
+services_pkg.document_service = document_module
+services_pkg.search_service = search_module
+services_pkg.system_service = system_module
+orchestrator_module: Any = _load_module(
     "src.mcp_services.orchestrator_service",
     "src/mcp_services/orchestrator_service.py",
 )
@@ -94,8 +94,8 @@ class DummyClientManager:
         raise AssertionError("get_mcp_client should not be called")
 
 
-def _install_agentic_stubs() -> Dict[str, Any]:
-    created: Dict[str, Any] = {"originals": {}}
+def _install_agentic_stubs() -> dict[str, Any]:
+    created: dict[str, Any] = {"originals": {}}
 
     class DiscoveryStub:
         def __init__(self, client_manager, **_kwargs) -> None:
@@ -124,15 +124,15 @@ def _install_agentic_stubs() -> Dict[str, Any]:
         async def run_search(self, **_kwargs):  # pragma: no cover - set later
             raise AssertionError("run_search not configured")
 
-    originals = cast(Dict[str, Any], created["originals"])
+    originals = cast(dict[str, Any], created["originals"])
     originals["DynamicToolDiscovery"] = orchestrator_module.DynamicToolDiscovery
     originals["ToolExecutionService"] = orchestrator_module.ToolExecutionService
     originals["RetrievalHelper"] = orchestrator_module.RetrievalHelper
     originals["GraphRunner"] = orchestrator_module.GraphRunner
-    setattr(orchestrator_module, "DynamicToolDiscovery", DiscoveryStub)
-    setattr(orchestrator_module, "ToolExecutionService", ToolServiceStub)
-    setattr(orchestrator_module, "RetrievalHelper", RetrievalStub)
-    setattr(orchestrator_module, "GraphRunner", GraphRunnerStub)
+    orchestrator_module.DynamicToolDiscovery = DiscoveryStub
+    orchestrator_module.ToolExecutionService = ToolServiceStub
+    orchestrator_module.RetrievalHelper = RetrievalStub
+    orchestrator_module.GraphRunner = GraphRunnerStub
     return created
 
 
@@ -152,7 +152,7 @@ async def test_initialize_agentic_components_builds_graph_runner():
         assert created["graph_kwargs"]["run_timeout_seconds"] == 30.0
         assert created["discovery_instance"].refresh_calls == [True]
     finally:
-        originals = cast(Dict[str, Any], created["originals"])
+        originals = cast(dict[str, Any], created["originals"])
         for attr, original in originals.items():
             setattr(orchestrator_module, attr, original)
 
@@ -186,7 +186,7 @@ async def test_orchestrate_multi_service_workflow_uses_graph_runner():
 
     service._graph_runner = types.SimpleNamespace(run_search=fake_run_search)
 
-    registered: Dict[str, Any] = {}
+    registered: dict[str, Any] = {}
 
     def fake_tool_decorator(func=None):
         def _register(inner):
@@ -202,9 +202,7 @@ async def test_orchestrate_multi_service_workflow_uses_graph_runner():
     try:
         await service._register_orchestrator_tools()
 
-        workflow = cast(
-            Any, registered["orchestrate_multi_service_workflow"]
-        )
+        workflow = cast(Any, registered["orchestrate_multi_service_workflow"])
         result = await workflow(
             workflow_description="desc",
             services_required=["search"],
@@ -215,6 +213,6 @@ async def test_orchestrate_multi_service_workflow_uses_graph_runner():
         assert result["workflow_results"]["answer"] == "done"
         assert result["workflow_results"]["results"]
     finally:
-        originals = cast(Dict[str, Any], created["originals"])
+        originals = cast(dict[str, Any], created["originals"])
         for attr, original in originals.items():
             setattr(orchestrator_module, attr, original)

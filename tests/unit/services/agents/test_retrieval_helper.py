@@ -6,6 +6,7 @@ import sys
 import types
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -20,14 +21,14 @@ for module_name in (
 ):
     sys.modules.pop(module_name, None)
 
-infra_stub = types.ModuleType("src.infrastructure.client_manager")
+infra_stub: Any = types.ModuleType("src.infrastructure.client_manager")
 
 
 class ClientManager:  # noqa: D401 - lightweight stub for import
     pass
 
 
-setattr(infra_stub, "ClientManager", ClientManager)
+infra_stub.ClientManager = ClientManager
 sys.modules["src.infrastructure.client_manager"] = infra_stub
 
 _spec = spec_from_file_location("_retrieval_helper_under_test", MODULE_PATH)

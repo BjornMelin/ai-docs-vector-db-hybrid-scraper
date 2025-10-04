@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, Dict, cast
+from typing import Any, cast
 
 import pytest
 from mcp.types import CallToolResult
@@ -29,7 +29,7 @@ for module_name in (
 ):
     _original_modules[module_name] = sys.modules.pop(module_name, None)
 
-infra_stub = types.ModuleType("src.infrastructure.client_manager")
+infra_stub: Any = types.ModuleType("src.infrastructure.client_manager")
 
 
 class ClientManager:  # noqa: D401 - lightweight stub
@@ -47,10 +47,10 @@ class ClientManager:  # noqa: D401 - lightweight stub
         return self._client
 
 
-setattr(infra_stub, "ClientManager", ClientManager)
+infra_stub.ClientManager = ClientManager
 sys.modules["src.infrastructure.client_manager"] = infra_stub
 
-telemetry_stub = types.ModuleType("src.services.monitoring.telemetry_repository")
+telemetry_stub: Any = types.ModuleType("src.services.monitoring.telemetry_repository")
 
 
 class _TelemetryRepository:
@@ -91,19 +91,19 @@ def _get_telemetry_repository() -> _TelemetryRepository:
     return _repository
 
 
-setattr(telemetry_stub, "get_telemetry_repository", _get_telemetry_repository)
+telemetry_stub.get_telemetry_repository = _get_telemetry_repository
 sys.modules["src.services.monitoring.telemetry_repository"] = telemetry_stub
 
-services_stub = types.ModuleType("src.services")
-errors_stub = types.ModuleType("src.services.errors")
+services_stub: Any = types.ModuleType("src.services")
+errors_stub: Any = types.ModuleType("src.services.errors")
 
 
 class APIError(Exception):
     """Minimal stub matching APIError signature."""
 
 
-setattr(errors_stub, "APIError", APIError)
-setattr(services_stub, "errors", errors_stub)
+errors_stub.APIError = APIError
+services_stub.errors = errors_stub
 sys.modules["src.services"] = services_stub
 sys.modules["src.services.errors"] = errors_stub
 
@@ -163,9 +163,9 @@ async def test_execute_tool_success(monkeypatch: pytest.MonkeyPatch) -> None:
 
     result = await service.execute_tool("demo", arguments={"foo": "bar"})
     assert result.server_name == "primary"
-    snapshot = cast(Dict[str, Any], telemetry.export_snapshot())
-    counters = cast(Dict[str, Any], snapshot.get("counters", {}))
-    histograms = cast(Dict[str, Any], snapshot.get("histograms", {}))
+    snapshot = cast(dict[str, Any], telemetry.export_snapshot())
+    counters = cast(dict[str, Any], snapshot.get("counters", {}))
+    histograms = cast(dict[str, Any], snapshot.get("histograms", {}))
     assert counters.get("mcp_tool_calls_total")
     assert histograms.get("mcp_tool_latency_ms")
 
@@ -211,7 +211,7 @@ async def test_execute_tool_reports_remote_failure(
     with pytest.raises(ToolExecutionFailure):
         await service.execute_tool("demo", arguments={})
 
-    counters_snapshot = cast(Dict[str, Any], telemetry.export_snapshot())
+    counters_snapshot = cast(dict[str, Any], telemetry.export_snapshot())
     counters = cast(
         list[dict[str, Any]],
         counters_snapshot.get("counters", {}).get("mcp_tool_errors_total", []),
