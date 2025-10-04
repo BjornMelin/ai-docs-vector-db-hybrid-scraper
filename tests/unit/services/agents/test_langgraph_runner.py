@@ -119,7 +119,9 @@ async def test_run_search_produces_outcome() -> None:
         max_parallel_tools=2,
     )
 
-    outcome = await runner.run_search(query="find langgraph docs", collection="docs", top_k=2)
+    outcome = await runner.run_search(
+        query="find langgraph docs", collection="docs", top_k=2
+    )
 
     assert outcome.success
     assert outcome.answer is not None

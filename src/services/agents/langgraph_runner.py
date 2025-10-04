@@ -12,9 +12,9 @@ from dataclasses import dataclass
 from typing import Any, TypedDict, cast
 from uuid import uuid4
 
+from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
-from langchain_core.runnables import RunnableConfig
 from opentelemetry import trace
 
 from src.infrastructure.client_manager import ClientManager

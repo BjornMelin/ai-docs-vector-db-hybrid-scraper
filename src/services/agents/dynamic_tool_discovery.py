@@ -7,12 +7,12 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from collections.abc import Callable, Mapping
+from collections.abc import AsyncIterator, Callable, Mapping
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, AsyncIterator, cast
+from typing import Any, cast
 
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
@@ -153,9 +153,7 @@ class DynamicToolDiscovery:  # pylint: disable=too-many-instance-attributes
         """
 
         client_manager_any = cast(Any, self._client_manager)
-        client = cast(
-            MultiServerMCPClient, await client_manager_any.get_mcp_client()
-        )
+        client = cast(MultiServerMCPClient, await client_manager_any.get_mcp_client())
         if not getattr(client, "connections", None):
             msg = "No MCP server connections available for discovery"
             raise APIError(msg)
