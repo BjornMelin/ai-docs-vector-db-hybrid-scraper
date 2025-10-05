@@ -130,7 +130,7 @@ def app(monkeypatch: pytest.MonkeyPatch) -> ClientWithReloader:
 
     reloader = DummyReloader()
     monkeypatch.setattr(config_router, "get_config_reloader", lambda: reloader)
-    fastapi_app = FastAPI()
+    fastapi_app = FastAPI()  # type: ignore[operator]
     fastapi_app.include_router(config_router.router)
     client = TestClient(fastapi_app)
     cast(Any, client).reloader = reloader
