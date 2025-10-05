@@ -13,7 +13,7 @@ from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.tools import (
     agentic_rag,
     analytics,
-    query_processing,
+    query_processing_tools,
 )
 from src.services.observability import (
     AIOperationTracker,
@@ -92,7 +92,7 @@ class AnalyticsService:
 
         # Register core analytics tools
         analytics.register_tools(self.mcp, self.client_manager)
-        query_processing.register_tools(self.mcp, self.client_manager)
+        query_processing_tools.register_tools(self.mcp, self.client_manager)
 
         # Register agentic RAG analytics tools
         agentic_rag.register_tools(self.mcp, self.client_manager)
