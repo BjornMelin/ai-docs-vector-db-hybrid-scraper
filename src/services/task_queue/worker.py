@@ -7,7 +7,7 @@ from arq.connections import RedisSettings
 
 from src.config import TaskQueueConfig, get_config
 
-from .tasks import TASK_REGISTRY
+from .tasks import TASK_MAP
 
 
 logger = logging.getLogger(__name__)
@@ -17,7 +17,7 @@ class WorkerSettings:
     """ARQ worker settings."""
 
     # Task functions to register
-    functions: ClassVar[list] = list(TASK_REGISTRY.values())
+    functions: ClassVar[list] = list(TASK_MAP.values())
 
     # Cron jobs (if needed)
     cron_jobs: ClassVar[list] = [
@@ -47,7 +47,6 @@ class WorkerSettings:
             tq_config = config.task_queue
         else:
             # Fallback to default TaskQueueConfig if not available
-
             tq_config = TaskQueueConfig()
 
         # Parse redis URL
