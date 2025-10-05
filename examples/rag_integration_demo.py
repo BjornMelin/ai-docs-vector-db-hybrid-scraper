@@ -66,7 +66,7 @@ async def _initialise_generator(
 
     vector_store = await client_manager.get_vector_store_service()
     generator, rag_config = await initialise_rag_generator(config, vector_store)
-    print("✅ RAG generator initialised successfully")
+    print("✅ RAG generator initialized successfully")
     return generator, rag_config
 
 

@@ -107,7 +107,7 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
         }
         if ctx:
             await ctx.info(
-                f"Workspace '{workspace_name}' initialised with "
+                f"Workspace '{workspace_name}' initialized with "
                 f"{len(created)} collections"
             )
         return response

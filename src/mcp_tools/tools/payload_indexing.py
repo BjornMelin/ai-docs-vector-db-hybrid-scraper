@@ -36,7 +36,7 @@ _VECTOR_SERVICE_INIT_LOCK = asyncio.Lock()
 
 
 async def _get_vector_service(client_manager: ClientManager):
-    """Return an initialised VectorStoreService instance."""
+    """Return an initialized VectorStoreService instance."""
 
     service = await client_manager.get_vector_store_service()
     if not service.is_initialized():

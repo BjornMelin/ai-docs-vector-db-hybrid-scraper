@@ -29,7 +29,7 @@ def _raise_scrape_error(url: str) -> None:
 
 
 async def _get_vector_service(client_manager: ClientManager) -> VectorStoreService:
-    """Return an initialised VectorStoreService instance."""
+    """Return an initialized VectorStoreService instance."""
 
     service = await client_manager.get_vector_store_service()
     if not service.is_initialized():

@@ -54,7 +54,7 @@ class PerformanceMonitor:
         self._recent_operations: list[OperationRecord] = []
 
     def initialize(self) -> None:
-        LOGGER.info("Performance monitor initialised")
+        LOGGER.info("Performance monitor initialized")
 
     async def cleanup(self) -> None:
         self._recent_operations.clear()

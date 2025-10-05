@@ -160,7 +160,7 @@ class RagasEvaluator:
             self._llm = LangchainLLMWrapper(llm_instance)
             self._embeddings = LangchainEmbeddingsWrapper(embedding_instance)
             LOGGER.info(
-                "Ragas evaluator initialised with model=%s embedding=%s",
+                "Ragas evaluator initialized with model=%s embedding=%s",
                 llm_model or "gpt-4o-mini",
                 embedding_model or "text-embedding-3-small",
             )

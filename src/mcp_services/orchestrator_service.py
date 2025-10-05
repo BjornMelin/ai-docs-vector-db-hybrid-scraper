@@ -108,7 +108,7 @@ class OrchestratorService:  # pylint: disable=too-many-instance-attributes
             run_timeout_seconds=30.0,
         )
         await discovery.refresh(force=True)
-        logger.info("Initialised LangGraph runner for orchestrator")
+        logger.info("initialized LangGraph runner for orchestrator")
 
     async def _register_orchestrator_tools(self) -> None:
         if not self.client_manager:

@@ -33,15 +33,15 @@ class VectorServiceStub:
     """Async stub for VectorStoreService interactions used in tests."""
 
     def __init__(self) -> None:
-        self._initialised = False
+        self._initialized = False
         self.ensure_collection = AsyncMock()
         self.upsert_documents = AsyncMock()
 
     def is_initialized(self) -> bool:
-        return self._initialised
+        return self._initialized
 
     async def initialize(self) -> None:
-        self._initialised = True
+        self._initialized = True
 
     @property
     def embedding_dimension(self) -> int:

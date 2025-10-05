@@ -30,7 +30,7 @@ _MIN_MULTI_STAGE = 2
 
 
 async def _get_vector_service(client_manager: ClientManager) -> VectorStoreService:
-    """Return an initialised vector store service instance."""
+    """Return an initialized vector store service instance."""
 
     service = await client_manager.get_vector_store_service()
     if not service.is_initialized():

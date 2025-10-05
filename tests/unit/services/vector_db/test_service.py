@@ -110,7 +110,7 @@ async def initialized_service(
 async def test_initialize_sets_vector_store(
     initialized_service: VectorStoreService,
 ) -> None:
-    """Vector store should be initialised once with configured collection name."""
+    """Vector store should be initialized once with configured collection name."""
 
     service = initialized_service
     assert service.is_initialized()

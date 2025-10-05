@@ -96,7 +96,7 @@ class RAGGenerator(BaseService):
             self._chat_model = cast(ChatOpenAI, ChatOpenAI(**params))  # type: ignore[call-arg]
 
         self._mark_initialized()
-        logger.info("RAG generator initialised using LangChain components")
+        logger.info("RAG generator initialized using LangChain components")
 
     async def cleanup(self) -> None:
         """Release cached model instances."""
@@ -106,7 +106,7 @@ class RAGGenerator(BaseService):
 
     @property
     def llm_client_available(self) -> bool:
-        """Indicate whether the underlying chat model is initialised."""
+        """Indicate whether the underlying chat model is initialized."""
 
         return self._chat_model is not None
 
@@ -124,7 +124,7 @@ class RAGGenerator(BaseService):
 
         llm = self._chat_model
         if llm is None:
-            raise EmbeddingServiceError("Chat model is not initialised")
+            raise EmbeddingServiceError("Chat model is not initialized")
 
         start_time = time.perf_counter()
         max_tokens = request.max_tokens or self._config.max_tokens
