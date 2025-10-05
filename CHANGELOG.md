@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Configuration reload and file-watching endpoints now validate override paths, surface operator errors as HTTP 400, and wait until the osquery-backed provider reports readiness before returning success.
 - Simplified the security configuration model to the fields actually enforced by the middleware, updated templates/docs, and aligned the middleware implementation with the lean schema.
+- Removed the fail-closed `search_service`/`cache_service` placeholders; mode configs now advertise only supported embedding/vector services and the health endpoint reflects the leaner set.
 - Dependency re-exports for FastAPI helpers now live under `src/services/fastapi/dependencies/__init__.py`, trimming redundant wrapper modules.
 - LangGraph GraphRunner now emits structured metrics/errors, enforces optional
   run timeouts, and surfaces discovery/tool telemetry across MCP entry points;
