@@ -13,28 +13,13 @@ from typing import Annotated, Any
 from fastapi import Depends  # type: ignore[attr-defined]
 from pydantic import BaseModel, Field
 
-from src.config import (
-    AutoDetectedServices,
-    CacheType,
-    Config,
-    DetectedEnvironment,
-    Environment,
-    get_config,
-    get_config_with_auto_detection,
-)
+from src.config import CacheType, Config, get_config
 from src.infrastructure.client_manager import ClientManager
-from src.services.auto_detection import (
-    ConnectionPoolManager,
-    EnvironmentDetector,
-    HealthChecker,
-    ServiceDiscovery,
-)
 from src.services.embeddings.manager import QualityTier
 from src.services.errors import (
     CircuitBreakerRegistry,
     CrawlServiceError,
     EmbeddingServiceError,
-    TaskQueueServiceError,
     circuit_breaker,
     tenacity_circuit_breaker,
 )
@@ -71,243 +56,20 @@ def create_service_error_handler(
 
 #### CONFIGURATION DEPENDENCIES ####
 
+# Embedding Service Dependencies
 ConfigDep = Annotated[Config, Depends(get_config)]
-
-
-async def get_auto_detected_config() -> Config:
-    """Get configuration with auto-detection applied."""
-    return await get_config_with_auto_detection()
-
-
-AutoDetectedConfigDep = Annotated[Config, Depends(get_auto_detected_config)]
 
 
 @lru_cache
 def get_client_manager() -> ClientManager:
     """Get singleton ClientManager instance."""
+
     return ClientManager.from_unified_config()
 
 
-async def get_auto_detected_client_manager() -> ClientManager:
-    """Get ClientManager instance with auto-detection applied."""
-    return await ClientManager.from_unified_config_with_auto_detection()
-
-
 ClientManagerDep = Annotated[ClientManager, Depends(get_client_manager)]
-AutoDetectedClientManagerDep = Annotated[
-    ClientManager, Depends(get_auto_detected_client_manager)
-]
 
 
-# Auto-Detection Dependencies
-@circuit_breaker(
-    service_name="auto_detection_services",
-    failure_threshold=3,
-    recovery_timeout=30.0,
-    enable_adaptive_timeout=True,
-)
-async def get_auto_detected_services(
-    config: AutoDetectedConfigDep,
-) -> Any:
-    """Get auto-detected services information."""
-    if (auto_detected := config.get_auto_detected_services()) is None:
-        # Return empty services if auto-detection wasn't performed
-        return AutoDetectedServices(
-            environment=DetectedEnvironment(
-                environment_type=Environment.DEVELOPMENT,
-                is_containerized=False,
-                is_kubernetes=False,
-                detection_confidence=0.0,
-                detection_time_ms=0.0,
-            ),
-            services=[],
-            errors=["Auto-detection not performed"],
-        )
-
-    return auto_detected
-
-
-AutoDetectedServicesDep = Annotated[Any, Depends(get_auto_detected_services)]
-
-
-# Auto-Detection Service Access Dependencies
-async def get_auto_detected_redis_client(
-    client_manager: AutoDetectedClientManagerDep,
-) -> Any:
-    """Get Redis client using auto-detected configuration."""
-    return await client_manager.get_redis_client()
-
-
-async def get_auto_detected_qdrant_client(
-    client_manager: AutoDetectedClientManagerDep,
-) -> Any:
-    """Get Qdrant client using auto-detected configuration."""
-    return await client_manager.get_qdrant_client()
-
-
-async def get_auto_detected_cache_manager(
-    client_manager: AutoDetectedClientManagerDep,
-) -> Any:
-    """Get CacheManager using auto-detected Redis when available."""
-    return await client_manager.get_cache_manager()
-
-
-async def get_auto_detected_task_queue_manager(
-    client_manager: AutoDetectedClientManagerDep,
-) -> Any:
-    """Get TaskQueueManager using auto-detected Redis when available."""
-    return await client_manager.get_task_queue_manager()  # type: ignore[attr-defined]
-
-
-AutoDetectedRedisDep = Annotated[Any, Depends(get_auto_detected_redis_client)]
-AutoDetectedQdrantDep = Annotated[Any, Depends(get_auto_detected_qdrant_client)]
-AutoDetectedCacheDep = Annotated[Any, Depends(get_auto_detected_cache_manager)]
-AutoDetectedTaskQueueDep = Annotated[Any, Depends(get_auto_detected_task_queue_manager)]
-
-
-@circuit_breaker(
-    service_name="auto_detection_health",
-    failure_threshold=2,
-    recovery_timeout=15.0,
-)
-async def get_auto_detection_health_checker(
-    config: AutoDetectedConfigDep,
-) -> Any:
-    """Get auto-detection health checker."""
-    # HealthChecker imported at top-level
-
-    health_checker = HealthChecker(config.auto_detection)
-
-    # Initialize with auto-detected services if available
-    auto_detected = config.get_auto_detected_services()
-    if auto_detected and auto_detected.services:
-        await health_checker.start_monitoring(auto_detected.services)
-
-    return health_checker
-
-
-AutoDetectionHealthDep = Annotated[Any, Depends(get_auto_detection_health_checker)]
-
-
-@circuit_breaker(
-    service_name="auto_detection_pools",
-    failure_threshold=3,
-    recovery_timeout=30.0,
-)
-async def get_auto_detection_connection_pools(
-    config: AutoDetectedConfigDep,
-) -> Any:
-    """Get connection pool manager for auto-detected services."""
-    # ConnectionPoolManager imported at top-level
-
-    pool_manager = ConnectionPoolManager(config.auto_detection)
-
-    # Initialize pools with auto-detected services if available
-    auto_detected = config.get_auto_detected_services()
-    if auto_detected and auto_detected.services:
-        await pool_manager.initialize_pools(auto_detected.services)
-
-    return pool_manager
-
-
-AutoDetectionPoolsDep = Annotated[Any, Depends(get_auto_detection_connection_pools)]
-
-
-class AutoDetectionRequest(BaseModel):
-    """Auto-detection request model."""
-
-    force_refresh: bool = False
-    timeout_seconds: float | None = None
-    enabled_services: list[str] | None = None
-
-
-class AutoDetectionResponse(BaseModel):
-    """Auto-detection response model."""
-
-    services_found: int
-    environment_type: str
-    detection_time_ms: float
-    services: list[dict[str, Any]] = Field(default_factory=list)
-    errors: list[str] = Field(default_factory=list)
-    is_cached: bool = False
-
-
-@tenacity_circuit_breaker(
-    service_name="perform_auto_detection",
-    max_attempts=2,
-    wait_multiplier=1.0,
-    wait_max=30.0,
-    failure_threshold=3,
-    recovery_timeout=60.0,
-)
-async def perform_auto_detection(
-    request: AutoDetectionRequest,
-    config: ConfigDep,
-) -> AutoDetectionResponse:
-    """Perform service auto-detection (consolidated implementation)."""
-    start_time = time.time()
-    try:
-        # Prepare detection config
-        detection_config = config.auto_detection
-        if request.timeout_seconds:
-            detection_config.timeout_seconds = request.timeout_seconds
-
-        # Perform environment detection and service discovery
-        env_detector = EnvironmentDetector(config=detection_config)
-        detected_env = await env_detector.detect()
-
-        service_discovery = ServiceDiscovery(detection_config)
-        discovery_result = await service_discovery.discover_all_services()
-
-        # Filter services by type if requested
-        services = discovery_result.services
-        if request.enabled_services:
-            services = [
-                s
-                for s in services
-                if s.service_type in request.enabled_services  # type: ignore[attr-defined]
-            ]
-
-        # Format services for response
-        formatted_services = [
-            {
-                "service_name": s.service_name,  # type: ignore[attr-defined]
-                "service_type": s.service_type,  # type: ignore[attr-defined]
-                "host": s.host,  # type: ignore[attr-defined]
-                "port": s.port,  # type: ignore[attr-defined]
-                "is_available": s.is_available,  # type: ignore[attr-defined]
-                "connection_string": s.connection_string,  # type: ignore[attr-defined]
-                "version": s.version,  # type: ignore[attr-defined]
-                "supports_pooling": s.supports_pooling,  # type: ignore[attr-defined]
-                "detection_time_ms": s.detection_time_ms,  # type: ignore[attr-defined]
-                "metadata": s.metadata,  # type: ignore[attr-defined]
-            }
-            for s in services
-        ]
-
-        detection_time_ms = (time.time() - start_time) * 1000
-
-        return AutoDetectionResponse(
-            services_found=len(services),
-            environment_type=detected_env.environment_type.value,
-            detection_time_ms=detection_time_ms,
-            services=formatted_services,
-            errors=discovery_result.errors,
-            is_cached=False,
-        )
-    except Exception as e:
-        logger.exception("Auto-detection failed")
-        return AutoDetectionResponse(
-            services_found=0,
-            environment_type="unknown",
-            detection_time_ms=0.0,
-            services=[],
-            errors=[str(e)],
-            is_cached=False,
-        )
-
-
-# Embedding Service Dependencies
 class EmbeddingRequest(BaseModel):
     """Embedding generation request model."""
 
@@ -537,62 +299,6 @@ async def crawl_site(
         raise CrawlServiceError(msg) from e
     else:
         return result
-
-
-# Task Queue Service Dependencies
-class TaskRequest(BaseModel):
-    """Pydantic model for task queue requests."""
-
-    task_name: str
-    args: list[Any] = Field(default_factory=list)
-    kwargs: dict[str, Any] = Field(default_factory=dict)
-    delay: int | None = None
-    queue_name: str | None = None
-
-
-async def get_task_queue_manager(
-    client_manager: ClientManagerDep,
-) -> Any:
-    """Get initialized TaskQueueManager service."""
-    return await client_manager.get_task_queue_manager()  # type: ignore[attr-defined]
-
-
-TaskQueueManagerDep = Annotated[Any, Depends(get_task_queue_manager)]
-
-
-async def enqueue_task(
-    request: TaskRequest,
-    task_manager: TaskQueueManagerDep,
-) -> str | None:
-    """Enqueue a task for execution."""
-    try:
-        job_id = await task_manager.enqueue(
-            request.task_name,
-            *request.args,
-            _delay=request.delay,
-            _queue_name=request.queue_name,
-            **request.kwargs,
-        )
-    except Exception as e:
-        logger.exception("Task enqueue failed for %s", request.task_name)
-        msg = f"Failed to enqueue task: {e}"
-        raise TaskQueueServiceError(msg) from e
-    else:
-        return job_id
-
-
-async def get_task_status(
-    job_id: str,
-    task_manager: TaskQueueManagerDep,
-) -> dict[str, Any]:
-    """Get status of a task."""
-    try:
-        status = await task_manager.get_job_status(job_id)
-    except Exception as e:
-        logger.exception("Task status check failed for job_id=%s", job_id)
-        return {"status": "error", "message": str(e)}
-    else:
-        return status
 
 
 # Database Dependencies
@@ -981,194 +687,6 @@ async def get_service_health() -> dict[str, Any]:
         }
 
 
-async def get_auto_detected_service_health(
-    health_checker: AutoDetectionHealthDep = None,
-) -> dict[str, Any]:
-    """Get health status of auto-detected services."""
-
-    try:
-        if health_checker is None:
-            return {
-                "status": "no_auto_detection",
-                "message": "Auto-detection not configured or no services detected",
-                "services": {},
-            }
-
-        # Get comprehensive health summary
-        health_summary = await health_checker.check_all_services()
-
-        # Get health trends
-        trends = health_checker.get_health_trends()
-
-        return {
-            "status": "healthy"
-            if health_summary.overall_health_score >= 0.8
-            else "degraded",
-            "summary": {
-                "total_services": health_summary.total_services,
-                "healthy_services": health_summary.healthy_services,
-                "unhealthy_services": health_summary.unhealthy_services,
-                "overall_health_score": health_summary.overall_health_score,
-                "average_response_time_ms": health_summary.average_response_time_ms,
-            },
-            "services": {
-                result.service_name: {
-                    "is_healthy": result.is_healthy,
-                    "response_time_ms": result.response_time_ms,
-                    "status_code": result.status_code,
-                    "error_message": result.error_message,
-                    "metadata": result.metadata,
-                    "uptime_1h": trends.get(result.service_name, {}).get(
-                        "uptime_1h", 0.0
-                    ),
-                    "uptime_24h": trends.get(result.service_name, {}).get(
-                        "uptime_24h", 0.0
-                    ),
-                }
-                for result in health_summary.service_results
-            },
-            "trends": trends,
-            "timestamp": datetime.now(tz=UTC).isoformat(),
-        }
-
-    except Exception as e:
-        logger.exception("Auto-detected service health check failed")
-        return {
-            "status": "error",
-            "error": str(e),
-            "services": {},
-            "trends": {},
-        }
-
-
-async def get_auto_detection_pool_metrics(
-    pool_manager: AutoDetectionPoolsDep = None,
-) -> dict[str, Any]:
-    """Get metrics for auto-detected service connection pools."""
-    try:
-        if pool_manager is None:
-            return {
-                "status": "no_pools",
-                "message": "Connection pools not initialized",
-                "pools": {},
-            }
-
-        # Get comprehensive pool statistics
-        pool_stats = pool_manager.get_pool_stats()
-
-        # Get individual pool health metrics
-        all_pool_health = pool_manager.get_all_pool_health()
-
-        return {
-            "status": "active",
-            "summary": {
-                "total_pools": pool_stats["total_pools"],
-                "healthy_pools": pool_stats["healthy_pools"],
-                "pool_types": list(pool_stats["pools"].keys()),
-            },
-            "pools": {
-                pool_name: {
-                    **pool_info,
-                    "health_metrics": all_pool_health.get(pool_name, {}).model_dump()
-                    if all_pool_health.get(pool_name)
-                    else None,
-                }
-                for pool_name, pool_info in pool_stats["pools"].items()
-            },
-            "timestamp": datetime.now(tz=UTC).isoformat(),
-        }
-
-    except Exception as e:
-        logger.exception("Auto-detection pool metrics failed")
-        return {
-            "status": "error",
-            "error": str(e),
-            "pools": {},
-        }
-
-
-async def get_auto_detection_summary(
-    auto_detected: AutoDetectedServicesDep = None,
-    health_checker: AutoDetectionHealthDep = None,
-    pool_manager: AutoDetectionPoolsDep = None,
-) -> dict[str, Any]:
-    """Get comprehensive auto-detection summary with all metrics."""
-    summary = {
-        "timestamp": datetime.now(tz=UTC).isoformat(),
-        "auto_detection": {},
-        "service_health": {},
-        "connection_pools": {},
-        "overall_status": "unknown",
-    }
-
-    try:
-        # Inline auto-detection formatting
-        if auto_detected:
-            summary["auto_detection"] = {
-                "environment": {
-                    "type": auto_detected.environment.environment_type.value,
-                    "is_containerized": auto_detected.environment.is_containerized,
-                    "is_kubernetes": auto_detected.environment.is_kubernetes,
-                    "cloud_provider": auto_detected.environment.cloud_provider,
-                    "region": auto_detected.environment.region,
-                    "detection_confidence": (
-                        auto_detected.environment.detection_confidence
-                    ),
-                },
-                "services": {
-                    "total_discovered": len(auto_detected.services),
-                    "services_by_type": {
-                        service.service_type: {
-                            "host": service.host,
-                            "port": service.port,
-                            "is_available": service.is_available,
-                            "version": service.version,
-                            "supports_pooling": service.supports_pooling,
-                        }
-                        for service in auto_detected.services
-                    },
-                },
-                "detection_performance": {
-                    "total_time_ms": auto_detected.total_detection_time_ms,
-                    "started_at": auto_detected.detection_started_at,
-                    "completed_at": auto_detected.detection_completed_at,
-                },
-                "errors": auto_detected.errors,
-            }
-
-        summary["service_health"] = await get_auto_detected_service_health(
-            health_checker
-        )
-        summary["connection_pools"] = await get_auto_detection_pool_metrics(
-            pool_manager
-        )
-
-        # Inline status determination
-        health_status = summary["service_health"].get("status", "unknown")
-        pool_status = summary["connection_pools"].get("status", "unknown")
-
-        if health_status == "healthy" and pool_status in ["active", "no_pools"]:
-            summary["overall_status"] = "healthy"
-        elif health_status == "degraded" or pool_status == "error":
-            summary["overall_status"] = "degraded"
-        elif health_status in ["no_auto_detection", "error"]:
-            summary["overall_status"] = "unavailable"
-        else:
-            summary["overall_status"] = "unknown"
-
-        return summary
-    except Exception as e:
-        logger.exception("Auto-detection summary failed")
-        return {
-            "timestamp": datetime.now(tz=UTC).isoformat(),
-            "overall_status": "error",
-            "error": str(e),
-            "auto_detection": {},
-            "service_health": {},
-            "connection_pools": {},
-        }
-
-
 # Service Performance Metrics
 async def get_service_metrics() -> dict[str, Any]:
     """Get performance metrics for all services."""
@@ -1180,7 +698,6 @@ async def get_service_metrics() -> dict[str, Any]:
             "embedding_service": {},
             "cache_service": {},
             "crawl_service": {},
-            "task_queue": {},
         }
 
         # Get cache metrics if available

@@ -7,16 +7,14 @@ from __future__ import annotations
 import threading
 from importlib import import_module
 from pathlib import Path
-from typing import Any, ClassVar, Self, cast
+from typing import Any, ClassVar, Self
 
-from pydantic import Field, PrivateAttr, model_validator
+from pydantic import Field, model_validator
 from pydantic.fields import ModelPrivateAttr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from .models import (
     ApplicationMode,
-    AutoDetectedServices,
-    AutoDetectionConfig,
     BrowserUseConfig,
     CacheConfig,
     ChunkingConfig,
@@ -43,7 +41,6 @@ from .models import (
     RAGConfig,
     ReRankingConfig,
     SearchStrategy,
-    TaskQueueConfig,
 )
 from .security.config import SecurityConfig
 
@@ -62,9 +59,7 @@ class Config(BaseSettings):
         env_ignore_empty=True,
         arbitrary_types_allowed=True,
     )
-    model_private_attrs: ClassVar[dict[str, ModelPrivateAttr]] = {
-        "_auto_detected_services": cast(ModelPrivateAttr, PrivateAttr(default=None)),
-    }
+    model_private_attrs: ClassVar[dict[str, ModelPrivateAttr]] = {}
 
     # Core application metadata
     app_name: str = Field(
@@ -162,12 +157,6 @@ class Config(BaseSettings):
     deployment: DeploymentConfig = Field(
         default_factory=DeploymentConfig, description="Deployment configuration"
     )
-    task_queue: TaskQueueConfig = Field(
-        default_factory=TaskQueueConfig, description="Task queue configuration"
-    )
-    auto_detection: AutoDetectionConfig = Field(
-        default_factory=AutoDetectionConfig, description="Auto-detection configuration"
-    )
     documentation_sites: list[DocumentationSite] = Field(
         default_factory=list, description="Documentation sites to crawl"
     )
@@ -206,7 +195,6 @@ class Config(BaseSettings):
     def sync_service_urls(self) -> Self:
         self.qdrant.url = self.qdrant_url
         self.cache.redis_url = self.redis_url
-        self.task_queue.redis_url = self.redis_url
         return self
 
     @model_validator(mode="after")
@@ -250,15 +238,6 @@ class Config(BaseSettings):
         if self.mode == ApplicationMode.SIMPLE:
             return SearchStrategy.DENSE
         return SearchStrategy.HYBRID
-
-    def set_auto_detected_services(self, services: AutoDetectedServices | None) -> None:
-        """Store detection metadata captured by the environment probes."""
-
-        # pylint: disable=attribute-defined-outside-init
-        self._auto_detected_services = services
-
-    def get_auto_detected_services(self) -> AutoDetectedServices | None:
-        return self._auto_detected_services
 
 
 _config_lock = threading.Lock()

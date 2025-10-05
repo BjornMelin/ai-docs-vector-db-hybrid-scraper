@@ -1,4 +1,4 @@
-"""Consolidated error classes for all services and MCP server.
+"""Error classes for all services and MCP server.
 
 This module provides an error hierarchy for the AI Documentation Vector DB project,
 following best practices from Pydantic 2.0 and FastMCP 2.0.
@@ -29,7 +29,7 @@ import time
 from collections.abc import Callable
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, ClassVar, TypeVar
+from typing import Any, ClassVar, LiteralString, TypeVar
 
 from pydantic import ValidationError as PydanticValidationError
 from pydantic_core import PydanticCustomError
@@ -62,8 +62,8 @@ class BaseError(Exception):
             message: Human-readable error message
             error_code: Machine-readable error code for categorization
             context: Additional context information
-
         """
+
         self.message = message
         self.error_code = error_code or self.__class__.__name__
         self.context = context or {}
@@ -71,6 +71,7 @@ class BaseError(Exception):
 
     def to_dict(self) -> dict[str, Any]:
         """Convert error to dictionary for API responses."""
+
         return {
             "error": self.message,
             "error_code": self.error_code,
@@ -100,10 +101,6 @@ class CacheServiceError(ServiceError):
     """Cache service errors."""
 
 
-class TaskQueueServiceError(ServiceError):
-    """Task queue service errors."""
-
-
 # Validation Errors
 class ValidationError(BaseError):
     """Input validation error with Pydantic integration."""
@@ -111,6 +108,7 @@ class ValidationError(BaseError):
     @classmethod
     def from_pydantic(cls, exc: PydanticValidationError) -> "ValidationError":
         """Create ValidationError from Pydantic ValidationError."""
+
         errors = exc.errors()
         if len(errors) == 1:
             error = errors[0]
@@ -264,7 +262,6 @@ def retry_async(
 
     Returns:
         Decorated function
-
     """
 
     def decorator(func: F) -> F:
@@ -279,20 +276,24 @@ def retry_async(
                     last_exception = e
 
                     if attempt == max_attempts - 1:
-                        logger.exception("Final attempt failed for {func.__name__}")
+                        logger.exception("Final attempt failed for %s", func.__name__)
                         break
 
                     delay = min(base_delay * (backoff_factor**attempt), max_delay)
 
                     logger.warning(
-                        f"Attempt {attempt + 1}/{max_attempts} failed for "
-                        f"{func.__name__}: {e}. Retrying in {delay:.1f}s..."
+                        "Attempt %d/%d failed for %s: %s. Retrying in %.1fs...",
+                        attempt + 1,
+                        max_attempts,
+                        func.__name__,
+                        e,
+                        delay,
                     )
 
                     await asyncio.sleep(delay)
                 except (TimeoutError, OSError, PermissionError):
                     # Non-retryable error
-                    logger.exception("Non-retryable error in {func.__name__}")
+                    logger.exception("Non-retryable error in %s", func.__name__)
                     raise
 
             raise last_exception or Exception("All retry attempts failed")
@@ -310,7 +311,7 @@ class CircuitState(Enum):
     HALF_OPEN = "half_open"
 
 
-class CircuitBreakerMetrics:
+class CircuitBreakerMetrics:  # pylint: disable=too-many-instance-attributes
     """Metrics collection for circuit breaker monitoring."""
 
     def __init__(self):
@@ -325,6 +326,7 @@ class CircuitBreakerMetrics:
 
     def record_call(self, success: bool, response_time: float | None = None):
         """Record a service call."""
+
         self.total_calls += 1
         if success:
             self.success_calls += 1
@@ -336,6 +338,7 @@ class CircuitBreakerMetrics:
 
     def record_state_change(self, old_state: CircuitState, new_state: CircuitState):
         """Record a circuit state transition."""
+
         self.state_transitions.append(
             {
                 "timestamp": datetime.now(tz=UTC),
@@ -351,25 +354,34 @@ class CircuitBreakerMetrics:
 
     def get_success_rate(self) -> float:
         """Get the success rate percentage."""
+
         if self.total_calls == 0:
             return 100.0
         return (self.success_calls / self.total_calls) * 100
 
     def get_average_response_time(self) -> float:
         """Get average response time in seconds."""
+
         if not self.response_times:
             return 0.0
         return sum(self.response_times) / len(self.response_times)
 
     def reset(self):
         """Reset all metrics."""
-        self.__init__()
+        self.total_calls = 0
+        self.success_calls = 0
+        self.failure_calls = 0
+        self.circuit_opens = 0
+        self.circuit_closes = 0
+        self.state_transitions = []
+        self.response_times = []
+        self.last_reset = datetime.now(tz=UTC)
 
 
-class AdvancedCircuitBreaker:
-    """Advanced circuit breaker with adaptive features and metrics."""
+class AdvancedCircuitBreaker:  # pylint: disable=too-many-instance-attributes
+    """Circuit breaker with adaptive features and metrics."""
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         self,
         service_name: str,
         failure_threshold: int = 5,
@@ -379,6 +391,8 @@ class AdvancedCircuitBreaker:
         enable_adaptive_timeout: bool = True,
         enable_metrics: bool = True,
     ):
+        """Initialize circuit breaker."""
+
         self.service_name = service_name
         self.failure_threshold = failure_threshold
         self.recovery_timeout = recovery_timeout
@@ -406,6 +420,7 @@ class AdvancedCircuitBreaker:
 
     def _should_attempt_reset(self) -> bool:
         """Check if circuit should transition from OPEN to HALF_OPEN."""
+
         if self.state != CircuitState.OPEN:
             return False
 
@@ -420,8 +435,8 @@ class AdvancedCircuitBreaker:
 
         Returns:
             True if circuit should attempt to reset
-
         """
+
         return self._should_attempt_reset()
 
     def record_success(self, response_time: float):
@@ -429,8 +444,8 @@ class AdvancedCircuitBreaker:
 
         Args:
             response_time: Response time in seconds
-
         """
+
         return self._record_success(response_time)
 
     def record_failure(self, exception: Exception, response_time: float):
@@ -439,12 +454,13 @@ class AdvancedCircuitBreaker:
         Args:
             exception: The exception that occurred
             response_time: Response time in seconds
-
         """
+
         return self._record_failure(exception, response_time)
 
     def _update_adaptive_timeout(self, success: bool):
         """Update adaptive timeout based on recent success/failure patterns."""
+
         if not self.enable_adaptive_timeout:
             return
 
@@ -464,6 +480,7 @@ class AdvancedCircuitBreaker:
 
     def _change_state(self, new_state: CircuitState):
         """Change circuit state and record metrics."""
+
         old_state = self.state
         self.state = new_state
 
@@ -471,12 +488,15 @@ class AdvancedCircuitBreaker:
             self.metrics.record_state_change(old_state, new_state)
 
         logger.info(
-            f"Circuit breaker '{self.service_name}' state changed: "
-            f"{old_state.value} -> {new_state.value}"
+            "Circuit breaker '%s' state changed: %s -> %s",
+            self.service_name,
+            old_state.value,
+            new_state.value,
         )
 
     async def call(self, func: Callable, *args, **kwargs) -> Any:
         """Execute function with circuit breaker protection."""
+
         start_time = time.time()
 
         # Check if circuit is open
@@ -520,7 +540,6 @@ class AdvancedCircuitBreaker:
                 if asyncio.iscoroutinefunction(func)
                 else func(*args, **kwargs)
             )
-
         except self.expected_exceptions as e:
             # Record failure
             response_time = time.time() - start_time
@@ -529,15 +548,16 @@ class AdvancedCircuitBreaker:
         except Exception as e:
             # Non-retryable error - don't count against circuit breaker
             logger.warning(
-                f"Non-retryable error in {self.service_name}: {e}. "
-                f"Not counted against circuit breaker."
+                "Non-retryable error in %s: %s. Not counted against circuit breaker.",
+                self.service_name,
+                e,
             )
             raise
-        else:
-            # Record success
-            response_time = time.time() - start_time
-            self._record_success(response_time)
-            return result
+
+        # Record success
+        response_time = time.time() - start_time
+        self._record_success(response_time)
+        return result
 
     def _record_success(self, response_time: float):
         """Record a successful call."""
@@ -558,11 +578,12 @@ class AdvancedCircuitBreaker:
             if self.failure_count > 0:
                 self.failure_count = 0
                 logger.debug(
-                    f"Circuit breaker '{self.service_name}' failure count reset"
+                    "Circuit breaker '%s' failure count reset", self.service_name
                 )
 
     def _record_failure(self, _exception: Exception, response_time: float):
         """Record a failed call."""
+
         self.failure_count += 1
         self.last_failure_time = datetime.now(tz=UTC)
         self._update_adaptive_timeout(success=False)
@@ -571,8 +592,10 @@ class AdvancedCircuitBreaker:
             self.metrics.record_call(success=False, response_time=response_time)
 
         logger.warning(
-            f"Circuit breaker '{self.service_name}' failure "
-            f"{self.failure_count}/{self.failure_threshold}"
+            "Circuit breaker '%s' failure %d/%d",
+            self.service_name,
+            self.failure_count,
+            self.failure_threshold,
         )
 
         # Check if we should open the circuit
@@ -585,6 +608,7 @@ class AdvancedCircuitBreaker:
 
     def get_status(self) -> dict[str, Any]:
         """Get current circuit breaker status."""
+
         status = {
             "service_name": self.service_name,
             "state": self.state.value,
@@ -615,6 +639,7 @@ class AdvancedCircuitBreaker:
 
     def reset(self):
         """Manually reset the circuit breaker."""
+
         self._change_state(CircuitState.CLOSED)
         self.failure_count = 0
         self.half_open_calls = 0
@@ -659,7 +684,7 @@ class CircuitBreakerRegistry:
         return list(cls._breakers.keys())
 
 
-def circuit_breaker(
+def circuit_breaker(  # pylint: disable=too-many-arguments
     service_name: str | None = None,
     failure_threshold: int = 5,
     recovery_timeout: float = 60.0,
@@ -684,7 +709,6 @@ def circuit_breaker(
 
     Returns:
         Decorated function with circuit breaker protection
-
     """
 
     def decorator(func: F) -> F:
@@ -726,7 +750,7 @@ def circuit_breaker(
     return decorator
 
 
-def tenacity_circuit_breaker(
+def tenacity_circuit_breaker(  # pylint: disable=too-many-arguments,too-many-positional-arguments
     service_name: str | None = None,
     max_attempts: int = 3,
     wait_multiplier: float = 1.0,
@@ -754,7 +778,6 @@ def tenacity_circuit_breaker(
 
     Returns:
         Decorated function with retry + circuit breaker protection
-
     """
 
     def decorator(func: F) -> F:
@@ -808,13 +831,14 @@ def tenacity_circuit_breaker(
 
                         # Log retry attempt
                         logger.warning(
-                            f"Tenacity retry attempt "
-                            f"{attempt.retry_state.attempt_number}/"
-                            f"{max_attempts} failed for {service_name}"
+                            "Tenacity retry attempt %d/%d failed for %s",
+                            attempt.retry_state.attempt_number,
+                            max_attempts,
+                            service_name,
                         )
                         raise
-                    else:
-                        return result
+
+                    return result
             return None
 
         # Add circuit breaker management methods
@@ -838,7 +862,6 @@ def handle_mcp_errors(func: Callable[..., Any]) -> Callable[..., Any]:
 
     Returns:
         Decorated function that returns safe responses
-
     """
 
     @functools.wraps(func)
@@ -850,8 +873,7 @@ def handle_mcp_errors(func: Callable[..., Any]) -> Callable[..., Any]:
             return safe_response(True, result=result)
         except (ToolError, ResourceError) as e:
             # These errors are meant to be sent to clients
-            message = f"MCP error in {func.__name__}: {e}"
-            logger.warning(message)
+            logger.warning("MCP error in %s: %s", func.__name__, e)
             return safe_response(
                 False, error=str(e), error_type=e.error_code or "mcp_error"
             )
@@ -870,8 +892,9 @@ def handle_mcp_errors(func: Callable[..., Any]) -> Callable[..., Any]:
                 ConfigurationError: "configuration",
             }
             error_type = error_type_map.get(type(e), "general")
-            message = f"{error_type.capitalize()} error in {func.__name__}: {e}"
-            logger.warning(message)
+            logger.warning(
+                "%s error in %s: %s", error_type.capitalize(), func.__name__, e
+            )
             return safe_response(False, error=str(e), error_type=error_type)
         except (ConnectionError, OSError, PermissionError):
             # Mask internal errors for security
@@ -896,7 +919,6 @@ def validate_input(**validators) -> Callable[[F], F]:
 
     Returns:
         Decorated function
-
     """
 
     def decorator(func: F) -> F:
@@ -932,19 +954,21 @@ def validate_input(**validators) -> Callable[[F], F]:
 
 # Custom Pydantic errors following Pydantic 2.0 patterns
 def create_validation_error(
-    field: str, message, error_type="value_error", **context
+    field: str,
+    message: LiteralString,
+    error_type: LiteralString = "value_error",
+    **context: Any,
 ) -> PydanticCustomError:
     """Create a custom Pydantic validation error.
 
     Args:
         field: Field name that failed validation
-        message: Error message
-        error_type: Type of validation error
+        message: Error message (must be a literal string)
+        error_type: Type of validation error (must be a literal string)
         **context: Additional context for the error
 
     Returns:
         PydanticCustomError instance
-
     """
     return PydanticCustomError(
         error_type,

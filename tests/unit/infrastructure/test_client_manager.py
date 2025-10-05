@@ -480,16 +480,3 @@ class TestClientManagerFactoryMethods:
         """Test factory method for creating from unified config."""
         manager = ClientManager.from_unified_config()
         assert isinstance(manager, ClientManager)
-
-    @pytest.mark.asyncio
-    async def test_from_unified_config_with_auto_detection(self):
-        """Test factory method with auto-detection."""
-        with patch(
-            "src.infrastructure.client_manager.get_container"
-        ) as mock_get_container:
-            mock_container = MagicMock()
-            mock_get_container.return_value = mock_container
-
-            manager = await ClientManager.from_unified_config_with_auto_detection()
-            assert isinstance(manager, ClientManager)
-            assert manager.is_initialized

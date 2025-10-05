@@ -22,16 +22,9 @@ from .loader import (
     reset_config,
     set_config,
 )
-from .manager import (
-    ConfigManager,
-    GracefulDegradationHandler,
-    get_degradation_handler as _get_degradation_handler,
-)
 from .models import (
     ABTestVariant,
     ApplicationMode,
-    AutoDetectedServices,
-    AutoDetectionConfig,
     BrowserUseConfig,
     CacheConfig,
     CacheType,
@@ -43,15 +36,12 @@ from .models import (
     DatabaseConfig,
     DeploymentConfig,
     DeploymentTier,
-    DetectedEnvironment,
-    DetectedService,
     DocumentationSite,
     DocumentStatus,
     EmbeddingConfig,
     EmbeddingModel,
     EmbeddingProvider,
     Environment,
-    EnvironmentDetector,
     FastEmbedConfig,
     FirecrawlConfig,
     FusionAlgorithm,
@@ -81,7 +71,6 @@ from .models import (
     SearchMode,
     SearchPipeline,
     SearchStrategy,
-    TaskQueueConfig,
     VectorType,
 )
 from .reloader import (
@@ -105,23 +94,7 @@ from .security.config import (
 )
 
 
-async def get_config_with_auto_detection(*, force_reload: bool = False) -> Config:
-    """Return configuration after running lightweight auto-detection."""
-
-    config = get_config(force_reload=force_reload)
-    if not config.auto_detection.enabled:
-        config.set_auto_detected_services(None)
-        return config
-
-    detector = EnvironmentDetector(config=config.auto_detection)
-    environment = await detector.detect()
-    autodetected = AutoDetectedServices(environment=environment)
-    config.set_auto_detected_services(autodetected)
-    return config
-
-
 _reloader_instance: ConfigReloader | None = None
-get_degradation_handler = _get_degradation_handler
 
 
 def get_config_reloader(**kwargs: Any) -> ConfigReloader:
@@ -157,8 +130,6 @@ __all__ = [
     "set_config",
     "ABTestVariant",
     "ApplicationMode",
-    "AutoDetectionConfig",
-    "AutoDetectedServices",
     "BrowserUseConfig",
     "CacheConfig",
     "CacheType",
@@ -170,15 +141,12 @@ __all__ = [
     "DatabaseConfig",
     "DeploymentConfig",
     "DeploymentTier",
-    "DetectedEnvironment",
-    "DetectedService",
     "DocumentStatus",
     "DocumentationSite",
     "EmbeddingConfig",
     "EmbeddingModel",
     "EmbeddingProvider",
     "Environment",
-    "EnvironmentDetector",
     "FastEmbedConfig",
     "FirecrawlConfig",
     "FusionAlgorithm",
@@ -208,10 +176,7 @@ __all__ = [
     "SearchPipeline",
     "SearchStrategy",
     "ScoreNormalizationStrategy",
-    "TaskQueueConfig",
     "VectorType",
-    "ConfigManager",
-    "GracefulDegradationHandler",
     "ConfigAccessLevel",
     "ConfigDataClassification",
     "ConfigOperationType",
@@ -221,8 +186,6 @@ __all__ = [
     "SecurityConfig",
     "get_config_reloader",
     "set_config_reloader",
-    "get_config_with_auto_detection",
-    "get_degradation_handler",
     "ConfigBackup",
     "ConfigError",
     "ConfigLoadError",

@@ -1,6 +1,7 @@
 """FastAPI router for configuration lifecycle management."""
 
 import logging
+import os
 from pathlib import Path
 from typing import Any, cast
 
@@ -13,6 +14,7 @@ from src.config import (
     get_config,
     get_config_reloader,
 )
+from src.services.monitoring.file_integrity import OsqueryFileIntegrityProvider
 from src.services.observability.tracing import (
     ConfigOperationType,
     instrument_config_operation,
@@ -95,7 +97,6 @@ class ReloadStatsResponse(BaseModel):
     failed_operations: int
     success_rate: float
     average_duration_ms: float
-    listeners_registered: int
     backups_available: int
     current_config_hash: str | None = None
 
@@ -269,7 +270,6 @@ async def get_reload_stats() -> ReloadStatsResponse:
             failed_operations=cast(int, stats.get("failed_operations", 0)),
             success_rate=cast(float, stats.get("success_rate", 0.0)),
             average_duration_ms=cast(float, stats.get("average_duration_ms", 0.0)),
-            listeners_registered=cast(int, stats.get("listeners_registered", 0)),
             backups_available=cast(int, stats.get("backups_available", 0)),
             current_config_hash=current_hash,
         )
@@ -292,7 +292,6 @@ async def get_config_status() -> dict[str, Any]:
         return {
             "config_reloader_enabled": True,
             "current_config_hash": stats.get("current_config_hash"),
-            "registered_listeners": stats.get("listeners_registered", 0),
             "available_backups": stats.get("backups_available", 0),
             "file_watching_enabled": reloader.is_file_watch_enabled(),
             "reload_statistics": {
@@ -327,6 +326,14 @@ async def enable_file_watching(
 
     try:
         reloader = get_config_reloader()
+        provider = OsqueryFileIntegrityProvider(
+            results_log=Path(
+                os.getenv(
+                    "OSQUERY_RESULTS_LOG", "/var/log/osquery/osqueryd.results.log"
+                )
+            )
+        )
+        await reloader.attach_file_integrity_provider(provider)
         await reloader.enable_file_watching(poll_interval=poll_interval)
         return {
             "file_watching_enabled": True,

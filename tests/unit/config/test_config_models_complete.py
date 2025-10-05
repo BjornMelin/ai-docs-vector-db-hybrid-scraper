@@ -21,7 +21,6 @@ from src.config import (
     PlaywrightConfig,
     SearchStrategy,
     SecurityConfig,
-    TaskQueueConfig,
 )
 
 
@@ -151,18 +150,6 @@ DEFAULT_EXPECTATIONS = [
             "console_exporter": False,
         },
         id="observability",
-    ),
-    pytest.param(
-        TaskQueueConfig,
-        {
-            "redis_url": "redis://localhost:6379",
-            "redis_password": None,
-            "redis_database": 0,
-            "max_jobs": 10,
-            "job_timeout": 300,
-            "default_queue_name": "default",
-        },
-        id="taskqueue",
     ),
     pytest.param(
         EmbeddingConfig,
@@ -340,23 +327,6 @@ CUSTOM_CONFIG_CASES = [
         id="observability",
     ),
     pytest.param(
-        TaskQueueConfig,
-        {
-            "redis_password": TEST_REDIS_PASSWORD,
-            "redis_database": 4,
-            "max_jobs": 50,
-        },
-        {
-            "redis_url": "redis://localhost:6379",
-            "redis_password": TEST_REDIS_PASSWORD,
-            "redis_database": 4,
-            "max_jobs": 50,
-            "job_timeout": 300,
-            "default_queue_name": "default",
-        },
-        id="taskqueue",
-    ),
-    pytest.param(
         EmbeddingConfig,
         {
             "provider": EmbeddingProvider.OPENAI,
@@ -390,8 +360,6 @@ INVALID_CONFIG_CASES = [
     pytest.param(
         ObservabilityConfig, {"trace_sample_rate": 1.1}, id="observability-sample"
     ),
-    pytest.param(TaskQueueConfig, {"redis_database": -1}, id="taskqueue-db"),
-    pytest.param(TaskQueueConfig, {"redis_database": 16}, id="taskqueue-db-max"),
     pytest.param(EmbeddingConfig, {"provider": "invalid"}, id="embedding-provider"),
 ]
 

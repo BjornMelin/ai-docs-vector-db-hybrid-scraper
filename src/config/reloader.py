@@ -17,11 +17,10 @@ from pathlib import Path
 from time import perf_counter
 from uuid import uuid4
 
-
-try:  # pragma: no cover - optional dependency in minimal environments
-    from watchfiles import awatch
-except ImportError:  # pragma: no cover - ensures graceful degradation
-    awatch = None
+from src.services.monitoring.file_integrity import (
+    FileChangeEvent,
+    FileIntegrityProvider,
+)
 
 from .loader import Config, get_config, set_config
 
@@ -100,7 +99,12 @@ class ConfigReloader:
             Path(config_source).expanduser().resolve() if config_source else None
         )
         self._file_watch_enabled = False
-        self._watch_task: asyncio.Task[None] | None = None
+        self._fim_provider: FileIntegrityProvider | None = None
+        self._watch_target_is_dir = (
+            self._default_config_source.is_dir()
+            if self._default_config_source and self._default_config_source.exists()
+            else False
+        )
         self._history: deque[ReloadOperation] = deque(maxlen=history_limit)
         self._backups: deque[tuple[str, ConfigBackup]] = deque(maxlen=history_limit)
         self._lock = asyncio.Lock()
@@ -235,6 +239,11 @@ class ConfigReloader:
 
         return list(self._history)[:limit]
 
+    def get_default_config_source(self) -> Path | None:
+        """Return the default configuration source path, if configured."""
+
+        return self._default_config_source
+
     def get_reload_stats(self) -> dict[str, object]:
         """Return aggregate counters describing reload behaviour."""
 
@@ -247,101 +256,81 @@ class ConfigReloader:
             "failed_operations": self._failed_operations,
             "success_rate": success_rate,
             "average_duration_ms": average_duration,
-            "listeners_registered": int(
-                self._watch_task is not None and not self._watch_task.done()
-            ),
             "backups_available": len(self._backups),
             "current_config_hash": self._hash_config(get_config()),
         }
 
+    async def attach_file_integrity_provider(
+        self, provider: FileIntegrityProvider | None
+    ) -> None:
+        """Attach a file integrity provider used for change notifications."""
+
+        if provider is self._fim_provider:
+            return
+
+        if self._fim_provider is not None:
+            with contextlib.suppress(Exception):
+                await self._fim_provider.stop()
+
+        self._fim_provider = provider
+
+        if self._fim_provider is not None:
+            self._fim_provider.subscribe(self._on_file_change)
+            if self._file_watch_enabled:
+                await self._fim_provider.start()
+
     async def enable_file_watching(self, poll_interval: float | None = None) -> None:
-        """Enable asynchronous watching of the configuration source.
-
-        Args:
-            poll_interval: Optional debounce interval (seconds) for filesystem
-                change notifications. Defaults to 0.5s when omitted.
-
-        Raises:
-            ConfigError: When file watching cannot be enabled.
-        """
-
-        if awatch is None:  # pragma: no cover - optional dependency guard
-            msg = "watchfiles dependency is required for file watching"
-            raise ConfigError(msg)
+        """Enable file watching through the configured integrity provider."""
 
         if self._default_config_source is None:
             msg = "Cannot enable file watching without a configured source path"
+            raise ConfigError(msg)
+
+        if self._fim_provider is None:
+            msg = (
+                "File integrity provider not configured; call "
+                "attach_file_integrity_provider() first"
+            )
             raise ConfigError(msg)
 
         target = self._default_config_source
         if not target.exists():
             msg = f"Configuration source not found for watching: {target}"
             raise ConfigLoadError(msg)
+        if target.exists():
+            self._watch_target_is_dir = target.is_dir()
+        else:
+            self._watch_target_is_dir = False
 
-        if self._watch_task and not self._watch_task.done():
+        if poll_interval is not None:
+            logger.debug(
+                "ConfigReloader.enable_file_watching received poll_interval=%s but "
+                "the current provider manages scheduling internally",
+                poll_interval,
+            )
+
+        if self._file_watch_enabled:
             logger.debug("File watching already active for %s", target)
             return
 
-        await self.disable_file_watching()
-
-        debounce = int(poll_interval if poll_interval is not None else 0.5)
-        watch_root = target if target.is_dir() else target.parent
-        monitored_file = target.resolve()
-
-        async def _watch_loop() -> None:
-            # Type assertion for awatch
-            assert awatch is not None
-
-            try:
-                async for changes in awatch(watch_root, debounce=debounce):
-                    if not self._file_watch_enabled:
-                        break
-
-                    if target.is_file():
-                        relevant = any(
-                            Path(changed).resolve() == monitored_file
-                            for _change, changed in changes
-                        )
-                        if not relevant:
-                            continue
-
-                    logger.debug("Detected configuration change in %s", monitored_file)
-                    try:
-                        await self.reload_config(
-                            trigger=ReloadTrigger.FILE_WATCH,
-                            config_source=target,
-                        )
-                    except Exception as exc:  # pragma: no cover - defensive path
-                        logger.exception("File watch reload failed: %s", exc)
-            except asyncio.CancelledError:
-                logger.debug("File watching task cancelled")
-                raise
-            except Exception as exc:  # pragma: no cover - defensive path
-                logger.exception("File watching task failed: %s", exc)
-            finally:
-                self._file_watch_enabled = False
-                self._watch_task = None
-                logger.debug("File watching stopped for %s", monitored_file)
-
+        await self._fim_provider.start()
         self._file_watch_enabled = True
-        self._watch_task = asyncio.create_task(_watch_loop(), name="config-file-watch")
 
     async def disable_file_watching(self) -> None:
         """Disable file watching hooks for configuration changes."""
 
+        if not self._file_watch_enabled:
+            return
+
         self._file_watch_enabled = False
-        if self._watch_task and not self._watch_task.done():
-            self._watch_task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await self._watch_task
-        self._watch_task = None
+        if self._fim_provider is not None:
+            with contextlib.suppress(Exception):
+                await self._fim_provider.stop()
 
     def is_file_watch_enabled(self) -> bool:
         """Return whether on-disk file watching is active."""
 
-        return self._file_watch_enabled and (
-            self._watch_task is not None and not self._watch_task.done()
-        )
+        return self._file_watch_enabled
 
     def get_config_backups(self) -> Iterator[tuple[str, ConfigBackup]]:
         """Yield configuration backups starting with the newest snapshot."""
@@ -360,6 +349,44 @@ class ConfigReloader:
         else:
             self._failed_operations += 1
         self._aggregate_duration_ms += operation.total_duration_ms
+
+    async def _on_file_change(self, event: FileChangeEvent) -> None:
+        """Handle file integrity events emitted by the provider."""
+
+        if self._default_config_source is None:
+            return
+
+        try:
+            event_path = Path(event.path).resolve()
+        except Exception:
+            logger.debug("Ignoring malformed file integrity event: %s", event)
+            return
+
+        target = self._default_config_source
+        target_path = target.resolve()
+
+        relevant = False
+        if self._watch_target_is_dir:
+            with contextlib.suppress(ValueError):
+                event_path.relative_to(target_path)
+                relevant = True
+        else:
+            relevant = event_path == target_path
+
+        if not relevant:
+            return
+
+        logger.debug(
+            "Detected configuration change via file integrity event: %s", event
+        )
+        try:
+            await self.reload_config(
+                trigger=ReloadTrigger.FILE_WATCH,
+                config_source=target,
+                force=True,
+            )
+        except Exception as exc:  # pragma: no cover - defensive path
+            logger.exception("File integrity reload failed: %s", exc)
 
     def _store_backup(self, config_hash: str | None, config: Config) -> None:
         if config_hash is None:

@@ -4,7 +4,6 @@ from .base import CacheInterface
 from .dragonfly_cache import DragonflyCache
 from .embedding_cache import EmbeddingCache
 from .manager import CacheManager, CacheType
-from .patterns import CachePatterns
 from .persistent_cache import CacheStats, PersistentCacheManager
 from .search_cache import SearchResultCache
 from .warming import CacheWarmer
@@ -13,7 +12,6 @@ from .warming import CacheWarmer
 __all__ = [
     "CacheInterface",
     "CacheManager",
-    "CachePatterns",
     "CacheStats",
     "CacheType",
     "CacheWarmer",

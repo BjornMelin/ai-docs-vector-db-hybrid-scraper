@@ -58,6 +58,7 @@ class DummyReloader:  # pylint: disable=too-many-instance-attributes
     def __init__(self) -> None:
         self.config_source = "config.yaml"
         self.backup_count = 1
+        self._provider = None
         self._file_watch_enabled = False
         self.raise_reload_error = False
         self.raise_rollback_error = False
@@ -95,13 +96,18 @@ class DummyReloader:  # pylint: disable=too-many-instance-attributes
             "failed_operations": 0,
             "success_rate": 1.0,
             "average_duration_ms": 12.3,
-            "listeners_registered": 2,
             "backups_available": 1,
             "current_config_hash": "hash-new",
         }
 
+    def get_default_config_source(self) -> Path | None:
+        return Path("/tmp/config.json")
+
     def is_file_watch_enabled(self) -> bool:  # noqa: D401 - matches router expectation
         return self._file_watch_enabled
+
+    async def attach_file_integrity_provider(self, provider: Any) -> None:
+        self._provider = provider
 
     async def enable_file_watching(self, *, poll_interval: float | None = None) -> None:
         del poll_interval

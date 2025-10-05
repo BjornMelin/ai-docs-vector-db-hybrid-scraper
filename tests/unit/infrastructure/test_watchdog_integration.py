@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 from collections.abc import Iterator
 from pathlib import Path
@@ -16,6 +15,11 @@ from src.config.reloader import (
     ConfigLoadError,
     ConfigReloader,
     ReloadTrigger,
+)
+from src.services.monitoring.file_integrity import (
+    FileChangeAction,
+    FileChangeEvent,
+    StubFileIntegrityProvider,
 )
 
 
@@ -32,14 +36,14 @@ class TestConfigReloaderFileWatching:
     """Tests covering file watching behaviour for ConfigReloader."""
 
     @pytest.mark.asyncio
-    async def test_enable_file_watching_triggers_reload(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
+    async def test_enable_file_watching_triggers_reload(self, tmp_path: Path) -> None:
         """Test that enabling file watching triggers config reload on file change."""
         config_path = tmp_path / "config.json"
         config_path.write_text("{}", encoding="utf-8")
 
         reloader = ConfigReloader(config_source=config_path)
+        provider = StubFileIntegrityProvider()
+        await reloader.attach_file_integrity_provider(provider)
 
         reload_calls: list[tuple[ReloadTrigger, Path | None]] = []
 
@@ -50,47 +54,36 @@ class TestConfigReloaderFileWatching:
 
         reloader.reload_config = fake_reload_config  # type: ignore[assignment]
 
-        async def fake_awatch(path: Path, *, debounce: int):
-            yield {(None, str(config_path))}
-            await asyncio.sleep(0)
-
-        monkeypatch.setattr("src.config.reloader.awatch", fake_awatch)
-
         await reloader.enable_file_watching(poll_interval=0)
-        await asyncio.sleep(0.05)
+
+        await provider.emit(
+            FileChangeEvent(path=config_path, action=FileChangeAction.UPDATED)
+        )
 
         assert reload_calls
         trigger, source = reload_calls[0]
         assert trigger == ReloadTrigger.FILE_WATCH
         assert source == config_path
-        assert reloader.is_file_watch_enabled() is False
+        assert reloader.is_file_watch_enabled() is True
 
     @pytest.mark.asyncio
-    async def test_enable_file_watching_requires_dependency(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
-        """Test that enabling file watching raises error when dependency is missing."""
+    async def test_enable_file_watching_requires_provider(self, tmp_path: Path) -> None:
+        """Test that enabling file watching raises error when provider missing."""
         config_path = tmp_path / "config.json"
         config_path.write_text("{}", encoding="utf-8")
 
         reloader = ConfigReloader(config_source=config_path)
-        monkeypatch.setattr("src.config.reloader.awatch", None)
 
         with pytest.raises(ConfigError):
             await reloader.enable_file_watching()
 
     @pytest.mark.asyncio
-    async def test_enable_file_watching_missing_source(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
+    async def test_enable_file_watching_missing_source(self, tmp_path: Path) -> None:
         """Test that enabling file watching raises error for missing config source."""
         missing_path = tmp_path / "missing.json"
         reloader = ConfigReloader(config_source=missing_path)
-
-        async def dummy_awatch(*args, **kwargs):
-            yield set()
-
-        monkeypatch.setattr("src.config.reloader.awatch", dummy_awatch)
+        provider = StubFileIntegrityProvider()
+        await reloader.attach_file_integrity_provider(provider)
 
         with pytest.raises(ConfigLoadError):
             await reloader.enable_file_watching()
@@ -104,34 +97,16 @@ class TestConfigReloaderFileWatching:
         config_path.write_text("{}", encoding="utf-8")
 
         reloader = ConfigReloader(config_source=config_path)
-        start_event = asyncio.Event()
-        stop_event = asyncio.Event()
-
-        async def looping_awatch(path: Path, *, debounce: int):
-            start_event.set()
-            try:
-                while True:
-                    await asyncio.sleep(0.01)
-                    yield {(None, str(config_path))}
-            finally:
-                stop_event.set()
-
-        monkeypatch.setattr("src.config.reloader.awatch", looping_awatch)
-
-        async def fake_reload_config(
-            *, trigger: ReloadTrigger, config_source: Path | None, force: bool = False
-        ) -> None:
-            await asyncio.sleep(0)
-
-        reloader.reload_config = fake_reload_config  # type: ignore[assignment]
+        provider = StubFileIntegrityProvider()
+        await reloader.attach_file_integrity_provider(provider)
 
         await reloader.enable_file_watching(poll_interval=0)
-        await asyncio.wait_for(start_event.wait(), timeout=0.2)
         assert reloader.is_file_watch_enabled() is True
+        assert provider._running is True  # type: ignore[attr-defined]
 
         await reloader.disable_file_watching()
-        await asyncio.wait_for(stop_event.wait(), timeout=0.2)
         assert reloader.is_file_watch_enabled() is False
+        assert provider._running is False  # type: ignore[attr-defined]
 
 
 class TestConfigReloaderOperations:

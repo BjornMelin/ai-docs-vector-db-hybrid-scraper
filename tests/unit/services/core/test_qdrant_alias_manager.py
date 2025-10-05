@@ -1,6 +1,6 @@
 """Tests for Qdrant alias manager service."""
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from qdrant_client.models import CreateAliasOperation, DeleteAliasOperation
@@ -141,36 +141,26 @@ class TestQdrantAliasManager:
         return client
 
     @pytest.fixture
-    def mock_task_queue_manager(self):
-        """Create mock TaskQueueManager."""
-        mock_manager = AsyncMock()
-        mock_manager.enqueue.return_value = "test_job_id"
-        return mock_manager
-
-    @pytest.fixture
-    def alias_manager(self, mock_config, mock_client, mock_task_queue_manager):
+    def alias_manager(self, mock_config, mock_client):
         """Create QdrantAliasManager instance."""
         return QdrantAliasManager(
             config=mock_config,
             client=mock_client,
-            task_queue_manager=mock_task_queue_manager,
         )
 
     def test_inheritance(self, alias_manager):
         """Test that QdrantAliasManager inherits from BaseService."""
         assert isinstance(alias_manager, BaseService)
 
-    def test_init(self, mock_config, mock_client, mock_task_queue_manager):
+    def test_init(self, mock_config, mock_client):
         """Test QdrantAliasManager initialization."""
         manager = QdrantAliasManager(
             config=mock_config,
             client=mock_client,
-            task_queue_manager=mock_task_queue_manager,
         )
 
         assert manager.config == mock_config
         assert manager.client == mock_client
-        assert manager._task_queue_manager == mock_task_queue_manager
         assert manager._initialized is True  # Already initialized via client
 
     @pytest.mark.asyncio
@@ -190,15 +180,9 @@ class TestQdrantAliasManager:
 
     @pytest.mark.asyncio
     async def test_cleanup_with_pending_tasks(self, alias_manager):
-        """Test cleanup method (no-op as tasks are managed by task queue)."""
-        # Current implementation uses task queue manager for persistence
-        # No local cleanup is needed as tasks are managed externally
+        """Cleanup remains a no-op with direct deletion."""
 
-        # Should not raise any exceptions
         await alias_manager.cleanup()
-
-        # No assertions needed as cleanup is a no-op
-        # All deletion scheduling is handled by task queue manager
 
     @pytest.mark.asyncio
     async def test_create_alias_success(self, alias_manager, mock_client):
@@ -348,9 +332,7 @@ class TestQdrantAliasManager:
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_switch_alias_with_delete_old(
-        self, alias_manager, mock_client, mock_task_queue_manager
-    ):
+    async def test_switch_alias_with_delete_old(self, alias_manager, mock_client):
         """Test switching alias with delete_old=True."""
         # Mock existing alias
         existing_alias = MagicMock()
@@ -365,14 +347,17 @@ class TestQdrantAliasManager:
             ),  # For list_aliases in safe_delete_collection (no aliases left)
         ]
 
-        result = await alias_manager.switch_alias(
-            "test_alias", "new_collection", delete_old=True
-        )
+        with patch(
+            "src.services.core.qdrant_alias_manager.asyncio.sleep",
+            new=AsyncMock(return_value=None),
+        ) as mock_sleep:
+            result = await alias_manager.switch_alias(
+                "test_alias", "new_collection", delete_old=True
+            )
 
         assert result == "old_collection"
-
-        # Should schedule deletion task via task queue manager
-        mock_task_queue_manager.enqueue.assert_called_once()
+        mock_sleep.assert_awaited_once()
+        mock_client.delete_collection.assert_called_once_with("old_collection")
 
     @pytest.mark.asyncio
     async def test_switch_alias_invalid_names(self, alias_manager):
@@ -542,54 +527,36 @@ class TestQdrantAliasManager:
         mock_client.delete_collection.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_safe_delete_collection_no_aliases(
-        self, alias_manager, mock_client, mock_task_queue_manager
-    ):
+    async def test_safe_delete_collection_no_aliases(self, alias_manager, mock_client):
         """Test safe delete when collection has no aliases."""
         mock_client.get_aliases.return_value = MagicMock(aliases=[])
 
-        await alias_manager.safe_delete_collection(
-            "test_collection", grace_period_minutes=0.01
-        )  # Very short for testing
+        with patch(
+            "src.services.core.qdrant_alias_manager.asyncio.sleep",
+            new=AsyncMock(return_value=None),
+        ) as mock_sleep:
+            await alias_manager.safe_delete_collection(
+                "test_collection", grace_period_minutes=0.01
+            )
 
-        # Should schedule deletion task via task queue manager
-        mock_task_queue_manager.enqueue.assert_called_once()
-
-        # Verify the task was scheduled with correct parameters
-        call_args = mock_task_queue_manager.enqueue.call_args
-        assert call_args[0][0] == "delete_collection"
-        assert call_args[1]["collection_name"] == "test_collection"
-
-    @pytest.mark.asyncio
-    async def test_safe_delete_collection_background_deletion(
-        self, alias_manager, mock_client, mock_task_queue_manager
-    ):
-        """Test that deletion is scheduled via task queue."""
-        mock_client.get_aliases.return_value = MagicMock(aliases=[])
-
-        await alias_manager.safe_delete_collection(
-            "test_collection", grace_period_minutes=1
-        )
-
-        # Verify task was scheduled with correct delay
-        mock_task_queue_manager.enqueue.assert_called_once()
-        call_args = mock_task_queue_manager.enqueue.call_args
-        assert call_args[0][0] == "delete_collection"
-        assert call_args[1]["collection_name"] == "test_collection"
-        assert call_args[1]["grace_period_minutes"] == 1
-        assert call_args[1]["_delay"] == 60  # 1 minute * 60 seconds
+        mock_sleep.assert_awaited_once()
+        mock_client.delete_collection.assert_called_once_with("test_collection")
 
     @pytest.mark.asyncio
     async def test_safe_delete_collection_deletion_failure(
-        self, alias_manager, mock_client, mock_task_queue_manager
+        self, alias_manager, mock_client
     ):
-        """Test deletion scheduling with task queue manager."""
+        """Ensure deletion failure propagates when Qdrant delete fails."""
         mock_client.get_aliases.return_value = MagicMock(aliases=[])
+        mock_client.delete_collection.side_effect = Exception("Qdrant failure")
 
-        # Mock task queue manager to simulate failure
-        mock_task_queue_manager.enqueue.return_value = None
-
-        with pytest.raises(RuntimeError, match="Failed to schedule deletion"):
+        with (
+            patch(
+                "src.services.core.qdrant_alias_manager.asyncio.sleep",
+                new=AsyncMock(return_value=None),
+            ),
+            pytest.raises(Exception, match="Qdrant failure"),
+        ):
             await alias_manager.safe_delete_collection(
                 "test_collection", grace_period_minutes=0.01
             )
