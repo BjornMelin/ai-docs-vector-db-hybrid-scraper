@@ -85,7 +85,7 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
             retrieval_mode=RetrievalMode.DENSE,
         )
         self._mark_initialized()
-        logger.info("VectorStoreService initialised via LangChain QdrantVectorStore")
+        logger.info("VectorStoreService initialized via LangChain QdrantVectorStore")
 
     async def cleanup(self) -> None:
         """Release Qdrant clients and embeddings."""
@@ -592,13 +592,13 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
 
     def _require_async_client(self) -> AsyncQdrantClient:
         if self._async_client is None:
-            msg = "VectorStoreService not initialised"
+            msg = "VectorStoreService not initialized"
             raise RuntimeError(msg)
         return self._async_client
 
     def _require_vector_store(self, collection: str) -> QdrantVectorStore:
         if self._vector_store is None:
-            msg = "VectorStoreService not initialised"
+            msg = "VectorStoreService not initialized"
             raise RuntimeError(msg)
         # LangChain's vector store keeps the collection name; override if needed.
         self._vector_store.collection_name = collection

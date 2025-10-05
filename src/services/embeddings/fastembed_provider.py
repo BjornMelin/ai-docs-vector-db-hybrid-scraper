@@ -63,7 +63,7 @@ class FastEmbedProvider(EmbeddingProvider):
             self._metrics = None
 
     async def initialize(self) -> None:
-        """Initialise the underlying LangChain embeddings."""
+        """Initialize the underlying LangChain embeddings."""
 
         if self._initialized:
             return
@@ -76,7 +76,7 @@ class FastEmbedProvider(EmbeddingProvider):
         probe = await asyncio.to_thread(self._dense.embed_query, "probe")
         self.dimensions = len(probe)
         self._initialized = True
-        logger.info("FastEmbed provider initialised using LangChain components")
+        logger.info("FastEmbed provider initialized using LangChain components")
 
     async def cleanup(self) -> None:
         """Release cached embedding instances."""
@@ -91,7 +91,7 @@ class FastEmbedProvider(EmbeddingProvider):
         """Expose the underlying LangChain embedding instance."""
 
         if self._dense is None:
-            msg = "FastEmbedProvider has not been initialised"
+            msg = "FastEmbedProvider has not been initialized"
             raise EmbeddingServiceError(msg)
         return self._dense
 
@@ -101,7 +101,7 @@ class FastEmbedProvider(EmbeddingProvider):
         """Generate dense embeddings for the given texts."""
 
         if not self._initialized or self._dense is None:
-            msg = "FastEmbedProvider has not been initialised"
+            msg = "FastEmbedProvider has not been initialized"
             raise EmbeddingServiceError(msg)
 
         if not texts:
@@ -128,7 +128,7 @@ class FastEmbedProvider(EmbeddingProvider):
         if not texts:
             return []
         if not self._initialized:
-            msg = "FastEmbedProvider has not been initialised"
+            msg = "FastEmbedProvider has not been initialized"
             raise EmbeddingServiceError(msg)
         if FastEmbedSparseRuntime is None:
             msg = "langchain-qdrant is required for sparse embeddings"

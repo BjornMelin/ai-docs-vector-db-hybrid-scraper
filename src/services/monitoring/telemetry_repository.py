@@ -10,7 +10,7 @@ from threading import RLock
 TagMapping = Mapping[str, str]
 
 
-def _normalise_tags(tags: TagMapping | None) -> tuple[tuple[str, str], ...]:
+def _normalize_tags(tags: TagMapping | None) -> tuple[tuple[str, str], ...]:
     """Return tags as a sorted tuple suitable for dictionary keys."""
 
     if not tags:
@@ -26,7 +26,7 @@ class CounterSample:
     value: int
 
     def as_dict(self) -> dict[str, object]:
-        """Return a serialisable representation."""
+        """Return a serializable representation."""
 
         return {"tags": dict(self.tags), "value": self.value}
 
@@ -41,7 +41,7 @@ class HistogramSample:
     values: tuple[float, ...]
 
     def as_dict(self) -> dict[str, object]:
-        """Return a serialisable representation."""
+        """Return a serializable representation."""
 
         return {
             "tags": dict(self.tags),
@@ -73,7 +73,7 @@ class TelemetryRepository:
         if value < 0:
             msg = "Counter increments must be non-negative"
             raise ValueError(msg)
-        key = _normalise_tags(tags)
+        key = _normalize_tags(tags)
         with self._lock:
             counters = self._counter_storage.setdefault(name, {})
             counters[key] = counters.get(key, 0) + value
@@ -87,7 +87,7 @@ class TelemetryRepository:
     ) -> None:
         """Record a single histogram observation."""
 
-        key = _normalise_tags(tags)
+        key = _normalize_tags(tags)
         with self._lock:
             histograms = self._histogram_storage.setdefault(name, {})
             samples = histograms.setdefault(key, [])
