@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Added focused FastAPI security middleware tests and published release notes summarising the configuration/file-watch hardening work.
+- Documented osquery prerequisites for configuration file watching to help operators enable the feature safely.
 - Captured ADR 0009 documenting the tiered Playwright anti-bot stack and exported the new browser metrics section in `docs/observability/query_processing_metrics.md` with challenge counters.
 - Published `docs/observability/rag_metrics_catalog.md` documenting the
   OpenTelemetry-aligned RAG metrics (stage latency, answer funnel, token
@@ -31,6 +33,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   record, and technical debt register for the new suites.
 
 ### Changed
+- Configuration reload and file-watching endpoints now validate override paths, surface operator errors as HTTP 400, and wait until the osquery-backed provider reports readiness before returning success.
+- Simplified the security configuration model to the fields actually enforced by the middleware, updated templates/docs, and aligned the middleware implementation with the lean schema.
+- Dependency re-exports for FastAPI helpers now live under `src/services/fastapi/dependencies/__init__.py`, trimming redundant wrapper modules.
 - LangGraph GraphRunner now emits structured metrics/errors, enforces optional
   run timeouts, and surfaces discovery/tool telemetry across MCP entry points;
   MCP orchestrator and tests were refreshed to exercise the new pipeline.
@@ -105,6 +110,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pinned the regression workflow `uv` dependency to `0.2.37` to stabilize CI setup.
 
 ### Removed
+- Deleted the unused `src/services/enterprise` package and example security integration module; optional services now fail closed until replacements arrive.
 - Deleted query_processing clustering, expansion, ranking, and utils modules plus their tests in favour of the final LangChain-backed stack.
 - Deleted support for the deprecated `AI_DOCS_DEPLOYMENT__TIER` environment variable in favor of `AI_DOCS_MODE` as the sole mode selector.
 - Removed the flaky async configuration validation unit suite that only exercised mock sleep-based helpers.
