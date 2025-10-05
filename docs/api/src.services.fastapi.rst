@@ -7,7 +7,6 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
-   src.services.fastapi.dependencies
    src.services.fastapi.middleware
    src.services.fastapi.routers
 

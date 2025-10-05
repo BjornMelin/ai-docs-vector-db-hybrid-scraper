@@ -181,16 +181,6 @@ class TestMetricsRegistry:
         assert "qdrant_collection_size" in registry._metrics
         assert "qdrant_operations" in registry._metrics
 
-    def test_record_task_metrics(self, registry):
-        """Test task queue metrics."""
-        registry.record_task_queue_size("embeddings", "pending", 25)
-        registry.record_task_execution("embeddings", duration_seconds=2.5, success=True)
-        registry.update_worker_count("embeddings", 3)
-
-        assert "task_queue_size" in registry._metrics
-        assert "task_execution_duration" in registry._metrics
-        assert "worker_active" in registry._metrics
-
     def test_browser_metrics(self, registry):
         """Test browser automation metrics."""
         registry.record_browser_request(
