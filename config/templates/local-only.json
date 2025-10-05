@@ -52,10 +52,8 @@
     }
   },
   "security": {
-    "require_api_keys": false,
-    "enable_rate_limiting": false,
-    "allowed_domains": ["localhost", "127.0.0.1"],
-    "blocked_domains": []
+    "api_key_required": false,
+    "enable_rate_limiting": false
   },
   "_comment": "This configuration is optimized for local-only operation without any cloud services"
 }

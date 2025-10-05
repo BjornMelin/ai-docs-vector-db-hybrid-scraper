@@ -54,7 +54,7 @@
     }
   },
   "security": {
-    "require_api_keys": false,
+    "api_key_required": false,
     "enable_rate_limiting": false
   },
   "documentation_sites": [

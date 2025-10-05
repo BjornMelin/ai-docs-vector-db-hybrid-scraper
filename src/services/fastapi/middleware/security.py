@@ -28,9 +28,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
     - Essential security headers injection
     - Redis-backed rate limiting for distributed deployments
     - Fallback to in-memory rate limiting for development
-    - Request validation and filtering
-    - Security event logging
-    - AI-specific threat detection (prompt injection)
+    - Request validation and lightweight logging
     """
 
     def __init__(
@@ -42,8 +40,8 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             app: ASGI application
             config: Security configuration
             redis_url: Redis connection URL for distributed rate limiting
-
         """
+
         super().__init__(app)
         self.config = config
         self.redis_url = redis_url or "redis://localhost:6379/1"
@@ -68,6 +66,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         Establishes connection to Redis/DragonflyDB and performs health checks.
         Falls back to in-memory rate limiting if Redis is unavailable.
         """
+
         try:
             self.redis_client = redis.Redis.from_url(
                 self.redis_url,
@@ -146,8 +145,8 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Dictionary of security headers
-
         """
+
         headers = {}
 
         if self.config.x_frame_options:
@@ -182,8 +181,8 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Args:
             response: HTTP response to modify
-
         """
+
         for header_name, header_value in self._security_headers.items():
             # Don't override existing headers
             if header_name not in response.headers:
@@ -224,21 +223,26 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Returns:
             True if request is allowed, False if rate limited
-
         """
+
+        if self.redis_client is None:
+            return self._check_rate_limit_memory(client_ip)
+
+        client = self.redis_client
+
         try:
             # Create rate limiting key
             rate_limit_key = f"rate_limit:{client_ip}"
 
             # Check current count first
-            current_count = await self.redis_client.get(rate_limit_key)
+            current_count = await client.get(rate_limit_key)
 
             if current_count:
                 # Increment counter atomically and check limit
-                new_count = await self.redis_client.incr(rate_limit_key)
+                new_count = await client.incr(rate_limit_key)
                 return new_count <= self.config.default_rate_limit
             # First request in window - set counter and expiry atomically
-            async with self.redis_client.pipeline(transaction=True) as pipe:
+            async with client.pipeline(transaction=True) as pipe:
                 pipe.incr(rate_limit_key)
                 pipe.expire(rate_limit_key, self.config.rate_limit_window)
                 await pipe.execute()
@@ -256,8 +260,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             self._redis_healthy = False
             return self._check_rate_limit_memory(client_ip)
 
-        else:
-            return True
+        return True
 
     def _check_rate_limit_memory(self, client_ip: str) -> bool:
         """In-memory sliding window rate limiting implementation.
@@ -270,8 +273,8 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Returns:
             True if request is allowed, False if rate limited
-
         """
+
         current_time = int(time.time())
         client_data = self._rate_limit_storage[client_ip]
 
@@ -294,8 +297,8 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Returns:
             True if Redis is healthy, False otherwise
-
         """
+
         if not self.redis_client:
             return False
 
@@ -317,8 +320,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             self._redis_healthy = False
             return False
 
-        else:
-            return True
+        return True
 
     async def cleanup(self) -> None:
         """Cleanup Redis connection and resources."""
@@ -340,15 +342,14 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Client IP address
-
         """
+
         # Prioritize direct client IP for security - avoids X-Forwarded-For spoofing
         if request.client:
             return request.client.host
 
-        # Only trust proxy headers from known/configured proxy IPs in production
-        # TODO: Implement trusted_proxies configuration for load balancer scenarios
-        # For now, we use direct IP to prevent spoofing attacks
+        # Only trust proxy headers from known proxy IPs in production. Future work
+        # may surface an explicit trusted proxy allow-list.
 
         return "unknown"
 
@@ -358,6 +359,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         This should be called periodically in production.
         Consider using a background task or external cleanup process.
         """
+
         current_time = int(time.time())
         expired_ips = []
 
@@ -387,14 +389,15 @@ class CSRFProtectionMiddleware(BaseHTTPMiddleware):
             app: ASGI application
             secret_key: Secret key for token generation
             exempt_paths: List of paths to exempt from CSRF protection
-
         """
+
         super().__init__(app)
         self.secret_key = secret_key
         self.exempt_paths = exempt_paths or []
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Process request with CSRF protection."""
+
         # Skip CSRF protection for safe methods and exempt paths
         if (
             request.method in ("GET", "HEAD", "OPTIONS")

@@ -133,9 +133,9 @@ Choose your template based on:
    - Set budget limits for API providers
 
 4. **Security Hardening:**
-   - Always enable `require_api_keys` in production
-   - Configure `allowed_domains` for crawling restrictions
-   - Use rate limiting to prevent abuse
+   - Always enable `api_key_required` in production
+   - Provision strong API keys via the `api_keys` list
+   - Enable rate limiting to prevent abuse
 
 ## Environment-Specific Overrides
 
@@ -149,8 +149,8 @@ export AI_DOCS__ENVIRONMENT=staging
 export AI_DOCS__CACHE__REDIS_URL=redis://prod-dragonfly:6379
 export AI_DOCS__QDRANT__URL=http://qdrant-cluster:6333
 
-# Override arrays (as JSON)
-export AI_DOCS__SECURITY__ALLOWED_DOMAINS='["example.com", "docs.example.com"]'
+# Override API keys (as JSON)
+export AI_DOCS__SECURITY__API_KEYS='["prod-key-1", "prod-key-2"]'
 ```
 
 ## Migrating from Old Configuration
