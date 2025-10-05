@@ -6,14 +6,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from .drift import (
-    ConfigDriftDetector,
-    DriftSeverity,
-    get_drift_detector,
-    get_drift_summary,
-    initialize_drift_detector,
-    run_drift_detection,
-)
 from .loader import (
     Config,
     create_config_from_env,
@@ -55,7 +47,6 @@ from .models import (
     DetectedService,
     DocumentationSite,
     DocumentStatus,
-    DriftDetectionConfig,
     EmbeddingConfig,
     EmbeddingModel,
     EmbeddingProvider,
@@ -183,7 +174,6 @@ __all__ = [
     "DetectedService",
     "DocumentStatus",
     "DocumentationSite",
-    "DriftDetectionConfig",
     "EmbeddingConfig",
     "EmbeddingModel",
     "EmbeddingProvider",
@@ -229,12 +219,6 @@ __all__ = [
     "EncryptedConfigItem",
     "SecureConfigManager",
     "SecurityConfig",
-    "ConfigDriftDetector",
-    "DriftSeverity",
-    "get_drift_detector",
-    "get_drift_summary",
-    "initialize_drift_detector",
-    "run_drift_detection",
     "get_config_reloader",
     "set_config_reloader",
     "get_config_with_auto_detection",

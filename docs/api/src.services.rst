@@ -48,16 +48,7 @@ src.services.base module
    :show-inheritance:
    :undoc-members:
 
-src.services.config\_drift\_service module
-------------------------------------------
-
-.. automodule:: src.services.config_drift_service
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 src.services.dependencies module
---------------------------------
 
 .. automodule:: src.services.dependencies
    :members:

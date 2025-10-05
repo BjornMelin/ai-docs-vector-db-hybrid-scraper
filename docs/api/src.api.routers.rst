@@ -20,14 +20,6 @@ src.api.routers.config module
    :show-inheritance:
    :undoc-members:
 
-src.api.routers.config\_drift module
-------------------------------------
-
-.. automodule:: src.api.routers.config_drift
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 Module contents
 ---------------
 
