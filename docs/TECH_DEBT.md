@@ -1,0 +1,5 @@
+# Technical Debt Log
+
+| Date       | Area / Path            | Item                                                                                                     | Impact                                              | Risk   | Proposed Fix                                                                 | Priority | Owner | Links | Decision / Rationale                                   |
+| ---------- | ---------------------- | -------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | ------ | ---------------------------------------------------------------------------- | -------- | ----- | ----- | ------------------------------------------------------ |
+| 2024-06-03 | src/api/app_factory.py | Search and cache services now fail closed because legacy enterprise/simple implementations were removed. | Core features unavailable until replacements exist. | Medium | Wire the factory to real cache/search abstractions once requirements settle. | P2       | TBD   |       | Prefer failing closed to hiding missing functionality. |

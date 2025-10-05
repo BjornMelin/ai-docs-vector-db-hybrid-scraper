@@ -379,19 +379,7 @@ def _build_app_lifespan(app: FastAPI):
 
 def _register_mode_services(factory: ModeAwareServiceFactory) -> None:
     """Register services for the specified mode."""
-    simple_search_impl = _resolve_optional_class(
-        "src.services.simple.search", "SimpleSearchService"
-    )
-    enterprise_search_impl = _resolve_optional_class(
-        "src.services.enterprise.search", "EnterpriseSearchService"
-    )
-    if simple_search_impl or enterprise_search_impl:
-        factory.register_service(
-            "search_service",
-            simple_search_impl,
-            enterprise_search_impl,
-        )
-    else:
+    if not factory.is_service_registered("search_service"):
         logger.warning(
             "Search service implementations not available; using fail-closed"
         )
@@ -399,19 +387,7 @@ def _register_mode_services(factory: ModeAwareServiceFactory) -> None:
             "search_service", _build_fail_closed_service("search_service")
         )
 
-    simple_cache_impl = _resolve_optional_class(
-        "src.services.simple.cache", "SimpleCacheService"
-    )
-    enterprise_cache_impl = _resolve_optional_class(
-        "src.services.enterprise.cache", "EnterpriseCacheService"
-    )
-    if simple_cache_impl or enterprise_cache_impl:
-        factory.register_service(
-            "cache_service",
-            simple_cache_impl,
-            enterprise_cache_impl,
-        )
-    else:
+    if not factory.is_service_registered("cache_service"):
         logger.warning("Cache service implementations not available; using fail-closed")
         factory.register_universal_service(
             "cache_service", _build_fail_closed_service("cache_service")

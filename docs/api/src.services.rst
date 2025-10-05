@@ -17,7 +17,6 @@ Subpackages
    src.services.crawling
    src.services.deployment
    src.services.embeddings
-   src.services.enterprise
    src.services.fastapi
    src.services.functional
    src.services.hyde
