@@ -1,4 +1,4 @@
-"""Modern unit tests for ClientManager with dependency injection container mocking."""
+"""Unit tests for ClientManager with dependency injection container mocking."""
 
 import asyncio
 import time
