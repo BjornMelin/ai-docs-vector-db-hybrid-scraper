@@ -15,12 +15,11 @@ from concurrent.futures import ThreadPoolExecutor
 
 import httpx
 import pytest
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
 from src.api.main import app
 from src.services.security import AISecurityValidator
-from src.services.security.integration import SecurityManager
 from src.services.security.monitoring import SecurityEventType, SecurityMonitor
 
 
@@ -378,7 +377,6 @@ class TestAPISecurityFramework:
         protected_endpoints = [
             "/api/v1/config/reload",
             "/api/v1/config/rollback",
-            "/api/v1/drift/run",
         ]
 
         for endpoint in protected_endpoints:
@@ -599,17 +597,16 @@ class TestSecurityIntegration:
     async def test_security_manager_integration(self):
         """Test integrated security manager functionality."""
 
-        security_manager = SecurityManager()
+        validator = AISecurityValidator()
 
-        # Test comprehensive request validation
-        malicious_request = {
+        malicious_payload = {
             "query": "'; DROP TABLE documents; --",
-            "limit": 99999,
             "user_input": "<script>alert('xss')</script>",
         }
 
-        is_safe = await security_manager.validate_request(malicious_request)
-        assert not is_safe, "Security manager should detect malicious request"
+        for value in malicious_payload.values():
+            with pytest.raises(HTTPException):
+                validator.validate_search_query(value)
 
     @security_test
     @pytest.mark.asyncio
@@ -618,18 +615,17 @@ class TestSecurityIntegration:
 
         monitor = SecurityMonitor()
 
-        # Simulate security events
-        await monitor.log_security_event(
-            event_type=SecurityEventType.INJECTION_ATTEMPT,
-            details={"query": "'; DROP TABLE users; --", "ip": "192.168.1.100"},
+        monitor.log_security_event(
+            event_type=SecurityEventType.SUSPICIOUS_ACTIVITY.value,
+            event_data={"query": "'; DROP TABLE users; --", "ip": "192.168.1.100"},
             severity="HIGH",
         )
 
-        # Check that monitoring captures events
-        events = await monitor.get_recent_events(limit=10)
-        assert len(events) > 0
+        events = monitor.recent_events[-10:]
+        assert events, "Expected recent security events"
         assert any(
-            event.event_type == SecurityEventType.INJECTION_ATTEMPT for event in events
+            event.event_type == SecurityEventType.SUSPICIOUS_ACTIVITY
+            for event in events
         )
 
 

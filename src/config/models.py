@@ -991,64 +991,6 @@ class AutoDetectionConfig(BaseModel):
     retry_attempts: int = Field(default=3, ge=1, description="Retry attempts")
 
 
-class DriftDetectionConfig(BaseModel):
-    """Configuration drift monitoring settings."""
-
-    enabled: bool = Field(default=True, description="Enable drift detection")
-    snapshot_interval_minutes: int = Field(
-        default=15, gt=0, le=1440, description="Snapshot interval"
-    )
-    comparison_interval_minutes: int = Field(
-        default=5, gt=0, le=60, description="Comparison interval"
-    )
-    monitored_paths: list[str] = Field(
-        default_factory=lambda: [
-            "src/config/",
-            ".env",
-            "config.yaml",
-            "config.json",
-            "docker-compose.yml",
-            "docker-compose.yaml",
-        ],
-        description="Paths monitored for drift",
-    )
-    excluded_paths: list[str] = Field(
-        default_factory=lambda: [
-            "**/__pycache__/",
-            "**/*.pyc",
-            "**/logs/",
-            "**/cache/",
-            "**/tmp/",
-        ],
-        description="Excluded paths",
-    )
-    alert_on_severity: list[str] = Field(
-        default_factory=lambda: ["high", "critical"],
-        description="Alert severities that trigger notifications",
-    )
-    max_alerts_per_hour: int = Field(
-        default=10, gt=0, description="Max drift alerts per hour"
-    )
-    snapshot_retention_days: int = Field(
-        default=30, gt=0, description="Retention for snapshots"
-    )
-    events_retention_days: int = Field(
-        default=90, gt=0, description="Retention for drift events"
-    )
-    integrate_with_task20_anomaly: bool = Field(
-        default=True, description="Integrate with anomaly detection"
-    )
-    use_performance_monitoring: bool = Field(
-        default=True, description="Use performance monitoring signals"
-    )
-    enable_auto_remediation: bool = Field(
-        default=False, description="Enable automatic remediation"
-    )
-    auto_remediation_severity_threshold: str = Field(
-        default="high", description="Severity threshold for remediation"
-    )
-
-
 class DocumentationSite(BaseModel):
     """Documentation site crawl configuration."""
 
@@ -1127,7 +1069,6 @@ __all__ = [
     "DocumentationSite",
     "DetectedEnvironment",
     "DetectedService",
-    "DriftDetectionConfig",
     "EmbeddingConfig",
     "EmbeddingModel",
     "EmbeddingProvider",

@@ -154,8 +154,6 @@ class TestAPISecurity:
                     "/api/v1/documents": ["get", "post", "delete"],
                     "/api/v1/config/status": ["get"],
                     "/api/v1/config/reload": ["post"],
-                    "/api/v1/drift/status": ["get"],
-                    "/api/v1/drift/run": ["post"],
                 }
 
         return RealPenetrationClient()
