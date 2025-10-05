@@ -20,10 +20,7 @@ from typing import TYPE_CHECKING, Any
 from src.architecture.service_factory import BaseService
 from src.config import Config
 from src.services.deployment.feature_flags import FeatureFlagConfig, FeatureFlagManager
-from src.services.enterprise.cache import EnterpriseCacheService
-from src.services.enterprise.search import EnterpriseSearchService
 from src.services.observability.performance import PerformanceMonitor
-from src.services.security.integration import SecurityManager
 
 
 if TYPE_CHECKING:
@@ -572,7 +569,7 @@ class EnterpriseIntegrationManager:  # pylint: disable=too-many-instance-attribu
         self.service_registry = EnterpriseServiceRegistry(config)
 
         # Integration components
-        self.security_manager: SecurityManager | None = None
+        self.security_manager = None
         self.performance_monitor: PerformanceMonitor | None = None
         self.feature_flag_manager: FeatureFlagManager | None = None
         self.deployment_manager: BlueGreenDeployment | None = None
@@ -593,8 +590,7 @@ class EnterpriseIntegrationManager:  # pylint: disable=too-many-instance-attribu
 
             # Initialize core infrastructure
             await self._initialize_core_infrastructure()
-
-            # Register enterprise services
+            # Register enterprise services (no-op until implementations provided)
             await self._register_enterprise_services()
 
             # Start service orchestration
@@ -629,9 +625,6 @@ class EnterpriseIntegrationManager:  # pylint: disable=too-many-instance-attribu
             await self.service_registry.coordinate_shutdown()
 
             # Cleanup individual components
-            if self.security_manager:
-                await self.security_manager.cleanup_resources()
-
             if self.performance_monitor:
                 await self.performance_monitor.cleanup()
 
@@ -653,7 +646,7 @@ class EnterpriseIntegrationManager:  # pylint: disable=too-many-instance-attribu
             ),
             "system_status": system_status,
             "enterprise_features": {
-                "security_manager": self.security_manager is not None,
+                "security_manager": False,
                 "performance_monitor": self.performance_monitor is not None,
                 "feature_flags": self.feature_flag_manager is not None,
                 "blue_green_deployment": self.deployment_manager is not None,
@@ -662,9 +655,10 @@ class EnterpriseIntegrationManager:  # pylint: disable=too-many-instance-attribu
 
     async def _initialize_core_infrastructure(self) -> None:
         """Initialize core infrastructure components."""
-        # Initialize security manager
-        self.security_manager = SecurityManager()
-        await self.security_manager.initialize_components()
+        logger.info(
+            "FastAPI middleware stack handles baseline security; "
+            "skipping legacy security manager initialization."
+        )
 
         # Initialize performance monitoring
         self.performance_monitor = PerformanceMonitor()
@@ -678,23 +672,10 @@ class EnterpriseIntegrationManager:  # pylint: disable=too-many-instance-attribu
 
     async def _register_enterprise_services(self) -> None:
         """Register all enterprise services with the registry."""
-        # Register enterprise cache service
-
-        cache_service = EnterpriseCacheService()
-        await self.service_registry.register_service(
-            cache_service, dependencies=[], criticality="high"
+        logger.info(
+            "No enterprise services registered; provide concrete "
+            "implementations to extend the registry."
         )
-
-        # Register enterprise search service
-
-        search_service = EnterpriseSearchService()
-        await self.service_registry.register_service(
-            search_service,
-            dependencies=["enterprise_cache_service"],
-            criticality="critical",
-        )
-
-        logger.info("Enterprise services registered")
 
     async def _validate_enterprise_integration(self) -> None:
         """Validate enterprise feature integration."""
@@ -704,13 +685,6 @@ class EnterpriseIntegrationManager:  # pylint: disable=too-many-instance-attribu
         if system_status["health_summary"]["overall_status"] != "healthy":
             msg = "Enterprise integration validation failed: unhealthy services"
             raise RuntimeError(msg)
-
-        # Validate security framework
-        if self.security_manager:
-            security_status = await self.security_manager.get_security_status()
-            if not security_status.get("components_initialized", False):
-                msg = "Security framework validation failed"
-                raise RuntimeError(msg)
 
         logger.info("Enterprise integration validation passed")
 
