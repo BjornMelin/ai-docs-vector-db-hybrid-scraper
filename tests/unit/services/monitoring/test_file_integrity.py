@@ -27,6 +27,7 @@ async def test_stub_provider_emits_events() -> None:
 
     provider.subscribe(_collector)
     await provider.start()
+    assert await provider.wait_until_ready(timeout=0.1) is True
 
     event = FileChangeEvent(path=Path("/tmp/test.txt"), action=FileChangeAction.CREATED)
     await provider.emit(event)
@@ -34,6 +35,7 @@ async def test_stub_provider_emits_events() -> None:
     assert received == [event]
 
     await provider.stop()
+    assert provider.is_ready() is False
 
 
 def test_osquery_parse_event(tmp_path: Path) -> None:

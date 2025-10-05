@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
 from .loader import (
@@ -83,15 +84,7 @@ from .reloader import (
     ReloadStatus,
     ReloadTrigger,
 )
-from .security.config import (
-    ConfigAccessLevel,
-    ConfigDataClassification,
-    ConfigOperationType,
-    ConfigurationAuditEvent,
-    EncryptedConfigItem,
-    SecureConfigManager,
-    SecurityConfig,
-)
+from .security.config import SecurityConfig
 
 
 _reloader_instance: ConfigReloader | None = None
@@ -102,7 +95,19 @@ def get_config_reloader(**kwargs: Any) -> ConfigReloader:
 
     global _reloader_instance
     if _reloader_instance is None:
-        _reloader_instance = ConfigReloader(**kwargs)
+        config_source = kwargs.pop("config_source", None)
+        if config_source is None:
+            env_source = os.getenv("AI_DOCS_CONFIG_PATH")
+            if env_source:
+                config_source = env_source
+        _reloader_instance = ConfigReloader(
+            config_source=config_source,
+            **kwargs,
+        )
+    else:
+        config_source = kwargs.get("config_source")
+        if config_source is not None:
+            _reloader_instance.set_default_config_source(config_source)
     return _reloader_instance
 
 
@@ -177,12 +182,6 @@ __all__ = [
     "SearchStrategy",
     "ScoreNormalizationStrategy",
     "VectorType",
-    "ConfigAccessLevel",
-    "ConfigDataClassification",
-    "ConfigOperationType",
-    "ConfigurationAuditEvent",
-    "EncryptedConfigItem",
-    "SecureConfigManager",
     "SecurityConfig",
     "get_config_reloader",
     "set_config_reloader",

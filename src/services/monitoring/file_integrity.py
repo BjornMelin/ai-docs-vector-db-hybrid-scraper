@@ -1,4 +1,4 @@
-"""File integrity provider abstractions and implementations."""
+"""File integrity provider abstractions and osquery-backed implementation."""
 
 from __future__ import annotations
 
@@ -20,6 +20,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 CallbackType = Callable[["FileChangeEvent"], Awaitable[None] | None]
+_CALLBACK_TIMEOUT_SECONDS = 2.0
 
 
 class FileChangeAction(str, Enum):
@@ -54,11 +55,11 @@ class FileIntegrityProvider(ABC):
     """Abstract base class for file integrity event providers."""
 
     def __init__(self) -> None:
-        """Initialize the file integrity provider."""
-
         self._callbacks: list[CallbackType] = []
         self._running = False
         self._callback_lock = asyncio.Lock()
+        self._ready = False
+        self._ready_event: asyncio.Event = asyncio.Event()
 
     def subscribe(self, callback: CallbackType) -> None:
         """Register a callback invoked for each file change event."""
@@ -73,6 +74,33 @@ class FileIntegrityProvider(ABC):
     async def stop(self) -> None:
         """Stop streaming file system events and release resources."""
 
+    async def wait_until_ready(self, timeout: float | None = None) -> bool:
+        """Wait until the provider signals readiness."""
+
+        try:
+            await asyncio.wait_for(self._ready_event.wait(), timeout)
+        except TimeoutError:
+            return False
+        return self._ready
+
+    def is_ready(self) -> bool:
+        """Return whether the provider is currently ready to emit events."""
+
+        return self._ready
+
+    async def health_check(self) -> dict[str, Any]:
+        """Return provider health details suitable for diagnostics."""
+
+        return {"ready": self.is_ready()}
+
+    def _mark_ready(self) -> None:
+        self._ready = True
+        self._ready_event.set()
+
+    def _mark_not_ready(self) -> None:
+        self._ready = False
+        self._ready_event.clear()
+
     async def _notify(self, event: FileChangeEvent) -> None:
         """Notify registered callbacks of a file change event."""
 
@@ -83,7 +111,12 @@ class FileIntegrityProvider(ABC):
             try:
                 result = callback(event)
                 if asyncio.iscoroutine(result):
-                    await result
+                    await asyncio.wait_for(result, timeout=_CALLBACK_TIMEOUT_SECONDS)
+            except TimeoutError:
+                logger.warning(
+                    "File integrity callback exceeded %s seconds",
+                    _CALLBACK_TIMEOUT_SECONDS,
+                )
             except Exception:  # pragma: no cover - defensive path
                 logger.exception("File integrity callback failed")
 
@@ -95,11 +128,13 @@ class StubFileIntegrityProvider(FileIntegrityProvider):
         """Start the stub provider."""
 
         self._running = True
+        self._mark_ready()
 
     async def stop(self) -> None:
         """Stop the stub provider."""
 
         self._running = False
+        self._mark_not_ready()
 
     async def emit(self, event: FileChangeEvent) -> None:
         """Emit a single event to registered callbacks."""
@@ -120,10 +155,8 @@ class OsqueryFileIntegrityProvider(FileIntegrityProvider):  # pylint: disable=to
         exclude_globs: Sequence[str] | None = None,
         poll_interval: float = 1.0,
     ) -> None:
-        """Initialize the osquery file integrity provider."""
-
         super().__init__()
-        self.results_log = results_log
+        self.results_log = Path(results_log).expanduser().resolve()
         self.include_globs = tuple(include_globs or ["*"])
         self.exclude_globs = tuple(exclude_globs or [])
         self.poll_interval = poll_interval
@@ -135,6 +168,7 @@ class OsqueryFileIntegrityProvider(FileIntegrityProvider):  # pylint: disable=to
         if self._watch_task is not None and not self._watch_task.done():
             return
         self._running = True
+        self._mark_not_ready()
         self._watch_task = asyncio.create_task(self._watch_loop(), name="osquery-fim")
 
     async def stop(self) -> None:
@@ -146,6 +180,15 @@ class OsqueryFileIntegrityProvider(FileIntegrityProvider):  # pylint: disable=to
             with contextlib.suppress(asyncio.CancelledError):
                 await self._watch_task
         self._watch_task = None
+        self._mark_not_ready()
+
+    async def health_check(self) -> dict[str, Any]:
+        """Return readiness information and the monitored log path."""
+
+        return {
+            "ready": self.is_ready(),
+            "results_log": str(self.results_log),
+        }
 
     async def _watch_loop(self) -> None:
         """Main loop for tailing the osquery results log."""
@@ -157,13 +200,17 @@ class OsqueryFileIntegrityProvider(FileIntegrityProvider):  # pylint: disable=to
             while self._running:
                 if file_handle is None:
                     try:
-                        file_handle = self.results_log.open("r", encoding="utf-8")
+                        file_handle = self.results_log.open(  # pylint: disable=consider-using-with
+                            "r", encoding="utf-8"
+                        )
                         file_handle.seek(0, os.SEEK_END)
                         last_inode = os.fstat(file_handle.fileno()).st_ino
+                        self._mark_ready()
                         logger.debug(
                             "File integrity provider monitoring %s", self.results_log
                         )
                     except FileNotFoundError:
+                        self._mark_not_ready()
                         await asyncio.sleep(self.poll_interval)
                         continue
 
@@ -173,11 +220,13 @@ class OsqueryFileIntegrityProvider(FileIntegrityProvider):  # pylint: disable=to
                     if not self.results_log.exists():
                         file_handle.close()
                         file_handle = None
+                        self._mark_not_ready()
                     else:
                         current_inode = os.fstat(file_handle.fileno()).st_ino
                         if last_inode is not None and current_inode != last_inode:
                             file_handle.close()
                             file_handle = None
+                            self._mark_not_ready()
                     continue
 
                 event = self._parse_osquery_event(line)
@@ -191,9 +240,10 @@ class OsqueryFileIntegrityProvider(FileIntegrityProvider):  # pylint: disable=to
         finally:
             if file_handle is not None:
                 file_handle.close()
+            self._mark_not_ready()
 
     def _filter_event(self, path: Path) -> bool:
-        """Determine if a file event isincluded based on include/exclude globs."""
+        """Determine if a file event is included based on include/exclude globs."""
 
         path_str = str(path)
         included = any(fnmatch(path_str, pattern) for pattern in self.include_globs)

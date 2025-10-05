@@ -146,6 +146,8 @@ class ConfigReloader:
             changes_applied: list[str] = []
 
             try:
+                if config_source is not None:
+                    self.set_default_config_source(config_source)
                 replacement = self._load_config_source(
                     config_source or self._default_config_source
                 )
@@ -165,6 +167,7 @@ class ConfigReloader:
                     if replacement_hash != previous_hash:
                         changes_applied.append("reload")
             except Exception as exc:  # pragma: no cover - defensive path
+                logger.exception("Configuration reload failed")
                 error_message = str(exc)
                 # Restore previous configuration snapshot on failure.
                 if previous_config is not None:
@@ -244,6 +247,24 @@ class ConfigReloader:
 
         return self._default_config_source
 
+    def set_default_config_source(self, config_source: Path | str | None) -> None:
+        """Set the default configuration source used for reloads and watching."""
+
+        if config_source is None:
+            self._default_config_source = None
+            self._watch_target_is_dir = False
+            return
+
+        path = Path(config_source).expanduser().resolve()
+        if not path.exists():
+            raise ConfigLoadError(f"Configuration source not found: {path}")
+        if not (path.is_file() or path.is_dir()):
+            raise ConfigLoadError(
+                f"Configuration source must be a file or directory: {path}"
+            )
+        self._default_config_source = path
+        self._watch_target_is_dir = path.is_dir()
+
     def get_reload_stats(self) -> dict[str, object]:
         """Return aggregate counters describing reload behaviour."""
 
@@ -320,6 +341,11 @@ class ConfigReloader:
         """Return whether on-disk file watching is active."""
 
         return self._file_watch_enabled
+
+    def get_file_integrity_provider(self) -> FileIntegrityProvider | None:
+        """Return the currently configured file integrity provider."""
+
+        return self._fim_provider
 
     def _resolve_watch_target(self) -> Path:
         """Validate and return the path being watched for changes."""

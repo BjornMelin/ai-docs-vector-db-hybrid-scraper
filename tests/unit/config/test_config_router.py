@@ -12,6 +12,9 @@ import pytest
 from fastapi import FastAPI, status
 from fastapi.testclient import TestClient
 
+from src.config.reloader import ConfigError, ConfigLoadError
+from src.services.monitoring.file_integrity import StubFileIntegrityProvider
+
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
@@ -56,12 +59,16 @@ class DummyReloader:  # pylint: disable=too-many-instance-attributes
     """In-memory stub used to drive the router in tests."""
 
     def __init__(self) -> None:
-        self.config_source = "config.yaml"
         self.backup_count = 1
-        self._provider = None
+        self._provider: StubFileIntegrityProvider | None = None
         self._file_watch_enabled = False
         self.raise_reload_error = False
         self.raise_rollback_error = False
+        self.fail_set_default = False
+        self.operation_success = True
+        self.operation_error_message = "operation failed"
+        self.raise_watch_error = False
+        self._default_source: Path | None = Path("/tmp/config.json")
 
     async def reload_config(
         self,
@@ -73,7 +80,11 @@ class DummyReloader:  # pylint: disable=too-many-instance-attributes
         del trigger, config_source, force
         if self.raise_reload_error:
             raise RuntimeError("reload failure")
-        return DummyReloadOperation()
+        if self.operation_success:
+            return DummyReloadOperation()
+        return DummyReloadOperation(
+            success=False, error_message=self.operation_error_message
+        )
 
     async def rollback_config(
         self,
@@ -101,7 +112,15 @@ class DummyReloader:  # pylint: disable=too-many-instance-attributes
         }
 
     def get_default_config_source(self) -> Path | None:
-        return Path("/tmp/config.json")
+        return self._default_source
+
+    def set_default_config_source(self, config_source: Path | str | None) -> None:
+        if self.fail_set_default:
+            raise ConfigLoadError("invalid path requested")
+        if config_source is None:
+            self._default_source = None
+        else:
+            self._default_source = Path(config_source)
 
     def is_file_watch_enabled(self) -> bool:  # noqa: D401 - matches router expectation
         return self._file_watch_enabled
@@ -111,10 +130,19 @@ class DummyReloader:  # pylint: disable=too-many-instance-attributes
 
     async def enable_file_watching(self, *, poll_interval: float | None = None) -> None:
         del poll_interval
+        if self.raise_watch_error:
+            raise ConfigError("watch error")
         self._file_watch_enabled = True
+        if self._provider is not None and hasattr(self._provider, "start"):
+            await self._provider.start()
 
     async def disable_file_watching(self) -> None:
         self._file_watch_enabled = False
+        if self._provider is not None and hasattr(self._provider, "stop"):
+            await self._provider.stop()
+
+    def get_file_integrity_provider(self) -> Any:
+        return self._provider
 
     def get_config_backups(self) -> list[tuple[str, DummyBackupConfig]]:
         return [
@@ -162,6 +190,30 @@ def test_reload_configuration_error(app: ClientWithReloader) -> None:
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
+def test_reload_configuration_operation_failure_returns_400(
+    app: ClientWithReloader,
+) -> None:
+    """Operator errors should map to HTTP 400 responses."""
+
+    reloader = cast(DummyReloader, cast(Any, app).reloader)
+    reloader.operation_success = False
+    reloader.operation_error_message = "invalid config payload"
+    response = app.post("/config/reload", json={})
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "invalid config" in response.json()["detail"]
+
+
+def test_reload_configuration_invalid_path_returns_400(
+    app: ClientWithReloader,
+) -> None:
+    """Invalid config_source input should be rejected with HTTP 400."""
+
+    reloader = cast(DummyReloader, cast(Any, app).reloader)
+    reloader.fail_set_default = True
+    response = app.post("/config/reload", json={"config_source": "/tmp/missing.yml"})
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
 def test_rollback_configuration_failure(app: ClientWithReloader) -> None:
     """Rollback failures should surface as HTTP 400."""
 
@@ -199,8 +251,80 @@ def test_status_endpoint(app: ClientWithReloader) -> None:
     assert body["reload_statistics"]["total_operations"] == 1
 
 
-def test_file_watch_toggle(app: ClientWithReloader) -> None:
+def test_enable_file_watching_requires_config_source(
+    app: ClientWithReloader,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Enabling file watching without a configured source should fail."""
+
+    reloader = cast(DummyReloader, cast(Any, app).reloader)
+    reloader.set_default_config_source(None)
+    log_path = tmp_path / "osqueryd.results.log"
+    log_path.write_text("", encoding="utf-8")
+    monkeypatch.setenv("OSQUERY_RESULTS_LOG", str(log_path))
+
+    response = app.post("/config/file-watch/enable")
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+def test_enable_file_watching_success(
+    app: ClientWithReloader,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """File watching endpoint should report readiness when provider is ready."""
+
+    reloader = cast(DummyReloader, cast(Any, app).reloader)
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text("{}", encoding="utf-8")
+    reloader.set_default_config_source(config_file)
+
+    log_path = tmp_path / "osqueryd.results.log"
+    log_path.write_text("", encoding="utf-8")
+    monkeypatch.setenv("OSQUERY_RESULTS_LOG", str(log_path))
+
+    class ReadyProvider(StubFileIntegrityProvider):
+        """Stub osquery provider that matches the production signature."""
+
+        def __init__(self, *, results_log: Path, poll_interval: float) -> None:
+            super().__init__()
+            self.results_log = results_log
+            self.poll_interval = poll_interval
+
+    monkeypatch.setattr(config_router, "OsqueryFileIntegrityProvider", ReadyProvider)
+
+    response = app.post("/config/file-watch/enable")
+    assert response.status_code == status.HTTP_200_OK
+    payload = response.json()
+    assert payload["file_watching_enabled"] is True
+    assert payload["file_watching_ready"] is True
+    assert payload["config_source"].endswith("config.yaml")
+
+
+def test_file_watch_toggle(
+    app: ClientWithReloader,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
     """Enabling and disabling file watching should succeed."""
+
+    reloader = cast(DummyReloader, cast(Any, app).reloader)
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text("{}", encoding="utf-8")
+    reloader.set_default_config_source(config_file)
+
+    log_path = tmp_path / "osqueryd.results.log"
+    log_path.write_text("", encoding="utf-8")
+    monkeypatch.setenv("OSQUERY_RESULTS_LOG", str(log_path))
+
+    class ReadyProvider(StubFileIntegrityProvider):
+        def __init__(self, *, results_log: Path, poll_interval: float) -> None:
+            super().__init__()
+            self.results_log = results_log
+            self.poll_interval = poll_interval
+
+    monkeypatch.setattr(config_router, "OsqueryFileIntegrityProvider", ReadyProvider)
 
     enable_response = app.post(
         "/config/file-watch/enable", params={"poll_interval": 0.5}
