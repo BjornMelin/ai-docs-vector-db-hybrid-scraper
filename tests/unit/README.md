@@ -119,7 +119,6 @@ class TestServices:
 - **monitoring/**: System monitoring and health checks
 - **observability/**: Observability and tracking
 - **query_processing/**: Query processing and orchestration
-- **task_queue/**: Asynchronous task processing
 - **utilities/**: Service utility functions
 - **vector_db/**: Vector database operations and management
 

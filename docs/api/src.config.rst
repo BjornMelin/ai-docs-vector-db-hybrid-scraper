@@ -36,14 +36,6 @@ src.config.models module
    :show-inheritance:
    :undoc-members:
 
-src.config.task\_queue module
------------------------------
-
-.. automodule:: src.config.task_queue
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 Module contents
 ---------------
 

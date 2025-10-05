@@ -14,14 +14,6 @@ Subpackages
 Submodules
 ----------
 
-src.services.fastapi.background module
---------------------------------------
-
-.. automodule:: src.services.fastapi.background
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 src.services.fastapi.production\_server module
 ----------------------------------------------
 

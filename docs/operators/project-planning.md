@@ -50,14 +50,14 @@ status: draft
 ### INF-01 – Harden Unified Configuration & Secrets
 
 - **Legacy IDs:** 2, 11, 12
-- **Summary:** Consolidated config lacks secret handling, env alias validation, and auto-detect tests.
+- **Summary:** Consolidated config lacks secret handling and environment alias validation.
 - **Acceptance Criteria:**
   - Introduce `SecretStr` (or equivalent) for sensitive fields; secrets never exposed in logs.
-  - Provide env alias matrix + profile templates (personal, production, testing) and tests covering auto-detection (`src/services/dependencies.py`).
+  - Provide env alias matrix + profile templates (personal, production, testing) with unit coverage for config loading edge cases.
   - Document configuration migration + rollback in `docs/operators/configuration.md`.
 - **Dependencies:** QA-01
 - **Owner:** Platform Engineer (TBD)
-- **Evidence:** `rg "Secret" src/config/models.py` → none; `src/services/dependencies.py:55-132` auto-detection lacks tests.
+- **Evidence:** `rg "Secret" src/config/models.py` → none; config alias handling lacks coverage in `tests/unit/infrastructure/test_pydantic_settings_patterns.py`.
 
 ### INF-02 – Centralize API Error Handling
 

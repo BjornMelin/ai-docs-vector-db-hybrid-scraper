@@ -78,7 +78,6 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 
 - Session storage
 - Rate limiting
-- Background task queue
 
 ### Reverse Proxy (Nginx)
 

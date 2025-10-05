@@ -35,7 +35,6 @@ src.chunking module
 src.cli\_worker module
 ----------------------
 
-.. automodule:: src.cli_worker
    :members:
    :show-inheritance:
    :undoc-members:
