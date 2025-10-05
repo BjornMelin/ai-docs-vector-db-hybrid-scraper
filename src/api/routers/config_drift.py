@@ -106,8 +106,8 @@ async def get_drift_status():
 async def _get_drift_status() -> DriftServiceStatusResponse:
     """Get drift service status with monitoring."""
     with monitor_operation("api_config_drift_status", category="api"):
-        status = await get_drift_service_status()
-        return DriftServiceStatusResponse(**status)
+        service_status = await get_drift_service_status()
+        return DriftServiceStatusResponse(**service_status)
 
 
 @router.post(
@@ -253,20 +253,20 @@ async def check_drift_health():
     """Check health of the configuration drift detection service."""
     try:
         with monitor_operation("api_config_drift_health", category="api"):
-            status = await get_drift_service_status()
+            service_status = await get_drift_service_status()
 
             # Determine health based on service status
             healthy = (
-                status["service_running"]
-                and status["detector_initialized"]
-                and status["drift_detection_enabled"]
+                service_status["service_running"]
+                and service_status["detector_initialized"]
+                and service_status["drift_detection_enabled"]
             )
 
             health_status = {
                 "healthy": healthy,
-                "service_running": status["service_running"],
-                "detector_initialized": status["detector_initialized"],
-                "drift_detection_enabled": status["drift_detection_enabled"],
+                "service_running": service_status["service_running"],
+                "detector_initialized": service_status["detector_initialized"],
+                "drift_detection_enabled": service_status["drift_detection_enabled"],
                 "timestamp": datetime.now(tz=UTC).isoformat(),
             }
 

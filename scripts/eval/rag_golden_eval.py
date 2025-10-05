@@ -1,49 +1,291 @@
-"""Regression harness for the RAG pipeline against the golden dataset.
+"""Evaluate the RAG pipeline against the golden dataset with structured metrics.
 
-The harness executes the query processing pipeline with RAG enabled for each
-entry in ``tests/data/rag/golden_set.jsonl`` and produces a lightweight
-similarity score against the expected answer.  It is intentionally library
-agnostic so the underlying implementation (LangChain/LangGraph) can change
-without modifying this script.
+This script executes the LangGraph-backed search orchestrator for every
+entry in the golden dataset and captures three layers of evaluation:
+
+* Deterministic baselines (string similarity + retrieval precision/recall)
+* Optional Ragas metrics (faithfulness, relevance, context recall)
+* Telemetry snapshots from the Prometheus metrics registry
 
 Usage:
-    uv run python scripts/eval/rag_golden_eval.py --dataset tests/data/rag/golden_set.jsonl
+    uv run python scripts/eval/rag_golden_eval.py \
+        --dataset tests/data/rag/golden_set.jsonl \
+        --output artifacts/rag_golden_report.json
 
-Notes:
-    * The script requires a fully initialised SearchOrchestrator.  Provide
-      the usual configuration (e.g., via environment variables) before running.
-    * Scores are based on simple string similarity; replace ``_score_answer``
-      with a richer metric (e.g., RAGAS, LangChain evaluators) once the
-      LangChain migration lands.
-"""  # noqa: E501
+Enable semantic metrics by providing an API-enabled LLM/embedding via
+environment variables and passing ``--enable-ragas``.
+"""
 
+# pylint: disable=unnecessary-ellipsis
 from __future__ import annotations
 
 import argparse
 import asyncio
 import json
+import logging
+from collections import defaultdict
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 from pathlib import Path
-from typing import Any
+from statistics import fmean
+from typing import Any, Protocol
+
+from prometheus_client import CollectorRegistry
+from prometheus_client.samples import Sample
 
 from src.infrastructure.client_manager import ClientManager
-from src.services.query_processing.models import SearchRequest
+from src.services.monitoring.metrics import (
+    MetricsConfig,
+    MetricsRegistry,
+    set_metrics_registry,
+)
+from src.services.query_processing.models import SearchRequest, SearchResponse
 from src.services.query_processing.orchestrator import SearchOrchestrator
+
+
+LOGGER = logging.getLogger(__name__)
+
+# Ragas imports are optional to keep the harness runnable in offline mode.
+# They are resolved lazily inside ``RagasEvaluator``.
 
 
 @dataclass(slots=True)
 class GoldenExample:
-    """A single regression example."""
+    """Single regression example sourced from the golden dataset."""
 
     query: str
     expected_answer: str
+    expected_contexts: list[str]
     references: list[str]
     metadata: dict[str, Any]
 
 
+@dataclass(slots=True)
+class ExampleMetrics:
+    """Metrics captured for an individual evaluation example."""
+
+    similarity: float
+    retrieval: dict[str, float]
+    ragas: dict[str, float]
+
+
+@dataclass(slots=True)
+class ExampleResult:
+    """Outcome of evaluating a single golden dataset example."""
+
+    example: GoldenExample
+    predicted_answer: str
+    answer_confidence: float | None
+    answer_sources: list[dict[str, Any]]
+    processing_time_ms: float
+    metrics: ExampleMetrics
+    records: list[dict[str, Any]]
+
+
+@dataclass(slots=True)
+class EvaluationReport:
+    """Complete evaluation artefact emitted by the harness."""
+
+    results: list[ExampleResult]
+    aggregates: dict[str, Any]
+    telemetry: dict[str, Any]
+
+
+class SupportsSearchOrchestrator(Protocol):
+    """Protocol describing the minimal orchestrator surface used by the harness."""
+
+    async def search(self, request: SearchRequest) -> SearchResponse:
+        """Execute a search request."""
+        ...
+
+    async def cleanup(self) -> None:
+        """Release any orchestrator resources."""
+        ...
+
+
+class RagasEvaluator:
+    """Wrapper around RAGAS metrics with graceful degradation."""
+
+    def __init__(
+        self,
+        *,
+        enabled: bool,
+        llm_model: str | None = None,
+        embedding_model: str | None = None,
+    ) -> None:
+        self._enabled = False
+        self._evaluate = None
+        self._metrics_suite: list[Any] = []
+        self._llm = None
+        self._embeddings = None
+        self._dataset_cls: Any | None = None
+        if not enabled:
+            LOGGER.info("Ragas evaluation disabled; skipping semantic metrics.")
+            return
+
+        self._enabled = self._setup_backend(llm_model, embedding_model)
+
+    def _setup_backend(
+        self, llm_model: str | None, embedding_model: str | None
+    ) -> bool:
+        """Initialise optional Ragas dependencies."""
+
+        # pylint: disable=import-outside-toplevel,too-many-locals
+        try:  # pragma: no cover - exercised only when optional deps are present
+            from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+            from ragas import evaluate as ragas_evaluate
+            from ragas.dataset_schema import EvaluationDataset
+            from ragas.embeddings import LangchainEmbeddingsWrapper
+            from ragas.llms import LangchainLLMWrapper
+            from ragas.metrics import (
+                answer_relevancy,
+                context_precision,
+                context_recall,
+                faithfulness,
+            )
+
+            self._dataset_cls = EvaluationDataset
+            self._evaluate = ragas_evaluate
+            self._metrics_suite = [
+                context_precision,
+                context_recall,
+                faithfulness,
+                answer_relevancy,
+            ]
+            llm_instance = ChatOpenAI(model=llm_model or "gpt-4o-mini")
+            embedding_instance = OpenAIEmbeddings(
+                model=embedding_model or "text-embedding-3-small"
+            )
+            self._llm = LangchainLLMWrapper(llm_instance)
+            self._embeddings = LangchainEmbeddingsWrapper(embedding_instance)
+            LOGGER.info(
+                "Ragas evaluator initialised with model=%s embedding=%s",
+                llm_model or "gpt-4o-mini",
+                embedding_model or "text-embedding-3-small",
+            )
+            return True
+        except ImportError as exc:  # pragma: no cover - optional dependency path
+            LOGGER.warning(
+                "ragas/langchain_openai missing; semantic metrics disabled (%s)",
+                exc,
+            )
+            return False
+        except Exception as exc:  # pragma: no cover - environment specific
+            LOGGER.warning(
+                "Failed to initialise Ragas evaluator, metrics disabled: %s",
+                exc,
+                exc_info=True,
+            )
+            return False
+
+    def evaluate(
+        self,
+        example: GoldenExample,
+        predicted_answer: str,
+        contexts: Sequence[str],
+    ) -> dict[str, float]:
+        """Return semantic metrics using RAGAS when enabled."""
+
+        if not self._enabled or self._evaluate is None or self._dataset_cls is None:
+            return {}
+
+        try:  # pragma: no cover - networked path
+            dataset = self._dataset_cls.from_list(
+                [
+                    {
+                        "question": example.query,
+                        "answer": predicted_answer,
+                        "contexts": list(contexts),
+                        "ground_truths": list(example.expected_contexts or []),
+                    }
+                ]
+            )
+            result = self._evaluate(
+                dataset=dataset,
+                metrics=self._metrics_suite,
+                llm=self._llm,
+                embeddings=self._embeddings,
+            )
+
+            raw_scores: dict[str, float] = {}
+            for key, value in self._collect_metric_samples(result):
+                if value is None:
+                    continue
+                try:
+                    raw_scores[str(key)] = float(value)
+                except (TypeError, ValueError):
+                    continue
+
+            clean_scores: dict[str, float] = {}
+            for metric in self._metrics_suite:
+                metric_name = getattr(metric, "name", None)
+                if not metric_name:
+                    continue
+                for candidate_key in (
+                    metric_name,
+                    f"{metric_name}_score",
+                    metric_name.replace("-", "_"),
+                ):
+                    if candidate_key in raw_scores:
+                        clean_scores[metric_name] = raw_scores[candidate_key]
+                        break
+            return clean_scores
+        except Exception as exc:  # pragma: no cover - defensive guard
+            LOGGER.warning(
+                "Ragas evaluation failed for query '%s': %s",
+                example.query,
+                exc,
+                exc_info=True,
+            )
+            return {}
+
+    @staticmethod
+    def _collect_metric_samples(raw_result: Any) -> Iterable[tuple[str, Any]]:
+        """Normalise the various result payloads emitted by RAGAS."""
+
+        if hasattr(raw_result, "metrics") and isinstance(raw_result.metrics, dict):
+            return raw_result.metrics.items()
+        if hasattr(raw_result, "scores") and isinstance(raw_result.scores, dict):
+            return raw_result.scores.items()
+        if hasattr(raw_result, "to_dict"):
+            payload = raw_result.to_dict()
+            if isinstance(payload, dict):
+                return payload.items()
+        if isinstance(raw_result, dict):
+            return raw_result.items()
+        return []
+
+
+def _load_dataset(path: Path) -> list[GoldenExample]:
+    """Parse the golden dataset in JSON Lines format."""
+
+    if not path.exists():
+        msg = f"Dataset path does not exist: {path}"
+        raise FileNotFoundError(msg)
+
+    examples: list[GoldenExample] = []
+    with path.open(encoding="utf-8") as handle:
+        for line in handle:
+            if not line.strip():
+                continue
+            payload = json.loads(line)
+            examples.append(
+                GoldenExample(
+                    query=str(payload["query"]),
+                    expected_answer=str(payload["expected_answer"]),
+                    expected_contexts=list(payload.get("expected_contexts", [])),
+                    references=list(payload.get("references", [])),
+                    metadata=dict(payload.get("metadata", {})),
+                )
+            )
+    if not examples:
+        raise RuntimeError("Golden dataset is empty")
+    return examples
+
+
 async def _load_orchestrator() -> SearchOrchestrator:
-    """Instantiate and initialize the shared search orchestrator."""
+    """Create and initialise the shared search orchestrator."""
 
     client_manager = ClientManager()
     vector_service = await client_manager.get_vector_store_service()
@@ -52,80 +294,298 @@ async def _load_orchestrator() -> SearchOrchestrator:
     return orchestrator
 
 
-def _score_answer(predicted: str, expected: str) -> float:
-    """Return a crude similarity score between predicted and expected text."""
+def _compute_similarity(predicted: str, expected: str) -> float:
+    """Deterministic string similarity baseline."""
 
-    return SequenceMatcher(a=predicted.lower(), b=expected.lower()).ratio()
-
-
-def _load_dataset(path: Path) -> list[GoldenExample]:
-    """Read the golden dataset in JSON Lines format."""
-
-    examples: list[GoldenExample] = []
-    with path.open(encoding="utf-8") as handle:
-        for line in handle:
-            if not line.strip():
-                continue
-            raw = json.loads(line)
-            examples.append(
-                GoldenExample(
-                    query=raw["query"],
-                    expected_answer=raw["expected_answer"],
-                    references=list(raw.get("references", [])),
-                    metadata=dict(raw.get("metadata", {})),
-                )
-            )
-    return examples
+    matcher = SequenceMatcher(a=predicted.lower(), b=expected.lower())
+    return matcher.ratio()
 
 
-async def _run(dataset_path: Path) -> None:
-    """Execute regression evaluation and print a short report."""
+def _extract_reference(record: dict[str, Any]) -> str | None:
+    """Best-effort extraction of a reference identifier from a search record."""
 
-    examples = _load_dataset(dataset_path)
-    if not examples:
-        raise RuntimeError("Golden dataset is empty")
+    metadata = record.get("metadata") or {}
+    for key in ("doc_path", "source_path", "reference", "uri"):
+        candidate = metadata.get(key)
+        if candidate:
+            return str(candidate)
+    if record.get("group_id"):
+        return str(record["group_id"])
+    return record.get("id")
 
-    orchestrator = await _load_orchestrator()
 
-    scores: list[tuple[GoldenExample, float, str]] = []
+def _compute_retrieval_metrics(
+    example: GoldenExample,
+    records: Sequence[dict[str, Any]],
+    *,
+    k: int,
+) -> dict[str, float]:
+    """Precision/recall style metrics derived from retrieved records."""
+
+    if not records:
+        return {"precision_at_k": 0.0, "recall_at_k": 0.0, "hit_rate": 0.0, "mrr": 0.0}
+
+    expected = {ref.lower() for ref in example.references}
+    ranked_refs = [_extract_reference(record) for record in records]
+    ranked_refs = [ref.lower() for ref in ranked_refs if ref]
+
+    top_k = ranked_refs[: max(1, k)]
+    hits = [ref for ref in top_k if ref in expected]
+
+    precision = len(hits) / len(top_k) if top_k else 0.0
+    recall = len(hits) / len(expected) if expected else 0.0
+    hit_rate = 1.0 if hits else 0.0
+
+    reciprocal_rank = 0.0
+    for index, ref in enumerate(ranked_refs, start=1):
+        if ref in expected:
+            reciprocal_rank = 1.0 / index
+            break
+
+    return {
+        "precision_at_k": precision,
+        "recall_at_k": recall,
+        "hit_rate": hit_rate,
+        "mrr": reciprocal_rank,
+    }
+
+
+def _snapshot_metrics(registry: CollectorRegistry) -> dict[str, Any]:
+    """Convert Prometheus metrics into a JSON-friendly structure."""
+
+    snapshot: dict[str, Any] = {}
+    for metric in registry.collect():
+        samples: list[dict[str, Any]] = []
+        for sample in metric.samples:
+            assert isinstance(sample, Sample)  # typing guard
+            samples.append({"labels": sample.labels, "value": sample.value})
+        snapshot[metric.name] = {
+            "type": metric.type,
+            "documentation": metric.documentation,
+            "samples": samples,
+        }
+    return snapshot
+
+
+def _aggregate_metrics(results: Sequence[ExampleResult]) -> dict[str, Any]:
+    """Aggregate numeric metrics across all examples."""
+
+    if not results:
+        return {}
+
+    similarity_scores = [item.metrics.similarity for item in results]
+
+    retrieval_bucket: dict[str, list[float]] = defaultdict(list)
+    ragas_bucket: dict[str, list[float]] = defaultdict(list)
+
+    for result in results:
+        for key, value in result.metrics.retrieval.items():
+            retrieval_bucket[key].append(value)
+        for key, value in result.metrics.ragas.items():
+            ragas_bucket[key].append(value)
+
+    aggregates: dict[str, Any] = {
+        "examples": len(results),
+        "similarity_avg": fmean(similarity_scores) if similarity_scores else 0.0,
+        "processing_time_ms_avg": fmean([item.processing_time_ms for item in results]),
+    }
+
+    aggregates["retrieval_avg"] = {
+        key: fmean(values) if values else 0.0
+        for key, values in retrieval_bucket.items()
+    }
+    aggregates["ragas_avg"] = {
+        key: fmean(values) if values else 0.0 for key, values in ragas_bucket.items()
+    }
+    return aggregates
+
+
+async def _evaluate_examples(
+    examples: Sequence[GoldenExample],
+    orchestrator: SupportsSearchOrchestrator,
+    ragas_evaluator: RagasEvaluator,
+    *,
+    limit: int,
+) -> list[ExampleResult]:
+    """Execute the orchestrator for every example and collect metrics."""
+
+    # pylint: disable=too-many-locals  # named intermediates keep reporting explicit
+    results: list[ExampleResult] = []
+
     for example in examples:
-        request = SearchRequest.from_input(
-            example.query,
-            enable_rag=True,
-            limit=5,
-        )
-        response = await orchestrator.search(request)
+        request_overrides: dict[str, Any] = {
+            "enable_rag": True,
+            "limit": limit,
+        }
+        if collection := example.metadata.get("collection"):
+            request_overrides["collection"] = collection
+
+        request = SearchRequest.from_input(example.query, **request_overrides)
+        response: SearchResponse = await orchestrator.search(request)
+
         predicted = response.generated_answer or " ".join(
             record.content for record in response.records
         )
-        score = _score_answer(predicted, example.expected_answer)
-        scores.append((example, score, predicted))
+        contexts = [record.content for record in response.records]
 
-    await orchestrator.cleanup()
+        similarity = _compute_similarity(predicted, example.expected_answer)
+        retrieval_metrics = _compute_retrieval_metrics(
+            example, [record.model_dump() for record in response.records], k=limit
+        )
+        ragas_scores = ragas_evaluator.evaluate(example, predicted, contexts)
 
-    print("=== RAG Golden Set Evaluation ===")
-    for example, score, predicted in scores:
-        print(f"Query: {example.query}")
-        print(f"Expected: {example.expected_answer}")
-        print(f"Predicted: {predicted}")
-        print(f"Score: {score:.3f}")
-        print(f"References: {example.references}")
-        print("---")
-    average = sum(score for _, score, _ in scores) / len(scores)
-    print(f"Average similarity score: {average:.3f}")
+        result = ExampleResult(
+            example=example,
+            predicted_answer=predicted,
+            answer_confidence=response.answer_confidence,
+            answer_sources=response.answer_sources or [],
+            processing_time_ms=response.processing_time_ms,
+            metrics=ExampleMetrics(
+                similarity=similarity,
+                retrieval=retrieval_metrics,
+                ragas=ragas_scores,
+            ),
+            records=[record.model_dump() for record in response.records],
+        )
+        results.append(result)
+
+    return results
 
 
-def main() -> None:
+def _render_report(report: EvaluationReport) -> dict[str, Any]:
+    """Convert the dataclass-based report into serialisable structures."""
+
+    return {
+        "aggregates": report.aggregates,
+        "telemetry": report.telemetry,
+        "results": [
+            {
+                "example": {
+                    "query": item.example.query,
+                    "expected_answer": item.example.expected_answer,
+                    "expected_contexts": item.example.expected_contexts,
+                    "references": item.example.references,
+                    "metadata": item.example.metadata,
+                },
+                "predicted_answer": item.predicted_answer,
+                "answer_confidence": item.answer_confidence,
+                "answer_sources": item.answer_sources,
+                "processing_time_ms": item.processing_time_ms,
+                "metrics": {
+                    "similarity": item.metrics.similarity,
+                    "retrieval": item.metrics.retrieval,
+                    "ragas": item.metrics.ragas,
+                },
+                "records": item.records,
+            }
+            for item in report.results
+        ],
+    }
+
+
+def _write_output(payload: dict[str, Any], output_path: Path | None) -> None:
+    """Persist the report to disk or pretty-print to stdout."""
+
+    if output_path is None:
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w", encoding="utf-8") as handle:
+        json.dump(payload, handle, indent=2, ensure_ascii=False)
+    LOGGER.info("Report written to %s", output_path)
+
+
+async def _run(args: argparse.Namespace) -> None:
+    dataset_path = Path(args.dataset)
+    examples = _load_dataset(dataset_path)
+
+    registry = CollectorRegistry(auto_describe=True)
+    metrics_registry = MetricsRegistry(
+        MetricsConfig(namespace=args.namespace, enabled=True),
+        registry=registry,
+    )
+    set_metrics_registry(metrics_registry)
+
+    ragas_evaluator = RagasEvaluator(
+        enabled=args.enable_ragas,
+        llm_model=args.ragas_model,
+        embedding_model=args.ragas_embedding,
+    )
+
+    orchestrator = await _load_orchestrator()
+    try:
+        results = await _evaluate_examples(
+            examples,
+            orchestrator,
+            ragas_evaluator,
+            limit=args.limit,
+        )
+    finally:
+        await orchestrator.cleanup()
+
+    report = EvaluationReport(
+        results=results,
+        aggregates=_aggregate_metrics(results),
+        telemetry={
+            "prometheus_snapshot": _snapshot_metrics(registry),
+        },
+    )
+
+    payload = _render_report(report)
+    _write_output(payload, Path(args.output) if args.output else None)
+
+
+def _build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--dataset",
-        type=Path,
-        default=Path("tests/data/rag/golden_set.jsonl"),
-        help="Path to the golden dataset (JSONL).",
+        type=str,
+        default="tests/data/rag/golden_set.jsonl",
+        help="Path to the golden dataset (JSONL format)",
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "--output",
+        type=str,
+        default=None,
+        help="Optional path to write the evaluation report as JSON",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=5,
+        help="Maximum number of documents to request per query",
+    )
+    parser.add_argument(
+        "--namespace",
+        type=str,
+        default="ml_app",
+        help="Metrics namespace for the Prometheus registry",
+    )
+    parser.add_argument(
+        "--enable-ragas",
+        action="store_true",
+        help="Enable semantic RAGAS metrics (requires configured LLM + embeddings)",
+    )
+    parser.add_argument(
+        "--ragas-model",
+        type=str,
+        default=None,
+        help="LLM model identifier used by RAGAS (defaults to gpt-4o-mini)",
+    )
+    parser.add_argument(
+        "--ragas-embedding",
+        type=str,
+        default=None,
+        help="Embedding model for RAGAS (default: text-embedding-3-small)",
+    )
+    return parser
 
-    asyncio.run(_run(args.dataset))
+
+def main() -> None:
+    logging.basicConfig(level=logging.INFO)
+    args = _build_arg_parser().parse_args()
+    asyncio.run(_run(args))
 
 
 if __name__ == "__main__":
