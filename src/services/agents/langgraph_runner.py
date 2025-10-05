@@ -9,6 +9,7 @@ import logging
 import time
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from enum import Enum
 from typing import Any, TypedDict, cast
 from uuid import uuid4
 
@@ -30,8 +31,11 @@ from src.services.agents.retrieval import (
 )
 from src.services.agents.tool_execution_service import (
     ToolExecutionError,
+    ToolExecutionFailure,
+    ToolExecutionInvalidArgument,
     ToolExecutionResult,
     ToolExecutionService,
+    ToolExecutionTimeout,
 )
 from src.services.monitoring.telemetry_repository import get_telemetry_repository
 
@@ -78,6 +82,40 @@ class AgenticGraphState(TypedDict, total=False):
     metrics: Any
     success: Any
     start_time: Any
+
+
+class AgentErrorCode(str, Enum):
+    """Normalized error codes surfaced by the LangGraph runner."""
+
+    RUN_TIMEOUT = "RUN_TIMEOUT"
+    DISCOVERY_ERROR = "DISCOVERY_ERROR"
+    RETRIEVAL_ERROR = "RETRIEVAL_ERROR"
+    TOOL_TIMEOUT = "TOOL_TIMEOUT"
+    TOOL_INVALID_ARGUMENT = "TOOL_INVALID_ARGUMENT"
+    TOOL_FAILURE = "TOOL_FAILURE"
+    TOOL_UNEXPECTED = "TOOL_UNEXPECTED"
+
+
+def _error_entry(source: str, code: AgentErrorCode, **extra: Any) -> dict[str, Any]:
+    """Construct a structured error payload with optional metadata."""
+
+    entry: dict[str, Any] = {"source": source, "code": code.value}
+    for key, value in extra.items():
+        if value is not None:
+            entry[key] = value
+    return entry
+
+
+def _map_tool_error_code(exc: ToolExecutionError) -> AgentErrorCode:
+    """Translate ToolExecutionError subclasses into canonical codes."""
+
+    if isinstance(exc, ToolExecutionTimeout):
+        return AgentErrorCode.TOOL_TIMEOUT
+    if isinstance(exc, ToolExecutionInvalidArgument):
+        return AgentErrorCode.TOOL_INVALID_ARGUMENT
+    if isinstance(exc, ToolExecutionFailure):
+        return AgentErrorCode.TOOL_FAILURE
+    return AgentErrorCode.TOOL_UNEXPECTED
 
 
 @dataclass(slots=True)
@@ -240,6 +278,9 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
                     raw_state = await self._graph.ainvoke(state, config=config)
                 return cast(AgenticGraphState, raw_state)
             except TimeoutError:
+                now = time.perf_counter()
+                start_timestamp = float(state.get("start_time", now))
+                duration_ms = (now - start_timestamp) * 1000.0
                 telemetry.increment_counter(
                     _METRIC_RUNS,
                     tags={
@@ -248,17 +289,27 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
                         "reason": "timeout",
                     },
                 )
+                telemetry.record_observation(
+                    _METRIC_LATENCY,
+                    duration_ms,
+                    tags={"mode": state.get("mode", "search")},
+                )
                 errors = list(state.get("errors", []))
                 errors.append(
-                    {
-                        "source": "graph",
-                        "code": "RUN_TIMEOUT",
-                        "message": "Workflow timed out",
-                    }
+                    _error_entry(
+                        "graph",
+                        AgentErrorCode.RUN_TIMEOUT,
+                        message="Workflow timed out",
+                    )
                 )
+                metrics = {
+                    "latency_ms": duration_ms,
+                    "tool_count": len(state.get("tool_outputs", []) or []),
+                    "error_count": len(errors),
+                }
                 timeout_state = cast(
                     AgenticGraphState,
-                    {**state, "errors": errors, "success": False},
+                    {**state, "errors": errors, "metrics": metrics, "success": False},
                 )
                 return timeout_state
 
@@ -292,10 +343,43 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
         return {"intent": mode, "agent_notes": notes}
 
     async def _tool_discovery_node(self, state: AgenticGraphState) -> AgenticGraphState:
-        await self._discovery.refresh()
-        capabilities = list(self._discovery.get_capabilities())
-        selected = self._select_tools(capabilities, state)
         notes = list(state.get("agent_notes", []))
+        try:
+            await self._discovery.refresh()
+            capabilities = list(self._discovery.get_capabilities())
+        except Exception as exc:  # pragma: no cover - defensive guard
+            logger.warning("Tool discovery failed: %s", exc, exc_info=True)
+            errors = list(state.get("errors", []))
+            errors.append(
+                _error_entry(
+                    "discovery", AgentErrorCode.DISCOVERY_ERROR, message=str(exc)
+                )
+            )
+            telemetry.increment_counter(
+                _METRIC_RUNS,
+                tags={
+                    "mode": state.get("mode", "search"),
+                    "success": "false",
+                    "reason": "discovery_error",
+                },
+            )
+            with tracer.start_as_current_span(
+                "agent.tool_discovery",
+                attributes={"agent.discovered": 0, "agent.selected": 0},
+            ):
+                notes.append("discovered:0")
+                notes.append("selected:none")
+            return cast(
+                AgenticGraphState,
+                {
+                    "discovered_tools": [],
+                    "selected_tools": [],
+                    "agent_notes": notes,
+                    "errors": errors,
+                },
+            )
+
+        selected = self._select_tools(capabilities, state)
         with tracer.start_as_current_span(
             "agent.tool_discovery",
             attributes={
@@ -305,11 +389,14 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
         ):
             notes.append(f"discovered:{len(capabilities)}")
             notes.append(f"selected:{','.join(cap.name for cap in selected) or 'none'}")
-        return {
-            "discovered_tools": capabilities,
-            "selected_tools": selected,
-            "agent_notes": notes,
-        }
+        return cast(
+            AgenticGraphState,
+            {
+                "discovered_tools": capabilities,
+                "selected_tools": selected,
+                "agent_notes": notes,
+            },
+        )
 
     async def _retrieval_node(self, state: AgenticGraphState) -> AgenticGraphState:
         collection_value = state.get("collection")
@@ -341,6 +428,12 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
                     tags={"collection": query.collection},
                 )
         except Exception:  # pragma: no cover - defensive guard
+            duration_ms = (time.perf_counter() - start_time) * 1000.0
+            telemetry.record_observation(
+                _METRIC_RETRIEVAL_LATENCY,
+                duration_ms,
+                tags={"collection": query.collection},
+            )
             telemetry.increment_counter(
                 _METRIC_RETRIEVAL_ERRORS,
                 tags={"collection": query.collection},
@@ -348,11 +441,11 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
             logger.exception("Retrieval failed for collection %s", query.collection)
             errors = list(state.get("errors", []))
             errors.append(
-                {
-                    "source": "retrieval",
-                    "code": "RETRIEVAL_ERROR",
-                    "collection": query.collection,
-                }
+                _error_entry(
+                    "retrieval",
+                    AgentErrorCode.RETRIEVAL_ERROR,
+                    collection=query.collection,
+                )
             )
             return cast(
                 AgenticGraphState, {"errors": errors, "retrieved_documents": []}
@@ -371,49 +464,92 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
     async def _tool_execution_node(self, state: AgenticGraphState) -> AgenticGraphState:
         selected = state.get("selected_tools", [])
         if not selected:
-            return {"tool_outputs": []}
+            return cast(AgenticGraphState, {"tool_outputs": []})
+
         semaphore = asyncio.Semaphore(self._max_parallel_tools)
+        run_deadline: float | None = None
+        if self._run_timeout_seconds is not None:
+            run_deadline = float(state.get("start_time", time.perf_counter()))
+            run_deadline += self._run_timeout_seconds
+
+        async def invoke_tool(
+            capability: ToolCapability,
+        ) -> tuple[str, ToolCapability, Any]:
+            try:
+                async with semaphore:
+                    read_timeout_ms: int | None = None
+                    if run_deadline is not None:
+                        remaining = run_deadline - time.perf_counter()
+                        if remaining <= 0:
+                            raise ToolExecutionTimeout(
+                                (
+                                    "Run deadline exceeded before executing tool "
+                                    f"'{capability.name}'"
+                                ),
+                                server_name=capability.server,
+                            )
+                        read_timeout_ms = max(1, int(remaining * 1000))
+                    result = await self._execute_tool(
+                        capability,
+                        state,
+                        read_timeout_ms=read_timeout_ms,
+                    )
+                return "ok", capability, result
+            except ToolExecutionError as exc:
+                return "tool", capability, exc
+            except Exception as exc:  # pragma: no cover - defensive guard
+                logger.exception(
+                    "Unexpected failure executing tool %s on server %s",
+                    capability.name,
+                    capability.server,
+                )
+                return "unexpected", capability, exc
+
+        outputs: list[dict[str, Any]] = []
+        errors = list(state.get("errors", []))
         with tracer.start_as_current_span(
             "agent.tool_execution",
             attributes={"agent.requested_tools": len(selected)},
         ):
-            tasks = {
-                asyncio.create_task(
-                    self._execute_tool(capability, state, semaphore)
-                ): capability
-                for capability in selected
-            }
-            outputs: list[dict[str, Any]] = []
-            errors = list(state.get("errors", []))
-            for task, capability in tasks.items():
-                try:
-                    result = await task
-                except ToolExecutionError as exc:
-                    errors.append(
-                        {
-                            "source": "tool_execution",
-                            "code": exc.__class__.__name__,
-                            "tool": capability.name,
-                            "server": capability.server,
-                        }
+            task_results: list[asyncio.Task[tuple[str, ToolCapability, Any]]] = []
+            async with asyncio.TaskGroup() as group:
+                for capability in selected:
+                    task_results.append(group.create_task(invoke_tool(capability)))
+
+        for task in task_results:
+            outcome, capability, payload = task.result()
+            if outcome == "ok":
+                outputs.append(cast(dict[str, Any], payload))
+                continue
+            if outcome == "tool":
+                error_code = _map_tool_error_code(cast(ToolExecutionError, payload))
+                errors.append(
+                    _error_entry(
+                        "tool_execution",
+                        error_code,
+                        tool=capability.name,
+                        server=capability.server,
+                        message=str(payload),
                     )
-                except Exception:  # pragma: no cover - defensive guard
-                    logger.exception(
-                        "Unexpected failure executing tool %s on server %s",
-                        capability.name,
-                        capability.server,
-                    )
-                    errors.append(
-                        {
-                            "source": "tool_execution",
-                            "code": "UNEXPECTED_ERROR",
-                            "tool": capability.name,
-                            "server": capability.server,
-                        }
-                    )
-                else:
-                    outputs.append(result)
-        return {"tool_outputs": outputs, "errors": errors}
+                )
+                continue
+            errors.append(
+                _error_entry(
+                    "tool_execution",
+                    AgentErrorCode.TOOL_UNEXPECTED,
+                    tool=capability.name,
+                    server=capability.server,
+                    message=str(payload),
+                )
+            )
+
+        return cast(
+            AgenticGraphState,
+            {
+                "tool_outputs": outputs,
+                "errors": errors,
+            },
+        )
 
     async def _synthesis_node(self, state: AgenticGraphState) -> AgenticGraphState:
         documents = state.get("retrieved_documents", [])
@@ -509,36 +645,24 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
         self,
         capability: ToolCapability,
         state: AgenticGraphState,
-        semaphore: asyncio.Semaphore,
+        *,
+        read_timeout_ms: int | None = None,
     ) -> dict[str, Any]:
-        async with semaphore:
-            try:
-                arguments = self._build_tool_arguments(capability, state)
-                result: ToolExecutionResult = await self._tool_service.execute_tool(
-                    capability.name,
-                    arguments=arguments,
-                    server_name=capability.server,
-                )
-                return {
-                    "tool_name": capability.name,
-                    "server_name": capability.server,
-                    "duration_ms": result.duration_ms,
-                    "structured_content": result.result.structuredContent,
-                    "content": [item.model_dump() for item in result.result.content],
-                    "meta": result.result.meta,
-                }
-            except ToolExecutionError as exc:
-                telemetry.increment_counter(
-                    "agentic_tool_failures_total",
-                    tags={"tool": capability.name, "server": capability.server},
-                )
-                logger.warning(
-                    "Tool '%s' failed on server '%s': %s",
-                    capability.name,
-                    capability.server,
-                    exc,
-                )
-                raise
+        arguments = self._build_tool_arguments(capability, state)
+        result: ToolExecutionResult = await self._tool_service.execute_tool(
+            capability.name,
+            arguments=arguments,
+            server_name=capability.server,
+            read_timeout_ms=read_timeout_ms,
+        )
+        return {
+            "tool_name": capability.name,
+            "server_name": capability.server,
+            "duration_ms": result.duration_ms,
+            "structured_content": result.result.structuredContent,
+            "content": [item.model_dump() for item in result.result.content],
+            "meta": result.result.meta,
+        }
 
     def _build_tool_arguments(
         self, capability: ToolCapability, state: AgenticGraphState
@@ -607,6 +731,7 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
 
 
 __all__ = [
+    "AgentErrorCode",
     "AgenticGraphState",
     "GraphAnalysisOutcome",
     "GraphRunner",
