@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Security configuration for the AI documentation system."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -45,7 +45,7 @@ class ConfigurationAuditEvent(BaseModel):
     """Represents a configuration audit event."""
 
     operation: ConfigOperationType
-    timestamp: datetime = Field(default_factory=datetime.now)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(tz=UTC))
     data_classification: ConfigDataClassification
     user: str | None = None
     details: dict[str, Any] = Field(default_factory=dict)
@@ -57,7 +57,7 @@ class EncryptedConfigItem(BaseModel):
     key: str
     encrypted_value: str
     data_classification: ConfigDataClassification
-    created_at: datetime = Field(default_factory=datetime.now)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(tz=UTC))
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 

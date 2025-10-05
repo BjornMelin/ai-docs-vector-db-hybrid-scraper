@@ -11,7 +11,7 @@ from src.config import SearchStrategy
 from src.mcp_tools.models.requests import ProjectRequest
 from src.mcp_tools.models.responses import ProjectInfo
 from src.mcp_tools.tools.projects import register_tools
-from src.services.vector_db.adapter_base import VectorMatch
+from src.services.vector_db.types import VectorMatch
 
 
 @pytest.fixture
@@ -23,7 +23,6 @@ def mock_vector_service() -> Mock:
     service.collection_stats = AsyncMock(return_value={"points_count": 5})
     service.list_collections = AsyncMock(return_value=["collection-a"])
     service.search_documents = AsyncMock(return_value=[])
-    service.hybrid_search = AsyncMock(return_value=[])
     return service
 
 
@@ -159,7 +158,7 @@ async def test_search_project_uses_hybrid(
         "id": "proj",
         "collection": "project_proj",
     }
-    mock_vector_service.hybrid_search.return_value = [
+    mock_vector_service.search_documents.return_value = [
         VectorMatch(id="doc", score=0.8, payload={"content": "body"})
     ]
 
@@ -167,5 +166,5 @@ async def test_search_project_uses_hybrid(
         "proj", query="hello", strategy=SearchStrategy.HYBRID, ctx=mock_context
     )
 
-    mock_vector_service.hybrid_search.assert_awaited_once()
+    mock_vector_service.search_documents.assert_awaited_once()
     assert results[0].content == "body"

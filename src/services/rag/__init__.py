@@ -1,27 +1,10 @@
-"""Retrieval-Augmented Generation (RAG) services."""
+"""Retrieval-augmented generation service package.
 
-from .generator import RAGGenerator
-from .models import (
-    AnswerMetrics,
-    RAGConfig,
-    RAGRequest,
-    RAGResult,
-    RAGServiceMetrics,
-    SourceAttribution,
-)
-from .retriever import VectorServiceRetriever
-from .utils import build_default_rag_config, initialise_rag_generator
+Import concrete modules (e.g., ``src.services.rag.models``) directly to avoid
+implicit re-export coupling.
+"""
+
+from __future__ import annotations
 
 
-__all__ = [
-    "AnswerMetrics",
-    "RAGConfig",
-    "RAGGenerator",
-    "RAGRequest",
-    "RAGResult",
-    "RAGServiceMetrics",
-    "SourceAttribution",
-    "VectorServiceRetriever",
-    "build_default_rag_config",
-    "initialise_rag_generator",
-]
+__all__: list[str] = []

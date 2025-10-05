@@ -31,8 +31,8 @@ from .config import Config, get_config
 from .infrastructure.client_manager import ClientManager
 from .services.embeddings.manager import QualityTier
 from .services.logging_config import configure_logging
-from .services.vector_db.adapter_base import CollectionSchema, VectorRecord
 from .services.vector_db.service import VectorStoreService
+from .services.vector_db.types import CollectionSchema, VectorRecord
 
 
 class ScrapingError(Exception):

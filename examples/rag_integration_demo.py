@@ -14,6 +14,7 @@ Usage:
     python examples/rag_integration_demo.py
 """
 
+# pylint: disable=wrong-import-position
 from __future__ import annotations
 
 import asyncio
@@ -25,23 +26,19 @@ SRC_ROOT = Path(__file__).parent.parent / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-from src.config import Config, get_config  # pylint: disable=wrong-import-position
-from src.infrastructure.client_manager import (  # pylint: disable=wrong-import-position
-    ClientManager,
-)
-from src.services.dependencies import (  # pylint: disable=wrong-import-position
+from src.config import Config, get_config
+from src.infrastructure.client_manager import ClientManager
+from src.services.dependencies import (
     RAGResponse,
     RAGRequest,
     clear_rag_cache,
     generate_rag_answer,
     get_rag_metrics,
 )
-from src.services.errors import EmbeddingServiceError  # pylint: disable=wrong-import-position
-from src.services.rag import (  # pylint: disable=wrong-import-position
-    RAGConfig as ServiceRAGConfig,
-    RAGGenerator,
-    initialise_rag_generator,
-)
+from src.services.errors import EmbeddingServiceError
+from src.services.rag.generator import RAGGenerator
+from src.services.rag.models import RAGConfig as ServiceRAGConfig
+from src.services.rag.utils import initialise_rag_generator
 
 
 def _print_banner() -> None:
@@ -69,7 +66,7 @@ async def _initialise_generator(
 
     vector_store = await client_manager.get_vector_store_service()
     generator, rag_config = await initialise_rag_generator(config, vector_store)
-    print("✅ RAG generator initialised successfully")
+    print("✅ RAG generator initialized successfully")
     return generator, rag_config
 
 

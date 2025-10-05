@@ -7,6 +7,7 @@ import time
 from collections.abc import Iterable, Sequence
 from typing import Any, cast
 
+from langchain_core.callbacks.base import BaseCallbackHandler
 from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.retrievers import BaseRetriever
@@ -60,6 +61,7 @@ class RAGGenerator(BaseService):
         self._chat_model = chat_model
         self._generation_count = 0
         self._total_latency_ms = 0.0
+        self._callbacks: list[BaseCallbackHandler] = []
 
     @property
     def config(self) -> RAGConfig:
@@ -72,6 +74,11 @@ class RAGGenerator(BaseService):
         """Expose the underlying retriever instance."""
 
         return self._retriever
+
+    def register_callbacks(self, callbacks: Sequence[BaseCallbackHandler]) -> None:
+        """Register LangChain callback handlers for downstream execution."""
+
+        self._callbacks = list(callbacks)
 
     async def initialize(self) -> None:
         """Prepare the chat model and executable chain."""
@@ -89,7 +96,7 @@ class RAGGenerator(BaseService):
             self._chat_model = cast(ChatOpenAI, ChatOpenAI(**params))  # type: ignore[call-arg]
 
         self._mark_initialized()
-        logger.info("RAG generator initialised using LangChain components")
+        logger.info("RAG generator initialized using LangChain components")
 
     async def cleanup(self) -> None:
         """Release cached model instances."""
@@ -99,7 +106,7 @@ class RAGGenerator(BaseService):
 
     @property
     def llm_client_available(self) -> bool:
-        """Indicate whether the underlying chat model is initialised."""
+        """Indicate whether the underlying chat model is initialized."""
 
         return self._chat_model is not None
 
@@ -117,7 +124,7 @@ class RAGGenerator(BaseService):
 
         llm = self._chat_model
         if llm is None:
-            raise EmbeddingServiceError("Chat model is not initialised")
+            raise EmbeddingServiceError("Chat model is not initialized")
 
         start_time = time.perf_counter()
         max_tokens = request.max_tokens or self._config.max_tokens
@@ -149,8 +156,12 @@ class RAGGenerator(BaseService):
 
         chain = self._DEFAULT_PROMPT | llm
         try:
+            config_kwargs: dict[str, Any] | None = None
+            if self._callbacks:
+                config_kwargs = {"callbacks": self._callbacks}
             message = await chain.ainvoke(
-                {"context": context_block, "question": request.query}
+                {"context": context_block, "question": request.query},
+                config=config_kwargs,
             )
         except Exception as exc:  # pragma: no cover - runtime errors
             logger.exception("RAG generation failed")

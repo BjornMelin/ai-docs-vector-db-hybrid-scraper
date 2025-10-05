@@ -29,6 +29,7 @@ try:
     MONITORING_AVAILABLE = True
 except ImportError:
     MONITORING_AVAILABLE = False
+    get_metrics_registry = None  # type: ignore[assignment]
 
 
 class AlertSeverity(str, Enum):
@@ -138,7 +139,7 @@ class MonitoringConfig(BaseModel):
 class BrowserAutomationMonitor:
     """Monitoring system for 5-tier browser automation."""
 
-    def __init__(self, config: MonitoringConfig = None):
+    def __init__(self, config: MonitoringConfig | None = None):
         """Initialize monitoring system.
 
         Args:
@@ -169,7 +170,7 @@ class BrowserAutomationMonitor:
 
         # Initialize Prometheus metrics registry if available
         self.metrics_registry = None
-        if MONITORING_AVAILABLE:
+        if MONITORING_AVAILABLE and get_metrics_registry is not None:
             try:
                 self.metrics_registry = get_metrics_registry()
                 logger.info("Browser monitoring Prometheus integration enabled")
@@ -203,6 +204,8 @@ class BrowserAutomationMonitor:
         response_time_ms: float,
         error_type: str | None = None,
         cache_hit: bool = False,
+        runtime: str | None = None,
+        challenge: str | None = None,
     ):
         """Record metrics for a single request.
 
@@ -282,6 +285,15 @@ class BrowserAutomationMonitor:
 
             # Check for alerts
             await self._check_alert_conditions(tier, metrics)
+
+            if self.metrics_registry:
+                self.metrics_registry.record_browser_request(
+                    tier=tier,
+                    duration_seconds=response_time_ms / 1000,
+                    success=success,
+                    runtime=runtime,
+                    challenge=challenge,
+                )
 
     async def _update_health_status(self, tier: str, metrics: PerformanceMetrics):
         """Update health status for a tier based on metrics."""

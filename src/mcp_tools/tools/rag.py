@@ -1,8 +1,7 @@
-"""RAG (Retrieval-Augmented Generation) MCP tools.
+"""Retrieval-augmented generation tools for the MCP server.
 
-This module provides MCP tools for generating contextual answers from search results
-using Large Language Models. Portfolio-worthy implementation showcasing advanced
-AI integration patterns.
+Provide structured endpoints that build answers from vector search output using the
+configured language model stack.
 """
 
 # pylint: disable=duplicate-code
@@ -14,11 +13,9 @@ from fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
 from src.config import Config, get_config
-from src.services.rag import (
-    RAGGenerator,
-    RAGRequest,
-    initialise_rag_generator,
-)
+from src.services.rag.generator import RAGGenerator
+from src.services.rag.models import RAGRequest
+from src.services.rag.utils import initialise_rag_generator
 from src.services.vector_db.service import VectorStoreService
 
 
@@ -94,9 +91,8 @@ def register_tools(app: FastMCP) -> None:  # pylint: disable=too-many-statements
     async def generate_rag_answer(request: RAGAnswerRequest) -> RAGAnswerResponse:
         """Generate a contextual answer from search results using RAG.
 
-        This tool uses advanced Large Language Model capabilities to generate
-        contextual, accurate answers based on provided search results. Features
-        include source attribution, confidence scoring, and quality metrics.
+        The handler forwards the request to the configured RAG generator and
+        collects the answer, source list, and metrics produced by the pipeline.
 
         Args:
             request: RAG answer generation request
@@ -156,15 +152,14 @@ def register_tools(app: FastMCP) -> None:  # pylint: disable=too-many-statements
     async def get_rag_metrics() -> RAGMetricsResponse:
         """Get RAG service performance metrics.
 
-        Returns comprehensive metrics about RAG answer generation including
-        performance statistics, cost estimates, and quality measures.
+        Returns metrics about RAG answer generation including
+        performance stats, cost estimates, and quality measures.
 
         Returns:
             RAGMetricsResponse: Service metrics and statistics
 
         Raises:
             RuntimeError: If metrics retrieval fails
-
         """
         config = get_config()
 
@@ -204,7 +199,6 @@ def register_tools(app: FastMCP) -> None:  # pylint: disable=too-many-statements
 
         Raises:
             RuntimeError: If configuration test fails
-
         """
         config = get_config()
 
@@ -249,7 +243,6 @@ def register_tools(app: FastMCP) -> None:  # pylint: disable=too-many-statements
 
         Raises:
             RuntimeError: If cache clearing fails
-
         """
         config = get_config()
 

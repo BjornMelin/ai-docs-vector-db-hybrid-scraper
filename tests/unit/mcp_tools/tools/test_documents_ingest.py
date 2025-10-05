@@ -11,7 +11,7 @@ import pytest
 from src.mcp_tools.models.requests import BatchRequest, DocumentRequest
 from src.mcp_tools.models.responses import AddDocumentResponse
 from src.mcp_tools.tools import documents
-from src.services.vector_db.adapter_base import CollectionSchema, TextDocument
+from src.services.vector_db.types import CollectionSchema, TextDocument
 
 
 class DummyContentType:
@@ -33,15 +33,15 @@ class VectorServiceStub:
     """Async stub for VectorStoreService interactions used in tests."""
 
     def __init__(self) -> None:
-        self._initialised = False
+        self._initialized = False
         self.ensure_collection = AsyncMock()
         self.upsert_documents = AsyncMock()
 
     def is_initialized(self) -> bool:
-        return self._initialised
+        return self._initialized
 
     async def initialize(self) -> None:
-        self._initialised = True
+        self._initialized = True
 
     @property
     def embedding_dimension(self) -> int:

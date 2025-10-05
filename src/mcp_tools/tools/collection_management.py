@@ -112,9 +112,7 @@ def register_tools(mcp, client_manager: ClientManager):  # pylint: disable=too-m
             delete_alias = getattr(vector_service, "delete_collection", None)
             drop_method = getattr(vector_service, "drop_collection", None)
             if callable(delete_alias):
-                delete_callable = cast(
-                    Callable[[str], Awaitable[None]], delete_alias
-                )
+                delete_callable = cast(Callable[[str], Awaitable[None]], delete_alias)
                 await delete_callable(collection_name)
             elif callable(drop_method):
                 drop_callable = cast(Callable[[str], Awaitable[None]], drop_method)

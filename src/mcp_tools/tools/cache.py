@@ -16,7 +16,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
     @mcp.tool()
     async def clear_cache(
-        pattern: str | None = None, ctx: Context = None
+        pattern: str | None = None, ctx: Context | None = None
     ) -> CacheClearResponse:
         """Clear cache entries.
 
@@ -54,7 +54,7 @@ def register_tools(mcp, client_manager: ClientManager):
             raise
 
     @mcp.tool()
-    async def get_cache_stats(ctx: Context = None) -> CacheStatsResponse:
+    async def get_cache_stats(ctx: Context | None = None) -> CacheStatsResponse:
         """Get cache statistics and metrics.
 
         Returns hit rate, size, and performance metrics for the cache.

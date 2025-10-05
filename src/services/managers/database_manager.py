@@ -10,7 +10,7 @@ from dependency_injector.wiring import Provide, inject
 from src.config import CacheType
 from src.infrastructure.container import ApplicationContainer
 from src.services.errors import APIError
-from src.services.vector_db.adapter_base import VectorRecord
+from src.services.vector_db.types import VectorRecord
 
 
 if TYPE_CHECKING:

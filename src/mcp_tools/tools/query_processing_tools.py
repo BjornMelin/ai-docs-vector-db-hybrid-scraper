@@ -18,7 +18,8 @@ from pydantic import BaseModel, Field
 from src.contracts.retrieval import SearchRecord
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.models.responses import SearchResult
-from src.services.query_processing import SearchOrchestrator, SearchRequest
+from src.services.query_processing.models import SearchRequest
+from src.services.query_processing.orchestrator import SearchOrchestrator
 
 
 logger = logging.getLogger(__name__)

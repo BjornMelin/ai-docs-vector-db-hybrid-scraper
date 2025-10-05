@@ -6,6 +6,7 @@ pipeline, including request and response structures for search operations.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -84,6 +85,58 @@ class SearchRequest(BaseModel):
         ge=1.0,
         description="Server-side overfetch multiplier for grouping",
     )
+
+    @classmethod
+    def from_input(
+        cls,
+        request: SearchRequest | str | Mapping[str, Any],
+        *,
+        collection: str | None = None,
+        limit: int | None = None,
+        **overrides: Any,
+    ) -> SearchRequest:
+        """Coerce raw input into a ``SearchRequest`` instance.
+
+        Args:
+            request: Existing ``SearchRequest`` instance, raw query string, or
+                mapping payload describing the request.
+            collection: Optional collection override applied when present.
+            limit: Optional result limit override applied when present.
+            **overrides: Additional keyword arguments merged into the request.
+
+        Returns:
+            A normalised ``SearchRequest`` instance.
+
+        Raises:
+            TypeError: If the ``request`` type is unsupported.
+        """
+
+        update: dict[str, Any] = {}
+        if collection is not None:
+            update["collection"] = collection
+        if limit is not None:
+            update["limit"] = limit
+        if overrides:
+            update.update(overrides)
+
+        if isinstance(request, cls):
+            if not update:
+                return request
+            return request.model_copy(update=update)
+
+        if isinstance(request, str):
+            payload: dict[str, Any] = {"query": request}
+            payload.update(update)
+            return cls(**payload)
+
+        if isinstance(request, Mapping):
+            payload = dict(request)
+            for key, value in update.items():
+                payload.setdefault(key, value)
+            return cls(**payload)
+
+        msg = f"Unsupported request type: {type(request)!r}"
+        raise TypeError(msg)
 
 
 class SearchResponse(BaseModel):

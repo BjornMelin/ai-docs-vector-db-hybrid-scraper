@@ -2,19 +2,24 @@
 
 **Date:** 2025-10-02  
 **Status:** Accepted  
-**Context:** To safely migrate toward the library-first architecture (ADR 0005)
-we must guarantee behavioural parity and control upstream churn.  The previous
-stack lacked automated regression checks and had loosely specified dependency
-ranges.
+**Drivers:** Need for behavioral parity validation during library migration, lack of automated regression checks, loosely specified dependency ranges  
+**Deciders:** AI Docs Platform Team
+
+## Context
+
+To safely migrate toward the library-first architecture (ADR 0005) we must
+guarantee behavioural parity and control upstream churn. The previous stack
+lacked automated regression checks and had loosely specified dependency ranges.
 
 ## Decision
 
 1. **Golden Evaluation Harness**
    - Maintain a lightweight golden dataset (`tests/data/rag/golden_set.jsonl`).
    - Provide a standard evaluation script (`scripts/eval/rag_golden_eval.py`)
-     that executes the QueryProcessingPipeline with RAG enabled and emits
-     similarity scores.  The function is intentionally framework neutral so it
-     will continue to work after the LangChain migration.
+     that executes the `SearchOrchestrator` with RAG enabled using
+     `SearchRequest.from_input` for normalisation and emits similarity scores.
+     The function remains framework neutral so it will continue to work after
+     the LangChain migration.
    - Integrate richer metrics (RAGAS or LangChain evaluators) once the
      LangChain pipeline is in place.
 
@@ -36,12 +41,6 @@ ranges.
   upstream API changes.
 - Additional maintenance overhead: the compatibility matrix must be kept up to
   date and the evaluation script requires periodic enhancement.
-
-## Status
-
-- Dataset, evaluation script, compatibility matrix, and Renovate rules have
-  been added in Phase A.
-- CI integration and metric enhancements are tracked in Phase B.
 
 ## References
 

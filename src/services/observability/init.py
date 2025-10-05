@@ -74,7 +74,7 @@ def initialize_observability(config: ObservabilityConfig | None = None) -> bool:
             value is loaded via ``get_observability_config``.
 
     Returns:
-        bool: ``True`` when observability is enabled and providers are initialised.
+        bool: ``True`` when observability is enabled and providers are initialized.
     """
 
     config = config or get_observability_config()
@@ -83,7 +83,7 @@ def initialize_observability(config: ObservabilityConfig | None = None) -> bool:
         return False
 
     if _STATE.tracer_provider is not None:
-        return True  # already initialised
+        return True  # already initialized
 
     try:
         from opentelemetry import metrics, trace
@@ -147,7 +147,7 @@ def initialize_observability(config: ObservabilityConfig | None = None) -> bool:
 
     _configure_instrumentations(config.instrumentations)
     LOGGER.info(
-        "Observability initialised - service=%s endpoint=%s",
+        "Observability initialized - service=%s endpoint=%s",
         config.service_name,
         config.otlp_endpoint,
     )

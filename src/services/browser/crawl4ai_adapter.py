@@ -144,7 +144,7 @@ class Crawl4AIAdapter(BaseService):
             A payload containing crawl outcome, markdown, and metadata.
 
         Raises:
-            CrawlServiceError: If the adapter is not initialised.
+            CrawlServiceError: If the adapter is not initialized.
         """
 
         if not self._initialized or not self._crawler:
@@ -211,7 +211,7 @@ class Crawl4AIAdapter(BaseService):
             A list of payloads mirroring :meth:`scrape` outputs.
 
         Raises:
-            CrawlServiceError: If the adapter is not initialised.
+            CrawlServiceError: If the adapter is not initialized.
         """
 
         if not self._initialized or not self._crawler:

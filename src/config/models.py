@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Self
+from typing import Any, Literal, Self
 
 from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
 
@@ -215,6 +215,69 @@ class DeploymentTier(str, Enum):
     ENTERPRISE = "enterprise"
 
 
+class MCPTransport(str, Enum):
+    """Transport mechanisms supported by MCP clients."""
+
+    STDIO = "stdio"
+    STREAMABLE_HTTP = "streamable_http"
+    SSE = "sse"
+
+
+class MCPServerConfig(BaseModel):
+    """Configuration for a single MCP server endpoint."""
+
+    name: str = Field(..., min_length=1, description="Unique MCP server identifier")
+    transport: MCPTransport = Field(
+        MCPTransport.STDIO, description="Transport type for the server"
+    )
+    command: str | None = Field(
+        None,
+        description="Executable name for stdio transports",
+    )
+    args: list[str] = Field(
+        default_factory=list, description="Command arguments for stdio transports"
+    )
+    url: HttpUrl | None = Field(
+        None,
+        description="HTTP endpoint for streamable_http and sse transports",
+    )
+    headers: dict[str, str] = Field(
+        default_factory=dict,
+        description="Additional headers for HTTP-based transports",
+    )
+    env: dict[str, str] = Field(
+        default_factory=dict,
+        description="Environment variables applied when launching the server",
+    )
+    timeout_ms: int | None = Field(
+        None,
+        ge=0,
+        description="Optional execution timeout for stdio transports",
+    )
+
+    @model_validator(mode="after")
+    def validate_transport(self) -> MCPServerConfig:
+        if self.transport == MCPTransport.STDIO and not self.command:
+            msg = "command is required for stdio MCP transports"
+            raise ValueError(msg)
+        if self.transport != MCPTransport.STDIO and not self.url:
+            msg = "url is required for non-stdio MCP transports"
+            raise ValueError(msg)
+        return self
+
+
+class MCPClientConfig(BaseModel):
+    """Top-level configuration for MCP client connectivity."""
+
+    enabled: bool = Field(True, description="Enable MCP client integration")
+    request_timeout_ms: int = Field(
+        60000, ge=1000, description="Default timeout for MCP tool executions"
+    )
+    servers: list[MCPServerConfig] = Field(
+        default_factory=list, description="Configured MCP servers"
+    )
+
+
 #### Configuration sections ####
 
 
@@ -415,12 +478,153 @@ class Crawl4AIConfig(BaseModel):
     remove_styles: bool = Field(default=True, description="Remove style tags")
 
 
+class PlaywrightProxySettings(BaseModel):
+    """Proxy configuration injected into Playwright browser contexts."""
+
+    server: str = Field(..., description="Proxy server URL, including scheme.")
+    username: str | None = Field(
+        default=None, description="Proxy authentication username"
+    )
+    password: str | None = Field(
+        default=None, description="Proxy authentication password"
+    )
+    bypass: str | None = Field(
+        default=None,
+        description="Comma separated hostnames that should bypass the proxy",
+    )
+
+    def to_playwright_dict(self) -> dict[str, str]:
+        """Return the dictionary signature expected by Playwright."""
+
+        proxy: dict[str, str] = {"server": self.server}
+        if self.username:
+            proxy["username"] = self.username
+        if self.password:
+            proxy["password"] = self.password
+        if self.bypass:
+            proxy["bypass"] = self.bypass
+        return proxy
+
+
+class PlaywrightCaptchaSettings(BaseModel):
+    """CAPTCHA solving configuration using CapMonster Cloud."""
+
+    provider: Literal["capmonster"] = Field(
+        default="capmonster", description="Captcha solving provider identifier"
+    )
+    api_key: str = Field(..., description="CapMonster Cloud API key")
+    captcha_type: Literal["recaptcha_v2", "hcaptcha", "turnstile"] = Field(
+        default="recaptcha_v2",
+        description="Captcha type solved through CapMonster",
+    )
+    iframe_selector: str = Field(
+        default="iframe[src*='captcha']",
+        description="CSS selector pointing at the captcha iframe",
+    )
+    response_input_selector: str = Field(
+        default="textarea[name='g-recaptcha-response']",
+        description="Selector used to inject the solved token",
+    )
+
+
+class PlaywrightTierConfig(BaseModel):
+    """Configuration describing a single anti-bot execution tier."""
+
+    name: str = Field(default="baseline", description="Identifier for the tier")
+    use_undetected_browser: bool = Field(
+        default=False,
+        description="Whether to launch the Rebrowser patched Playwright runtime",
+    )
+    enable_stealth: bool = Field(
+        default=True,
+        description="Apply tf_playwright_stealth transformations for the tier",
+    )
+    proxy: PlaywrightProxySettings | None = Field(
+        default=None, description="Proxy configuration applied to this tier"
+    )
+    captcha: PlaywrightCaptchaSettings | None = Field(
+        default=None, description="Captcha solving configuration"
+    )
+    max_attempts: int = Field(
+        default=1, gt=0, description="Maximum navigation attempts for the tier"
+    )
+    challenge_status_codes: list[int] = Field(
+        default_factory=lambda: [403, 429],
+        description="HTTP status codes that should trigger escalation",
+    )
+    challenge_keywords: list[str] = Field(
+        default_factory=lambda: ["captcha", "verify you are human"],
+        description="Body snippets that indicate bot-detection challenges",
+    )
+
+
 class PlaywrightConfig(BaseModel):
-    """Playwright browser configuration."""
+    """Playwright browser configuration for automation clients."""
 
     browser: str = Field(default="chromium", description="Browser type")
     headless: bool = Field(default=True, description="Run in headless mode")
     timeout: int = Field(default=30000, gt=0, description="Timeout in milliseconds")
+    viewport: dict[str, int | float | bool] = Field(
+        default_factory=lambda: {"width": 1920, "height": 1080},
+        description="Viewport size (width/height) applied to new browser contexts",
+    )
+    user_agent: str = Field(
+        default=(
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+        ),
+        description="User-Agent header injected into new browser contexts",
+    )
+    enable_stealth: bool = Field(
+        default=True,
+        description="Global default for applying tf_playwright_stealth",
+    )
+    tiers: list[PlaywrightTierConfig] = Field(
+        default_factory=list,
+        description="Ordered anti-bot tiers executed until success",
+    )
+
+    @field_validator("viewport")
+    @classmethod
+    def validate_viewport(
+        cls, value: dict[str, int | float | bool]
+    ) -> dict[str, int | float | bool]:
+        required_keys = {"width", "height"}
+        missing = required_keys.difference(value)
+        if missing:
+            missing_keys = ", ".join(sorted(missing))
+            msg = f"Viewport must include keys: {missing_keys}"
+            raise ValueError(msg)
+
+        clean_value = dict(value)
+        for key in required_keys:
+            dimension = clean_value[key]
+            if not isinstance(dimension, int) or dimension <= 0:
+                msg = f"Viewport {key} must be a positive integer"
+                raise ValueError(msg)
+            clean_value[key] = int(dimension)
+
+        return clean_value
+
+    @field_validator("user_agent")
+    @classmethod
+    def validate_user_agent(cls, value: str) -> str:
+        if not value or not value.strip():
+            msg = "User agent must be a non-empty string"
+            raise ValueError(msg)
+        return value.strip()
+
+    @model_validator(mode="after")
+    def default_tier_injection(self) -> Self:
+        if not self.tiers:
+            self.tiers = [
+                PlaywrightTierConfig(
+                    name="baseline",
+                    use_undetected_browser=False,
+                    enable_stealth=self.enable_stealth,
+                )
+            ]
+        return self
 
 
 class BrowserUseConfig(BaseModel):
@@ -787,64 +991,6 @@ class AutoDetectionConfig(BaseModel):
     retry_attempts: int = Field(default=3, ge=1, description="Retry attempts")
 
 
-class DriftDetectionConfig(BaseModel):
-    """Configuration drift monitoring settings."""
-
-    enabled: bool = Field(default=True, description="Enable drift detection")
-    snapshot_interval_minutes: int = Field(
-        default=15, gt=0, le=1440, description="Snapshot interval"
-    )
-    comparison_interval_minutes: int = Field(
-        default=5, gt=0, le=60, description="Comparison interval"
-    )
-    monitored_paths: list[str] = Field(
-        default_factory=lambda: [
-            "src/config/",
-            ".env",
-            "config.yaml",
-            "config.json",
-            "docker-compose.yml",
-            "docker-compose.yaml",
-        ],
-        description="Paths monitored for drift",
-    )
-    excluded_paths: list[str] = Field(
-        default_factory=lambda: [
-            "**/__pycache__/",
-            "**/*.pyc",
-            "**/logs/",
-            "**/cache/",
-            "**/tmp/",
-        ],
-        description="Excluded paths",
-    )
-    alert_on_severity: list[str] = Field(
-        default_factory=lambda: ["high", "critical"],
-        description="Alert severities that trigger notifications",
-    )
-    max_alerts_per_hour: int = Field(
-        default=10, gt=0, description="Max drift alerts per hour"
-    )
-    snapshot_retention_days: int = Field(
-        default=30, gt=0, description="Retention for snapshots"
-    )
-    events_retention_days: int = Field(
-        default=90, gt=0, description="Retention for drift events"
-    )
-    integrate_with_task20_anomaly: bool = Field(
-        default=True, description="Integrate with anomaly detection"
-    )
-    use_performance_monitoring: bool = Field(
-        default=True, description="Use performance monitoring signals"
-    )
-    enable_auto_remediation: bool = Field(
-        default=False, description="Enable automatic remediation"
-    )
-    auto_remediation_severity_threshold: str = Field(
-        default="high", description="Severity threshold for remediation"
-    )
-
-
 class DocumentationSite(BaseModel):
     """Documentation site crawl configuration."""
 
@@ -923,7 +1069,6 @@ __all__ = [
     "DocumentationSite",
     "DetectedEnvironment",
     "DetectedService",
-    "DriftDetectionConfig",
     "EmbeddingConfig",
     "EmbeddingModel",
     "EmbeddingProvider",

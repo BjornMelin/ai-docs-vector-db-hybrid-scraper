@@ -1,4 +1,4 @@
-"""Comprehensive tests for the configuration loader.
+"""Unit tests for the configuration loader.
 
 The suite exercises the pydantic-settings integration."""
 

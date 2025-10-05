@@ -11,14 +11,14 @@ from __future__ import annotations
 
 import logging
 from collections import OrderedDict
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable
 from typing import Any
 
 from fastmcp import Context
 
 from src.infrastructure.client_manager import ClientManager
-from src.services.vector_db.adapter_base import VectorMatch
 from src.services.vector_db.service import VectorStoreService
+from src.services.vector_db.types import VectorMatch
 
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ _MIN_MULTI_STAGE = 2
 
 
 async def _get_vector_service(client_manager: ClientManager) -> VectorStoreService:
-    """Return an initialised vector store service instance."""
+    """Return an initialized vector store service instance."""
 
     service = await client_manager.get_vector_store_service()
     if not service.is_initialized():
@@ -125,16 +125,30 @@ def _deduplicate_by_score(matches: Iterable[VectorMatch]) -> list[VectorMatch]:
     return list(ranked.values())
 
 
-def _extract_vector(match: VectorMatch) -> Sequence[float]:
-    """Return the dense vector from a VectorMatch, if available."""
-
-    if match.vector is None:
-        raise ValueError("Vector data unavailable for the requested document")
-    return match.vector
-
-
 def register_tools(mcp, client_manager: ClientManager) -> None:
     """Register search-related MCP tools using the vector service."""
+
+    async def _query_vectors(
+        *,
+        query: str,
+        collection: str,
+        limit: int,
+        filters: dict[str, Any] | None,
+        ctx: Context | None,
+    ) -> list[VectorMatch]:
+        service = await _get_vector_service(client_manager)
+        try:
+            return await service.search_documents(
+                collection,
+                query,
+                limit=limit,
+                filters=filters,
+            )
+        except Exception as exc:  # pragma: no cover - defensive logging
+            logger.exception("Vector search failed")
+            if ctx:
+                await ctx.error(f"Search error: {exc}")
+            return []
 
     async def _search(
         *,
@@ -144,20 +158,14 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
         filters: dict[str, Any] | None,
         ctx: Context | None,
     ) -> list[dict[str, Any]]:
-        service = await _get_vector_service(client_manager)
-        try:
-            matches = await service.search_documents(
-                collection,
-                query,
-                limit=limit,
-                filters=filters,
-            )
-            return [_format_match(match) for match in matches]
-        except Exception as exc:  # pragma: no cover - defensive logging
-            logger.exception("Vector search failed")
-            if ctx:
-                await ctx.error(f"Search error: {exc}")
-            return []
+        matches = await _query_vectors(
+            query=query,
+            collection=collection,
+            limit=limit,
+            filters=filters,
+            ctx=ctx,
+        )
+        return [_format_match(match) for match in matches]
 
     async def _hybrid(
         *,
@@ -167,20 +175,14 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
         filters: dict[str, Any] | None,
         ctx: Context | None,
     ) -> list[dict[str, Any]]:
-        service = await _get_vector_service(client_manager)
-        try:
-            matches = await service.hybrid_search(
-                collection,
-                query,
-                limit=limit,
-                filters=filters,
-            )
-            return [_format_match(match) for match in matches]
-        except Exception as exc:  # pragma: no cover - defensive logging
-            logger.exception("Hybrid search failed")
-            if ctx:
-                await ctx.error(f"Hybrid search error: {exc}")
-            return []
+        matches = await _query_vectors(
+            query=query,
+            collection=collection,
+            limit=limit,
+            filters=filters,
+            ctx=ctx,
+        )
+        return [_format_match(match) for match in matches]
 
     @mcp.tool()
     async def search_documents(  # pylint: disable=too-many-arguments,too-many-positional-arguments
@@ -236,37 +238,28 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
     ) -> dict[str, Any]:
         """Paginate through an entire collection."""
 
-        filters = _normalize_filters(filter_conditions)
         service = await _get_vector_service(client_manager)
         try:
-            matches, next_offset = await service.scroll(
+            documents, next_offset = await service.list_documents(
                 collection,
                 limit=limit,
                 offset=offset,
-                filters=filters,
-                with_payload=True,
             )
             payload = {
-                "points": [
-                    {
-                        "id": match.id,
-                        "payload": dict(match.payload or {}),
-                    }
-                    for match in matches
-                ],
-                "count": len(matches),
+                "documents": documents,
+                "count": len(documents),
                 "next_page_offset": next_offset,
             }
             if ctx:
                 await ctx.info(
-                    f"Retrieved {payload['count']} points from '{collection}'"
+                    f"Retrieved {payload['count']} documents from '{collection}'"
                 )
             return payload
         except Exception as exc:  # pragma: no cover - defensive logging
             logger.exception("Scroll operation failed")
             if ctx:
                 await ctx.error(f"Scroll error: {exc}")
-            return {"points": [], "count": 0, "next_page_offset": None}
+            return {"documents": [], "count": 0, "next_page_offset": None}
 
     @mcp.tool()
     async def search_with_context(  # pylint: disable=too-many-arguments,too-many-positional-arguments
@@ -307,33 +300,18 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
 
         filters = _normalize_filters(filter_conditions)
         service = await _get_vector_service(client_manager)
-        try:
-            documents = await service.retrieve_documents(
-                collection,
-                [point_id],
-                with_payload=True,
-                with_vectors=True,
-            )
-        except Exception as exc:  # pragma: no cover - defensive logging
-            logger.exception("Failed to load source document for recommendation")
-            if ctx:
-                await ctx.error(f"Recommendation error: {exc}")
-            raise
-
-        if not documents:
+        document_payload = await service.get_document(collection, point_id)
+        if document_payload is None:
             msg = f"Document {point_id} not found"
             logger.error(msg)
             if ctx:
                 await ctx.error(msg)
             raise ValueError(msg)
 
-        document = documents[0]
-
         try:
-            base_vector = _extract_vector(document)
-            matches = await service.recommend_similar(
+            matches = await service.recommend(
                 collection,
-                vector=base_vector,
+                positive_ids=[point_id],
                 limit=limit + 1,  # allow excluding the seed document
                 filters=filters,
             )
@@ -423,7 +401,6 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
         """Execute a progressive multi-stage search pipeline."""
 
         filters = _normalize_filters(filter_conditions)
-        service = await _get_vector_service(client_manager)
         num_stages = max(min(stages, _MAX_MULTI_STAGE), _MIN_MULTI_STAGE)
         stage_limits = [
             min(limit * (10 ** (num_stages - idx)), 1000) for idx in range(num_stages)
@@ -432,11 +409,12 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
         collected: list[VectorMatch] = []
         for stage_limit in stage_limits:
             try:
-                stage_matches = await service.hybrid_search(
-                    collection,
-                    query,
+                stage_matches = await _query_vectors(
+                    query=query,
+                    collection=collection,
                     limit=stage_limit,
                     filters=filters,
+                    ctx=ctx,
                 )
             except Exception as exc:  # pragma: no cover - defensive logging
                 logger.exception("Multi-stage search stage failed")

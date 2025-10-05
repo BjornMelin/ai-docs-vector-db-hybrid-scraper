@@ -15,8 +15,8 @@ from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.models.requests import BatchRequest, DocumentRequest
 from src.mcp_tools.models.responses import AddDocumentResponse, DocumentBatchResponse
 from src.security import SecurityValidator
-from src.services.vector_db.adapter_base import CollectionSchema, TextDocument
 from src.services.vector_db.service import VectorStoreService
+from src.services.vector_db.types import CollectionSchema, TextDocument
 
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ def _raise_scrape_error(url: str) -> None:
 
 
 async def _get_vector_service(client_manager: ClientManager) -> VectorStoreService:
-    """Return an initialised VectorStoreService instance."""
+    """Return an initialized VectorStoreService instance."""
 
     service = await client_manager.get_vector_store_service()
     if not service.is_initialized():

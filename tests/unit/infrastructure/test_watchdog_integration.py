@@ -35,6 +35,7 @@ class TestConfigReloaderFileWatching:
     async def test_enable_file_watching_triggers_reload(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
+        """Test that enabling file watching triggers config reload on file change."""
         config_path = tmp_path / "config.json"
         config_path.write_text("{}", encoding="utf-8")
 
@@ -68,6 +69,7 @@ class TestConfigReloaderFileWatching:
     async def test_enable_file_watching_requires_dependency(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
+        """Test that enabling file watching raises error when dependency is missing."""
         config_path = tmp_path / "config.json"
         config_path.write_text("{}", encoding="utf-8")
 
@@ -81,6 +83,7 @@ class TestConfigReloaderFileWatching:
     async def test_enable_file_watching_missing_source(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
+        """Test that enabling file watching raises error for missing config source."""
         missing_path = tmp_path / "missing.json"
         reloader = ConfigReloader(config_source=missing_path)
 
@@ -96,6 +99,7 @@ class TestConfigReloaderFileWatching:
     async def test_disable_file_watching_cancels_task(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
+        """Test that disabling file watching cancels the watch task."""
         config_path = tmp_path / "config.json"
         config_path.write_text("{}", encoding="utf-8")
 
@@ -135,6 +139,7 @@ class TestConfigReloaderOperations:
 
     @pytest.mark.asyncio
     async def test_reload_and_rollback_flow(self, tmp_path: Path) -> None:
+        """Test reload and rollback config operations with backup verification."""
         initial = Config(environment=Environment.TESTING, app_name="initial")
         set_config(initial)
 

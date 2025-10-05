@@ -9,16 +9,22 @@
 
 - Legacy compression helpers lived under `src/services/query_processing/rag`, yet the primary consumers are the shared `VectorServiceRetriever` (`src/services/rag/retriever.py`), the query processing orchestrator, and CI/evaluation scripts.
 - This layout creates an inverted dependency: the core RAG package must import `src.services.query_processing.rag`, producing module tangles during initialization and complicating future reuse by other entrypoints (CLI, MCP, batch summarisation).
-- Upcoming Phase B tasks (compression metrics + CI gate) require exposing compression utilities directly from the RAG package so telemetry and harnesses remain aligned without extra adapter layers.
+- Compression metrics and CI gate require exposing compression utilities directly from the RAG package so telemetry and harnesses remain aligned without extra adapter layers.
 
-## Options Considered
+## Decision Framework
 
-| Option | Leverage (35%) | Value (30%) | Maintenance (25%) | Adaptability (10%) | Weighted Total |
-| ------ | -------------- | ----------- | ----------------- | ------------------ | --------------- |
-| Consolidate compression helpers into the shared RAG module | 10.0 | 9.5 | 9.7 | 9.0 | **9.68** |
-| Keep packages separate with cross-imports | 6.0 | 6.5 | 5.5 | 6.5 | 6.25 |
+| Criteria           | Weight   | Consolidate compression helpers into the shared RAG module | Keep packages separate with cross-imports |
+| ------------------ | -------- | ---------------------------------------------------------- | ----------------------------------------- |
+| Leverage           | 35%      | 10.0                                                       | 6.0                                       |
+| Value              | 30%      | 9.5                                                        | 6.5                                       |
+| Maintenance        | 25%      | 9.7                                                        | 5.5                                       |
+| Adaptability       | 10%      | 9.0                                                        | 6.5                                       |
+| **Weighted Total** | **100%** | **9.68**                                                   | **6.25**                                  |
 
-**Rationale:** Consolidation scores higher because it eliminates cross-package imports, exposes compression as a first-class RAG concern, and lets multiple services consume the same telemetry and configuration without bespoke shims. The alternative keeps awkward dependencies and increases maintenance drag.
+**Rationale:** Consolidation scores higher because it eliminates cross-package
+imports, exposes compression as a first-class RAG concern, and lets multiple
+services consume the same telemetry and configuration without bespoke shims.
+The alternative keeps awkward dependencies and increases maintenance drag.
 
 ## Decision
 
@@ -36,7 +42,7 @@
 
 ## Follow-Up Actions
 
-1. Implement the relocation and ensure `__all__` exports match previous surfaces.  
-2. Update documentation (API refs, developer guides) to reference the new module path.  
-3. Confirm Sphinx builds succeed without references to the deleted package.  
-4. Extend telemetry wiring in Phase B to emit compression stats via the unified RAG module.
+1. Implement the relocation and ensure `__all__` exports match previous surfaces.
+2. Update documentation (API refs, developer guides) to reference the new module path.
+3. Confirm Sphinx builds succeed without references to the deleted package.
+4. Extend telemetry wiring to emit compression stats via the unified RAG module.

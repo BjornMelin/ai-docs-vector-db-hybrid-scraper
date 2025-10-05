@@ -47,8 +47,8 @@ def _validate_dynamic_import(module_name: str, function_name: str) -> bool:
 
     Raises:
         ValueError: If module or function is not whitelisted
-
     """
+
     if module_name not in ALLOWED_PERSIST_MODULES:
         msg = f"Module '{module_name}' not in security whitelist"
         raise ValueError(msg)
@@ -76,12 +76,13 @@ async def delete_collection(
 
     Returns:
         Task result with status
-
     """
+
     start_time = time.time()
     logger.info(
-        f"Starting delayed deletion of {collection_name} "
-        f"(grace period: {grace_period_minutes} minutes)"
+        "Starting delayed deletion of %s (grace period: %d minutes)",
+        collection_name,
+        grace_period_minutes,
     )
 
     try:
@@ -100,7 +101,8 @@ async def delete_collection(
             aliases = await alias_manager.list_aliases()
             if collection_name in aliases.values():
                 logger.warning(
-                    f"Collection {collection_name} still has aliases, skipping deletion"
+                    "Collection %s still has aliases, skipping deletion",
+                    collection_name,
                 )
                 return {
                     "status": "skipped",
@@ -159,8 +161,8 @@ async def persist_cache(
 
     Returns:
         Task result with status
-
     """
+
     start_time = time.time()
     logger.info("Starting delayed persistence for %s (delay: %ds)", key, delay)
 
@@ -206,170 +208,6 @@ async def persist_cache(
         }
 
 
-async def config_drift_snapshot(_ctx: dict[str, Any]) -> dict[str, Any]:
-    """Take configuration snapshots for drift detection.
-
-    Args:
-        ctx: ARQ context (provided by worker)
-
-    Returns:
-        Task result with snapshot status
-
-    """
-    start_time = time.time()
-    logger.info("Starting configuration drift snapshot task")
-
-    try:
-        # Use dynamic import to avoid circular dependency
-
-        config_drift_module = importlib.import_module(
-            "src.services.config_drift_service"
-        )
-        get_drift_service = config_drift_module.get_drift_service
-
-        service = get_drift_service()
-        result = await service.take_configuration_snapshot()
-
-        logger.info(
-            f"Configuration snapshot completed - "
-            f"snapshots taken: {result['snapshots_taken']}, "
-            "errors"
-        )
-
-        result.update(
-            {
-                "status": "success",
-                "task_duration": time.time() - start_time,
-            }
-        )
-
-    except Exception as e:
-        logger.exception("Configuration snapshot task failed")
-        return {
-            "status": "failed",
-            "error": str(e),
-            "task_duration": time.time() - start_time,
-        }
-
-    else:
-        return result
-
-
-async def config_drift_comparison(_ctx: dict[str, Any]) -> dict[str, Any]:
-    """Compare configurations to detect drift.
-
-    Args:
-        ctx: ARQ context (provided by worker)
-
-    Returns:
-        Task result with comparison status
-
-    """
-    start_time = time.time()
-    logger.info("Starting configuration drift comparison task")
-
-    try:
-        # Use dynamic import to avoid circular dependency
-
-        config_drift_module = importlib.import_module(
-            "src.services.config_drift_service"
-        )
-        get_drift_service = config_drift_module.get_drift_service
-
-        service = get_drift_service()
-        result = await service.compare_configurations()
-
-        logger.info(
-            f"Configuration comparison completed - "
-            f"sources compared: {result['sources_compared']}, "
-            f"drift events: {len(result['drift_events'])}, "
-            "alerts sent"
-        )
-
-        result.update(
-            {
-                "status": "success",
-                "task_duration": time.time() - start_time,
-            }
-        )
-
-    except Exception as e:
-        logger.exception("Configuration comparison task failed")
-        return {
-            "status": "failed",
-            "error": str(e),
-            "task_duration": time.time() - start_time,
-        }
-
-    else:
-        return result
-
-
-async def config_drift_remediation(
-    _ctx: dict[str, Any],
-    event_id: str,
-    source: str,
-    drift_type: str,
-    _suggestion: str,
-) -> dict[str, Any]:
-    """Execute configuration drift auto-remediation.
-
-    Args:
-        ctx: ARQ context (provided by worker)
-        event_id: Drift event ID
-        source: Configuration source
-        drift_type: Type of drift detected
-        suggestion: Remediation suggestion
-
-    Returns:
-        Task result with remediation status
-
-    """
-    start_time = time.time()
-    logger.info("Starting configuration drift remediation for event %s", event_id)
-
-    try:
-        # Log the remediation attempt (actual implementation would apply changes)
-        logger.info(
-            f"Remediating drift event {event_id} in {source}: "
-            "Type: {drift_type}, Suggestion"
-        )
-
-        # For now, this is a placeholder for actual remediation logic
-        # In a real implementation, this would:
-        # 1. Validate the remediation is still safe
-        # 2. Apply the suggested changes
-        # 3. Verify the changes were successful
-        # 4. Take a new snapshot to confirm drift is resolved
-
-        await asyncio.sleep(0.1)  # Simulate remediation work
-
-        logger.info("Configuration drift remediation completed for event %s", event_id)
-
-        return {
-            "status": "success",
-            "event_id": event_id,
-            "source": source,
-            "drift_type": drift_type,
-            "remediation_applied": False,  # Would be True when actually implemented
-            "task_duration": time.time() - start_time,
-        }
-
-    except Exception as e:
-        logger.exception("Configuration drift remediation failed for event {event_id}")
-        return {
-            "status": "failed",
-            "event_id": event_id,
-            "error": str(e),
-            "task_duration": time.time() - start_time,
-        }
-
-
-# Removed enterprise deployment infrastructure:
-# - run_canary_deployment()
-# - monitor_deployment_events()
-# These were over-engineered for V1 with 0 users
-
 # ARQ task definitions (simplified for V1)
 delete_collection_task = func(
     delete_collection,
@@ -383,35 +221,11 @@ persist_cache_task = func(
     max_tries=3,
 )
 
-config_drift_snapshot_task = func(
-    config_drift_snapshot,
-    name="config_drift_snapshot",
-    max_tries=2,
-)
-
-config_drift_comparison_task = func(
-    config_drift_comparison,
-    name="config_drift_comparison",
-    max_tries=2,
-)
-
-config_drift_remediation_task = func(
-    config_drift_remediation,
-    name="config_drift_remediation",
-    max_tries=1,
-)
-
 # Task registry for ARQ worker
 TASK_MAP = {
     "delete_collection": delete_collection_task,
     "persist_cache": persist_cache_task,
-    "config_drift_snapshot": config_drift_snapshot_task,
-    "config_drift_comparison": config_drift_comparison_task,
-    "config_drift_remediation": config_drift_remediation_task,
 }
-
-# Legacy alias for backward compatibility
-TASK_REGISTRY = TASK_MAP
 
 
 async def create_task(
@@ -431,8 +245,8 @@ async def create_task(
 
     Returns:
         Job ID if successful, None otherwise
-
     """
+
     try:
         # Get task queue manager
         from src.infrastructure.client_manager import ClientManager  # noqa: PLC0415

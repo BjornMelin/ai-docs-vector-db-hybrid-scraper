@@ -7,10 +7,10 @@
 
 ## Context
 
-- `SearchRecord` and companion response objects were duplicated across three locations (`src/services/query_processing/models.py`, `src/mcp_tools/models/responses.py`, `src/services/vector_db/adapter_base.py`). Divergent fields (`collection` vs `_collection`, legacy `_total_*`)
+- `SearchRecord` and companion response objects were duplicated across three locations (`src/services/query_processing/models.py`, `src/mcp_tools/models/responses.py`, `src/services/vector_db/types.py`). Divergent fields (`collection` vs `_collection`, legacy `_total_*`)
 - created brittle conversions and inconsistent payloads.
 - MCP tooling expected `_collection` metadata while orchestrator clients consumed `collection`. Downstream analytics lacked confidence labels and canonical grouping flags, complicating dedup removal and SLAs.
-- Server-side grouping (Phase 2) required reliable propagation of capability probes and payload metadata so federated merging and MCP outputs stayed aligned.
+- Server-side grouping required reliable propagation of capability probes and payload metadata so federated merging and MCP outputs stayed aligned.
 
 ## Decision
 

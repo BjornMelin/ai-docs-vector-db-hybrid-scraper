@@ -23,35 +23,10 @@ from src.mcp_tools.models.requests import (
     SearchRequest,
 )
 from src.mcp_tools.models.responses import SearchResult
-from src.services.vector_db.adapter_base import VectorMatch
-from src.services.vector_db.service import VectorStoreService
+from src.mcp_tools.tools._shared import ensure_vector_service, match_to_result
 
 
 logger = logging.getLogger(__name__)
-
-
-async def _get_vector_service(client_manager: ClientManager) -> VectorStoreService:
-    """Fetch the shared VectorStoreService instance from the client manager."""
-
-    service = await client_manager.get_vector_store_service()
-    if not service.is_initialized():
-        await service.initialize()
-    return service
-
-
-def _to_search_result(match: VectorMatch, *, include_metadata: bool) -> SearchResult:
-    """Convert a vector match into the MCP SearchResult schema."""
-
-    payload = dict(match.payload or {})
-    metadata = payload if include_metadata else None
-    return SearchResult(
-        id=match.id,
-        content=str(payload.get("content", "")),
-        score=float(match.score),
-        url=payload.get("url"),
-        title=payload.get("title"),
-        metadata=metadata,
-    )
 
 
 async def _execute_search(
@@ -62,7 +37,7 @@ async def _execute_search(
 ) -> list[SearchResult]:
     """Execute a single-stage search using the configured strategy."""
 
-    service = await _get_vector_service(client_manager)
+    service = await ensure_vector_service(client_manager)
 
     try:
         if ctx:
@@ -74,23 +49,15 @@ async def _execute_search(
         logger.debug("Failed to emit MCP info event for search request")
 
     try:
-        if request.strategy == SearchStrategy.DENSE:
-            matches = await service.search_documents(
-                request.collection,
-                request.query,
-                limit=request.limit,
-                filters=request.filters,
-            )
-        else:
-            matches = await service.hybrid_search(
-                request.collection,
-                request.query,
-                limit=request.limit,
-                filters=request.filters,
-            )
+        matches = await service.search_documents(
+            request.collection,
+            request.query,
+            limit=request.limit,
+            filters=request.filters,
+        )
 
         return [
-            _to_search_result(match, include_metadata=request.include_metadata)
+            match_to_result(match, include_metadata=request.include_metadata)
             for match in matches[: request.limit]
         ]
     except Exception as exc:  # pragma: no cover - runtime safety

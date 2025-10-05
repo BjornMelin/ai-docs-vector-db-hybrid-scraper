@@ -12,22 +12,6 @@ Subpackages
 Submodules
 ----------
 
-src.config.drift module
------------------------
-
-.. automodule:: src.config.drift
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-src.config.drift\_detection module
-----------------------------------
-
-.. automodule:: src.config.drift_detection
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 src.config.loader module
 ------------------------
 

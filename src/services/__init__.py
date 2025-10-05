@@ -1,4 +1,6 @@
-"""Services package for direct API/SDK integration."""
+"""Public API for service-layer modules."""
+
+from __future__ import annotations
 
 from . import (
     circuit_breaker,

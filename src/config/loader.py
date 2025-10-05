@@ -26,7 +26,6 @@ from .models import (
     DatabaseConfig,
     DeploymentConfig,
     DocumentationSite,
-    DriftDetectionConfig,
     EmbeddingConfig,
     EmbeddingProvider,
     Environment,
@@ -168,10 +167,6 @@ class Config(BaseSettings):
     )
     auto_detection: AutoDetectionConfig = Field(
         default_factory=AutoDetectionConfig, description="Auto-detection configuration"
-    )
-    drift_detection: DriftDetectionConfig = Field(
-        default_factory=DriftDetectionConfig,
-        description="Configuration drift detection settings",
     )
     documentation_sites: list[DocumentationSite] = Field(
         default_factory=list, description="Documentation sites to crawl"

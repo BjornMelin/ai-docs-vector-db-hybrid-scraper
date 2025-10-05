@@ -1,4 +1,4 @@
-"""Modern HTTP mocking patterns validated against LightweightScraper."""
+"""HTTP mocking patterns validated against LightweightScraper."""
 
 import asyncio
 from types import SimpleNamespace

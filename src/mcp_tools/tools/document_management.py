@@ -4,6 +4,8 @@ The tools expose collection lifecycle helpers without the
 legacy caching, batching, or bespoke orchestration code paths.
 """
 
+# pylint: disable=too-many-statements  # tool registration defines several closures sharing client state.
+
 from __future__ import annotations
 
 import asyncio
@@ -14,8 +16,8 @@ from typing import Any
 from fastmcp import Context
 
 from src.infrastructure.client_manager import ClientManager
-from src.services.vector_db.adapter_base import CollectionSchema
 from src.services.vector_db.service import VectorStoreService
+from src.services.vector_db.types import CollectionSchema
 
 
 logger = logging.getLogger(__name__)
@@ -105,7 +107,7 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
         }
         if ctx:
             await ctx.info(
-                f"Workspace '{workspace_name}' initialised with "
+                f"Workspace '{workspace_name}' initialized with "
                 f"{len(created)} collections"
             )
         return response
@@ -155,14 +157,31 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
             }
 
         if action == "optimize":
-            await service.clear_collection(collection_name)
+            stats = await service.collection_stats(collection_name)
+            params = stats.get("config", {}).get("params", {})
+            vector_params = params.get("vectors", {})
+            vector_size = int(vector_params.get("size") or service.embedding_dimension)
+            distance = str(vector_params.get("distance") or _DEFAULT_DISTANCE)
+            requires_sparse = bool(params.get("sparse_vectors"))
+            await service.drop_collection(collection_name)
+            schema = CollectionSchema(
+                name=collection_name,
+                vector_size=vector_size,
+                distance=distance,
+                requires_sparse=requires_sparse,
+            )
+            await service.ensure_collection(schema)
             if ctx:
                 await ctx.info(
-                    f"Recreated collection '{collection_name}' for optimisation"
+                    f"Recreated collection '{collection_name}' "
+                    f"with vector size {vector_size}"
                 )
             return {
                 "collection": collection_name,
                 "action": action,
+                "vector_size": vector_size,
+                "distance": distance,
+                "requires_sparse": requires_sparse,
                 "status": "recreated",
             }
 

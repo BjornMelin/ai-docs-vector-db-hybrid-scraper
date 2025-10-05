@@ -1,10 +1,10 @@
-"""Dynamic tool registration system for FastMCP server.
+"""Utilities for registering all MCP tool modules with FastMCP."""
 
-This module provides a clean, modular way to register all MCP tools
-with the server, following FastMCP 2.0 best practices.
-"""
+from __future__ import annotations
 
 import logging
+from collections.abc import Callable
+from typing import Final
 
 from fastmcp import FastMCP
 
@@ -15,85 +15,45 @@ from . import tools
 
 logger = logging.getLogger(__name__)
 
+_REGISTRATION_PIPELINE: Final[
+    list[tuple[str, Callable[[FastMCP, ClientManager], None]]]
+] = [
+    ("search", tools.search.register_tools),
+    ("documents", tools.documents.register_tools),
+    ("embeddings", tools.embeddings.register_tools),
+    ("lightweight_scrape", tools.lightweight_scrape.register_tools),
+    ("collection_management", tools.collection_management.register_tools),
+    ("projects", tools.projects.register_tools),
+    ("search_tools", tools.search_tools.register_tools),
+    ("query_processing_tools", tools.query_processing_tools.register_tools),
+    ("payload_indexing", tools.payload_indexing.register_tools),
+    ("analytics", tools.analytics.register_tools),
+    ("cache", tools.cache.register_tools),
+    ("utilities", tools.utilities.register_tools),
+    ("content_intelligence", tools.content_intelligence.register_tools),
+]
 
-async def register_all_tools(mcp: "FastMCP", client_manager: "ClientManager") -> None:
-    """Register all tool modules with the MCP server.
 
-    This function dynamically loads and registers all tool modules,
-    allowing for easy addition/removal of functionality.
+async def register_all_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
+    """Register all tool modules with the supplied FastMCP instance.
 
     Args:
-        mcp: The FastMCP server instance
-        client_manager: The unified client manager for all services
+        mcp: FastMCP server that should receive tool registrations.
+        client_manager: Client manager used by individual tool modules.
     """
 
-    # Track registration for logging
-    registered_tools = []
+    registered: list[str] = []
+    for tool_name, registrar in _REGISTRATION_PIPELINE:
+        logger.debug("Registering tool module '%s'", tool_name)
+        registrar(mcp, client_manager)
+        registered.append(tool_name)
 
-    # Core functionality
-    logger.info("Registering core tools...")
-    tools.search.register_tools(mcp, client_manager)
-    registered_tools.append("search")
-
-    tools.documents.register_tools(mcp, client_manager)
-    registered_tools.append("documents")
-
-    tools.embeddings.register_tools(mcp, client_manager)
-    registered_tools.append("embeddings")
-
-    tools.lightweight_scrape.register_tools(mcp, client_manager)
-    registered_tools.append("lightweight_scrape")
-
-    # Collection and project management
-    logger.info("Registering management tools...")
-    tools.collection_management.register_tools(mcp, client_manager)
-    registered_tools.append("collection_management")
-
-    tools.projects.register_tools(mcp, client_manager)
-    registered_tools.append("projects")
-
-    # Additional features
-    logger.info("Registering additional tools...")
-    tools.search_tools.register_tools(mcp, client_manager)
-    registered_tools.append("search_tools")
-
-    tools.query_processing.register_tools(mcp, client_manager)
-    registered_tools.append("query_processing")
-
-    # Additional filtering and query processing capabilities
-    tools.query_processing_tools.register_tools(mcp, client_manager)
-    registered_tools.append("query_processing_tools")
-
-    tools.payload_indexing.register_tools(mcp, client_manager)
-    registered_tools.append("payload_indexing")
-
-    # Utilities and monitoring
-    logger.info("Registering utility tools...")
-    tools.analytics.register_tools(mcp, client_manager)
-    registered_tools.append("analytics")
-
-    tools.cache.register_tools(mcp, client_manager)
-    registered_tools.append("cache")
-
-    tools.utilities.register_tools(mcp, client_manager)
-    registered_tools.append("utilities")
-
-    # Content Intelligence
-    logger.info("Registering content intelligence tools...")
-    tools.content_intelligence.register_tools(mcp, client_manager)
-    registered_tools.append("content_intelligence")
-
-    # RAG (Pydantic-AI based agents)
-    logger.info("Registering RAG tools...")
     try:
         tools.agentic_rag.register_tools(mcp, client_manager)
-        registered_tools.append("agentic_rag")
-    except ImportError as e:
-        logger.warning("RAG tools not available (missing dependencies): %s", e)
-    except Exception:  # noqa: BLE001
-        logger.exception("Failed to register RAG tools")
+        registered.append("agentic_rag")
+    except ImportError as exc:
+        logger.info("Skipping agentic_rag tool module: %s", exc)
+    except Exception:  # pragma: no cover - defensive logging
+        logger.exception("Failed to register agentic_rag tool module")
 
-    tool_list = ", ".join(registered_tools)
-    logger.info(
-        "Successfully registered %d tool modules: %s", len(registered_tools), tool_list
-    )
+    logger.info("Registered %d MCP tool modules", len(registered))
