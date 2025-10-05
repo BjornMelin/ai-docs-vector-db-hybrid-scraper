@@ -113,7 +113,7 @@ class ConfigReloader:
         self._failed_operations = 0
         self._aggregate_duration_ms = 0.0
 
-    async def reload_config(
+    async def reload_config(  # pylint: disable=too-many-locals
         self,
         *,
         trigger: ReloadTrigger = ReloadTrigger.MANUAL,
@@ -282,9 +282,7 @@ class ConfigReloader:
     async def enable_file_watching(self, poll_interval: float | None = None) -> None:
         """Enable file watching through the configured integrity provider."""
 
-        if self._default_config_source is None:
-            msg = "Cannot enable file watching without a configured source path"
-            raise ConfigError(msg)
+        target = self._resolve_watch_target()
 
         if self._fim_provider is None:
             msg = (
@@ -292,15 +290,6 @@ class ConfigReloader:
                 "attach_file_integrity_provider() first"
             )
             raise ConfigError(msg)
-
-        target = self._default_config_source
-        if not target.exists():
-            msg = f"Configuration source not found for watching: {target}"
-            raise ConfigLoadError(msg)
-        if target.exists():
-            self._watch_target_is_dir = target.is_dir()
-        else:
-            self._watch_target_is_dir = False
 
         if poll_interval is not None:
             logger.debug(
@@ -332,6 +321,21 @@ class ConfigReloader:
 
         return self._file_watch_enabled
 
+    def _resolve_watch_target(self) -> Path:
+        """Validate and return the path being watched for changes."""
+
+        source = self._default_config_source
+        if source is None:
+            msg = "Cannot enable file watching without a configured source path"
+            raise ConfigError(msg)
+
+        if not source.exists():
+            msg = f"Configuration source not found for watching: {source}"
+            raise ConfigLoadError(msg)
+
+        self._watch_target_is_dir = source.is_dir()
+        return source
+
     def get_config_backups(self) -> Iterator[tuple[str, ConfigBackup]]:
         """Yield configuration backups starting with the newest snapshot."""
 
@@ -342,6 +346,8 @@ class ConfigReloader:
     # ------------------------------------------------------------------
 
     def _record_operation(self, operation: ReloadOperation) -> None:
+        """Record a completed reload or rollback operation in the history."""
+
         self._history.appendleft(operation)
         self._total_operations += 1
         if operation.success:
@@ -389,6 +395,8 @@ class ConfigReloader:
             logger.exception("File integrity reload failed: %s", exc)
 
     def _store_backup(self, config_hash: str | None, config: Config) -> None:
+        """Store a snapshot of the current configuration for potential rollback."""
+
         if config_hash is None:
             return
         if self._backups and self._backups[0][0] == config_hash:
@@ -406,6 +414,8 @@ class ConfigReloader:
     def _select_backup(
         self, target_hash: str | None
     ) -> tuple[str, ConfigBackup] | tuple[None, None]:
+        """Select a backup matching the specified hash, or the most recent one."""
+
         if not self._backups:
             return None, None
         if target_hash is None:
@@ -416,6 +426,8 @@ class ConfigReloader:
         return None, None
 
     def _load_config_source(self, config_source: Path | None) -> Config:
+        """Load configuration from the specified source."""
+
         if config_source is None:
             return Config()
         path = config_source.expanduser()
@@ -440,6 +452,8 @@ class ConfigReloader:
 
     @staticmethod
     def _hash_config(config: Config | None) -> str | None:
+        """Return a short hash representing the current configuration state."""
+
         if config is None:
             return None
         payload = config.model_dump(mode="json")
