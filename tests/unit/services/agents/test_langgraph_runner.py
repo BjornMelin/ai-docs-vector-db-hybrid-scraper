@@ -50,6 +50,7 @@ ToolCapabilityType = cast(Any, module.ToolCapabilityType)
 ToolExecutionResult = cast(Any, module.ToolExecutionResult)
 RetrievedDocument = cast(Any, retrieval_module.RetrievedDocument)
 ToolExecutionFailure = cast(Any, tool_execution_module.ToolExecutionFailure)
+AgentErrorCode = cast(Any, module.AgentErrorCode)
 
 
 class StubDiscovery:
@@ -95,6 +96,33 @@ class StubRetrievalHelper:
 class FailingToolService:
     async def execute_tool(self, *_, **__):  # noqa: D401, ANN001
         raise ToolExecutionFailure("boom")
+
+
+class SlowToolService:
+    def __init__(self) -> None:
+        self.cancelled = asyncio.Event()
+
+    async def execute_tool(
+        self,
+        tool_name,
+        *,
+        arguments,
+        server_name,
+        read_timeout_ms=None,
+    ):  # noqa: ANN001
+        try:
+            await asyncio.sleep(0.05)
+            return ToolExecutionResult(
+                tool_name=tool_name,
+                server_name=server_name,
+                duration_ms=50.0,
+                result=CallToolResult(
+                    content=[], structuredContent=None, isError=False
+                ),
+            )
+        except asyncio.CancelledError:
+            self.cancelled.set()
+            raise
 
 
 @pytest.mark.asyncio
@@ -190,28 +218,68 @@ async def test_run_search_surfaces_structured_tool_error() -> None:
     assert outcome.errors
     error = outcome.errors[0]
     assert error["source"] == "tool_execution"
-    assert error["code"] == "ToolExecutionFailure"
+    assert error["code"] == AgentErrorCode.TOOL_FAILURE.value
 
 
 @pytest.mark.asyncio
 async def test_run_search_times_out() -> None:
-    capabilities = []
-
-    # Use existing runner but with long-running tool discovery to trigger timeout
+    capabilities = [
+        ToolCapability(
+            name="slow_tool",
+            server="primary",
+            description="Slow tool",
+            capability_type=ToolCapabilityType.SEARCH,
+            input_schema=(),
+            output_schema=(),
+            metadata={},
+            last_refreshed="2024-01-01T00:00:00+00:00",
+        )
+    ]
+    slow_service = SlowToolService()
     runner = GraphRunner(
         client_manager=None,
         discovery=StubDiscovery(capabilities),
-        tool_service=StubToolService(),
+        tool_service=slow_service,
         retrieval_helper=StubRetrievalHelper(),
         run_timeout_seconds=0.01,
     )
 
-    async def sleepy_refresh(*_, **__):
-        await asyncio.sleep(0.05)
-
-    runner._discovery.refresh = sleepy_refresh  # type: ignore[attr-defined]
-
     outcome = await runner.run_search(query="slow", collection="docs")
 
     assert outcome.success is False
-    assert any(err.get("code") == "RUN_TIMEOUT" for err in outcome.errors)
+    assert any(
+        err.get("code") == AgentErrorCode.RUN_TIMEOUT.value for err in outcome.errors
+    )
+    await asyncio.wait_for(slow_service.cancelled.wait(), timeout=0.1)
+
+
+@pytest.mark.asyncio
+async def test_discovery_failure_returns_structured_error() -> None:
+    class BrokenDiscovery:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        async def refresh(self, *, force: bool = False) -> None:  # noqa: D401
+            self.calls += 1
+            raise RuntimeError("discovery unavailable")
+
+        def get_capabilities(self) -> tuple[Any, ...]:  # noqa: D401
+            return ()
+
+    discovery = BrokenDiscovery()
+    runner = GraphRunner(
+        client_manager=None,
+        discovery=discovery,
+        tool_service=StubToolService(),
+        retrieval_helper=StubRetrievalHelper(),
+    )
+
+    outcome = await runner.run_search(query="q", collection="docs")
+
+    assert discovery.calls == 1
+    assert outcome.success is False
+    assert any(
+        err.get("code") == AgentErrorCode.DISCOVERY_ERROR.value
+        for err in outcome.errors
+    )
+    assert not outcome.tools_used

@@ -136,7 +136,7 @@ class ToolExecutionService:
         )
         if not server_candidates:
             msg = "No MCP servers configured for tool execution"
-            raise APIError(msg)
+            raise ToolExecutionFailure(msg)
 
         last_error: ToolExecutionError | None = None
         for candidate in server_candidates:
