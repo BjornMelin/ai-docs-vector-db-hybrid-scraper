@@ -49,8 +49,6 @@ SIMPLE_MODE_CONFIG = ModeConfig(
     enabled_services=[
         "embedding_service",
         "vector_db_service",
-        "search_service",
-        "cache_service",
     ],
     max_complexity_features={
         "max_concurrent_crawls": 5,
@@ -91,8 +89,6 @@ ENTERPRISE_MODE_CONFIG = ModeConfig(
     enabled_services=[
         "embedding_service",
         "vector_db_service",
-        "search_service",
-        "cache_service",
     ],
     max_complexity_features={
         "max_concurrent_crawls": 50,

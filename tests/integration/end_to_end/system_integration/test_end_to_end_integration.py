@@ -1,7 +1,7 @@
 """
 End-to-end integration testing for the AI docs vector database hybrid scraper.
 
-This module provides comprehensive integration tests that validate the entire system
+This module provides integration tests that validate the entire system
 workflow from data ingestion through search and retrieval.
 """
 
@@ -100,13 +100,13 @@ def journey_data_manager():
 
 @pytest.mark.asyncio
 async def test_complete_system_integration_scenario(
-    manager,
-    data_manager,
+    integration_test_manager: IntegrationTestManager,
+    journey_data_manager,
 ):
     """Test complete end-to-end system integration scenario."""
     # Define comprehensive integration scenario
     scenario_config = {
-        "components": ["api_gateway", "search_service", "vector_database"],
+        "components": ["api_gateway", "vector_database", "embedding_service"],
         "data_sources": [
             "https://docs.example.com/getting-started.html",
             "https://docs.example.com/api-reference.html",
@@ -118,12 +118,12 @@ async def test_complete_system_integration_scenario(
     }
 
     # Execute complete integration scenario
-    result = await manager.execute_integration_scenario(
+    result = await integration_test_manager.execute_integration_scenario(
         "complete_system_integration", scenario_config
     )
 
     # Store comprehensive results
-    data_manager.store_artifact("complete_system_integration", result)
+    journey_data_manager.store_artifact("complete_system_integration", result)
 
     # Validate integration scenario
     assert result["overall_success"], (
@@ -139,15 +139,15 @@ async def test_complete_system_integration_scenario(
 
 @pytest.mark.asyncio
 async def test_integration_test_summary(
-    manager,
-    data_manager,
+    integration_test_manager: IntegrationTestManager,
+    journey_data_manager,
 ):
     """Generate and validate integration test summary."""
     # Get test summary
-    test_summary = manager.get_test_summary()
+    test_summary = integration_test_manager.get_test_summary()
 
     # Store summary
-    data_manager.store_artifact("integration_test_summary", test_summary)
+    journey_data_manager.store_artifact("integration_test_summary", test_summary)
 
     # Validate that integration testing was comprehensive
     assert test_summary["_total_performance_data_points"] >= 0, (
