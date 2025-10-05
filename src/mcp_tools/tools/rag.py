@@ -1,8 +1,7 @@
-"""RAG (Retrieval-Augmented Generation) MCP tools.
+"""Retrieval-augmented generation tools for the MCP server.
 
-This module provides MCP tools for generating contextual answers from search results
-using Large Language Models. Portfolio-worthy implementation showcasing advanced
-AI integration patterns.
+Provide structured endpoints that build answers from vector search output using the
+configured language model stack.
 """
 
 # pylint: disable=duplicate-code
@@ -92,9 +91,8 @@ def register_tools(app: FastMCP) -> None:  # pylint: disable=too-many-statements
     async def generate_rag_answer(request: RAGAnswerRequest) -> RAGAnswerResponse:
         """Generate a contextual answer from search results using RAG.
 
-        Uses LLM capabilities to generate contextual, accurate answers based
-        on provided search results. Features include source attribution,
-        confidence scoring, and quality metrics.
+        The handler forwards the request to the configured RAG generator and
+        collects the answer, source list, and metrics produced by the pipeline.
 
         Args:
             request: RAG answer generation request

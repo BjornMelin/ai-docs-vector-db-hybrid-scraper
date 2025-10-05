@@ -3,47 +3,50 @@
 from __future__ import annotations
 
 import warnings
+from collections.abc import Sequence
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from langchain.retrievers.document_compressors import DocumentCompressorPipeline
+from langchain_core.callbacks.base import BaseCallbackHandler
 from langchain_core.documents import Document
+from langchain_core.retrievers import BaseRetriever
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
-
-pytest.importorskip("langgraph")
-
 from src.contracts.retrieval import SearchRecord
 from src.services.query_processing.models import SearchRequest
-from src.services.rag import RAGConfig, RAGResult, SourceAttribution
+from src.services.rag.generator import RAGGenerator
 from src.services.rag.langgraph_pipeline import (
     LangGraphRAGPipeline,
     RagTracingCallback,
+    _StaticDocumentRetriever,
 )
+from src.services.rag.models import RAGConfig, RAGRequest, RAGResult, SourceAttribution
+from src.services.vector_db.service import VectorStoreService
 from src.services.vector_db.types import VectorMatch
 
 
-class VectorServiceFake:
+pytest.importorskip("langgraph")
+
+
+class VectorServiceFake(VectorStoreService):
     """Vector service stub returning deterministic matches."""
 
     def __init__(self, matches: list[VectorMatch]) -> None:
+        super().__init__()
         self._matches = matches
-        self._initialised = False
         self.config = SimpleNamespace(
             fastembed=SimpleNamespace(model="BAAI/bge-small-en-v1.5")
         )
 
     async def initialize(self) -> None:  # pragma: no cover - simple stub
-        self._initialised = True
+        self._mark_initialized()
 
     async def cleanup(self) -> None:  # pragma: no cover - simple stub
-        self._initialised = False
-
-    def is_initialized(self) -> bool:
-        return self._initialised
+        self._mark_uninitialized()
 
     async def search_documents(
         self,
@@ -57,40 +60,49 @@ class VectorServiceFake:
         return ["docs"]
 
 
-class DummyGenerator:
+def dummy_generator_factory(
+    config: RAGConfig, retriever: BaseRetriever
+) -> DummyGenerator:
+    """Return a dummy generator for pipeline tests."""
+
+    return DummyGenerator(config, retriever)
+
+
+class DummyGenerator(RAGGenerator):
     """Generator stub producing static answers without LLM calls."""
 
-    last_callbacks: list[Any] | None = None
+    last_callbacks: Sequence[BaseCallbackHandler] | None = None
 
-    def __init__(self, config: RAGConfig, retriever: Any) -> None:  # noqa: D401
-        self._config = config
-        self._documents = list(getattr(retriever, "_documents", []))
-        self.callbacks = None
-
-    def register_callbacks(self, callbacks) -> None:  # pragma: no cover - trivial
-        self.callbacks = list(callbacks)
-        DummyGenerator.last_callbacks = self.callbacks
+    def __init__(self, config: RAGConfig, retriever: BaseRetriever) -> None:
+        super().__init__(config=config, retriever=retriever)
 
     async def initialize(self) -> None:  # pragma: no cover - trivial
-        return None
+        self._mark_initialized()
 
     async def cleanup(self) -> None:  # pragma: no cover - trivial
-        return None
+        self._mark_uninitialized()
 
-    async def generate_answer(self, request) -> RAGResult:
-        doc = self._documents[0] if self._documents else None
+    def register_callbacks(
+        self, callbacks: Sequence[BaseCallbackHandler]
+    ) -> None:  # pragma: no cover - trivial
+        super().register_callbacks(callbacks)
+        DummyGenerator.last_callbacks = list(callbacks)
+
+    async def generate_answer(self, request: RAGRequest) -> RAGResult:
+        document = None
+        if isinstance(self._retriever, _StaticDocumentRetriever):  # noqa: SLF001
+            document = next(iter(self._retriever._documents), None)  # noqa: SLF001
         source = SourceAttribution(
-            source_id=str(doc.metadata.get("source_id", "missing"))
-            if doc
+            source_id=str(document.metadata.get("source_id", "missing"))
+            if document
             else "missing",
-            title=str(doc.metadata.get("title", "")) if doc else "",
-            url=doc.metadata.get("url") if doc else None,
-            excerpt=doc.page_content if doc else "",
-            score=float(doc.metadata.get("score", 0.0)) if doc else 0.0,
+            title=str(document.metadata.get("title", "")) if document else "",
+            url=document.metadata.get("url") if document else None,
+            excerpt=document.page_content if document else "",
+            score=float(document.metadata.get("score", 0.0)) if document else 0.0,
         )
-        answer_text = f"Answer to {request.query}"
         return RAGResult(
-            answer=answer_text,
+            answer=f"Answer to {request.query}",
             confidence_score=0.9,
             sources=[source],
             generation_time_ms=1.0,
@@ -113,26 +125,29 @@ async def test_pipeline_returns_answer_with_retriever_results() -> None:
         collection="docs",
     )
     service = VectorServiceFake([match])
-    pipeline = LangGraphRAGPipeline(service, generator_factory=DummyGenerator)
+    pipeline = LangGraphRAGPipeline(
+        cast(VectorStoreService, service),
+        generator_factory=dummy_generator_factory,
+    )
 
     request = SearchRequest(query="langgraph", limit=5)
     rag_config = RAGConfig(compression_enabled=False)
 
     with warnings.catch_warnings(record=True) as caught_warnings:
         warnings.simplefilter("always")
-        result = await pipeline.run(
-            query="langgraph",
-            request=request,
-            rag_config=rag_config,
-            collection="docs",
-        )
+    result = await pipeline.run(
+        query="langgraph",
+        request=request,
+        rag_config=rag_config,
+        collection="docs",
+    )
 
     assert not caught_warnings
-
     assert result is not None
-    assert result["answer"] == "Answer to langgraph"
-    assert result["confidence"] == pytest.approx(0.9)
-    assert result["sources"] == [
+    result_dict = cast(dict[str, Any], result)
+    assert result_dict["answer"] == "Answer to langgraph"
+    assert result_dict["confidence"] == pytest.approx(0.9)
+    assert result_dict["sources"] == [
         {
             "source_id": "doc-1",
             "title": "LangGraph",
@@ -147,7 +162,10 @@ async def test_pipeline_returns_answer_with_retriever_results() -> None:
 @pytest.mark.asyncio
 async def test_pipeline_uses_prefetched_records_when_retrieval_empty() -> None:
     service = VectorServiceFake([])
-    pipeline = LangGraphRAGPipeline(service, generator_factory=DummyGenerator)
+    pipeline = LangGraphRAGPipeline(
+        cast(VectorStoreService, service),
+        generator_factory=dummy_generator_factory,
+    )
 
     search_record = SearchRecord(
         id="seed-1",
@@ -176,8 +194,10 @@ async def test_pipeline_uses_prefetched_records_when_retrieval_empty() -> None:
     )
 
     assert result is not None
-    assert result["answer"].startswith("Answer to primer")
-    assert result["sources"][0]["source_id"] == "seed-1"
+    result_dict = cast(dict[str, Any], result)
+    assert result_dict["answer"].startswith("Answer to primer")
+    sources = cast(list[dict[str, Any]], result_dict["sources"])
+    assert sources[0]["source_id"] == "seed-1"
 
 
 def test_rag_tracing_callback_records_token_usage() -> None:
@@ -204,11 +224,13 @@ def test_rag_tracing_callback_records_token_usage() -> None:
     assert len(spans) == 1
     span = spans[0]
     assert span.name == "rag.llm"
-    assert span.attributes["rag.llm.prompt_count"] == 1
-    assert span.attributes["rag.llm.model"] == "gpt-4o-mini"
-    assert span.attributes["rag.llm.prompt_tokens"] == 5
-    assert span.attributes["rag.llm.completion_tokens"] == 7
-    assert span.attributes["rag.llm.total_tokens"] == 12
+    attributes = span.attributes
+    assert attributes is not None
+    assert attributes["rag.llm.prompt_count"] == 1
+    assert attributes["rag.llm.model"] == "gpt-4o-mini"
+    assert attributes["rag.llm.prompt_tokens"] == 5
+    assert attributes["rag.llm.completion_tokens"] == 7
+    assert attributes["rag.llm.total_tokens"] == 12
 
 
 @pytest.mark.asyncio
@@ -243,7 +265,10 @@ async def test_pipeline_emits_metrics_when_registry_available(monkeypatch) -> No
         collection="docs",
     )
     service = VectorServiceFake([match])
-    pipeline = LangGraphRAGPipeline(service, generator_factory=DummyGenerator)
+    pipeline = LangGraphRAGPipeline(
+        cast(VectorStoreService, service),
+        generator_factory=dummy_generator_factory,
+    )
 
     request = SearchRequest(query="langgraph", limit=5)
     rag_config = RAGConfig(compression_enabled=False)
@@ -259,7 +284,7 @@ async def test_pipeline_emits_metrics_when_registry_available(monkeypatch) -> No
     call = metrics_stub.generation_calls[0]
     assert call["collection"] == "docs"
     assert call["model"] == rag_config.model
-    assert metrics_stub.compression_calls == []
+    assert not metrics_stub.compression_calls
 
 
 @pytest.mark.asyncio
@@ -314,7 +339,10 @@ async def test_pipeline_records_compression_metrics(monkeypatch) -> None:
         collection="docs",
     )
     service = VectorServiceFake([match])
-    pipeline = LangGraphRAGPipeline(service, generator_factory=DummyGenerator)
+    pipeline = LangGraphRAGPipeline(
+        cast(VectorStoreService, service),
+        generator_factory=dummy_generator_factory,
+    )
 
     request = SearchRequest(query="compress", limit=3)
     rag_config = RAGConfig(compression_enabled=True)
