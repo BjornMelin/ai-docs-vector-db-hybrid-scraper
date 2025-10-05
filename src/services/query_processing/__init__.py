@@ -1,11 +1,8 @@
-"""Query processing service exports."""
+"""Query processing package exports core request/response models."""
+
+from __future__ import annotations
 
 from .models import SearchRequest, SearchResponse
-from .orchestrator import SearchOrchestrator
 
 
-__all__ = [
-    "SearchOrchestrator",
-    "SearchRequest",
-    "SearchResponse",
-]
+__all__ = ["SearchRequest", "SearchResponse"]

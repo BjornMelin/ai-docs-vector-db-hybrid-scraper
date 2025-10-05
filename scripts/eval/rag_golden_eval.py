@@ -28,7 +28,8 @@ from pathlib import Path
 from typing import Any
 
 from src.infrastructure.client_manager import ClientManager
-from src.services.query_processing import SearchOrchestrator, SearchRequest
+from src.services.query_processing.models import SearchRequest
+from src.services.query_processing.orchestrator import SearchOrchestrator
 
 
 @dataclass(slots=True)

@@ -12,14 +12,12 @@ import re
 import time
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 from src.contracts.retrieval import SearchRecord
 from src.services.base import BaseService
-from src.services.rag import (
-    LangGraphRAGPipeline,
-    RAGConfig as ServiceRAGConfig,
-)
+from src.services.rag.langgraph_pipeline import LangGraphRAGPipeline
+from src.services.rag.models import RAGConfig as ServiceRAGConfig
 from src.services.vector_db.service import VectorStoreService
 from src.services.vector_db.types import VectorMatch
 
@@ -434,7 +432,8 @@ def _expand_query_terms(query: str, *, max_terms: int) -> str | None:
                 seen.add(variant)
                 expansions.append(variant)
 
-        for synonym in _DEFAULT_SYNONYMS.get(term, ()):  # type: ignore[arg-type]
+        synonyms = cast(tuple[str, ...], _DEFAULT_SYNONYMS.get(term) or ())
+        for synonym in synonyms:
             if synonym not in seen:
                 seen.add(synonym)
                 expansions.append(synonym)
@@ -477,4 +476,4 @@ def _normalize_scores(scores: list[float]) -> list[float]:
     return [(score - minimum) / span for score in scores]
 
 
-__all__ = ["SearchOrchestrator", "SearchRequest", "SearchResponse"]
+__all__ = ["SearchOrchestrator"]

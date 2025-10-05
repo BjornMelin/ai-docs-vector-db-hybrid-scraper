@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, cast
 
@@ -131,13 +131,13 @@ def test_security_enums_reject_invalid_values(
 def test_configuration_audit_event_defaults() -> None:
     """Audit events default timestamp to the current time and use empty detail dicts."""
 
-    before = datetime.now()
+    before = datetime.now(tz=UTC)
     event = ConfigurationAuditEvent(
         operation=ConfigOperationType.READ,
         data_classification=ConfigDataClassification.INTERNAL,
         user="tester",
     )
-    after = datetime.now()
+    after = datetime.now(tz=UTC)
 
     assert event.operation is ConfigOperationType.READ
     assert event.data_classification is ConfigDataClassification.INTERNAL
@@ -179,13 +179,13 @@ def test_configuration_audit_event_validation_errors() -> None:
 def test_encrypted_config_item_defaults() -> None:
     """Encrypted config items record metadata and timestamps with sensible defaults."""
 
-    before = datetime.now()
+    before = datetime.now(tz=UTC)
     item = EncryptedConfigItem(
         key="api_key",
         encrypted_value="encrypted:secret",
         data_classification=ConfigDataClassification.SECRET,
     )
-    after = datetime.now()
+    after = datetime.now(tz=UTC)
 
     assert item.key == "api_key"
     assert item.encrypted_value == "encrypted:secret"
@@ -312,7 +312,7 @@ def test_secure_config_manager_audit_timestamps_are_recent(
 ) -> None:
     """Audit events recorded through the manager use current timestamps and details."""
 
-    before = datetime.now()
+    before = datetime.now(tz=UTC)
     secure_config_manager.audit_operation(
         ConfigurationAuditEvent(
             operation=ConfigOperationType.BACKUP,
@@ -320,7 +320,7 @@ def test_secure_config_manager_audit_timestamps_are_recent(
             details={"status": "scheduled"},
         )
     )
-    after = datetime.now()
+    after = datetime.now(tz=UTC)
 
     recorded_event = secure_config_manager.audit_events[-1]
     assert (

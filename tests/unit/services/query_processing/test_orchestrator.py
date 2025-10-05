@@ -9,7 +9,7 @@ import pytest
 
 from src.services.query_processing.models import SearchRequest
 from src.services.query_processing.orchestrator import SearchOrchestrator
-from src.services.rag import RAGConfig as ServiceRAGConfig
+from src.services.rag.models import RAGConfig as ServiceRAGConfig
 from src.services.vector_db.service import VectorStoreService
 from src.services.vector_db.types import VectorMatch
 

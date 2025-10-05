@@ -11,7 +11,7 @@ from functools import lru_cache
 from typing import Annotated, Any
 
 from fastapi import Depends  # type: ignore[attr-defined]
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from src.config import (
     AutoDetectedServices,
@@ -38,7 +38,7 @@ from src.services.errors import (
     circuit_breaker,
     tenacity_circuit_breaker,
 )
-from src.services.rag import RAGGenerator
+from src.services.rag.generator import RAGGenerator
 from src.services.rag.models import RAGRequest as InternalRAGRequest
 from src.services.vector_db.service import VectorStoreService
 
@@ -227,8 +227,8 @@ class AutoDetectionResponse(BaseModel):
     services_found: int
     environment_type: str
     detection_time_ms: float
-    services: list[dict[str, Any]] = []
-    errors: list[str] = []
+    services: list[dict[str, Any]] = Field(default_factory=list)
+    errors: list[str] = Field(default_factory=list)
     is_cached: bool = False
 
 
@@ -470,13 +470,13 @@ class CrawlResponse(BaseModel):
     content: str = ""
     url: str
     title: str = ""
-    metadata: dict[str, Any] = {}
+    metadata: dict[str, Any] = Field(default_factory=dict)
     tier_used: str = "none"
     automation_time_ms: float = 0
     quality_score: float = 0.0
     error: str | None = None
     fallback_attempted: bool = False
-    failed_tiers: list[str] = []
+    failed_tiers: list[str] = Field(default_factory=list)
 
 
 @circuit_breaker(
@@ -544,8 +544,8 @@ class TaskRequest(BaseModel):
     """Pydantic model for task queue requests."""
 
     task_name: str
-    args: list[Any] = []
-    kwargs: dict[str, Any] = {}
+    args: list[Any] = Field(default_factory=list)
+    kwargs: dict[str, Any] = Field(default_factory=dict)
     delay: int | None = None
     queue_name: str | None = None
 
@@ -589,7 +589,7 @@ async def get_task_status(
     try:
         status = await task_manager.get_job_status(job_id)
     except Exception as e:
-        logger.exception("Task status check failed for")
+        logger.exception("Task status check failed for job_id=%s", job_id)
         return {"status": "error", "message": str(e)}
     else:
         return status
