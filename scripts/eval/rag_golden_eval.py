@@ -683,57 +683,6 @@ async def _run(args: argparse.Namespace) -> None:
 
     if gating_failures:
         raise SystemExit(1)
-    dataset_path = Path(args.dataset)
-    examples = _load_dataset(dataset_path)
-
-    registry = CollectorRegistry(auto_describe=True)
-    metrics_registry = MetricsRegistry(
-        MetricsConfig(namespace=args.namespace, enabled=True),
-        registry=registry,
-    )
-    set_metrics_registry(metrics_registry)
-
-    ragas_evaluator = RagasEvaluator(
-        enabled=args.enable_ragas,
-        llm_model=args.ragas_model,
-        embedding_model=args.ragas_embedding,
-    )
-    if args.enable_ragas:
-        LOGGER.info(
-            "Semantic evaluation enabled. API usage limits should be configured."
-        )
-
-    orchestrator = await _load_orchestrator()
-    try:
-        results = await _evaluate_examples(
-            examples,
-            orchestrator,
-            ragas_evaluator,
-            limit=args.limit,
-            ragas_sample_cap=args.ragas_max_samples,
-        )
-    finally:
-        await orchestrator.cleanup()
-        set_metrics_registry(None)
-
-    allowlist = args.metrics_allowlist
-    if not allowlist:
-        allowlist_path = Path("config/metrics_allowlist.json")
-        if allowlist_path.exists():
-            with allowlist_path.open(encoding="utf-8") as handle:
-                data = json.load(handle)
-                allowlist = data.get("metrics", [])
-
-    report = EvaluationReport(
-        results=results,
-        aggregates=_aggregate_metrics(results),
-        telemetry={
-            "prometheus_snapshot": _snapshot_metrics(registry, frozenset(allowlist)),
-        },
-    )
-
-    payload = _render_report(report)
-    _write_output(payload, Path(args.output) if args.output else None)
 
 
 def _build_arg_parser() -> argparse.ArgumentParser:
