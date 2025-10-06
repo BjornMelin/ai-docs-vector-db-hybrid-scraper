@@ -96,7 +96,7 @@ def _make_enriched_content() -> SimpleNamespace:
 
 
 @pytest.fixture()
-def documents_env(monkeypatch) -> SimpleNamespace:
+def documents_env(monkeypatch) -> SimpleNamespace:  # pylint: disable=too-many-locals
     """Provide registered document tools with mocked dependencies."""
 
     vector_service = VectorServiceStub()

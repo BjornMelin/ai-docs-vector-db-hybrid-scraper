@@ -48,8 +48,7 @@ async def _analyze_url_suitability(
     except (AttributeError, ConnectionError, RuntimeError, TimeoutError):
         return True  # Default to allowing the attempt
 
-    else:
-        return can_handle
+    return can_handle
 
 
 def _convert_content_formats(

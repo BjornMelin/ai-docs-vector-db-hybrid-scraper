@@ -125,7 +125,9 @@ def _raise_client_manager_unavailable() -> None:
     raise ImportError(msg)
 
 
-class UnifiedBrowserManager(BaseService):
+class UnifiedBrowserManager(  # pylint: disable=too-many-instance-attributes
+    BaseService
+):
     """Unified browser automation manager providing single interface to all 5 tiers.
 
     The UnifiedBrowserManager acts as the single entry point for all browser automation

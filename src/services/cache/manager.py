@@ -432,6 +432,26 @@ class CacheManager:
             return await self._clear_specific_cache_type(cache_type)
         return await self._clear_all_caches()
 
+    async def clear_all(self) -> int:
+        """Clear all cache layers and return cleared entry count from L2."""
+
+        cleared = 0
+        if isinstance(self._distributed_cache, DragonflyCache):
+            cleared = await self._distributed_cache.clear()
+        if self._local_cache:
+            await self._local_cache.clear()
+        return cleared
+
+    async def clear_pattern(self, pattern: str) -> int:
+        """Clear cache entries matching a pattern in distributed cache."""
+
+        if not isinstance(self._distributed_cache, DragonflyCache):
+            return 0
+        cleared = await self._distributed_cache.clear_pattern(pattern)
+        if self._local_cache:
+            await self._local_cache.clear()
+        return cleared
+
     async def _clear_specific_cache_type(self, cache_type: CacheType) -> bool:
         """Clear specific cache type by pattern."""
         pattern = f"{self.key_prefix}{cache_type.value}:*"
@@ -446,6 +466,24 @@ class CacheManager:
             return False
 
         return await self._clear_keys_from_both_caches(keys, cache_type)
+
+    async def _clear_keys_matching_pattern(self, pattern: str) -> int:
+        """Clear keys matching a Redis glob pattern."""
+
+        if not isinstance(self._distributed_cache, DragonflyCache):
+            return 0
+
+        try:
+            keys = await self._distributed_cache.scan_keys(pattern)
+        except (ConnectionError, RuntimeError, TimeoutError) as e:
+            logger.error("Cache scan error for pattern %s: %s", pattern, e)
+            return 0
+
+        cleared = 0
+        for key in keys:
+            if await self._distributed_cache.delete(key):
+                cleared += 1
+        return cleared
 
     async def _clear_keys_from_both_caches(
         self, keys: list[str], cache_type: CacheType

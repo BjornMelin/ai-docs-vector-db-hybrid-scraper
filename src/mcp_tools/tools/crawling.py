@@ -31,7 +31,9 @@ def _raise_crawling_failed(tier: str) -> None:
     raise ValueError(msg)
 
 
-def register_tools(mcp, client_manager: ClientManager):
+def register_tools(  # pylint: disable=too-many-statements
+    mcp, client_manager: ClientManager
+):
     """Register 5-tier crawling tools with the MCP server."""
 
     @mcp.tool()

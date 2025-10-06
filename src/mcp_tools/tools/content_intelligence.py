@@ -31,7 +31,9 @@ from src.services.dependencies import get_content_intelligence_service
 logger = logging.getLogger(__name__)
 
 
-def register_tools(mcp, client_manager: ClientManager):
+def register_tools(  # pylint: disable=too-many-statements
+    mcp, client_manager: ClientManager
+):
     """Register content intelligence tools with the MCP server."""
 
     @mcp.tool()

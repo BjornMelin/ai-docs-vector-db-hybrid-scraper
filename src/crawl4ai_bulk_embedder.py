@@ -82,7 +82,7 @@ class ProcessingState(BaseModel):
     collection_name: str = "bulk_embeddings"
 
 
-class BulkEmbedder:
+class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
     """Bulk embedder for crawling and embedding web content."""
 
     def __init__(
@@ -391,7 +391,7 @@ class BulkEmbedder:
 
         return dense_embeddings, sparse_embeddings
 
-    async def _store_points(
+    async def _store_points(  # pylint: disable=too-many-arguments
         self,
         *,
         url: str,
@@ -426,7 +426,7 @@ class BulkEmbedder:
             error_msg = f"Point storage failed: {e}"
             raise RuntimeError(error_msg) from e
 
-    def _prepare_records(
+    def _prepare_records(  # pylint: disable=too-many-arguments
         self,
         *,
         url: str,
@@ -649,7 +649,7 @@ class BulkEmbedder:
     is_flag=True,
     help="Enable verbose logging",
 )
-def main(
+def main(  # pylint: disable=too-many-arguments,too-many-positional-arguments
     urls: tuple[str, ...],
     file: Path | None = None,
     sitemap: str | None = None,
@@ -708,7 +708,7 @@ def main(
     )
 
 
-async def _async_main(
+async def _async_main(  # pylint: disable=too-many-arguments,too-many-locals
     *,
     urls: list[str],
     file: Path | None = None,
