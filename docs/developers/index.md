@@ -6,190 +6,97 @@ owner: platform-engineering
 last_reviewed: 2025-03-13
 ---
 
-## Developer Documentation
+# Developer Hub
 
-Use this hub to develop against, extend, and maintain the AI Docs Vector DB platform. The
-sections below link to the key guides and reference material that engineers rely on every day.
+This page is the single stop for engineers who build, extend, or operate the AI Docs Vector DB
+platform. It keeps the essential setup steps close at hand and points to the deeper references when
+you need the full detail.
 
-## Quick Navigation
-
-### Getting Started
-
-- **[Getting Started](./getting-started.md)** – Set up the local environment and project tooling
-- **[Integration Guide](./integration-guide.md)** – Patterns for embedding the platform into client
-  applications
-- **[Contributing](./contributing.md)** – Code style, testing expectations, and review workflow
-
-### Technical References
-
-- **[API Reference](./api-reference.md)** – REST, browser automation, and MCP endpoints
-- **[Architecture](./architecture.md)** – System design, data flow, and component responsibilities
-- **[Configuration](./configuration.md)** – Environment variables, service defaults, and tuning knobs
-- **[Application Profiles](./app-profiles.md)** – How the simple and enterprise profiles are composed
-- **[Deployment Strategies](./deployment-strategies.md)** – Blue/green, canary, and feature flag rollout
-  practices
-- **[CI/CD Workflows](./ci-cd.md)** – Automation inventory, triggers, and required validation gates
-- **[GitHub Composite Actions](./github-actions.md)** – Reusable workflow building blocks for local automation
-
-## What You'll Find Here
-
-### Development Environment
-
-- Supported runtimes (Python 3.11–3.12) and prerequisite tooling
-- Local development via Docker and helper scripts
-- Test suite layout and quality gates
-- CI/CD workflow across Linux, Windows, and macOS (see [CI/CD Workflows](./ci-cd.md))
-
-### API Integration
-
-- REST and streaming APIs with authentication examples
-- Browser automation and RAG orchestration interfaces
-- Model Context Protocol (MCP) adapters and tooling
-- Error handling, retries, and rate limiting guidance
-
-### System Architecture
-
-- High-level architecture diagrams and component boundaries
-- Message flow across ingestion, processing, and retrieval services
-- Scaling guidance for hybrid search pipelines
-- Security controls applied at each layer
-
-### Advanced Topics
-
-- Extending embedding models and adapters
-- Performance profiling and tuning playbooks
-- Observability instrumentation and alerting
-- Plugin and extension points for custom integrations
-
-## Development Quick Start
+## 1. Quick Setup
 
 ```bash
-# Clone and set up
-git clone <repository-url>
+# Clone and enter the repository
+git clone https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper.git
 cd ai-docs-vector-db-hybrid-scraper
-./setup.sh  # optional helper; see Getting Started for manual steps
 
-# Start development services
+# Install dependencies (project + dev extras)
+uv sync --dev
+
+# Launch the local services stack
 python scripts/dev.py services start
+
+# Validate the environment before coding
+uv run pytest -q
 ```
 
-```bash
-# Health check
-curl localhost:6333/health
+| Tool            | Notes                                                         |
+| --------------- | ------------------------------------------------------------- |
+| Python          | 3.11 or 3.12 (pin with `uv python pin 3.12` if unsure)       |
+| Package manager | [uv](https://github.com/astral-sh/uv) for virtualenv + deps   |
+| Docker          | Desktop/Engine 24+ for Qdrant, Dragonfly, and API containers  |
+| Optional        | `docker compose`, `just`, VS Code devcontainer configuration  |
 
-# Basic search test
-curl -X POST localhost:8000/search \
-  -H "Content-Type: application/json" \
-  -d '{"query": "test search", "limit": 5}'
-```
+## 2. Essential References
 
-```python
-# Minimal Python integration example (update import to the published client package)
-from ai_docs_client import VectorDBClient
+Keep these guides bookmarked—together they answer the majority of day-to-day questions:
 
-client = VectorDBClient("http://localhost:8000")
-print(client.search("your query"))
-```
+- **[Architecture](./architecture.md)** – Component map, request flows, scaling tactics.
+- **[Configuration](./configuration.md)** – Environment variables, profile overrides, tuning knobs.
+- **[Service Adapters](./service_adapters.md)** – Drop-in patterns for optional cache/search services.
+- **[API Reference](./api-reference.md)** – REST + MCP endpoints, request/response schemas.
+- **[CI/CD Workflows](./ci-cd.md)** – Pipeline layout, required checks, reusable jobs.
+- **[Contributing](./contributing.md)** – Coding standards, quality gates, review workflow.
 
-## Documentation Structure
+Supporting docs like `app-profiles.md`, `deployment.md`, or `document-metadata.md` provide deep
+dives when you need them but stay out of the way for routine development.
 
-### Core Development Guides
+## 3. Common Tasks
 
-- **Getting Started** – Environment setup and project workflow
-- **Integration Guide** – Client integration patterns for search, ingestion, and embeddings
-- **Contributing** – How to propose changes and satisfy quality checks
+| Task                    | Checklist                                                                 |
+| ----------------------- | ------------------------------------------------------------------------- |
+| Start a feature         | Sync `main`, run `uv run pytest -q`, branch, follow lint/type gates       |
+| Add a dependency        | Edit `pyproject.toml`, run `uv sync`, capture notes in configuration docs |
+| Touch the API           | Update Pydantic models + OpenAPI schema, extend API tests, document change |
+| Tune performance        | Adjust config knobs, capture metrics via `/metrics`, note changes for ops |
+| Operate locally         | `python scripts/dev.py services start|stop|logs`, use `docker compose`    |
+| Ship to production      | Follow CI/CD checklist, update release notes, notify operators            |
 
-### Technical References
+## 4. Development Patterns
 
-- **API Reference** – Request/response formats and examples
-- **Architecture** – Components, deployment topology, and failure domains
-- **Configuration** – Service-level settings and environment matrices
-- **Service Layer Modernization** – Function-based patterns and FastAPI dependency injection
+### FastAPI & Dependency Injection
+- Register services with `ModeAwareServiceFactory`; prefer functional providers over classes.
+- Keep route handlers thin—domain logic belongs in `src/services/**`.
+- Use Pydantic models for validation and log structured errors.
 
-### Advanced Topics
+### Testing & Quality Gates
+- Unit tests live under `tests/unit/**`; mark integration suites with `@pytest.mark.integration`.
+- Required gates: `ruff format`, `ruff check`, `pylint`, `pyright`, `uv run pytest`.
+- Snapshot data belongs in `tests/fixtures/**`; avoid ad-hoc test assets.
 
-- **Performance Benchmarking Methodology** – Measuring and tuning throughput/latency
-- **Security Architecture Assessment** – Recommended controls and validation steps
-- **Extensibility** – Hooks for custom pipelines and connectors
-- **Enterprise Deployment** – Feature flag management and staged rollouts
+### Observability
+- Expose metrics through Prometheus (`/metrics`) and structured logs.
+- Emit OpenTelemetry spans when introducing new services and update operator dashboards accordingly.
 
-## Developer Personas
+## 5. Optional Services
 
-### API Integrators
+Optional caches or search engines should be wired via adapters instead of direct imports. The
+[Service Adapters](./service_adapters.md) guide contains:
 
-Deliver applications that call the platform.
-→ Start with [Integration Guide](./integration-guide.md) and [API Reference](./api-reference.md)
+- An in-memory search adapter for local demos.
+- Production-grade OpenSearch and Redis examples.
+- Dependency override patterns for lightweight FastAPI injections.
 
-### System Contributors
+## 6. Where to Go Next
 
-Add features or fix issues within the platform.
-→ Start with [Getting Started](./getting-started.md) and [Contributing](./contributing.md)
+| If you need…                | Read…                                   |
+| --------------------------- | --------------------------------------- |
+| Environment details         | [Configuration](./configuration.md)     |
+| System overview             | [Architecture](./architecture.md)       |
+| API contracts               | [API Reference](./api-reference.md)     |
+| Automation basics           | [CI/CD Workflows](./ci-cd.md)           |
+| Contribution process        | [Contributing](./contributing.md)       |
+| Deployment guidance         | [Deployment](./deployment.md)           |
+| Operator procedures         | [Operator Hub](../operators/index.md)   |
 
-### DevOps Engineers
-
-Operate the platform in production.
-→ Review [Architecture](./architecture.md) and the [Operator Documentation](../operators/index.md)
-
-### Platform Engineers
-
-Embed the platform inside internal tooling.
-→ Focus on [API Reference](./api-reference.md) and [Configuration](./configuration.md)
-
-## Common Development Tasks
-
-### Setting Up the Environment
-
-1. Follow prerequisites in [Getting Started](./getting-started.md)
-2. Use helper scripts or manual steps to install dependencies
-3. Run the unit and integration test suites
-4. Launch sample integrations to confirm connectivity
-
-### Building an Integration
-
-1. Read [API Reference](./api-reference.md) for supported operations
-2. Review [Integration Guide](./integration-guide.md) for patterns and code samples
-3. Configure authentication and rate limiting
-4. Implement structured error handling and retries
-
-### Contributing Code
-
-1. Read [Contributing](./contributing.md)
-2. Create a feature branch and follow coding guidelines
-3. Run tests locally and ensure linting passes
-4. Submit a pull request with clear context and validation steps
-
-### Performance Tuning
-
-1. Review [Architecture](./architecture.md) for pipeline details
-2. Check [Configuration](./configuration.md) for tunable parameters
-3. Use [Performance Benchmarking Methodology](./performance-benchmarking-methodology.md) for repeatable tests
-4. Coordinate rollouts with the [Operations Runbook](../operators/operations.md)
-
-## Related Resources
-
-### User Resources
-
-- **[User Documentation](../users/index.md)** – Tutorials and user-facing guides
-- **[User Quick Start](../users/quick-start.md)** – Five-minute onboarding
-
-### Operations Resources
-
-- **[Operator Documentation](../operators/index.md)** – Deployment and maintenance playbooks
-- **[Monitoring Guide](../operators/monitoring.md)** – Observability checklists
-
-### External References
-
-- **[Qdrant Documentation](https://qdrant.tech/documentation/)**
-- **[FastAPI Documentation](https://fastapi.tiangolo.com/)**
-- **[Docker Documentation](https://docs.docker.com/)**
-
-## Need Help?
-
-- **Issues** – Review or open GitHub issues for blockers and bugs
-- **Discussions** – Join project discussions for architecture or feature questions
-- **Documentation Updates** – Suggest edits or submit PRs for missing guidance
-
----
-
-Feedback is welcome—if something is unclear, please open an issue or update the relevant
-section so the team can keep these docs current.
+See something missing? Open an issue or submit a PR—keeping this hub concise and accurate helps
+every engineer move faster.
