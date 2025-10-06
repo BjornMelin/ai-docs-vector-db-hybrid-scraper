@@ -12,12 +12,13 @@ LangChain-oriented retrieval stack. The harness relied on a single
 `difflib.SequenceMatcher` score which failed to identify regressions in
 retrieval, grounding, or observability. Phase B3 requires confidence that the
 LangGraph pipeline delivers the intended metrics catalogue
-(`docs/observability/rag_metrics_catalog.md`) and that the dataset structure can
+(`docs/testing/evaluation-harness.md`) and that the dataset structure can
 express the final "final-only" implementation.
 
 ## Decision
 
 1. **Hybrid Scoring Architecture**
+
    - Retain deterministic baselines (string similarity plus
      precision/recall/reciprocal-rank computed from `SearchRecord` metadata).
    - Layer optional RAGAS evaluators (context precision/recall, faithfulness,
@@ -27,6 +28,7 @@ express the final "final-only" implementation.
      runnable in offline CI environments.
 
 2. **Telemetry Snapshot Integration**
+
    - Bootstrap an isolated `MetricsRegistry` with a per-run namespace and emit a
      Prometheus snapshot alongside the evaluation report. The snapshot exposes
      the stage latency, answer counters, and compression statistics defined in
@@ -57,3 +59,9 @@ express the final "final-only" implementation.
 - `tests/data/rag/golden_set.jsonl`
 - `tests/unit/scripts/test_rag_golden_eval.py`
 - Decision log entry 2025-10-05 (RAG evaluation modernization, score 4.56/5)
+
+### 2025-10-05 Update
+
+We finalised the modernization by fixing the RAGAS ground-truth mapping, expanding the golden dataset to cover curated cases, seeding a reproducible `golden_eval`
+Qdrant collection, and wiring cost-aware CLI flags. A metrics allowlist and deterministic budget artefact now keep CI outputs stable. Future contributors must validate dataset
+changes with `scripts/eval/dataset_validator.py` and refresh the seed corpus when new cases are added.

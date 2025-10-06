@@ -61,7 +61,7 @@ Key changes:
 - Observability shifts to OpenTelemetry-aligned spans and Prometheus series for
   each LangGraph stage (`*_rag_stage_latency_seconds`, `*_rag_answers_total`,
   `*_rag_errors_total`). The new catalog is documented in
-  `docs/observability/rag_metrics_catalog.md`, enabling downstream teams to wire
+  `docs/testing/evaluation-harness.md`, enabling downstream teams to wire
   dashboards without touching pipeline code.
 
 ## Alternatives Considered
