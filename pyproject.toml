@@ -98,7 +98,7 @@ dependencies = [
 eval = [
     "ragas==0.1.13",
     "langchain-openai>=0.3.33,<1.0.0",
-    "datasets>=2.18.0,<3.0.0",
+    "datasets>=2.18.0,<5.0.0",
 ]
 
 # Development dependencies
