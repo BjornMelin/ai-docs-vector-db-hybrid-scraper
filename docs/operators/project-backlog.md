@@ -31,7 +31,7 @@ owns the work and the most relevant evidence. For the archival research deck see
 | ID    | Goal                                 | Owner             | Evidence                              |
 | ----- | ------------------------------------ | ----------------- | ------------------------------------- |
 | OPS-01 | Turn on Prometheus/OTel middleware | Observability Eng | Middleware defined but not mounted    |
-| OPS-02 | Baseline performance benchmarks    | Performance Eng   | `tests/performance/` placeholders     |
+| OPS-02 | Deterministic RAG evaluation harness | Observability Eng | `scripts/eval/rag_golden_eval.py`     |
 | OPS-03 | Release gate with QA + docs checks | Operations Lead   | `.github/workflows/release.yml`       |
 
 ## Retrieval & Data

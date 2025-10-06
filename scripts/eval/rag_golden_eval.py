@@ -31,6 +31,7 @@ from pathlib import Path
 from statistics import fmean
 from typing import Any, Protocol
 
+import yaml
 from prometheus_client import CollectorRegistry
 from prometheus_client.samples import Sample
 
@@ -198,7 +199,7 @@ class RagasEvaluator:
                         "question": example.query,
                         "answer": predicted_answer,
                         "contexts": list(contexts),
-                        "ground_truths": [example.expected_answer],
+                        "ground_truth": [example.expected_answer],
                         "reference_contexts": list(example.expected_contexts or []),
                     }
                 ]
@@ -257,6 +258,95 @@ class RagasEvaluator:
         if isinstance(raw_result, dict):
             return raw_result.items()
         return []
+
+
+def _load_yaml(path: Path) -> dict[str, Any]:
+    """Load a YAML file returning an empty dict when missing or invalid."""
+
+    if not path.exists():
+        return {}
+    try:
+        with path.open(encoding="utf-8") as handle:
+            data = yaml.safe_load(handle) or {}
+    except Exception as exc:  # pragma: no cover - defensive
+        LOGGER.warning("Failed to load YAML config at %s: %s", path, exc)
+        return {}
+    if not isinstance(data, dict):
+        LOGGER.warning("YAML config at %s is not a mapping; ignoring", path)
+        return {}
+    return data
+
+
+def _load_cost_controls() -> tuple[int | None, dict[str, Any]]:
+    """Return semantic evaluation caps and raw config."""
+
+    config = _load_yaml(Path("config/eval_costs.yml"))
+    raw_semantic = config.get("semantic")
+    semantic = raw_semantic if isinstance(raw_semantic, dict) else {}
+    max_samples_value = semantic.get("max_samples")
+    max_samples = max_samples_value if isinstance(max_samples_value, int) else None
+    return max_samples, config
+
+
+def _load_thresholds() -> dict[str, float]:
+    """Load evaluation threshold budget values."""
+
+    raw = _load_yaml(Path("config/eval_budgets.yml"))
+    thresholds: dict[str, float] = {}
+    for key in ("similarity_avg", "precision_at_k", "recall_at_k", "max_latency_ms"):
+        value = raw.get(key)
+        if isinstance(value, (int, float)):
+            thresholds[key] = float(value)
+    return thresholds
+
+
+def _format_threshold_failure(metric: str, observed: float, required: float) -> str:
+    """Return a concise message describing a threshold violation."""
+
+    return f"{metric} {observed:.3f} outside budget {required:.3f}"
+
+
+def _enforce_thresholds(
+    aggregates: dict[str, Any], thresholds: dict[str, float]
+) -> list[str]:
+    """Return failures when aggregates fall outside the configured budgets."""
+
+    failures: list[str] = []
+    if not thresholds:
+        return failures
+
+    if "similarity_avg" in thresholds:
+        similarity = float(aggregates.get("similarity_avg", 0.0) or 0.0)
+        required = thresholds["similarity_avg"]
+        if similarity < required:
+            failures.append(
+                _format_threshold_failure("similarity_avg", similarity, required)
+            )
+
+    retrieval_avg = aggregates.get("retrieval_avg", {})
+    if not isinstance(retrieval_avg, dict):
+        retrieval_avg = {}
+
+    for key in ("precision_at_k", "recall_at_k"):
+        if key in thresholds:
+            observed = float(retrieval_avg.get(key, 0.0) or 0.0)
+            required = thresholds[key]
+            if observed < required:
+                failures.append(_format_threshold_failure(key, observed, required))
+
+    if "max_latency_ms" in thresholds:
+        latency = float(aggregates.get("processing_time_ms_avg", 0.0) or 0.0)
+        required_latency = thresholds["max_latency_ms"]
+        if latency > required_latency:
+            failures.append(
+                _format_threshold_failure(
+                    "processing_time_ms_avg",
+                    latency,
+                    required_latency,
+                )
+            )
+
+    return failures
 
 
 def _load_dataset(path: Path) -> list[GoldenExample]:
@@ -526,6 +616,73 @@ def _write_output(payload: dict[str, Any], output_path: Path | None) -> None:
 
 
 async def _run(args: argparse.Namespace) -> None:
+    """Execute the evaluation harness with provided CLI arguments."""
+    # pylint: disable=too-many-locals, too-many-statements
+    dataset_path = Path(args.dataset)
+    examples = _load_dataset(dataset_path)
+
+    registry = CollectorRegistry(auto_describe=True)
+    metrics_registry = MetricsRegistry(
+        MetricsConfig(namespace=args.namespace, enabled=True),
+        registry=registry,
+    )
+    set_metrics_registry(metrics_registry)
+
+    default_max_samples, _ = _load_cost_controls()
+    ragas_sample_cap = args.ragas_max_samples
+    if ragas_sample_cap is None:
+        ragas_sample_cap = default_max_samples
+
+    ragas_evaluator = RagasEvaluator(
+        enabled=args.enable_ragas,
+        llm_model=args.ragas_model,
+        embedding_model=args.ragas_embedding,
+    )
+    if args.enable_ragas:
+        LOGGER.info(
+            "Semantic evaluation enabled. API usage limits should be configured."
+        )
+
+    orchestrator = await _load_orchestrator()
+    try:
+        results = await _evaluate_examples(
+            examples,
+            orchestrator,
+            ragas_evaluator,
+            limit=args.limit,
+            ragas_sample_cap=ragas_sample_cap,
+        )
+    finally:
+        await orchestrator.cleanup()
+        set_metrics_registry(None)
+
+    allowlist = args.metrics_allowlist
+    if not allowlist:
+        allowlist_path = Path("config/metrics_allowlist.json")
+        if allowlist_path.exists():
+            with allowlist_path.open(encoding="utf-8") as handle:
+                data = json.load(handle)
+                allowlist = data.get("metrics", [])
+
+    aggregates = _aggregate_metrics(results)
+    thresholds = _load_thresholds()
+    gating_failures = _enforce_thresholds(aggregates, thresholds)
+    if gating_failures:
+        for failure in gating_failures:
+            LOGGER.error("Evaluation budget failure: %s", failure)
+    report = EvaluationReport(
+        results=results,
+        aggregates=aggregates,
+        telemetry={
+            "prometheus_snapshot": _snapshot_metrics(registry, frozenset(allowlist)),
+        },
+    )
+
+    payload = _render_report(report)
+    _write_output(payload, Path(args.output) if args.output else None)
+
+    if gating_failures:
+        raise SystemExit(1)
     dataset_path = Path(args.dataset)
     examples = _load_dataset(dataset_path)
 

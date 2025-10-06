@@ -98,3 +98,4 @@ Only metrics listed in `config/metrics_allowlist.json` are serialised by the har
 3. Optionally enable semantic scoring with cost guardrails.
 4. Review telemetry snapshots against the metrics allowlist.
 5. Export traces and metrics to dashboards, updating thresholds as necessary.
+6. Run regression tests (`pytest -q tests/unit/scripts/test_rag_golden_eval.py tests/integration`) to confirm threshold enforcement and failure-path coverage stay green.
