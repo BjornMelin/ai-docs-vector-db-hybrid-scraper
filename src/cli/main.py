@@ -1,10 +1,6 @@
-"""Main unified CLI entry point for AI Documentation Scraper.
+"""Main unified CLI entry point for AI Documentation Scraper."""
 
-This module provides a CLI interface that integrates all
-existing functionality under a unified command structure with
-user experience features.
-"""
-
+import asyncio
 import sys
 from pathlib import Path
 
@@ -16,7 +12,7 @@ from rich.table import Table
 from rich.text import Text
 
 from src.config import Config, get_config
-from src.utils.health_checks import ServiceHealthChecker
+from src.services.health import perform_health_checks, summarize_results
 
 # Import command groups
 from .commands import (
@@ -215,28 +211,40 @@ def status(ctx: click.Context):
     rich_cli = ctx.obj["rich_cli"]
     config = ctx.obj["config"]
 
-    # Run health checks
-    with rich_cli.console.status("[bold green]Checking system status..."):
-        results = ServiceHealthChecker.perform_all_health_checks(config)
+    try:
+        with rich_cli.console.status("[bold green]Checking system status..."):
+            results = asyncio.run(perform_health_checks(config))
+    except Exception as exc:  # noqa: BLE001 - surfaced as CLI error message
+        rich_cli.show_error("Health checks failed", str(exc))
+        return
 
-    # Create status table
+    summary = summarize_results(results)
+
     table = Table(title="System Status", show_header=True, header_style="bold cyan")
     table.add_column("Component", style="dim", width=20)
     table.add_column("Status", width=10)
     table.add_column("Details", width=40)
 
-    for component, result in results.items():
-        status_style = "green" if result["connected"] else "red"
-        status_icon = "✅" if result["connected"] else "❌"
+    for result in results:
+        status_style = "green" if result.connected else "red"
+        status_label = "Healthy" if result.connected else "Error"
+        details = (
+            result.error
+            or ", ".join(f"{key}={value}" for key, value in result.details.items())
+            or "Connected"
+        )
 
         table.add_row(
-            component.title(),
-            f"{status_icon} {'Healthy' if result['connected'] else 'Error'}",
-            result.get("error", "") or "Connected",
+            result.service.title(),
+            status_label,
+            details,
             style=status_style,
         )
 
     rich_cli.console.print(table)
+
+    overall = summary["overall_status"].title()
+    rich_cli.console.print(f"Overall status: {overall}")
 
 
 if __name__ == "__main__":

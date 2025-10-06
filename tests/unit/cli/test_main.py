@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 from rich.console import Console
 
 from src.cli.main import RichCLI, main
+from src.services.health.checks import HealthCheckResult
 
 
 class TestRichCLI:
@@ -257,52 +258,52 @@ class TestStatusCommand:
     """Test system status and health check functionality."""
 
     @patch("src.cli.main.get_config")
-    @patch("src.utils.health_checks.ServiceHealthChecker.perform_all_health_checks")
+    @patch("src.cli.main.perform_health_checks")
     def test_status_command_all_healthy(
         self, mock_health_checks, mock_get_config, cli_runner, mock_config
     ):
         """Test status command with all services healthy."""
         mock_get_config.return_value = mock_config
-        mock_health_checks.return_value = {
-            "qdrant": {"connected": True, "version": "1.7.0"},
-            "redis": {"connected": True, "version": "7.0.0"},
-            "openai": {"connected": True, "model": "text-embedding-ada-002"},
-        }
+        mock_health_checks.return_value = [
+            HealthCheckResult(
+                service="qdrant", status="healthy", details={"version": "1.7.0"}
+            ),
+            HealthCheckResult(
+                service="redis", status="healthy", details={"version": "7.0.0"}
+            ),
+        ]
 
         result = cli_runner.invoke(main, ["status"])
 
         assert result.exit_code == 0
         assert "System Status" in result.output
-        assert "✅" in result.output
         assert "Healthy" in result.output
         assert "Qdrant" in result.output
         assert "Redis" in result.output
-        assert "Openai" in result.output
         mock_health_checks.assert_called_once_with(mock_config)
 
     @patch("src.cli.main.get_config")
-    @patch("src.utils.health_checks.ServiceHealthChecker.perform_all_health_checks")
+    @patch("src.cli.main.perform_health_checks")
     def test_status_command_with_errors(
         self, mock_health_checks, mock_get_config, cli_runner, mock_config
     ):
         """Test status command with some service errors."""
         mock_get_config.return_value = mock_config
-        mock_health_checks.return_value = {
-            "qdrant": {"connected": True, "version": "1.7.0"},
-            "redis": {"connected": False, "error": "Connection refused"},
-            "openai": {"connected": True, "model": "text-embedding-ada-002"},
-        }
+        mock_health_checks.return_value = [
+            HealthCheckResult(service="qdrant", status="healthy", details={}),
+            HealthCheckResult(
+                service="redis", status="unhealthy", error="Connection refused"
+            ),
+        ]
 
         result = cli_runner.invoke(main, ["status"])
 
         assert result.exit_code == 0
         assert "System Status" in result.output
-        assert "✅" in result.output  # For healthy services
-        assert "❌" in result.output  # For failed services
         assert "Connection refused" in result.output
 
     @patch("src.cli.main.get_config")
-    @patch("src.utils.health_checks.ServiceHealthChecker.perform_all_health_checks")
+    @patch("src.cli.main.perform_health_checks")
     def test_status_command_health_check_exception(
         self, mock_health_checks, mock_get_config, cli_runner, mock_config
     ):
@@ -310,11 +311,10 @@ class TestStatusCommand:
         mock_get_config.return_value = mock_config
         mock_health_checks.side_effect = Exception("Health check failed")
 
-        # This should not crash the CLI
         result = cli_runner.invoke(main, ["status"])
 
-        # The exact behavior depends on implementation, but it shouldn't crash
-        assert result.exit_code in [0, 1]  # Either success or controlled failure
+        assert result.exit_code == 0
+        assert "Health checks failed" in result.output
 
 
 class TestMainIntegration:
