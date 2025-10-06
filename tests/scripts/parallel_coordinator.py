@@ -224,7 +224,7 @@ class ParallelCoordinator:
             "tests/unit/services",
             "tests/unit/infrastructure",
             "tests/unit/ai",
-            "tests/integration",
+            "tests/unit/scripts",
         ]
 
         for dir_path in priority_dirs:
@@ -293,7 +293,7 @@ class ParallelCoordinator:
         """Get performance fixture tasks."""
         return {
             "type": "performance_fixtures",
-            "target_files": ["tests/performance"],
+            "target_files": ["scripts/eval", "tests/unit/scripts"],
         }
 
     def _get_ci_tasks(self) -> dict | None:

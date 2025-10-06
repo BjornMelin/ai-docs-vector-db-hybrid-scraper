@@ -16,8 +16,11 @@ from scripts.eval.rag_golden_eval import (
     GoldenExample,
     RagasEvaluator,
     _aggregate_metrics,
+    _enforce_thresholds,
     _evaluate_examples,
+    _load_cost_controls,
     _load_dataset,
+    _load_thresholds,
     _render_report,
     _snapshot_metrics,
 )
@@ -126,11 +129,7 @@ async def test_evaluate_examples_and_aggregation() -> None:
             ),
             answer_confidence=0.85,
             answer_sources=[
-                {
-                    "doc_path": (
-                        "docs/security/security-essentials.md#api-key-rotation"
-                    )
-                }
+                {"doc_path": ("docs/security/security-essentials.md#api-key-rotation")}
             ],
         ),
         examples[1].query: SearchResponse(
@@ -285,3 +284,81 @@ def test_dataset_validator_detects_missing_metadata(tmp_path: Path) -> None:
 
     with pytest.raises(DatasetValidationError):
         validate_dataset(dataset_path)
+
+
+def test_enforce_thresholds_detects_budget_failures() -> None:
+    aggregates = {
+        "similarity_avg": 0.72,
+        "processing_time_ms_avg": 1800.0,
+        "retrieval_avg": {"precision_at_k": 0.75, "recall_at_k": 0.82},
+    }
+    thresholds = {
+        "similarity_avg": 0.75,
+        "precision_at_k": 0.8,
+        "recall_at_k": 0.8,
+        "max_latency_ms": 1500,
+    }
+
+    failures = _enforce_thresholds(aggregates, thresholds)
+    assert "similarity_avg" in failures[0]
+    assert any("precision_at_k" in failure for failure in failures)
+    assert any("processing_time_ms_avg" in failure for failure in failures)
+
+
+def test_load_cost_controls_handles_missing_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Missing config files should yield None and empty config."""
+
+    monkeypatch.chdir(tmp_path)
+    max_samples, config = _load_cost_controls()
+    assert max_samples is None
+    assert config == {}
+
+
+def test_load_thresholds_filters_numeric_values(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Threshold loader should ignore non-numeric entries and coerce floats."""
+
+    config_dir = tmp_path / "config"
+    config_dir.mkdir()
+    budgets_path = config_dir / "eval_budgets.yml"
+    budgets_path.write_text(
+        """similarity_avg: 0.8
+precision_at_k: 1
+recall_at_k: not-a-number
+max_latency_ms: 1500.5
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    thresholds = _load_thresholds()
+    assert thresholds == {
+        "similarity_avg": 0.8,
+        "precision_at_k": 1.0,
+        "max_latency_ms": 1500.5,
+    }
+
+
+def test_enforce_thresholds_returns_empty_list_when_no_thresholds() -> None:
+    """No configured thresholds should produce no failures."""
+
+    assert _enforce_thresholds({"similarity_avg": 1.0}, {}) == []
+
+
+def test_load_cost_controls_coerces_integer(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Cost control loader should parse integer max samples."""
+
+    config_dir = tmp_path / "config"
+    config_dir.mkdir()
+    costs_path = config_dir / "eval_costs.yml"
+    costs_path.write_text("semantic:\n  max_samples: 12\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    max_samples, config = _load_cost_controls()
+    assert max_samples == 12
+    assert config["semantic"]["max_samples"] == 12
