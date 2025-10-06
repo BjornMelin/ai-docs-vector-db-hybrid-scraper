@@ -58,7 +58,6 @@ dependencies = [
     { name = "langchain-community" },
     { name = "langchain-core" },
     { name = "langchain-mcp-adapters" },
-    { name = "langchain-openai" },
     { name = "langchain-qdrant" },
     { name = "langgraph" },
     { name = "mcp" },
@@ -67,7 +66,6 @@ dependencies = [
     { name = "opentelemetry-api" },
     { name = "opentelemetry-instrumentation-fastapi" },
     { name = "opentelemetry-sdk" },
-    { name = "playwright" },
     { name = "prometheus-client" },
     { name = "prometheus-fastapi-instrumentator" },
     { name = "psutil" },
@@ -76,27 +74,20 @@ dependencies = [
     { name = "pydantic-ai" },
     { name = "pydantic-settings" },
     { name = "pydeps" },
-    { name = "pylint" },
-    { name = "pyright" },
     { name = "python-dotenv" },
     { name = "python-multipart" },
     { name = "pyyaml" },
     { name = "qdrant-client", extra = ["fastembed"] },
     { name = "questionary" },
-    { name = "ragas" },
-    { name = "rebrowser-playwright" },
     { name = "redis", extra = ["hiredis"] },
     { name = "respx" },
     { name = "rich" },
-    { name = "ruff" },
     { name = "scikit-learn" },
     { name = "scipy" },
     { name = "slowapi" },
     { name = "sqlalchemy" },
     { name = "starlette" },
-    { name = "taskipy" },
     { name = "tenacity" },
-    { name = "tf-playwright-stealth" },
     { name = "tomli-w" },
     { name = "tool" },
     { name = "tqdm" },
@@ -118,6 +109,7 @@ all = [
     { name = "beautifulsoup4" },
     { name = "bitsandbytes" },
     { name = "coverage" },
+    { name = "datasets" },
     { name = "deepspeed" },
     { name = "factory-boy" },
     { name = "faker" },
@@ -128,6 +120,7 @@ all = [
     { name = "jsonschema" },
     { name = "langchain-anthropic" },
     { name = "langchain-google-genai" },
+    { name = "langchain-openai" },
     { name = "locust" },
     { name = "lxml" },
     { name = "mkdocs" },
@@ -154,11 +147,13 @@ all = [
     { name = "pytest-mock" },
     { name = "pytest-timeout" },
     { name = "pytest-xdist" },
+    { name = "ragas" },
     { name = "rebrowser-playwright" },
     { name = "responses" },
     { name = "ruff" },
     { name = "schemathesis" },
     { name = "selenium" },
+    { name = "taskipy" },
     { name = "testcontainers" },
     { name = "tf-playwright-stealth" },
     { name = "torch" },
@@ -208,6 +203,7 @@ dev = [
     { name = "pytest-timeout" },
     { name = "pytest-xdist" },
     { name = "ruff" },
+    { name = "taskipy" },
     { name = "testcontainers" },
 ]
 docs = [
@@ -215,6 +211,11 @@ docs = [
     { name = "mkdocs-material" },
     { name = "mkdocstrings" },
     { name = "mkdocstrings-python" },
+]
+eval = [
+    { name = "datasets" },
+    { name = "langchain-openai" },
+    { name = "ragas" },
 ]
 gpu = [
     { name = "accelerate" },
@@ -247,38 +248,10 @@ parsing = [
     { name = "tree-sitter-typescript" },
 ]
 
-[package.dev-dependencies]
-contract = [
-    { name = "schemathesis" },
-]
-dev = [
-    { name = "coverage" },
-    { name = "hypothesis" },
-    { name = "locust" },
-    { name = "mutmut" },
-    { name = "pyjwt" },
-    { name = "pyright" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-benchmark" },
-    { name = "pytest-cov" },
-    { name = "pytest-env" },
-    { name = "pytest-mock" },
-    { name = "pytest-timeout" },
-    { name = "pytest-xdist" },
-    { name = "testcontainers" },
-]
-docs = [
-    { name = "mkdocs" },
-    { name = "mkdocs-material" },
-    { name = "mkdocstrings" },
-    { name = "mkdocstrings-python" },
-]
-
 [package.metadata]
 requires-dist = [
     { name = "accelerate", marker = "extra == 'gpu'", specifier = ">=0.34.0,<2.0.0" },
-    { name = "ai-docs-vector-db-hybrid-scraper", extras = ["dev", "contract", "accessibility", "browser", "llm", "observability", "parsing", "dataframe", "docs", "gpu"], marker = "extra == 'all'" },
+    { name = "ai-docs-vector-db-hybrid-scraper", extras = ["dev", "contract", "accessibility", "browser", "llm", "observability", "parsing", "dataframe", "docs", "gpu", "eval"], marker = "extra == 'all'" },
     { name = "aiocache", specifier = ">=0.12.3,<0.13.0" },
     { name = "aiofiles", specifier = ">=24.1.0,<25.0.0" },
     { name = "aiohttp", specifier = ">=3.12.15,<4.0.0" },
@@ -292,6 +265,7 @@ requires-dist = [
     { name = "colorlog", specifier = ">=6.9.0,<7.0.0" },
     { name = "coverage", marker = "extra == 'dev'", specifier = ">=7.6.0,<8.0.0" },
     { name = "crawl4ai", extras = ["all"], specifier = ">=0.7.4,<0.8.0" },
+    { name = "datasets", marker = "extra == 'eval'", specifier = ">=2.18.0,<3.0.0" },
     { name = "deepspeed", marker = "extra == 'gpu'", specifier = ">=0.14.0,<1.0.0" },
     { name = "defusedxml", specifier = ">=0.7.1,<0.8.0" },
     { name = "dependency-injector", specifier = ">=4.48.2" },
@@ -315,7 +289,7 @@ requires-dist = [
     { name = "langchain-core", specifier = ">=0.3.76" },
     { name = "langchain-google-genai", marker = "extra == 'llm'", specifier = ">=2.1.12,<3.0.0" },
     { name = "langchain-mcp-adapters", specifier = ">=0.1.10,<0.2.0" },
-    { name = "langchain-openai", specifier = ">=0.3.33,<1.0.0" },
+    { name = "langchain-openai", marker = "extra == 'eval'", specifier = ">=0.3.33,<1.0.0" },
     { name = "langchain-qdrant", specifier = ">=0.2.0,<0.4.0" },
     { name = "langgraph", specifier = ">=0.6.0,<0.7.0" },
     { name = "locust", marker = "extra == 'dev'", specifier = ">=2.37.10,<3.0.0" },
@@ -337,7 +311,6 @@ requires-dist = [
     { name = "opentelemetry-instrumentation-starlette", marker = "extra == 'observability'", specifier = ">=0.58b0,<0.59.0" },
     { name = "opentelemetry-sdk", specifier = ">=1.37.0,<2.0.0" },
     { name = "opentelemetry-sdk", marker = "extra == 'observability'", specifier = ">=1.37.0,<2.0.0" },
-    { name = "playwright", specifier = ">=1.55.0,<2.0.0" },
     { name = "playwright", marker = "extra == 'accessibility'", specifier = ">=1.55.0,<2.0.0" },
     { name = "playwright", marker = "extra == 'browser'", specifier = ">=1.55.0,<2.0.0" },
     { name = "polars", marker = "extra == 'dataframe'", specifier = ">=1.33.1,<2.0.0" },
@@ -351,9 +324,7 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.10.1,<3.0.0" },
     { name = "pydeps", specifier = ">=3.0.1" },
     { name = "pyjwt", marker = "extra == 'dev'", specifier = ">=2.10.1,<3.0.0" },
-    { name = "pylint", specifier = ">=3.3.8,<4.0.0" },
     { name = "pylint", marker = "extra == 'dev'", specifier = ">=3.3.8,<4.0.0" },
-    { name = "pyright", specifier = ">=1.1.379,<2.0.0" },
     { name = "pyright", marker = "extra == 'dev'", specifier = ">=1.1.379,<2.0.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.4.2,<9.0.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=1.2.0,<2.0.0" },
@@ -367,14 +338,12 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0.2,<7.0.0" },
     { name = "qdrant-client", extras = ["fastembed"], specifier = ">=1.15.1,<1.15.2" },
     { name = "questionary", specifier = ">=2.1.1,<3.0.0" },
-    { name = "ragas", specifier = ">=0.1.10,<0.2.0" },
-    { name = "rebrowser-playwright", specifier = ">=1.47.0,<2.0.0" },
+    { name = "ragas", marker = "extra == 'eval'", specifier = "==0.1.13" },
     { name = "rebrowser-playwright", marker = "extra == 'browser'", specifier = ">=1.47.0,<2.0.0" },
     { name = "redis", extras = ["hiredis"], specifier = ">=5.3.1,<6.0.0" },
     { name = "responses", marker = "extra == 'contract'", specifier = ">=0.25.8,<0.26.0" },
     { name = "respx", specifier = ">=0.22.0,<0.23.0" },
     { name = "rich", specifier = ">=14.1.0,<15.0.0" },
-    { name = "ruff", specifier = ">=0.13.1,<0.14.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.13.1,<0.14.0" },
     { name = "schemathesis", marker = "extra == 'contract'", specifier = ">=3.39.16,<4.0.0" },
     { name = "scikit-learn", specifier = ">=1.7.2,<2.0.0" },
@@ -383,10 +352,9 @@ requires-dist = [
     { name = "slowapi", specifier = ">=0.1.9,<0.2.0" },
     { name = "sqlalchemy", specifier = ">=2.0.43,<3.0.0" },
     { name = "starlette", specifier = ">=0.48.0,<0.49.0" },
-    { name = "taskipy", specifier = ">=1.14.1,<2.0.0" },
+    { name = "taskipy", marker = "extra == 'dev'", specifier = ">=1.14.1,<2.0.0" },
     { name = "tenacity", specifier = ">=9.1.2,<10.0.0" },
     { name = "testcontainers", marker = "extra == 'dev'", specifier = ">=4.8.1,<5.0.0" },
-    { name = "tf-playwright-stealth", specifier = ">=1.2.0,<2.0.0" },
     { name = "tf-playwright-stealth", marker = "extra == 'browser'", specifier = ">=1.2.0,<2.0.0" },
     { name = "tomli-w", specifier = ">=1.2.0,<2.0.0" },
     { name = "tool", specifier = ">=0.8.0" },
@@ -405,33 +373,7 @@ requires-dist = [
     { name = "watchdog", specifier = ">=6.0.0,<7.0.0" },
     { name = "xformers", marker = "extra == 'gpu'", specifier = ">=0.0.28,<1.0.0" },
 ]
-provides-extras = ["dev", "docs", "contract", "accessibility", "browser", "llm", "observability", "parsing", "dataframe", "gpu", "all"]
-
-[package.metadata.requires-dev]
-contract = [{ name = "schemathesis", specifier = ">=3.39.16,<4.0.0" }]
-dev = [
-    { name = "coverage", specifier = ">=7.6.0,<8.0.0" },
-    { name = "hypothesis", specifier = ">=6.135.0,<7.0.0" },
-    { name = "locust", specifier = ">=2.37.10,<3.0.0" },
-    { name = "mutmut", specifier = ">=2.5.1,<4.0.0" },
-    { name = "pyjwt", specifier = ">=2.10.1,<3.0.0" },
-    { name = "pyright", specifier = ">=1.1.379,<2.0.0" },
-    { name = "pytest", specifier = ">=8.3.5,<9.0.0" },
-    { name = "pytest-asyncio", specifier = ">=1.0.0,<2.0.0" },
-    { name = "pytest-benchmark", specifier = ">=5.1.0,<6.0.0" },
-    { name = "pytest-cov", specifier = ">=6.1.1,<8.0.0" },
-    { name = "pytest-env", specifier = ">=1.1.5,<2.0.0" },
-    { name = "pytest-mock", specifier = ">=3.14.1,<4.0.0" },
-    { name = "pytest-timeout", specifier = ">=2.4.0,<3.0.0" },
-    { name = "pytest-xdist", specifier = ">=3.7.0,<4.0.0" },
-    { name = "testcontainers", specifier = ">=4.8.1,<5.0.0" },
-]
-docs = [
-    { name = "mkdocs", specifier = ">=1.6.1,<2.0.0" },
-    { name = "mkdocs-material", specifier = ">=9.6.20,<10.0.0" },
-    { name = "mkdocstrings", specifier = ">=0.30.1,<1.0.0" },
-    { name = "mkdocstrings-python", specifier = ">=1.18.2,<2.0.0" },
-]
+provides-extras = ["eval", "dev", "docs", "contract", "accessibility", "browser", "llm", "observability", "parsing", "dataframe", "gpu", "all"]
 
 [[package]]
 name = "aiocache"
@@ -1329,9 +1271,10 @@ wheels = [
 
 [[package]]
 name = "datasets"
-version = "4.1.1"
+version = "2.21.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
+    { name = "aiohttp" },
     { name = "dill" },
     { name = "filelock" },
     { name = "fsspec", extra = ["http"] },
@@ -1346,9 +1289,9 @@ dependencies = [
     { name = "tqdm" },
     { name = "xxhash" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/91/a4/73f8e6ef52c535e1d20d5b2ca83bfe6de399d8b8b8a61ccc8d63d60735aa/datasets-4.1.1.tar.gz", hash = "sha256:7d8d5ba8b12861d2c44bfff9c83484ebfafff1ff553371e5901a8d3aab5450e2", size = 579324, upload-time = "2025-09-18T13:14:27.108Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e5/a5/38719e5cff7aa0537a6be37d21cc1fdd7096e9565e8fce2d46a822e10b5b/datasets-2.21.0.tar.gz", hash = "sha256:998f85a8460f1bd982e5bd058f8a0808eef424249e3df1e8cdd594ccd0dc8ba2", size = 2215317, upload-time = "2024-08-14T06:40:44.314Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f4/c8/09012ac195a0aab58755800d2efdc0e7d5905053509f12cb5d136c911cda/datasets-4.1.1-py3-none-any.whl", hash = "sha256:62e4f6899a36be9ec74a7e759a6951253cc85b3fcfa0a759b0efa8353b149dac", size = 503623, upload-time = "2025-09-18T13:14:25.111Z" },
+    { url = "https://files.pythonhosted.org/packages/72/b3/33c4ad44fa020e3757e9b2fad8a5de53d9079b501e6bbc45bdd18f82f893/datasets-2.21.0-py3-none-any.whl", hash = "sha256:25e4e097110ce28824b746a107727ada94024cba11db8bc588d468414692b65a", size = 527251, upload-time = "2024-08-14T06:40:39.612Z" },
 ]
 
 [[package]]
@@ -1425,11 +1368,11 @@ wheels = [
 
 [[package]]
 name = "dill"
-version = "0.4.0"
+version = "0.3.8"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/12/80/630b4b88364e9a8c8c5797f4602d0f76ef820909ee32f0bacb9f90654042/dill-0.4.0.tar.gz", hash = "sha256:0633f1d2df477324f53a895b02c901fb961bdbf65a17122586ea7019292cbcf0", size = 186976, upload-time = "2025-04-16T00:41:48.867Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/17/4d/ac7ffa80c69ea1df30a8aa11b3578692a5118e7cd1aa157e3ef73b092d15/dill-0.3.8.tar.gz", hash = "sha256:3ebe3c479ad625c4553aca177444d89b486b1d84982eeacded644afc0cf797ca", size = 184847, upload-time = "2024-01-27T23:42:16.145Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/50/3d/9373ad9c56321fdab5b41197068e1d8c25883b3fea29dd361f9b55116869/dill-0.4.0-py3-none-any.whl", hash = "sha256:44f54bf6412c2c8464c14e8243eb163690a9800dbe2c367330883b19c7561049", size = 119668, upload-time = "2025-04-16T00:41:47.671Z" },
+    { url = "https://files.pythonhosted.org/packages/c9/7a/cef76fd8438a42f96db64ddaa85280485a9c395e7df3db8158cfec1eee34/dill-0.3.8-py3-none-any.whl", hash = "sha256:c36ca9ffb54365bdd2f8eb3eff7d2a21237f8452b57ace88b1ac615b7e815bd7", size = 116252, upload-time = "2024-01-27T23:42:14.239Z" },
 ]
 
 [[package]]
@@ -1948,11 +1891,11 @@ wheels = [
 
 [[package]]
 name = "fsspec"
-version = "2025.9.0"
+version = "2024.6.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/de/e0/bab50af11c2d75c9c4a2a26a5254573c0bd97cea152254401510950486fa/fsspec-2025.9.0.tar.gz", hash = "sha256:19fd429483d25d28b65ec68f9f4adc16c17ea2c7c7bf54ec61360d478fb19c19", size = 304847, upload-time = "2025-09-02T19:10:49.215Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/90/b6/eba5024a9889fcfff396db543a34bef0ab9d002278f163129f9f01005960/fsspec-2024.6.1.tar.gz", hash = "sha256:fad7d7e209dd4c1208e3bbfda706620e0da5142bebbd9c384afb95b07e798e49", size = 284584, upload-time = "2024-06-27T14:35:45.467Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/47/71/70db47e4f6ce3e5c37a607355f80da8860a33226be640226ac52cb05ef2e/fsspec-2025.9.0-py3-none-any.whl", hash = "sha256:530dc2a2af60a414a832059574df4a6e10cce927f6f4a78209390fe38955cfb7", size = 199289, upload-time = "2025-09-02T19:10:47.708Z" },
+    { url = "https://files.pythonhosted.org/packages/5e/44/73bea497ac69bafde2ee4269292fa3b41f1198f4bb7bbaaabde30ad29d4a/fsspec-2024.6.1-py3-none-any.whl", hash = "sha256:3cb443f8bcd2efb31295a5b9fdb02aee81d8452c80d28f97a6d0959e6cee101e", size = 177561, upload-time = "2024-06-27T14:35:42.023Z" },
 ]
 
 [package.optional-dependencies]
@@ -5426,18 +5369,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pytest-env"
-version = "1.1.5"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pytest" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/1f/31/27f28431a16b83cab7a636dce59cf397517807d247caa38ee67d65e71ef8/pytest_env-1.1.5.tar.gz", hash = "sha256:91209840aa0e43385073ac464a554ad2947cc2fd663a9debf88d03b01e0cc1cf", size = 8911, upload-time = "2024-09-17T22:39:18.566Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/de/b8/87cfb16045c9d4092cfcf526135d73b88101aac83bc1adcf82dfb5fd3833/pytest_env-1.1.5-py3-none-any.whl", hash = "sha256:ce90cf8772878515c24b31cd97c7fa1f4481cd68d588419fd45f10ecaee6bc30", size = 6141, upload-time = "2024-09-17T22:39:16.942Z" },
-]
-
-[[package]]
 name = "pytest-mock"
 version = "3.15.1"
 source = { registry = "https://pypi.org/simple" }
@@ -5690,7 +5621,7 @@ wheels = [
 
 [[package]]
 name = "ragas"
-version = "0.1.19"
+version = "0.1.13"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "appdirs" },
@@ -5705,9 +5636,9 @@ dependencies = [
     { name = "pysbd" },
     { name = "tiktoken" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b2/97/da4544e0ff16c92c250ddfa60d5c62eacf40d1b2fe88f3249935a278886d/ragas-0.1.19.tar.gz", hash = "sha256:9a9536f33ffbcdf28aeb4a4bf648bbf0f1c1be58e357c2442604babf726fe871", size = 4164141, upload-time = "2024-09-18T02:35:20.054Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d5/e9/9370a94eb056c3e5a5a647ee178bd83c40763ef0bcedbdea3f3e0712366b/ragas-0.1.13.tar.gz", hash = "sha256:18b5b8aa6e6033ea4b8cd6388afae43ca762579d5cf5b533576ef952c1a5e438", size = 4165686, upload-time = "2024-08-05T18:44:46.936Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/02/c8/6fcf75477ef5276bfeff47b08af9c4e1301a495594a026eca5bb7a226d6f/ragas-0.1.19-py3-none-any.whl", hash = "sha256:8c70a6418398b1acfe36212d502bcabb0cd44f575de13f96faaeb8c8115034c7", size = 190329, upload-time = "2024-09-18T02:35:17.738Z" },
+    { url = "https://files.pythonhosted.org/packages/50/cd/ebdca03ec9ea6480e521d65dbc1900468556110bd4a77a79486dd1262765/ragas-0.1.13-py3-none-any.whl", hash = "sha256:919b3f91c57d6605d37b805a7f365c4a04be34577a3ec54d000c66056b3f005f", size = 162121, upload-time = "2024-08-05T18:44:44.684Z" },
 ]
 
 [[package]]
