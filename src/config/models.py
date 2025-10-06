@@ -859,6 +859,20 @@ class ObservabilityConfig(BaseModel):
     )
 
 
+class AgenticConfig(BaseModel):
+    """Configuration for agentic orchestration defaults."""
+
+    run_timeout_seconds: float = Field(
+        default=30.0, gt=0, description="Maximum end-to-end agent run timeout"
+    )
+    max_parallel_tools: int = Field(
+        default=3, ge=1, le=16, description="Maximum concurrently executed tools"
+    )
+    retrieval_limit: int = Field(
+        default=8, ge=1, le=50, description="Default document retrieval limit"
+    )
+
+
 class RAGConfig(BaseModel):
     """Retrieval-augmented generation configuration."""
 
@@ -1002,11 +1016,15 @@ __all__ = [
     "EmbeddingModel",
     "EmbeddingProvider",
     "Environment",
+    "AgenticConfig",
     "FastEmbedConfig",
     "FirecrawlConfig",
     "FusionAlgorithm",
     "HyDEConfig",
     "LogLevel",
+    "MCPClientConfig",
+    "MCPServerConfig",
+    "MCPTransport",
     "ModelType",
     "MonitoringConfig",
     "ObservabilityConfig",

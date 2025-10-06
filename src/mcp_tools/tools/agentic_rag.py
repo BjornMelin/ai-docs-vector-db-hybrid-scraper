@@ -14,12 +14,9 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from src.infrastructure.client_manager import ClientManager
 from src.services.agents import (
-    DynamicToolDiscovery,
     GraphAnalysisOutcome,
     GraphRunner,
     GraphSearchOutcome,
-    RetrievalHelper,
-    ToolExecutionService,
 )
 from src.services.errors import ToolError
 from src.services.monitoring.telemetry_repository import get_telemetry_repository
@@ -108,16 +105,7 @@ async def _get_runner(client_manager: ClientManager) -> GraphRunner:
         if runner is not None:
             return runner
 
-        discovery = DynamicToolDiscovery(client_manager)
-        tool_service = ToolExecutionService(client_manager)
-        retrieval_helper = RetrievalHelper(client_manager)
-        runner = GraphRunner(
-            client_manager=client_manager,
-            discovery=discovery,
-            tool_service=tool_service,
-            retrieval_helper=retrieval_helper,
-            run_timeout_seconds=30.0,
-        )
+        _, _, _, runner = GraphRunner.build_components(client_manager)
         _runner_cache[client_manager] = runner
         return runner
 
@@ -129,7 +117,9 @@ class AgenticSearchRequest(BaseModel):
 
     query: str = Field(..., min_length=1, description="User query to process")
     collection: str = Field("documentation", description="Target collection")
-    max_results: int = Field(8, ge=1, le=50, description="Maximum documents to return")
+    max_results: int | None = Field(
+        None, ge=1, le=50, description="Maximum documents to return"
+    )
     session_id: str | None = Field(None, description="Session identifier")
     user_context: dict[str, Any] | None = Field(
         None, description="Optional user context"

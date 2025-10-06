@@ -99,13 +99,19 @@ class OrchestratorService:  # pylint: disable=too-many-instance-attributes
         discovery = DynamicToolDiscovery(self.client_manager)
         tool_service = ToolExecutionService(self.client_manager)
         retrieval_helper = RetrievalHelper(self.client_manager)
+        agentic_cfg = getattr(self.client_manager.config, "agentic", None)
+        max_parallel = getattr(agentic_cfg, "max_parallel_tools", 3)
+        run_timeout = getattr(agentic_cfg, "run_timeout_seconds", 30.0)
+        retrieval_limit = getattr(agentic_cfg, "retrieval_limit", 8)
         self._discovery = discovery
         self._graph_runner = GraphRunner(
             client_manager=self.client_manager,
             discovery=discovery,
             tool_service=tool_service,
             retrieval_helper=retrieval_helper,
-            run_timeout_seconds=30.0,
+            max_parallel_tools=max_parallel,
+            run_timeout_seconds=run_timeout,
+            retrieval_limit=retrieval_limit,
         )
         await discovery.refresh(force=True)
         logger.info("initialized LangGraph runner for orchestrator")
