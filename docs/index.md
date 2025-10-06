@@ -69,9 +69,10 @@ graph LR
 
 ## Additional Resources
 
-- [Security Architecture Assessment](security/security-architecture-assessment.md)
-- [Testing and Modernization Report](testing/test-modernization-completion-report.md)
-- [Doc Modernization Summary](reports/doc-modernization/phase0/summary.md)
+- [Query Processing Metrics](observability/query_processing_metrics.md)
+- [RAG Metrics Catalog](observability/rag_metrics_catalog.md)
+- [Security Checklist](security/security-checklist.md)
+- [Technical Debt Log](TECH_DEBT.md)
 
 Questions or improvements? Open an issue or contribute a pull request so that
 these docs stay up to date.

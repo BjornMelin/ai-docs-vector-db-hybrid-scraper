@@ -44,38 +44,41 @@ nav:
       - Quick Start: users/quick-start.md
       - Configuration Basics: users/configuration-management.md
       - Examples & Recipes: users/examples-and-recipes.md
+      - Search & Retrieval: users/search-and-retrieval.md
       - Troubleshooting: users/troubleshooting.md
   - Architecture & API:
       - Developer Hub: developers/index.md
       - System Architecture: developers/architecture.md
       - Configuration Reference: developers/configuration.md
-      - Integration Guide: developers/integration-guide.md
+      - Service Adapters: developers/service_adapters.md
       - API Reference: developers/api-reference.md
+      - App Profiles: developers/app-profiles.md
       - CI/CD Workflows: developers/ci-cd.md
-      - GitHub Composite Actions: developers/github-actions.md
+      - Deployment Guide: developers/deployment.md
+      - GitHub Actions: developers/github-actions.md
   - Operations:
       - Operator Hub: operators/index.md
       - Deployment: operators/deployment.md
       - Configuration: operators/configuration.md
       - Monitoring: operators/monitoring.md
       - Operations Runbook: operators/operations.md
+      - Release Notes: operators/release-notes.md
+      - Service Feedback Monitoring: operators/service_feedback_monitoring.md
   - Security:
-      - Architecture Assessment: security/security-architecture-assessment.md
-      - Configuration Hardening: security/security-config-implementation.md
-      - Essential Checklist: security/essential-security-checklist.md
-  - Testing & Performance:
-      - Testing Strategy: testing/test-modernization-completion-report.md
-      - Test Infrastructure: testing/test-infrastructure-documentation.md
-      - Performance Benchmarking: developers/performance-benchmarking-methodology.md
-  - Research & Reports:
-      - Browser Research: research/browser-use/README.md
-      - Transformation Research: research/transformation/README.md
-      - Doc Modernization Summary: reports/doc-modernization/phase0/summary.md
+      - Overview: security/index.md
+      - Security Essentials: security/security-essentials.md
+      - Security Checklist: security/security-checklist.md
+  - Testing & Observability:
+      - Testing Overview: testing/index.md
+      - Testing Guide: testing/testing-guide.md
+      - MCP Unit Tests: testing/mcp-unit-tests.md
+      - Query Processing Metrics: observability/query_processing_metrics.md
+      - RAG Metrics Catalog: observability/rag_metrics_catalog.md
   - Governance:
-      - Community Guidelines: community-guidelines.md
-      - Remaining Work Backlog: operators/remaining_tasks/README.md
-      - Documentation Metadata: contributing/document-metadata.md
-      - Roadmap: roadmap.md
+      - Community Guidelines: contributing/community-guidelines.md
+      - Contributor Guide: developers/contributing.md
+      - Documentation Metadata: developers/document-metadata.md
+      - Technical Debt Log: TECH_DEBT.md
 
 markdown_extensions:
   - toc:
