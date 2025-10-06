@@ -1,5 +1,7 @@
 """Comprehensive test suite for MCP embeddings tools."""
 
+# pylint: disable=duplicate-code
+
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest

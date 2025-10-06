@@ -1,5 +1,7 @@
 """Comprehensive test suite for MCP cache tools."""
 
+# pylint: disable=duplicate-code
+
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest

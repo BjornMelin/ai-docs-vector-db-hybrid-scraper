@@ -16,6 +16,8 @@ from src.services.vector_db.types import VectorMatch
 
 @pytest.fixture
 def mock_vector_service() -> Mock:
+    """Create a vector service mock with asynchronous helpers."""
+
     service = Mock()
     service.is_initialized.return_value = True
     service.ensure_collection = AsyncMock()
@@ -28,6 +30,8 @@ def mock_vector_service() -> Mock:
 
 @pytest.fixture
 def mock_client_manager(mock_vector_service: Mock, monkeypatch) -> Mock:
+    """Provide a client manager mock wired to the vector service mock."""
+
     storage = Mock()
     storage.save_project = AsyncMock()
     storage.list_projects = AsyncMock(return_value=[])
@@ -49,11 +53,15 @@ def mock_client_manager(mock_vector_service: Mock, monkeypatch) -> Mock:
 
 @pytest.fixture
 def project_storage(mock_client_manager: Mock) -> Mock:
+    """Return the project storage mock extracted from the manager."""
+
     return mock_client_manager.get_project_storage.return_value
 
 
 @pytest.fixture
 def register(mock_client_manager: Mock) -> dict[str, Callable]:
+    """Register project tools and expose them for tests."""
+
     mock_mcp = MagicMock()
     registered_tools: dict[str, Callable] = {}
 
@@ -68,6 +76,8 @@ def register(mock_client_manager: Mock) -> dict[str, Callable]:
 
 @pytest.fixture
 def mock_context() -> Mock:
+    """Build an MCP context mock with logging hooks."""
+
     ctx = Mock()
     ctx.info = AsyncMock()
     ctx.debug = AsyncMock()
@@ -77,6 +87,8 @@ def mock_context() -> Mock:
 
 @pytest.mark.asyncio
 async def test_registers_project_tools(register: dict[str, Callable]) -> None:
+    """Ensure tool registration exposes the project tool set."""
+
     assert {
         "create_project",
         "list_projects",
@@ -90,6 +102,8 @@ async def test_registers_project_tools(register: dict[str, Callable]) -> None:
 async def test_create_project(
     register: dict[str, Callable], project_storage: Mock, mock_context: Mock
 ) -> None:
+    """Verify creating a project persists metadata and responds with info."""
+
     request = ProjectRequest(name="Docs", description="Demo", quality_tier="balanced")
     result = await register["create_project"](request, mock_context)
 
@@ -104,6 +118,8 @@ async def test_list_projects_enriches_stats(
     mock_vector_service: Mock,
     mock_context: Mock,
 ) -> None:
+    """Confirm listing projects enriches entries with collection stats."""
+
     project_storage.list_projects.return_value = [
         {
             "id": "proj",
@@ -122,6 +138,8 @@ async def test_list_projects_enriches_stats(
 async def test_update_project_applies_mutations(
     register: dict[str, Callable], project_storage: Mock, mock_context: Mock
 ) -> None:
+    """Ensure project updates mutate stored values as expected."""
+
     project_storage.get_project.return_value = {
         "id": "proj",
         "name": "Old",
@@ -141,6 +159,8 @@ async def test_delete_project_drops_collection(
     mock_vector_service: Mock,
     mock_context: Mock,
 ) -> None:
+    """Check deleting a project drops related collections and records."""
+
     project_storage.get_project.return_value = {
         "id": "proj",
         "collection": "project_proj",
@@ -160,6 +180,8 @@ async def test_search_project_uses_hybrid(
     mock_vector_service: Mock,
     mock_context: Mock,
 ) -> None:
+    """Validate hybrid search delegates to the vector service."""
+
     project_storage.get_project.return_value = {
         "id": "proj",
         "collection": "project_proj",

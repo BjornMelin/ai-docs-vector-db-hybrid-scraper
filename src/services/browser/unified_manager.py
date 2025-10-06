@@ -35,14 +35,10 @@ except ImportError:
 
 if TYPE_CHECKING:
     from src.infrastructure.client_manager import ClientManager as ClientManagerType
-    from src.services.cache.browser_cache import (
-        BrowserCache as BrowserCacheType,
-        BrowserCacheEntry as BrowserCacheEntryType,
-    )
+    from src.services.cache.browser_cache import BrowserCache as BrowserCacheType
 else:
     ClientManagerType = Any
     BrowserCacheType = Any
-    BrowserCacheEntryType = Any
 
 logger = logging.getLogger(__name__)
 
@@ -119,12 +115,6 @@ class TierMetrics(BaseModel):
     success_rate: float = 0.0
 
 
-def _raise_client_manager_unavailable() -> None:
-    """Raise ImportError for ClientManager not available."""
-    msg = "ClientManager not available"
-    raise ImportError(msg)
-
-
 class UnifiedBrowserManager(  # pylint: disable=too-many-instance-attributes
     BaseService
 ):
@@ -141,12 +131,8 @@ class UnifiedBrowserManager(  # pylint: disable=too-many-instance-attributes
     """
 
     def __init__(self, config: Config):
-        """Initialize unified browser manager.
+        """Initialize unified browser manager."""
 
-        Args:
-            config: Unified configuration instance
-
-        """
         super().__init__(config)
         self._automation_router: Any = None
         self._client_manager: ClientManagerType | None = None
@@ -176,6 +162,7 @@ class UnifiedBrowserManager(  # pylint: disable=too-many-instance-attributes
 
     async def initialize(self) -> None:
         """Initialize the unified browser manager and all dependencies."""
+
         if self._initialized:
             return
 
@@ -191,11 +178,11 @@ class UnifiedBrowserManager(  # pylint: disable=too-many-instance-attributes
 
     async def _initialize_client_manager(self) -> None:
         """Initialize client manager and automation router."""
-        client_manager_candidate = ClientManager
-        if client_manager_candidate is None:
-            _raise_client_manager_unavailable()
+        if ClientManager is None:
+            msg = "ClientManager not available"
+            raise ImportError(msg)
 
-        client_manager_cls = cast(type[ClientManagerType], client_manager_candidate)
+        client_manager_cls = cast(type[ClientManagerType], ClientManager)
         self._client_manager = client_manager_cls()
         await self._client_manager.initialize()
 
@@ -250,16 +237,22 @@ class UnifiedBrowserManager(  # pylint: disable=too-many-instance-attributes
         self._initialized = True
         logger.info("UnifiedBrowserManager initialized with 5-tier automation")
 
+    def _is_cache_available(self) -> bool:
+        """Check if browser cache is available and enabled.
+
+        Returns:
+            True if cache is available and enabled, False otherwise
+        """
+        return bool(self._cache_enabled and self._browser_cache)
+
     async def _try_get_cached_result(
         self, request: UnifiedScrapingRequest, start_time: float
     ) -> UnifiedScrapingResponse | None:
         """Try to get cached result for the request."""
-        if not (
-            self._cache_enabled
-            and self._browser_cache
-            and not request.interaction_required
-        ):
+        if not self._is_cache_available() or request.interaction_required:
             return None
+
+        assert self._browser_cache is not None  # For type checker
 
         try:
             cache_key = self._browser_cache.generate_cache_key(
@@ -296,9 +289,9 @@ class UnifiedBrowserManager(  # pylint: disable=too-many-instance-attributes
 
         # Update metrics for cache hit
         self._update_tier_metrics(cached_entry.tier_used, True, execution_time)
-
-        # Record monitoring metrics for cache hit if enabled
-        await self._record_cache_hit_metrics(cached_entry.tier_used, execution_time)
+        await self._record_monitoring_metrics(
+            cached_entry.tier_used, True, execution_time, cache_hit=True
+        )
 
         return UnifiedScrapingResponse(
             success=True,
@@ -320,32 +313,50 @@ class UnifiedBrowserManager(  # pylint: disable=too-many-instance-attributes
             failed_tiers=[],
         )
 
-    async def _record_cache_hit_metrics(
-        self, tier_used: str, execution_time: float
+    async def _record_monitoring_metrics(  # pylint: disable=too-many-arguments
+        self,
+        tier: str,
+        success: bool,
+        execution_time: float,
+        *,
+        cache_hit: bool = False,
+        runtime: str | None = None,
+        challenge: str | None = None,
+        error_type: str | None = None,
     ) -> None:
-        """Record cache hit metrics if monitoring is enabled."""
+        """Record monitoring metrics if monitoring is enabled.
+
+        Args:
+            tier: Tier name
+            success: Whether operation was successful
+            execution_time: Execution time in milliseconds
+            cache_hit: Whether this was a cache hit
+            runtime: Runtime identifier if applicable
+            challenge: Challenge outcome if applicable
+            error_type: Error type if failed
+        """
         if not (self._monitoring_enabled and self._monitor):
             return
 
         try:
             await self._monitor.record_request_metrics(
-                tier=tier_used,
-                success=True,
+                tier=tier,
+                success=success,
                 response_time_ms=execution_time,
-                cache_hit=True,
-                runtime=None,
-                challenge=None,
+                cache_hit=cache_hit,
+                runtime=runtime,
+                challenge=challenge,
+                error_type=error_type,
             )
         except (ConnectionError, OSError, PermissionError):
-            logger.warning("Failed to record cache hit monitoring metrics")
+            logger.debug("Failed to record monitoring metrics")
 
     async def _try_cache_result(
         self, request: UnifiedScrapingRequest, response: UnifiedScrapingResponse
     ) -> None:
         """Try to cache successful scraping result."""
         if not (
-            self._cache_enabled
-            and self._browser_cache
+            self._is_cache_available()
             and response.success
             and not request.interaction_required
             and response.content_length > 0
@@ -361,9 +372,10 @@ class UnifiedBrowserManager(  # pylint: disable=too-many-instance-attributes
         self, request: UnifiedScrapingRequest, response: UnifiedScrapingResponse
     ) -> None:
         """Store cache entry for successful response."""
-        if BrowserCacheEntry is None:
-            logger.warning("BrowserCacheEntry not available, skipping cache")
+        if BrowserCacheEntry is None or not self._is_cache_available():
             return
+
+        assert self._browser_cache is not None  # For type checker
 
         cache_entry = BrowserCacheEntry(
             url=request.url,
@@ -374,9 +386,6 @@ class UnifiedBrowserManager(  # pylint: disable=too-many-instance-attributes
             },
             tier_used=response.tier_used,
         )
-
-        if not self._browser_cache:
-            return
 
         cache_key = self._browser_cache.generate_cache_key(
             request.url, None if request.tier == "auto" else request.tier
@@ -409,14 +418,16 @@ class UnifiedBrowserManager(  # pylint: disable=too-many-instance-attributes
 
         # Update metrics
         self._update_tier_metrics(tier_used, success_flag, execution_time)
-
-        # Record monitoring metrics if enabled
-        await self._record_success_metrics(
+        await self._record_monitoring_metrics(
             tier_used,
+            success_flag,
             execution_time,
             runtime=runtime_used,
-            challenge_outcome=challenge_outcome,
-            success=success_flag,
+            challenge=(
+                challenge_outcome
+                if challenge_outcome in {"detected", "solved"}
+                else None
+            ),
         )
 
         return UnifiedScrapingResponse(
@@ -432,35 +443,6 @@ class UnifiedBrowserManager(  # pylint: disable=too-many-instance-attributes
             quality_score=quality_score,
             failed_tiers=failed_tiers,
         )
-
-    async def _record_success_metrics(
-        self,
-        tier_used: str,
-        execution_time: float,
-        *,
-        runtime: str | None,
-        challenge_outcome: str | None,
-        success: bool,
-    ) -> None:
-        """Record success metrics if monitoring is enabled."""
-        if not (self._monitoring_enabled and self._monitor):
-            return
-
-        try:
-            await self._monitor.record_request_metrics(
-                tier=tier_used,
-                success=success,
-                response_time_ms=execution_time,
-                cache_hit=False,
-                runtime=runtime,
-                challenge=(
-                    challenge_outcome
-                    if challenge_outcome in {"detected", "solved"}
-                    else None
-                ),
-            )
-        except (ConnectionError, OSError, PermissionError):
-            logger.warning("Failed to record monitoring metrics")
 
     async def _perform_url_analysis(self, url: str) -> dict[str, Any]:
         """Perform URL analysis to determine optimal tier."""
@@ -485,14 +467,19 @@ class UnifiedBrowserManager(  # pylint: disable=too-many-instance-attributes
             },
         }
 
+    async def _cleanup_monitoring(self) -> None:
+        """Stop monitoring if active."""
+        if not (self._monitoring_enabled and self._monitor):
+            return
+
+        try:
+            await self._monitor.stop_monitoring()
+        except (ConnectionError, OSError, RuntimeError, TimeoutError):
+            logger.debug("Failed to stop monitoring during cleanup")
+
     async def cleanup(self) -> None:
         """Cleanup all resources."""
-        # Stop monitoring if active
-        if self._monitoring_enabled and self._monitor:
-            try:
-                await self._monitor.stop_monitoring()
-            except (ConnectionError, OSError, RuntimeError, TimeoutError):
-                logger.warning("Failed to stop monitoring during cleanup")
+        await self._cleanup_monitoring()
 
         if self._client_manager:
             await self._client_manager.cleanup()
@@ -520,8 +507,8 @@ class UnifiedBrowserManager(  # pylint: disable=too-many-instance-attributes
 
         Raises:
             CrawlServiceError: If manager not initialized or scraping fails
-
         """
+
         if not self._initialized:
             msg = "UnifiedBrowserManager not initialized"
             raise CrawlServiceError(msg)
@@ -540,6 +527,7 @@ class UnifiedBrowserManager(  # pylint: disable=too-many-instance-attributes
         if cache_result:
             return cache_result
 
+        response: UnifiedScrapingResponse | None = None
         try:
             result = await self._automation_router.scrape(
                 url=request.url,
@@ -567,24 +555,12 @@ class UnifiedBrowserManager(  # pylint: disable=too-many-instance-attributes
         except Exception as exc:
             execution_time = (time.time() - start_time) * 1000
             self._update_tier_metrics("unknown", False, execution_time)
-
-            # Record monitoring metrics for failed request if enabled
-            if self._monitoring_enabled and self._monitor:
-                try:
-                    await self._monitor.record_request_metrics(
-                        tier="unknown",
-                        success=False,
-                        response_time_ms=execution_time,
-                        error_type=type(exc).__name__,
-                        runtime=None,
-                        challenge=None,
-                    )
-                except (ConnectionError, OSError, PermissionError) as err:
-                    logger.warning("Failed to record error monitoring metrics: %s", err)
-
+            await self._record_monitoring_metrics(
+                "unknown", False, execution_time, error_type=type(exc).__name__
+            )
             logger.exception("Unified scraping failed for %s", request.url)
 
-            return UnifiedScrapingResponse(
+            response = UnifiedScrapingResponse(
                 success=False,
                 content="",
                 url=request.url,
@@ -593,8 +569,11 @@ class UnifiedBrowserManager(  # pylint: disable=too-many-instance-attributes
                 content_length=0,
                 error=str(exc),
             )
-        else:
-            return response
+
+        if response is None:
+            msg = "Scraping response could not be generated"
+            raise CrawlServiceError(msg)
+        return response
 
     async def analyze_url(self, url: str) -> dict[str, Any]:
         """Analyze URL to determine optimal tier and provide insights.
@@ -604,8 +583,8 @@ class UnifiedBrowserManager(  # pylint: disable=too-many-instance-attributes
 
         Returns:
             Analysis results with tier recommendations
-
         """
+
         if not self._initialized:
             msg = "UnifiedBrowserManager not initialized"
             raise CrawlServiceError(msg)
@@ -630,48 +609,57 @@ class UnifiedBrowserManager(  # pylint: disable=too-many-instance-attributes
         """
         return self._tier_metrics.copy()
 
-    def get_system_status(self) -> dict[str, Any]:
-        """Get overall system status and health information.
+    def _get_router_metrics(self) -> dict[str, Any]:
+        """Get automation router metrics safely."""
+        if not self._automation_router:
+            return {}
+
+        try:
+            return self._automation_router.get_metrics()
+        except (ConnectionError, OSError, PermissionError):
+            logger.debug("Failed to get router metrics")
+            return {}
+
+    def _calculate_overall_success_rate(self) -> tuple[int, int, float]:
+        """Calculate overall success metrics.
 
         Returns:
-            System status information
-
+            Tuple of (total_requests, total_successful, success_rate)
         """
+        total_requests = sum(m.total_requests for m in self._tier_metrics.values())
+        total_successful = sum(
+            m.successful_requests for m in self._tier_metrics.values()
+        )
+        success_rate = total_successful / total_requests if total_requests > 0 else 0.0
+        return total_requests, total_successful, success_rate
+
+    def _get_cache_stats(self) -> dict[str, Any]:
+        """Get cache statistics safely."""
+        if not self._is_cache_available():
+            return {}
+
+        assert self._browser_cache is not None
+        return self._browser_cache.get_stats()
+
+    def _get_monitoring_health(self) -> dict[str, Any]:
+        """Get monitoring system health safely."""
+        if not (self._monitoring_enabled and self._monitor):
+            return {}
+
+        try:
+            return self._monitor.get_system_health()
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
+            logger.debug("Failed to get monitoring health")
+            return {"error": str(e)}
+
+    def get_system_status(self) -> dict[str, Any]:
+        """Get overall system status and health information."""
         if not self._initialized:
             return {"status": "not_initialized", "error": "Manager not initialized"}
 
-        # Get router metrics if available
-        router_metrics = {}
-        if self._automation_router:
-            try:
-                router_metrics = self._automation_router.get_metrics()
-            except (ConnectionError, OSError, PermissionError):
-                logger.warning("Failed to get router metrics")
-
-        # Calculate overall health
-        total_requests = sum(
-            metrics.total_requests for metrics in self._tier_metrics.values()
+        total_requests, _total_successful, overall_success_rate = (
+            self._calculate_overall_success_rate()
         )
-        total_successful = sum(
-            metrics.successful_requests for metrics in self._tier_metrics.values()
-        )
-        overall_success_rate = (
-            total_successful / total_requests if total_requests > 0 else 0.0
-        )
-
-        # Get cache statistics if available
-        cache_stats = {}
-        if self._cache_enabled and self._browser_cache:
-            cache_stats = self._browser_cache.get_stats()
-
-        # Get monitoring system health if available
-        monitoring_health = {}
-        if self._monitoring_enabled and self._monitor:
-            try:
-                monitoring_health = self._monitor.get_system_health()
-            except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
-                logger.warning("Failed to get monitoring health")
-                monitoring_health = {"error": str(e)}
 
         return {
             "status": "healthy" if overall_success_rate > 0.8 else "degraded",
@@ -683,16 +671,17 @@ class UnifiedBrowserManager(  # pylint: disable=too-many-instance-attributes
             ),
             "router_available": self._automation_router is not None,
             "cache_enabled": self._cache_enabled,
-            "cache_stats": cache_stats,
+            "cache_stats": self._get_cache_stats(),
             "monitoring_enabled": self._monitoring_enabled,
-            "monitoring_health": monitoring_health,
-            "router_metrics": router_metrics,
+            "monitoring_health": self._get_monitoring_health(),
+            "router_metrics": self._get_router_metrics(),
             "tier_metrics": {
                 name: metrics.dict() for name, metrics in self._tier_metrics.items()
             },
         }
 
-    def _calculate_quality_score(self, result: dict[str, Any]) -> float:
+    @staticmethod
+    def _calculate_quality_score(result: dict[str, Any]) -> float:
         """Calculate content quality score based on content length.
 
         Args:
@@ -700,14 +689,12 @@ class UnifiedBrowserManager(  # pylint: disable=too-many-instance-attributes
 
         Returns:
             Quality score between 0.0 and 1.0
-
         """
         if not result.get("success"):
             return 0.0
 
-        content = result.get("content", "")
-        # Simple quality score based on content length
-        return min(len(content) / 5000, 1.0)  # Normalize to 5000 chars
+        content_length = len(result.get("content", ""))
+        return min(content_length / 5000.0, 1.0)
 
     def _update_tier_metrics(
         self, tier: str, success: bool, execution_time_ms: float
@@ -718,8 +705,8 @@ class UnifiedBrowserManager(  # pylint: disable=too-many-instance-attributes
             tier: Tier name
             success: Whether the operation was successful
             execution_time_ms: Execution time in milliseconds
-
         """
+
         if tier not in self._tier_metrics:
             self._tier_metrics[tier] = TierMetrics(tier_name=tier)
 
