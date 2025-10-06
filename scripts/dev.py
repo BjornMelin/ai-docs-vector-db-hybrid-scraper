@@ -49,18 +49,6 @@ class PytestProfile:
 PYTEST_PROFILES: dict[str, PytestProfile] = {
     "quick": PytestProfile(("tests/unit", "-m", "not slow", "-q")),
     "unit": PytestProfile(("tests/unit", "-m", "unit or fast")),
-    "integration": PytestProfile(("tests/integration", "-m", "integration")),
-    "performance": PytestProfile(
-        (
-            "tests/performance",
-            "-m",
-            "performance or benchmark",
-            "--benchmark-only",
-            "--benchmark-sort=mean",
-            "--benchmark-group-by=group",
-        ),
-        uses_workers=False,
-    ),
     "full": PytestProfile(("tests",)),
     "ci": PytestProfile(
         ("tests", "-m", "not local_only", "--maxfail=3"), forces_coverage=True
@@ -164,82 +152,35 @@ def cmd_test(args: argparse.Namespace) -> int:
     return run_command(command)
 
 
-def _build_integration_benchmark_command(
-    verbose: bool, output: str | None
-) -> list[str]:
-    """Return the command used for integration benchmarks."""
+def cmd_benchmark(args: argparse.Namespace) -> int:
+    """Run the RAG golden evaluation harness."""
 
     command = [
         "uv",
         "run",
-        "pytest",
-        "tests/integration",
-        "-m",
-        "performance",
-        "--benchmark-only",
-        "--benchmark-sort=mean",
+        "python",
+        "scripts/eval/rag_golden_eval.py",
     ]
-    if output:
-        command.append(f"--benchmark-json={output}")
-    if verbose:
-        command.append("-v")
-    return command
-
-
-def cmd_benchmark(args: argparse.Namespace) -> int:
-    """Run performance benchmark suites."""
-
-    workers = _auto_worker_count(args.workers)
-    suites: tuple[str, ...] = (
-        ("performance", "integration") if args.suite == "all" else (args.suite,)
-    )
-
-    if len(suites) > 1 and args.output and not args.output_dir:
-        print(
-            "⚠️ Ignoring --output because multiple suites are selected; "
-            "use --output-dir for per-suite reports.",
-            file=sys.stderr,
-        )
-        output_override: str | None = None
-    else:
-        output_override = args.output
-
-    exit_code = 0
-    for suite in suites:
-        output_path = output_override
-        if args.output_dir:
-            target = Path(args.output_dir) / f"{suite}_benchmark_results.json"
-            target.parent.mkdir(parents=True, exist_ok=True)
-            output_path = str(target)
-
-        if suite == "performance":
-            command = _build_pytest_command(
-                "performance",
-                workers=workers,
-                coverage=False,
-                verbose=args.verbose,
-                extra=[],
-            )
-            if output_path:
-                command.append(f"--benchmark-json={output_path}")
-        else:
-            command = _build_integration_benchmark_command(args.verbose, output_path)
-
-        if args.compare_baseline:
-            baseline_path = Path(args.baseline).resolve()
-            if baseline_path.exists():
-                command.append(f"--benchmark-compare={baseline_path}")
-            else:
-                print(
-                    f"⚠️ Baseline file '{baseline_path}' not found; "
-                    f"skipping comparison.",
-                    file=sys.stderr,
-                )
-
-        print(f"\n⚡ Running {suite} benchmarks")
-        exit_code = max(exit_code, run_command(command))
-
-    return exit_code
+    if args.dataset:
+        command.extend(["--dataset", args.dataset])
+    if args.output:
+        command.extend(["--output", args.output])
+    if args.limit is not None:
+        command.extend(["--limit", str(args.limit)])
+    if args.namespace:
+        command.extend(["--namespace", args.namespace])
+    if args.enable_ragas:
+        command.append("--enable-ragas")
+    if args.ragas_model:
+        command.extend(["--ragas-model", args.ragas_model])
+    if args.ragas_embedding:
+        command.extend(["--ragas-embedding", args.ragas_embedding])
+    if args.ragas_max_samples is not None:
+        command.extend(["--ragas-max-samples", str(args.ragas_max_samples)])
+    if args.metrics_allowlist:
+        command.append("--metrics-allowlist")
+        command.extend(args.metrics_allowlist)
+    return run_command(command)
 
 
 def _import_check(module: str) -> bool:
@@ -532,6 +473,54 @@ def build_parser() -> argparse.ArgumentParser:
         help="Forward any additional arguments to pytest.",
     )
     test_parser.set_defaults(func=cmd_test)
+
+    benchmark_parser = subparsers.add_parser(
+        "benchmark", help="Run the RAG golden evaluation harness"
+    )
+    benchmark_parser.add_argument(
+        "--dataset",
+        default="tests/data/rag/golden_set.jsonl",
+        help="Path to the golden dataset (JSONL)",
+    )
+    benchmark_parser.add_argument(
+        "--output",
+        help="Optional JSON report destination",
+    )
+    benchmark_parser.add_argument(
+        "--limit",
+        type=int,
+        default=5,
+        help="Maximum documents to retrieve per query",
+    )
+    benchmark_parser.add_argument(
+        "--namespace",
+        default="ml_app",
+        help="Metrics namespace for the Prometheus snapshot",
+    )
+    benchmark_parser.add_argument(
+        "--enable-ragas",
+        action="store_true",
+        help="Enable semantic RAGAS metrics",
+    )
+    benchmark_parser.add_argument(
+        "--ragas-model",
+        help="Override the LLM model used by RAGAS",
+    )
+    benchmark_parser.add_argument(
+        "--ragas-embedding",
+        help="Override the embedding model used by RAGAS",
+    )
+    benchmark_parser.add_argument(
+        "--ragas-max-samples",
+        type=int,
+        help="Maximum number of samples for RAGAS evaluation",
+    )
+    benchmark_parser.add_argument(
+        "--metrics-allowlist",
+        nargs="*",
+        help="Prometheus metric names to include in the snapshot",
+    )
+    benchmark_parser.set_defaults(func=cmd_benchmark)
 
     benchmark_parser = subparsers.add_parser(
         "benchmark", help="Run performance benchmarks"

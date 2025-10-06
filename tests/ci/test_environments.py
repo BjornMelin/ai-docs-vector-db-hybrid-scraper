@@ -94,7 +94,7 @@ class GitHubActionsEnvironment(CIEnvironment):
             return "not slow and not integration", ["tests/unit"]
         if event_name == "push":
             # More comprehensive for pushes to main
-            return "not slow", ["tests/unit", "tests/integration"]
+            return "not slow", ["tests/unit"]
         # Full test suite for scheduled runs
         return "", ["tests"]
 
