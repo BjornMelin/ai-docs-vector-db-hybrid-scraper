@@ -80,6 +80,8 @@ class _IntegrationRequestHandler(BaseHTTPRequestHandler):
             )
         elif path == "/api/message":
             self._send_json({"message": "Hello from API"})
+        elif path == "/forbidden":
+            self.send_error(HTTPStatus.FORBIDDEN)
         else:
             self.send_error(HTTPStatus.NOT_FOUND)
 

@@ -26,6 +26,7 @@ for module_name in (
     "src.services.agents.tool_execution_service",
     "src.infrastructure.client_manager",
     "src.services.monitoring.telemetry_repository",
+    "src.services.errors",
 ):
     _original_modules[module_name] = sys.modules.pop(module_name, None)
 

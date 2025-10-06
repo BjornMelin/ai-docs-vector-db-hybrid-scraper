@@ -114,48 +114,48 @@ class ResponseFactory:
 
 
 @dataclass
-class TestDataBuilder:
+class DataBuilder:
     """Builder pattern for complex test data construction."""
 
     def __init__(self):
         self._data: dict[str, Any] = {}
 
-    def with_id(self, doc_id: str) -> "TestDataBuilder":
+    def with_id(self, doc_id: str) -> "DataBuilder":
         """Set document ID."""
         self._data["id"] = doc_id
         return self
 
-    def with_url(self, url: str) -> "TestDataBuilder":
+    def with_url(self, url: str) -> "DataBuilder":
         """Set document URL."""
         self._data["url"] = url
         return self
 
-    def with_title(self, title: str) -> "TestDataBuilder":
+    def with_title(self, title: str) -> "DataBuilder":
         """Set document title."""
         self._data["title"] = title
         return self
 
-    def with_content(self, content: str) -> "TestDataBuilder":
+    def with_content(self, content: str) -> "DataBuilder":
         """Set document content."""
         self._data["content"] = content
         return self
 
-    def with_metadata(self, metadata: dict[str, Any]) -> "TestDataBuilder":
+    def with_metadata(self, metadata: dict[str, Any]) -> "DataBuilder":
         """Set document metadata."""
         self._data["metadata"] = metadata
         return self
 
-    def with_status(self, status: str) -> "TestDataBuilder":
+    def with_status(self, status: str) -> "DataBuilder":
         """Set document status."""
         self._data["status"] = status
         return self
 
-    def with_vectors(self, vectors: list[list[float]]) -> "TestDataBuilder":
+    def with_vectors(self, vectors: list[list[float]]) -> "DataBuilder":
         """Set document vectors."""
         self._data["vectors"] = vectors
         return self
 
-    def with_chunks(self, chunks: list[dict[str, Any]]) -> "TestDataBuilder":
+    def with_chunks(self, chunks: list[dict[str, Any]]) -> "DataBuilder":
         """Set document chunks."""
         self._data["chunks"] = chunks
         return self

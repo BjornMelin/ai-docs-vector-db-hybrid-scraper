@@ -75,7 +75,7 @@ nav:
       - Testing Guide: testing/testing-guide.md
       - MCP Unit Tests: testing/mcp-unit-tests.md
       - Query Processing Metrics: observability/query_processing_metrics.md
-      - RAG Metrics Catalog: observability/rag_metrics_catalog.md
+      - Evaluation Harness Playbook: testing/evaluation-harness.md
   - Governance:
       - Community Guidelines: contributing/community-guidelines.md
       - Contributor Guide: developers/contributing.md

@@ -214,6 +214,66 @@ def benchmark(profile: str):
     _run_command(_dev_script_command("benchmark", "--suite", suite))
 
 
+@cli.command(name="eval")
+@click.option(
+    "--dataset",
+    default="tests/data/rag/golden_set.jsonl",
+    show_default=True,
+    help="Golden dataset path (JSONL)",
+)
+@click.option("--output", help="Optional JSON report destination")
+@click.option("--limit", type=int, default=5, show_default=True)
+@click.option("--namespace", default="ml_app", show_default=True)
+@click.option("--enable-ragas", is_flag=True, default=False)
+@click.option("--ragas-model")
+@click.option("--ragas-embedding")
+@click.option("--ragas-max-samples", type=int)
+@click.option(
+    "--metrics-allowlist",
+    multiple=True,
+    help="Restrict the Prometheus metrics snapshot to specific names",
+)
+def run_eval(
+    dataset: str,
+    output: str | None,
+    limit: int,
+    namespace: str,
+    enable_ragas: bool,
+    ragas_model: str | None,
+    ragas_embedding: str | None,
+    ragas_max_samples: int | None,
+    metrics_allowlist: tuple[str, ...],
+):
+    """Run the RAG golden evaluation harness."""
+
+    click.echo("🎯 Running RAG golden evaluation harness")
+    cmd: list[str | os.PathLike[str]] = _dev_script_command(
+        "eval",
+        "--dataset",
+        dataset,
+        "--limit",
+        str(limit),
+        "--namespace",
+        namespace,
+    )
+
+    if output:
+        cmd.extend(["--output", output])
+    if enable_ragas:
+        cmd.append("--enable-ragas")
+    if ragas_model:
+        cmd.extend(["--ragas-model", ragas_model])
+    if ragas_embedding:
+        cmd.extend(["--ragas-embedding", ragas_embedding])
+    if ragas_max_samples is not None:
+        cmd.extend(["--ragas-max-samples", str(ragas_max_samples)])
+    if metrics_allowlist:
+        cmd.append("--metrics-allowlist")
+        cmd.extend(metrics_allowlist)
+
+    _run_command(cmd)
+
+
 @cli.command()
 def validate():
     """Validate project configuration and health."""

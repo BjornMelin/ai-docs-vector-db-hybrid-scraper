@@ -336,6 +336,7 @@ class MetricsRegistry:
 
     def _setup_system_metrics(self) -> None:
         """Set up system-level metrics."""
+
         namespace = self.config.namespace
 
         self._metrics["system_cpu_usage"] = Gauge(
@@ -359,6 +360,7 @@ class MetricsRegistry:
 
     def update_system_metrics(self) -> None:
         """Update system metrics with current values."""
+
         if not self.config.include_system_metrics:
             return
 
@@ -612,6 +614,7 @@ class MetricsRegistry:
             cache_layer: Cache layer (local, distributed)
             cache_type: Type of cache data (embeddings, crawl, search, etc.)
         """
+
         self._metrics["cache_hits"].labels(
             cache_layer=cache_layer, cache_type=cache_type
         ).inc()
@@ -621,8 +624,8 @@ class MetricsRegistry:
 
         Args:
             cache_type: Type of cache data (embeddings, crawl, search, etc.)
-
         """
+
         self._metrics["cache_misses"].labels(cache_type=cache_type).inc()
 
     def record_grouping_attempt(
@@ -882,6 +885,7 @@ class MetricsRegistry:
 
     def update_cache_stats(self, cache_manager) -> None:
         """Update cache statistics from cache manager."""
+
         try:
             self._update_local_cache_stats(cache_manager)
             self._update_distributed_cache_stats(cache_manager)
@@ -1018,14 +1022,7 @@ class MetricsRegistry:
             start_http_server(self.config.export_port, registry=self.registry)
 
     def get_metric(self, name: str) -> Any | None:
-        """Get metric by name.
-
-        Args:
-            name: Metric name
-
-        Returns:
-            Prometheus metric object or None if not found
-        """
+        """Get metric by name."""
 
         return self._metrics.get(name)
 
@@ -1053,32 +1050,18 @@ class _MetricsRegistrySingleton:
 
 
 def get_metrics_registry() -> MetricsRegistry:
-    """Get global metrics registry instance.
-
-    Returns:
-        Global MetricsRegistry instance
-
-    Raises:
-        RuntimeError: If registry not initialized
-    """
+    """Get global metrics registry instance."""
 
     return _MetricsRegistrySingleton.get_instance()
 
 
 def initialize_metrics(config: MetricsConfig) -> MetricsRegistry:
-    """Initialize global metrics registry.
-
-    Args:
-        config: Metrics configuration
-
-    Returns:
-        Initialized MetricsRegistry instance
-    """
+    """Initialize global metrics registry."""
 
     return _MetricsRegistrySingleton.initialize_instance(config)
 
 
-def set_metrics_registry(instance: MetricsRegistry) -> None:
+def set_metrics_registry(instance: MetricsRegistry | None) -> None:
     """Force the global metrics registry singleton to the provided instance."""
 
     _MetricsRegistrySingleton._instance = instance

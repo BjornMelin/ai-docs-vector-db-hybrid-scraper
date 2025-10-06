@@ -70,7 +70,7 @@ graph LR
 ## Additional Resources
 
 - [Query Processing Metrics](observability/query_processing_metrics.md)
-- [RAG Metrics Catalog](observability/rag_metrics_catalog.md)
+- [Evaluation Harness Playbook](testing/evaluation-harness.md)
 - [Security Checklist](security/security-checklist.md)
 - [Technical Debt Log](TECH_DEBT.md)
 

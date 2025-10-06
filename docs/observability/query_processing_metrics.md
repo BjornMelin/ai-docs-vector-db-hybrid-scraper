@@ -3,7 +3,7 @@
 The vector search and RAG pipelines emit the following Prometheus series after
 Phase 5. All metrics share the namespace configured via `MetricsConfig.namespace`
 (default `ml_app`). For detailed RAG instrumentation, consult
-[`rag_metrics_catalog.md`](rag_metrics_catalog.md).
+[Evaluation Harness Playbook](../testing/evaluation-harness.md).
 
 ## Grouped Search Metrics
 

@@ -3,6 +3,7 @@
 ## Environment Setup
 
 ### Generate Encryption Keys
+
 ```bash
 # Generate new FERNET_KEY for production
 python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
@@ -12,6 +13,7 @@ openssl rand -base64 32
 ```
 
 ### Essential Environment Variables
+
 ```bash
 # Required API keys
 export OPENAI_API_KEY=sk-your-openai-key-here
@@ -27,6 +29,7 @@ export REDIS_URL=redis://localhost:6379
 ```
 
 ### Secrets Management
+
 ```bash
 # Store secrets in environment (production)
 echo "OPENAI_API_KEY=sk-..." >> /etc/environment
@@ -39,6 +42,7 @@ grep -r "OPENAI_API_KEY.*=" src/ --include="*.py"
 ## Dependency Security
 
 ### Security Audit
+
 ```bash
 # Install security tools
 uv add pip-audit safety
@@ -54,6 +58,7 @@ uv sync --upgrade
 ```
 
 ### Vulnerability Scanning
+
 ```bash
 # Scan Python dependencies
 uv run pip-audit --format=json --output=audit-report.json
@@ -68,6 +73,7 @@ uv run pip-audit --require-hashes
 ## Production Hardening
 
 ### Disable Debug Features
+
 ```bash
 # Set production environment
 export DEBUG=false
@@ -78,6 +84,7 @@ python -c "import os; print('DEBUG:', os.getenv('DEBUG', 'false'))"
 ```
 
 ### Security Headers Configuration
+
 ```bash
 # Test security headers
 curl -I localhost:8000 | grep -E "(Strict-Transport-Security|X-Frame-Options|X-Content-Type-Options)"
@@ -87,6 +94,7 @@ curl -I http://localhost:8000
 ```
 
 ### SSL/TLS Setup
+
 ```bash
 # Generate self-signed cert (development)
 openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes
@@ -98,6 +106,7 @@ openssl s_client -connect localhost:8443 -servername localhost
 ## Rate Limiting
 
 ### Redis Setup for Rate Limiting
+
 ```bash
 # Start Redis for rate limiting
 docker run -d --name redis-rate-limit -p 6379:6379 redis:alpine
@@ -110,6 +119,7 @@ curl -X POST localhost:8000/api/test -H "Content-Type: application/json" -d '{}'
 ```
 
 ### Rate Limit Configuration
+
 ```bash
 # Configure rate limits
 export RATE_LIMIT_REQUESTS=100
@@ -122,6 +132,7 @@ for i in {1..105}; do curl -s localhost:8000/api/test; done
 ## Security Validation
 
 ### Security Test Commands
+
 ```bash
 # Run security test suite
 uv run pytest tests/security/ -v
@@ -134,6 +145,7 @@ uv run pytest tests/security/test_prompt_injection.py
 ```
 
 ### Health Check Commands
+
 ```bash
 # Security health check
 curl localhost:8000/health/security
@@ -146,6 +158,7 @@ curl localhost:8000/admin/encryption-status
 ```
 
 ### Vulnerability Scan Commands
+
 ```bash
 # Basic security scan
 nmap -sV localhost -p 8000
@@ -164,6 +177,7 @@ curl -X POST localhost:8000/api/search \
 ## Emergency Response
 
 ### Incident Response Steps
+
 ```bash
 # 1. Isolate affected systems
 docker stop $(docker ps -q)
@@ -183,6 +197,7 @@ netstat -tulpn | grep :8000
 ```
 
 ### Emergency Contacts Template
+
 ```bash
 # Security Lead: [PHONE] [EMAIL]
 # Infrastructure: [PHONE] [EMAIL]
@@ -191,6 +206,7 @@ netstat -tulpn | grep :8000
 ```
 
 ### Log Analysis Commands
+
 ```bash
 # Check authentication failures
 grep "authentication failed" /var/log/app/security.log | tail -20
@@ -208,6 +224,7 @@ tail -f /var/log/app/security.log | grep -E "(ERROR|CRITICAL|attack)"
 ## Quick Security Checklist
 
 ### Pre-Deployment
+
 - [ ] `grep -r "sk-" src/` returns no hardcoded keys
 - [ ] `uv run pip-audit` passes with no HIGH/CRITICAL issues
 - [ ] `export DEBUG=false` in production
@@ -215,6 +232,7 @@ tail -f /var/log/app/security.log | grep -E "(ERROR|CRITICAL|attack)"
 - [ ] SSL certificates valid: `openssl x509 -in cert.pem -text -noout`
 
 ### Post-Deployment
+
 - [ ] Security headers present: `curl -I https://domain.com`
 - [ ] Rate limiting active: test with multiple requests
 - [ ] HTTPS redirect working: `curl -I http://domain.com`
@@ -222,8 +240,13 @@ tail -f /var/log/app/security.log | grep -E "(ERROR|CRITICAL|attack)"
 - [ ] Monitoring active: `curl domain.com/health/security`
 
 ### Daily Monitoring
+
 - [ ] Check security logs: `grep ERROR /var/log/app/security.log`
 - [ ] Monitor rate limits: `grep "rate limit" /var/log/app/app.log`
 - [ ] Verify backups: `ls -la /backup/$(date +%Y%m%d)/`
 - [ ] Check dependencies: `uv run pip-audit --quiet`
 - [ ] Test critical endpoints: `curl domain.com/health`
+
+## API Key Rotation
+
+Generate a replacement key in the security portal, roll it out to dependent services, verify connectivity, then revoke the retired credential immediately. Automate the rollout where possible to limit exposure time.

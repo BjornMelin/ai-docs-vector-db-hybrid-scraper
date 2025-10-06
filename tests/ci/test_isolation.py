@@ -101,26 +101,6 @@ class IsolatedTestResources:
 
 
 @pytest.fixture
-def isolated_resources(request):
-    """Pytest fixture providing isolated test resources."""
-    resources = IsolatedTestResources()
-    yield resources
-    resources.cleanup()
-
-
-@pytest.fixture
-def isolated_temp_dir(isolated_resources):
-    """Get an isolated temporary directory."""
-    return isolated_resources.get_isolated_temp_dir()
-
-
-@pytest.fixture
-def isolated_port(isolated_resources):
-    """Get an isolated port number."""
-    return isolated_resources.get_isolated_port()
-
-
-@pytest.fixture
 def isolated_db_name(isolated_resources):
     """Get an isolated database name."""
     return isolated_resources.get_isolated_database_name()

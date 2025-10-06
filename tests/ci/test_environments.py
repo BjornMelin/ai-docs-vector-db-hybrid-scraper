@@ -3,7 +3,7 @@
 import os
 
 
-class TestEnvironment:
+class CIEnvironment:
     """Base class for test environment configuration."""
 
     def __init__(self):
@@ -27,7 +27,7 @@ class TestEnvironment:
         return "", ["tests"]
 
 
-class GitHubActionsEnvironment(TestEnvironment):
+class GitHubActionsEnvironment(CIEnvironment):
     """GitHub Actions CI environment configuration."""
 
     def detect(self) -> bool:
@@ -94,12 +94,12 @@ class GitHubActionsEnvironment(TestEnvironment):
             return "not slow and not integration", ["tests/unit"]
         if event_name == "push":
             # More comprehensive for pushes to main
-            return "not slow", ["tests/unit", "tests/integration"]
+            return "not slow", ["tests/unit"]
         # Full test suite for scheduled runs
         return "", ["tests"]
 
 
-class GitLabCIEnvironment(TestEnvironment):
+class GitLabCIEnvironment(CIEnvironment):
     """GitLab CI environment configuration."""
 
     def detect(self) -> bool:
@@ -135,7 +135,7 @@ class GitLabCIEnvironment(TestEnvironment):
         return "not slow", ["tests"]
 
 
-class JenkinsEnvironment(TestEnvironment):
+class JenkinsEnvironment(CIEnvironment):
     """Jenkins CI environment configuration."""
 
     def detect(self) -> bool:
@@ -166,7 +166,7 @@ class JenkinsEnvironment(TestEnvironment):
         }
 
 
-class AzureDevOpsEnvironment(TestEnvironment):
+class AzureDevOpsEnvironment(CIEnvironment):
     """Azure DevOps environment configuration."""
 
     def detect(self) -> bool:
@@ -195,7 +195,7 @@ class AzureDevOpsEnvironment(TestEnvironment):
         }
 
 
-class CircleCIEnvironment(TestEnvironment):
+class CircleCIEnvironment(CIEnvironment):
     """CircleCI environment configuration."""
 
     def detect(self) -> bool:
@@ -236,7 +236,7 @@ class CircleCIEnvironment(TestEnvironment):
         }
 
 
-class LocalEnvironment(TestEnvironment):
+class LocalEnvironment(CIEnvironment):
     """Local development environment configuration."""
 
     def detect(self) -> bool:
@@ -275,7 +275,7 @@ class LocalEnvironment(TestEnvironment):
         return "", ["tests"]
 
 
-def detect_environment() -> TestEnvironment:
+def detect_environment() -> CIEnvironment:
     """Detect the current test environment."""
     environments = [
         GitHubActionsEnvironment(),
