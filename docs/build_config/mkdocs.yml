@@ -48,6 +48,7 @@ nav:
       - Troubleshooting: users/troubleshooting.md
   - Architecture & API:
       - Developer Hub: developers/index.md
+      - Developer Setup: developers/getting-started.md
       - System Architecture: developers/architecture.md
       - Configuration Reference: developers/configuration.md
       - Service Adapters: developers/service_adapters.md
@@ -55,6 +56,7 @@ nav:
       - App Profiles: developers/app-profiles.md
       - CI/CD Workflows: developers/ci-cd.md
       - Deployment Guide: developers/deployment.md
+      - GPU Acceleration: developers/gpu-acceleration.md
       - GitHub Actions: developers/github-actions.md
   - Operations:
       - Operator Hub: operators/index.md

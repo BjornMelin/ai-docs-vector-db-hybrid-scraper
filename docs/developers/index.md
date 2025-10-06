@@ -47,8 +47,13 @@ Keep these guides bookmarked—together they answer the majority of day-to-day q
 - **[CI/CD Workflows](./ci-cd.md)** – Pipeline layout, required checks, reusable jobs.
 - **[Contributing](./contributing.md)** – Coding standards, quality gates, review workflow.
 
-Supporting docs like `app-profiles.md`, `deployment.md`, or `document-metadata.md` provide deep
-dives when you need them but stay out of the way for routine development.
+Supporting docs when you need more detail:
+
+- **[Developer Setup Guide](./getting-started.md)** – OS-specific prerequisites and local tooling.
+- **[GPU Acceleration Guide](./gpu-acceleration.md)** – Optional CUDA/MPS configuration and helper APIs.
+- **[Application Profiles](./app-profiles.md)** – Simple vs enterprise feature composition.
+- **[Deployment Guide](./deployment.md)** – Production rollout patterns and rollback steps.
+- **[Document Metadata](./document-metadata.md)** – Indexing schema and required fields.
 
 ## 3. Common Tasks
 
