@@ -558,8 +558,8 @@ Our community has achieved remarkable database optimization results:
    # Run performance benchmarks
    uv run python scripts/benchmark_query_api.py
 
-   # Test database connection optimization
-   uv run pytest tests/integration/test_database_connection_pool_optimization.py -v
+   # Validate RAG regression harness outputs
+   uv run python scripts/eval/rag_golden_eval.py --metrics-allowlist config/metrics_allowlist.json
 
    # Profile specific components
    uv run python -m cProfile -o profile.stats your_optimization.py
@@ -637,7 +637,7 @@ When contributing research-related issues, use these labels:
 
    - Review `src/infrastructure/database/connection_manager.py`
    - Study the ML models in `src/infrastructure/database/load_monitor.py`
-   - Examine performance tests in `tests/integration/`
+   - Review the evaluation harness under `scripts/eval/` and docs in `docs/testing/evaluation-harness.md`
 
 3. **Join research discussions**
    - Comment on research-related GitHub issues
