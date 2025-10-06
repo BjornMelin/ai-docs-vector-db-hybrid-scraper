@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """Vector Database Management Utility
-Modern Python 3.13 implementation with async patterns for Qdrant operations.
 
-Provides comprehensive database management, search, and maintenance utilities
+Provides database management, search, and maintenance utilities with async
+patterns for Qdrant operations.
 """
 
-import inspect
 import logging
 from collections.abc import Mapping
 from typing import Any
@@ -19,6 +18,7 @@ from rich.table import Table
 from src.config import get_config
 from src.contracts.retrieval import SearchRecord
 from src.infrastructure.client_manager import ClientManager
+from src.services.embeddings.manager import EmbeddingManager
 from src.services.vector_db import CollectionSchema
 from src.services.vector_db.service import VectorStoreService
 from src.utils import async_command
@@ -79,6 +79,7 @@ class VectorDBManager:
         self.client_manager = client_manager
         self.qdrant_url = qdrant_url
         self._initialized = False
+        self._embedding_manager: EmbeddingManager | None = None
 
     async def initialize(self) -> None:
         """Initialize services using ClientManager."""
@@ -127,28 +128,24 @@ class VectorDBManager:
         if not self._initialized:
             await self.initialize()
 
-        vector_service = await self.get_vector_store_service()
-        if hasattr(vector_service, "get_embedding_manager"):
-            embedding_manager = vector_service.get_embedding_manager()
-            if inspect.isawaitable(embedding_manager):
-                embedding_manager = await embedding_manager
-            return embedding_manager
-
-        legacy_fetch = getattr(self.client_manager, "get_embedding_manager", None)
-        if callable(legacy_fetch):
-            embedding_manager = legacy_fetch()
-            if inspect.isawaitable(embedding_manager):
-                embedding_manager = await embedding_manager
-            if embedding_manager is not None:
-                return embedding_manager
-
-        msg = "Embedding manager access is not available in this configuration."
-        raise NotImplementedError(msg)
+        if self._embedding_manager is None:
+            manager = EmbeddingManager(
+                config=get_config(),
+                client_manager=self.client_manager,
+                budget_limit=None,
+                rate_limiter=None,
+            )
+            await manager.initialize()
+            self._embedding_manager = manager
+        return self._embedding_manager
 
     async def cleanup(self) -> None:
         """Cleanup services (delegated to ClientManager)."""
         if self.client_manager:
             await self.client_manager.cleanup()
+        if self._embedding_manager is not None:
+            await self._embedding_manager.cleanup()
+            self._embedding_manager = None
         self._initialized = False
 
     async def list_collections(self) -> list[str]:
@@ -252,7 +249,7 @@ class VectorDBManager:
         try:
             await self.initialize()
             vector_service = await self.get_vector_store_service()
-            matches = await vector_service.search_vectors(
+            matches = await vector_service.search_vector(
                 collection_name,
                 query_vector,
                 limit=limit,

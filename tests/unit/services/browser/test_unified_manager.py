@@ -30,8 +30,19 @@ def mock_client_manager():
     client_manager = Mock()
     client_manager.initialize = AsyncMock()
     client_manager.cleanup = AsyncMock()
-    client_manager.get_cache_manager = AsyncMock()
     return client_manager
+
+
+@pytest.fixture
+def cache_dependency(monkeypatch):
+    """Patch cache dependency used by UnifiedBrowserManager."""
+
+    cache_manager = Mock()
+    dependency = AsyncMock(return_value=cache_manager)
+    monkeypatch.setattr(
+        "src.services.browser.unified_manager.get_cache_manager", dependency
+    )
+    return cache_manager, dependency
 
 
 @pytest.fixture
@@ -124,7 +135,11 @@ class TestUnifiedScrapingAPI:
 
     @pytest.mark.asyncio
     async def test_scrape_with_request_object(
-        self, unified_manager, mock_client_manager, mock_automation_router
+        self,
+        unified_manager,
+        mock_client_manager,
+        mock_automation_router,
+        cache_dependency,
     ):
         """Test scraping with UnifiedScrapingRequest object."""
         # Initialize manager
@@ -134,12 +149,9 @@ class TestUnifiedScrapingAPI:
                 return_value=mock_automation_router
             )
             # Mock cache manager
-            mock_cache_manager = Mock()
-            mock_cache_manager.local_cache = None
-            mock_cache_manager.distributed_cache = None
-            mock_client_manager.get_cache_manager = AsyncMock(
-                return_value=mock_cache_manager
-            )
+            cache_manager, _ = cache_dependency
+            cache_manager.local_cache = None
+            cache_manager.distributed_cache = None
 
             await unified_manager.initialize()
 
@@ -687,9 +699,14 @@ class TestUnifiedBrowserManagerMonitoring:
 
     @pytest.mark.asyncio
     async def test_monitoring_integration(
-        self, unified_manager, mock_client_manager, mock_automation_router
+        self,
+        unified_manager,
+        mock_client_manager,
+        mock_automation_router,
+        cache_dependency,
     ):
         """Test that monitoring system integrates correctly."""
+
         # Enable monitoring
         unified_manager._monitoring_enabled = True
 
@@ -704,12 +721,10 @@ class TestUnifiedBrowserManagerMonitoring:
                 return_value=mock_automation_router
             )
             # Mock cache manager
-            mock_cache_manager = Mock()
-            mock_cache_manager.local_cache = None
-            mock_cache_manager.distributed_cache = None
-            mock_client_manager.get_cache_manager = AsyncMock(
-                return_value=mock_cache_manager
-            )
+            cache_manager, dependency = cache_dependency
+            cache_manager.local_cache = None
+            cache_manager.distributed_cache = None
+            dependency.return_value = cache_manager
 
             await unified_manager.initialize()
 
@@ -735,7 +750,11 @@ class TestUnifiedBrowserManagerMonitoring:
 
     @pytest.mark.asyncio
     async def test_monitoring_disabled(
-        self, unified_manager, mock_client_manager, mock_automation_router
+        self,
+        unified_manager,
+        mock_client_manager,
+        mock_automation_router,
+        cache_dependency,
     ):
         """Test behavior when monitoring is disabled."""
         # Disable monitoring
@@ -752,12 +771,10 @@ class TestUnifiedBrowserManagerMonitoring:
                 return_value=mock_automation_router
             )
             # Mock cache manager
-            mock_cache_manager = Mock()
-            mock_cache_manager.local_cache = None
-            mock_cache_manager.distributed_cache = None
-            mock_client_manager.get_cache_manager = AsyncMock(
-                return_value=mock_cache_manager
-            )
+            cache_manager, dependency = cache_dependency
+            cache_manager.local_cache = None
+            cache_manager.distributed_cache = None
+            dependency.return_value = cache_manager
 
             await unified_manager.initialize()
 
@@ -805,7 +822,11 @@ class TestUnifiedBrowserManagerMonitoring:
 
     @pytest.mark.asyncio
     async def test_monitoring_error_handling(
-        self, unified_manager, mock_client_manager, mock_automation_router
+        self,
+        unified_manager,
+        mock_client_manager,
+        mock_automation_router,
+        cache_dependency,
     ):
         """Test graceful handling of monitoring errors."""
         # Enable monitoring
@@ -823,12 +844,10 @@ class TestUnifiedBrowserManagerMonitoring:
                 return_value=mock_automation_router
             )
             # Mock cache manager
-            mock_cache_manager = Mock()
-            mock_cache_manager.local_cache = None
-            mock_cache_manager.distributed_cache = None
-            mock_client_manager.get_cache_manager = AsyncMock(
-                return_value=mock_cache_manager
-            )
+            cache_manager, dependency = cache_dependency
+            cache_manager.local_cache = None
+            cache_manager.distributed_cache = None
+            dependency.return_value = cache_manager
 
             await unified_manager.initialize()
 

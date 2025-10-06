@@ -78,7 +78,8 @@ async def test_lifespan_cancels_background_tasks(
 
     client_manager = AsyncMock()
     client_manager.cleanup = AsyncMock()
-    client_manager.get_cache_manager = AsyncMock(return_value=object())
+    cache_dependency = AsyncMock(return_value=object())
+    monkeypatch.setattr(unified_mcp_server, "get_cache_manager", cache_dependency)
     monkeypatch.setattr(unified_mcp_server, "ClientManager", lambda: client_manager)
 
     register_mock = AsyncMock()

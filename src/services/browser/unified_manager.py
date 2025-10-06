@@ -22,8 +22,10 @@ from .monitoring import BrowserAutomationMonitor
 # Optional imports that may not be available in all configurations
 try:
     from src.infrastructure.client_manager import ClientManager
+    from src.services.dependencies import get_cache_manager
 except ImportError:
     ClientManager = None
+    get_cache_manager = None  # type: ignore[assignment]
 
 try:
     from src.services.cache.browser_cache import BrowserCache, BrowserCacheEntry
@@ -216,9 +218,12 @@ class UnifiedBrowserManager(BaseService):
             self._cache_enabled = False
             return
 
-        cache_manager = await cast(
-            ClientManagerType, client_manager
-        ).get_cache_manager()
+        if get_cache_manager is None:
+            logger.warning("Cache manager dependency unavailable; disabling cache")
+            self._cache_enabled = False
+            return
+
+        cache_manager = await get_cache_manager(cast(ClientManagerType, client_manager))
 
         cache_config = getattr(self.config, "cache", None)
         self._browser_cache = BrowserCache(

@@ -27,7 +27,7 @@ def mock_vector_service() -> Mock:
 
 
 @pytest.fixture
-def mock_client_manager(mock_vector_service: Mock) -> Mock:
+def mock_client_manager(mock_vector_service: Mock, monkeypatch) -> Mock:
     storage = Mock()
     storage.save_project = AsyncMock()
     storage.list_projects = AsyncMock(return_value=[])
@@ -35,8 +35,14 @@ def mock_client_manager(mock_vector_service: Mock) -> Mock:
     storage.update_project = AsyncMock()
     storage.delete_project = AsyncMock()
 
+    storage_dependency = AsyncMock(return_value=storage)
+    monkeypatch.setattr(
+        "src.services.dependencies.get_project_storage", storage_dependency
+    )
+
     manager = Mock()
     manager.get_project_storage = AsyncMock(return_value=storage)
+    manager.storage_dependency = storage_dependency
     manager.get_vector_store_service = AsyncMock(return_value=mock_vector_service)
     return manager
 

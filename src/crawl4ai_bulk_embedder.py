@@ -29,7 +29,8 @@ from rich.table import Table
 from .chunking import DocumentChunker
 from .config import Config, get_config
 from .infrastructure.client_manager import ClientManager
-from .services.embeddings.manager import QualityTier
+from .services.crawling.manager import CrawlManager
+from .services.embeddings.manager import EmbeddingManager, QualityTier
 from .services.logging_config import configure_logging
 from .services.vector_db.service import VectorStoreService
 from .services.vector_db.types import CollectionSchema, VectorRecord
@@ -147,13 +148,21 @@ class BulkEmbedder:
     async def initialize_services(self) -> None:
         """Initialize all required services."""
         # Get services from client manager
-        self.crawl_manager = await self.client_manager.get_crawl_manager()
         if self.crawl_manager is None:
-            raise RuntimeError("Crawl manager not available")
+            self.crawl_manager = CrawlManager(
+                config=self.config,
+                rate_limiter=None,
+            )
+            await self.crawl_manager.initialize()
 
-        self.embedding_manager = await self.client_manager.get_embedding_manager()
         if self.embedding_manager is None:
-            raise RuntimeError("Embedding manager not available")
+            self.embedding_manager = EmbeddingManager(
+                config=self.config,
+                client_manager=self.client_manager,
+                budget_limit=None,
+                rate_limiter=None,
+            )
+            await self.embedding_manager.initialize()
 
         self.vector_service = await self.client_manager.get_vector_store_service()
         if self.vector_service and not self.vector_service.is_initialized():

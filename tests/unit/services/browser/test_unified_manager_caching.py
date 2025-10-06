@@ -70,15 +70,15 @@ class TestUnifiedManagerCaching:
         mock_cache_manager = Mock()
         mock_cache_manager.local_cache = Mock()
         mock_cache_manager.distributed_cache = Mock()
-        mock_client_manager.get_cache_manager = AsyncMock(
-            return_value=mock_cache_manager
-        )
-
         mock_client_manager_class.return_value = mock_client_manager
 
         # Create manager
         manager = UnifiedBrowserManager(mock_config)
-        await manager.initialize()
+        with patch(
+            "src.services.browser.unified_manager.get_cache_manager",
+            AsyncMock(return_value=mock_cache_manager),
+        ):
+            await manager.initialize()
 
         # Verify browser cache was created
         mock_browser_cache_class.assert_called_once_with(
