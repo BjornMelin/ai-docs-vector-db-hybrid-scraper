@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unified MCP Server for AI Documentation Vector DB.
+"""Unified MCP Server for AI Docs Vector DB.
 
 This is the main entry point for the MCP server. It follows FastMCP 2.0
 best practices with lazy initialization and modular tool registration.
@@ -25,8 +25,6 @@ from src.services.monitoring.initialization import (
 )
 
 
-# Initialize logging
-configure_logging()
 logger = logging.getLogger(__name__)
 
 # Initialize FastMCP server with streaming support
@@ -137,6 +135,8 @@ def validate_configuration():
 @asynccontextmanager
 async def lifespan():
     """Server lifecycle management with lazy initialization."""
+
+    configure_logging()
     monitoring_tasks = []
     try:
         # Validate configuration first
@@ -232,8 +232,9 @@ mcp.lifespan = lifespan
 
 
 if __name__ == "__main__":
+    configure_logging()
     # Run the server with enhanced streaming support
-    # Default to streamable-http for better performance and streaming capabilities
+    # Default to streamable-http for better perf and streaming capabilities
     transport = os.getenv("FASTMCP_TRANSPORT", "streamable-http")
 
     logger.info("Starting MCP server with transport: %s", transport)
