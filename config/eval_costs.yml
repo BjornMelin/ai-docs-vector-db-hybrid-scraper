@@ -1,0 +1,6 @@
+semantic:
+  max_samples: 25
+  max_monthly_cost_usd: 50
+  providers:
+    openai:
+      max_tokens: 100000

@@ -1,0 +1,4 @@
+similarity_avg: 0.75
+precision_at_k: 0.8
+recall_at_k: 0.8
+max_latency_ms: 1500

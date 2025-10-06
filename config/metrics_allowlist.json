@@ -1,0 +1,9 @@
+{
+  "metrics": [
+    "ml_app_rag_stage_latency_seconds",
+    "ml_app_rag_answers_total",
+    "ml_app_rag_errors_total",
+    "ml_app_rag_generation_latency_seconds",
+    "ml_app_compression_token_ratio"
+  ]
+}
