@@ -12,7 +12,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.api.app_profiles import AppProfile, detect_profile
 from src.architecture.modes import ApplicationMode, get_mode_config
 from src.architecture.service_factory import (
-    BaseService,
     ModeAwareServiceFactory,
     set_service_factory,
 )
@@ -36,32 +35,6 @@ def _resolve_optional_class(module_path: str, attribute: str) -> Any | None:
     except ImportError:
         return None
     return getattr(module, attribute, None)
-
-
-def _build_fail_closed_service(name: str) -> type["BaseService"]:
-    """Create a fail-closed service implementation that raises on use."""
-
-    class FailClosedService(BaseService):
-        """Fail-closed placeholder for unavailable optional services."""
-
-        def __init__(self) -> None:
-            super().__init__()
-            self._service_name = name
-
-        async def initialize(self) -> None:
-            self._mark_initialized()
-
-        async def cleanup(self) -> None:
-            self._mark_cleanup()
-
-        def get_service_name(self) -> str:
-            return self._service_name
-
-        def __getattr__(self, item: str) -> Any:  # pragma: no cover - defensive
-            msg = f"Service '{self._service_name}' is not available in this profile"
-            raise RuntimeError(msg)
-
-    return FailClosedService
 
 
 def _coerce_profile(
@@ -379,54 +352,13 @@ def _build_app_lifespan(app: FastAPI):
 
 def _register_mode_services(factory: ModeAwareServiceFactory) -> None:
     """Register services for the specified mode."""
-    simple_search_impl = _resolve_optional_class(
-        "src.services.simple.search", "SimpleSearchService"
-    )
-    enterprise_search_impl = _resolve_optional_class(
-        "src.services.enterprise.search", "EnterpriseSearchService"
-    )
-    if simple_search_impl or enterprise_search_impl:
-        factory.register_service(
-            "search_service",
-            simple_search_impl,
-            enterprise_search_impl,
-        )
-    else:
-        logger.warning(
-            "Search service implementations not available; using fail-closed"
-        )
-        factory.register_universal_service(
-            "search_service", _build_fail_closed_service("search_service")
-        )
-
-    simple_cache_impl = _resolve_optional_class(
-        "src.services.simple.cache", "SimpleCacheService"
-    )
-    enterprise_cache_impl = _resolve_optional_class(
-        "src.services.enterprise.cache", "EnterpriseCacheService"
-    )
-    if simple_cache_impl or enterprise_cache_impl:
-        factory.register_service(
-            "cache_service",
-            simple_cache_impl,
-            enterprise_cache_impl,
-        )
-    else:
-        logger.warning("Cache service implementations not available; using fail-closed")
-        factory.register_universal_service(
-            "cache_service", _build_fail_closed_service("cache_service")
-        )
-
     embedding_manager_cls = _resolve_optional_class(
         "src.services.embeddings.manager", "EmbeddingManager"
     )
     if embedding_manager_cls:
         factory.register_universal_service("embedding_service", embedding_manager_cls)
     else:
-        logger.warning("Embedding manager unavailable; using fail-closed")
-        factory.register_universal_service(
-            "embedding_service", _build_fail_closed_service("embedding_service")
-        )
+        logger.warning("Embedding manager unavailable; embedding service disabled")
 
     vector_store_cls = _resolve_optional_class(
         "src.services.vector_db.service", "VectorStoreService"
@@ -434,27 +366,12 @@ def _register_mode_services(factory: ModeAwareServiceFactory) -> None:
     if vector_store_cls:
         factory.register_universal_service("vector_db_service", vector_store_cls)
     else:
-        logger.error("Vector store service unavailable; using fail-closed")
-        factory.register_universal_service(
-            "vector_db_service", _build_fail_closed_service("vector_db_service")
-        )
-
-    # Ensure optional cross-cutting services fail closed when not provided.
-    for optional_service in ("auth_service", "metrics_service", "tracing_service"):
-        if not factory.is_service_registered(optional_service):
-            factory.register_universal_service(
-                optional_service, _build_fail_closed_service(optional_service)
-            )
+        logger.warning("Vector store service unavailable; vector DB service disabled")
 
 
 async def _initialize_critical_services(factory: ModeAwareServiceFactory) -> None:
     """Initialize critical services required for basic operation."""
-    critical_services = [
-        "embedding_service",
-        "vector_db_service",
-        "search_service",
-        "cache_service",
-    ]
+    critical_services = list(factory.mode_config.enabled_services)
 
     for service_name in critical_services:
         try:

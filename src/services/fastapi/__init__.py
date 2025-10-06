@@ -5,13 +5,6 @@ unified MCP server, including middleware, dependency injection,
 and background task management.
 """
 
-from .background import (
-    BackgroundTaskManager,
-    cleanup_task_manager,
-    get_task_manager,
-    initialize_task_manager,
-    submit_managed_task,
-)
 from .dependencies import (
     cleanup_dependencies,
     get_cache_manager,
@@ -40,7 +33,6 @@ from .production_server import (
 
 __all__ = [
     # Background tasks
-    "BackgroundTaskManager",
     # Middleware components
     "CompressionMiddleware",
     # Middleware management
@@ -52,7 +44,6 @@ __all__ = [
     "TimeoutMiddleware",
     "TracingMiddleware",
     "cleanup_dependencies",
-    "cleanup_task_manager",
     "create_middleware_manager",
     "create_production_server",
     "get_cache_manager",
@@ -61,11 +52,8 @@ __all__ = [
     "get_embedding_manager",
     "get_fastapi_config",
     "get_health_checker",
-    "get_task_manager",
     "get_vector_service",
     # Dependency injection
     "initialize_dependencies",
-    "initialize_task_manager",
     "run_production_server_async",
-    "submit_managed_task",
 ]

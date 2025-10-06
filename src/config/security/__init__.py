@@ -1,23 +1,6 @@
-#!/usr/bin/env python3
-"""Security configuration module for AI documentation system."""
+"""Security configuration module."""
 
-from src.config.security.config import (
-    ConfigAccessLevel,
-    ConfigDataClassification,
-    ConfigOperationType,
-    ConfigurationAuditEvent,
-    EncryptedConfigItem,
-    SecureConfigManager,
-    SecurityConfig,
-)
+from .config import SecurityConfig
 
 
-__all__ = [
-    "ConfigAccessLevel",
-    "ConfigDataClassification",
-    "ConfigOperationType",
-    "ConfigurationAuditEvent",
-    "EncryptedConfigItem",
-    "SecureConfigManager",
-    "SecurityConfig",
-]
+__all__ = ["SecurityConfig"]

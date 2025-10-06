@@ -49,8 +49,6 @@ SIMPLE_MODE_CONFIG = ModeConfig(
     enabled_services=[
         "embedding_service",
         "vector_db_service",
-        "search_service",
-        "cache_service",
     ],
     max_complexity_features={
         "max_concurrent_crawls": 5,
@@ -69,7 +67,6 @@ SIMPLE_MODE_CONFIG = ModeConfig(
         "enable_advanced_chunking": False,
         "enable_ml_quality_assessment": False,
         "enable_content_intelligence": False,
-        "enable_task_queue": False,
         "enable_batch_processing": False,
     },
     resource_limits={
@@ -92,8 +89,6 @@ ENTERPRISE_MODE_CONFIG = ModeConfig(
     enabled_services=[
         "embedding_service",
         "vector_db_service",
-        "search_service",
-        "cache_service",
     ],
     max_complexity_features={
         "max_concurrent_crawls": 50,
@@ -112,7 +107,6 @@ ENTERPRISE_MODE_CONFIG = ModeConfig(
         "enable_advanced_chunking": True,
         "enable_ml_quality_assessment": True,
         "enable_content_intelligence": True,
-        "enable_task_queue": True,
         "enable_batch_processing": True,
     },
     resource_limits={

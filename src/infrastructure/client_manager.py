@@ -349,15 +349,3 @@ class ClientManager:  # pylint: disable=too-many-public-methods
         Used by function-based dependencies for singleton pattern.
         """
         return cls()
-
-    @classmethod
-    async def from_unified_config_with_auto_detection(cls) -> "ClientManager":
-        """Create ClientManager instance with auto-detection applied.
-
-        This async factory creates a ClientManager with service auto-detection
-        enabled, allowing automatic discovery and configuration of Redis, Qdrant,
-        and PostgreSQL services in the environment.
-        """
-        instance = cls()
-        await instance.initialize()
-        return instance

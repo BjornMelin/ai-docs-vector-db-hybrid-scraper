@@ -7,20 +7,11 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
-   src.services.fastapi.dependencies
    src.services.fastapi.middleware
    src.services.fastapi.routers
 
 Submodules
 ----------
-
-src.services.fastapi.background module
---------------------------------------
-
-.. automodule:: src.services.fastapi.background
-   :members:
-   :show-inheritance:
-   :undoc-members:
 
 src.services.fastapi.production\_server module
 ----------------------------------------------

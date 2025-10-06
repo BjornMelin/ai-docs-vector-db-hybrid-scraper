@@ -18,7 +18,6 @@ Subpackages
    services.hyde
    services.monitoring
    services.query_processing
-   services.task_queue
    services.utilities
    services.vector_db
 

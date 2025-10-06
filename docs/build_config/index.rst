@@ -28,7 +28,7 @@ Quick Start
 
 For users, see the :doc:`users/quick-start` guide.
 
-For developers, see the :doc:`developers/getting-started` guide.
+For developers, see the :doc:`developers/index` guide.
 
 For operators, see the :doc:`operators/deployment` guide.
 

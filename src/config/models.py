@@ -859,17 +859,6 @@ class ObservabilityConfig(BaseModel):
     )
 
 
-class TaskQueueConfig(BaseModel):
-    """Task queue configuration for background workers."""
-
-    redis_url: str = Field(default="redis://localhost:6379", description="Redis URL")
-    redis_password: str | None = Field(default=None, description="Redis password")
-    redis_database: int = Field(default=0, ge=0, le=15, description="Redis database")
-    max_jobs: int = Field(default=10, gt=0, description="Max concurrent jobs")
-    job_timeout: int = Field(default=300, gt=0, description="Job timeout seconds")
-    default_queue_name: str = Field(default="default", description="Default queue name")
-
-
 class RAGConfig(BaseModel):
     """Retrieval-augmented generation configuration."""
 
@@ -983,14 +972,6 @@ class DeploymentConfig(BaseModel):
         return value
 
 
-class AutoDetectionConfig(BaseModel):
-    """Service auto-detection configuration."""
-
-    enabled: bool = Field(default=True, description="Enable auto detection")
-    timeout_seconds: float = Field(default=5.0, gt=0, description="Detection timeout")
-    retry_attempts: int = Field(default=3, ge=1, description="Retry attempts")
-
-
 class DocumentationSite(BaseModel):
     """Documentation site crawl configuration."""
 
@@ -1001,59 +982,9 @@ class DocumentationSite(BaseModel):
     priority: str = Field(default="medium", description="Crawl priority")
 
 
-#### Auto-detection helper models ####
-
-
-class DetectedService(BaseModel):
-    """Auto-detected service with lightweight health metadata."""
-
-    name: str
-    url: str
-    healthy: bool = True
-    metadata: dict[str, Any] = Field(default_factory=dict)
-
-
-class DetectedEnvironment(BaseModel):
-    """Environment detection result."""
-
-    environment_type: Environment = Environment.DEVELOPMENT
-    is_containerized: bool = False
-    is_kubernetes: bool = False
-    detection_confidence: float = 0.0
-    detection_time_ms: float = 0.0
-    cloud_provider: str | None = None
-
-
-class AutoDetectedServices(BaseModel):
-    """Collection of auto-detected services and contextual metadata."""
-
-    environment: DetectedEnvironment
-    services: list[DetectedService] = Field(default_factory=list)
-    errors: list[str] = Field(default_factory=list)
-
-
-class EnvironmentDetector(BaseModel):
-    """Simple environment detector placeholder capable of future extension."""
-
-    config: AutoDetectionConfig | None = None
-
-    async def detect(self) -> DetectedEnvironment:
-        """Return a basic environment description.
-
-        The implementation can be extended to perform actual detection using
-        container introspection or cloud SDKs. For now, it returns a default
-        environment with zero confidence so callers can distinguish between
-        inferred and observed states.
-        """
-
-        return DetectedEnvironment()
-
-
 __all__ = [
     "ABTestVariant",
     "ApplicationMode",
-    "AutoDetectionConfig",
-    "AutoDetectedServices",
     "BrowserUseConfig",
     "CacheConfig",
     "CacheType",
@@ -1067,8 +998,6 @@ __all__ = [
     "DeploymentTier",
     "DocumentStatus",
     "DocumentationSite",
-    "DetectedEnvironment",
-    "DetectedService",
     "EmbeddingConfig",
     "EmbeddingModel",
     "EmbeddingProvider",
@@ -1094,7 +1023,5 @@ __all__ = [
     "SearchMode",
     "SearchPipeline",
     "SearchStrategy",
-    "TaskQueueConfig",
     "VectorType",
-    "EnvironmentDetector",
 ]

@@ -9,7 +9,6 @@ Subpackages
 
    src.services.agents
    src.services.analytics
-   src.services.auto_detection
    src.services.browser
    src.services.cache
    src.services.circuit_breaker
@@ -18,7 +17,6 @@ Subpackages
    src.services.crawling
    src.services.deployment
    src.services.embeddings
-   src.services.enterprise
    src.services.fastapi
    src.services.functional
    src.services.hyde
@@ -32,8 +30,6 @@ Subpackages
    src.services.processing
    src.services.query_processing
    src.services.rag
-   src.services.security
-   src.services.task_queue
    src.services.utilities
    src.services.vector_db
 

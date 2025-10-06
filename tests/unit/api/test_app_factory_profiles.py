@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-import src.api.app_factory as app_factory
+from src.api import app_factory
 from src.api.app_profiles import AppProfile
 from src.architecture.service_factory import reset_service_factory
 
@@ -40,7 +40,7 @@ def test_create_app_simple_profile_exposes_service_status() -> None:
 
     class StubFactory:
         def __init__(self) -> None:
-            self.available = ["embedding_service", "search_service"]
+            self.available = ["embedding_service", "vector_db_service"]
 
         def get_available_services(self) -> list[str]:
             return self.available
@@ -63,7 +63,7 @@ def test_create_app_simple_profile_exposes_service_status() -> None:
         assert payload["available_services"] == stub_factory.available
         assert payload["service_status"] == [
             {"name": "embedding_service", "healthy": True},
-            {"name": "search_service", "healthy": True},
+            {"name": "vector_db_service", "healthy": True},
         ]
 
 
@@ -72,13 +72,3 @@ def test_create_app_enterprise_requires_routers() -> None:
 
     with pytest.raises(RuntimeError, match="Enterprise profile requires"):
         app_factory.create_app(AppProfile.ENTERPRISE)
-
-
-def test_fail_closed_service_raises_on_access() -> None:
-    """Fail-closed services raise clear RuntimeError when invoked."""
-
-    placeholder_cls = app_factory._build_fail_closed_service("analytics_service")  # type: ignore[attr-defined]
-    placeholder = placeholder_cls()
-
-    with pytest.raises(RuntimeError, match="analytics_service"):
-        placeholder.query_metrics()  # type: ignore[attr-defined]

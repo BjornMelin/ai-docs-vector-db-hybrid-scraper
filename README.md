@@ -75,7 +75,6 @@ flowchart LR
         crawl["Unified crawling manager"]
         embed["Embedding manager"]
         search["Hybrid retrieval"]
-        queue["ARQ task queue"]
     end
 
     subgraph data["Storage & caching"]
@@ -230,7 +229,7 @@ python scripts/dev.py test --profile ci
 python scripts/dev.py quality
 ```
 
-Performance and benchmark suites are available via `python scripts/dev.py benchmark`, and chaos/security suites live under `tests/` with dedicated markers.
+Performance and benchmark suites are available via `python scripts/dev.py benchmark`, and chaos-focused stress suites live under `tests/` with dedicated markers.
 
 ## Documentation & Resources
 

@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
 from .loader import (
@@ -22,16 +23,9 @@ from .loader import (
     reset_config,
     set_config,
 )
-from .manager import (
-    ConfigManager,
-    GracefulDegradationHandler,
-    get_degradation_handler as _get_degradation_handler,
-)
 from .models import (
     ABTestVariant,
     ApplicationMode,
-    AutoDetectedServices,
-    AutoDetectionConfig,
     BrowserUseConfig,
     CacheConfig,
     CacheType,
@@ -43,15 +37,12 @@ from .models import (
     DatabaseConfig,
     DeploymentConfig,
     DeploymentTier,
-    DetectedEnvironment,
-    DetectedService,
     DocumentationSite,
     DocumentStatus,
     EmbeddingConfig,
     EmbeddingModel,
     EmbeddingProvider,
     Environment,
-    EnvironmentDetector,
     FastEmbedConfig,
     FirecrawlConfig,
     FusionAlgorithm,
@@ -81,7 +72,6 @@ from .models import (
     SearchMode,
     SearchPipeline,
     SearchStrategy,
-    TaskQueueConfig,
     VectorType,
 )
 from .reloader import (
@@ -94,34 +84,10 @@ from .reloader import (
     ReloadStatus,
     ReloadTrigger,
 )
-from .security.config import (
-    ConfigAccessLevel,
-    ConfigDataClassification,
-    ConfigOperationType,
-    ConfigurationAuditEvent,
-    EncryptedConfigItem,
-    SecureConfigManager,
-    SecurityConfig,
-)
-
-
-async def get_config_with_auto_detection(*, force_reload: bool = False) -> Config:
-    """Return configuration after running lightweight auto-detection."""
-
-    config = get_config(force_reload=force_reload)
-    if not config.auto_detection.enabled:
-        config.set_auto_detected_services(None)
-        return config
-
-    detector = EnvironmentDetector(config=config.auto_detection)
-    environment = await detector.detect()
-    autodetected = AutoDetectedServices(environment=environment)
-    config.set_auto_detected_services(autodetected)
-    return config
+from .security.config import SecurityConfig
 
 
 _reloader_instance: ConfigReloader | None = None
-get_degradation_handler = _get_degradation_handler
 
 
 def get_config_reloader(**kwargs: Any) -> ConfigReloader:
@@ -129,7 +95,19 @@ def get_config_reloader(**kwargs: Any) -> ConfigReloader:
 
     global _reloader_instance
     if _reloader_instance is None:
-        _reloader_instance = ConfigReloader(**kwargs)
+        config_source = kwargs.pop("config_source", None)
+        if config_source is None:
+            env_source = os.getenv("AI_DOCS_CONFIG_PATH")
+            if env_source:
+                config_source = env_source
+        _reloader_instance = ConfigReloader(
+            config_source=config_source,
+            **kwargs,
+        )
+    else:
+        config_source = kwargs.get("config_source")
+        if config_source is not None:
+            _reloader_instance.set_default_config_source(config_source)
     return _reloader_instance
 
 
@@ -157,8 +135,6 @@ __all__ = [
     "set_config",
     "ABTestVariant",
     "ApplicationMode",
-    "AutoDetectionConfig",
-    "AutoDetectedServices",
     "BrowserUseConfig",
     "CacheConfig",
     "CacheType",
@@ -170,15 +146,12 @@ __all__ = [
     "DatabaseConfig",
     "DeploymentConfig",
     "DeploymentTier",
-    "DetectedEnvironment",
-    "DetectedService",
     "DocumentStatus",
     "DocumentationSite",
     "EmbeddingConfig",
     "EmbeddingModel",
     "EmbeddingProvider",
     "Environment",
-    "EnvironmentDetector",
     "FastEmbedConfig",
     "FirecrawlConfig",
     "FusionAlgorithm",
@@ -208,21 +181,10 @@ __all__ = [
     "SearchPipeline",
     "SearchStrategy",
     "ScoreNormalizationStrategy",
-    "TaskQueueConfig",
     "VectorType",
-    "ConfigManager",
-    "GracefulDegradationHandler",
-    "ConfigAccessLevel",
-    "ConfigDataClassification",
-    "ConfigOperationType",
-    "ConfigurationAuditEvent",
-    "EncryptedConfigItem",
-    "SecureConfigManager",
     "SecurityConfig",
     "get_config_reloader",
     "set_config_reloader",
-    "get_config_with_auto_detection",
-    "get_degradation_handler",
     "ConfigBackup",
     "ConfigError",
     "ConfigLoadError",

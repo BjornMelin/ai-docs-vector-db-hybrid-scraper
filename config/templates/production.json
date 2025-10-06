@@ -75,10 +75,10 @@
     }
   },
   "security": {
-    "require_api_keys": true,
+    "api_key_required": true,
+    "api_keys": ["replace-with-production-key"],
     "enable_rate_limiting": true,
-    "rate_limit_requests": 100,
-    "allowed_domains": [],
-    "blocked_domains": []
+    "default_rate_limit": 100,
+    "rate_limit_window": 60
   }
 }

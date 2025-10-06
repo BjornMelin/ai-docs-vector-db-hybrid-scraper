@@ -141,40 +141,6 @@ services:
           memory: 1G
           cpus: "0.5"
 
-  # Task Queue Worker (enterprise only)
-  worker:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.worker
-    container_name: ai-docs-worker
-    restart: unless-stopped
-    environment:
-      - AI_DOCS__TASK_QUEUE__REDIS_URL=redis://redis:6379
-      - AI_DOCS__LOG_LEVEL=INFO
-      - PYTHONPATH=/app/src
-    volumes:
-      - ./src:/app/src:ro
-      - ./data:/app/data
-      - ./logs:/app/logs
-    depends_on:
-      redis:
-        condition: service_healthy
-      qdrant:
-        condition: service_healthy
-    networks:
-      - ai-docs-network
-    command: arq src.services.task_queue.worker.WorkerSettings
-    profiles:
-      - enterprise
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-          cpus: "1.0"
-        reservations:
-          memory: 1G
-          cpus: "0.5"
-
   # Monitoring Stack (enterprise only)
   prometheus:
     image: prom/prometheus:latest

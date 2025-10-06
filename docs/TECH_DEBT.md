@@ -1,0 +1,5 @@
+# Technical Debt Log
+
+| Date       | Area / Path            | Item                                                                                                     | Impact                                              | Risk   | Proposed Fix                                                                 | Priority | Owner | Links | Decision / Rationale                                   |
+| ---------- | ---------------------- | -------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | ------ | ---------------------------------------------------------------------------- | -------- | ----- | ----- | ------------------------------------------------------ |
+| 2024-06-05 | src/api/app_factory.py | Removed unused search/cache service registrations from the app factory. | None; deletes dead abstraction layer. | Low    | Keep service factory focused on active embedding/vector services. | Retired  | Core Platform |       | Decision: library-first simplification keeps only supported services. |

@@ -47,9 +47,10 @@ class SecurityValidator:
         """
 
         self.config = security_config or get_config().security
+        allowed = getattr(self.config, "allowed_domains", [])
         logger.info(
             "SecurityValidator initialized with %d allowed domains",
-            len(self.config.allowed_domains),
+            len(allowed),
         )
 
     @classmethod
@@ -78,15 +79,17 @@ class SecurityValidator:
 
         # Check against blocked domains from config
         domain = parsed.netloc.lower()
-        for blocked in self.config.blocked_domains:
+        blocked_domains = getattr(self.config, "blocked_domains", [])
+        for blocked in blocked_domains:
             if blocked.lower() in domain:
                 msg = f"Domain '{domain}' is blocked"
                 raise SecurityError(msg)
 
         # Check against allowed domains if configured
-        if self.config.allowed_domains:
+        allowed_domains = getattr(self.config, "allowed_domains", [])
+        if allowed_domains:
             domain_allowed = False
-            for allowed in self.config.allowed_domains:
+            for allowed in allowed_domains:
                 if allowed.lower() in domain or domain in allowed.lower():
                     domain_allowed = True
                     break

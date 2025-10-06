@@ -36,7 +36,7 @@
     "max_memory_usage_mb": 200.0
   },
   "security": {
-    "require_api_keys": false,
+    "api_key_required": false,
     "enable_rate_limiting": false
   },
   "_comment": "Configuration optimized for fast test execution with minimal resources"

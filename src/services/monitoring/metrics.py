@@ -52,8 +52,8 @@ class MetricsRegistry:
         Args:
             config: Metrics configuration
             registry: Prometheus registry (uses default if not provided)
-
         """
+
         self.config = config
         self.registry = registry or REGISTRY
         self._metrics: dict[str, Any] = {}
@@ -61,6 +61,7 @@ class MetricsRegistry:
 
     def _setup_metrics(self) -> None:
         """Set up all application metrics."""
+
         namespace = self.config.namespace
 
         # === Vector Search Metrics ===
@@ -275,29 +276,6 @@ class MetricsRegistry:
             f"{namespace}_qdrant_operations_total",
             "Total Qdrant operations",
             ["operation", "collection", "status"],
-            registry=self.registry,
-        )
-
-        # === Task Queue Metrics ===
-        self._metrics["task_queue_size"] = Gauge(
-            f"{namespace}_task_queue_size",
-            "Number of tasks in queue",
-            ["queue", "status"],
-            registry=self.registry,
-        )
-
-        self._metrics["task_execution_duration"] = Histogram(
-            f"{namespace}_task_execution_duration_seconds",
-            "Time spent executing tasks",
-            ["task_name", "status"],
-            buckets=(0.1, 0.5, 1.0, 5.0, 10.0, 30.0, 60.0, 300.0),
-            registry=self.registry,
-        )
-
-        self._metrics["task_requests"] = Counter(
-            f"{namespace}_task_requests_total",
-            "Total number of task requests",
-            ["task_name", "status"],
             registry=self.registry,
         )
 
@@ -764,8 +742,8 @@ class MetricsRegistry:
             provider: Embedding provider name
             model: Model name
             result: Embedding result
-
         """
+
         self._metrics["embedding_requests"].labels(
             provider=provider, model=model, status="success"
         ).inc()
@@ -782,8 +760,8 @@ class MetricsRegistry:
         Args:
             provider: Embedding provider name
             model: Model name
-
         """
+
         self._metrics["embedding_requests"].labels(
             provider=provider, model=model, status="error"
         ).inc()
@@ -797,8 +775,8 @@ class MetricsRegistry:
             provider: Embedding provider name
             model: Model name
             start_time: Request start time
-
         """
+
         duration = time.time() - start_time
         self._metrics["embedding_duration"].labels(
             provider=provider, model=model
@@ -811,8 +789,8 @@ class MetricsRegistry:
             cache_type: Type of cache
             cache_name: Name of cache
             result: Cache operation result
-
         """
+
         if result is not None:
             self.record_cache_hit(cache_name, cache_type)
         else:
@@ -824,8 +802,8 @@ class MetricsRegistry:
         Args:
             cache_type: Type of cache
             cache_name: Name of cache
-
         """
+
         self.record_cache_miss(cache_type)
 
     def _record_cache_operation_success(self, cache_type: str, operation: str) -> None:
@@ -834,8 +812,8 @@ class MetricsRegistry:
         Args:
             cache_type: Type of cache
             operation: Cache operation
-
         """
+
         self._metrics["cache_operations"].labels(
             cache_type=cache_type, operation=operation, result="success"
         ).inc()
@@ -846,8 +824,8 @@ class MetricsRegistry:
         Args:
             cache_type: Type of cache
             operation: Cache operation
-
         """
+
         self._metrics["cache_operations"].labels(
             cache_type=cache_type, operation=operation, result="error"
         ).inc()
@@ -861,20 +839,16 @@ class MetricsRegistry:
             cache_type: Type of cache
             operation: Cache operation
             start_time: Operation start time
-
         """
+
         duration = time.time() - start_time
         self._metrics["cache_duration"].labels(
             cache_type=cache_type, operation=operation
         ).observe(duration)
 
     def _update_local_cache_stats(self, cache_manager) -> None:
-        """Update local cache statistics.
+        """Update local cache statistics."""
 
-        Args:
-            cache_manager: Cache manager instance
-
-        """
         if hasattr(cache_manager, "local_cache") and cache_manager.local_cache:
             local_stats = cache_manager.local_cache.get_stats()
             self.update_cache_memory_usage(
@@ -882,12 +856,7 @@ class MetricsRegistry:
             )
 
     def _update_distributed_cache_stats(self, cache_manager) -> None:
-        """Update distributed cache statistics.
-
-        Args:
-            cache_manager: Cache manager instance
-
-        """
+        """Update distributed cache statistics."""
         if (
             hasattr(cache_manager, "distributed_cache")
             and cache_manager.distributed_cache
@@ -905,19 +874,14 @@ class MetricsRegistry:
             cache_type: Type of cache (local, distributed)
             cache_name: Name of the cache instance
             memory_bytes: Memory usage in bytes
-
         """
+
         self._metrics["cache_memory_usage"].labels(
             cache_type=cache_type, cache_name=cache_name
         ).set(memory_bytes)
 
     def update_cache_stats(self, cache_manager) -> None:
-        """Update cache statistics from cache manager.
-
-        Args:
-            cache_manager: CacheManager instance to collect stats from
-
-        """
+        """Update cache statistics from cache manager."""
         try:
             self._update_local_cache_stats(cache_manager)
             self._update_distributed_cache_stats(cache_manager)
@@ -932,6 +896,7 @@ class MetricsRegistry:
             model: Model name
             cost: Cost in USD
         """
+
         self._metrics["embedding_cost"].labels(provider=provider, model=model).inc(cost)
 
     def update_queue_depth(self, provider: str, depth: int) -> None:
@@ -941,6 +906,7 @@ class MetricsRegistry:
             provider: Embedding provider
             depth: Current queue depth
         """
+
         self._metrics["embedding_queue_depth"].labels(provider=provider).set(depth)
 
     def update_service_health(self, service: str, healthy: bool) -> None:
@@ -950,6 +916,7 @@ class MetricsRegistry:
             service: Service name
             healthy: Whether service is healthy
         """
+
         self._metrics["service_health"].labels(service=service).set(1 if healthy else 0)
 
     def update_dependency_health(self, dependency: str, healthy: bool) -> None:
@@ -959,6 +926,7 @@ class MetricsRegistry:
             dependency: Dependency name (qdrant, redis, etc.)
             healthy: Whether dependency is healthy
         """
+
         self._metrics["dependency_health"].labels(dependency=dependency).set(
             1 if healthy else 0
         )
@@ -973,6 +941,7 @@ class MetricsRegistry:
             size: Number of vectors
             memory_usage: Memory usage in bytes
         """
+
         self._metrics["qdrant_collection_size"].labels(collection=collection).set(size)
         self._metrics["qdrant_memory_usage"].labels(collection=collection).set(
             memory_usage
@@ -988,36 +957,11 @@ class MetricsRegistry:
             collection: Collection name
             success: Whether operation succeeded
         """
+
         status = "success" if success else "error"
         self._metrics["qdrant_operations"].labels(
             operation=operation, collection=collection, status=status
         ).inc()
-
-    def record_task_queue_size(self, queue: str, status: str, size: int) -> None:
-        """Record task queue size.
-
-        Args:
-            queue: Queue name
-            status: Task status (pending, running, complete, failed)
-            size: Number of tasks
-        """
-        self._metrics["task_queue_size"].labels(queue=queue, status=status).set(size)
-
-    def record_task_execution(
-        self, task_name: str, duration_seconds: float, success: bool
-    ) -> None:
-        """Record task execution metrics.
-
-        Args:
-            task_name: Name of the task
-            duration_seconds: Execution duration
-            success: Whether task succeeded
-        """
-        status = "success" if success else "error"
-        self._metrics["task_execution_duration"].labels(
-            task_name=task_name, status=status
-        ).observe(duration_seconds)
-        self._metrics["task_requests"].labels(task_name=task_name, status=status).inc()
 
     def update_worker_count(self, queue: str, count: int) -> None:
         """Update active worker count.
@@ -1026,6 +970,7 @@ class MetricsRegistry:
             queue: Queue name
             count: Number of active workers
         """
+
         self._metrics["worker_active"].labels(queue=queue).set(count)
 
     def record_browser_request(
@@ -1044,6 +989,7 @@ class MetricsRegistry:
             duration_seconds: Request duration
             success: Whether request succeeded
         """
+
         status = "success" if success else "error"
         self._metrics["browser_requests"].labels(tier=tier, status=status).inc()
         self._metrics["browser_response_time"].labels(tier=tier).observe(
@@ -1062,10 +1008,12 @@ class MetricsRegistry:
             tier: Browser tier name
             healthy: Whether tier is healthy
         """
+
         self._metrics["browser_tier_health"].labels(tier=tier).set(1 if healthy else 0)
 
     def start_metrics_server(self) -> None:
         """Start Prometheus metrics HTTP server."""
+
         if self.config.enabled:
             start_http_server(self.config.export_port, registry=self.registry)
 
@@ -1078,6 +1026,7 @@ class MetricsRegistry:
         Returns:
             Prometheus metric object or None if not found
         """
+
         return self._metrics.get(name)
 
 
@@ -1089,6 +1038,7 @@ class _MetricsRegistrySingleton:
     @classmethod
     def get_instance(cls) -> MetricsRegistry:
         """Get the singleton metrics registry instance."""
+
         if cls._instance is None:
             msg = "Metrics registry not initialized. Call initialize_metrics() first."
             raise RuntimeError(msg)
@@ -1097,6 +1047,7 @@ class _MetricsRegistrySingleton:
     @classmethod
     def initialize_instance(cls, config: MetricsConfig) -> MetricsRegistry:
         """Initialize the singleton with configuration."""
+
         cls._instance = MetricsRegistry(config)
         return cls._instance
 
@@ -1110,6 +1061,7 @@ def get_metrics_registry() -> MetricsRegistry:
     Raises:
         RuntimeError: If registry not initialized
     """
+
     return _MetricsRegistrySingleton.get_instance()
 
 
@@ -1122,6 +1074,7 @@ def initialize_metrics(config: MetricsConfig) -> MetricsRegistry:
     Returns:
         Initialized MetricsRegistry instance
     """
+
     return _MetricsRegistrySingleton.initialize_instance(config)
 
 

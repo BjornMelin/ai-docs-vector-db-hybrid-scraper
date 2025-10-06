@@ -13,17 +13,13 @@ from pydantic import ValidationError
 
 from src.config import (
     ApplicationMode,
-    AutoDetectedServices,
     ChunkingStrategy,
     Config,
     CrawlProvider,
-    DetectedEnvironment,
-    DetectedService,
     EmbeddingProvider,
     Environment,
     SearchStrategy,
     get_config,
-    get_config_with_auto_detection,
     reset_config,
     set_config,
 )
@@ -158,7 +154,6 @@ def test_config_synchronizes_service_credentials_and_urls(tmp_path: Path) -> Non
     assert snapshot["qdrant"]["api_key"] == "qd-live"
     assert snapshot["qdrant"]["url"] == "http://qdrant:6333"
     assert snapshot["cache"]["redis_url"] == "redis://redis:6379/1"
-    assert snapshot["task_queue"]["redis_url"] == "redis://redis:6379/1"
 
 
 def test_config_simple_mode_adjustments_and_helpers(tmp_path: Path) -> None:
@@ -215,22 +210,6 @@ def test_config_enterprise_mode_adjustments(tmp_path: Path) -> None:
     assert config.get_effective_search_strategy() is SearchStrategy.HYBRID
 
 
-def test_config_auto_detection_storage_round_trip() -> None:
-    """Private auto-detected services storage should retain assignments."""
-
-    config = Config(environment=Environment.TESTING)
-    detected = AutoDetectedServices(
-        environment=DetectedEnvironment(environment_type=Environment.STAGING),
-        services=[
-            DetectedService(name="qdrant", url="http://qdrant:6333", healthy=True),
-        ],
-        errors=["timeout"],
-    )
-    config.set_auto_detected_services(detected)
-
-    assert config.get_auto_detected_services() is detected
-
-
 def test_global_config_cache_and_reset(tmp_path: Path) -> None:
     """Global helpers should manage cached configuration instances predictably."""
 
@@ -255,58 +234,3 @@ def test_global_config_cache_and_reset(tmp_path: Path) -> None:
     reset_config()
     config_c = get_config()
     assert config_c is not replacement
-
-
-@pytest.mark.asyncio
-async def test_get_config_with_auto_detection_enabled(tmp_path: Path) -> None:
-    """Auto detection should populate services when the feature is enabled."""
-
-    overrides = _path_overrides(tmp_path)
-    config = Config.model_validate(
-        {
-            "environment": Environment.TESTING,
-            "auto_detection": {"enabled": True},
-            "data_dir": overrides["data_dir"],
-            "cache_dir": overrides["cache_dir"],
-            "logs_dir": overrides["logs_dir"],
-        }
-    )
-    config.set_auto_detected_services(None)
-    set_config(config)
-
-    try:
-        result = await get_config_with_auto_detection()
-    finally:
-        reset_config()
-
-    services = result.get_auto_detected_services()
-    assert services is not None
-    assert services.environment.environment_type is Environment.DEVELOPMENT
-
-
-@pytest.mark.asyncio
-async def test_get_config_with_auto_detection_disabled(tmp_path: Path) -> None:
-    """Auto detection should clear stored services when the feature is disabled."""
-
-    overrides = _path_overrides(tmp_path)
-    preexisting = AutoDetectedServices(
-        environment=DetectedEnvironment(environment_type=Environment.STAGING),
-    )
-    config = Config.model_validate(
-        {
-            "environment": Environment.TESTING,
-            "auto_detection": {"enabled": False},
-            "data_dir": overrides["data_dir"],
-            "cache_dir": overrides["cache_dir"],
-            "logs_dir": overrides["logs_dir"],
-        }
-    )
-    config.set_auto_detected_services(preexisting)
-    set_config(config)
-
-    try:
-        result = await get_config_with_auto_detection()
-    finally:
-        reset_config()
-
-    assert result.get_auto_detected_services() is None

@@ -6,7 +6,7 @@ owner: product-education
 last_reviewed: 2025-03-13
 ---
 
-# Configuration Management Guide
+## Configuration Management Guide
 
 > **Status**: Active  
 > **Last Updated**: 2025-01-11  
@@ -65,6 +65,7 @@ uv run python -m src.cli.main config wizard
 ```
 
 **Available Templates:**
+
 - **🛠️ Development**: Debug logging, local database, fast iteration
 - **🚀 Production**: Security hardening, performance optimization
 - **⚡ High Performance**: Maximum throughput and concurrency
@@ -123,13 +124,13 @@ The configuration wizard includes:
 
 Templates provide optimized configurations for specific use cases:
 
-| Template | Use Case | Key Features |
-|----------|----------|--------------|
-| **development** | Local development and testing | Debug logging, local services, fast iteration |
-| **production** | Production deployment | Security hardening, performance optimization |
-| **high_performance** | High-traffic applications | Maximum throughput, aggressive caching |
-| **memory_optimized** | Resource-constrained systems | Minimal memory usage, conservative settings |
-| **distributed** | Multi-node deployments | Cluster configuration, load balancing |
+| Template             | Use Case                      | Key Features                                  |
+| -------------------- | ----------------------------- | --------------------------------------------- |
+| **development**      | Local development and testing | Debug logging, local services, fast iteration |
+| **production**       | Production deployment         | Security hardening, performance optimization  |
+| **high_performance** | High-traffic applications     | Maximum throughput, aggressive caching        |
+| **memory_optimized** | Resource-constrained systems  | Minimal memory usage, conservative settings   |
+| **distributed**      | Multi-node deployments        | Cluster configuration, load balancing         |
 
 ### Using Templates
 
@@ -140,6 +141,7 @@ uv run python -m src.cli.main config template list
 ```
 
 Output:
+
 ```
 Available Configuration Templates
 ┌─────────────────┬──────────────────────────────────┬─────────────────────────────────┐
@@ -204,7 +206,7 @@ Templates can be customized during application:
     }
   },
   "security": {
-    "require_api_keys": false,
+    "api_key_required": false,
     "enable_rate_limiting": false
   }
 }
@@ -237,9 +239,11 @@ Templates can be customized during application:
     }
   },
   "security": {
-    "require_api_keys": true,
+    "api_key_required": true,
+    "api_keys": ["prod-key-1"],
     "enable_rate_limiting": true,
-    "rate_limit_requests": 100
+    "default_rate_limit": 100,
+    "rate_limit_window": 60
   },
   "monitoring": {
     "enabled": true,
@@ -250,6 +254,20 @@ Templates can be customized during application:
 ```
 
 ## 💾 Backup and Restore System
+
+## File Integrity Monitoring Prerequisites
+
+The `/config/file-watch/enable` endpoint streams file change events from
+osquery. Before enabling it:
+
+- Install and run `osqueryd` with the `file_events` table enabled.
+- Ensure the results log (default: `/var/log/osquery/osqueryd.results.log`) is
+  readable by the API process. Override the path with the
+  `OSQUERY_RESULTS_LOG` environment variable when needed.
+- Configure include/exclude glob patterns in your osquery configuration; the
+  API validates paths but does not mutate osquery settings.
+- Confirm the agent is producing events before enabling the watcher; the API
+  will return `503` if the provider fails to become ready.
 
 ### Creating Backups
 
@@ -286,6 +304,7 @@ uv run python -m src.cli.main config backup list --limit 10
 ```
 
 Example output:
+
 ```
 Configuration Backups
 ┌──────────────┬────────────┬─────────────────────┬─────────────┬──────┬─────────────────────────────────┐
@@ -343,6 +362,7 @@ uv run python -m src.cli.main config migrate plan config.json 2.0.0
 ```
 
 Example output:
+
 ```
 📋 Migration Plan
 
@@ -352,7 +372,7 @@ Estimated Duration: ~4 minutes
 
 Migration Steps:
   1. 1.0.0_to_1.1.0 - Add enhanced validation metadata
-  2. 1.1.0_to_1.2.0 - Update cache configuration structure  
+  2. 1.1.0_to_1.2.0 - Update cache configuration structure
   3. 1.2.0_to_2.0.0 - Major version upgrade with new features
 
 Rollback Plan Available:
@@ -392,6 +412,7 @@ uv run python -m src.cli.main config migrate status config.json
 ```
 
 Example output:
+
 ```
 📊 Migration Status
 
@@ -480,7 +501,7 @@ uv run python -m src.cli.main config template apply development -o config.json
 # YAML
 uv run python -m src.cli.main config convert config.json config.yaml
 
-# TOML  
+# TOML
 uv run python -m src.cli.main config convert config.json config.toml
 ```
 
@@ -605,24 +626,28 @@ uv run python -m src.cli.main config migrate apply config.json 2.0.0 --dry-run
 ### Common Issues
 
 #### Missing API Keys
+
 ```
 Error: OpenAI API key required when using OpenAI embedding provider
 Solution: Set AI_DOCS__OPENAI__API_KEY environment variable or use wizard to configure
 ```
 
 #### Service Connection Failures
+
 ```
 Error: Qdrant connection failed: Connection refused
 Solution: Ensure Qdrant is running on configured URL or update configuration
 ```
 
 #### Migration Conflicts
+
 ```
 Error: Migration conflict detected - environment mismatch
 Solution: Use --force flag or resolve conflicts manually
 ```
 
 #### Invalid Configuration Format
+
 ```
 Error: Invalid JSON format in configuration file
 Solution: Use 'config convert' command to fix format or validate with wizard
@@ -663,4 +688,4 @@ uv run python -m src.cli.main config validate config.json --comprehensive
 
 ---
 
-*🛠️ The advanced configuration management system makes setup and maintenance simple while providing enterprise-grade features for backup, migration, and validation.*
+_🛠️ The advanced configuration management system makes setup and maintenance simple while providing enterprise-grade features for backup, migration, and validation._
