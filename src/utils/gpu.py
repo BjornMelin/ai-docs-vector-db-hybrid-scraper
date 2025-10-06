@@ -34,9 +34,9 @@ try:
     try:
         CUDA_AVAILABLE = torch.cuda.is_available()
         if CUDA_AVAILABLE:
-            logger.info(f"CUDA available with {torch.cuda.device_count()} device(s)")
+            logger.info("CUDA available with %d device(s)", torch.cuda.device_count())
     except RuntimeError as e:
-        logger.warning(f"CUDA detection failed: {e}")
+        logger.warning("CUDA detection failed: %s", e)
         CUDA_AVAILABLE = False
 except ImportError:
     torch = None
@@ -119,17 +119,17 @@ class GPUManager:
                 if available_memory_gb >= memory_required_gb:
                     device = f"cuda:{i}"
                     logger.info(
-                        f"Selected {device} with {available_memory_gb:.1f}GB memory"
+                        "Selected %s with %.1fGB memory", device, available_memory_gb
                     )
                     return device
 
-            logger.warning(f"No GPU with {memory_required_gb}GB+ memory available")
+            logger.warning("No GPU with %.1fGB+ memory available", memory_required_gb)
             return None
 
         # Default to first available device
         device = "cuda:0"
         if self.device_count > 0:
-            logger.info(f"Using default GPU device: {device}")
+            logger.info("Using default GPU device: %s", device)
             return device
 
         return None
@@ -142,8 +142,8 @@ class GPUManager:
 
         Returns:
             Dictionary with memory information in GB
-
         """
+
         if not self.is_available:
             return {"total": 0.0, "used": 0.0, "free": 0.0}
 
@@ -162,7 +162,7 @@ class GPUManager:
                     "used": (total_memory - memory_info[0]) / (1024**3),
                 }
             except RuntimeError as e:
-                logger.warning(f"Failed to get GPU memory info: {e}")
+                logger.warning("Failed to get GPU memory info: %s", e)
 
         return {"total": 0.0, "used": 0.0, "free": 0.0}
 
@@ -171,8 +171,8 @@ class GPUManager:
 
         Args:
             device: Device to optimize, defaults to current device
-
         """
+
         if not self.is_available:
             return
 
@@ -187,17 +187,17 @@ class GPUManager:
                 # Synchronize to ensure operations complete
                 torch.cuda.synchronize()
 
-                logger.info(f"GPU memory optimized for {device}")
+                logger.info("GPU memory optimized for %s", device)
             except RuntimeError as e:
-                logger.warning(f"GPU memory optimization failed: {e}")
+                logger.warning("GPU memory optimization failed: %s", e)
 
     def set_device(self, device: str) -> None:
         """Set the active GPU device.
 
         Args:
             device: Device string (e.g., 'cuda:0')
-
         """
+
         if not self.is_available:
             logger.warning("GPU not available, cannot set device")
             return
@@ -205,9 +205,9 @@ class GPUManager:
         try:
             torch.cuda.set_device(device)
             self._device = device
-            logger.info(f"Active GPU device set to {device}")
+            logger.info("Active GPU device set to %s", device)
         except RuntimeError:
-            logger.exception(f"Failed to set GPU device {device}")
+            logger.exception("Failed to set GPU device %s", device)
 
 
 # Global GPU manager instance
@@ -216,6 +216,7 @@ gpu_manager = GPUManager()
 
 def is_gpu_available() -> bool:
     """Check if GPU acceleration is available."""
+
     return gpu_manager.is_available
 
 
@@ -227,8 +228,8 @@ def get_gpu_device(memory_required_gb: float | None = None) -> str | None:
 
     Returns:
         Device string or None
-
     """
+
     return gpu_manager.get_optimal_device(memory_required_gb)
 
 
@@ -240,8 +241,8 @@ def get_gpu_memory_info(device: str | None = None) -> dict[str, float]:
 
     Returns:
         Memory information dictionary
-
     """
+
     return gpu_manager.get_memory_info(device)
 
 
@@ -250,8 +251,8 @@ def optimize_gpu_memory(device: str | None = None) -> None:
 
     Args:
         device: Device to optimize
-
     """
+
     gpu_manager.optimize_memory(device)
 
 
@@ -266,8 +267,8 @@ def safe_gpu_operation(func: callable, fallback: Any = None, *args, **kwargs) ->
 
     Returns:
         Function result or fallback
-
     """
+
     if not is_gpu_available():
         if callable(fallback):
             return fallback(*args, **kwargs)
@@ -276,7 +277,7 @@ def safe_gpu_operation(func: callable, fallback: Any = None, *args, **kwargs) ->
     try:
         return func(*args, **kwargs)
     except RuntimeError as e:
-        logger.warning(f"GPU operation failed, using fallback: {e}")
+        logger.warning("GPU operation failed, using fallback: %s", e)
         if callable(fallback):
             return fallback(*args, **kwargs)
         return fallback
@@ -290,8 +291,8 @@ def get_torch_device(device: str | None = None) -> Any:
 
     Returns:
         PyTorch device object
-
     """
+
     if not TORCH_AVAILABLE:
         msg = "PyTorch not available"
         raise RuntimeError(msg)
@@ -312,8 +313,8 @@ def move_to_device(tensor_or_model: Any, device: str | None = None) -> Any:
 
     Returns:
         Object moved to device
-
     """
+
     if not TORCH_AVAILABLE:
         return tensor_or_model
 
@@ -322,17 +323,13 @@ def move_to_device(tensor_or_model: Any, device: str | None = None) -> Any:
     try:
         return tensor_or_model.to(target_device)
     except RuntimeError as e:
-        logger.warning(f"Failed to move to device {target_device}: {e}")
+        logger.warning("Failed to move to device %s: %s", target_device, e)
         return tensor_or_model
 
 
 def get_gpu_stats() -> dict[str, Any]:
-    """Get comprehensive GPU statistics.
+    """Get GPU statistics."""
 
-    Returns:
-        Dictionary with GPU information
-
-    """
     stats = {
         "gpu_available": is_gpu_available(),
         "torch_available": TORCH_AVAILABLE,
@@ -360,13 +357,14 @@ def get_gpu_stats() -> dict[str, Any]:
 # Convenience functions for common GPU operations
 def enable_tf32() -> None:
     """Enable TensorFloat-32 precision for faster computations."""
+
     if TORCH_AVAILABLE and CUDA_AVAILABLE:
         try:
             torch.backends.cuda.matmul.allow_tf32 = True
             torch.backends.cudnn.allow_tf32 = True
             logger.info("TF32 precision enabled for faster GPU computations")
         except RuntimeError as e:
-            logger.warning(f"Failed to enable TF32: {e}")
+            logger.warning("Failed to enable TF32: %s", e)
 
 
 def set_memory_fraction(fraction: float, device: str | None = None) -> None:
@@ -375,8 +373,8 @@ def set_memory_fraction(fraction: float, device: str | None = None) -> None:
     Args:
         fraction: Memory fraction (0.0 to 1.0)
         device: Device string
-
     """
+
     if not TORCH_AVAILABLE or not CUDA_AVAILABLE:
         return
 
@@ -388,11 +386,12 @@ def set_memory_fraction(fraction: float, device: str | None = None) -> None:
             torch.cuda.set_per_process_memory_fraction(
                 fraction, int(device.split(":")[1])
             )
-            logger.info(f"GPU memory fraction set to {fraction} for {device}")
+            logger.info("GPU memory fraction set to %.1f for %s", fraction, device)
         except RuntimeError as e:
-            logger.warning(f"Failed to set GPU memory fraction: {e}")
+            logger.warning("Failed to set GPU memory fraction: %s", e)
 
 
 # Initialize GPU optimizations on import
 if TORCH_AVAILABLE and CUDA_AVAILABLE:
+    """Enable GPU optimizations."""
     enable_tf32()

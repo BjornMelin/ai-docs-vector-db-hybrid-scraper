@@ -41,8 +41,8 @@ class ServiceHealthChecker:
                 - connected: Whether connection was successful
                 - error: Error message if connection failed
                 - details: Additional information (collections count, URL)
-
         """
+
         result = {"service": "qdrant", "connected": False, "error": None, "details": {}}
 
         try:
@@ -73,8 +73,8 @@ class ServiceHealthChecker:
 
         Returns:
             Dictionary with connection status and details
-
         """
+
         result = {
             "service": "dragonfly",
             "connected": False,
@@ -115,8 +115,8 @@ class ServiceHealthChecker:
                 - connected: Whether connection was successful
                 - error: Error message if connection failed or not configured
                 - details: Model info and available models count
-
         """
+
         result = {"service": "openai", "connected": False, "error": None, "details": {}}
 
         if config.embedding_provider != "openai" or not config.openai.api_key:
@@ -172,8 +172,8 @@ class ServiceHealthChecker:
                 - connected: Whether connection was successful
                 - error: Error message if connection failed or not configured
                 - details: API URL and credits remaining (if available)
-
         """
+
         result = {
             "service": "firecrawl",
             "connected": False,
@@ -218,8 +218,8 @@ class ServiceHealthChecker:
         Returns:
             dict[str, dict[str, object]]: Service names mapped to health check results.
                 Each result contains service, connected, error, and details fields.
-
         """
+
         results = {}
 
         # Always check Qdrant as it's required
@@ -251,8 +251,8 @@ class ServiceHealthChecker:
 
         Returns:
             Summary dictionary with overall status and individual service results
-
         """
+
         results = cls.perform_all_health_checks(config, client_manager)
 
         connected_services = [
