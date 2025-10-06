@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib import error as url_error, request as url_request
@@ -70,6 +71,22 @@ def run_command(
     if result.returncode != 0:
         print(f"Command exited with status {result.returncode}", file=sys.stderr)
     return result.returncode
+
+
+@lru_cache(maxsize=1)
+def _ensure_uv_available() -> bool:
+    """Validate that the uv CLI is available before running uv-backed commands."""
+
+    if shutil.which("uv"):
+        return True
+
+    message = (
+        "The 'uv' command is required for this workflow but was not found on your "
+        "PATH.\nInstall uv from https://github.com/astral-sh/uv or adjust your "
+        "PATH before rerunning."
+    )
+    print(message, file=sys.stderr)
+    return False
 
 
 def _auto_worker_count(explicit: int | None) -> str:
@@ -134,6 +151,9 @@ def _build_pytest_command(
 def cmd_test(args: argparse.Namespace) -> int:
     """Execute one of the supported pytest profiles."""
 
+    if not _ensure_uv_available():
+        return 1
+
     workers = _auto_worker_count(args.workers)
     coverage_enabled = args.coverage or args.profile == "ci"
     extra_args = list(args.extra) if args.extra else []
@@ -152,8 +172,11 @@ def cmd_test(args: argparse.Namespace) -> int:
     return run_command(command)
 
 
-def cmd_benchmark(args: argparse.Namespace) -> int:
+def cmd_eval(args: argparse.Namespace) -> int:
     """Run the RAG golden evaluation harness."""
+
+    if not _ensure_uv_available():
+        return 1
 
     command = [
         "uv",
@@ -180,6 +203,50 @@ def cmd_benchmark(args: argparse.Namespace) -> int:
     if args.metrics_allowlist:
         command.append("--metrics-allowlist")
         command.extend(args.metrics_allowlist)
+    return run_command(command)
+
+
+def cmd_benchmark(args: argparse.Namespace) -> int:
+    """Run pytest-powered benchmark suites."""
+
+    if not _ensure_uv_available():
+        return 1
+
+    suite_arguments: dict[str, list[str]] = {
+        "performance": ["tests/performance"],
+        "integration": ["tests/integration"],
+        "all": ["tests"],
+    }
+
+    try:
+        base_args = suite_arguments[args.suite]
+    except KeyError as exc:  # pragma: no cover - safeguarded by argparse choices
+        message = f"Unknown benchmark suite: {args.suite}"
+        raise ValueError(message) from exc
+
+    command: list[str] = ["uv", "run", "pytest", *base_args, "--benchmark-only"]
+
+    if args.workers and args.workers > 0:
+        command.extend(["-n", str(args.workers), "--dist", "worksteal"])
+
+    if args.verbose:
+        command.append("-vv")
+    else:
+        command.append("-v")
+
+    output_path: Path | None = None
+    if args.output:
+        output_path = Path(args.output)
+    elif args.output_dir:
+        output_path = Path(args.output_dir) / f"{args.suite}_benchmark.json"
+
+    if output_path is not None:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        command.extend(["--benchmark-json", str(output_path)])
+
+    if args.compare_baseline:
+        command.extend(["--benchmark-compare", args.baseline])
+
     return run_command(command)
 
 
@@ -268,8 +335,6 @@ def cmd_validate(args: argparse.Namespace) -> int:  # pylint: disable=too-many-b
 
     required_paths = [
         PROJECT_ROOT / "pyproject.toml",
-        PROJECT_ROOT / "src/api/main.py",
-        PROJECT_ROOT / "src/cli/unified.py",
         PROJECT_ROOT / "tests",
     ]
     for path in required_paths:
@@ -277,6 +342,18 @@ def cmd_validate(args: argparse.Namespace) -> int:  # pylint: disable=too-many-b
             continue
         errors.append(
             f"Missing required file or directory: {path.relative_to(PROJECT_ROOT)}"
+        )
+
+    recommended_paths = [
+        PROJECT_ROOT / "src/api/main.py",
+        PROJECT_ROOT / "src/cli/unified.py",
+    ]
+    for path in recommended_paths:
+        if path.exists():
+            continue
+        warnings.append(
+            "Recommended file missing (optional surface): "
+            f"{path.relative_to(PROJECT_ROOT)}"
         )
 
     for module in ("fastapi", "qdrant_client", "pytest"):
@@ -396,6 +473,9 @@ def cmd_services(args: argparse.Namespace) -> int:
 def cmd_lint(args: argparse.Namespace) -> int:
     """Run Ruff linting, optionally applying fixes."""
 
+    if not _ensure_uv_available():
+        return 1
+
     command = ["uv", "run", "ruff", "check", "."]
     if args.fix:
         command.append("--fix")
@@ -405,17 +485,26 @@ def cmd_lint(args: argparse.Namespace) -> int:
 def cmd_format(_: argparse.Namespace) -> int:
     """Format the codebase using Ruff."""
 
+    if not _ensure_uv_available():
+        return 1
+
     return run_command(["uv", "run", "ruff", "format", "."])
 
 
 def cmd_typecheck(_: argparse.Namespace) -> int:
     """Run Pyright static type checking."""
 
+    if not _ensure_uv_available():
+        return 1
+
     return run_command(["uv", "run", "pyright"])
 
 
 def cmd_quality(args: argparse.Namespace) -> int:
     """Execute the standard quality gate (format, lint, typecheck)."""
+
+    if not _ensure_uv_available():
+        return 1
 
     commands: list[list[str]] = []
     if not args.skip_format:
@@ -474,53 +563,53 @@ def build_parser() -> argparse.ArgumentParser:
     )
     test_parser.set_defaults(func=cmd_test)
 
-    benchmark_parser = subparsers.add_parser(
-        "benchmark", help="Run the RAG golden evaluation harness"
+    eval_parser = subparsers.add_parser(
+        "eval", help="Run the RAG golden evaluation harness"
     )
-    benchmark_parser.add_argument(
+    eval_parser.add_argument(
         "--dataset",
         default="tests/data/rag/golden_set.jsonl",
         help="Path to the golden dataset (JSONL)",
     )
-    benchmark_parser.add_argument(
+    eval_parser.add_argument(
         "--output",
         help="Optional JSON report destination",
     )
-    benchmark_parser.add_argument(
+    eval_parser.add_argument(
         "--limit",
         type=int,
         default=5,
         help="Maximum documents to retrieve per query",
     )
-    benchmark_parser.add_argument(
+    eval_parser.add_argument(
         "--namespace",
         default="ml_app",
         help="Metrics namespace for the Prometheus snapshot",
     )
-    benchmark_parser.add_argument(
+    eval_parser.add_argument(
         "--enable-ragas",
         action="store_true",
         help="Enable semantic RAGAS metrics",
     )
-    benchmark_parser.add_argument(
+    eval_parser.add_argument(
         "--ragas-model",
         help="Override the LLM model used by RAGAS",
     )
-    benchmark_parser.add_argument(
+    eval_parser.add_argument(
         "--ragas-embedding",
         help="Override the embedding model used by RAGAS",
     )
-    benchmark_parser.add_argument(
+    eval_parser.add_argument(
         "--ragas-max-samples",
         type=int,
         help="Maximum number of samples for RAGAS evaluation",
     )
-    benchmark_parser.add_argument(
+    eval_parser.add_argument(
         "--metrics-allowlist",
         nargs="*",
         help="Prometheus metric names to include in the snapshot",
     )
-    benchmark_parser.set_defaults(func=cmd_benchmark)
+    eval_parser.set_defaults(func=cmd_eval)
 
     benchmark_parser = subparsers.add_parser(
         "benchmark", help="Run performance benchmarks"
