@@ -275,14 +275,6 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         self._vector_store_service = service
         return service
 
-    async def get_qdrant_service(self) -> VectorStoreService:
-        """Backward-compatible alias for legacy callers."""
-
-        logger.warning(
-            "get_qdrant_service() is deprecated; use get_vector_store_service() instead"
-        )
-        return await self.get_vector_store_service()
-
     async def get_redis_client(self):
         provider = self._providers.get("redis")
         if not provider:
@@ -305,48 +297,6 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         return provider.client
 
     # Function-based dependency access methods (backward compatibility)
-
-    async def get_database_manager(self):
-        """Backward compatibility: returns None since we use function-based deps."""
-        logger.warning(
-            "get_database_manager() deprecated - use function-based dependencies "
-            "from src.services.dependencies"
-        )
-
-    async def get_embedding_manager(self):
-        """Backward compatibility: returns None since we use function-based deps."""
-        logger.warning(
-            "get_embedding_manager() deprecated - use function-based dependencies "
-            "from src.services.dependencies"
-        )
-
-    async def get_crawling_manager(self):
-        """Backward compatibility: returns None since we use function-based deps."""
-        logger.warning(
-            "get_crawling_manager() deprecated - use function-based dependencies "
-            "from src.services.dependencies"
-        )
-
-    async def get_monitoring_manager(self):
-        """Backward compatibility: returns None since we use function-based deps."""
-        logger.warning(
-            "get_monitoring_manager() deprecated - use function-based dependencies "
-            "from src.services.dependencies"
-        )
-
-    async def get_cache_manager(self):
-        """Backward compatibility: use function-based dependencies."""
-        logger.warning(
-            "get_cache_manager() deprecated - use get_redis_client() or "
-            "function-based cache dependencies"
-        )
-        return await self.get_redis_client()
-
-    async def get_crawl_manager(self):
-        """Backward compatibility: returns None since we use function-based deps."""
-        logger.warning(
-            "get_crawl_manager() deprecated - use function-based crawling dependencies"
-        )
 
     async def get_health_status(self) -> dict[str, dict[str, Any]]:
         """Get health status using function-based dependencies."""
