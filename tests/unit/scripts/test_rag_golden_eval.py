@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any
 
 import pytest
+from prometheus_client import CollectorRegistry, Counter
 
+from scripts.eval.dataset_validator import DatasetValidationError, validate_dataset
 from scripts.eval.rag_golden_eval import (
     EvaluationReport,
     ExampleMetrics,
@@ -13,7 +17,9 @@ from scripts.eval.rag_golden_eval import (
     RagasEvaluator,
     _aggregate_metrics,
     _evaluate_examples,
+    _load_dataset,
     _render_report,
+    _snapshot_metrics,
 )
 from src.contracts.retrieval import SearchRecord
 from src.services.query_processing.models import SearchResponse
@@ -25,9 +31,7 @@ class _StubOrchestrator:
     def __init__(self, fixtures: dict[str, SearchResponse]) -> None:
         self._fixtures = fixtures
 
-    async def search(
-        self, request
-    ) -> SearchResponse:  # pragma: no cover - small wrapper
+    async def search(self, request) -> SearchResponse:  # pragma: no cover - wrapper
         query = request.query
         try:
             return self._fixtures[query]
@@ -45,12 +49,12 @@ class _DummyRagas(RagasEvaluator):
         super().__init__(enabled=False)
         self._score = score
 
-    def evaluate(
+    def evaluate(  # type: ignore[override]
         self,
         example: GoldenExample,
         predicted_answer: str,
         contexts: Any,
-    ) -> dict[str, float]:  # type: ignore[override]
+    ) -> dict[str, float]:
         return {"faithfulness": self._score}
 
 
@@ -60,36 +64,37 @@ async def test_evaluate_examples_and_aggregation() -> None:
 
     examples = [
         GoldenExample(
-            query="How do I rotate API keys?",
+            query="How should operators rotate API keys?",
             expected_answer=(
-                "Use the security portal to generate a new key, "
-                "update service configs, then revoke the old key."
+                "Generate a replacement key in the security portal, roll it "
+                "out to dependent services, validate traffic, and immediately "
+                "revoke the old key."
             ),
             expected_contexts=[
                 (
-                    "Rotate keys by issuing a replacement in the security portal, "
-                    "updating all services with the new credential, and removing "
-                    "the old key immediately after verifying connectivity."
+                    "To rotate API keys, issue a new credential in the security "
+                    "portal, update every dependent service, verify connectivity, "
+                    "and revoke the retired key immediately after validation."
                 )
             ],
-            references=["docs/security/api-keys.md"],
-            metadata={"collection": "docs"},
+            references=["docs/security/security-essentials.md#api-key-rotation"],
+            metadata={"collection": "golden_eval"},
         ),
         GoldenExample(
-            query="What is the default grouping field?",
+            query="What payload field is used to group search results by default?",
             expected_answer=(
-                "Results are grouped by the `doc_id` payload unless overridden "
-                "per request."
+                "Results are grouped by the doc_id payload unless the request "
+                "overrides group_by."
             ),
             expected_contexts=[
                 (
-                    "Grouping uses the `doc_id` field by default so deduped "
-                    "passages from the same document collapse into a single "
-                    "group unless the caller supplies a different payload key."
+                    "Server-side grouping collapses results that share the same "
+                    "doc_id payload value unless the caller provides a custom "
+                    "group_by key."
                 )
             ],
-            references=["docs/query_processing_response_contract.md"],
-            metadata={"collection": "docs"},
+            references=["docs/query/evaluation-reference.md#grouping-defaults"],
+            metadata={"collection": "golden_eval"},
         ),
     ]
 
@@ -99,43 +104,63 @@ async def test_evaluate_examples_and_aggregation() -> None:
                 SearchRecord(
                     id="doc-1",
                     content=(
-                        "Rotate keys via the security portal then revoke the old "
-                        "credentials"
+                        "To rotate API keys, issue a new credential in the security "
+                        "portal, update every dependent service, verify connectivity, "
+                        "and revoke the retired key immediately after validation."
                     ),
                     score=0.99,
-                    metadata={"doc_path": "docs/security/api-keys.md"},
+                    metadata={
+                        "doc_path": (
+                            "docs/security/security-essentials.md#api-key-rotation"
+                        )
+                    },
                 )
             ],
             total_results=1,
             query=examples[0].query,
             processing_time_ms=42.0,
             generated_answer=(
-                "Generate a replacement key in the security portal, roll it out, "
-                "then delete the old one."
+                "Generate a replacement key in the security portal, roll it out to "
+                "dependent services, validate traffic, and immediately revoke the "
+                "old key."
             ),
             answer_confidence=0.85,
-            answer_sources=[{"doc_path": "docs/security/api-keys.md"}],
+            answer_sources=[
+                {
+                    "doc_path": (
+                        "docs/security/security-essentials.md#api-key-rotation"
+                    )
+                }
+            ],
         ),
         examples[1].query: SearchResponse(
             records=[
                 SearchRecord(
                     id="doc-2",
                     content=(
-                        "By default results are grouped on the doc_id payload field"
+                        "Server-side grouping collapses results that share the same "
+                        "doc_id payload value unless the caller provides a custom "
+                        "group_by key."
                     ),
                     score=0.92,
-                    metadata={"doc_path": "docs/query_processing_response_contract.md"},
+                    metadata={
+                        "doc_path": (
+                            "docs/query/evaluation-reference.md#grouping-defaults"
+                        )
+                    },
                 )
             ],
             total_results=1,
             query=examples[1].query,
             processing_time_ms=55.0,
             generated_answer=(
-                "The orchestrator groups on the doc_id payload unless callers "
-                "supply a different key."
+                "Results are grouped by the doc_id payload unless the request "
+                "overrides group_by."
             ),
             answer_confidence=0.9,
-            answer_sources=[{"doc_path": "docs/query_processing_response_contract.md"}],
+            answer_sources=[
+                {"doc_path": "docs/query/evaluation-reference.md#grouping-defaults"}
+            ],
         ),
     }
 
@@ -152,7 +177,7 @@ async def test_evaluate_examples_and_aggregation() -> None:
     assert len(results) == 2
     for result in results:
         assert isinstance(result.metrics, ExampleMetrics)
-        assert result.metrics.similarity > 0.45
+        assert result.metrics.similarity > 0.9
         assert result.metrics.retrieval["precision_at_k"] == pytest.approx(1.0)
         assert result.metrics.retrieval["recall_at_k"] == pytest.approx(1.0)
         assert result.metrics.retrieval["hit_rate"] == 1.0
@@ -161,7 +186,7 @@ async def test_evaluate_examples_and_aggregation() -> None:
 
     aggregates = _aggregate_metrics(results)
     assert aggregates["examples"] == 2
-    assert aggregates["similarity_avg"] > 0.5
+    assert aggregates["similarity_avg"] > 0.9
     assert aggregates["processing_time_ms_avg"] == pytest.approx(48.5)
     assert aggregates["retrieval_avg"]["precision_at_k"] == pytest.approx(1.0)
     assert aggregates["ragas_avg"]["faithfulness"] == pytest.approx(0.75)
@@ -181,7 +206,7 @@ async def test_evaluate_examples_handles_missing_records() -> None:
         query="Missing context",
         expected_answer="No answer",
         expected_contexts=[],
-        references=["docs/missing.md"],
+        references=["docs/testing/missing.md"],
         metadata={},
     )
 
@@ -211,3 +236,52 @@ async def test_evaluate_examples_handles_missing_records() -> None:
     assert results[0].metrics.retrieval["recall_at_k"] == 0.0
     assert results[0].metrics.retrieval["hit_rate"] == 0.0
     assert results[0].metrics.retrieval["mrr"] == 0.0
+
+
+def test_load_dataset_raises_on_invalid_json(tmp_path: Path) -> None:
+    """Malformed JSON should raise a descriptive error."""
+
+    dataset_path = tmp_path / "broken.jsonl"
+    dataset_path.write_text("{invalid json}\n", encoding="utf-8")
+    with pytest.raises(ValueError):
+        _load_dataset(dataset_path)
+
+
+def test_snapshot_metrics_respects_allowlist() -> None:
+    """Only metrics on the allowlist should be exported."""
+
+    registry = CollectorRegistry()
+    hits = Counter(
+        "rag_hits",
+        "Dummy rag hits",
+        labelnames=("collection",),
+        registry=registry,
+    )
+    other = Counter(
+        "unrelated_counter_total",
+        "Noise",
+        registry=registry,
+    )
+    hits.labels(collection="golden_eval").inc()
+    other.inc()
+
+    snapshot = _snapshot_metrics(registry, frozenset({"rag_hits"}))
+    assert "rag_hits" in snapshot
+    assert "unrelated_counter_total" not in snapshot
+
+
+def test_dataset_validator_detects_missing_metadata(tmp_path: Path) -> None:
+    """Dataset validator should fail when required metadata keys are absent."""
+
+    dataset_path = tmp_path / "dataset.jsonl"
+    record = {
+        "query": "test",
+        "expected_answer": "answer",
+        "expected_contexts": [],
+        "references": [],
+        "metadata": {},
+    }
+    dataset_path.write_text(json.dumps(record) + "\n", encoding="utf-8")
+
+    with pytest.raises(DatasetValidationError):
+        validate_dataset(dataset_path)

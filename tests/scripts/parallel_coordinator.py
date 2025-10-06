@@ -293,7 +293,7 @@ class ParallelCoordinator:
         """Get performance fixture tasks."""
         return {
             "type": "performance_fixtures",
-            "target_files": ["tests/benchmarks", "tests/performance"],
+            "target_files": ["tests/performance"],
         }
 
     def _get_ci_tasks(self) -> dict | None:

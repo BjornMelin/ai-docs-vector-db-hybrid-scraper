@@ -16,13 +16,13 @@ Enable semantic metrics by providing an API-enabled LLM/embedding via
 environment variables and passing ``--enable-ragas``.
 """
 
-# pylint: disable=unnecessary-ellipsis
 from __future__ import annotations
 
 import argparse
 import asyncio
 import json
 import logging
+import re
 from collections import defaultdict
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
@@ -34,6 +34,7 @@ from typing import Any, Protocol
 from prometheus_client import CollectorRegistry
 from prometheus_client.samples import Sample
 
+from scripts.eval.dataset_validator import DatasetValidationError, load_dataset_records
 from src.infrastructure.client_manager import ClientManager
 from src.services.monitoring.metrics import (
     MetricsConfig,
@@ -52,7 +53,7 @@ LOGGER = logging.getLogger(__name__)
 
 @dataclass(slots=True)
 class GoldenExample:
-    """Single regression example sourced from the golden dataset."""
+    """Input row for the regression evaluation harness."""
 
     query: str
     expected_answer: str
@@ -93,19 +94,19 @@ class EvaluationReport:
 
 
 class SupportsSearchOrchestrator(Protocol):
-    """Protocol describing the minimal orchestrator surface used by the harness."""
+    """Protocol describing the orchestrator surface required by the harness."""
 
     async def search(self, request: SearchRequest) -> SearchResponse:
         """Execute a search request."""
-        ...
+        raise NotImplementedError
 
     async def cleanup(self) -> None:
         """Release any orchestrator resources."""
-        ...
+        raise NotImplementedError
 
 
 class RagasEvaluator:
-    """Wrapper around RAGAS metrics with graceful degradation."""
+    """Wrapper around Ragas metrics with graceful degradation when disabled."""
 
     def __init__(
         self,
@@ -132,7 +133,7 @@ class RagasEvaluator:
         """Initialise optional Ragas dependencies."""
 
         # pylint: disable=import-outside-toplevel,too-many-locals
-        try:  # pragma: no cover - exercised only when optional deps are present
+        try:  # pragma: no cover - optional dependency import path
             from langchain_openai import ChatOpenAI, OpenAIEmbeddings
             from ragas import evaluate as ragas_evaluate
             from ragas.dataset_schema import EvaluationDataset
@@ -160,7 +161,7 @@ class RagasEvaluator:
             self._llm = LangchainLLMWrapper(llm_instance)
             self._embeddings = LangchainEmbeddingsWrapper(embedding_instance)
             LOGGER.info(
-                "Ragas evaluator initialized with model=%s embedding=%s",
+                "Ragas evaluator initialised with model=%s embedding=%s",
                 llm_model or "gpt-4o-mini",
                 embedding_model or "text-embedding-3-small",
             )
@@ -185,7 +186,7 @@ class RagasEvaluator:
         predicted_answer: str,
         contexts: Sequence[str],
     ) -> dict[str, float]:
-        """Return semantic metrics using RAGAS when enabled."""
+        """Return semantic metrics using Ragas when enabled."""
 
         if not self._enabled or self._evaluate is None or self._dataset_cls is None:
             return {}
@@ -197,7 +198,8 @@ class RagasEvaluator:
                         "question": example.query,
                         "answer": predicted_answer,
                         "contexts": list(contexts),
-                        "ground_truths": list(example.expected_contexts or []),
+                        "ground_truths": [example.expected_answer],
+                        "reference_contexts": list(example.expected_contexts or []),
                     }
                 ]
             )
@@ -242,7 +244,7 @@ class RagasEvaluator:
 
     @staticmethod
     def _collect_metric_samples(raw_result: Any) -> Iterable[tuple[str, Any]]:
-        """Normalise the various result payloads emitted by RAGAS."""
+        """Normalise the various result payloads emitted by Ragas."""
 
         if hasattr(raw_result, "metrics") and isinstance(raw_result.metrics, dict):
             return raw_result.metrics.items()
@@ -264,28 +266,27 @@ def _load_dataset(path: Path) -> list[GoldenExample]:
         msg = f"Dataset path does not exist: {path}"
         raise FileNotFoundError(msg)
 
-    examples: list[GoldenExample] = []
-    with path.open(encoding="utf-8") as handle:
-        for line in handle:
-            if not line.strip():
-                continue
-            payload = json.loads(line)
-            examples.append(
-                GoldenExample(
-                    query=str(payload["query"]),
-                    expected_answer=str(payload["expected_answer"]),
-                    expected_contexts=list(payload.get("expected_contexts", [])),
-                    references=list(payload.get("references", [])),
-                    metadata=dict(payload.get("metadata", {})),
-                )
-            )
-    if not examples:
+    try:
+        rows = load_dataset_records(path)
+    except DatasetValidationError as exc:
+        raise ValueError(str(exc)) from exc
+    if not rows:
         raise RuntimeError("Golden dataset is empty")
-    return examples
+
+    return [
+        GoldenExample(
+            query=str(payload["query"]),
+            expected_answer=str(payload["expected_answer"]),
+            expected_contexts=list(payload.get("expected_contexts", [])),
+            references=list(payload.get("references", [])),
+            metadata=dict(payload.get("metadata", {})),
+        )
+        for payload in rows
+    ]
 
 
 async def _load_orchestrator() -> SearchOrchestrator:
-    """Create and initialise the shared search orchestrator."""
+    """Instantiate and initialise the shared search orchestrator."""
 
     client_manager = ClientManager()
     vector_service = await client_manager.get_vector_store_service()
@@ -294,10 +295,23 @@ async def _load_orchestrator() -> SearchOrchestrator:
     return orchestrator
 
 
+_WHITESPACE_RE = re.compile(r"\s+")
+
+
+def _normalize_text(candidate: str) -> str:
+    """Return a lowercase, normalised representation for similarity scoring."""
+
+    collapsed = _WHITESPACE_RE.sub(" ", candidate.lower()).strip()
+    return collapsed
+
+
 def _compute_similarity(predicted: str, expected: str) -> float:
     """Deterministic string similarity baseline."""
 
-    matcher = SequenceMatcher(a=predicted.lower(), b=expected.lower())
+    matcher = SequenceMatcher(
+        a=_normalize_text(predicted),
+        b=_normalize_text(expected),
+    )
     return matcher.ratio()
 
 
@@ -350,15 +364,25 @@ def _compute_retrieval_metrics(
     }
 
 
-def _snapshot_metrics(registry: CollectorRegistry) -> dict[str, Any]:
+def _snapshot_metrics(
+    registry: CollectorRegistry,
+    allowlist: frozenset[str] | None = None,
+) -> dict[str, Any]:
     """Convert Prometheus metrics into a JSON-friendly structure."""
 
+    permitted = allowlist or frozenset()
     snapshot: dict[str, Any] = {}
     for metric in registry.collect():
+        if permitted and metric.name not in permitted:
+            continue
         samples: list[dict[str, Any]] = []
         for sample in metric.samples:
             assert isinstance(sample, Sample)  # typing guard
-            samples.append({"labels": sample.labels, "value": sample.value})
+            redacted_labels = {
+                key: (value.split("/")[-1] if key.endswith("_path") else value)
+                for key, value in sample.labels.items()
+            }
+            samples.append({"labels": redacted_labels, "value": sample.value})
         snapshot[metric.name] = {
             "type": metric.type,
             "documentation": metric.documentation,
@@ -406,6 +430,7 @@ async def _evaluate_examples(
     ragas_evaluator: RagasEvaluator,
     *,
     limit: int,
+    ragas_sample_cap: int | None = None,
 ) -> list[ExampleResult]:
     """Execute the orchestrator for every example and collect metrics."""
 
@@ -432,7 +457,11 @@ async def _evaluate_examples(
         retrieval_metrics = _compute_retrieval_metrics(
             example, [record.model_dump() for record in response.records], k=limit
         )
-        ragas_scores = ragas_evaluator.evaluate(example, predicted, contexts)
+
+        if ragas_sample_cap is not None and len(results) >= ragas_sample_cap:
+            ragas_scores = {}
+        else:
+            ragas_scores = ragas_evaluator.evaluate(example, predicted, contexts)
 
         result = ExampleResult(
             example=example,
@@ -512,6 +541,10 @@ async def _run(args: argparse.Namespace) -> None:
         llm_model=args.ragas_model,
         embedding_model=args.ragas_embedding,
     )
+    if args.enable_ragas:
+        LOGGER.info(
+            "Semantic evaluation enabled. API usage limits should be configured."
+        )
 
     orchestrator = await _load_orchestrator()
     try:
@@ -520,15 +553,25 @@ async def _run(args: argparse.Namespace) -> None:
             orchestrator,
             ragas_evaluator,
             limit=args.limit,
+            ragas_sample_cap=args.ragas_max_samples,
         )
     finally:
         await orchestrator.cleanup()
+        set_metrics_registry(None)
+
+    allowlist = args.metrics_allowlist
+    if not allowlist:
+        allowlist_path = Path("config/metrics_allowlist.json")
+        if allowlist_path.exists():
+            with allowlist_path.open(encoding="utf-8") as handle:
+                data = json.load(handle)
+                allowlist = data.get("metrics", [])
 
     report = EvaluationReport(
         results=results,
         aggregates=_aggregate_metrics(results),
         telemetry={
-            "prometheus_snapshot": _snapshot_metrics(registry),
+            "prometheus_snapshot": _snapshot_metrics(registry, frozenset(allowlist)),
         },
     )
 
@@ -579,10 +622,24 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         default=None,
         help="Embedding model for RAGAS (default: text-embedding-3-small)",
     )
+    parser.add_argument(
+        "--ragas-max-samples",
+        type=int,
+        default=None,
+        help="Upper bound on examples processed with RAGAS (cost control)",
+    )
+    parser.add_argument(
+        "--metrics-allowlist",
+        nargs="*",
+        default=[],
+        help="Prometheus metric names to include in the snapshot",
+    )
     return parser
 
 
 def main() -> None:
+    """CLI entrypoint for the regression evaluation harness."""
+
     logging.basicConfig(level=logging.INFO)
     args = _build_arg_parser().parse_args()
     asyncio.run(_run(args))
