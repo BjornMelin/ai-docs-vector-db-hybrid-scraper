@@ -7,6 +7,8 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from src.config import PlaywrightConfig, PlaywrightTierConfig
+from src.services.browser.playwright_adapter import PlaywrightAdapter
+from src.services.errors import CrawlServiceError
 
 
 pytestmark = pytest.mark.filterwarnings("ignore::DeprecationWarning")
@@ -15,15 +17,11 @@ pytestmark = pytest.mark.filterwarnings("ignore::DeprecationWarning")
 @pytest.fixture(name="adapter_cls")
 def fixture_adapter_cls():
     warnings.filterwarnings("ignore", category=DeprecationWarning)
-    from src.services.browser.playwright_adapter import PlaywrightAdapter
-
     return PlaywrightAdapter
 
 
 @pytest.fixture(name="crawl_error")
 def fixture_crawl_error():
-    from src.services.errors import CrawlServiceError
-
     return CrawlServiceError
 
 
@@ -71,7 +69,13 @@ class TestInitialization:
 
         assert adapter._initialized is True
         assert "baseline" in adapter._runtimes
-        mock_launcher.launch.assert_called_once_with(headless=True)
+        mock_launcher.launch.assert_called_once()
+        launch_kwargs = mock_launcher.launch.call_args.kwargs
+        assert launch_kwargs["headless"] is True
+        if adapter.enable_stealth:
+            assert launch_kwargs["args"] == [
+                "--disable-blink-features=AutomationControlled"
+            ]
 
     @pytest.mark.asyncio
     async def test_initialize_requires_rebrowser_when_tier_requests_it(
@@ -142,7 +146,7 @@ class TestScrape:
         )
 
         monkeypatch.setattr(
-            "src.services.browser.playwright_adapter.stealth_async",
+            "src.services.browser.playwright_adapter._stealth_async",
             AsyncMock(),
         )
 
@@ -170,7 +174,7 @@ class TestScrape:
         self, basic_config, adapter_cls, mock_runtime, monkeypatch
     ) -> None:
         """HTTP status codes configured as challenges should toggle escalation."""
-        mock_browser, mock_context, mock_page = mock_runtime
+        mock_browser, _mock_context, mock_page = mock_runtime
         mock_page.goto.return_value = SimpleNamespace(status=429)
 
         adapter = adapter_cls(basic_config)
@@ -182,7 +186,7 @@ class TestScrape:
         )
 
         monkeypatch.setattr(
-            "src.services.browser.playwright_adapter.stealth_async",
+            "src.services.browser.playwright_adapter._stealth_async",
             AsyncMock(),
         )
 

@@ -2,8 +2,8 @@
 
 This module provides sophisticated anti-detection capabilities for browser automation,
 including fingerprint management, behavioral patterns, and success rate monitoring.
-Designed to achieve 95%+ success rate on challenging sites while
-maintaining performance.
+Designed to achieve 95%+ success rate on challenging sites while maintaining
+performance.
 
 Note: Uses standard random module for anti-detection purposes
 (timing, user agents, etc.)
@@ -11,13 +11,9 @@ This is intentional and not cryptographically sensitive.
 """
 # Standard random is acceptable for anti-detection purposes
 
-import json
 import logging
 import random
-import secrets
-import time
-from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from pydantic import BaseModel, Field
 
@@ -144,152 +140,22 @@ class BrowserStealthConfig(BaseModel):
     javascript_enabled: bool = Field(default=True)
     images_enabled: bool = Field(default=True)
     css_enabled: bool = Field(default=True)
-
-
-class SessionData(BaseModel):
-    """Browser session data for persistence."""
-
-    session_id: str = Field(description="Unique session identifier")
-    domain: str = Field(description="Domain this session belongs to")
-    cookies: list[dict[str, Any]] = Field(
-        default_factory=list, description="Cookie data"
+    languages: list[str] = Field(
+        default_factory=lambda: ["en-US", "en"],
+        description="Ordered list of preferred languages",
     )
-    local_storage: dict[str, str] = Field(
-        default_factory=dict, description="localStorage data"
+    locale: str = Field(default="en-US", description="Primary locale identifier")
+    timezone: str = Field(default="America/Los_Angeles", description="IANA time zone")
+    platform: str = Field(default="Win32", description="Navigator platform value")
+    client_hints_platform: str = Field(
+        default="Windows", description="Sec-CH-UA-Platform header value"
     )
-    session_storage: dict[str, str] = Field(
-        default_factory=dict, description="sessionStorage data"
+    webgl_vendor: str | None = Field(
+        default=None, description="Override for UNMASKED_VENDOR_WEBGL"
     )
-    user_agent: str = Field(description="User agent used for this session")
-    viewport: dict[str, int] = Field(description="Viewport used for this session")
-    created_at: float = Field(description="Session creation timestamp")
-    last_used: float = Field(description="Last usage timestamp")
-    success_count: int = Field(default=0, description="Number of successful requests")
-
-    def is_expired(self, max_age_hours: int = 24) -> bool:
-        """Check if session has expired."""
-        age_hours = (time.time() - self.created_at) / 3600
-        return age_hours > max_age_hours
-
-    def update_usage(self, success: bool = True) -> None:
-        """Update session usage statistics."""
-        self.last_used = time.time()
-        if success:
-            self.success_count += 1
-
-
-class SessionManager:
-    """Manages browser sessions for persistent browsing behavior."""
-
-    def __init__(self, session_dir: str | None = None):
-        """Initialize session manager.
-
-        Args:
-            session_dir: Directory to store session data
-
-        """
-        self.session_dir = Path(session_dir or "./.anti_detection_sessions")
-        self.session_dir.mkdir(exist_ok=True)
-        self.active_sessions: dict[str, SessionData] = {}
-
-    def _get_session_file(self, session_id: str) -> Path:
-        """Get session file path."""
-        return self.session_dir / f"{session_id}.json"
-
-    def create_session(
-        self, domain: str, user_agent: str, viewport: dict[str, int]
-    ) -> SessionData:
-        """Create a new session for a domain."""
-        session_id = f"{domain}_{int(time.time())}_{secrets.randbelow(9000) + 1000}"
-
-        session = SessionData(
-            session_id=session_id,
-            domain=domain,
-            user_agent=user_agent,
-            viewport=viewport,
-            created_at=time.time(),
-            last_used=time.time(),
-        )
-
-        self.active_sessions[session_id] = session
-        self.save_session(session)
-        return session
-
-    def get_session(self, domain: str) -> SessionData | None:
-        """Get an existing session for a domain."""
-        # Look for active sessions first
-        for session in self.active_sessions.values():
-            if session.domain == domain and not session.is_expired():
-                return session
-
-        # Look for stored sessions
-        for session_file in self.session_dir.glob(f"{domain}_*.json"):
-            try:
-                with session_file.open() as f:
-                    session_data = json.load(f)
-                session = SessionData(**session_data)
-
-                if not session.is_expired():
-                    self.active_sessions[session.session_id] = session
-                    return session
-                # Clean up expired session
-                session_file.unlink(missing_ok=True)
-            except (FileNotFoundError, OSError, PermissionError):
-                # Clean up corrupted session file
-                session_file.unlink(missing_ok=True)
-
-        return None
-
-    def save_session(self, session: SessionData) -> None:
-        """Save session to disk."""
-        session_file = self._get_session_file(session.session_id)
-        try:
-            with session_file.open("w") as f:
-                json.dump(session.model_dump(), f, indent=2)
-        except (json.JSONDecodeError, ValueError, TypeError) as e:
-            logger.debug("Failed to save session %s: %s", session.session_id, e)
-
-    def update_session_data(
-        self,
-        session_id: str,
-        cookies: list[dict[str, Any]] | None = None,
-        local_storage: dict[str, str] | None = None,
-        session_storage: dict[str, str] | None = None,
-    ) -> None:
-        """Update session data."""
-        if session_id in self.active_sessions:
-            session = self.active_sessions[session_id]
-
-            if cookies is not None:
-                session.cookies = cookies
-            if local_storage is not None:
-                session.local_storage = local_storage
-            if session_storage is not None:
-                session.session_storage = session_storage
-
-            session.update_usage()
-            self.save_session(session)
-
-    def cleanup_expired_sessions(self) -> None:
-        """Clean up expired sessions."""
-        # Clean up active sessions
-        expired_ids = [
-            sid for sid, session in self.active_sessions.items() if session.is_expired()
-        ]
-        for sid in expired_ids:
-            del self.active_sessions[sid]
-
-        # Clean up session files
-        for session_file in self.session_dir.glob("*.json"):
-            try:
-                with session_file.open() as f:
-                    session_data = json.load(f)
-                session = SessionData(**session_data)
-
-                if session.is_expired():
-                    session_file.unlink()
-            except (FileNotFoundError, ImportError, OSError):
-                session_file.unlink(missing_ok=True)
+    webgl_renderer: str | None = Field(
+        default=None, description="Override for UNMASKED_RENDERER_WEBGL"
+    )
 
 
 class SuccessRateMonitor(BaseModel):
@@ -300,33 +166,47 @@ class SuccessRateMonitor(BaseModel):
     recent_successes: list[bool] = Field(default_factory=list, max_length=50)
     strategy_performance: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
+    @property
+    def _total_attempts(self) -> int:
+        """Backwards-compatible alias for total attempts."""
+        return self.total_attempts
+
+    @_total_attempts.setter
+    def _total_attempts(self, value: int) -> None:
+        self.total_attempts = value
+
     def record_attempt(self, success: bool, strategy: str = "default") -> None:
         """Record an attempt and update statistics."""
         self.total_attempts += 1
         if success:
             self.successful_attempts += 1
 
-        # Maintain rolling window of recent attempts
-        self.recent_successes.append(success)
-        if len(self.recent_successes) > 50:
-            self.recent_successes.pop(0)
+        # Maintain rolling window using pydantic-provided container.
+        # pylint: disable=no-member
+        recent_successes = cast(list[bool], self.recent_successes)
+        recent_successes.append(success)
+        if len(recent_successes) > 50:
+            recent_successes.pop(0)
 
         # Update strategy-specific performance
-        if strategy not in self.strategy_performance:
-            self.strategy_performance[strategy] = {
+        performance = cast(dict[str, dict[str, Any]], self.strategy_performance)
+        if strategy not in performance:
+            performance[strategy] = {
                 "attempts": 0,
                 "successes": 0,
                 "recent_performance": [],
             }
 
-        self.strategy_performance[strategy]["attempts"] += 1
+        metrics = performance[strategy]
+        metrics["attempts"] += 1
         if success:
-            self.strategy_performance[strategy]["successes"] += 1
+            metrics["successes"] += 1
 
         # Keep recent performance window
-        self.strategy_performance[strategy]["recent_performance"].append(success)
-        if len(self.strategy_performance[strategy]["recent_performance"]) > 20:
-            self.strategy_performance[strategy]["recent_performance"].pop(0)
+        history = cast(list[bool], metrics["recent_performance"])
+        history.append(success)
+        if len(history) > 20:
+            history.pop(0)
 
     def get_overall_success_rate(self) -> float:
         """Get overall success rate."""
@@ -358,19 +238,14 @@ class SuccessRateMonitor(BaseModel):
 
 
 class EnhancedAntiDetection:
-    """Enhanced anti-detection system for browser automation.
+    """Enhanced anti-detection system for browser automation."""
 
-    Provides sophisticated fingerprint management, behavioral patterns,
-    and adaptive strategy adjustment to achieve 95%+ success rates.
-    """
-
-    def __init__(self, enable_session_management: bool = True):
+    def __init__(self) -> None:
         """Initialize the enhanced anti-detection system."""
         self.user_agents = UserAgentPool()
         self.viewport_profiles = ViewportProfile.get_common_profiles()
         self.success_monitor = SuccessRateMonitor()
         self.site_profiles: dict[str, SiteProfile] = {}
-        self.session_manager = SessionManager() if enable_session_management else None
         self._load_default_site_profiles()
 
     def _load_default_site_profiles(self) -> None:
@@ -423,15 +298,29 @@ class EnhancedAntiDetection:
         # Get site profile or use default
         profile = self.site_profiles.get(site_profile, self.site_profiles["default"])
 
+        user_agent, platform, ch_platform = self._rotate_user_agents()
+        language_header, languages, locale = self._select_language_profile()
+        headers = self._generate_realistic_headers(language_header, ch_platform)
+        timezone = self._select_timezone(profile)
+        viewport = self._randomize_viewport()
+        vendor, renderer = self._select_webgl_overrides(profile, platform)
+
         return BrowserStealthConfig(
-            user_agent=self._rotate_user_agents(),
-            viewport=self._randomize_viewport(),
-            headers=self._generate_realistic_headers(profile),
-            extra_args=self._get_stealth_args(profile),
+            user_agent=user_agent,
+            viewport=viewport,
+            headers=headers,
+            extra_args=self._get_stealth_args(),
             timing=self._get_timing_pattern(profile),
+            languages=languages,
+            locale=locale,
+            timezone=timezone,
+            platform=platform,
+            client_hints_platform=ch_platform,
+            webgl_vendor=vendor,
+            webgl_renderer=renderer,
         )
 
-    def _rotate_user_agents(self) -> str:
+    def _rotate_user_agents(self) -> tuple[str, str, str]:
         """Rotate user agents with realistic browser signatures."""
         # Weighted selection favoring Chrome (most common)
         browser_weights = [0.65, 0.25, 0.10]  # Chrome, Firefox, Safari
@@ -444,7 +333,9 @@ class EnhancedAntiDetection:
         selected_pool = random.choices(browser_pools, weights=browser_weights)[  # noqa: S311
             0
         ]  # Anti-detection randomization
-        return random.choice(selected_pool)  # noqa: S311  # Anti-detection randomization
+        user_agent = random.choice(selected_pool)  # noqa: S311  # Anti-detection randomization
+        platform, ch_platform = self._derive_platform(user_agent)
+        return user_agent, platform, ch_platform
 
     def _randomize_viewport(self) -> ViewportProfile:
         """Randomize viewport with common resolution patterns."""
@@ -463,28 +354,21 @@ class EnhancedAntiDetection:
             is_mobile=profile.is_mobile,
         )
 
-    def _generate_realistic_headers(self, _profile: SiteProfile) -> dict[str, str]:
+    def _generate_realistic_headers(
+        self, language_header: str, client_hints_platform: str
+    ) -> dict[str, str]:
         """Generate realistic HTTP headers."""
-        # Language preferences weighted by global usage
-        languages = [
-            "en-US,en;q=0.9",
-            "en-US,en;q=0.9,es;q=0.8",
-            "en-US,en;q=0.9,fr;q=0.8",
-            "en-US,en;q=0.9,de;q=0.8",
-            "en-GB,en;q=0.9",
-        ]
-
         headers = {
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,"
             "image/avif,image/webp,image/apng,*/*;q=0.8,"
             "application/signed-exchange;v=b3;q=0.7",
             "Accept-Encoding": "gzip, deflate, br",
-            "Accept-Language": random.choice(languages),  # noqa: S311  # Anti-detection randomization
+            "Accept-Language": language_header,
             "Cache-Control": "max-age=0",
             "Sec-Ch-Ua": '"Chromium";v="122", "Not(A:Brand";v="24", '
             '"Google Chrome";v="122"',
             "Sec-Ch-Ua-Mobile": "?0",
-            "Sec-Ch-Ua-Platform": '"Windows"',
+            "Sec-Ch-Ua-Platform": f'"{client_hints_platform}"',
             "Sec-Fetch-Dest": "document",
             "Sec-Fetch-Mode": "navigate",
             "Sec-Fetch-Site": "none",
@@ -498,49 +382,94 @@ class EnhancedAntiDetection:
 
         return headers
 
-    def _get_stealth_args(self, profile: SiteProfile) -> list[str]:
-        """Get browser arguments for stealth based on profile."""
-        base_args = [
-            "--disable-blink-features=AutomationControlled",
-            "--disable-web-security",
-            "--disable-features=VizDisplayCompositor",
-            "--no-sandbox",
-            "--disable-dev-shm-usage",
-            "--disable-background-timer-throttling",
-            "--disable-backgrounding-occluded-windows",
-            "--disable-renderer-backgrounding",
-            "--disable-field-trial-config",
+    def _get_stealth_args(self) -> list[str]:
+        """Return a conservative list of Chromium flags for stealth."""
+        return ["--disable-blink-features=AutomationControlled"]
+
+    def resolve_profile_for_domain(self, domain: str | None) -> str:
+        """Resolve the most appropriate site profile name for a domain."""
+        if not domain:
+            return "default"
+        lowered = domain.lower()
+        for profile_name, profile in self.site_profiles.items():
+            if profile_name == "default":
+                continue
+            if profile.domain in lowered or lowered.endswith(profile.domain):
+                return profile_name
+        return "default"
+
+    def _select_language_profile(self) -> tuple[str, list[str], str]:
+        """Return Accept-Language header, languages list, and locale."""
+
+        templates = [
+            ("en-US,en;q=0.9", ["en-US", "en"], "en-US"),
+            ("en-GB,en;q=0.9", ["en-GB", "en"], "en-GB"),
+            (
+                "en-US,en;q=0.9,fr;q=0.8",
+                ["en-US", "en", "fr"],
+                "en-US",
+            ),
+            (
+                "en-US,en;q=0.9,de;q=0.8",
+                ["en-US", "en", "de"],
+                "en-US",
+            ),
+            (
+                "en-US,en;q=0.9,es;q=0.8",
+                ["en-US", "en", "es"],
+                "en-US",
+            ),
         ]
+        return random.choice(templates)  # noqa: S311  # Anti-detection randomization
 
-        if profile.stealth_level in ["advanced", "maximum"]:
-            base_args.extend(
-                [
-                    "--disable-ipc-flooding-protection",
-                    "--disable-default-apps",
-                    "--disable-sync",
-                    "--no-first-run",
-                    "--no-default-browser-check",
-                    "--disable-client-side-phishing-detection",
-                    "--disable-component-update",
-                    "--disable-hang-monitor",
-                    "--disable-prompt-on-repost",
-                    "--disable-background-networking",
-                ]
+    def _select_timezone(self, profile: SiteProfile) -> str:
+        """Return a suitable time zone for the supplied profile."""
+
+        pool = [
+            "America/Los_Angeles",
+            "America/New_York",
+            "Europe/Berlin",
+            "Europe/Paris",
+            "Asia/Tokyo",
+            "Asia/Singapore",
+        ]
+        if profile.domain == "linkedin.com":
+            pool.extend(["America/Chicago", "Europe/London"])
+        if profile.domain == "cloudflare.com":
+            pool.extend(["America/Denver", "Europe/Amsterdam"])
+        return random.choice(pool)  # noqa: S311  # Anti-detection randomization
+
+    def _derive_platform(self, user_agent: str) -> tuple[str, str]:
+        """Derive navigator platform and client hints platform."""
+
+        lowered = user_agent.lower()
+        if "windows" in lowered:
+            return "Win32", "Windows"
+        if "macintosh" in lowered or "mac os" in lowered:
+            return "MacIntel", "macOS"
+        if "x11" in lowered or "linux" in lowered:
+            return "Linux x86_64", "Linux"
+        return "Win32", "Windows"
+
+    def _select_webgl_overrides(
+        self, profile: SiteProfile, platform: str
+    ) -> tuple[str | None, str | None]:
+        """Return WebGL vendor/renderer overrides for high-risk profiles."""
+
+        if profile.stealth_level not in {"advanced", "maximum"}:
+            return None, None
+
+        if platform == "MacIntel":
+            return "Apple Inc.", "Apple GPU"
+        if platform == "Linux x86_64":
+            return (
+                "Google Inc.",
+                "ANGLE (AMD Radeon RX 6600 XT Direct3D11 vs_5_0 ps_5_0)",
             )
-
-        if profile.stealth_level == "maximum":
-            base_args.extend(
-                [
-                    "--disable-extensions",
-                    "--disable-plugins-discovery",
-                    "--disable-preconnect",
-                    "--disable-software-rasterizer",
-                    "--media-cache-size=0",
-                    "--disk-cache-size=0",
-                ]
-            )
-
-        return base_args
+        return (
+            "Google Inc.",
+            "ANGLE (Intel(R) UHD Graphics 630 Direct3D11 vs_5_0 ps_5_0)",
+        )
 
     def _get_timing_pattern(self, profile: SiteProfile) -> TimingPattern:
         """Get timing patterns based on site profile."""
@@ -584,12 +513,13 @@ class EnhancedAntiDetection:
         stealth_config = self.get_stealth_config(site_profile)
 
         # Create enhanced config
+        viewport_model = cast(ViewportProfile, stealth_config.viewport)
         return PlaywrightConfig(
             browser=config.browser,
             headless=config.headless,
             viewport={
-                "width": stealth_config.viewport.width,
-                "height": stealth_config.viewport.height,
+                "width": viewport_model.width,  # pylint: disable=no-member
+                "height": viewport_model.height,  # pylint: disable=no-member
             },
             user_agent=stealth_config.user_agent,
             timeout=config.timeout,
@@ -625,6 +555,7 @@ class EnhancedAntiDetection:
         return {
             "overall_success_rate": self.success_monitor.get_overall_success_rate(),
             "recent_success_rate": self.success_monitor.get_recent_success_rate(),
+            "_total_attempts": self.success_monitor.total_attempts,
             "total_attempts": self.success_monitor.total_attempts,
             "successful_attempts": self.success_monitor.successful_attempts,
             "needs_adjustment": self.success_monitor.needs_strategy_adjustment(),
@@ -633,10 +564,9 @@ class EnhancedAntiDetection:
 
     def get_recommended_strategy(self, domain: str) -> str:
         """Get recommended strategy based on domain and success rates."""
-        # Check if domain has specific profile
-        for profile_domain in self.site_profiles:
-            if profile_domain in domain or domain in profile_domain:
-                return profile_domain
+        resolved = self.resolve_profile_for_domain(domain)
+        if resolved != "default":
+            return resolved
 
         # Check recent performance for auto-adjustment
         if self.success_monitor.needs_strategy_adjustment():
