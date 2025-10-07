@@ -118,6 +118,14 @@ class LightweightScraper:
             return None
 
         status_code = response.status_code
+        if status_code >= 500:
+            logger.warning(
+                "Received HTTP %s while lightweight scraping %s; "
+                "escalating to higher tier",
+                status_code,
+                url,
+            )
+            return None
         if status_code >= 400:
             logger.info(
                 "Received HTTP %s while lightweight scraping %s; "

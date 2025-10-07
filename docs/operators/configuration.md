@@ -11,10 +11,11 @@ export AI_DOCS__FIRECRAWL__API_KEY=${FIRECRAWL_API_KEY}
 # Database URLs
 export AI_DOCS__CACHE__DRAGONFLY_URL="redis://dragonfly:6379"
 export AI_DOCS__QDRANT__URL="http://qdrant:6333"
+export AI_DOCS__QDRANT__COLLECTION_NAME="documents"
 
 # Environment
 export AI_DOCS__ENVIRONMENT=production
-export CONFIG_FILE=config/production.json
+export AI_DOCS_CONFIG_PATH="config/production.json"
 ```
 
 ### Production Settings
@@ -79,6 +80,7 @@ services:
     "cache_ttl": 3600
   },
   "qdrant": {
+    "collection_name": "documents",
     "collection_config": {
       "vector_size": 1536,
       "distance": "Cosine",

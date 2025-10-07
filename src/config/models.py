@@ -296,11 +296,7 @@ class QdrantConfig(BaseModel):
     api_key: str | None = Field(default=None, description="Qdrant API key")
     timeout: float = Field(default=30.0, gt=0, description="Request timeout seconds")
     collection_name: str = Field(
-        default="documents", description="Default collection name"
-    )
-    default_collection: str = Field(
-        default="documentation",
-        description="Legacy collection name retained for migration support",
+        default="documents", description="Primary collection name used for queries"
     )
     batch_size: int = Field(
         default=100, gt=0, le=1000, description="Batch size for operations"

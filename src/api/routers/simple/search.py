@@ -92,7 +92,7 @@ async def _perform_search(
     )
 
 
-@router.get("/search")
+@router.get("/search", response_model=SimpleSearchResponse)
 async def search_documents_get(
     factory: FactoryDependency,
     q: str = Query(..., min_length=1, max_length=500, description="Search query"),
@@ -134,15 +134,16 @@ async def _get_search_stats(factory: ModeAwareServiceFactory) -> dict[str, Any]:
     vector_service = await _get_vector_store_service(factory)
     collections = await vector_service.list_collections()
     stats: dict[str, Any] = {"collections": collections}
-    default_collection = "documents"
-    if default_collection in collections:
+    qdrant_config = getattr(vector_service.config, "qdrant", None)
+    primary_collection = getattr(qdrant_config, "collection_name", None) or "documents"
+    if primary_collection in collections:
         try:
-            stats["default_collection"] = default_collection
-            stats["default_collection_stats"] = await vector_service.collection_stats(
-                default_collection
+            stats["primary_collection"] = primary_collection
+            stats["primary_collection_stats"] = await vector_service.collection_stats(
+                primary_collection
             )
         except Exception as exc:  # pragma: no cover - defensive logging branch
-            stats["default_collection_error"] = str(exc)
+            stats["primary_collection_error"] = str(exc)
     return stats
 
 

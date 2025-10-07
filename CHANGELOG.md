@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Lightweight scraper escalates 4xx/5xx responses without raising, mode helpers resolve from injected settings, Qdrant default collection alias was removed, typed config fixtures were introduced for tests, and docs/env guidance now reference `primary_collection` and `AI_DOCS_CONFIG_PATH`.
 - Configuration reload and file-watching endpoints now validate override paths, surface operator errors as HTTP 400, and wait until the osquery-backed provider reports readiness before returning success.
 - Rebuilt the configuration stack around a single `Config` settings provider, removed legacy helpers/aliases, updated the reloader to work with the provider callbacks, and refactored services/tests to consume nested credentials directly.
 - Simplified the security configuration model to the fields actually enforced by the middleware, updated templates/docs, and aligned the middleware implementation with the lean schema.

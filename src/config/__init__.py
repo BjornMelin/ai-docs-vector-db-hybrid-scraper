@@ -11,8 +11,6 @@ from typing import Any
 
 from .loader import (
     Config,
-    SettingsProvider,
-    ensure_runtime_directories,
     get_config,
     load_config,
     on_settings_applied,
@@ -117,8 +115,6 @@ __all__ = [
     "on_settings_applied",
     "reset_config",
     "set_config",
-    "SettingsProvider",
-    "ensure_runtime_directories",
     "AgenticConfig",
     "BrowserUseConfig",
     "CacheConfig",
