@@ -69,6 +69,7 @@ _FUNCTION_REGISTRY: dict[str, Callable[..., Any]] = {
     "prometheus": setup_prometheus,
 }
 
+
 def _default_stack_names() -> tuple[str, ...]:
     """Return the canonical middleware ordering for the defaults alias."""
 
