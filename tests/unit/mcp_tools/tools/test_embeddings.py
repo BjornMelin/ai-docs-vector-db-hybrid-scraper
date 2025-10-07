@@ -15,16 +15,36 @@ class TestEmbeddingsTools:
     """Test suite for embeddings MCP tools."""
 
     @pytest.fixture
-    def mock_client_manager(self, monkeypatch):
+    def mock_client_manager(self):
         """Create a mock client manager with embedding service."""
         mock_manager = MagicMock()
 
         # Mock embedding manager
         mock_embedding = AsyncMock()
 
+        mock_embedding.estimate_cost = MagicMock(
+            return_value={
+                "fastembed": {
+                    "estimated_tokens": 20,
+                    "cost_per_token": 0.0,
+                    "total_cost": 0.0,
+                }
+            }
+        )
+        mock_embedding.get_provider_info = MagicMock(
+            return_value={
+                "fastembed": {
+                    "model": "BAAI/bge-small-en-v1.5",
+                    "dimensions": 384,
+                    "max_tokens": 512,
+                    "cost_per_token": 0.0,
+                }
+            }
+        )
+
         # Create a smart mock that returns different results based on inputs
         async def mock_generate_embeddings(
-            texts, model=None, _batch_size=32, generate_sparse=False
+            texts, model=None, batch_size=32, generate_sparse=False
         ):
             mock_result = MagicMock()
             # Generate embeddings based on number of input texts
@@ -42,6 +62,7 @@ class TestEmbeddingsTools:
             )
             mock_result.model = model or "BAAI/bge-small-en-v1.5"
             mock_result._total_tokens = len(texts) * 10  # 10 tokens per text
+            mock_result.total_tokens = None
             return mock_result
 
         mock_embedding.generate_embeddings.side_effect = mock_generate_embeddings
@@ -56,12 +77,7 @@ class TestEmbeddingsTools:
 
         mock_embedding.get_current_provider_info = mock_provider_info
 
-        embedding_dependency = AsyncMock(return_value=mock_embedding)
-        monkeypatch.setattr(
-            "src.services.dependencies.get_embedding_manager", embedding_dependency
-        )
-
-        mock_manager.embedding_dependency = embedding_dependency
+        mock_manager.get_embedding_manager = AsyncMock(return_value=mock_embedding)
         mock_manager.embedding_mock = mock_embedding
 
         return mock_manager
@@ -107,6 +123,8 @@ class TestEmbeddingsTools:
         assert len(result.embeddings[1]) == 4
         assert result.model == "BAAI/bge-small-en-v1.5"
         assert result.sparse_embeddings is None
+        assert result.cost_estimate == 0.0
+        assert result.total_tokens == 20
 
         # Verify context logging
         mock_context.info.assert_called()
@@ -144,12 +162,15 @@ class TestEmbeddingsTools:
         assert len(result.sparse_embeddings) == 2
         assert len(result.sparse_embeddings[0]) == 5
         assert len(result.sparse_embeddings[1]) == 5
+        assert result.cost_estimate == 0.0
 
         # Verify context logging
         mock_context.info.assert_called()
 
     @pytest.mark.asyncio
-    async def test_list_embedding_providers(self, mock_client_manager, mock_context):
+    async def test_list_embedding_providers(
+        self, mock_client_manager, mock_context, monkeypatch
+    ):
         """Test getting available embedding providers."""
 
         mock_mcp = MagicMock()
@@ -160,6 +181,17 @@ class TestEmbeddingsTools:
             return func
 
         mock_mcp.tool.return_value = capture_tool
+        # Reset provider cache
+        monkeypatch.setattr(
+            "src.mcp_tools.tools.embeddings._provider_cache",
+            None,
+            raising=False,
+        )
+        monkeypatch.setattr(
+            "src.mcp_tools.tools.embeddings._provider_cache_expiry",
+            None,
+            raising=False,
+        )
         register_tools(mock_mcp, mock_client_manager)
 
         list_embedding_providers = registered_tools["list_embedding_providers"]
@@ -167,7 +199,8 @@ class TestEmbeddingsTools:
         result = await list_embedding_providers(ctx=mock_context)
 
         assert isinstance(result, list)
-        # The implementation returns a list of provider info
+        assert result[0].name == "fastembed"
+        assert result[0].models[0]["name"] == "BAAI/bge-small-en-v1.5"
 
         # Verify context logging
         mock_context.info.assert_called()
@@ -181,7 +214,7 @@ class TestEmbeddingsTools:
         mock_embedding.generate_embeddings.side_effect = Exception(
             "Embedding service unavailable"
         )
-        mock_client_manager.embedding_dependency.return_value = mock_embedding
+        mock_client_manager.get_embedding_manager.return_value = mock_embedding
 
         mock_mcp = MagicMock()
         registered_tools = {}
@@ -326,7 +359,8 @@ class TestEmbeddingsTools:
         # Test embedding manager is retrieved
         request = EmbeddingRequest(texts=["test"])
         await generate_embeddings(request, mock_context)
-        mock_client_manager.embedding_dependency.assert_called()
+        mock_client_manager.get_embedding_manager.assert_called()
+        mock_client_manager.embedding_mock.generate_embeddings.assert_called()
 
         # Test providers call
         await list_embedding_providers(ctx=mock_context)
@@ -386,5 +420,9 @@ class TestEmbeddingsTools:
         assert len(result.embeddings) == 1
 
         # Verify embedding manager was called with custom model details
-        embedding_manager = await mock_client_manager.embedding_dependency()
-        embedding_manager.generate_embeddings.assert_called()
+        mock_client_manager.embedding_mock.generate_embeddings.assert_called_with(
+            texts=["test text"],
+            model="sentence-transformers/all-MiniLM-L6-v2",
+            batch_size=32,
+            generate_sparse=False,
+        )

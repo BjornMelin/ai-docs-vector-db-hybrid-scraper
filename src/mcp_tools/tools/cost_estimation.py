@@ -1,14 +1,17 @@
 """Minimal cost estimation with real calculations."""
 
+from __future__ import annotations
+
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastmcp import Context
 
-from src.infrastructure.client_manager import ClientManager
-
 
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from src.infrastructure.client_manager import ClientManager
 
 # Current API pricing (as of 2024)
 PRICING = {

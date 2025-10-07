@@ -6,17 +6,15 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 from fastmcp import Context
 
 from src.config import SearchStrategy
-from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.models.requests import ProjectRequest
 from src.mcp_tools.models.responses import OperationStatus, ProjectInfo, SearchResult
 from src.mcp_tools.tools._shared import ensure_vector_service, match_to_result
-from src.services.dependencies import get_project_storage
 from src.services.vector_db.types import CollectionSchema
 
 
@@ -38,6 +36,10 @@ def _collection_schema(collection: str, tier: str) -> CollectionSchema:
     return CollectionSchema(name=collection, vector_size=vector_size, distance="cosine")
 
 
+if TYPE_CHECKING:
+    from src.infrastructure.client_manager import ClientManager
+
+
 def register_tools(mcp, client_manager: ClientManager) -> None:
     """Register project management tools with the MCP server."""
 
@@ -47,7 +49,7 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
     ) -> ProjectInfo:
         """Create a new project with a dedicated vector collection."""
 
-        project_storage = await get_project_storage(client_manager)
+        project_storage = await client_manager.get_project_storage()
         vector_service = await ensure_vector_service(client_manager)
 
         project_id = str(uuid4())
@@ -77,7 +79,7 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
     async def list_projects(ctx: Context | None = None) -> list[ProjectInfo]:
         """Return all projects with lightweight collection statistics."""
 
-        project_storage = await get_project_storage(client_manager)
+        project_storage = await client_manager.get_project_storage()
         vector_service = await ensure_vector_service(client_manager)
 
         projects = await project_storage.list_projects()
@@ -110,7 +112,7 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
     ) -> ProjectInfo:
         """Update basic project metadata."""
 
-        project_storage = await get_project_storage(client_manager)
+        project_storage = await client_manager.get_project_storage()
         project = await project_storage.get_project(project_id)
         if not project:
             msg = f"Project {project_id} not found"
@@ -140,7 +142,7 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
     ) -> OperationStatus:
         """Delete a project record and optionally drop its vector collection."""
 
-        project_storage = await get_project_storage(client_manager)
+        project_storage = await client_manager.get_project_storage()
         project = await project_storage.get_project(project_id)
         if not project:
             msg = f"Project {project_id} not found"
@@ -176,7 +178,7 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
     ) -> list[SearchResult]:
         """Search within a project's dedicated collection."""
 
-        project_storage = await get_project_storage(client_manager)
+        project_storage = await client_manager.get_project_storage()
         project = await project_storage.get_project(project_id)
         if not project:
             msg = f"Project {project_id} not found"

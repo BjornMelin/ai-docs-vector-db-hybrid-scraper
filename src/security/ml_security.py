@@ -84,7 +84,7 @@ class MLSecurityValidator:
 
     def validate_input(
         self, data: dict[str, Any], expected_schema: dict[str, type] | None = None
-        ) -> SecurityCheckResult:
+    ) -> SecurityCheckResult:
         """Basic input validation for ML requests.
 
         Args:
