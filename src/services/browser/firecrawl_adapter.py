@@ -17,6 +17,7 @@ import os
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
+from numbers import Integral
 from typing import Any
 
 import httpx
@@ -123,8 +124,18 @@ class FirecrawlAdapter:
 
         self._ensure_ready()
 
-        fmts = list(formats) if formats else list(self._config.default_formats)
-        to = timeout or self._config.timeout_seconds
+        try:
+            fmts = self._normalize_formats(formats, self._config.default_formats)
+        except TypeError as err:
+            logger.warning("Firecrawl scrape invalid formats for %s: %s", url, err)
+            return {
+                "success": False,
+                "url": url,
+                "error": str(err),
+                "provider": "firecrawl",
+            }
+
+        to = timeout if timeout is not None else self._config.timeout_seconds
         scrape_kwargs: dict[str, Any] = {"formats": fmts}
         if only_main_content is not None:
             scrape_kwargs["only_main_content"] = only_main_content
@@ -180,29 +191,39 @@ class FirecrawlAdapter:
             **overrides: Per-call overrides for ``limit``, ``formats``,
                 ``poll_interval``, and ``timeout``.
 
-        Raises:
-            TypeError: If an unsupported override name or invalid value is supplied.
+        Returns:
+            Normalized crawl result or an error payload when parameters are invalid.
         """
 
         self._ensure_ready()
 
         base_options = options or FirecrawlCrawlOptions()
-        self._validate_overrides(overrides)
-
-        effective_limit = self._coerce_int(overrides.get("limit"), base_options.limit)
-        fmts = list(
-            overrides.get("formats", base_options.formats)
-            or self._config.default_formats
-        )
-        poll_interval = self._coerce_int(
-            overrides.get("poll_interval"), base_options.poll_interval
-        )
-        to = self._coerce_int(
-            overrides.get("timeout"),
-            base_options.timeout
-            if base_options.timeout is not None
-            else self._config.timeout_seconds,
-        )
+        try:
+            self._validate_overrides(overrides)
+            effective_limit = self._coerce_int(
+                overrides.get("limit"), base_options.limit
+            )
+            fmts = self._normalize_formats(
+                overrides.get("formats", base_options.formats),
+                base_options.formats or self._config.default_formats,
+            )
+            poll_interval = self._coerce_int(
+                overrides.get("poll_interval"), base_options.poll_interval
+            )
+            to = self._coerce_int(
+                overrides.get("timeout"),
+                base_options.timeout
+                if base_options.timeout is not None
+                else self._config.timeout_seconds,
+            )
+        except TypeError as err:
+            logger.warning("Firecrawl crawl parameter error for %s: %s", url, err)
+            return {
+                "success": False,
+                "url": url,
+                "error": str(err),
+                "provider": "firecrawl",
+            }
 
         try:
             job = await asyncio.wait_for(
@@ -256,9 +277,14 @@ class FirecrawlAdapter:
         if sources:
             kwargs["sources"] = list(sources)
 
+        to = self._config.timeout_seconds
+
         try:
-            result = await self._client.search(  # type: ignore[attr-defined]
-                query, **kwargs
+            result = await asyncio.wait_for(
+                self._client.search(  # type: ignore[attr-defined]
+                    query, **kwargs
+                ),
+                timeout=to,
             )
             normalized_results = self._normalize_search_results(result)
             return {
@@ -266,6 +292,14 @@ class FirecrawlAdapter:
                 "query": query,
                 "results": normalized_results,
                 "sources": kwargs.get("sources", []),
+                "provider": "firecrawl",
+            }
+        except TimeoutError as err:
+            logger.warning("Firecrawl search timed out for %s: %s", query, err)
+            return {
+                "success": False,
+                "query": query,
+                "error": "search timeout",
                 "provider": "firecrawl",
             }
         except (ValidationError, ValueError, httpx.HTTPError) as err:
@@ -288,25 +322,34 @@ class FirecrawlAdapter:
     # --- Internals ------------------------------------------------------
 
     def _ensure_ready(self) -> None:
-        if not self._initialized or self._client is None:
-            """Ensure FirecrawlAdapter is initialized and ready."""
+        """Ensure FirecrawlAdapter is initialized and ready."""
 
+        if not self._initialized or self._client is None:
             raise RuntimeError("FirecrawlAdapter not initialized")
 
     @staticmethod
     def _coerce_int(value: Any, default: int) -> int:
-        """Return ``value`` if it is an ``int`` otherwise ``default``.
+        """Return ``value`` as an ``int`` or fall back to ``default``.
 
-        Raises ``TypeError`` when value is not ``None`` and not an integer to
-        surface invalid overrides early.
+        Accepts integral numeric types and digit-only strings while rejecting
+        booleans and non-numeric inputs.
         """
 
         if value is None:
             return default
-        if isinstance(value, bool) or not isinstance(value, int):
-            msg = f"Expected integer override, received {value!r}"
+        if isinstance(value, bool):
+            msg = "Expected integer override, received bool"
             raise TypeError(msg)
-        return value
+        if isinstance(value, Integral):
+            return int(value)
+        if isinstance(value, str):
+            try:
+                return int(value.strip())
+            except ValueError as exc:  # pragma: no cover - invalid str handled below
+                msg = f"Expected integer override, received {value!r}"
+                raise TypeError(msg) from exc
+        msg = f"Expected integer override, received {value!r}"
+        raise TypeError(msg)
 
     @staticmethod
     def _validate_overrides(overrides: Mapping[str, Any]) -> None:
@@ -317,6 +360,24 @@ class FirecrawlAdapter:
             unexpected = ", ".join(sorted(extra_keys))
             msg = f"Unsupported crawl overrides: {unexpected}"
             raise TypeError(msg)
+
+    @staticmethod
+    def _normalize_formats(value: Any, fallback: Sequence[str]) -> list[str]:
+        """Normalize format inputs to a concrete list of strings."""
+
+        if value is None:
+            result = list(fallback)
+        elif isinstance(value, str):
+            result = [value]
+        elif isinstance(value, Sequence) and not isinstance(
+            value, (str, bytes, bytearray)
+        ):
+            result = [str(item) for item in value]
+        else:
+            msg = "formats must be a string or a sequence of strings"
+            raise TypeError(msg)
+
+        return result or list(fallback)
 
     @staticmethod
     def _ensure_dict(data: Any) -> dict[str, Any]:
