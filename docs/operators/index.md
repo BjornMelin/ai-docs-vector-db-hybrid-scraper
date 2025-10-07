@@ -74,5 +74,5 @@ docker kill $(docker ps -q)       # Force stop all containers
 
 ---
 
-For comprehensive system information, see [Developer Architecture](../developers/architecture.md).
+For comprehensive system information, see [Developer Architecture](../developers/architecture-and-orchestration.md).
 For user-facing documentation, see [User Documentation](../users/index.md).

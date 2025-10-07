@@ -40,9 +40,9 @@ uv run pytest -q
 
 Keep these guides bookmarked—together they answer the majority of day-to-day questions:
 
-- **[Architecture](./architecture.md)** – Component map, request flows, scaling tactics.
+- **[Architecture & Orchestration](./architecture-and-orchestration.md)** – System design, LangGraph stack, MCP guidance.
 - **[Configuration](./configuration.md)** – Environment variables, profile overrides, tuning knobs.
-- **[Service Adapters](./service_adapters.md)** – Drop-in patterns for optional cache/search services.
+- **[Architecture & Orchestration](./architecture-and-orchestration.md)** – Drop-in patterns for optional cache/search services.
 - **[Persistent Cache](./cache/persistent-cache.md)** – Implementation notes for the local + Dragonfly stack.
 - **[Agentic Orchestration](./agentic-orchestration.md)** – LangGraph runner, tool discovery, and testing guidance.
 - **[FastMCP Integration](./mcp-integration.md)** – Server structure, middleware, and migration roadmap.
@@ -55,7 +55,7 @@ Supporting docs when you need more detail:
 
 - **[Developer Setup Guide](./getting-started.md)** – OS-specific prerequisites and local tooling.
 - **[GPU Acceleration Guide](./gpu-acceleration.md)** – Optional CUDA/MPS configuration and helper APIs.
-- **[Application Profiles](./app-profiles.md)** – Simple vs enterprise feature composition.
+- **[Setup & Configuration](./setup-and-configuration.md)** – Environment prerequisites, profiles, and configuration loader.
 - **[Deployment Guide](./deployment.md)** – Production rollout patterns and rollback steps.
 - **[Document Metadata](./document-metadata.md)** – Indexing schema and required fields.
 
@@ -91,13 +91,7 @@ Supporting docs when you need more detail:
 
 ## 5. Optional Services
 
-Optional caches or search engines should be wired via adapters instead of direct imports. The
-[Service Adapters](./service_adapters.md) guide contains:
-
-- An in-memory search adapter for local demos.
-- Production-grade OpenSearch and Redis examples.
-- Dependency override patterns for lightweight FastAPI injections.
-
+Optional caches or search engines should be wired via the patterns documented in [Architecture & Orchestration](./architecture-and-orchestration.md).
 ## 6. Where to Go Next
 
 | If you need…         | Read…                                 |

@@ -56,7 +56,7 @@ graph LR
 === "Developers"
 
     - [Developer Hub](developers/index.md)
-    - [System Architecture](developers/architecture.md)
+    - [System Architecture](developers/architecture-and-orchestration.md)
     - [API Reference](developers/api-reference.md)
     - [Agentic Orchestration](developers/agentic-orchestration.md)
     - [FastMCP Integration](developers/mcp-integration.md)

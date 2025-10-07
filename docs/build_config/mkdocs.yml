@@ -49,7 +49,7 @@ nav:
   - Architecture & API:
       - Developer Hub: developers/index.md
       - Developer Setup: developers/getting-started.md
-      - System Architecture: developers/architecture.md
+      - System Architecture: developers/architecture-and-orchestration.md
       - Configuration Reference: developers/configuration.md
       - Service Adapters: developers/service_adapters.md
       - API Reference: developers/api-reference.md
