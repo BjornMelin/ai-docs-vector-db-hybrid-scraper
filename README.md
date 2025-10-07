@@ -214,7 +214,7 @@ Stop with `docker compose down` when finished.
 
 - Configuration is defined with Pydantic models in `src/config/models.py` and can be overridden via environment variables (`AI_DOCS__*`) or YAML files in `config/templates/`.
 - Mode-aware settings enable or disable services such as advanced caching, A/B testing, and observability.
-- Detailed configuration guidance lives in `docs/developers/configuration.md` and operator runbooks under `docs/operators/`.
+- Detailed configuration guidance lives in `docs/developers/setup-and-configuration.md` and operator runbooks under `docs/operators/`.
 
 ## Testing & Quality
 

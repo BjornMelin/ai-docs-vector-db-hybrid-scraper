@@ -41,6 +41,9 @@ jobs:
           cache-suffix: "-docs"
           install-dev: 'false'
 
+      - name: Ensure uv is available
+        run: uv --version
+
       - name: Install documentation dependencies
         run: uv sync --frozen --group docs
 
