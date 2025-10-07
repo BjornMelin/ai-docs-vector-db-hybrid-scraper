@@ -26,7 +26,17 @@ from src.infrastructure.container import ApplicationContainer, get_container
 from src.services.browser.automation_router import AutomationRouter
 from src.services.embeddings.fastembed_provider import FastEmbedProvider
 from src.services.errors import APIError
+from src.services.registry import ensure_service_registry
 from src.services.vector_db.service import VectorStoreService
+
+
+if TYPE_CHECKING:  # pragma: no cover - imported for typing only
+    from src.services.cache.manager import CacheManager
+    from src.services.content_intelligence.service import ContentIntelligenceService
+    from src.services.core.project_storage import ProjectStorage
+    from src.services.crawling.manager import CrawlManager
+    from src.services.embeddings.manager import EmbeddingManager
+    from src.services.rag.generator import RAGGenerator
 
 
 # Import dependencies for health checks
@@ -90,6 +100,12 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         self._parallel_processing_system: Any | None = None
         self._initialized = False
         self._vector_store_service: VectorStoreService | None = None
+        self._cache_manager: CacheManager | None = None
+        self._embedding_manager: EmbeddingManager | None = None
+        self._crawl_manager: CrawlManager | None = None
+        self._content_intelligence: ContentIntelligenceService | None = None
+        self._project_storage: ProjectStorage | None = None
+        self._rag_generator: RAGGenerator | None = None
         self._config = get_config()
         self._automation_router: AutomationRouter | None = None
         self._mcp_client: MultiServerMCPClient | None = None
@@ -172,6 +188,17 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         if self._vector_store_service:
             await self._vector_store_service.cleanup()
             self._vector_store_service = None
+        if self._rag_generator:
+            try:
+                await self._rag_generator.cleanup()
+            except Exception:  # pragma: no cover - defensive
+                logger.exception("Failed to cleanup RAG generator")
+            self._rag_generator = None
+        self._cache_manager = None
+        self._embedding_manager = None
+        self._crawl_manager = None
+        self._content_intelligence = None
+        self._project_storage = None
         self._mcp_client = None
         self._providers.clear()
         self._parallel_processing_system = None
@@ -275,6 +302,86 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         self._vector_store_service = service
         return service
 
+    async def get_cache_manager(self) -> "CacheManager":
+        if self._cache_manager:
+            return self._cache_manager
+
+        registry = await ensure_service_registry()
+        self._cache_manager = registry.cache_manager
+        return self._cache_manager
+
+    async def get_embedding_manager(self) -> "EmbeddingManager":
+        if self._embedding_manager:
+            return self._embedding_manager
+
+        registry = await ensure_service_registry()
+        self._embedding_manager = registry.embedding_manager
+        return self._embedding_manager
+
+    async def get_crawl_manager(self) -> "CrawlManager":
+        if self._crawl_manager:
+            return self._crawl_manager
+
+        registry = await ensure_service_registry()
+        self._crawl_manager = registry.crawl_manager
+        return self._crawl_manager
+
+    async def get_content_intelligence_service(
+        self,
+    ) -> "ContentIntelligenceService":
+        if self._content_intelligence:
+            return self._content_intelligence
+
+        registry = await ensure_service_registry()
+        self._content_intelligence = registry.content_intelligence
+        return self._content_intelligence
+
+    async def get_project_storage(self) -> "ProjectStorage":
+        if self._project_storage:
+            return self._project_storage
+
+        registry = await ensure_service_registry()
+        self._project_storage = registry.project_storage
+        return self._project_storage
+
+    async def get_rag_generator(self) -> "RAGGenerator":
+        if self._rag_generator:
+            return self._rag_generator
+
+        from src.services.rag.generator import (  # pylint: disable=import-outside-toplevel
+            RAGGenerator,
+        )
+        from src.services.rag.models import (  # pylint: disable=import-outside-toplevel
+            RAGConfig as ServiceRAGConfig,
+        )
+        from src.services.rag.retriever import (  # pylint: disable=import-outside-toplevel
+            VectorServiceRetriever,
+        )
+
+        vector_service = await self.get_vector_store_service()
+        rag_config_model = getattr(self._config, "rag", None)
+        rag_config = ServiceRAGConfig.model_validate(
+            rag_config_model.model_dump() if rag_config_model is not None else {}
+        )
+
+        collection_name = getattr(
+            getattr(self._config, "qdrant", None),
+            "collection_name",
+            "documents",
+        )
+
+        retriever = VectorServiceRetriever(
+            vector_service=vector_service,
+            collection=collection_name,
+            k=rag_config.retriever_top_k,
+            rag_config=rag_config,
+        )
+
+        generator = RAGGenerator(rag_config, retriever)
+        await generator.initialize()
+        self._rag_generator = generator
+        return generator
+
     async def get_redis_client(self):
         provider = self._providers.get("redis")
         if not provider:
@@ -361,7 +468,7 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         try:
             yield await getters[client_type]()
         except (ConnectionError, TimeoutError, APIError, ValueError, RuntimeError):
-            logger.exception("Error using {client_type} client")
+            logger.exception("Error using %s client", client_type)
             raise
 
     async def __aenter__(self):

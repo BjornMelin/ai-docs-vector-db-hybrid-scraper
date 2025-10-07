@@ -10,12 +10,15 @@ import logging
 import os
 import random
 import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, ClassVar
 
 from locust import HttpUser, TaskSet, between, events, task
 from locust.env import Environment
 from locust.log import setup_logging
+
+from tests.load.performance_utils import grade_from_score
 
 
 logger = logging.getLogger(__name__)
@@ -475,6 +478,17 @@ class AdminUser(HttpUser):
                 response.failure("{operation} failed")
 
 
+@dataclass(slots=True)
+class RequestMetric:
+    """Structured representation of a single request metric."""
+
+    request_type: str
+    name: str
+    response_time: float
+    content_length: int
+    exception: Exception | None = None
+
+
 class LoadTestMetricsCollector:
     """Enhanced metrics collector for load testing."""
 
@@ -501,24 +515,17 @@ class LoadTestMetricsCollector:
         self.test_end_time = time.time()
         logger.info("Load test metrics collection stopped")
 
-    def add_request_metric(
-        self,
-        request_type: str,
-        name: str,
-        response_time: float,
-        content_length: int,
-        exception: Exception | None,
-    ):
+    def add_request_metric(self, metric: RequestMetric) -> None:
         """Add request metric."""
         self.request_metrics.append(
             {
                 "timestamp": time.time(),
-                "request_type": request_type,
-                "name": name,
-                "response_time": response_time,
-                "content_length": content_length,
-                "success": exception is None,
-                "error": str(exception) if exception else None,
+                "request_type": metric.request_type,
+                "name": metric.name,
+                "response_time": metric.response_time,
+                "content_length": metric.content_length,
+                "success": metric.exception is None,
+                "error": str(metric.exception) if metric.exception else None,
             }
         )
 
@@ -592,16 +599,7 @@ class LoadTestMetricsCollector:
         # Deduct for errors
         score -= error_rate * 10
 
-        # Convert to grade
-        if score >= 90:
-            return "A"
-        if score >= 80:
-            return "B"
-        if score >= 70:
-            return "C"
-        if score >= 60:
-            return "D"
-        return "F"
+        return grade_from_score(score)
 
     def _check_thresholds(self) -> list[str]:
         """Check performance threshold violations."""
@@ -682,9 +680,14 @@ def on_request(
     **__kwargs,
 ):
     """Handle request completion event."""
-    metrics_collector.add_request_metric(
-        request_type, name, response_time, response_length, exception
+    metric = RequestMetric(
+        request_type=request_type,
+        name=name,
+        response_time=response_time,
+        content_length=response_length,
+        exception=exception,
     )
+    metrics_collector.add_request_metric(metric)
 
 
 def save_load_test_report(summary: dict[str, Any], environment: Environment):

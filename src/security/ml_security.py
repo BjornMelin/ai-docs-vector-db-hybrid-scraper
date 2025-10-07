@@ -28,6 +28,9 @@ from src.config import get_config
 
 # Import SecurityValidator from the file module
 spec = importlib.util.spec_from_file_location("security_module", "src/security.py")
+if spec is None or spec.loader is None:
+    msg = "Unable to load security module specification"
+    raise ImportError(msg)
 security_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(security_module)
 
@@ -62,18 +65,26 @@ class MLSecurityValidator:
 
     def __init__(self):
         """Initialize with existing security config."""
+
         self.config = get_config()
         self.base_validator = BaseSecurityValidator.from_unified_config()
-        self.checks_performed = []
+        self.checks_performed: list[SecurityCheckResult] = []
+
+    def _record_result(self, result: SecurityCheckResult) -> SecurityCheckResult:
+        """Store and return a security check result for consistent handling."""
+
+        self.checks_performed.append(result)
+        return result
 
     @classmethod
     def from_unified_config(cls) -> "MLSecurityValidator":
         """Create MLSecurityValidator from unified config."""
+
         return cls()
 
     def validate_input(
         self, data: dict[str, Any], expected_schema: dict[str, type] | None = None
-    ) -> SecurityCheckResult:
+        ) -> SecurityCheckResult:
         """Basic input validation for ML requests.
 
         Args:
@@ -82,47 +93,47 @@ class MLSecurityValidator:
 
         Returns:
             Security check result
-
         """
+
         # Check if ML input validation is enabled (use default if not configured)
         enable_validation = getattr(
             self.config.security, "enable_ml_input_validation", True
         )
         if not enable_validation:
-            result = SecurityCheckResult(
-                check_type="input_validation",
-                passed=True,
-                message="Input validation skipped (disabled in config)",
+            return self._record_result(
+                SecurityCheckResult(
+                    check_type="input_validation",
+                    passed=True,
+                    message="Input validation skipped (disabled in config)",
+                )
             )
-            self.checks_performed.append(result)
-            return result
 
         try:
             # Check data size (prevent DoS)
             data_str = str(data)
             max_input_size = getattr(self.config.security, "max_ml_input_size", 1000000)
             if len(data_str) > max_input_size:
-                result = SecurityCheckResult(
-                    check_type="input_validation",
-                    passed=False,
-                    message="Input data too large",
-                    severity="warning",
+                return self._record_result(
+                    SecurityCheckResult(
+                        check_type="input_validation",
+                        passed=False,
+                        message="Input data too large",
+                        severity="warning",
+                    )
                 )
-                self.checks_performed.append(result)
-                return result
 
             # Basic type checking
             if expected_schema:
                 for key, expected_type in expected_schema.items():
                     if key in data and not isinstance(data[key], expected_type):
-                        result = SecurityCheckResult(
-                            check_type="input_validation",
-                            passed=False,
-                            message=f"Invalid type for {key}",
-                            severity="warning",
+                        return self._record_result(
+                            SecurityCheckResult(
+                                check_type="input_validation",
+                                passed=False,
+                                message=f"Invalid type for {key}",
+                                severity="warning",
+                            )
                         )
-                        self.checks_performed.append(result)
-                        return result
 
             # Check for suspicious patterns from config
             suspicious_patterns = getattr(
@@ -132,73 +143,68 @@ class MLSecurityValidator:
             )
             for pattern in suspicious_patterns:
                 if pattern in data_str:
-                    result = SecurityCheckResult(
-                        check_type="input_validation",
-                        passed=False,
-                        message="Suspicious pattern detected",
-                        severity="error",
+                    return self._record_result(
+                        SecurityCheckResult(
+                            check_type="input_validation",
+                            passed=False,
+                            message="Suspicious pattern detected",
+                            severity="error",
+                        )
                     )
-                    self.checks_performed.append(result)
-                    return result
 
-            result = SecurityCheckResult(
-                check_type="input_validation",
-                passed=True,
-                message="Input validation passed",
+            return self._record_result(
+                SecurityCheckResult(
+                    check_type="input_validation",
+                    passed=True,
+                    message="Input validation passed",
+                )
             )
-            self.checks_performed.append(result)
-
-        except Exception as e:
+        except Exception as exc:  # noqa: BLE001 - broad due to validation surface
             logger.exception("Input validation error")
-            result = SecurityCheckResult(
-                check_type="input_validation",
-                passed=False,
-                message=str(e),
-                severity="error",
+            return self._record_result(
+                SecurityCheckResult(
+                    check_type="input_validation",
+                    passed=False,
+                    message=str(exc),
+                    severity="error",
+                )
             )
-            self.checks_performed.append(result)
-        else:
-            return result
 
     def check_dependencies(self) -> SecurityCheckResult:
         """Run dependency security check using pip-audit.
 
         Returns:
             Security check result
-
         """
+
         # Check if dependency scanning is enabled (use default if not configured)
         enable_scanning = getattr(
             self.config.security, "enable_dependency_scanning", True
         )
         if not enable_scanning:
-            result = SecurityCheckResult(
-                check_type="dependency_scan",
-                passed=True,
-                message="Dependency scan skipped (disabled in config)",
+            return self._record_result(
+                SecurityCheckResult(
+                    check_type="dependency_scan",
+                    passed=True,
+                    message="Dependency scan skipped (disabled in config)",
+                )
             )
-            self.checks_performed.append(result)
-            return result
 
-        try:
-            # Use pip-audit if available with full path for security
-            pip_audit_path = shutil.which("pip-audit")
-            if not pip_audit_path:
-                # pip-audit not available
-                result = SecurityCheckResult(
+        pip_audit_path = shutil.which("pip-audit")
+        if not pip_audit_path:
+            return self._record_result(
+                SecurityCheckResult(
                     check_type="dependency_scan",
                     passed=True,
                     message="Dependency scan skipped (pip-audit not available)",
                 )
-                self.checks_performed.append(result)
-                return result
+            )
 
-            # Validate executable path for security
-            if not pip_audit_path.startswith(("/usr/bin/", "/usr/local/bin/", "/opt/")):
-                logger.warning(
-                    f"pip-audit found in unexpected location: {pip_audit_path}"
-                )
+        # Validate executable path for security
+        if not pip_audit_path.startswith(("/usr/bin/", "/usr/local/bin/", "/opt/")):
+            logger.warning("pip-audit found in unexpected location: %s", pip_audit_path)
 
+        try:
             result = subprocess.run(  # Validated executable path  # noqa: S603
                 [pip_audit_path, "--format", "json"],
                 capture_output=True,
@@ -207,57 +213,47 @@ class MLSecurityValidator:
                 check=False,
                 shell=False,  # Explicitly disable shell
             )
-
+        except subprocess.TimeoutExpired:
+            check_result = SecurityCheckResult(
+                check_type="dependency_scan",
+                passed=True,
+                message="Dependency scan timed out",
+                severity="info",
+            )
+        except (OSError, PermissionError):
+            logger.exception("Dependency check error")
+            check_result = SecurityCheckResult(
+                check_type="dependency_scan",
+                passed=True,
+                message="Dependency scan failed",
+                severity="info",
+            )
+        else:
             if result.returncode == 0:
                 audit_data = json.loads(result.stdout)
                 vulnerabilities = audit_data.get("vulnerabilities", [])
-
                 if vulnerabilities:
-                    result = SecurityCheckResult(
+                    check_result = SecurityCheckResult(
                         check_type="dependency_scan",
                         passed=False,
                         message=f"Found {len(vulnerabilities)} vulnerabilities",
                         severity="warning",
                         details={"count": len(vulnerabilities)},
                     )
-                    self.checks_performed.append(result)
-                    return result
-                result = SecurityCheckResult(
+                else:
+                    check_result = SecurityCheckResult(
+                        check_type="dependency_scan",
+                        passed=True,
+                        message="No vulnerabilities found",
+                    )
+            else:
+                check_result = SecurityCheckResult(
                     check_type="dependency_scan",
                     passed=True,
-                    message="No vulnerabilities found",
+                    message="Dependency scan skipped (pip-audit unavailable or failed)",
                 )
-                self.checks_performed.append(result)
-                return result
-            # pip-audit not available or failed
-            result = SecurityCheckResult(
-                check_type="dependency_scan",
-                passed=True,
-                message="Dependency scan skipped (pip-audit not available)",
-            )
-            self.checks_performed.append(result)
 
-        except subprocess.TimeoutExpired:
-            result = SecurityCheckResult(
-                check_type="dependency_scan",
-                passed=True,
-                message="Dependency scan timed out",
-                severity="info",
-            )
-            self.checks_performed.append(result)
-            return result
-
-        except (OSError, PermissionError):
-            logger.exception("Dependency check error")
-            result = SecurityCheckResult(
-                check_type="dependency_scan",
-                passed=True,
-                message="Dependency scan failed",
-                severity="info",
-            )
-            self.checks_performed.append(result)
-        else:
-            return result
+        return self._record_result(check_result)
 
     def check_container(self, image_name: str) -> SecurityCheckResult:
         """Basic container security check using trivy if available.
@@ -273,30 +269,28 @@ class MLSecurityValidator:
             # Try trivy first with full path for security
             trivy_path = shutil.which("trivy")
             if not trivy_path:
-                result = SecurityCheckResult(
-                    check_type="container_scan",
-                    passed=True,
-                    message="Container scan skipped (trivy not available)",
+                return self._record_result(
+                    SecurityCheckResult(
+                        check_type="container_scan",
+                        passed=True,
+                        message="Container scan skipped (trivy not available)",
+                    )
                 )
-                self.checks_performed.append(result)
-                return result
 
             # Validate executable path for security
             if not trivy_path.startswith(("/usr/bin/", "/usr/local/bin/", "/opt/")):
-                logger.warning(
-                    "trivy found in unexpected location: %s", trivy_path
-                )
+                logger.warning("trivy found in unexpected location: %s", trivy_path)
 
             # Validate image name for security
             if not image_name or ".." in image_name or "/" not in image_name:
-                result = SecurityCheckResult(
-                    check_type="container_scan",
-                    passed=False,
-                    message="Invalid container image name",
-                    severity="error",
+                return self._record_result(
+                    SecurityCheckResult(
+                        check_type="container_scan",
+                        passed=False,
+                        message="Invalid container image name",
+                        severity="error",
+                    )
                 )
-                self.checks_performed.append(result)
-                return result
 
             result = subprocess.run(  # Validated executable path  # noqa: S603
                 [
@@ -326,42 +320,42 @@ class MLSecurityValidator:
                 )
 
                 if vuln_count > 0:
-                    result = SecurityCheckResult(
-                        check_type="container_scan",
-                        passed=False,
-                        message=f"Found {vuln_count} high/critical vulnerabilities",
-                        severity="error",
-                        details={"vulnerability_count": vuln_count},
+                    return self._record_result(
+                        SecurityCheckResult(
+                            check_type="container_scan",
+                            passed=False,
+                            message=(
+                                f"Found {vuln_count} high/critical vulnerabilities"
+                            ),
+                            severity="error",
+                            details={"vulnerability_count": vuln_count},
+                        )
                     )
-                    self.checks_performed.append(result)
-                    return result
-                result = SecurityCheckResult(
+                return self._record_result(
+                    SecurityCheckResult(
+                        check_type="container_scan",
+                        passed=True,
+                        message="No critical vulnerabilities found",
+                    )
+                )
+            return self._record_result(
+                SecurityCheckResult(
                     check_type="container_scan",
                     passed=True,
-                    message="No critical vulnerabilities found",
+                    message="Container scan skipped (trivy unavailable or failed)",
                 )
-                self.checks_performed.append(result)
-                return result
-            result = SecurityCheckResult(
-                check_type="container_scan",
-                passed=True,
-                message="Container scan skipped (trivy not available)",
             )
-            self.checks_performed.append(result)
 
         except (AttributeError, RuntimeError, ValueError):
             logger.info("Container scan skipped")
-            result = SecurityCheckResult(
-                check_type="container_scan",
-                passed=True,
-                message="Container scan not performed",
-                severity="info",
+            return self._record_result(
+                SecurityCheckResult(
+                    check_type="container_scan",
+                    passed=True,
+                    message="Container scan not performed",
+                    severity="info",
+                )
             )
-            self.checks_performed.append(result)
-            return result
-
-        else:
-            return result
 
     def validate_collection_name(self, name: str) -> str:
         """Validate collection name using base validator.
