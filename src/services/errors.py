@@ -39,8 +39,6 @@ from tenacity import (
     wait_exponential,
 )
 
-from src.services.circuit_breaker.provider import get_circuit_breaker_manager
-
 
 logger = logging.getLogger(__name__)
 
@@ -325,7 +323,7 @@ async def _call_with_circuit_breaker(
 ):
     """Execute an async callable inside a purgatory circuit breaker."""
 
-    manager = await get_circuit_breaker_manager()
+    manager = await _get_circuit_breaker_manager()
     breaker = await manager.get_breaker(service_name, **breaker_kwargs)
     try:
         async with breaker:
@@ -370,11 +368,11 @@ def circuit_breaker(  # pylint: disable=too-many-arguments
             )
 
         async def _status() -> dict[str, Any]:
-            manager = await get_circuit_breaker_manager()
+            manager = await _get_circuit_breaker_manager()
             return await manager.get_breaker_status(breaker_name)
 
         async def _reset() -> bool:
-            manager = await get_circuit_breaker_manager()
+            manager = await _get_circuit_breaker_manager()
             return await manager.reset_breaker(breaker_name)
 
         wrapper.circuit_breaker_name = breaker_name  # type: ignore[attr-defined]
@@ -426,11 +424,11 @@ def tenacity_circuit_breaker(  # pylint: disable=too-many-arguments,too-many-pos
                     )
 
         async def _status() -> dict[str, Any]:
-            manager = await get_circuit_breaker_manager()
+            manager = await _get_circuit_breaker_manager()
             return await manager.get_breaker_status(breaker_name)
 
         async def _reset() -> bool:
-            manager = await get_circuit_breaker_manager()
+            manager = await _get_circuit_breaker_manager()
             return await manager.reset_breaker(breaker_name)
 
         wrapper.circuit_breaker_name = breaker_name  # type: ignore[attr-defined]
@@ -565,3 +563,9 @@ def create_validation_error(
         message,
         {"field": field, **context},
     )
+async def _get_circuit_breaker_manager():
+    """Resolve the circuit breaker manager lazily to avoid import cycles."""
+
+    from src.services.circuit_breaker.provider import get_circuit_breaker_manager
+
+    return await get_circuit_breaker_manager()
