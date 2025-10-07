@@ -26,7 +26,6 @@ from src.infrastructure.container import ApplicationContainer, get_container
 from src.services.browser.automation_router import AutomationRouter
 from src.services.embeddings.fastembed_provider import FastEmbedProvider
 from src.services.errors import APIError
-from src.services.registry import ensure_service_registry
 from src.services.vector_db.service import VectorStoreService
 
 
@@ -73,6 +72,14 @@ deps_get_overall_health: OverallHealthCallable | None = (
 
 
 logger = logging.getLogger(__name__)
+
+
+async def _ensure_service_registry():  # pragma: no cover - thin wrapper
+    from src.services.registry import (
+        ensure_service_registry as _ensure_service_registry,
+    )
+
+    return await _ensure_service_registry()
 
 
 class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instance-attributes
@@ -306,7 +313,7 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         if self._cache_manager:
             return self._cache_manager
 
-        registry = await ensure_service_registry()
+        registry = await _ensure_service_registry()
         self._cache_manager = registry.cache_manager
         return self._cache_manager
 
@@ -314,7 +321,7 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         if self._embedding_manager:
             return self._embedding_manager
 
-        registry = await ensure_service_registry()
+        registry = await _ensure_service_registry()
         self._embedding_manager = registry.embedding_manager
         return self._embedding_manager
 
@@ -322,7 +329,7 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         if self._crawl_manager:
             return self._crawl_manager
 
-        registry = await ensure_service_registry()
+        registry = await _ensure_service_registry()
         self._crawl_manager = registry.crawl_manager
         return self._crawl_manager
 
@@ -332,7 +339,7 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         if self._content_intelligence:
             return self._content_intelligence
 
-        registry = await ensure_service_registry()
+        registry = await _ensure_service_registry()
         self._content_intelligence = registry.content_intelligence
         return self._content_intelligence
 
@@ -340,7 +347,7 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         if self._project_storage:
             return self._project_storage
 
-        registry = await ensure_service_registry()
+        registry = await _ensure_service_registry()
         self._project_storage = registry.project_storage
         return self._project_storage
 

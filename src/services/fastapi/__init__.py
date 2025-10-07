@@ -6,10 +6,8 @@ task management for the unified MCP Server.
 
 from .dependencies import (
     cleanup_dependencies,
-    get_cache_manager,
     get_client_manager,
     get_config_dependency as get_config,
-    get_embedding_manager,
     get_health_checker,
     get_vector_service,
     initialize_dependencies,
@@ -45,11 +43,9 @@ __all__ = [
     "TracingMiddleware",
     "cleanup_dependencies",
     "create_production_server",
-    "get_cache_manager",
     "get_client_manager",
     "get_config",
     "get_correlation_id",
-    "get_embedding_manager",
     "get_health_checker",
     "get_vector_service",
     # Dependency injection

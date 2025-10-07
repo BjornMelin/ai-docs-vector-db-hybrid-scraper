@@ -6,14 +6,13 @@ appropriate tier based on content complexity, requirements, and performance.
 
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal
 from urllib.parse import urlparse
 
 import redis
 from pydantic import BaseModel, Field
 
 from src.config import Config
-from src.infrastructure.client_manager import ClientManager
 from src.services.base import BaseService
 from src.services.errors import CrawlServiceError
 
@@ -27,9 +26,11 @@ except ImportError:
     BrowserCacheEntry = None
 
 if TYPE_CHECKING:
+    from src.infrastructure.client_manager import ClientManager
     from src.services.cache.browser_cache import BrowserCache as BrowserCacheType
 else:
     BrowserCacheType = Any
+    ClientManager = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -169,12 +170,9 @@ class UnifiedBrowserManager(  # pylint: disable=too-many-instance-attributes
 
     async def _initialize_client_manager(self) -> None:
         """Initialize client manager and automation router."""
-        if ClientManager is None:
-            msg = "ClientManager not available"
-            raise ImportError(msg)
+        from src.infrastructure.client_manager import ClientManager as ClientManagerCls
 
-        client_manager_cls = cast(type[ClientManager], ClientManager)
-        self._client_manager = client_manager_cls()
+        self._client_manager = ClientManagerCls()
         await self._client_manager.initialize()
 
         # Get enhanced automation router (lazy-initialized in ClientManager)
@@ -198,7 +196,7 @@ class UnifiedBrowserManager(  # pylint: disable=too-many-instance-attributes
             self._cache_enabled = False
             return
 
-        cache_manager = await cast(ClientManager, client_manager).get_cache_manager()
+        cache_manager = await client_manager.get_cache_manager()
 
         cache_config = getattr(self.config, "cache", None)
         self._browser_cache = BrowserCache(

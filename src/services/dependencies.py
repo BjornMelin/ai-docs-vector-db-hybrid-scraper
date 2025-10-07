@@ -7,13 +7,12 @@ import logging
 from collections.abc import AsyncGenerator, Callable
 from datetime import UTC, datetime
 from time import perf_counter
-from typing import Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any
 
 from fastapi import Depends  # type: ignore[attr-defined]
 from pydantic import BaseModel, Field
 
 from src.config import CacheType, Config, get_config
-from src.infrastructure.client_manager import ClientManager
 from src.services.embeddings.manager import QualityTier
 from src.services.errors import (
     CircuitBreakerRegistry,
@@ -32,6 +31,12 @@ from src.services.registry import (
 from src.services.vector_db.service import VectorStoreService
 
 
+if TYPE_CHECKING:
+    from src.infrastructure.client_manager import ClientManager
+else:  # pragma: no cover - runtime import happens lazily where required
+    ClientManager = Any  # type: ignore[assignment]
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -39,8 +44,8 @@ logger = logging.getLogger(__name__)
 
 
 async def _resolve_client_manager(
-    client_manager: ClientManager | None,
-) -> ClientManager:
+    client_manager: "ClientManager | None",
+) -> "ClientManager":
     """Return an initialized ClientManager instance."""
 
     if client_manager is not None:
@@ -49,7 +54,9 @@ async def _resolve_client_manager(
     try:
         return get_service_registry().client_manager
     except Exception:  # pragma: no cover - defensive fallback
-        manager = ClientManager.from_unified_config()
+        from src.infrastructure.client_manager import ClientManager as _ClientManager
+
+        manager = _ClientManager.from_unified_config()
         await manager.initialize()
         return manager
 
@@ -60,15 +67,15 @@ async def _resolve_client_manager(
 ConfigDep = Annotated[Config, Depends(get_config)]
 
 
-def get_client_manager() -> ClientManager:
+def get_client_manager() -> "ClientManager":
     """Return the shared ClientManager from the service registry."""
     return get_service_registry().client_manager
 
 
-ClientManagerDep = Annotated[ClientManager, Depends(get_client_manager)]
+ClientManagerDep = Annotated["ClientManager", Depends(get_client_manager)]
 
 
-async def get_ready_client_manager() -> ClientManager:
+async def get_ready_client_manager() -> "ClientManager":
     """Return an initialized ClientManager instance."""
 
     registry = await ensure_service_registry()
