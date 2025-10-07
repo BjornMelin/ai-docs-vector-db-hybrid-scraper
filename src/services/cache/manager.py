@@ -122,13 +122,17 @@ class CacheManager:
         self._embedding_cache = None
         self._search_cache = None
         if enable_specialized_caches and self._distributed_cache:
+            redis_ttl = self.distributed_ttl_seconds.get(
+                CacheType.REDIS,
+                max(self.distributed_ttl_seconds.values(), default=3600),
+            )
             self._embedding_cache = EmbeddingCache(
                 cache=self._distributed_cache,
-                default_ttl=self.distributed_ttl_seconds[CacheType.REDIS],
+                default_ttl=redis_ttl,
             )
             self._search_cache = SearchResultCache(
                 cache=self._distributed_cache,
-                default_ttl=self.distributed_ttl_seconds[CacheType.REDIS],
+                default_ttl=redis_ttl,
             )
 
         # Initialize Prometheus monitoring registry

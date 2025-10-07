@@ -143,15 +143,14 @@ class EmbeddingResponse(BaseModel):
     enable_adaptive_timeout=True,
 )
 async def get_embedding_manager(
-    client_manager: ClientManagerDep,
+    client_manager: ClientManager | None = None,
 ) -> Any:
     """Get initialized EmbeddingManager service."""
-    del client_manager  # dependency retained for FastAPI signature.
     global _embedding_manager
     if _embedding_manager is not None:
         return _embedding_manager
 
-    ready_manager = await get_ready_client_manager()
+    ready_manager = client_manager or await get_ready_client_manager()
 
     async with _embedding_lock:
         if _embedding_manager is None:
@@ -222,10 +221,9 @@ class CacheRequest(BaseModel):
     enable_adaptive_timeout=True,
 )
 async def get_cache_manager(
-    client_manager: ClientManagerDep,
+    client_manager: ClientManager | None = None,
 ) -> Any:
     """Get initialized CacheManager service."""
-    del client_manager  # Signature retained for FastAPI dependency wiring.
 
     global _cache_manager
     if _cache_manager is not None:
@@ -336,11 +334,9 @@ class CrawlResponse(BaseModel):
     enable_adaptive_timeout=True,
 )
 async def get_crawl_manager(
-    client_manager: ClientManagerDep,
+    client_manager: ClientManager | None = None,
 ) -> Any:
     """Get initialized CrawlManager service."""
-    del client_manager
-
     global _crawl_manager
     if _crawl_manager is not None:
         return _crawl_manager
@@ -403,15 +399,14 @@ async def crawl_site(
 
 # Database Dependencies
 async def get_database_manager(
-    client_manager: ClientManagerDep,
+    client_manager: ClientManager | None = None,
 ) -> Any:
     """Get initialized DatabaseManager service."""
-    del client_manager
     global _database_manager
     if _database_manager is not None:
         return _database_manager
 
-    ready_manager = await get_ready_client_manager()
+    ready_manager = client_manager or await get_ready_client_manager()
 
     async with _database_lock:
         if _database_manager is None:
@@ -446,12 +441,11 @@ DatabaseSessionDep = Annotated[Any, Depends(get_database_session)]
     enable_adaptive_timeout=True,
 )
 async def get_vector_store_service(
-    client_manager: ClientManagerDep,
+    client_manager: ClientManager | None = None,
 ) -> VectorStoreService:
     """Get initialized vector store service."""
 
-    del client_manager
-    ready_manager = await get_ready_client_manager()
+    ready_manager = client_manager or await get_ready_client_manager()
     return await ready_manager.get_vector_store_service()
 
 
@@ -460,7 +454,7 @@ VectorStoreServiceDep = Annotated[VectorStoreService, Depends(get_vector_store_s
 
 # Content Intelligence Dependencies
 async def get_content_intelligence_service(
-    client_manager: ClientManagerDep,
+    client_manager: ClientManager | None = None,
 ) -> Any:
     """Get initialized ContentIntelligenceService."""
     global _content_intelligence
