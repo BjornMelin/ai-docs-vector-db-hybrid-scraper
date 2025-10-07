@@ -231,7 +231,7 @@ class HybridSearchBenchmark:
 
         """
         start_time = time.time()
-        logger.info(f"Starting comprehensive benchmark: {self.benchmark_config.name}")
+        logger.info("Starting comprehensive benchmark: %s", self.benchmark_config.name)
 
         results = BenchmarkResults(
             benchmark_name=self.benchmark_config.name,
@@ -292,10 +292,8 @@ class HybridSearchBenchmark:
             # Calculate total duration
             results.duration_seconds = time.time() - start_time
 
-            logger.info(
-                f"Benchmark completed in {results.duration_seconds:.2f} seconds"
-            )
-            logger.info(f"Meets targets: {results.meets_targets}")
+            logger.info("Benchmark completed in %.2f seconds", results.duration_seconds)
+            logger.info("Meets targets: %s", results.meets_targets)
 
         except Exception as e:
             logger.exception("Benchmark failed: ")
@@ -318,7 +316,7 @@ class HybridSearchBenchmark:
         load_results = {}
 
         for concurrent_users in self.benchmark_config.concurrent_users:
-            logger.info(f"Running load test with {concurrent_users} concurrent users")
+            logger.info("Running load test with %s concurrent users", concurrent_users)
 
             load_config = LoadTestConfig(
                 concurrent_users=concurrent_users,
@@ -388,7 +386,9 @@ class HybridSearchBenchmark:
                 total_predictions += 1
 
             except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
-                logger.warning(f"Classification failed for query '{query_text}': {e}")
+                logger.warning(
+                    "Classification failed for query '%s': %s", query_text, e
+                )
                 total_predictions += 1
 
         return correct_predictions / max(total_predictions, 1)
@@ -428,8 +428,10 @@ class HybridSearchBenchmark:
                     appropriate_selections += 1
                 total_selections += 1
 
-            except (ValueError, TypeError, UnicodeDecodeError) as e:
-                logger.warning(f"Model selection failed for query '{query_text}': {e}")
+            except (ValueError, TypeError) as e:
+                logger.warning(
+                    "Model selection failed for query '%s': %s", query_text, e
+                )
                 total_selections += 1
 
         return appropriate_selections / max(total_selections, 1)
@@ -459,7 +461,9 @@ class HybridSearchBenchmark:
                 total_fusions += 1
 
             except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
-                logger.warning(f"Fusion tuning failed for query '{query.query}': {e}")
+                logger.warning(
+                    "Fusion tuning failed for query '%s': %s", query.query, e
+                )
                 total_fusions += 1
 
         return effective_fusions / max(total_fusions, 1)
@@ -593,6 +597,6 @@ class HybridSearchBenchmark:
         with html_file.open("w") as f:
             f.write(html_report)
 
-        logger.info(f"Results saved to {output_dir}")
-        logger.info(f"JSON: {json_file}")
-        logger.info(f"HTML: {html_file}")
+        logger.info("Results saved to %s", output_dir)
+        logger.info("JSON: %s", json_file)
+        logger.info("HTML: %s", html_file)

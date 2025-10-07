@@ -697,7 +697,7 @@ def save_load_test_report(summary: dict[str, Any], environment: Environment):
             json.dump(full_report, f, indent=2)
         logger.info(
             "Load test report saved to %s", report_file
-        )  # TODO: Convert f-string to logging format
+        )
     except Exception:
         logger.exception("Failed to save load test report")
 

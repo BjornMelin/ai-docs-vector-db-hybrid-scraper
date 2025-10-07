@@ -315,7 +315,7 @@ class TestBreakingPoints:
                 if error_rate > 25 and avg_response_time > 5000:
                     logger.warning(
                         "Breaking point reached at step %s", i + 1
-                    )  # TODO: Convert f-string to logging format
+                    )
                     break
 
             except Exception:
@@ -358,7 +358,7 @@ class TestBreakingPoints:
         )
         logger.info(
             "Maximum stable load: %s users", breaking_point.max_stable_users
-        )  # TODO: Convert f-string to logging format
+        )
         logger.info("Graceful degradation")
 
     @pytest.mark.stress
@@ -541,7 +541,7 @@ class TestBreakingPoints:
 
         logger.info(
             "Maximum handled spike: %s users", max_handled_spike
-        )  # TODO: Convert f-string to logging format
+        )
         logger.info("Spike success rate")
 
     @pytest.mark.stress

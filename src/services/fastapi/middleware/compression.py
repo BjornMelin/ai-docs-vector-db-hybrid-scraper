@@ -124,7 +124,7 @@ class CompressionMiddleware(BaseHTTPMiddleware):
         try:
             body = self._get_response_body(response)
         except (ValueError, TypeError) as e:
-            logger.warning(f"Failed to get response body: {e}")
+            logger.warning("Failed to get response body: %s", e)
             return response
 
         # Skip if body is too small
@@ -134,7 +134,7 @@ class CompressionMiddleware(BaseHTTPMiddleware):
         try:
             compressed_body = gzip.compress(body, compresslevel=self.compression_level)
         except (ValueError, TypeError) as e:
-            logger.warning(f"Failed to compress response body: {e}")
+            logger.warning("Failed to compress response body: %s", e)
             return response
 
         try:
@@ -142,7 +142,7 @@ class CompressionMiddleware(BaseHTTPMiddleware):
                 response, body, compressed_body, "gzip"
             )
         except (ValueError, TypeError) as e:
-            logger.warning(f"Failed to create compressed response: {e}")
+            logger.warning("Failed to create compressed response: %s", e)
             return response
 
     def _get_response_body(self, response: Response) -> bytes:
@@ -336,7 +336,7 @@ class BrotliCompressionMiddleware(BaseHTTPMiddleware):
         try:
             body = self._get_response_body(response)
         except (ValueError, TypeError) as e:
-            logger.warning(f"Failed to get response body: {e}")
+            logger.warning("Failed to get response body: %s", e)
             return response
 
         # Skip if body is too small
@@ -346,7 +346,7 @@ class BrotliCompressionMiddleware(BaseHTTPMiddleware):
         try:
             compressed_body = self.brotli.compress(body, quality=self.quality)
         except (ValueError, TypeError) as e:
-            logger.warning(f"Failed to compress response body with Brotli: {e}")
+            logger.warning("Failed to compress response body with Brotli: %s", e)
             return response
 
         try:
@@ -354,7 +354,7 @@ class BrotliCompressionMiddleware(BaseHTTPMiddleware):
                 response, body, compressed_body, "br"
             )
         except (ValueError, TypeError) as e:
-            logger.warning(f"Failed to create Brotli compressed response: {e}")
+            logger.warning("Failed to create Brotli compressed response: %s", e)
             return response
 
     def _get_response_body(self, response: Response) -> bytes:

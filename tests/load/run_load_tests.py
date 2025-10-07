@@ -84,7 +84,7 @@ class LoadTestRunner:
         """Run load test using Locust."""
         logger.info(
             "Starting Locust load test with config: %s", config
-        )  # TODO: Convert f-string to logging format
+        )
 
         # Create environment
         env = create_load_test_environment(
@@ -98,7 +98,7 @@ class LoadTestRunner:
                 env.shape_class = load_profile
                 logger.info(
                     "Applied load profile: %s", profile
-                )  # TODO: Convert f-string to logging format
+                )
 
         if headless:
             # Run headless test
@@ -133,16 +133,16 @@ class LoadTestRunner:
                 report_file = self._save_report(report)
                 logger.info(
                     "Test report saved to: %s", report_file
-                )  # TODO: Convert f-string to logging format
+                )
 
             return report
         # Run with web UI
         logger.info(
             "Starting Locust web UI on port %s", web_port
-        )  # TODO: Convert f-string to logging format
+        )
         logger.info(
             "Visit http://localhost:%s to control the test", web_port
-        )  # TODO: Convert f-string to logging format
+        )
 
         # Set up Locust arguments for web mode
         locust_args = [
@@ -223,7 +223,7 @@ class LoadTestRunner:
         """Run a custom load test scenario from JSON file."""
         logger.info(
             "Running custom scenario: %s", scenario_file
-        )  # TODO: Convert f-string to logging format
+        )
 
         try:
             with Path(scenario_file).open() as f:
@@ -272,14 +272,14 @@ class LoadTestRunner:
         """Benchmark specific endpoints."""
         logger.info(
             "Benchmarking endpoints: %s", endpoints
-        )  # TODO: Convert f-string to logging format
+        )
 
         results = {}
 
         for endpoint in endpoints:
             logger.info(
                 "Benchmarking endpoint: %s", endpoint
-            )  # TODO: Convert f-string to logging format
+            )
 
             # Create custom user class for this endpoint
             endpoint_config = config.copy()
@@ -296,7 +296,7 @@ class LoadTestRunner:
         report_file = self._save_report(comparative_report, "endpoint_benchmark")
         logger.info(
             "Endpoint benchmark report saved to: %s", report_file
-        )  # TODO: Convert f-string to logging format
+        )
 
         return comparative_report
 
@@ -325,7 +325,7 @@ class LoadTestRunner:
             report_file = self._save_report(regression_analysis, "regression_analysis")
             logger.info(
                 "Regression analysis saved to: %s", report_file
-            )  # TODO: Convert f-string to logging format
+            )
 
         except Exception:
             logger.exception("Error in test execution")

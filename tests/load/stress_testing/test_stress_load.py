@@ -88,7 +88,7 @@ class TestStressLoad:
                     breaking_point = current_users
                     logger.warning(
                         "Breaking point detected at %s users", current_users
-                    )  # TODO: Convert f-string to logging format
+                    )
 
         # Run stress test
         load_test_runner.run_load_test(
@@ -212,7 +212,7 @@ class TestStressLoad:
                 # Check if failure is cascading
                 logger.warning(
                     "Service failure: %s", e
-                )  # TODO: Convert f-string to logging format
+                )
             else:
                 await services.call_service("embedding")
                 await services.call_service("vector_db")
