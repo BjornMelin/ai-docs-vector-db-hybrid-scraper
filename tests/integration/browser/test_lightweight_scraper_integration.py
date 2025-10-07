@@ -1,27 +1,34 @@
 """Browser integration tests using the lightweight scraper."""
 
+# pylint: disable=duplicate-code
+
 from __future__ import annotations
 
-from types import SimpleNamespace
+from pathlib import Path
 
 import pytest
 
-from src.config import Config
+from src.config import Config, Environment
 from src.services.browser.lightweight_scraper import LightweightScraper
 
 
 @pytest.mark.asyncio
 @pytest.mark.browser
-async def test_lightweight_scraper_handles_static_page(integration_server: str) -> None:
+async def test_lightweight_scraper_handles_static_page(
+    integration_server: str,
+    tmp_path: Path,
+) -> None:
     """Lightweight scraper should fetch simple HTML from the integration server."""
 
-    config = Config()
-    config_stub = SimpleNamespace(
-        content_threshold=20,
-        lightweight_timeout=5.0,
-        max_retries=0,
+    base = tmp_path / "browser_cfg"
+    config = Config.model_validate(
+        {
+            "environment": Environment.TESTING,
+            "data_dir": base / "data",
+            "cache_dir": base / "cache",
+            "logs_dir": base / "logs",
+        }
     )
-    object.__setattr__(config, "browser_automation", config_stub)
 
     scraper = LightweightScraper(config)
     await scraper.initialize()
@@ -41,16 +48,19 @@ async def test_lightweight_scraper_handles_static_page(integration_server: str) 
 @pytest.mark.browser
 async def test_lightweight_scraper_escalates_on_forbidden(
     integration_server: str,
+    tmp_path: Path,
 ) -> None:
     """403 responses should trigger escalation to higher tiers."""
 
-    config = Config()
-    config_stub = SimpleNamespace(
-        content_threshold=20,
-        lightweight_timeout=5.0,
-        max_retries=0,
+    base = tmp_path / "browser_cfg_forbidden"
+    config = Config.model_validate(
+        {
+            "environment": Environment.TESTING,
+            "data_dir": base / "data",
+            "cache_dir": base / "cache",
+            "logs_dir": base / "logs",
+        }
     )
-    object.__setattr__(config, "browser_automation", config_stub)
 
     scraper = LightweightScraper(config)
     await scraper.initialize()

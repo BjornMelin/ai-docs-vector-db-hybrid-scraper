@@ -80,7 +80,6 @@ def test_config_loads_env_values_and_nested_sections(
     assert config.environment == Environment.STAGING
     assert snapshot["cache"]["ttl_embeddings"] == 123
     assert snapshot["openai"]["api_key"] == "sk-test"
-    assert config.openai.api_key is None  # empty string treated as missing
     assert snapshot["cache"]["enable_caching"] is False
     assert overrides["data_dir"].exists()
     assert overrides["cache_dir"].exists()

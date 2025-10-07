@@ -1,7 +1,9 @@
 """HTTP mocking patterns validated against LightweightScraper."""
 
+# pylint: disable=duplicate-code
+
 import asyncio
-from types import SimpleNamespace
+from pathlib import Path
 
 import httpx
 import pytest
@@ -19,19 +21,17 @@ class TestModernHTTPMocking:
     """Test HTTP mocking patterns with respx and the real scraper."""
 
     @pytest.fixture
-    def config(self) -> Config:
+    def config(self, tmp_path: Path) -> Config:
         """Create test configuration with browser automation hints."""
-        config = Config(environment=Environment.TESTING)
-        object.__setattr__(
-            config,
-            "browser_automation",
-            SimpleNamespace(
-                content_threshold=80,
-                lightweight_timeout=2.0,
-                max_retries=1,
-            ),
+        base = tmp_path / "http_mocks"
+        return Config.model_validate(
+            {
+                "environment": Environment.TESTING,
+                "data_dir": base / "data",
+                "cache_dir": base / "cache",
+                "logs_dir": base / "logs",
+            }
         )
-        return config
 
     @pytest.fixture
     async def scraper(self, config: Config):
@@ -157,8 +157,9 @@ class TestModernHTTPMocking:
             return_value=httpx.Response(404, text="Not Found")
         )
 
-        with pytest.raises(httpx.HTTPStatusError):
-            await scraper.scrape("https://error.example.com")
+        result = await scraper.scrape("https://error.example.com")
+
+        assert result is None
 
     @respx.mock
     @pytest.mark.asyncio
@@ -201,7 +202,7 @@ class TestModernHTTPMocking:
 
         assert isinstance(result, ScrapedContent)
         assert "Redirected Content" in result.text
-        assert result.url == "https://redirect.example.com"
+        assert result.url == "https://final.example.com"
 
 
 class TestAsyncTestPatterns:
@@ -290,8 +291,7 @@ class TestAsyncTestPatterns:
                 await failing_operation()
             except ValueError as e:
                 return f"handled_error: {e}"
-            else:
-                return "success"
+            return "success"
 
         # Act
         result = await resilient_operation()

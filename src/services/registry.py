@@ -10,6 +10,7 @@ from pathlib import Path
 from src.config import CacheType, Config, get_config
 from src.infrastructure.client_manager import ClientManager
 from src.services.cache.manager import CacheManager
+from src.services.circuit_breaker import CircuitBreakerManager
 from src.services.content_intelligence.service import ContentIntelligenceService
 from src.services.core.project_storage import ProjectStorage
 from src.services.managers.crawling_manager import CrawlingManager
@@ -27,6 +28,7 @@ class ServiceRegistry:  # pylint: disable=too-many-instance-attributes
 
     config: Config
     client_manager: ClientManager
+    circuit_breaker_manager: CircuitBreakerManager
     cache_manager: CacheManager
     database_manager: DatabaseManager
     embedding_manager: EmbeddingManager
@@ -43,6 +45,11 @@ class ServiceRegistry:  # pylint: disable=too-many-instance-attributes
 
         client_manager = ClientManager.from_unified_config()
         await client_manager.initialize()
+
+        circuit_breaker_manager = CircuitBreakerManager(
+            redis_url=config.cache.redis_url,
+            config=config,
+        )
 
         try:
             vector_service = await client_manager.get_vector_store_service()
@@ -123,6 +130,7 @@ class ServiceRegistry:  # pylint: disable=too-many-instance-attributes
         return cls(
             config=config,
             client_manager=client_manager,
+            circuit_breaker_manager=circuit_breaker_manager,
             cache_manager=cache_manager,
             database_manager=database_manager,
             embedding_manager=embedding_manager,
@@ -146,6 +154,9 @@ class ServiceRegistry:  # pylint: disable=too-many-instance-attributes
         if hasattr(self.cache_manager, "close"):
             await self._safe_cleanup(self.cache_manager.close, "cache manager")
         await self._safe_cleanup(self.client_manager.cleanup, "client manager")
+        await self._safe_cleanup(
+            self.circuit_breaker_manager.close, "circuit breaker manager"
+        )
         logger.info("Service registry shutdown complete")
 
     @staticmethod

@@ -9,20 +9,22 @@ import json
 import logging
 import time
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Protocol
 
 import redis.asyncio as redis
 
 
-# Imports to avoid circular dependencies
-try:
-    from src.config import Config
-    from src.services.search.search import QdrantSearch
-except ImportError:
-    Config = None
-    QdrantSearch = None
-
 logger = logging.getLogger(__name__)
+
+
+class SearchService(Protocol):
+    """Minimal async search interface for cache warming."""
+
+    async def search(
+        self, query: str
+    ) -> Any:  # pragma: no cover - behavioural contract
+        """Execute a search request for the supplied query."""
+        raise NotImplementedError
 
 
 @dataclass
@@ -230,43 +232,31 @@ class PerformanceCache:
                 self.metrics.avg_retrieval_time * (total_requests - 1) + retrieval_time
             ) / total_requests
 
-    async def warm_cache(self, popular_queries: list[str]) -> None:
-        """Proactively warm cache with popular queries.
+    async def warm_cache(
+        self,
+        popular_queries: list[str],
+        *,
+        search_service: SearchService,
+    ) -> None:
+        """Proactively warm cache with popular queries using supplied search service.
 
         Args:
             popular_queries: List of popular search queries to pre-cache
+            search_service: Search service used to fetch uncached results
 
         """
         if not self._initialized:
             await self.initialize()
 
-        if Config is None or QdrantSearch is None:
-            logger.warning("Required imports not available for cache warming")
-            return
-
-        # Initialize services for cache warming
-        config, search_service = await self._initialize_warming_services()
-        if not config or not search_service:
-            return
-
         # Warm cache for each query
         warmed_count = await self._warm_queries(popular_queries, search_service)
         logger.info("Cache warming completed for %d queries", warmed_count)
 
-    async def _initialize_warming_services(self) -> tuple[Any, Any]:
-        """Initialize services needed for cache warming."""
-        try:
-            if Config is None or QdrantSearch is None:
-                return None, None
-            config = Config()  # type: ignore
-            # Note: This would need proper client injection in production
-            search_service = QdrantSearch(None, config)  # type: ignore
-            return config, search_service
-        except Exception as e:
-            logger.error("Cache warming initialization failed: %s", e)
-            return None, None
-
-    async def _warm_queries(self, queries: list[str], search_service: Any) -> int:
+    async def _warm_queries(
+        self,
+        queries: list[str],
+        search_service: SearchService,
+    ) -> int:
         """Warm cache for list of queries."""
         warmed_count = 0
         for query in queries:
@@ -274,7 +264,11 @@ class PerformanceCache:
                 warmed_count += 1
         return warmed_count
 
-    async def _warm_single_query(self, query: str, search_service: Any) -> bool:
+    async def _warm_single_query(
+        self,
+        query: str,
+        search_service: SearchService,
+    ) -> bool:
         """Warm cache for a single query."""
         cache_key = f"search:{hashlib.sha256(query.encode()).hexdigest()}"
 
@@ -283,11 +277,9 @@ class PerformanceCache:
             return False
 
         try:
-            # This is a placeholder - actual implementation would
-            # need proper search service initialization
-            logger.info("Would warm cache for query: %s", query)
-            # result = await search_service.search(query)
-            # await self.set(cache_key, result, ttl=7200)
+            result = await search_service.search(query)
+            if result is not None:
+                await self.set(cache_key, result, ttl=7200)
             return True
         except Exception as e:
             logger.warning("Failed to warm cache for query '%s': %s", query, e)
