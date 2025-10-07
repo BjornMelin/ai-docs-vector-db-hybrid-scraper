@@ -43,19 +43,17 @@ Keep these guides bookmarked—together they answer most day-to-day questions:
 - **[Setup & Configuration](./setup-and-configuration.md)** – Environment prerequisites, profiles, and config loader.
 - **[Architecture & Orchestration](./architecture-and-orchestration.md)** – System design, LangGraph stack, FastMCP patterns.
 - **[Agentic Orchestration](./agentic-orchestration.md)** – LangGraph runner, tool discovery, testing guidance.
-- **[Cache & Performance](./cache-and-performance.md)** – Persistent cache internals, GPU notes, performance checklist.
+- **[Cache & Performance](./cache-and-performance.md)** – Persistent cache internals and performance checklist.
+- **[GPU Acceleration](./gpu-acceleration.md)** – Optional CUDA/MPS setup and helper utilities.
 - **[Platform Operations](./platform-operations.md)** – Deployment workflow, CI/CD, compatibility matrix.
 - **[API & Contracts](./api-and-contracts.md)** – REST endpoints, canonical response DTOs.
 - **[Contributing & Testing](./contributing-and-testing.md)** – Coding standards, quality gates, test strategy.
 
 Supporting docs when you need more detail:
 
-- **[Setup & Configuration](./setup-and-configuration.md)** – Environment prerequisites, profiles, and config loader.
-- **[Architecture & Orchestration](./architecture-and-orchestration.md)** – Additional design background and FastMCP notes.
-- **[Cache & Performance](./cache-and-performance.md)** – Persistent cache internals and performance checklist.
-- **[GPU Acceleration](./gpu-acceleration.md)** – Optional CUDA/MPS setup and helper utilities.
-- **[Platform Operations](./platform-operations.md)** – Deployment, workflows, compatibility matrix.
-- **[Document Metadata](./document-metadata.md)** – Indexing schema and required fields.
+- **[Platform Operations](./platform-operations.md)** – Additional deployment and workflow detail.
+- **[Document Metadata](./document-metadata.md)** – Front matter requirements and ownership tracking.
+- **[Templates](./templates/agent-report-template.md)** – Additional skeletons and reusable formats.
 
 ## 3. Common Tasks
 
@@ -94,12 +92,12 @@ Optional caches or search engines should be wired via the patterns documented in
 
 | If you need…         | Read…                                 |
 | -------------------- | ------------------------------------- |
-| Environment details  | [Configuration](./configuration.md)   |
-| System overview      | [Architecture](./architecture.md)     |
-| API contracts        | [API & Contracts](./api-and-contracts.md)   |
+| Environment details  | [Setup & Configuration](./setup-and-configuration.md) |
+| System overview      | [Architecture & Orchestration](./architecture-and-orchestration.md) |
+| API contracts        | [API & Contracts](./api-and-contracts.md) |
 | Automation basics    | [Platform Operations](./platform-operations.md)         |
-| Contribution process | [Contributing & Testing](./contributing-and-testing.md)     |
-| Deployment guidance  | [Deployment](./deployment.md)         |
+| Contribution process | [Contributing & Testing](./contributing-and-testing.md) |
+| Deployment guidance  | [Platform Operations](./platform-operations.md) |
 | Operator procedures  | [Operator Hub](../operators/index.md) |
 
 See something missing? Open an issue or submit a PR—keeping this hub concise and accurate helps

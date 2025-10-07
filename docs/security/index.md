@@ -4,8 +4,8 @@ Our security approach focuses on protecting user data, maintaining system integr
 
 ## Essential Security Documents
 
-- [Security Essentials](security-essentials.md) - Core security principles and fundamental practices
-- [Security Checklist](security-checklist.md) - Comprehensive checklist for security implementation
+- [Security Essentials](./security-essentials.md) - Core security principles and fundamental practices
+- [Security Checklist](./security-checklist.md) - Comprehensive checklist for security implementation
 
 ## Emergency Contact
 
