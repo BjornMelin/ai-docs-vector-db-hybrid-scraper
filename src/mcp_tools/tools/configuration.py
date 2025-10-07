@@ -20,16 +20,6 @@ logger = logging.getLogger(__name__)
 _SENSITIVE_SUFFIXES = ("api_key", "api_keys", "token", "secret", "password")
 
 
-class AppSettings(Config):
-    """Backward-compatible alias that mirrors the unified :class:`Config`."""
-
-    @classmethod
-    def load(cls) -> Config:
-        """Return the shared configuration instance without re-parsing env vars."""
-
-        return load_unified_config()
-
-
 def _should_mask(key: str) -> bool:
     lowered = key.lower()
     return lowered.endswith(_SENSITIVE_SUFFIXES) or lowered in {"api_token"}
@@ -62,9 +52,10 @@ def _collect_provider_warnings(config: Config) -> list[str]:
 
     warnings: list[str] = []
     embedding_provider = getattr(config, "embedding_provider", None)
-    openai_api_key = getattr(config, "openai_api_key", None)
     openai_settings = getattr(config, "openai", None)
-    firecrawl_api_key = getattr(config, "firecrawl_api_key", None)
+    openai_api_key = getattr(openai_settings, "api_key", None)
+    firecrawl_settings = getattr(config, "firecrawl", None)
+    firecrawl_api_key = getattr(firecrawl_settings, "api_key", None)
     crawl_provider = getattr(config, "crawl_provider", None)
 
     if (

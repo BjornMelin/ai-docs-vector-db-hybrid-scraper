@@ -9,7 +9,7 @@ import contextlib
 import json
 import logging
 from collections import deque
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
@@ -22,7 +22,14 @@ from src.services.monitoring.file_integrity import (
     FileIntegrityProvider,
 )
 
-from .loader import Config, get_config, set_config
+from .loader import (
+    Config,
+    SettingsCallback,
+    get_config,
+    load_config,
+    on_settings_applied,
+    set_config,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -171,7 +178,7 @@ class ConfigReloader:
                 error_message = str(exc)
                 # Restore previous configuration snapshot on failure.
                 if previous_config is not None:
-                    set_config(previous_config)
+                    set_config(previous_config.model_copy(deep=True))
             finally:
                 duration_ms = (perf_counter() - start) * 1000.0
                 operation = ReloadOperation(
@@ -367,6 +374,21 @@ class ConfigReloader:
 
         yield from self._backups
 
+    def register_settings_callback(
+        self, callback: SettingsCallback
+    ) -> Callable[[], None]:
+        """Register a callback that receives new settings after reload applies.
+
+        Args:
+            callback: Callable invoked with the new settings instance and the
+                previous one (or ``None`` when no previous settings existed).
+
+        Returns:
+            Callable that unregisters the listener when invoked.
+        """
+
+        return on_settings_applied(callback)
+
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
@@ -455,14 +477,17 @@ class ConfigReloader:
         """Load configuration from the specified source."""
 
         if config_source is None:
-            return Config()
+            return load_config()
         path = config_source.expanduser()
         if not path.exists():
             raise ConfigLoadError(f"Configuration source not found: {path}")
         suffix = path.suffix.lower()
         if suffix == ".json":
             data = json.loads(path.read_text(encoding="utf-8"))
-            return Config(**data)
+            if not isinstance(data, dict):
+                msg = "JSON configuration must decode to an object"
+                raise ConfigLoadError(msg)
+            return load_config(**data)
         if suffix in {".yaml", ".yml"}:
             try:
                 import yaml  # type: ignore
@@ -473,8 +498,8 @@ class ConfigReloader:
             data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
             if not isinstance(data, dict):  # pragma: no cover - defensive guard
                 raise ConfigLoadError("YAML configuration must decode to an object")
-            return Config(**data)
-        return Config(_env_file=str(path))  # type: ignore[call-arg]
+            return load_config(**data)
+        return load_config(_env_file=str(path))
 
     @staticmethod
     def _hash_config(config: Config | None) -> str | None:

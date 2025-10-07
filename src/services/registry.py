@@ -12,9 +12,9 @@ from src.infrastructure.client_manager import ClientManager
 from src.services.cache.manager import CacheManager
 from src.services.content_intelligence.service import ContentIntelligenceService
 from src.services.core.project_storage import ProjectStorage
-from src.services.crawling.manager import CrawlManager
-from src.services.embeddings.manager import EmbeddingManager
+from src.services.managers.crawling_manager import CrawlingManager
 from src.services.managers.database_manager import DatabaseManager
+from src.services.managers.embedding_manager import EmbeddingManager
 from src.services.vector_db.service import VectorStoreService
 
 
@@ -31,7 +31,7 @@ class ServiceRegistry:  # pylint: disable=too-many-instance-attributes
     database_manager: DatabaseManager
     embedding_manager: EmbeddingManager
     vector_service: VectorStoreService
-    crawl_manager: CrawlManager
+    crawl_manager: CrawlingManager
     content_intelligence: ContentIntelligenceService
     project_storage: ProjectStorage
 
@@ -74,13 +74,11 @@ class ServiceRegistry:  # pylint: disable=too-many-instance-attributes
         )
 
         try:
-            embedding_manager = EmbeddingManager(
+            embedding_manager = EmbeddingManager()
+            await embedding_manager.initialize(
                 config=config,
                 client_manager=client_manager,
-                budget_limit=None,
-                rate_limiter=None,
             )
-            await embedding_manager.initialize()
         except Exception as exc:  # pragma: no cover - defensive
             raise RuntimeError("Failed to initialize embedding manager") from exc
 
@@ -94,8 +92,8 @@ class ServiceRegistry:  # pylint: disable=too-many-instance-attributes
             raise RuntimeError("Failed to initialize database manager") from exc
 
         try:
-            crawl_manager = CrawlManager(config=config, rate_limiter=None)
-            await crawl_manager.initialize()
+            crawl_manager = CrawlingManager()
+            await crawl_manager.initialize(config=config)
         except Exception as exc:  # pragma: no cover - defensive
             raise RuntimeError("Failed to initialize crawl manager") from exc
 

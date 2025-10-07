@@ -41,6 +41,8 @@ class HealthCheckResult:
 
 
 async def _check_qdrant(config: Config) -> HealthCheckResult:
+    """Perform health check for Qdrant vector database."""
+
     start = perf_counter()
     client = AsyncQdrantClient(
         url=config.qdrant.url,
@@ -74,6 +76,8 @@ async def _check_qdrant(config: Config) -> HealthCheckResult:
 
 
 async def _check_redis(config: Config) -> HealthCheckResult:
+    """Perform health check for Redis cache service."""
+
     if not config.cache.enable_redis_cache:
         return HealthCheckResult(
             service="redis",
@@ -102,13 +106,15 @@ async def _check_redis(config: Config) -> HealthCheckResult:
 
 
 async def _check_openai(config: Config) -> HealthCheckResult:
+    """Perform health check for OpenAI API service."""
+
     if config.embedding_provider != EmbeddingProvider.OPENAI:
         return HealthCheckResult(
             service="openai",
             status="skipped",
             details={"reason": "provider_disabled"},
         )
-    api_key = config.openai.api_key or config.openai_api_key
+    api_key = config.openai.api_key or config.openai.api_key
     if not api_key:
         return HealthCheckResult(
             service="openai",
@@ -141,13 +147,15 @@ async def _check_openai(config: Config) -> HealthCheckResult:
 
 
 async def _check_firecrawl(config: Config) -> HealthCheckResult:
+    """Perform health check for Firecrawl API service."""
+
     if config.crawl_provider != CrawlProvider.FIRECRAWL:
         return HealthCheckResult(
             service="firecrawl",
             status="skipped",
             details={"reason": "provider_disabled"},
         )
-    api_key = config.firecrawl.api_key or config.firecrawl_api_key
+    api_key = config.firecrawl.api_key or config.firecrawl.api_key
     if not api_key:
         return HealthCheckResult(
             service="firecrawl",

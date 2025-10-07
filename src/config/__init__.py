@@ -1,5 +1,7 @@
 """Public configuration API for the AI documentation platform."""
 
+# pylint: disable=duplicate-code
+
 # pylint: disable=global-statement
 
 from __future__ import annotations
@@ -9,24 +11,16 @@ from typing import Any
 
 from .loader import (
     Config,
-    create_config_from_env,
-    create_enterprise_config,
-    create_simple_config,
-    get_cache_config,
+    SettingsProvider,
+    ensure_runtime_directories,
     get_config,
-    get_embedding_config,
-    get_openai_config,
-    get_performance_config,
-    get_qdrant_config,
-    get_security_config,
     load_config,
+    on_settings_applied,
     reset_config,
     set_config,
 )
 from .models import (
-    ABTestVariant,
     AgenticConfig,
-    ApplicationMode,
     BrowserUseConfig,
     CacheConfig,
     CacheType,
@@ -56,7 +50,6 @@ from .models import (
     MonitoringConfig,
     ObservabilityConfig,
     OpenAIConfig,
-    OptimizationStrategy,
     PerformanceConfig,
     PlaywrightCaptchaSettings,
     PlaywrightConfig,
@@ -70,8 +63,6 @@ from .models import (
     ReRankingConfig,
     ScoreNormalizationStrategy,
     SearchAccuracy,
-    SearchMode,
-    SearchPipeline,
     SearchStrategy,
     VectorType,
 )
@@ -121,21 +112,13 @@ def set_config_reloader(reloader: ConfigReloader) -> None:
 
 __all__ = [
     "Config",
-    "create_config_from_env",
-    "create_enterprise_config",
-    "create_simple_config",
-    "get_cache_config",
     "get_config",
-    "get_embedding_config",
-    "get_openai_config",
-    "get_performance_config",
-    "get_qdrant_config",
-    "get_security_config",
     "load_config",
+    "on_settings_applied",
     "reset_config",
     "set_config",
-    "ABTestVariant",
-    "ApplicationMode",
+    "SettingsProvider",
+    "ensure_runtime_directories",
     "AgenticConfig",
     "BrowserUseConfig",
     "CacheConfig",
@@ -166,7 +149,6 @@ __all__ = [
     "MonitoringConfig",
     "ObservabilityConfig",
     "OpenAIConfig",
-    "OptimizationStrategy",
     "PerformanceConfig",
     "PlaywrightCaptchaSettings",
     "PlaywrightConfig",
@@ -179,8 +161,6 @@ __all__ = [
     "RAGConfig",
     "ReRankingConfig",
     "SearchAccuracy",
-    "SearchMode",
-    "SearchPipeline",
     "SearchStrategy",
     "ScoreNormalizationStrategy",
     "VectorType",

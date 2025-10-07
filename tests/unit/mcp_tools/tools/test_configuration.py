@@ -1,5 +1,7 @@
 """Tests for MCP configuration management tools."""
 
+# pylint: disable=duplicate-code
+
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -16,17 +18,16 @@ class DummyConfig:
 
     def __init__(self) -> None:
         self.embedding_provider = SimpleNamespace(name="OPENAI")
-        self.openai_api_key = None
         self.openai = SimpleNamespace(api_key=None)
-        self.firecrawl_api_key = None
+        self.firecrawl = SimpleNamespace(api_key=None)
         self.crawl_provider = SimpleNamespace(name="FIRECRAWL")
         self.qdrant = SimpleNamespace(url="", enable_grouping=True)
         self.misc_setting = "value"
 
     def model_dump(self) -> dict[str, Any]:
         return {
-            "openai_api_key": "secret-openai",
-            "qdrant_api_key": "secret-qdrant",
+            "openai": {"api_key": "secret-openai"},
+            "qdrant": {"api_key": "secret-qdrant"},
             "misc_setting": self.misc_setting,
         }
 
@@ -90,8 +91,8 @@ class TestConfigurationTools:
         result = await get_config_tool(ctx=None)
 
         config_payload = result["config"]
-        assert config_payload["openai_api_key"] == "<redacted>"
-        assert config_payload["qdrant_api_key"] == "<redacted>"
+        assert config_payload["openai"]["api_key"] == "<redacted>"
+        assert config_payload["qdrant"]["api_key"] == "<redacted>"
         assert config_payload["misc_setting"] == "value"
 
     @pytest.mark.asyncio

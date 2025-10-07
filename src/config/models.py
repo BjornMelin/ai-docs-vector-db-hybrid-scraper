@@ -11,13 +11,6 @@ from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
 #### Enumerations ####
 
 
-class ApplicationMode(str, Enum):
-    """High-level execution modes."""
-
-    SIMPLE = "simple"
-    ENTERPRISE = "enterprise"
-
-
 class Environment(str, Enum):
     """Deployment environments supported by the platform."""
 
@@ -166,45 +159,6 @@ class FusionAlgorithm(str, Enum):
     RRF = "rrf"
     WEIGHTED = "weighted"
     NORMALIZED = "normalized"
-
-
-class ABTestVariant(str, Enum):
-    """A/B testing variants."""
-
-    CONTROL = "control"
-    VARIANT_A = "variant_a"
-    VARIANT_B = "variant_b"
-
-
-class OptimizationStrategy(str, Enum):
-    """Performance optimisation strategies."""
-
-    THROUGHPUT = "throughput"
-    LATENCY = "latency"
-    BALANCED = "balanced"
-    QUALITY_OPTIMIZED = "quality_optimized"
-    SPEED_OPTIMIZED = "speed_optimized"
-    COST_OPTIMIZED = "cost_optimized"
-
-
-class SearchMode(str, Enum):
-    """Composite search modes used by the API."""
-
-    BASIC = "basic"
-    SIMPLE = "simple"
-    ENHANCED = "enhanced"
-    INTELLIGENT = "intelligent"
-    PERSONALIZED = "personalized"
-    FULL = "full"
-
-
-class SearchPipeline(str, Enum):
-    """Predefined search pipelines."""
-
-    FAST = "fast"
-    BALANCED = "balanced"
-    COMPREHENSIVE = "comprehensive"
-    PRECISION = "precision"
 
 
 class DeploymentTier(str, Enum):
@@ -997,8 +951,6 @@ class DocumentationSite(BaseModel):
 
 
 __all__ = [
-    "ABTestVariant",
-    "ApplicationMode",
     "BrowserUseConfig",
     "CacheConfig",
     "CacheType",
@@ -1029,7 +981,6 @@ __all__ = [
     "MonitoringConfig",
     "ObservabilityConfig",
     "OpenAIConfig",
-    "OptimizationStrategy",
     "PerformanceConfig",
     "PlaywrightConfig",
     "QdrantConfig",
@@ -1038,8 +989,6 @@ __all__ = [
     "RAGConfig",
     "ReRankingConfig",
     "SearchAccuracy",
-    "SearchMode",
-    "SearchPipeline",
     "SearchStrategy",
     "VectorType",
 ]

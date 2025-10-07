@@ -2,6 +2,8 @@
 
 The suite exercises the pydantic-settings integration."""
 
+# pylint: disable=no-member
+
 from __future__ import annotations
 
 from collections.abc import Iterator
@@ -11,8 +13,8 @@ from typing import TypedDict
 import pytest
 from pydantic import ValidationError
 
+from src.architecture.modes import ApplicationMode
 from src.config import (
-    ApplicationMode,
     ChunkingStrategy,
     Config,
     CrawlProvider,
@@ -78,7 +80,7 @@ def test_config_loads_env_values_and_nested_sections(
     assert config.environment == Environment.STAGING
     assert snapshot["cache"]["ttl_embeddings"] == 123
     assert snapshot["openai"]["api_key"] == "sk-test"
-    assert config.openai_api_key is None  # empty string treated as missing
+    assert config.openai.api_key is None  # empty string treated as missing
     assert snapshot["cache"]["enable_caching"] is False
     assert overrides["data_dir"].exists()
     assert overrides["cache_dir"].exists()
@@ -130,18 +132,17 @@ def test_config_allows_missing_provider_keys_in_testing_environment() -> None:
     assert snapshot["firecrawl"]["api_key"] is None
 
 
-def test_config_synchronizes_service_credentials_and_urls(tmp_path: Path) -> None:
-    """Ensure top-level credentials and URLs cascade into nested config sections."""
+def test_config_nested_credentials_and_urls(tmp_path: Path) -> None:
+    """Nested credentials and URLs should be preserved without side effects."""
 
     overrides = _path_overrides(tmp_path)
     config = Config.model_validate(
         {
             "environment": Environment.TESTING,
-            "openai_api_key": "sk-live",
-            "firecrawl_api_key": "fc-live",
-            "qdrant_api_key": "qd-live",
-            "qdrant_url": "http://qdrant:6333",
-            "redis_url": "redis://redis:6379/1",
+            "openai": {"api_key": "sk-live"},
+            "firecrawl": {"api_key": "fc-live"},
+            "qdrant": {"api_key": "qd-live", "url": "http://qdrant:6333"},
+            "cache": {"redis_url": "redis://redis:6379/1"},
             "data_dir": overrides["data_dir"],
             "cache_dir": overrides["cache_dir"],
             "logs_dir": overrides["logs_dir"],

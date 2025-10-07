@@ -15,7 +15,7 @@ from rich.console import Console
 from rich.table import Table
 
 # Import unified configuration and service layer
-from src.config import get_config
+from src.config import get_config, set_config
 from src.contracts.retrieval import SearchRecord
 from src.services.registry import ensure_service_registry, shutdown_service_registry
 from src.services.vector_db import CollectionSchema
@@ -73,7 +73,12 @@ class VectorDBManager:
         """Ensure the service registry is ready and apply overrides."""
         if self.qdrant_url:
             config = get_config()
-            config.qdrant.url = self.qdrant_url
+            updated_config = config.model_copy(
+                update={
+                    "qdrant": config.qdrant.model_copy(update={"url": self.qdrant_url})
+                }
+            )
+            set_config(updated_config)
             registry = await ensure_service_registry(force=True)
         else:
             registry = await ensure_service_registry()
@@ -307,11 +312,8 @@ class VectorDBManager:
 
 def _create_manager_from_context(ctx) -> VectorDBManager:
     """Create VectorDBManager using the shared service registry."""
-    config = get_config()
-    override_url = ctx.obj.get("url")
-    if override_url:
-        config.qdrant.url = override_url
 
+    override_url = ctx.obj.get("url")
     return VectorDBManager(qdrant_url=override_url)
 
 
