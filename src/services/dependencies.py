@@ -1,12 +1,12 @@
-"""FastAPI dependency injection functions."""
+"""Service access helpers and dependency wrappers shared across entry points."""
 
 # pylint: disable=too-many-lines,no-else-return,no-else-raise,duplicate-code,cyclic-import,global-statement
 
 import asyncio
 import logging
-import time
 from collections.abc import AsyncGenerator, Callable
 from datetime import UTC, datetime
+from time import perf_counter
 from typing import Annotated, Any
 
 from fastapi import Depends  # type: ignore[attr-defined]
@@ -46,29 +46,12 @@ async def _resolve_client_manager(
     if client_manager is not None:
         return client_manager
 
-    manager = ClientManager.from_unified_config()
-    await manager.initialize()
-    return manager
-
-
-def create_service_error_handler(
-    service_name: str,
-    error_class: type[Exception] = RuntimeError,
-) -> Callable:
-    """Create error handler decorator for service operations."""
-
-    def decorator(func: Callable) -> Callable:
-        async def wrapper(*args: Any, **kwargs: Any) -> Any:
-            try:
-                return await func(*args, **kwargs)
-            except Exception as e:
-                logger.exception("%s operation failed", service_name)
-                msg = f"Failed {service_name} operation: {e}"
-                raise error_class(msg) from e
-
-        return wrapper
-
-    return decorator
+    try:
+        return get_service_registry().client_manager
+    except Exception:  # pragma: no cover - defensive fallback
+        manager = ClientManager.from_unified_config()
+        await manager.initialize()
+        return manager
 
 
 #### CONFIGURATION DEPENDENCIES ####
@@ -203,7 +186,7 @@ CacheManagerDep = Annotated[Any, Depends(get_cache_manager)]
 async def cache_get(
     key: str,
     cache_type: str = "crawl",
-    cache_manager: CacheManagerDep = None,
+    cache_manager: Any | None = None,
 ) -> Any:
     """Get value from cache."""
     manager = cache_manager or await get_cache_manager()
@@ -225,7 +208,7 @@ async def cache_set(
     value: Any,
     cache_type: str = "crawl",
     ttl: int | None = None,
-    cache_manager: CacheManagerDep = None,
+    cache_manager: Any | None = None,
 ) -> bool:
     """Set value in cache."""
     manager = cache_manager or await get_cache_manager()
@@ -245,7 +228,7 @@ async def cache_set(
 async def cache_delete(
     key: str,
     cache_type: str = "crawl",
-    cache_manager: CacheManagerDep = None,
+    cache_manager: Any | None = None,
 ) -> bool:
     """Delete value from cache."""
     manager = cache_manager or await get_cache_manager()
@@ -352,12 +335,9 @@ async def crawl_site(
 
 
 # Database Dependencies
-async def get_database_manager(
-    client_manager: ClientManager | None = None,
-) -> Any:
+async def get_database_manager() -> Any:
     """Get initialized DatabaseManager service."""
 
-    del client_manager
     registry = await ensure_service_registry()
     return registry.database_manager
 
@@ -635,7 +615,9 @@ async def get_circuit_breaker_status() -> dict[str, Any]:
                 "half_open_circuits": half_open_circuits,
                 "closed_circuits": total_circuits - open_circuits - half_open_circuits,
                 "health_percentage": (
-                    (total_circuits - open_circuits) / total_circuits * 100
+                    (total_circuits - open_circuits - half_open_circuits)
+                    / total_circuits
+                    * 100
                 )
                 if total_circuits > 0
                 else 100.0,
@@ -675,7 +657,7 @@ async def reset_circuit_breaker(service_name: str) -> dict[str, Any]:
             "new_status": breaker.get_status(),
         }
     except Exception as e:
-        logger.exception("Failed to reset circuit breaker for")
+        logger.exception("Failed to reset circuit breaker for %s", service_name)
         return {
             "success": False,
             "error": str(e),
@@ -863,12 +845,13 @@ async def get_crawl_recommended_tool(
 async def map_website_urls(
     url: str,
     include_subdomains: bool = False,
-    crawl_manager: CrawlManagerDep = None,
+    crawl_manager: Any | None = None,
 ) -> dict[str, Any]:
     """Map a website to get list of URLs."""
 
+    manager = crawl_manager or await get_crawl_manager()
     try:
-        return await crawl_manager.map_url(url, include_subdomains)
+        return await manager.map_url(url, include_subdomains)
     except (ConnectionError, TimeoutError, ValueError) as e:
         logger.warning("URL mapping failed for %s: %s", url, e)
         return {
@@ -880,12 +863,13 @@ async def map_website_urls(
 
 
 async def get_crawl_tier_metrics(
-    crawl_manager: CrawlManagerDep,
+    crawl_manager: Any | None = None,
 ) -> dict[str, dict]:
     """Get performance metrics for all crawling tiers."""
 
+    manager = crawl_manager or await get_crawl_manager()
     try:
-        return crawl_manager.get_tier_metrics()
+        return manager.get_tier_metrics()
     except (ConnectionError, TimeoutError, ValueError) as e:
         logger.warning("Failed to get tier metrics: %s", e)
         return {}
@@ -900,16 +884,16 @@ async def track_operation_performance(
 ) -> Any:
     """Track performance of an operation."""
 
-    start_time = time.time()
+    start_time = perf_counter()
 
     try:
         result = await operation_func(*args, **kwargs)
         # Record success metrics (could integrate with metrics system)
-        duration_ms = (time.time() - start_time) * 1000
+        duration_ms = (perf_counter() - start_time) * 1000
         logger.debug("Operation %s completed in %.2fms", operation_name, duration_ms)
     except Exception:
         # Record failure metrics
-        duration_ms = (time.time() - start_time) * 1000
+        duration_ms = (perf_counter() - start_time) * 1000
         logger.exception("Operation %s failed in %.2fms", operation_name, duration_ms)
         raise
     else:
@@ -932,8 +916,8 @@ async def rerank_search_results(
 
     try:
         return await embedding_manager.rerank_results(request.query, request.results)
-    except Exception:
-        logger.exception("Result reranking failed: %s")
+    except Exception as exc:
+        logger.exception("Result reranking failed: %s", exc)
         # Return original results on failure
         return request.results
 
@@ -941,24 +925,26 @@ async def rerank_search_results(
 async def estimate_embedding_cost(
     texts: list[str],
     provider_name: str | None = None,
-    embedding_manager: EmbeddingManagerDep = None,
+    embedding_manager: Any | None = None,
 ) -> dict[str, dict[str, float]] | dict[str, dict[str, str | float]]:
     """Estimate embedding generation cost."""
 
+    manager = embedding_manager or await get_embedding_manager()
     try:
-        return embedding_manager.estimate_cost(texts, provider_name)
+        return manager.estimate_cost(texts, provider_name)
     except Exception as e:
         logger.exception("Cost estimation failed")
         return {"error": {"message": str(e), "cost": 0.0}}
 
 
 async def get_embedding_provider_info(
-    embedding_manager: EmbeddingManagerDep,
+    embedding_manager: Any | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Get information about available embedding providers."""
 
+    manager = embedding_manager or await get_embedding_manager()
     try:
-        return embedding_manager.get_provider_info()
+        return manager.get_provider_info()
     except Exception as e:
         logger.exception("Provider info retrieval failed")
         return {"error": {"message": str(e)}}
@@ -968,12 +954,13 @@ async def get_optimal_embedding_provider(
     text_length: int,
     quality_required: bool = False,
     budget_limit: float | None = None,
-    embedding_manager: EmbeddingManagerDep = None,
+    embedding_manager: Any | None = None,
 ) -> str:
     """Select optimal provider based on constraints."""
 
+    manager = embedding_manager or await get_embedding_manager()
     try:
-        return await embedding_manager.get_optimal_provider(
+        return await manager.get_optimal_provider(
             text_length, quality_required, budget_limit
         )
     except Exception:
@@ -990,12 +977,13 @@ class TextAnalysisRequest(BaseModel):
 
 async def analyze_text_characteristics(
     request: TextAnalysisRequest,
-    embedding_manager: EmbeddingManagerDep,
+    embedding_manager: Any | None = None,
 ) -> dict[str, Any]:
     """Analyze text characteristics for smart model selection."""
 
+    manager = embedding_manager or await get_embedding_manager()
     try:
-        analysis = embedding_manager.analyze_text_characteristics(request.texts)
+        analysis = manager.analyze_text_characteristics(request.texts)
         # Convert TextAnalysis to dict for service boundary
         analysis_result = {
             "total_length": analysis.total_length,
@@ -1021,12 +1009,13 @@ async def analyze_text_characteristics(
 
 
 async def get_embedding_usage_report(
-    embedding_manager: EmbeddingManagerDep,
+    embedding_manager: Any | None = None,
 ) -> dict[str, Any]:
     """Get comprehensive embedding usage report."""
 
+    manager = embedding_manager or await get_embedding_manager()
     try:
-        return embedding_manager.get_usage_report()
+        return manager.get_usage_report()
     except Exception as e:
         logger.exception("Usage report generation failed")
         return {"error": str(e)}

@@ -82,9 +82,7 @@ class LoadTestRunner:
         web_port: int = 8089,
     ) -> dict:
         """Run load test using Locust."""
-        logger.info(
-            "Starting Locust load test with config: %s", config
-        )
+        logger.info("Starting Locust load test with config: %s", config)
 
         # Create environment
         env = create_load_test_environment(
@@ -96,9 +94,7 @@ class LoadTestRunner:
             load_profile = get_load_profile(profile)
             if load_profile:
                 env.shape_class = load_profile
-                logger.info(
-                    "Applied load profile: %s", profile
-                )
+                logger.info("Applied load profile: %s", profile)
 
         if headless:
             # Run headless test
@@ -131,18 +127,12 @@ class LoadTestRunner:
 
                 # Save report
                 report_file = self._save_report(report)
-                logger.info(
-                    "Test report saved to: %s", report_file
-                )
+                logger.info("Test report saved to: %s", report_file)
 
             return report
         # Run with web UI
-        logger.info(
-            "Starting Locust web UI on port %s", web_port
-        )
-        logger.info(
-            "Visit http://localhost:%s to control the test", web_port
-        )
+        logger.info("Starting Locust web UI on port %s", web_port)
+        logger.info("Visit http://localhost:%s to control the test", web_port)
 
         # Set up Locust arguments for web mode
         locust_args = [
@@ -221,12 +211,10 @@ class LoadTestRunner:
 
     def run_custom_scenario(self, scenario_file: str) -> dict:
         """Run a custom load test scenario from JSON file."""
-        logger.info(
-            "Running custom scenario: %s", scenario_file
-        )
+        logger.info("Running custom scenario: %s", scenario_file)
 
         try:
-            with Path(scenario_file).open() as f:
+            with Path(scenario_file).open(encoding="utf-8") as f:
                 scenario = json.load(f)
 
             # Validate scenario format
@@ -247,14 +235,8 @@ class LoadTestRunner:
                 "description": scenario["description"],
                 "file": scenario_file,
             }
-
-        except Exception:
-            logger.exception("Error in test execution")
-        else:
             return result
 
-        try:
-            pass
         except Exception:
             logger.exception("Failed to run custom scenario")
             return {
@@ -270,16 +252,12 @@ class LoadTestRunner:
 
     def benchmark_endpoints(self, endpoints: list[str], config: dict) -> dict:
         """Benchmark specific endpoints."""
-        logger.info(
-            "Benchmarking endpoints: %s", endpoints
-        )
+        logger.info("Benchmarking endpoints: %s", endpoints)
 
         results = {}
 
         for endpoint in endpoints:
-            logger.info(
-                "Benchmarking endpoint: %s", endpoint
-            )
+            logger.info("Benchmarking endpoint: %s", endpoint)
 
             # Create custom user class for this endpoint
             endpoint_config = config.copy()
@@ -294,9 +272,7 @@ class LoadTestRunner:
 
         # Save report
         report_file = self._save_report(comparative_report, "endpoint_benchmark")
-        logger.info(
-            "Endpoint benchmark report saved to: %s", report_file
-        )
+        logger.info("Endpoint benchmark report saved to: %s", report_file)
 
         return comparative_report
 
@@ -310,7 +286,7 @@ class LoadTestRunner:
 
         try:
             # Load baseline results
-            with Path(baseline_file).open() as f:
+            with Path(baseline_file).open(encoding="utf-8") as f:
                 baseline = json.load(f)
 
             # Run current test
@@ -323,17 +299,9 @@ class LoadTestRunner:
 
             # Save regression report
             report_file = self._save_report(regression_analysis, "regression_analysis")
-            logger.info(
-                "Regression analysis saved to: %s", report_file
-            )
-
-        except Exception:
-            logger.exception("Error in test execution")
-        else:
+            logger.info("Regression analysis saved to: %s", report_file)
             return regression_analysis
 
-        try:
-            pass
         except Exception:
             logger.exception("Failed to run regression test")
             return {
@@ -608,7 +576,7 @@ class LoadTestRunner:
         filename = f"{report_type}_report_{timestamp}.json"
         filepath = self.results_dir / filename
 
-        with Path(filepath).open("w") as f:
+        with Path(filepath).open("w", encoding="utf-8") as f:
             json.dump(report, f, indent=2)
 
         return str(filepath)
@@ -939,6 +907,7 @@ def main():
         config["duration"] = args.duration
 
     # Execute based on mode
+    result = {}
     try:
         if args.mode == "locust":
             headless = args.headless and not args.web
@@ -971,6 +940,8 @@ def main():
                 logger.error("Baseline file required for regression mode")
                 sys.exit(1)
             result = runner.validate_performance_regression(args.baseline, config)
+        else:
+            result = {"status": "error", "error": f"Unknown mode: {args.mode}"}
 
         # Print summary
         print("\n" + "=" * 60)
@@ -981,7 +952,7 @@ def main():
             if "status" in result:
                 print(f"Status: {result['status']}")
 
-            if "summary" in result:
+            if "summary" in result and isinstance(result["summary"], dict):
                 summary = result["summary"]
                 print(f"Total Requests: {summary.get('_total_requests', 'N/A')}")
                 print(

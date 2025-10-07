@@ -9,11 +9,12 @@ import asyncio
 import logging
 import re
 import time
-from typing import Any
+from typing import Any, cast
 from urllib.parse import urljoin, urlparse
 
 import httpx
 from bs4 import BeautifulSoup
+from bs4.element import Tag
 from pydantic import BaseModel, Field
 
 from src.config import Config
@@ -70,15 +71,18 @@ class LightweightScraper(BaseService):
 
         Args:
             config: Unified configuration instance
-
         """
+
         super().__init__(config)
-        self._client: httpx.AsyncClient | None = None
-        self._content_threshold = getattr(
-            config.browser_automation, "content_threshold", 100
+        self._http_client: httpx.AsyncClient | None = None
+        browser_settings: Any = getattr(config, "browser_automation", None)
+        self._content_threshold = cast(
+            int, getattr(browser_settings, "content_threshold", 100)
         )
-        self._timeout = getattr(config.browser_automation, "lightweight_timeout", 10.0)
-        self._max_retries = getattr(config.browser_automation, "max_retries", 2)
+        self._timeout = cast(
+            float, getattr(browser_settings, "lightweight_timeout", 10.0)
+        )
+        self._max_retries = cast(int, getattr(browser_settings, "max_retries", 2))
 
         # URL patterns for static content detection
         self._static_patterns = [
@@ -104,7 +108,7 @@ class LightweightScraper(BaseService):
 
     async def initialize(self) -> None:
         """Initialize the lightweight scraper."""
-        if self._client is None:
+        if self._http_client is None:
             # Configure httpx client for optimal performance
             limits = httpx.Limits(
                 max_keepalive_connections=20, max_connections=100, keepalive_expiry=30.0
@@ -114,7 +118,7 @@ class LightweightScraper(BaseService):
                 connect=5.0, read=self._timeout, write=5.0, pool=2.0
             )
 
-            self._client = httpx.AsyncClient(
+            self._http_client = httpx.AsyncClient(
                 limits=limits,
                 timeout=timeout,
                 headers={
@@ -139,9 +143,9 @@ class LightweightScraper(BaseService):
 
     async def cleanup(self) -> None:
         """Cleanup resources."""
-        if self._client:
-            await self._client.aclose()
-            self._client = None
+        if self._http_client:
+            await self._http_client.aclose()
+            self._http_client = None
 
     async def can_handle(self, url: str) -> ContentAnalysis:
         """Determine if URL can be handled by lightweight scraper.
@@ -154,8 +158,8 @@ class LightweightScraper(BaseService):
 
         Returns:
             ContentAnalysis with decision and confidence score
-
         """
+
         start_time = time.time()
         analysis = ContentAnalysis(can_handle=False, confidence=0.0)
 
@@ -165,10 +169,12 @@ class LightweightScraper(BaseService):
             if url_confidence > 0.7:
                 analysis.can_handle = True
                 analysis.confidence = url_confidence
-                analysis.reasons.append(
+                reasons = list(analysis.reasons)
+                reasons.append(
                     "URL pattern indicates static content "
                     f"(confidence: {url_confidence:.2f})"
                 )
+                analysis.reasons = reasons
                 return analysis
 
             # HEAD request analysis for more detailed assessment
@@ -176,13 +182,17 @@ class LightweightScraper(BaseService):
             if head_analysis:
                 analysis.can_handle = head_analysis["can_handle"]
                 analysis.confidence = head_analysis["confidence"]
-                analysis.reasons.extend(head_analysis["reasons"])
+                reasons = list(analysis.reasons)
+                reasons.extend(head_analysis["reasons"])
+                analysis.reasons = reasons
                 analysis.content_type = head_analysis.get("content_type")
                 analysis.size_estimate = head_analysis.get("size_estimate")
 
         except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             logger.warning("Error analyzing URL %s: %s", url, e)
-            analysis.reasons.append(f"Analysis error: {e!s}")
+            reasons = list(analysis.reasons)
+            reasons.append(f"Analysis error: {e!s}")
+            analysis.reasons = reasons
 
         elapsed_ms = (time.time() - start_time) * 1000
         logger.debug(
@@ -202,8 +212,8 @@ class LightweightScraper(BaseService):
 
         Returns:
             Confidence score (0.0 to 1.0)
-
         """
+
         parsed = urlparse(url)
         path = parsed.path.lower()
         domain = parsed.netloc.lower()
@@ -252,13 +262,16 @@ class LightweightScraper(BaseService):
 
         Returns:
             Dictionary with analysis results or None if failed
-
         """
-        if not self._client:
+
+        # pylint: disable=too-many-branches
+
+        if self._http_client is None:
             await self.initialize()
 
         try:
-            response = await self._client.head(url, timeout=5.0)
+            assert self._http_client is not None
+            response = await self._http_client.head(url, timeout=5.0)
             response.raise_for_status()
 
             content_type = response.headers.get("content-type", "").lower()
@@ -321,27 +334,34 @@ class LightweightScraper(BaseService):
             logger.debug("HEAD request failed for %s: %s", url, e)
             return None
 
-        else:
-            return analysis
+        return analysis
 
-    async def scrape(self, url: str) -> ScrapedContent | None:
+    async def scrape(
+        self, url: str, *, timeout: float | None = None
+    ) -> ScrapedContent | None:
         """Scrape content using lightweight HTTP + BeautifulSoup approach.
 
         Args:
             url: URL to scrape
+            timeout: Optional per-request timeout in seconds
 
         Returns:
-            ScrapedContent if successful, None if content should escalate to higher tier
-
+            ScrapedContent if successful, None if content escalated to higher tier
         """
+
         start_time = time.time()
 
-        if not self._client:
+        if self._http_client is None:
             await self.initialize()
 
         try:
             # Attempt lightweight scraping
-            response = await self._client.get(url)
+            request_kwargs: dict[str, Any] = {}
+            if timeout and timeout > 0:
+                request_kwargs["timeout"] = timeout
+
+            assert self._http_client is not None
+            response = await self._http_client.get(url, **request_kwargs)
             response.raise_for_status()
 
             # Parse content with BeautifulSoup
@@ -404,7 +424,7 @@ class LightweightScraper(BaseService):
             title = soup.title.string.strip() if soup.title.string else ""
 
         # Try site-specific selectors first
-        main_content = None
+        main_content: BeautifulSoup | Tag | None = None
         if domain in self._site_selectors:
             selector = self._site_selectors[domain]["content"]
             main_content = soup.select_one(selector)
@@ -413,10 +433,12 @@ class LightweightScraper(BaseService):
         if not main_content:
             main_content = self._find_main_content(soup)
 
+        content_soup = self._ensure_content_soup(main_content, soup)
+
         # Extract structured data
-        headings = self._extract_headings(main_content)
-        links = self._extract_links(main_content, url)
-        text = self._extract_clean_text(main_content)
+        headings = self._extract_headings(content_soup)
+        links = self._extract_links(content_soup, url)
+        text = self._extract_clean_text(content_soup)
 
         # Extract metadata
         metadata = self._extract_metadata(soup)
@@ -429,14 +451,25 @@ class LightweightScraper(BaseService):
             "metadata": metadata,
         }
 
-    def _find_main_content(self, soup: BeautifulSoup) -> BeautifulSoup:
+    def _ensure_content_soup(
+        self, node: BeautifulSoup | Tag | None, fallback: BeautifulSoup
+    ) -> BeautifulSoup:
+        """Return a BeautifulSoup document for the supplied node."""
+
+        if isinstance(node, BeautifulSoup):
+            return node
+        if isinstance(node, Tag):
+            return BeautifulSoup(str(node), "lxml")
+        return fallback
+
+    def _find_main_content(self, soup: BeautifulSoup) -> BeautifulSoup | Tag | None:
         """Find main content area using content heuristics.
 
         Args:
             soup: BeautifulSoup object
 
         Returns:
-            BeautifulSoup object with main content
+            BeautifulSoup or Tag containing the main content
 
         """
         # Try common content selectors in order of specificity
@@ -466,7 +499,9 @@ class LightweightScraper(BaseService):
         for element in unwanted:
             element.decompose()
 
-        return soup.body or soup
+        if soup.body:
+            return soup.body
+        return soup
 
     def _extract_headings(self, content: BeautifulSoup) -> list[dict[str, Any]]:
         """Extract heading structure from content.
@@ -478,17 +513,27 @@ class LightweightScraper(BaseService):
             List of heading dictionaries
 
         """
-        headings = []
+        headings: list[dict[str, Any]] = []
         for heading in content.find_all(["h1", "h2", "h3", "h4", "h5", "h6"]):
-            level = int(heading.name[1])
-            text = heading.get_text(strip=True)
+            heading_node = cast(Any, heading)
+            name = getattr(heading_node, "name", "") or ""
+            if len(name) != 2 or not name.startswith("h") or not name[1].isdigit():
+                continue
+            level = int(name[1])
+            text = (
+                heading_node.get_text(strip=True)
+                if hasattr(heading_node, "get_text")
+                else ""
+            )
             if text:  # Only include non-empty headings
                 headings.append(
                     {
                         "level": level,
                         "text": text,
-                        "id": heading.get("id"),
-                        "tag": heading.name,
+                        "id": heading_node.get("id")
+                        if hasattr(heading_node, "get")
+                        else None,
+                        "tag": name,
                     }
                 )
         return headings
@@ -506,10 +551,14 @@ class LightweightScraper(BaseService):
             List of link dictionaries
 
         """
-        links = []
-        for link in content.find_all("a", href=True):
-            href = link["href"].strip()
-            text = link.get_text(strip=True)
+        links: list[dict[str, str]] = []
+        for link in content.find_all("a"):
+            link_node = cast(Any, link)
+            href_raw = link_node.get("href") if hasattr(link_node, "get") else None
+            href = href_raw.strip() if isinstance(href_raw, str) else ""
+            text = (
+                link_node.get_text(strip=True) if hasattr(link_node, "get_text") else ""
+            )
 
             if not href or href.startswith("#"):
                 continue  # Skip empty links and anchors
@@ -525,12 +574,15 @@ class LightweightScraper(BaseService):
             elif urlparse(href).netloc == urlparse(base_url).netloc:
                 link_type = "internal"
 
+            title_attr = link_node.get("title") if hasattr(link_node, "get") else None
+            title = title_attr.strip() if isinstance(title_attr, str) else ""
+
             links.append(
                 {
                     "url": href,
                     "text": text,
                     "type": link_type,
-                    "title": link.get("title", ""),
+                    "title": title,
                 }
             )
 
@@ -547,7 +599,7 @@ class LightweightScraper(BaseService):
 
         """
         # Remove script and style elements
-        for script in content(["script", "style", "noscript"]):
+        for script in content.find_all(["script", "style", "noscript"]):
             script.decompose()
 
         # Get text with space separation
@@ -571,19 +623,32 @@ class LightweightScraper(BaseService):
             Dictionary with metadata
 
         """
-        metadata = {}
+        metadata: dict[str, Any] = {}
 
         # Meta tags
         for meta in soup.find_all("meta"):
-            name = meta.get("name") or meta.get("property")
-            content = meta.get("content")
-            if name and content:
-                metadata[name] = content
+            meta_node = cast(Any, meta)
+            name_attr = meta_node.get("name") if hasattr(meta_node, "get") else None
+            if not isinstance(name_attr, str) or not name_attr:
+                alt_name = (
+                    meta_node.get("property") if hasattr(meta_node, "get") else None
+                )
+                name_attr = alt_name if isinstance(alt_name, str) else ""
+            if not isinstance(name_attr, str) or not name_attr:
+                continue
+            meta_content = (
+                meta_node.get("content") if hasattr(meta_node, "get") else None
+            )
+            if isinstance(meta_content, str) and meta_content:
+                metadata[name_attr] = meta_content
 
         # Language
         html_tag = soup.find("html")
-        if html_tag and html_tag.get("lang"):
-            metadata["language"] = html_tag["lang"]
+        if html_tag:
+            html_node = cast(Any, html_tag)
+            lang_attr = html_node.get("lang") if hasattr(html_node, "get") else None
+            if isinstance(lang_attr, str) and lang_attr:
+                metadata["language"] = lang_attr
 
         return metadata
 
