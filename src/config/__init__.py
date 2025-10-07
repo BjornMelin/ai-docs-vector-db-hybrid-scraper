@@ -25,6 +25,7 @@ from .loader import (
 )
 from .models import (
     ABTestVariant,
+    AgenticConfig,
     ApplicationMode,
     BrowserUseConfig,
     CacheConfig,
@@ -135,6 +136,7 @@ __all__ = [
     "set_config",
     "ABTestVariant",
     "ApplicationMode",
+    "AgenticConfig",
     "BrowserUseConfig",
     "CacheConfig",
     "CacheType",

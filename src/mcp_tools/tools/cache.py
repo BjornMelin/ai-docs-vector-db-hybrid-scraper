@@ -6,6 +6,7 @@ from fastmcp import Context
 
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.models.responses import CacheClearResponse, CacheStatsResponse
+from src.services.dependencies import get_cache_manager
 
 
 logger = logging.getLogger(__name__)
@@ -29,7 +30,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 await ctx.info("Starting full cache clear")
 
         try:
-            cache_manager = await client_manager.get_cache_manager()
+            cache_manager = await get_cache_manager(client_manager)
             if pattern:
                 cleared = await cache_manager.clear_pattern(pattern)
                 if ctx:
@@ -63,7 +64,7 @@ def register_tools(mcp, client_manager: ClientManager):
             await ctx.info("Retrieving cache statistics")
 
         try:
-            cache_manager = await client_manager.get_cache_manager()
+            cache_manager = await get_cache_manager(client_manager)
             stats = await cache_manager.get_stats()
 
             if ctx:

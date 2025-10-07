@@ -29,7 +29,8 @@ from rich.table import Table
 from .chunking import DocumentChunker
 from .config import Config, get_config
 from .infrastructure.client_manager import ClientManager
-from .services.embeddings.manager import QualityTier
+from .services.crawling.manager import CrawlManager
+from .services.embeddings.manager import EmbeddingManager, QualityTier
 from .services.logging_config import configure_logging
 from .services.vector_db.service import VectorStoreService
 from .services.vector_db.types import CollectionSchema, VectorRecord
@@ -81,7 +82,7 @@ class ProcessingState(BaseModel):
     collection_name: str = "bulk_embeddings"
 
 
-class BulkEmbedder:
+class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
     """Bulk embedder for crawling and embedding web content."""
 
     def __init__(
@@ -147,13 +148,21 @@ class BulkEmbedder:
     async def initialize_services(self) -> None:
         """Initialize all required services."""
         # Get services from client manager
-        self.crawl_manager = await self.client_manager.get_crawl_manager()
         if self.crawl_manager is None:
-            raise RuntimeError("Crawl manager not available")
+            self.crawl_manager = CrawlManager(
+                config=self.config,
+                rate_limiter=None,
+            )
+            await self.crawl_manager.initialize()
 
-        self.embedding_manager = await self.client_manager.get_embedding_manager()
         if self.embedding_manager is None:
-            raise RuntimeError("Embedding manager not available")
+            self.embedding_manager = EmbeddingManager(
+                config=self.config,
+                client_manager=self.client_manager,
+                budget_limit=None,
+                rate_limiter=None,
+            )
+            await self.embedding_manager.initialize()
 
         self.vector_service = await self.client_manager.get_vector_store_service()
         if self.vector_service and not self.vector_service.is_initialized():
@@ -382,7 +391,7 @@ class BulkEmbedder:
 
         return dense_embeddings, sparse_embeddings
 
-    async def _store_points(
+    async def _store_points(  # pylint: disable=too-many-arguments
         self,
         *,
         url: str,
@@ -417,7 +426,7 @@ class BulkEmbedder:
             error_msg = f"Point storage failed: {e}"
             raise RuntimeError(error_msg) from e
 
-    def _prepare_records(
+    def _prepare_records(  # pylint: disable=too-many-arguments
         self,
         *,
         url: str,
@@ -640,13 +649,13 @@ class BulkEmbedder:
     is_flag=True,
     help="Enable verbose logging",
 )
-def main(
+def main(  # pylint: disable=too-many-arguments,too-many-positional-arguments
     urls: tuple[str, ...],
     file: Path | None = None,
     sitemap: str | None = None,
     collection: str = "bulk_embeddings",
     concurrent: int = 5,
-    _config_path: Path | None = None,
+    config_path: Path | None = None,
     state_file: Path | None = None,
     no_resume: bool = False,
     verbose: bool = False,
@@ -678,6 +687,8 @@ def main(
 
     # Load configuration
     config = get_config()
+    if config_path is not None:
+        logger.debug("CLI config path provided: %s", config_path)
 
     # Validate inputs
     if not any([urls, file, sitemap]):
@@ -699,7 +710,7 @@ def main(
     )
 
 
-async def _async_main(
+async def _async_main(  # pylint: disable=too-many-arguments,too-many-locals
     *,
     urls: list[str],
     file: Path | None = None,

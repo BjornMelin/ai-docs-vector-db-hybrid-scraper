@@ -4,8 +4,9 @@ This module provides essential dependencies for database sessions,
 configuration management, and other production services.
 """
 
+import asyncio
 import logging
-from collections.abc import AsyncGenerator, Callable
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from typing import Any
@@ -13,7 +14,7 @@ from typing import Any
 
 try:
     import redis
-except ImportError:
+except ImportError:  # pragma: no cover - optional dependency
     redis = None
 from fastapi.exceptions import HTTPException
 from fastapi.requests import Request
@@ -24,15 +25,19 @@ from src.infrastructure.client_manager import ClientManager
 
 # Import new function-based dependencies
 from src.services.dependencies import (
+    cleanup_services as cleanup_dependency_services,
     get_cache_manager,
+    get_database_manager,
     get_embedding_manager,
-    get_vector_store_service,
+    get_ready_client_manager,
 )
 from src.services.fastapi.middleware.correlation import get_correlation_id
 from src.services.vector_db.service import VectorStoreService
 
 
 logger = logging.getLogger(__name__)
+
+RedisErrorType = getattr(redis, "RedisError", Exception)
 
 
 class DependencyContainer:
@@ -89,15 +94,15 @@ class DependencyContainer:
             config: Application configuration
         """
 
-        self._client_manager = ClientManager.from_unified_config()
-        await self._client_manager.initialize()
-        self._vector_service = await get_vector_store_service(self._client_manager)
+        self._client_manager = await get_ready_client_manager()
+        self._vector_service = await self._client_manager.get_vector_store_service()
 
     async def _initialize_managers(self) -> None:
         """Initialize embedding and cache managers."""
 
-        self._embedding_manager = await get_embedding_manager(self._client_manager)
-        self._cache_manager = await get_cache_manager(self._client_manager)
+        ready_manager = self._client_manager or await get_ready_client_manager()
+        self._embedding_manager = await get_embedding_manager(ready_manager)
+        self._cache_manager = await get_cache_manager(ready_manager)
 
     async def cleanup(self) -> None:
         """Clean up all dependencies."""
@@ -110,9 +115,11 @@ class DependencyContainer:
     async def _perform_cleanup(self) -> None:
         """Perform dependency cleanup steps."""
 
-        # Function-based managers are cleaned up through client manager
-        if self._client_manager:
-            await self._client_manager.cleanup()
+        await cleanup_dependency_services()
+        self._vector_service = None
+        self._embedding_manager = None
+        self._cache_manager = None
+        self._client_manager = None
 
         self._initialized = False
         logger.info("Dependency container cleaned up")
@@ -203,12 +210,8 @@ class _DependencyContainerSingleton:
             cls._instance = None
 
 
-def get_container() -> DependencyContainer:
-    """Get the global dependency container.
-
-    Returns:
-        Global dependency container instance
-    """
+def get_app_dependency_container() -> DependencyContainer:
+    """Return the FastAPI dependency container singleton."""
 
     return _DependencyContainerSingleton.get_instance()
 
@@ -239,7 +242,7 @@ def get_config_dependency() -> Config:
         Configuration instance
     """
 
-    return get_container().config
+    return get_app_dependency_container().config
 
 
 def get_fastapi_config() -> Config:
@@ -252,152 +255,36 @@ def get_fastapi_config() -> Config:
     return get_config_dependency()
 
 
-def _raise_vector_service_unavailable() -> HTTPException:
-    """Helper to raise vector service unavailable exception."""
-
-    raise HTTPException(
-        status_code=HTTP_503_SERVICE_UNAVAILABLE,
-        detail="Vector service not available",
-    )
-
-
 async def get_vector_service() -> VectorStoreService:
-    """FastAPI dependency for vector database service.
-
-    Returns:
-        Vector database service instance
-    """
+    """Return an initialized vector service suitable for FastAPI dependencies."""
 
     try:
-        return _get_service_from_container(
-            "vector_service", _raise_vector_service_unavailable
-        )
-    except (OSError, AttributeError, ConnectionError, ImportError):
-        logger.exception("Failed to get vector service")
+        manager = await get_ready_client_manager()
+        return await manager.get_vector_store_service()
+    except Exception as exc:  # pylint: disable=broad-except
+        logger.exception("Failed to obtain vector service")
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
             detail="Vector service not available",
-        ) from None
+        ) from exc
 
 
-def _raise_embedding_service_unavailable() -> HTTPException:
-    """Helper to raise embedding service unavailable exception."""
-
-    raise HTTPException(
-        status_code=HTTP_503_SERVICE_UNAVAILABLE,
-        detail="Embedding service not available",
-    )
-
-
-async def get_embedding_manager_legacy() -> Any:
-    """FastAPI dependency for embedding manager (legacy container approach).
-
-    Returns:
-        Embedding manager instance via legacy container
-    """
+async def get_client_manager() -> ClientManager:
+    """Return an initialized ClientManager for FastAPI dependencies."""
 
     try:
-        return _get_service_from_container(
-            "embedding_manager", _raise_embedding_service_unavailable
-        )
-    except (OSError, AttributeError, ConnectionError, ImportError):
-        logger.exception("Failed to get embedding manager")
-        raise HTTPException(
-            status_code=HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Embedding service not available",
-        ) from None
-
-
-def _raise_cache_service_unavailable() -> HTTPException:
-    """Helper to raise cache service unavailable exception."""
-
-    raise HTTPException(
-        status_code=HTTP_503_SERVICE_UNAVAILABLE,
-        detail="Cache service not available",
-    )
-
-
-async def get_cache_manager_legacy() -> Any:
-    """FastAPI dependency for cache manager (legacy container approach).
-
-    Returns:
-        Cache manager instance via legacy container
-    """
-
-    try:
-        return _get_service_from_container(
-            "cache_manager", _raise_cache_service_unavailable
-        )
-    except (OSError, AttributeError, ConnectionError, ImportError):
-        logger.exception("Failed to get cache manager")
-        raise HTTPException(
-            status_code=HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Cache service not available",
-        ) from None
-
-
-def _raise_client_manager_unavailable() -> HTTPException:
-    """Helper to raise client manager unavailable exception."""
-    raise HTTPException(
-        status_code=HTTP_503_SERVICE_UNAVAILABLE,
-        detail="Client manager not available",
-    )
-
-
-def get_client_manager() -> ClientManager:
-    """FastAPI dependency for client manager.
-
-    Returns:
-        Client manager instance
-
-    Raises:
-        HTTPException: If service is not available
-
-    """
-    try:
-        return _get_service_from_container(
-            "client_manager", _raise_client_manager_unavailable
-        )
-    except (OSError, AttributeError, ConnectionError, ImportError):
-        logger.exception("Failed to get client manager")
+        return await get_ready_client_manager()
+    except Exception as exc:  # pylint: disable=broad-except
+        logger.exception("Failed to obtain client manager")
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
             detail="Client manager not available",
-        ) from None
-
-
-def _get_service_from_container(
-    service_name: str, unavailable_handler: Callable
-) -> Any:
-    """Get service from container with availability check.
-
-    Args:
-        service_name: Name of the service attribute
-        unavailable_handler: Function to call if service unavailable
-
-    Returns:
-        Service instance
-
-    Raises:
-        HTTPException: If service is not available
-
-    """
-    container = get_container()
-    if not container.is_initialized:
-        unavailable_handler()
-    return getattr(container, service_name)
+        ) from exc
 
 
 def get_correlation_id_dependency(request: Request) -> str:
-    """FastAPI dependency for correlation ID from request.
+    """FastAPI dependency for correlation ID from request."""
 
-    Args:
-        request: HTTP request
-
-    Returns:
-        Correlation ID string
-
-    """
     return get_correlation_id(request)
 
 
@@ -411,22 +298,15 @@ async def database_session() -> AsyncGenerator[Any]:
         AsyncSession: SQLAlchemy async database session
     """
 
-    client_manager = get_client_manager()
-    db_manager = await client_manager.get_database_manager()
+    client_manager = await get_ready_client_manager()
+    db_manager = await get_database_manager(client_manager)
 
-    async with db_manager.session() as session:
+    async with db_manager.get_session() as session:
         yield session
 
 
 def get_request_context(request: Request) -> dict[str, Any]:
-    """FastAPI dependency for request context information.
-
-    Args:
-        request: HTTP request
-
-    Returns:
-        Dictionary with request context data
-    """
+    """FastAPI dependency for request context information."""
 
     return {
         "correlation_id": get_correlation_id(request),
@@ -440,21 +320,19 @@ def get_request_context(request: Request) -> dict[str, Any]:
 class ServiceHealthChecker:
     """Health checker for production services."""
 
+    HEALTH_TIMEOUT_SECONDS = 2.0
+
     def __init__(self, container: DependencyContainer):
         """Initialize health checker.
 
         Args:
             container: Dependency container to check
-
         """
+
         self.container = container
 
     async def check_health(self) -> dict[str, Any]:
-        """Check health of all services.
-
-        Returns:
-            Health status dictionary
-        """
+        """Check health of all services."""
 
         health = {"status": "healthy", "services": {}, "timestamp": None}
 
@@ -466,30 +344,64 @@ class ServiceHealthChecker:
             health["services"]["container"] = {"status": "not_initialized"}
             return health
 
-        # Check vector service
+        # Check vector service readiness
         try:
-            # Attempt a simple health check operation
-            await self.container.vector_service.list_collections()
+            vector_service = self.container.vector_service
+        except RuntimeError:
+            vector_service = await get_vector_service()
+
+        try:
+            await asyncio.wait_for(
+                vector_service.list_collections(),
+                timeout=self.HEALTH_TIMEOUT_SECONDS,
+            )
             health["services"]["vector_db"] = {"status": "healthy"}
-        except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
+        except (TimeoutError, Exception) as exc:  # noqa: BLE001
             health["status"] = "degraded"
-            health["services"]["vector_db"] = {"status": "unhealthy", "error": str(e)}
+            health["services"]["vector_db"] = {
+                "status": "unhealthy",
+                "error": str(exc),
+            }
 
-        # Check embedding service
+        # Check embedding service readiness
         try:
-            # Check if embedding manager is responsive
+            embedding_manager = self.container.embedding_manager
+        except RuntimeError:
+            embedding_manager = await get_embedding_manager(
+                await get_ready_client_manager()
+            )
+
+        try:
+            await asyncio.wait_for(
+                asyncio.to_thread(embedding_manager.get_provider_info),
+                timeout=self.HEALTH_TIMEOUT_SECONDS,
+            )
             health["services"]["embeddings"] = {"status": "healthy"}
-        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
+        except (TimeoutError, Exception) as exc:  # noqa: BLE001
             health["status"] = "degraded"
-            health["services"]["embeddings"] = {"status": "unhealthy", "error": str(e)}
+            health["services"]["embeddings"] = {
+                "status": "unhealthy",
+                "error": str(exc),
+            }
 
-        # Check cache service
+        # Check cache service readiness
         try:
-            # Check cache manager health
+            cache_manager = self.container.cache_manager
+        except RuntimeError:
+            cache_manager = await get_cache_manager(await get_ready_client_manager())
+
+        try:
+            await asyncio.wait_for(
+                cache_manager.get_stats(),
+                timeout=self.HEALTH_TIMEOUT_SECONDS,
+            )
             health["services"]["cache"] = {"status": "healthy"}
-        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
+        except (RedisErrorType, ConnectionError, TimeoutError, ValueError) as exc:
             health["status"] = "degraded"
-            health["services"]["cache"] = {"status": "unhealthy", "error": str(e)}
+            health["services"]["cache"] = {
+                "status": "unhealthy",
+                "error": str(exc),
+            }
 
         return health
 
@@ -501,7 +413,7 @@ def get_health_checker() -> ServiceHealthChecker:
         Service health checker instance
     """
 
-    return ServiceHealthChecker(get_container())
+    return ServiceHealthChecker(get_app_dependency_container())
 
 
 # Export all dependency functions
@@ -510,12 +422,10 @@ __all__ = [
     "ServiceHealthChecker",
     "cleanup_dependencies",
     "database_session",
-    "get_cache_manager",
-    "get_client_manager",
     "get_config_dependency",
-    "get_container",
+    "get_app_dependency_container",
     "get_correlation_id_dependency",
-    "get_embedding_manager",
+    "get_client_manager",
     "get_fastapi_config",
     "get_health_checker",
     "get_request_context",

@@ -4,18 +4,26 @@ utils package
 Submodules
 ----------
 
-utils.health\_checks module
----------------------------
+utils.async_utils module
+------------------------
 
-.. automodule:: utils.health_checks
+.. automodule:: utils.async_utils
    :members:
    :show-inheritance:
    :undoc-members:
 
-utils.imports module
---------------------
+utils.paths module
+------------------
 
-.. automodule:: utils.imports
+.. automodule:: utils.paths
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+utils.gpu module
+----------------
+
+.. automodule:: utils.gpu
    :members:
    :show-inheritance:
    :undoc-members:

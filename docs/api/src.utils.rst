@@ -4,26 +4,26 @@ src.utils package
 Submodules
 ----------
 
-src.utils.cross\_platform module
---------------------------------
+src.utils.async_utils module
+----------------------------
 
-.. automodule:: src.utils.cross_platform
+.. automodule:: src.utils.async_utils
    :members:
    :show-inheritance:
    :undoc-members:
 
-src.utils.health\_checks module
--------------------------------
+src.utils.paths module
+----------------------
 
-.. automodule:: src.utils.health_checks
+.. automodule:: src.utils.paths
    :members:
    :show-inheritance:
    :undoc-members:
 
-src.utils.imports module
-------------------------
+src.utils.gpu module
+--------------------
 
-.. automodule:: src.utils.imports
+.. automodule:: src.utils.gpu
    :members:
    :show-inheritance:
    :undoc-members:

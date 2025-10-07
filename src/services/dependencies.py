@@ -1,6 +1,6 @@
 """FastAPI dependency injection functions."""
 
-# pylint: disable=too-many-lines,no-else-return,no-else-raise,duplicate-code,cyclic-import
+# pylint: disable=too-many-lines,no-else-return,no-else-raise,duplicate-code,cyclic-import,global-statement
 
 import asyncio
 import logging
@@ -15,7 +15,11 @@ from pydantic import BaseModel, Field
 
 from src.config import CacheType, Config, get_config
 from src.infrastructure.client_manager import ClientManager
-from src.services.embeddings.manager import QualityTier
+from src.services.cache.manager import CacheManager
+from src.services.content_intelligence.service import ContentIntelligenceService
+from src.services.core.project_storage import ProjectStorage
+from src.services.crawling.manager import CrawlManager
+from src.services.embeddings.manager import EmbeddingManager, QualityTier
 from src.services.errors import (
     CircuitBreakerRegistry,
     CrawlServiceError,
@@ -23,12 +27,32 @@ from src.services.errors import (
     circuit_breaker,
     tenacity_circuit_breaker,
 )
+from src.services.managers.database_manager import DatabaseManager
 from src.services.rag.generator import RAGGenerator
 from src.services.rag.models import RAGRequest as InternalRAGRequest
 from src.services.vector_db.service import VectorStoreService
 
 
 logger = logging.getLogger(__name__)
+
+
+_embedding_manager: EmbeddingManager | None = None
+_embedding_lock = asyncio.Lock()
+
+_cache_manager: CacheManager | None = None
+_cache_lock = asyncio.Lock()
+
+_crawl_manager: CrawlManager | None = None
+_crawl_lock = asyncio.Lock()
+
+_database_manager: DatabaseManager | None = None
+_database_lock = asyncio.Lock()
+
+_content_intelligence: ContentIntelligenceService | None = None
+_content_lock = asyncio.Lock()
+
+_project_storage: ProjectStorage | None = None
+_project_lock = asyncio.Lock()
 
 
 #### HELPER FUNCTIONS & DECORATORS ####
@@ -69,6 +93,21 @@ def get_client_manager() -> ClientManager:
 
 ClientManagerDep = Annotated[ClientManager, Depends(get_client_manager)]
 
+_client_manager_lock = asyncio.Lock()
+
+
+async def get_ready_client_manager() -> ClientManager:
+    """Return an initialized ClientManager instance."""
+
+    client_manager = get_client_manager()
+    if client_manager.is_initialized:
+        return client_manager
+
+    async with _client_manager_lock:
+        if not client_manager.is_initialized:
+            await client_manager.initialize()
+    return client_manager
+
 
 class EmbeddingRequest(BaseModel):
     """Embedding generation request model."""
@@ -107,7 +146,25 @@ async def get_embedding_manager(
     client_manager: ClientManagerDep,
 ) -> Any:
     """Get initialized EmbeddingManager service."""
-    return await client_manager.get_embedding_manager()
+    del client_manager  # dependency retained for FastAPI signature.
+    global _embedding_manager
+    if _embedding_manager is not None:
+        return _embedding_manager
+
+    ready_manager = await get_ready_client_manager()
+
+    async with _embedding_lock:
+        if _embedding_manager is None:
+            config = get_config()
+            manager = EmbeddingManager(
+                config=config,
+                client_manager=ready_manager,
+                budget_limit=None,
+                rate_limiter=None,
+            )
+            await manager.initialize()
+            _embedding_manager = manager
+    return _embedding_manager
 
 
 EmbeddingManagerDep = Annotated[Any, Depends(get_embedding_manager)]
@@ -168,7 +225,38 @@ async def get_cache_manager(
     client_manager: ClientManagerDep,
 ) -> Any:
     """Get initialized CacheManager service."""
-    return await client_manager.get_cache_manager()
+    del client_manager  # Signature retained for FastAPI dependency wiring.
+
+    global _cache_manager
+    if _cache_manager is not None:
+        return _cache_manager
+
+    async with _cache_lock:
+        if _cache_manager is None:
+            config = get_config()
+            cache_config = config.cache
+            redis_ttl = max(
+                cache_config.ttl_embeddings,
+                cache_config.ttl_search_results,
+            )
+            distributed_ttl = {
+                CacheType.REDIS: redis_ttl,
+                CacheType.EMBEDDINGS: cache_config.ttl_embeddings,
+                CacheType.SEARCH: cache_config.ttl_search_results,
+                CacheType.CRAWL: cache_config.ttl_crawl,
+                CacheType.HYBRID: redis_ttl,
+            }
+            _cache_manager = CacheManager(
+                dragonfly_url=cache_config.redis_url,
+                enable_local_cache=cache_config.enable_local_cache,
+                enable_distributed_cache=cache_config.enable_redis_cache,
+                local_max_size=cache_config.local_max_size,
+                local_max_memory_mb=float(cache_config.local_max_memory_mb),
+                distributed_ttl_seconds=distributed_ttl,
+                local_cache_path=config.cache_dir / "services",
+                memory_pressure_threshold=cache_config.memory_pressure_threshold,
+            )
+    return _cache_manager
 
 
 CacheManagerDep = Annotated[Any, Depends(get_cache_manager)]
@@ -251,7 +339,19 @@ async def get_crawl_manager(
     client_manager: ClientManagerDep,
 ) -> Any:
     """Get initialized CrawlManager service."""
-    return await client_manager.get_crawl_manager()
+    del client_manager
+
+    global _crawl_manager
+    if _crawl_manager is not None:
+        return _crawl_manager
+
+    async with _crawl_lock:
+        if _crawl_manager is None:
+            config = get_config()
+            manager = CrawlManager(config=config, rate_limiter=None)
+            await manager.initialize()
+            _crawl_manager = manager
+    return _crawl_manager
 
 
 CrawlManagerDep = Annotated[Any, Depends(get_crawl_manager)]
@@ -306,7 +406,22 @@ async def get_database_manager(
     client_manager: ClientManagerDep,
 ) -> Any:
     """Get initialized DatabaseManager service."""
-    return await client_manager.get_database_manager()
+    del client_manager
+    global _database_manager
+    if _database_manager is not None:
+        return _database_manager
+
+    ready_manager = await get_ready_client_manager()
+
+    async with _database_lock:
+        if _database_manager is None:
+            manager = DatabaseManager()
+            await manager.initialize(
+                qdrant_client=await ready_manager.get_qdrant_client(),
+                redis_client=await ready_manager.get_redis_client(),
+            )
+            _database_manager = manager
+    return _database_manager
 
 
 DatabaseManagerDep = Annotated[Any, Depends(get_database_manager)]
@@ -335,21 +450,12 @@ async def get_vector_store_service(
 ) -> VectorStoreService:
     """Get initialized vector store service."""
 
-    return await client_manager.get_vector_store_service()
+    del client_manager
+    ready_manager = await get_ready_client_manager()
+    return await ready_manager.get_vector_store_service()
 
 
 VectorStoreServiceDep = Annotated[VectorStoreService, Depends(get_vector_store_service)]
-
-
-# HyDE Engine Dependencies
-async def get_hyde_engine(
-    client_manager: ClientManagerDep,
-) -> Any:
-    """Get initialized HyDEEngine service."""
-    return await client_manager.get_hyde_engine()  # type: ignore[attr-defined]
-
-
-HyDEEngineDep = Annotated[Any, Depends(get_hyde_engine)]
 
 
 # Content Intelligence Dependencies
@@ -357,7 +463,23 @@ async def get_content_intelligence_service(
     client_manager: ClientManagerDep,
 ) -> Any:
     """Get initialized ContentIntelligenceService."""
-    return await client_manager.get_content_intelligence_service()  # type: ignore[attr-defined]
+    global _content_intelligence
+    if _content_intelligence is not None:
+        return _content_intelligence
+
+    async with _content_lock:
+        if _content_intelligence is None:
+            config = get_config()
+            embedding_manager = await get_embedding_manager(client_manager)
+            cache_manager = await get_cache_manager(client_manager)
+            service = ContentIntelligenceService(
+                config=config,
+                embedding_manager=embedding_manager,
+                cache_manager=cache_manager,
+            )
+            await service.initialize()
+            _content_intelligence = service
+    return _content_intelligence
 
 
 ContentIntelligenceServiceDep = Annotated[
@@ -554,7 +676,19 @@ async def get_project_storage(
     client_manager: ClientManagerDep,
 ) -> Any:
     """Get initialized ProjectStorage service."""
-    return await client_manager.get_project_storage()  # type: ignore[attr-defined]
+    del client_manager
+
+    global _project_storage
+    if _project_storage is not None:
+        return _project_storage
+
+    async with _project_lock:
+        if _project_storage is None:
+            config = get_config()
+            storage = ProjectStorage(data_dir=config.data_dir)
+            await storage.initialize()
+            _project_storage = storage
+    return _project_storage
 
 
 ProjectStorageDep = Annotated[Any, Depends(get_project_storage)]
@@ -702,7 +836,7 @@ async def get_service_metrics() -> dict[str, Any]:
 
         # Get cache metrics if available
         try:
-            cache_manager = await client_manager.get_cache_manager()
+            cache_manager = await get_cache_manager(client_manager)
             cache_stats = await cache_manager.get_performance_stats()
             metrics["cache_service"] = cache_stats
         except (ConnectionError, TimeoutError, ValueError) as e:
@@ -710,7 +844,7 @@ async def get_service_metrics() -> dict[str, Any]:
 
         # Get crawl metrics if available
         try:
-            crawl_manager = await client_manager.get_crawl_manager()
+            crawl_manager = await get_crawl_manager(client_manager)
             if crawl_manager:
                 crawl_metrics = crawl_manager.get_tier_metrics()  # type: ignore[attr-defined]
                 metrics["crawl_service"] = crawl_metrics
@@ -730,6 +864,32 @@ async def cleanup_services() -> None:
     try:
         client_manager = get_client_manager()
         await client_manager.cleanup()
+        global _embedding_manager
+        global _cache_manager
+        global _crawl_manager
+        global _database_manager
+        global _content_intelligence
+        global _project_storage
+
+        if _embedding_manager is not None:
+            await _embedding_manager.cleanup()
+            _embedding_manager = None
+        if _cache_manager is not None:
+            await _cache_manager.close()
+            _cache_manager = None
+        if _crawl_manager is not None:
+            await _crawl_manager.cleanup()
+            _crawl_manager = None
+        if _database_manager is not None:
+            await _database_manager.cleanup()
+            _database_manager = None
+        if _content_intelligence is not None:
+            await _content_intelligence.cleanup()
+            _content_intelligence = None
+        if _project_storage is not None:
+            await _project_storage.cleanup()
+            _project_storage = None
+        get_client_manager.cache_clear()
         logger.info("All services cleaned up successfully")
     except (ConnectionError, OSError, PermissionError):
         logger.exception("Service cleanup failed")
