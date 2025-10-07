@@ -103,6 +103,7 @@ eval = [
 dev = [
     "pytest>=8.4.2,<9.0.0",
     "pytest-asyncio>=1.2.0,<2.0.0",
+    "asgi-lifespan>=2.1.0,<3.0.0",
     "pytest-cov>=7.0.0,<8.0.0",
     "pytest-mock>=3.15.1,<4.0.0",
     "pytest-timeout>=2.4.0,<3.0.0",
@@ -352,7 +353,6 @@ addopts = [
     "--strict-markers",              # Treat unknown markers as errors
     "--strict-config",               # Error on unknown config keys
     "--tb=short",                    # Shorter traceback format
-    "--verbose",                     # Verbose output for debugging
     "--durations=10",                # Show 10 slowest tests
     "--maxfail=5",                   # Stop after 5 failures
     "--import-mode=prepend",         # Prepend mode for src imports
@@ -360,7 +360,8 @@ addopts = [
     "--doctest-modules",             # Run doctests in modules
     "--doctest-continue-on-failure", # Continue after doctest failures
     "--disable-warnings",            # Clean output
-    "-ra",                           # Show summary for all except passed
+    "--randomly-seed=42",            # Deterministic pytest-randomly seed
+    "-q",                            # Quiet baseline output
 ]
 
 # Warning filters for clean test output

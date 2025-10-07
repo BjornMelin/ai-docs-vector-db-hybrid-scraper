@@ -52,6 +52,38 @@ def test_cache_manager_delete_removes_hashed_local_entry(tmp_path: Path) -> None
     run(manager.close())
 
 
+def test_specialized_cache_defaults_to_safe_ttl(monkeypatch) -> None:
+    """Embedding cache should use a fallback TTL when REDIS entry missing."""
+
+    class StubDistributedCache:
+        def __init__(self, **_kwargs):
+            self.enable_compression = True
+            self.redis_url = "mock://redis"
+
+        async def close(self) -> None:  # pragma: no cover - simple stub
+            return None
+
+    monkeypatch.setattr(
+        "src.services.cache.manager.DragonflyCache",
+        StubDistributedCache,
+    )
+
+    manager = CacheManager(
+        enable_local_cache=False,
+        enable_distributed_cache=True,
+        enable_specialized_caches=True,
+        enable_metrics=False,
+        distributed_ttl_seconds={CacheType.EMBEDDINGS: 120},
+    )
+
+    assert manager.embedding_cache is not None
+    assert manager.search_cache is not None
+    assert manager.embedding_cache.default_ttl == 120
+    assert manager.search_cache.default_ttl == 120
+
+    run(manager.close())
+
+
 def test_delete_in_batches_counts_successful_deletions() -> None:
     """Test that delete_in_batches correctly counts successful deletions."""
 

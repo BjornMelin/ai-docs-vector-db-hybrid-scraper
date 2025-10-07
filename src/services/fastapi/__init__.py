@@ -22,7 +22,7 @@ from .middleware import (
     TracingMiddleware,
     get_correlation_id,
 )
-from .middleware.manager import MiddlewareManager, create_middleware_manager
+from .middleware.manager import MiddlewareManager, get_middleware_manager
 from .production_server import (
     ProductionMCPServer,
     create_production_server,
@@ -36,6 +36,7 @@ __all__ = [
     "CompressionMiddleware",
     # Middleware management
     "MiddlewareManager",
+    "get_middleware_manager",
     "PerformanceMiddleware",
     # Production server
     "ProductionMCPServer",
@@ -43,7 +44,6 @@ __all__ = [
     "TimeoutMiddleware",
     "TracingMiddleware",
     "cleanup_dependencies",
-    "create_middleware_manager",
     "create_production_server",
     "get_cache_manager",
     "get_client_manager",

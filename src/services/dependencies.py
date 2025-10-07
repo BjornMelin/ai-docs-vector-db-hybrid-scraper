@@ -7,7 +7,6 @@ import logging
 import time
 from collections.abc import AsyncGenerator, Callable
 from datetime import UTC, datetime
-from functools import lru_cache
 from typing import Annotated, Any
 
 from fastapi import Depends  # type: ignore[attr-defined]
@@ -15,11 +14,7 @@ from pydantic import BaseModel, Field
 
 from src.config import CacheType, Config, get_config
 from src.infrastructure.client_manager import ClientManager
-from src.services.cache.manager import CacheManager
-from src.services.content_intelligence.service import ContentIntelligenceService
-from src.services.core.project_storage import ProjectStorage
-from src.services.crawling.manager import CrawlManager
-from src.services.embeddings.manager import EmbeddingManager, QualityTier
+from src.services.embeddings.manager import QualityTier
 from src.services.errors import (
     CircuitBreakerRegistry,
     CrawlServiceError,
@@ -27,32 +22,17 @@ from src.services.errors import (
     circuit_breaker,
     tenacity_circuit_breaker,
 )
-from src.services.managers.database_manager import DatabaseManager
 from src.services.rag.generator import RAGGenerator
 from src.services.rag.models import RAGRequest as InternalRAGRequest
+from src.services.registry import (
+    ensure_service_registry,
+    get_service_registry,
+    shutdown_service_registry,
+)
 from src.services.vector_db.service import VectorStoreService
 
 
 logger = logging.getLogger(__name__)
-
-
-_embedding_manager: EmbeddingManager | None = None
-_embedding_lock = asyncio.Lock()
-
-_cache_manager: CacheManager | None = None
-_cache_lock = asyncio.Lock()
-
-_crawl_manager: CrawlManager | None = None
-_crawl_lock = asyncio.Lock()
-
-_database_manager: DatabaseManager | None = None
-_database_lock = asyncio.Lock()
-
-_content_intelligence: ContentIntelligenceService | None = None
-_content_lock = asyncio.Lock()
-
-_project_storage: ProjectStorage | None = None
-_project_lock = asyncio.Lock()
 
 
 #### HELPER FUNCTIONS & DECORATORS ####
@@ -84,29 +64,19 @@ def create_service_error_handler(
 ConfigDep = Annotated[Config, Depends(get_config)]
 
 
-@lru_cache
 def get_client_manager() -> ClientManager:
-    """Get singleton ClientManager instance."""
-
-    return ClientManager.from_unified_config()
+    """Return the shared ClientManager from the service registry."""
+    return get_service_registry().client_manager
 
 
 ClientManagerDep = Annotated[ClientManager, Depends(get_client_manager)]
-
-_client_manager_lock = asyncio.Lock()
 
 
 async def get_ready_client_manager() -> ClientManager:
     """Return an initialized ClientManager instance."""
 
-    client_manager = get_client_manager()
-    if client_manager.is_initialized:
-        return client_manager
-
-    async with _client_manager_lock:
-        if not client_manager.is_initialized:
-            await client_manager.initialize()
-    return client_manager
+    registry = await ensure_service_registry()
+    return registry.client_manager
 
 
 class EmbeddingRequest(BaseModel):
@@ -146,24 +116,10 @@ async def get_embedding_manager(
     client_manager: ClientManager | None = None,
 ) -> Any:
     """Get initialized EmbeddingManager service."""
-    global _embedding_manager
-    if _embedding_manager is not None:
-        return _embedding_manager
 
-    ready_manager = client_manager or await get_ready_client_manager()
-
-    async with _embedding_lock:
-        if _embedding_manager is None:
-            config = get_config()
-            manager = EmbeddingManager(
-                config=config,
-                client_manager=ready_manager,
-                budget_limit=None,
-                rate_limiter=None,
-            )
-            await manager.initialize()
-            _embedding_manager = manager
-    return _embedding_manager
+    del client_manager
+    registry = await ensure_service_registry()
+    return registry.embedding_manager
 
 
 EmbeddingManagerDep = Annotated[Any, Depends(get_embedding_manager)]
@@ -225,36 +181,9 @@ async def get_cache_manager(
 ) -> Any:
     """Get initialized CacheManager service."""
 
-    global _cache_manager
-    if _cache_manager is not None:
-        return _cache_manager
-
-    async with _cache_lock:
-        if _cache_manager is None:
-            config = get_config()
-            cache_config = config.cache
-            redis_ttl = max(
-                cache_config.ttl_embeddings,
-                cache_config.ttl_search_results,
-            )
-            distributed_ttl = {
-                CacheType.REDIS: redis_ttl,
-                CacheType.EMBEDDINGS: cache_config.ttl_embeddings,
-                CacheType.SEARCH: cache_config.ttl_search_results,
-                CacheType.CRAWL: cache_config.ttl_crawl,
-                CacheType.HYBRID: redis_ttl,
-            }
-            _cache_manager = CacheManager(
-                dragonfly_url=cache_config.redis_url,
-                enable_local_cache=cache_config.enable_local_cache,
-                enable_distributed_cache=cache_config.enable_redis_cache,
-                local_max_size=cache_config.local_max_size,
-                local_max_memory_mb=float(cache_config.local_max_memory_mb),
-                distributed_ttl_seconds=distributed_ttl,
-                local_cache_path=config.cache_dir / "services",
-                memory_pressure_threshold=cache_config.memory_pressure_threshold,
-            )
-    return _cache_manager
+    del client_manager
+    registry = await ensure_service_registry()
+    return registry.cache_manager
 
 
 CacheManagerDep = Annotated[Any, Depends(get_cache_manager)]
@@ -337,17 +266,9 @@ async def get_crawl_manager(
     client_manager: ClientManager | None = None,
 ) -> Any:
     """Get initialized CrawlManager service."""
-    global _crawl_manager
-    if _crawl_manager is not None:
-        return _crawl_manager
-
-    async with _crawl_lock:
-        if _crawl_manager is None:
-            config = get_config()
-            manager = CrawlManager(config=config, rate_limiter=None)
-            await manager.initialize()
-            _crawl_manager = manager
-    return _crawl_manager
+    del client_manager
+    registry = await ensure_service_registry()
+    return registry.crawl_manager
 
 
 CrawlManagerDep = Annotated[Any, Depends(get_crawl_manager)]
@@ -366,6 +287,7 @@ async def scrape_url(
     crawl_manager: CrawlManagerDep,
 ) -> CrawlResponse:
     """Scrape URL with provider selection."""
+
     try:
         result = await crawl_manager.scrape_url(
             url=request.url, preferred_provider=request.preferred_provider
@@ -383,6 +305,7 @@ async def crawl_site(
     crawl_manager: CrawlManagerDep,
 ) -> dict[str, Any]:
     """Crawl entire website from starting URL."""
+
     try:
         result = await crawl_manager.crawl_site(
             url=request.url,
@@ -402,21 +325,10 @@ async def get_database_manager(
     client_manager: ClientManager | None = None,
 ) -> Any:
     """Get initialized DatabaseManager service."""
-    global _database_manager
-    if _database_manager is not None:
-        return _database_manager
 
-    ready_manager = client_manager or await get_ready_client_manager()
-
-    async with _database_lock:
-        if _database_manager is None:
-            manager = DatabaseManager()
-            await manager.initialize(
-                qdrant_client=await ready_manager.get_qdrant_client(),
-                redis_client=await ready_manager.get_redis_client(),
-            )
-            _database_manager = manager
-    return _database_manager
+    del client_manager
+    registry = await ensure_service_registry()
+    return registry.database_manager
 
 
 DatabaseManagerDep = Annotated[Any, Depends(get_database_manager)]
@@ -426,6 +338,7 @@ async def get_database_session(
     db_manager: DatabaseManagerDep,
 ) -> AsyncGenerator[Any]:
     """Get database session with automatic cleanup."""
+
     async with db_manager.get_session() as session:
         yield session
 
@@ -445,8 +358,9 @@ async def get_vector_store_service(
 ) -> VectorStoreService:
     """Get initialized vector store service."""
 
-    ready_manager = client_manager or await get_ready_client_manager()
-    return await ready_manager.get_vector_store_service()
+    del client_manager
+    registry = await ensure_service_registry()
+    return registry.vector_service
 
 
 VectorStoreServiceDep = Annotated[VectorStoreService, Depends(get_vector_store_service)]
@@ -457,23 +371,10 @@ async def get_content_intelligence_service(
     client_manager: ClientManager | None = None,
 ) -> Any:
     """Get initialized ContentIntelligenceService."""
-    global _content_intelligence
-    if _content_intelligence is not None:
-        return _content_intelligence
 
-    async with _content_lock:
-        if _content_intelligence is None:
-            config = get_config()
-            embedding_manager = await get_embedding_manager(client_manager)
-            cache_manager = await get_cache_manager(client_manager)
-            service = ContentIntelligenceService(
-                config=config,
-                embedding_manager=embedding_manager,
-                cache_manager=cache_manager,
-            )
-            await service.initialize()
-            _content_intelligence = service
-    return _content_intelligence
+    del client_manager
+    registry = await ensure_service_registry()
+    return registry.content_intelligence
 
 
 ContentIntelligenceServiceDep = Annotated[
@@ -521,7 +422,6 @@ async def get_rag_generator(
     client_manager: ClientManagerDep,
 ) -> Any:
     """Get initialized RAGGenerator service."""
-    # RAGGenerator imported at top-level
 
     generator = RAGGenerator(config.rag, client_manager)  # type: ignore[arg-type]
     await generator.initialize()
@@ -533,6 +433,7 @@ RAGGeneratorDep = Annotated[Any, Depends(get_rag_generator)]
 
 def _convert_to_internal_rag_request(request: RAGRequest) -> InternalRAGRequest:
     """Convert external RAG request to internal format."""
+
     # Extract top_k from search_results length as a reasonable default
     if request.search_results:
         top_k = request.max_context_results or len(request.search_results)
@@ -558,6 +459,7 @@ def _format_rag_sources(
     request: RAGRequest, result: Any
 ) -> list[dict[str, Any]] | None:
     """Format RAG sources for response."""
+
     if not (request.include_sources and result.sources):
         return None
 
@@ -575,6 +477,7 @@ def _format_rag_sources(
 
 def _format_rag_metrics(result: Any) -> dict[str, Any] | None:
     """Format RAG metrics for response."""
+
     if not result.metrics:
         return None
 
@@ -599,6 +502,7 @@ async def generate_rag_answer(
     rag_generator: RAGGeneratorDep,
 ) -> RAGResponse:
     """Generate contextual answer from search results using RAG."""
+
     try:
         internal_request = _convert_to_internal_rag_request(request)
         result = await rag_generator.generate_answer(internal_request)
@@ -627,6 +531,7 @@ async def get_rag_metrics(
     rag_generator: RAGGeneratorDep,
 ) -> dict[str, Any]:
     """Get RAG service performance metrics."""
+
     try:
         metrics = rag_generator.get_metrics()
         # Convert RAGServiceMetrics to dict if it's a Pydantic model
@@ -642,6 +547,7 @@ async def clear_rag_cache(
     rag_generator: RAGGeneratorDep,
 ) -> dict[str, str]:
     """Clear RAG answer cache."""
+
     try:
         rag_generator.clear_cache()
         # RAGGenerator.clear_cache is a no-op (no cache to purge)
@@ -659,6 +565,7 @@ async def get_browser_automation_router(
     client_manager: ClientManagerDep,
 ) -> Any:
     """Get initialized BrowserAutomationRouter service."""
+
     return await client_manager.get_browser_automation_router()
 
 
@@ -670,19 +577,11 @@ async def get_project_storage(
     client_manager: ClientManagerDep,
 ) -> Any:
     """Get initialized ProjectStorage service."""
+
     del client_manager
 
-    global _project_storage
-    if _project_storage is not None:
-        return _project_storage
-
-    async with _project_lock:
-        if _project_storage is None:
-            config = get_config()
-            storage = ProjectStorage(data_dir=config.data_dir)
-            await storage.initialize()
-            _project_storage = storage
-    return _project_storage
+    registry = await ensure_service_registry()
+    return registry.project_storage
 
 
 ProjectStorageDep = Annotated[Any, Depends(get_project_storage)]
@@ -691,6 +590,7 @@ ProjectStorageDep = Annotated[Any, Depends(get_project_storage)]
 # Circuit Breaker Monitoring Functions
 async def get_circuit_breaker_status() -> dict[str, Any]:
     """Get status of all circuit breakers."""
+
     try:
         all_status = CircuitBreakerRegistry.get_all_status()
 
@@ -856,34 +756,7 @@ async def get_service_metrics() -> dict[str, Any]:
 async def cleanup_services() -> None:
     """Cleanup all services and release resources."""
     try:
-        client_manager = get_client_manager()
-        await client_manager.cleanup()
-        global _embedding_manager
-        global _cache_manager
-        global _crawl_manager
-        global _database_manager
-        global _content_intelligence
-        global _project_storage
-
-        if _embedding_manager is not None:
-            await _embedding_manager.cleanup()
-            _embedding_manager = None
-        if _cache_manager is not None:
-            await _cache_manager.close()
-            _cache_manager = None
-        if _crawl_manager is not None:
-            await _crawl_manager.cleanup()
-            _crawl_manager = None
-        if _database_manager is not None:
-            await _database_manager.cleanup()
-            _database_manager = None
-        if _content_intelligence is not None:
-            await _content_intelligence.cleanup()
-            _content_intelligence = None
-        if _project_storage is not None:
-            await _project_storage.cleanup()
-            _project_storage = None
-        get_client_manager.cache_clear()
+        await shutdown_service_registry()
         logger.info("All services cleaned up successfully")
     except (ConnectionError, OSError, PermissionError):
         logger.exception("Service cleanup failed")
@@ -893,7 +766,6 @@ async def cleanup_services() -> None:
 # ============================================================================
 # CRAWLING OPERATIONS
 # ============================================================================
-# Note: Redis operations removed - use cache_manager functions instead
 class BulkCrawlRequest(BaseModel):
     """Pydantic model for bulk crawling requests."""
 
@@ -907,6 +779,7 @@ async def bulk_scrape_urls(
     crawl_manager: CrawlManagerDep,
 ) -> list[dict[str, Any]]:
     """Scrape multiple URLs concurrently (consolidated implementation)."""
+
     try:
         # Try built-in bulk_scrape if available
         if hasattr(crawl_manager, "bulk_scrape"):
@@ -955,6 +828,7 @@ async def get_crawl_recommended_tool(
     crawl_manager: CrawlManagerDep,
 ) -> str:
     """Get recommended tool for a URL based on performance metrics."""
+
     try:
         return await crawl_manager.get_recommended_tool(url)
     except (ConnectionError, TimeoutError, ValueError) as e:
@@ -968,6 +842,7 @@ async def map_website_urls(
     crawl_manager: CrawlManagerDep = None,
 ) -> dict[str, Any]:
     """Map a website to get list of URLs."""
+
     try:
         return await crawl_manager.map_url(url, include_subdomains)
     except (ConnectionError, TimeoutError, ValueError) as e:
@@ -984,140 +859,12 @@ async def get_crawl_tier_metrics(
     crawl_manager: CrawlManagerDep,
 ) -> dict[str, dict]:
     """Get performance metrics for all crawling tiers."""
+
     try:
         return crawl_manager.get_tier_metrics()
     except (ConnectionError, TimeoutError, ValueError) as e:
         logger.warning("Failed to get tier metrics: %s", e)
         return {}
-
-
-# Direct Monitoring Operations (replacing MonitoringManager)
-class HealthCheckRequest(BaseModel):
-    """Pydantic model for health check registration."""
-
-    service_name: str
-    check_interval: int = 30
-
-
-class MetricRequest(BaseModel):
-    """Pydantic model for metric recording."""
-
-    metric_name: str
-    value: float
-    labels: dict[str, str] | None = None
-
-
-# Simple health check tracking without complex Manager state
-_health_checks: dict[str, dict[str, Any]] = {}
-
-
-async def register_health_check_function(
-    request: HealthCheckRequest,
-    check_function: Callable[[], Any],
-) -> dict[str, str]:
-    """Register a health check for a service."""
-    try:
-        _health_checks[request.service_name] = {
-            "check_function": check_function,
-            "check_interval": request.check_interval,
-            "last_check": time.time(),
-            "consecutive_failures": 0,
-            "last_error": None,
-            "state": "healthy",
-        }
-        logger.info("Registered health check for %s", request.service_name)
-    except Exception as e:
-        logger.exception("Failed to register health check for %s", request.service_name)
-        return {
-            "status": "error",
-            "message": str(e),
-        }
-    else:
-        return {
-            "status": "success",
-            "message": f"Health check registered for {request.service_name}",
-        }
-
-
-def _update_health_success(health: dict[str, Any]) -> None:
-    """Update health check state for successful check."""
-    health["last_check"] = time.time()
-    health["state"] = "healthy"
-    health["consecutive_failures"] = 0
-    health["last_error"] = None
-
-
-def _update_health_failure(health: dict[str, Any], error_msg: str) -> None:
-    """Update health check state for failed check."""
-    health["last_check"] = time.time()
-    health["last_error"] = error_msg
-    health["consecutive_failures"] = health.get("consecutive_failures", 0) + 1
-    health["state"] = "degraded" if health["consecutive_failures"] < 3 else "failed"
-
-
-async def check_service_health_function(service_name: str) -> bool:
-    """Check health of a specific service."""
-    if service_name not in _health_checks:
-        logger.warning("No health check registered for %s", service_name)
-        return False
-
-    health = _health_checks[service_name]
-
-    if not health.get("check_function"):
-        return False
-
-    try:
-        is_healthy = await health["check_function"]()
-    except Exception as e:
-        logger.exception("Health check failed for %s", service_name)
-        _update_health_failure(health, str(e))
-        return False
-    else:
-        if is_healthy:
-            _update_health_success(health)
-            return is_healthy
-        _update_health_failure(health, "Health check returned false")
-        return is_healthy
-
-
-async def get_all_health_status() -> dict[str, dict[str, Any]]:
-    """Get health status of all monitored services."""
-    status = {}
-
-    for service_name, health in _health_checks.items():
-        status[service_name] = {
-            "state": health.get("state", "unknown"),
-            "last_check": health.get("last_check", 0),
-            "last_error": health.get("last_error"),
-            "consecutive_failures": health.get("consecutive_failures", 0),
-            "is_healthy": health.get("state") == "healthy",
-        }
-
-    return status
-
-
-async def get_overall_health_summary() -> dict[str, Any]:
-    """Get overall system health summary."""
-    health_status = await get_all_health_status()
-
-    total_services = len(health_status)
-    healthy_services = sum(
-        1 for status in health_status.values() if status["is_healthy"]
-    )
-    failed_services = sum(
-        1 for status in health_status.values() if status["state"] == "failed"
-    )
-
-    overall_healthy = failed_services == 0 and healthy_services == total_services
-
-    return {
-        "overall_healthy": overall_healthy,
-        "total_services": total_services,
-        "healthy_services": healthy_services,
-        "failed_services": failed_services,
-        "health_percentage": (healthy_services / max(total_services, 1)) * 100,
-        "services": health_status,
-    }
 
 
 # Performance tracking without complex Manager state
@@ -1128,6 +875,7 @@ async def track_operation_performance(
     **kwargs: Any,
 ) -> Any:
     """Track performance of an operation."""
+
     start_time = time.time()
 
     try:
@@ -1157,6 +905,7 @@ async def rerank_search_results(
     embedding_manager: EmbeddingManagerDep,
 ) -> list[dict[str, Any]]:
     """Rerank search results using BGE reranker."""
+
     try:
         return await embedding_manager.rerank_results(request.query, request.results)
     except Exception:
@@ -1171,6 +920,7 @@ async def estimate_embedding_cost(
     embedding_manager: EmbeddingManagerDep = None,
 ) -> dict[str, dict[str, float]] | dict[str, dict[str, str | float]]:
     """Estimate embedding generation cost."""
+
     try:
         return embedding_manager.estimate_cost(texts, provider_name)
     except Exception as e:
@@ -1182,6 +932,7 @@ async def get_embedding_provider_info(
     embedding_manager: EmbeddingManagerDep,
 ) -> dict[str, dict[str, Any]]:
     """Get information about available embedding providers."""
+
     try:
         return embedding_manager.get_provider_info()
     except Exception as e:
@@ -1196,6 +947,7 @@ async def get_optimal_embedding_provider(
     embedding_manager: EmbeddingManagerDep = None,
 ) -> str:
     """Select optimal provider based on constraints."""
+
     try:
         return await embedding_manager.get_optimal_provider(
             text_length, quality_required, budget_limit
@@ -1217,6 +969,7 @@ async def analyze_text_characteristics(
     embedding_manager: EmbeddingManagerDep,
 ) -> dict[str, Any]:
     """Analyze text characteristics for smart model selection."""
+
     try:
         analysis = embedding_manager.analyze_text_characteristics(request.texts)
         # Convert TextAnalysis to dict for service boundary
@@ -1247,6 +1000,7 @@ async def get_embedding_usage_report(
     embedding_manager: EmbeddingManagerDep,
 ) -> dict[str, Any]:
     """Get comprehensive embedding usage report."""
+
     try:
         return embedding_manager.get_usage_report()
     except Exception as e:

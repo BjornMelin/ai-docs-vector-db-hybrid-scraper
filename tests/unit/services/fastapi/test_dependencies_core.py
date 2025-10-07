@@ -6,8 +6,8 @@ from typing import Any
 
 import pytest
 
-from src.services.fastapi.dependencies import core as dependencies
-from src.services.fastapi.dependencies.core import ServiceHealthChecker
+from src.services.fastapi import dependencies
+from src.services.fastapi.dependencies import ServiceHealthChecker
 
 
 class _StubVectorService:

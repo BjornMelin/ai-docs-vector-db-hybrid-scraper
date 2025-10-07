@@ -44,7 +44,7 @@ Core layers:
 graph LR
     subgraph Core Services
         Config[Config loader]
-        Container[Dependency injection]
+        Registry[ServiceRegistry]
         Scheduler[Async task scheduler]
     end
     subgraph Application
@@ -52,20 +52,31 @@ graph LR
         HybridSearch[LangChain/LangGraph orchestrator]
         BrowserMgr[Five-tier browser manager]
         EmbeddingMgr[Embedding manager]
+        CacheMgr[Dragonfly cache]
     end
-    Config --> Container
-    Container --> API
-    Container --> HybridSearch
-    Container --> BrowserMgr
-    Container --> EmbeddingMgr
+    Config --> Registry
+    Registry --> API
+    Registry --> HybridSearch
+    Registry --> BrowserMgr
+    Registry --> EmbeddingMgr
+    Registry --> CacheMgr
     HybridSearch --> Qdrant[(Qdrant)]
     BrowserMgr --> AutomationBackends
     EmbeddingMgr --> Providers
 ```
 
-Dependency injection (`dependency_injector`) remains because it centralises
-shared clients (OpenAI, Qdrant, Redis, Firecrawl) and provides deterministic
-lifetimes for tests and services.
+The `ServiceRegistry` (``src/services/registry.py``) eagerly initialises shared
+infrastructure—client manager, vector store, embedding manager, cache manager,
+content-intelligence service, and project storage—during FastAPI lifespan
+startup. Each dependency helper simply reads from the registry rather than
+keeping its own singleton or resurrecting bespoke containers. The previous
+`DependencyContainer` layer, module-level locks, and ad-hoc health trackers have
+been removed.
+
+`dependency_injector` still wires optional providers (OpenAI, Qdrant, Redis)
+for CLI tooling; however, HTTP request handling now relies on native FastAPI
+`Depends` + lifespan state for clarity and testability. Outside FastAPI, scripts
+interact with ``get_service_registry()`` to obtain the shared services.
 
 ## 2. LangChain / LangGraph Orchestration
 

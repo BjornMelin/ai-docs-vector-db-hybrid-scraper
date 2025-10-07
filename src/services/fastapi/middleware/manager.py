@@ -1,35 +1,39 @@
-"""Simplified middleware manager for FastAPI with essential middleware only.
+"""Middleware manager for FastAPI with essential middleware only."""
 
-This module provides basic middleware management following KISS principles.
-Only includes essential middleware for V1 release.
-"""
+from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
+from typing import Any
 
 from starlette.applications import Starlette
-from starlette.middleware import Middleware
 
-from src.config import get_config
+from src.config import PerformanceConfig, get_config
 
 from .performance import PerformanceMiddleware
 from .security import SecurityMiddleware
-from .timeout import TimeoutMiddleware
+from .timeout import TimeoutConfig, TimeoutMiddleware
 
 
 logger = logging.getLogger(__name__)
 
 
-class MiddlewareManager:
-    """Simple middleware manager for essential middleware only.
+@dataclass(slots=True)
+class MiddlewareSpec:
+    """Minimal middleware specification independent of Starlette wrappers."""
 
-    Handles basic middleware configuration for V1 release.
-    """
+    cls: type
+    kwargs: dict[str, Any]
+
+
+class MiddlewareManager:
+    """Simple middleware manager for essential middleware only."""
 
     def __init__(self, config=None):
         """Initialize middleware manager."""
         self.config = config or get_config()
 
-    def get_middleware_stack(self) -> list[Middleware]:
+    def get_middleware_stack(self) -> list[MiddlewareSpec]:
         """Get essential middleware stack in correct order.
 
         Simplified order:
@@ -42,45 +46,64 @@ class MiddlewareManager:
         # 1. Security - Basic protection
         if self.config.security.enable_rate_limiting:
             middleware_stack.append(
-                Middleware(SecurityMiddleware, config=self.config.security)
+                MiddlewareSpec(SecurityMiddleware, {"config": self.config.security})
             )
 
         # 2. Timeout - Request timeout
+        timeout_config = self._build_timeout_config(self.config.performance)
         middleware_stack.append(
-            Middleware(TimeoutMiddleware, config=self.config.performance)
+            MiddlewareSpec(TimeoutMiddleware, {"config": timeout_config})
         )
 
         # 3. Performance - Basic monitoring
         middleware_stack.append(
-            Middleware(PerformanceMiddleware, config=self.config.performance)
+            MiddlewareSpec(PerformanceMiddleware, {"config": self.config.performance})
         )
 
         return middleware_stack
 
     def apply_middleware(self, app: Starlette, middleware_names: list[str]) -> None:
         """Apply specified middleware to FastAPI app."""
+        timeout_config = self._build_timeout_config(self.config.performance)
         available_middleware = {
-            "security": Middleware(SecurityMiddleware, config=self.config.security),
-            "timeout": Middleware(TimeoutMiddleware, config=self.config.performance),
-            "performance": Middleware(
-                PerformanceMiddleware, config=self.config.performance
+            "security": MiddlewareSpec(
+                SecurityMiddleware, {"config": self.config.security}
+            ),
+            "timeout": MiddlewareSpec(TimeoutMiddleware, {"config": timeout_config}),
+            "performance": MiddlewareSpec(
+                PerformanceMiddleware, {"config": self.config.performance}
             ),
         }
 
         for name in middleware_names:
-            if name in available_middleware:
-                middleware = available_middleware[name]
-                app.add_middleware(middleware.cls, **middleware.kwargs)
-                logger.info("Applied middleware: %s", name)
-            else:
+            middleware = available_middleware.get(name)
+            if middleware is None:
                 logger.warning("Unknown middleware: %s", name)
+                continue
+            app.add_middleware(middleware.cls, **middleware.kwargs)
+            logger.info("Applied middleware: %s", name)
+
+    @staticmethod
+    def _build_timeout_config(performance: PerformanceConfig) -> TimeoutConfig:
+        """Create a TimeoutConfig based on the performance settings."""
+
+        defaults = TimeoutConfig()
+        failure_threshold = max(performance.max_retries, 1)
+        recovery_timeout = max(
+            performance.retry_base_delay * failure_threshold,
+            defaults.recovery_timeout,
+        )
+
+        return TimeoutConfig(
+            enabled=defaults.enabled,
+            request_timeout=performance.request_timeout,
+            enable_circuit_breaker=defaults.enable_circuit_breaker,
+            failure_threshold=failure_threshold,
+            recovery_timeout=recovery_timeout,
+            half_open_max_calls=defaults.half_open_max_calls,
+        )
 
 
 def get_middleware_manager(config=None) -> MiddlewareManager:
     """Get configured middleware manager instance."""
     return MiddlewareManager(config or get_config())
-
-
-def create_middleware_manager(config=None) -> MiddlewareManager:
-    """Alias for get_middleware_manager for backward compatibility."""
-    return get_middleware_manager(config)

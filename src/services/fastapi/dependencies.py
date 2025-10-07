@@ -31,10 +31,10 @@ from src.services.dependencies import (
     get_cache_manager,
     get_database_manager,
     get_embedding_manager,
-    get_ready_client_manager,
     get_vector_store_service,
 )
 from src.services.fastapi.middleware.correlation import get_correlation_id
+from src.services.registry import ensure_service_registry, get_service_registry
 from src.services.vector_db.service import VectorStoreService
 
 
@@ -45,28 +45,28 @@ RedisErrorType = getattr(redis, "RedisError", Exception)
 
 async def initialize_dependencies(config: Config | None = None) -> None:
     """Prime long-lived services used by the FastAPI application."""
+
     del config  # Configuration is resolved lazily inside the helpers.
-    client_manager = await get_ready_client_manager()
-    await client_manager.get_vector_store_service()
-    await get_embedding_manager()
-    await get_cache_manager()
-    await get_database_manager()
+    await ensure_service_registry()
 
 
 async def cleanup_dependencies() -> None:
     """Release shared services created for FastAPI usage."""
+
     await cleanup_services()
 
 
 def get_config_dependency() -> Config:
     """Return application configuration for FastAPI routes."""
+
     return get_config()
 
 
 async def get_vector_service() -> VectorStoreService:
     """Return the vector service instance, raising 503 on failure."""
+
     try:
-        return await get_vector_store_service()
+        return get_service_registry().vector_service
     except Exception as exc:  # pragma: no cover - defensive
         logger.exception("Failed to obtain vector service")
         raise HTTPException(
@@ -77,8 +77,9 @@ async def get_vector_service() -> VectorStoreService:
 
 async def get_client_manager() -> ClientManager:
     """Return the initialized ClientManager singleton."""
+
     try:
-        return await get_ready_client_manager()
+        return get_service_registry().client_manager
     except Exception as exc:  # pragma: no cover - defensive
         logger.exception("Failed to obtain client manager")
         raise HTTPException(
@@ -89,12 +90,14 @@ async def get_client_manager() -> ClientManager:
 
 def get_correlation_id_dependency(request: Request) -> str:
     """Return the correlation identifier extracted from the request."""
+
     return get_correlation_id(request)
 
 
 @asynccontextmanager
 async def database_session() -> AsyncGenerator[Any]:
     """Provide a database session with automatic cleanup."""
+
     db_manager = await get_database_manager()
     async with db_manager.get_session() as session:
         yield session
@@ -102,6 +105,7 @@ async def database_session() -> AsyncGenerator[Any]:
 
 def get_request_context(request: Request) -> dict[str, Any]:
     """Assemble lightweight request diagnostics for logging."""
+
     return {
         "correlation_id": get_correlation_id(request),
         "method": request.method,
@@ -134,10 +138,7 @@ class ServiceHealthChecker:
     async def _probe_embedding_manager(self, health: dict[str, Any]) -> None:
         try:
             manager = await get_embedding_manager()
-            await asyncio.wait_for(
-                asyncio.to_thread(manager.get_provider_info),
-                timeout=self.HEALTH_TIMEOUT_SECONDS,
-            )
+            manager.get_provider_info()
             health["services"]["embeddings"] = {"status": "healthy"}
         except Exception as exc:  # pragma: no cover - runtime failure
             health["status"] = "degraded"
@@ -177,6 +178,7 @@ class ServiceHealthChecker:
 
 def get_health_checker() -> ServiceHealthChecker:
     """Provide a ServiceHealthChecker instance."""
+
     return ServiceHealthChecker()
 
 

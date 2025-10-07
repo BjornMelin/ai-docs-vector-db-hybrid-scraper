@@ -17,8 +17,7 @@ from rich.table import Table
 # Import unified configuration and service layer
 from src.config import get_config
 from src.contracts.retrieval import SearchRecord
-from src.infrastructure.client_manager import ClientManager
-from src.services.embeddings.manager import EmbeddingManager
+from src.services.registry import ensure_service_registry, shutdown_service_registry
 from src.services.vector_db import CollectionSchema
 from src.services.vector_db.service import VectorStoreService
 from src.utils import async_command
@@ -62,40 +61,24 @@ def setup_logging(level: str = "INFO") -> logging.Logger:
 
 
 class VectorDBManager:
-    """Comprehensive vector database management using ClientManager."""
+    """Comprehensive vector database management using ServiceRegistry."""
 
-    def __init__(
-        self,
-        client_manager: ClientManager,
-        qdrant_url: str | None = None,
-    ) -> None:
-        """Initialize with ClientManager.
+    def __init__(self, qdrant_url: str | None = None) -> None:
+        """Initialize with optional Qdrant override."""
 
-        Args:
-            client_manager: ClientManager instance for all services
-            qdrant_url: Optional Qdrant URL override
-
-        """
-        self.client_manager = client_manager
         self.qdrant_url = qdrant_url
-        self._initialized = False
-        self._embedding_manager: EmbeddingManager | None = None
+        self._vector_service: VectorStoreService | None = None
 
     async def initialize(self) -> None:
-        """Initialize services using ClientManager."""
-        if self._initialized:
-            return
-
-        # Override Qdrant URL if provided
+        """Ensure the service registry is ready and apply overrides."""
         if self.qdrant_url:
             config = get_config()
             config.qdrant.url = self.qdrant_url
+            registry = await ensure_service_registry(force=True)
+        else:
+            registry = await ensure_service_registry()
 
-        # Ensure ClientManager is initialized
-        if not self.client_manager.is_initialized:
-            await self.client_manager.initialize()
-
-        self._initialized = True
+        self._vector_service = registry.vector_service
 
     @staticmethod
     def _build_search_results(matches: list[Any]) -> list[SearchResult]:
@@ -117,36 +100,19 @@ class VectorDBManager:
         return results
 
     async def get_vector_store_service(self) -> VectorStoreService:
-        """Get vector store service from ClientManager."""
-        if not self._initialized:
+        """Return the shared vector store service."""
+
+        if self._vector_service is None:
             await self.initialize()
-        return await self.client_manager.get_vector_store_service()
-
-    async def get_embedding_manager(self) -> Any:
-        """Expose embedding manager for backward compatibility paths."""
-
-        if not self._initialized:
-            await self.initialize()
-
-        if self._embedding_manager is None:
-            manager = EmbeddingManager(
-                config=get_config(),
-                client_manager=self.client_manager,
-                budget_limit=None,
-                rate_limiter=None,
-            )
-            await manager.initialize()
-            self._embedding_manager = manager
-        return self._embedding_manager
+        if self._vector_service is None:  # pragma: no cover - defensive
+            raise RuntimeError("Vector service not available")
+        return self._vector_service
 
     async def cleanup(self) -> None:
-        """Cleanup services (delegated to ClientManager)."""
-        if self.client_manager:
-            await self.client_manager.cleanup()
-        if self._embedding_manager is not None:
-            await self._embedding_manager.cleanup()
-            self._embedding_manager = None
-        self._initialized = False
+        """Release registry-managed services."""
+
+        self._vector_service = None
+        await shutdown_service_registry()
 
     async def list_collections(self) -> list[str]:
         """List all collections."""
@@ -340,13 +306,13 @@ class VectorDBManager:
 
 
 def _create_manager_from_context(ctx) -> VectorDBManager:
-    """Create VectorDBManager with ClientManager from CLI context."""
+    """Create VectorDBManager using the shared service registry."""
     config = get_config()
-    if ctx.obj.get("url"):
-        config.qdrant.url = ctx.obj.get("url")
+    override_url = ctx.obj.get("url")
+    if override_url:
+        config.qdrant.url = override_url
 
-    client_manager = ClientManager()
-    return VectorDBManager(client_manager=client_manager)
+    return VectorDBManager(qdrant_url=override_url)
 
 
 # CLI Commands

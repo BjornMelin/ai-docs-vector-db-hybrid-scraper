@@ -8,13 +8,17 @@ from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from starlette import status
 
 from src.api.app_profiles import AppProfile, detect_profile
+from src.api.lifespan import service_registry_lifespan
 from src.architecture.modes import ApplicationMode, get_mode_config
 from src.architecture.service_factory import (
     ModeAwareServiceFactory,
     set_service_factory,
 )
+from src.services.fastapi.dependencies import get_health_checker
 from src.services.fastapi.middleware.manager import get_middleware_manager
 
 
@@ -256,23 +260,23 @@ def _configure_common_routes(app: FastAPI) -> None:
     async def health_check():
         """Health check endpoint."""
         mode = app.state.mode
-        service_factory: ModeAwareServiceFactory = app.state.service_factory
-        mode_config = app.state.mode_config
+        checker = get_health_checker()
+        health_report = await checker.check_health()
 
-        # Get available services for health check
-        available_services = service_factory.get_available_services()
-        service_status = [
-            service_factory.get_service_status(name)
-            for name in mode_config.enabled_services
-        ]
+        status_code = (
+            status.HTTP_200_OK
+            if health_report.get("status") == "healthy"
+            else status.HTTP_503_SERVICE_UNAVAILABLE
+        )
 
-        return {
-            "status": "healthy",
+        payload = {
+            "status": health_report["status"],
             "mode": mode.value,
-            "available_services": available_services,
-            "service_status": service_status,
-            "timestamp": datetime.now(UTC).isoformat(),
+            "services": health_report.get("services", {}),
+            "timestamp": health_report.get("timestamp", datetime.now(UTC).isoformat()),
         }
+
+        return JSONResponse(payload, status_code=status_code)
 
     @app.get("/info")
     async def info():
@@ -335,17 +339,18 @@ def _build_app_lifespan(app: FastAPI):
 
         logger.info("Starting application in %s mode", mode.value)
 
-        _register_mode_services(service_factory)
-        await _initialize_critical_services(service_factory)
+        async with service_registry_lifespan(app):
+            _register_mode_services(service_factory)
+            await _initialize_critical_services(service_factory)
 
-        logger.info("Application startup complete in %s mode", mode.value)
+            logger.info("Application startup complete in %s mode", mode.value)
 
-        try:
-            yield
-        finally:
-            logger.info("Shutting down application")
-            await service_factory.cleanup_all_services()
-            logger.info("Application shutdown complete")
+            try:
+                yield
+            finally:
+                logger.info("Shutting down application")
+                await service_factory.cleanup_all_services()
+                logger.info("Application shutdown complete")
 
     return lifespan
 
