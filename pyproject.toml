@@ -63,6 +63,7 @@ dependencies = [
     "slowapi>=0.1.9,<0.2.0",
     "purgatory-circuitbreaker>=0.7.2,<0.8.0",
     "aiocache>=0.12.3,<0.13.0",
+    "platformdirs>=4.3.8,<5.0.0",
     "click>=8.2.1,<8.2.2",
     "rich>=14.1.0,<15.0.0",
     "colorlog>=6.9.0,<7.0.0",
@@ -74,16 +75,13 @@ dependencies = [
     "sqlalchemy>=2.0.43,<3.0.0",
     "tomli-w>=1.2.0,<2.0.0",
     "jsonschema2md>=1.7.0,<2.0.0",
-    "opentelemetry-api>=1.37.0,<2.0.0",
-    "opentelemetry-sdk>=1.37.0,<2.0.0",
     "respx>=0.22.0,<0.23.0",
     "watchdog>=6.0.0,<7.0.0",
     "tool>=0.8.0",
     "httpx>=0.28.1,<0.29.0",
-    "opentelemetry-instrumentation-fastapi>=0.58b0,<0.59.0",
+    # dependency-injector wires core clients (OpenAI, Qdrant, Dragonfly, Firecrawl) via ApplicationContainer.
     "dependency-injector>=4.48.2",
     "pydeps>=3.0.1",
-    "pydantic-ai>=0.2.20,<0.3.0",
     "scikit-learn>=1.7.2,<2.0.0",
     "langchain>=0.3.12,<0.4.0",
     "langchain-core>=0.3.76",
@@ -125,10 +123,10 @@ dev = [
 
 # Documentation
 docs = [
-    "mkdocs>=1.6.1,<2.0.0",
-    "mkdocs-material>=9.6.20,<10.0.0",
-    "mkdocstrings>=0.30.1,<1.0.0",
-    "mkdocstrings-python>=1.18.2,<2.0.0",
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.6.20",
+    "mkdocstrings>=0.30.1",
+    "mkdocstrings-python>=1.18.2"
 ]
 
 # Contract testing tools
@@ -137,7 +135,6 @@ contract = [
     "openapi-spec-validator>=0.7.2,<0.9.0",
     "jsonschema>=4.25.1,<5.0.0",
     "responses>=0.25.8,<0.26.0",
-    "httpx>=0.28.1,<0.29.0",
     "factory-boy>=3.3.3,<4.0.0",
     "faker>=37.8.0,<38.0.0",
 ]
@@ -455,7 +452,6 @@ extra-build-dependencies = { flash-attn = [{ requirement = "torch", match-runtim
 extra-build-variables = { flash-attn = { FLASH_ATTENTION_SKIP_CUDA_BUILD = "TRUE" } }
 
 # ===== Dependency Groups =====
-
 [tool.pylint]
 [tool.pylint.main]
 # Basic configuration

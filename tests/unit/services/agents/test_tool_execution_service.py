@@ -41,8 +41,7 @@ class ClientManager:  # noqa: D401 - lightweight stub
                 servers=[SimpleNamespace(name="primary")],
             )
         )
-        self.config.servers = [SimpleNamespace(name="primary")]
-        self._client = SimpleNamespace()
+        self._client = SimpleNamespace(connections={"primary": object()})
 
     async def get_mcp_client(self) -> object:  # noqa: D401
         return self._client

@@ -681,7 +681,7 @@ uv run python -m src.cli.main config validate config.json --comprehensive
 
 ## 📚 Related Resources
 
-- **[Configuration API Reference](../developers/configuration.md)**: Complete API documentation
+- **[Setup & Configuration Guide](../developers/setup-and-configuration.md)**: Complete API documentation
 - **[Operations Guide](../operators/operations.md)**: Production deployment and operations patterns
 - **[Security Guide](../operators/security.md)**: Security configuration best practices
 - **[Troubleshooting Guide](./troubleshooting.md)**: Common issues and solutions

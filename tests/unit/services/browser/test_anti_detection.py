@@ -1,6 +1,6 @@
 """Test suite for Enhanced Anti-Detection System."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -277,9 +277,11 @@ class TestEnhancedAntiDetection:
 
         # Get multiple user agents
         user_agents = set()
+        platforms = set()
         for _ in range(20):
-            ua = anti_detection._rotate_user_agents()
+            ua, platform, ch_platform = anti_detection._rotate_user_agents()
             user_agents.add(ua)
+            platforms.add((platform, ch_platform))
 
         # Should have some diversity (not always the same)
         assert len(user_agents) > 1
@@ -287,6 +289,7 @@ class TestEnhancedAntiDetection:
         # All should be valid user agent strings
         for ua in user_agents:
             assert "Mozilla" in ua
+        assert len(platforms) > 0
 
     def test_viewport_randomization(self):
         """Test viewport randomization."""
@@ -310,9 +313,8 @@ class TestEnhancedAntiDetection:
     def test_realistic_headers_generation(self):
         """Test realistic headers generation."""
         anti_detection = EnhancedAntiDetection()
-        default_profile = anti_detection.site_profiles["default"]
-
-        headers = anti_detection._generate_realistic_headers(default_profile)
+        language_header, _, _ = anti_detection._select_language_profile()
+        headers = anti_detection._generate_realistic_headers(language_header, "Windows")
 
         assert isinstance(headers, dict)
         assert "Accept" in headers
@@ -326,15 +328,10 @@ class TestEnhancedAntiDetection:
 
         # Test different stealth levels
         for profile_name in ["default", "github.com", "linkedin.com", "cloudflare.com"]:
-            profile = anti_detection.site_profiles[profile_name]
-            args = anti_detection._get_stealth_args(profile)
+            _ = anti_detection.site_profiles[profile_name]
+            args = anti_detection._get_stealth_args()
 
-            assert isinstance(args, list)
-            assert "--disable-blink-features=AutomationControlled" in args
-
-            # Higher stealth levels should have more args
-            if profile.stealth_level in ["advanced", "maximum"]:
-                assert len(args) > 8
+            assert args == ["--disable-blink-features=AutomationControlled"]
 
     def test_timing_patterns_by_risk(self):
         """Test timing patterns vary by risk level."""
@@ -462,81 +459,75 @@ class TestPlaywrightAdapterIntegration:
     """Test integration with Playwright adapter."""
 
     @pytest.mark.asyncio
-    async def test_playwright_adapter_with_anti_detection(self):
-        """Test Playwright adapter with anti-detection enabled."""
+    async def test_playwright_adapter_initializes_stealth_provider(self):
+        """Adapter exposes stealth metadata when enabled."""
 
         config = PlaywrightConfig()
+        adapter = PlaywrightAdapter(config, enable_stealth=True)
 
-        # Test with anti-detection enabled
-        adapter_with_ad = PlaywrightAdapter(config, enable_anti_detection=True)
-        assert adapter_with_ad.enable_anti_detection is True
-        assert adapter_with_ad.anti_detection is not None
-
-        # Test with anti-detection disabled
-        adapter_without_ad = PlaywrightAdapter(config, enable_anti_detection=False)
-        assert adapter_without_ad.enable_anti_detection is False
-        assert adapter_without_ad.anti_detection is None
+        assert adapter.enable_stealth is True
+        assert adapter.anti_detection is not None
+        assert adapter.stealth_provider in {
+            "tf_playwright_stealth",
+            "playwright_stealth",
+            None,
+        }
 
     @pytest.mark.asyncio
-    @patch("src.services.browser.playwright_adapter.async_playwright")
-    @pytest.mark.asyncio
-    async def test_playwright_stealth_initialization(self, mock_playwright):
-        """Test Playwright initialization with stealth configuration."""
+    async def test_apply_stealth_invokes_plugin(self, monkeypatch):
+        """_apply_stealth should invoke the configured stealth plugin."""
 
-        # Mock Playwright components
-        mock_playwright_instance = AsyncMock()
-        mock_browser_launcher = AsyncMock()
-        mock_browser = AsyncMock()
-
-        mock_playwright.return_value.start = AsyncMock(
-            return_value=mock_playwright_instance
+        config = PlaywrightConfig()
+        adapter = PlaywrightAdapter(config, enable_stealth=True)
+        monkeypatch.setattr(
+            "src.services.browser.playwright_adapter.STEALTH_AVAILABLE", True
         )
-        mock_playwright_instance.chromium = mock_browser_launcher
-        mock_browser_launcher.launch = AsyncMock(return_value=mock_browser)
-
-        config = PlaywrightConfig()
-        adapter = PlaywrightAdapter(config, enable_anti_detection=True)
-
-        # Simulate successful initialization
-        await adapter.initialize()
-
-        # Check that launch was called with stealth args
-        mock_browser_launcher.launch.assert_called_once()
-        call_args = mock_browser_launcher.launch.call_args
-
-        # Should include stealth arguments
-        assert "args" in call_args._kwargs
-        args = call_args._kwargs["args"]
-        assert isinstance(args, list)
-        assert any(
-            "--disable-blink-features=AutomationControlled" in arg for arg in args
+        mock_plugin = AsyncMock()
+        monkeypatch.setattr(
+            "src.services.browser.playwright_adapter._stealth_async", mock_plugin
         )
 
-    @pytest.mark.asyncio
-    async def test_stealth_script_injection(self):
-        """Test stealth script injection."""
+        page = AsyncMock()
+        assert adapter.anti_detection is not None
+        stealth_config = adapter.anti_detection.get_stealth_config("default")
+        await adapter._apply_stealth(page, stealth_config)
+
+        mock_plugin.assert_awaited_once_with(page)
+        page.add_init_script.assert_awaited()
+
+    def test_build_context_options_includes_stealth_data(self):
+        """Context options should reflect the anti-detection configuration."""
 
         config = PlaywrightConfig()
-        adapter = PlaywrightAdapter(config, enable_anti_detection=True)
+        adapter = PlaywrightAdapter(config, enable_stealth=True)
+        stealth_config = BrowserStealthConfig(
+            user_agent="stealth-agent",
+            viewport=ViewportProfile(width=1280, height=720),
+            headers={
+                "Sec-Ch-Ua": "Test",
+                "Accept-Language": "en-US",
+                "Sec-Ch-Ua-Platform": '"Windows"',
+            },
+            extra_args=["--disable-blink-features=AutomationControlled"],
+            timing=TimingPattern(),
+            languages=["en-US", "en"],
+            locale="en-US",
+            timezone="America/New_York",
+            platform="Win32",
+            client_hints_platform="Windows",
+            webgl_vendor="Google Inc.",
+            webgl_renderer="ANGLE (Intel(R) UHD Graphics 630 Direct3D11 vs_5_0 ps_5_0)",
+        )
 
-        # Mock page
-        mock_page = AsyncMock()
-        mock_stealth_config = MagicMock()
-        mock_stealth_config.canvas_fingerprint_protection = True
-        mock_stealth_config.webgl_fingerprint_protection = True
+        options = adapter._build_context_options(
+            adapter.config.tiers[0], stealth_config
+        )
 
-        # Test script injection
-        await adapter._inject_stealth_scripts(mock_page, mock_stealth_config)
-
-        # Should have called add_init_script
-        mock_page.add_init_script.assert_called_once()
-
-        # Check script content
-        script_content = mock_page.add_init_script.call_args[0][0]
-        assert "Object.defineProperty(navigator, 'webdriver'" in script_content
-        assert "window.chrome" in script_content
-        assert "canvas" in script_content.lower()
-        assert "webgl" in script_content.lower()
+        assert options["user_agent"] == "stealth-agent"
+        assert options["viewport"]["width"] == 1280
+        assert options["viewport"]["height"] == 720
+        assert options["extra_http_headers"]["Sec-Ch-Ua"] == "Test"
+        assert options["extra_http_headers"]["Sec-Ch-Ua-Platform"] == '"Windows"'
 
 
 if __name__ == "__main__":

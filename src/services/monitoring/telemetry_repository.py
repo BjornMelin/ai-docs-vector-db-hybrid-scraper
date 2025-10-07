@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import random
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from threading import RLock
@@ -54,12 +55,21 @@ class HistogramSample:
 class TelemetryRepository:
     """Thread-safe repository for lightweight counters and histograms."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        max_histogram_samples: int = 500,
+        sample_rate: float = 1.0,
+        in_memory_enabled: bool = True,
+    ) -> None:
         self._counter_storage: dict[str, dict[tuple[tuple[str, str], ...], int]] = {}
         self._histogram_storage: dict[
             str, dict[tuple[tuple[str, str], ...], list[float]]
         ] = {}
         self._lock = RLock()
+        self._max_histogram_samples = max(1, max_histogram_samples)
+        self._sample_rate = max(0.0, min(sample_rate, 1.0))
+        self._in_memory_enabled = in_memory_enabled
 
     def increment_counter(
         self,
@@ -73,6 +83,8 @@ class TelemetryRepository:
         if value < 0:
             msg = "Counter increments must be non-negative"
             raise ValueError(msg)
+        if not self._in_memory_enabled:
+            return
         key = _normalize_tags(tags)
         with self._lock:
             counters = self._counter_storage.setdefault(name, {})
@@ -87,11 +99,37 @@ class TelemetryRepository:
     ) -> None:
         """Record a single histogram observation."""
 
+        if not self._in_memory_enabled:
+            return
+        if self._sample_rate < 1.0 and random.random() > self._sample_rate:
+            return
         key = _normalize_tags(tags)
         with self._lock:
             histograms = self._histogram_storage.setdefault(name, {})
             samples = histograms.setdefault(key, [])
             samples.append(float(value))
+            if len(samples) > self._max_histogram_samples:
+                del samples[: len(samples) - self._max_histogram_samples]
+
+    def configure(
+        self,
+        *,
+        max_histogram_samples: int | None = None,
+        sample_rate: float | None = None,
+        in_memory_enabled: bool | None = None,
+    ) -> None:
+        """Update storage retention, sampling, and memory toggle settings."""
+
+        with self._lock:
+            if max_histogram_samples is not None:
+                self._max_histogram_samples = max(1, max_histogram_samples)
+            if sample_rate is not None:
+                self._sample_rate = max(0.0, min(sample_rate, 1.0))
+            if in_memory_enabled is not None:
+                self._in_memory_enabled = in_memory_enabled
+                if not self._in_memory_enabled:
+                    self._counter_storage.clear()
+                    self._histogram_storage.clear()
 
     def reset(self) -> None:
         """Clear all recorded metrics."""

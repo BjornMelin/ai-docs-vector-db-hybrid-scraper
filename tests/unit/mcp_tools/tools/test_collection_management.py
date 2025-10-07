@@ -13,7 +13,7 @@ class TestCollectionsTools:
     """Test suite for collections MCP tools."""
 
     @pytest.fixture
-    def mock_client_manager(self):
+    def mock_client_manager(self, monkeypatch):
         """Create a mock client manager with collections service."""
         mock_manager = MagicMock()
 
@@ -39,8 +39,14 @@ class TestCollectionsTools:
         # Mock cache manager
         mock_cache = AsyncMock()
         mock_cache.clear.return_value = 10  # cleared items
+        cache_dependency = AsyncMock(return_value=mock_cache)
+        monkeypatch.setattr(
+            "src.mcp_tools.tools.collection_management.get_cache_manager",
+            cache_dependency,
+        )
+
         mock_manager.get_vector_store_service = AsyncMock(return_value=mock_vector)
-        mock_manager.get_cache_manager = AsyncMock(return_value=mock_cache)
+        mock_manager.cache_dependency = cache_dependency
 
         return mock_manager
 

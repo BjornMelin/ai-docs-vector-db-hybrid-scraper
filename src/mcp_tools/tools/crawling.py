@@ -11,6 +11,7 @@ from typing import Any
 from fastmcp import Context
 
 from src.infrastructure.client_manager import ClientManager
+from src.services.dependencies import get_crawl_manager
 
 
 logger = logging.getLogger(__name__)
@@ -18,17 +19,21 @@ logger = logging.getLogger(__name__)
 
 def _raise_invalid_url_format() -> None:
     """Raise ValueError for invalid URL format."""
+
     msg = "Invalid URL format"
     raise ValueError(msg)
 
 
 def _raise_crawling_failed(tier: str) -> None:
     """Raise ValueError for crawling failure."""
+
     msg = f"Crawling failed for tier {tier}"
     raise ValueError(msg)
 
 
-def register_tools(mcp, client_manager: ClientManager):
+def register_tools(  # pylint: disable=too-many-statements
+    mcp, client_manager: ClientManager
+):
     """Register 5-tier crawling tools with the MCP server."""
 
     @mcp.tool()
@@ -36,7 +41,7 @@ def register_tools(mcp, client_manager: ClientManager):
         url: str,
         content_type_hint: str | None = None,
         performance_requirements: dict[str, Any] | None = None,
-        ctx: Context = None,
+        ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Select optimal crawling tier based on ML-powered analysis.
 
@@ -51,7 +56,6 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Tier selection results with reasoning and optimization metadata
-
         """
         try:
             # Validate URL
@@ -106,25 +110,24 @@ def register_tools(mcp, client_manager: ClientManager):
                 "error": str(e),
                 "fallback_tier": "crawl4ai",  # Safe fallback
             }
-        else:
-            return {
-                "success": True,
-                "recommended_tier": recommended_tier,
-                "url_analysis": url_analysis,
-                "optimization_metadata": optimization_metadata,
-                "autonomous_features": {
-                    "ml_powered_selection": True,
-                    "performance_optimization": True,
-                    "content_awareness": True,
-                },
-            }
+        return {
+            "success": True,
+            "recommended_tier": recommended_tier,
+            "url_analysis": url_analysis,
+            "optimization_metadata": optimization_metadata,
+            "autonomous_features": {
+                "ml_powered_selection": True,
+                "performance_optimization": True,
+                "content_awareness": True,
+            },
+        }
 
     @mcp.tool()
     async def enhanced_5_tier_crawl(
         url: str,
         tier: str | None = None,
         autonomous_optimization: bool = True,
-        ctx: Context = None,
+        ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Perform enhanced 5-tier crawling with autonomous optimization.
 
@@ -139,8 +142,9 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Enhanced crawling results with quality metrics and optimization data
-
         """
+
+        resolved_tier: str = tier or "crawl4ai"
         try:
             # Validate URL
             parsed_url = urllib.parse.urlparse(url)
@@ -152,27 +156,29 @@ def register_tools(mcp, client_manager: ClientManager):
                 await ctx.info(f"Starting enhanced 5-tier crawl for: {validated_url}")
 
             # Get crawling manager
-            crawl_manager = await client_manager.get_crawl_manager()
+            crawl_manager = await get_crawl_manager(client_manager)
 
             # Intelligent tier selection if not specified
-            if not tier and autonomous_optimization:
+            if tier is None and autonomous_optimization:
                 tier_result = await intelligent_tier_selection(validated_url, ctx=ctx)
                 if tier_result["success"]:
-                    tier = tier_result["recommended_tier"]
+                    resolved_tier = str(tier_result["recommended_tier"])
                     if ctx:
-                        await ctx.debug(f"Auto-selected tier: {tier}")
+                        await ctx.debug(f"Auto-selected tier: {resolved_tier}")
                 else:
-                    tier = "crawl4ai"  # Fallback
-            elif not tier:
-                tier = "crawl4ai"  # Default
+                    resolved_tier = "crawl4ai"  # Fallback
+            elif tier is None:
+                resolved_tier = "crawl4ai"  # Default
 
             # Perform crawling with selected tier
             crawl_result = await crawl_manager.scrape_url(
-                validated_url, tier=tier, enhanced_processing=autonomous_optimization
+                validated_url,
+                tier=resolved_tier,
+                enhanced_processing=autonomous_optimization,
             )
 
             if not crawl_result or not crawl_result.get("success"):
-                _raise_crawling_failed(tier)
+                _raise_crawling_failed(resolved_tier)
 
             # Quality assessment and enhancement
             quality_metrics = _assess_content_quality(crawl_result)
@@ -187,7 +193,7 @@ def register_tools(mcp, client_manager: ClientManager):
             # Comprehensive response with I3 research metadata
             response = {
                 "success": True,
-                "tier_used": tier,
+                "tier_used": resolved_tier,
                 "content": enhanced_result.get("content", ""),
                 "title": enhanced_result.get("title", ""),
                 "metadata": enhanced_result.get("metadata", {}),
@@ -209,7 +215,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Enhanced crawl completed: tier={tier}, "
+                    f"Enhanced crawl completed: tier={resolved_tier}, "
                     f"quality={quality_metrics.get('overall_score', 0.0):.2f}"
                 )
 
@@ -220,19 +226,14 @@ def register_tools(mcp, client_manager: ClientManager):
             return {
                 "success": False,
                 "error": str(e),
-                "tier_attempted": tier,
+                "tier_attempted": resolved_tier,
             }
-        else:
-            return response
+        return response
 
     @mcp.tool()
     async def get_crawling_capabilities() -> dict[str, Any]:
-        """Get 5-tier crawling capabilities and status.
+        """Get 5-tier crawling capabilities and status."""
 
-        Returns:
-            Comprehensive capabilities information for 5-tier crawling system
-
-        """
         try:
             # browser_manager = await client_manager.get_browser_manager()
 
@@ -299,6 +300,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
 def _analyze_domain_complexity(url: str) -> str:
     """Analyze domain complexity for tier selection."""
+
     domain = url.split("//")[-1].split("/")[0].lower()
 
     # Simple heuristics for complexity analysis
@@ -312,6 +314,7 @@ def _analyze_domain_complexity(url: str) -> str:
 
 def _predict_js_requirements(url: str) -> bool:
     """Predict JavaScript requirements based on URL patterns."""
+
     js_indicators = ["app", "spa", "dashboard", "admin", "portal"]
     domain = url.split("//")[-1].split("/")[0].lower()
     return any(indicator in domain for indicator in js_indicators)
@@ -327,6 +330,7 @@ def _select_optimal_tier(
     analysis: dict[str, Any], requirements: dict[str, Any] | None
 ) -> str:
     """Select optimal tier based on analysis and requirements."""
+
     # Simple tier selection logic (can be enhanced with ML model)
     if analysis["anti_detection_needed"]:
         return "firecrawl"
@@ -339,6 +343,7 @@ def _select_optimal_tier(
 
 def _predict_latency(tier: str) -> float:
     """Predict latency for tier selection."""
+
     latency_map = {
         "lightweight": 150.0,
         "crawl4ai": 800.0,
@@ -351,6 +356,7 @@ def _predict_latency(tier: str) -> float:
 
 def _assess_content_quality(crawl_result: dict[str, Any]) -> dict[str, Any]:
     """Assess content quality from crawl results."""
+
     content = crawl_result.get("content", "")
 
     return {
@@ -370,6 +376,7 @@ async def _apply_autonomous_enhancements(
     ctx: Any | None = None,
 ) -> dict[str, Any]:
     """Apply autonomous enhancements to crawl results."""
+
     enhanced_result = crawl_result.copy()
     enhancements = []
 
@@ -394,6 +401,7 @@ async def _apply_autonomous_enhancements(
 
 def _clean_content(content: str) -> str:
     """Clean and enhance content quality."""
+
     # Simple content cleaning
     lines = content.split("\n")
     cleaned_lines = [line.strip() for line in lines if line.strip()]
@@ -402,6 +410,7 @@ def _clean_content(content: str) -> str:
 
 def _extract_title_from_content(content: str) -> str:
     """Extract title from content if missing."""
+
     lines = content.split("\n")
     for line in lines[:5]:  # Check first 5 lines
         if len(line.strip()) > 10 and len(line.strip()) < 100:

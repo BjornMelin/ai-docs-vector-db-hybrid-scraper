@@ -6,11 +6,15 @@ import logging
 import threading
 from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
+from datetime import timedelta
 from typing import TYPE_CHECKING, Any, cast
 
 from dependency_injector.wiring import Provide, inject
+from langchain_mcp_adapters.client import MultiServerMCPClient
+from langchain_mcp_adapters.sessions import Connection
 
 from src.config import Config, get_config
+from src.config.models import MCPClientConfig, MCPServerConfig, MCPTransport
 from src.infrastructure.clients import (
     FirecrawlClientProvider,
     HTTPClientProvider,
@@ -61,7 +65,7 @@ deps_get_overall_health: OverallHealthCallable | None = (
 logger = logging.getLogger(__name__)
 
 
-class ClientManager:  # pylint: disable=too-many-public-methods
+class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instance-attributes
     """Client coordination layer using function-based dependencies."""
 
     _instance: "ClientManager | None" = None
@@ -88,6 +92,8 @@ class ClientManager:  # pylint: disable=too-many-public-methods
         self._vector_store_service: VectorStoreService | None = None
         self._config = get_config()
         self._automation_router: AutomationRouter | None = None
+        self._mcp_client: MultiServerMCPClient | None = None
+        self._mcp_client_lock = asyncio.Lock()
 
     @property
     def config(self) -> Config:
@@ -128,15 +134,16 @@ class ClientManager:  # pylint: disable=too-many-public-methods
 
     async def initialize(self) -> None:
         """Initialize client manager with function-based dependencies."""
-        if self._initialized:
-            return
-        container = get_container()
-        if container:
-            container.wire(modules=[__name__])
-            self.initialize_providers()
-        await self._initialize_parallel_processing_system()
-        self._initialized = True
-        logger.info("ClientManager initialized with function-based dependencies")
+        async with self._lock:
+            if self._initialized:
+                return
+            container = get_container()
+            if container:
+                container.wire(modules=[__name__])
+                self.initialize_providers()
+            await self._initialize_parallel_processing_system()
+            self._initialized = True
+            logger.info("ClientManager initialized with function-based dependencies")
 
     async def _initialize_parallel_processing_system(self) -> None:
         """Initialize the parallel processing system using dependency injection."""
@@ -165,6 +172,7 @@ class ClientManager:  # pylint: disable=too-many-public-methods
         if self._vector_store_service:
             await self._vector_store_service.cleanup()
             self._vector_store_service = None
+        self._mcp_client = None
         self._providers.clear()
         self._parallel_processing_system = None
         self._initialized = False
@@ -178,7 +186,10 @@ class ClientManager:  # pylint: disable=too-many-public-methods
 
     async def get_openai_client(self):
         provider = self._providers.get("openai")
-        return provider.client if provider else None
+        if not provider:
+            msg = "OpenAI client provider not available"
+            raise APIError(msg)
+        return provider.client
 
     async def get_qdrant_client(self):
         provider = self._providers.get("qdrant")
@@ -186,6 +197,72 @@ class ClientManager:  # pylint: disable=too-many-public-methods
             msg = "Qdrant client provider not available"
             raise APIError(msg)
         return provider.client
+
+    async def get_mcp_client(self) -> MultiServerMCPClient:
+        """Return a cached MultiServerMCPClient built from configuration."""
+
+        async with self._mcp_client_lock:
+            if self._mcp_client is not None:
+                return self._mcp_client
+
+            config = getattr(self._config, "mcp_client", None)
+            if not isinstance(config, MCPClientConfig) or not config.enabled:
+                msg = "MCP client integration is disabled"
+                raise APIError(msg)
+            if not config.servers:
+                msg = "No MCP servers configured"
+                raise APIError(msg)
+
+            connections = self._build_mcp_connections(config)
+            self._mcp_client = MultiServerMCPClient(connections)
+            return self._mcp_client
+
+    def _build_mcp_connections(self, config: MCPClientConfig) -> dict[str, Connection]:
+        """Translate MCP client config to connection mappings."""
+
+        connections: dict[str, Connection] = {}
+        for server in config.servers:
+            connections[server.name] = self._serialise_mcp_server(server, config)
+        return connections
+
+    @staticmethod
+    def _serialise_mcp_server(
+        server: MCPServerConfig, config: MCPClientConfig
+    ) -> Connection:
+        """Return serialised configuration for a single MCP server."""
+
+        timeout_ms = server.timeout_ms or config.request_timeout_ms
+        timeout = timedelta(milliseconds=timeout_ms)
+
+        if server.transport == MCPTransport.STDIO:
+            payload = {
+                "transport": "stdio",
+                "command": server.command,
+                "args": list(server.args),
+            }
+            if server.env:
+                payload["env"] = dict(server.env)
+            return cast(Connection, payload)
+
+        if server.transport == MCPTransport.STREAMABLE_HTTP:
+            payload = {
+                "transport": "streamable_http",
+                "url": str(server.url),
+                "timeout": timeout,
+            }
+            if server.headers:
+                payload["headers"] = dict(server.headers)
+            return cast(Connection, payload)
+
+        payload = {
+            "transport": "sse",
+            "url": str(server.url),
+            "timeout": timeout,
+            "sse_read_timeout": timeout,
+        }
+        if server.headers:
+            payload["headers"] = dict(server.headers)
+        return cast(Connection, payload)
 
     async def get_vector_store_service(self) -> VectorStoreService:
         if self._vector_store_service:
@@ -198,14 +275,6 @@ class ClientManager:  # pylint: disable=too-many-public-methods
         self._vector_store_service = service
         return service
 
-    async def get_qdrant_service(self) -> VectorStoreService:
-        """Backward-compatible alias for legacy callers."""
-
-        logger.warning(
-            "get_qdrant_service() is deprecated; use get_vector_store_service() instead"
-        )
-        return await self.get_vector_store_service()
-
     async def get_redis_client(self):
         provider = self._providers.get("redis")
         if not provider:
@@ -215,7 +284,10 @@ class ClientManager:  # pylint: disable=too-many-public-methods
 
     async def get_firecrawl_client(self):
         provider = self._providers.get("firecrawl")
-        return provider.client if provider else None
+        if not provider:
+            msg = "Firecrawl client provider not available"
+            raise APIError(msg)
+        return provider.client
 
     async def get_http_client(self):
         provider = self._providers.get("http")
@@ -225,48 +297,6 @@ class ClientManager:  # pylint: disable=too-many-public-methods
         return provider.client
 
     # Function-based dependency access methods (backward compatibility)
-
-    async def get_database_manager(self):
-        """Backward compatibility: returns None since we use function-based deps."""
-        logger.warning(
-            "get_database_manager() deprecated - use function-based dependencies "
-            "from src.services.dependencies"
-        )
-
-    async def get_embedding_manager(self):
-        """Backward compatibility: returns None since we use function-based deps."""
-        logger.warning(
-            "get_embedding_manager() deprecated - use function-based dependencies "
-            "from src.services.dependencies"
-        )
-
-    async def get_crawling_manager(self):
-        """Backward compatibility: returns None since we use function-based deps."""
-        logger.warning(
-            "get_crawling_manager() deprecated - use function-based dependencies "
-            "from src.services.dependencies"
-        )
-
-    async def get_monitoring_manager(self):
-        """Backward compatibility: returns None since we use function-based deps."""
-        logger.warning(
-            "get_monitoring_manager() deprecated - use function-based dependencies "
-            "from src.services.dependencies"
-        )
-
-    async def get_cache_manager(self):
-        """Backward compatibility: use function-based dependencies."""
-        logger.warning(
-            "get_cache_manager() deprecated - use get_redis_client() or "
-            "function-based cache dependencies"
-        )
-        return await self.get_redis_client()
-
-    async def get_crawl_manager(self):
-        """Backward compatibility: returns None since we use function-based deps."""
-        logger.warning(
-            "get_crawl_manager() deprecated - use function-based crawling dependencies"
-        )
 
     async def get_health_status(self) -> dict[str, dict[str, Any]]:
         """Get health status using function-based dependencies."""

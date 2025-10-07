@@ -1,7 +1,6 @@
 """Document management tools for MCP server."""
 
 import asyncio
-import inspect
 import logging
 from datetime import UTC, datetime
 from typing import Any, cast
@@ -15,6 +14,11 @@ from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.models.requests import BatchRequest, DocumentRequest
 from src.mcp_tools.models.responses import AddDocumentResponse, DocumentBatchResponse
 from src.security import SecurityValidator
+from src.services.dependencies import (
+    get_cache_manager,
+    get_content_intelligence_service,
+    get_crawl_manager,
+)
 from src.services.vector_db.service import VectorStoreService
 from src.services.vector_db.types import CollectionSchema, TextDocument
 
@@ -90,7 +94,7 @@ async def _scrape_document(
 ) -> tuple[dict[str, Any], Any | None]:
     """Scrape the target URL and optionally enrich the content."""
 
-    crawl_manager = await client_manager.get_crawl_manager()
+    crawl_manager = await get_crawl_manager(client_manager)
     if crawl_manager is None:
         msg = "Crawl manager not available"
         raise RuntimeError(msg)
@@ -106,14 +110,14 @@ async def _scrape_document(
         await ctx.error(f"Failed to scrape {request.url}")
         _raise_scrape_error(request.url)
 
-    get_ci_service = getattr(client_manager, "get_content_intelligence_service", None)
-    if callable(get_ci_service):
-        prospective_service = get_ci_service()
-        if inspect.isawaitable(prospective_service):
-            content_intelligence_service = await prospective_service
-        else:
-            content_intelligence_service = prospective_service
-    else:
+    try:
+        content_intelligence_service = await get_content_intelligence_service(
+            client_manager
+        )
+    except Exception as exc:  # pragma: no cover - optional component
+        logger.info(
+            "Content intelligence unavailable for %s: %s", doc_id, exc, exc_info=exc
+        )
         content_intelligence_service = None
     enriched_content = await _run_content_intelligence(
         content_intelligence_service,
@@ -303,7 +307,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         try:
             vector_service = await _get_vector_service(client_manager)
-            cache_manager = await client_manager.get_cache_manager()
+            cache_manager = await get_cache_manager(client_manager)
 
             request.url = SecurityValidator.from_unified_config().validate_url(
                 request.url

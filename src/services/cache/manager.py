@@ -5,7 +5,7 @@ import hashlib
 import logging
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol, runtime_checkable
 
 from src.config import CacheType
 
@@ -16,6 +16,21 @@ from .search_cache import SearchResultCache
 
 
 logger = logging.getLogger(__name__)
+
+
+@runtime_checkable
+class _PatternClearableCache(Protocol):
+    """Protocol describing pattern-based key management in caches."""
+
+    async def scan_keys(
+        self, pattern: str
+    ) -> list[str]:  # pragma: no cover - structural
+        """Return keys matching the supplied pattern."""
+        raise NotImplementedError
+
+    async def delete(self, key: str) -> bool:  # pragma: no cover - structural
+        """Delete a key from the cache. Returns True if the key was removed."""
+        raise NotImplementedError
 
 
 try:
@@ -432,6 +447,29 @@ class CacheManager:
             return await self._clear_specific_cache_type(cache_type)
         return await self._clear_all_caches()
 
+    async def clear_all(self) -> int:
+        """Clear all cache layers and return cleared entry count from L2."""
+
+        cleared = 0
+        if isinstance(self._distributed_cache, DragonflyCache):
+            cleared = await self._distributed_cache.clear()
+        if self._local_cache:
+            await self._local_cache.clear()
+        return cleared
+
+    async def clear_pattern(self, pattern: str) -> int:
+        """Clear cache entries matching a pattern in distributed cache."""
+
+        if not isinstance(self._distributed_cache, DragonflyCache):
+            if self._distributed_cache is None:
+                return 0
+            cleared = await self._clear_keys_matching_pattern(pattern)
+        else:
+            cleared = await self._distributed_cache.clear_pattern(pattern)
+        if self._local_cache:
+            await self._local_cache.clear()
+        return cleared
+
     async def _clear_specific_cache_type(self, cache_type: CacheType) -> bool:
         """Clear specific cache type by pattern."""
         pattern = f"{self.key_prefix}{cache_type.value}:*"
@@ -446,6 +484,32 @@ class CacheManager:
             return False
 
         return await self._clear_keys_from_both_caches(keys, cache_type)
+
+    async def _clear_keys_matching_pattern(self, pattern: str) -> int:
+        """Clear keys matching a Redis glob pattern."""
+
+        distributed_cache = self._distributed_cache
+        if not isinstance(distributed_cache, _PatternClearableCache):
+            logger.warning(
+                "Distributed cache %r missing _PatternClearableCache; skipping clear()",
+                type(distributed_cache),
+            )
+            return 0
+
+        try:
+            keys = await distributed_cache.scan_keys(pattern)
+        except (ConnectionError, RuntimeError, TimeoutError) as e:
+            logger.error("Cache scan error for pattern %s: %s", pattern, e)
+            return 0
+
+        cleared = 0
+        for key in keys:
+            try:
+                if bool(await distributed_cache.delete(key)):
+                    cleared += 1
+            except (ConnectionError, RuntimeError, TimeoutError) as e:
+                logger.error("Distributed cache delete error for key %s: %s", key, e)
+        return cleared
 
     async def _clear_keys_from_both_caches(
         self, keys: list[str], cache_type: CacheType

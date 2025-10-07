@@ -3,27 +3,30 @@
 import logging
 import re
 import time
+from collections.abc import Mapping, Sequence
 from typing import Literal
 
 from fastmcp import Context
 
 from src.infrastructure.client_manager import ClientManager
+from src.services.dependencies import get_crawl_manager
 from src.services.errors import CrawlServiceError
 
 
 logger = logging.getLogger(__name__)
 
 
-def _validate_formats(formats: list[str] | None) -> list[str]:
-    """Validate and normalize format list."""
+def _validate_formats(formats: Sequence[str] | None) -> list[str]:
+    """Validate and normalize requested output formats."""
     if formats is None:
-        formats = ["markdown"]
+        return ["markdown"]
 
-    valid_formats = {"markdown", "html", "text"}
-    if invalid_formats := set(formats) - valid_formats:
+    normalized_formats = list(formats)
+    valid_formats = frozenset({"markdown", "html", "text"})
+    if invalid_formats := set(normalized_formats) - valid_formats:
         msg = f"Invalid formats: {invalid_formats}. Valid options: {valid_formats}"
         raise ValueError(msg)
-    return formats
+    return normalized_formats
 
 
 async def _analyze_url_suitability(
@@ -45,21 +48,25 @@ async def _analyze_url_suitability(
     except (AttributeError, ConnectionError, RuntimeError, TimeoutError):
         return True  # Default to allowing the attempt
 
-    else:
-        return can_handle
+    return can_handle
 
 
 def _convert_content_formats(
-    content: str, formats: list[str], result: dict
+    content: str, formats: Sequence[str], result: Mapping[str, object]
 ) -> dict[str, str]:
     """Convert content to requested formats."""
     content_dict = {}
+
+    metadata = result.get("metadata")
+    raw_html = content
+    if isinstance(metadata, Mapping):
+        raw_html = metadata.get("raw_html", content)
 
     for fmt in formats:
         if fmt == "markdown":
             content_dict["markdown"] = content  # Assume content is already markdown
         elif fmt == "html":
-            content_dict["html"] = result.get("metadata", {}).get("raw_html", content)
+            content_dict["html"] = raw_html
         elif fmt == "text":
             # Strip markdown formatting for plain text
             text_content = re.sub(r"[*_`#\[\]()]", "", content)
@@ -69,10 +76,17 @@ def _convert_content_formats(
 
 
 def _build_success_response(
-    result: dict, url: str, formats: list[str], elapsed_ms: float, can_handle: bool
+    result: Mapping[str, object],
+    url: str,
+    formats: Sequence[str],
+    elapsed_ms: float,
+    can_handle: bool,
 ) -> dict:
     """Build successful response dictionary."""
-    content = result.get("content", "")
+
+    metadata = result.get("metadata")
+    metadata_dict = dict(metadata) if isinstance(metadata, Mapping) else {}
+    content = str(result.get("content", ""))
     content_dict = _convert_content_formats(content, formats, result)
 
     return {
@@ -83,7 +97,7 @@ def _build_success_response(
             "url": result.get("url", url),
             "tier_used": result.get("tier_used", "lightweight"),
             "quality_score": result.get("quality_score", 0.0),
-            **result.get("metadata", {}),
+            **metadata_dict,
         },
         "performance": {
             "elapsed_ms": elapsed_ms,
@@ -94,10 +108,19 @@ def _build_success_response(
     }
 
 
-async def _handle_scrape_failure(result: dict, url: str, ctx: Context | None) -> None:
+async def _handle_scrape_failure(
+    result: Mapping[str, object], url: str, ctx: Context | None
+) -> None:
     """Handle scrape failure with appropriate logging and error raising."""
-    error_msg = result.get("error", "Unknown error")
-    failed_tiers = result.get("failed_tiers", [])
+
+    error_value = result.get("error", "Unknown error")
+    error_msg = str(error_value)
+    failed_tiers_value = result.get("failed_tiers", [])
+    failed_tiers = (
+        list(failed_tiers_value)
+        if isinstance(failed_tiers_value, (list, tuple, set))
+        else [str(failed_tiers_value)]
+    )
 
     if ctx:
         await ctx.error(f"Failed to scrape {url}: {error_msg}")
@@ -120,7 +143,7 @@ def register_tools(mcp, client_manager: ClientManager):
     @mcp.tool()
     async def lightweight_scrape(
         url: str,
-        formats: list[Literal["markdown", "html", "text"]] | None = None,
+        formats: Sequence[Literal["markdown", "html", "text"]] | None = None,
         ctx: Context | None = None,
     ) -> dict:
         """Web scraping for simple static pages using httpx + BeautifulSoup.
@@ -159,16 +182,16 @@ def register_tools(mcp, client_manager: ClientManager):
         Raises:
             ValueError: If URL is invalid or formats are invalid
             CrawlServiceError: If scraping fails
-
         """
+
         if ctx:
             await ctx.info(f"Starting lightweight scrape of {url}")
 
         # Validate and normalize formats
-        formats = _validate_formats(formats)
+        validated_formats = _validate_formats(formats)
 
         # Get CrawlManager which uses UnifiedBrowserManager
-        crawl_manager = await client_manager.get_crawl_manager()
+        crawl_manager = await get_crawl_manager(client_manager)
 
         if ctx:
             await ctx.debug("Using UnifiedBrowserManager with lightweight tier")
@@ -194,9 +217,10 @@ def register_tools(mcp, client_manager: ClientManager):
                         f"{result.get('tier_used', 'unknown')} tier"
                     )
                 return _build_success_response(
-                    result, url, formats, elapsed_ms, can_handle
+                    result, url, validated_formats, elapsed_ms, can_handle
                 )
             await _handle_scrape_failure(result, url, ctx)
+            raise CrawlServiceError("Lightweight scraping failed without details.")
 
         except Exception as e:
             if ctx:

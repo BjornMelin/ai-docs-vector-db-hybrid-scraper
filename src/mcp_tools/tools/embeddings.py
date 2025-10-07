@@ -10,6 +10,7 @@ from src.mcp_tools.models.responses import (
     EmbeddingGenerationResponse,
     EmbeddingProviderInfo,
 )
+from src.services.dependencies import get_embedding_manager
 
 
 logger = logging.getLogger(__name__)
@@ -20,7 +21,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
     @mcp.tool()
     async def generate_embeddings(
-        request: EmbeddingRequest, ctx: Context = None
+        request: EmbeddingRequest, ctx: Context | None = None
     ) -> EmbeddingGenerationResponse:
         """Generate embeddings using the optimal provider.
 
@@ -35,7 +36,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         try:
             # Get embedding manager from client manager
-            embedding_manager = await client_manager.get_embedding_manager()
+            embedding_manager = await get_embedding_manager(client_manager)
 
             if ctx:
                 await ctx.debug(
@@ -80,7 +81,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
     @mcp.tool()
     async def list_embedding_providers(
-        ctx: Context = None,
+        ctx: Context | None = None,
     ) -> list[EmbeddingProviderInfo]:
         """List available embedding providers and their capabilities.
 
@@ -91,7 +92,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         try:
             # Get embedding manager from client manager
-            embedding_manager = await client_manager.get_embedding_manager()
+            embedding_manager = await get_embedding_manager(client_manager)
 
             # Get available providers
             providers = []

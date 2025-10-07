@@ -6,7 +6,7 @@ owner: product-education
 last_reviewed: 2025-03-13
 ---
 
-# User Documentation
+## User Documentation
 
 Start here to set up the AI Docs Vector DB system, run searches, and operate the browser
 automation features. The table below links to the core guides for everyday tasks.

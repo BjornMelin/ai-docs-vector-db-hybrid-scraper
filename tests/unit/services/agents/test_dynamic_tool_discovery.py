@@ -17,6 +17,13 @@ MODULE_PATH = (
     / "src/services/agents/dynamic_tool_discovery.py"
 )
 
+JSONSCHEMA_REF_WARNING_FILTER = (
+    r"ignore:jsonschema\\.exceptions\\.RefResolutionError is deprecated:"
+    r"DeprecationWarning"
+)
+
+pytestmark = pytest.mark.filterwarnings(JSONSCHEMA_REF_WARNING_FILTER)
+
 spec = importlib.util.spec_from_file_location(
     "dynamic_tool_discovery_under_test", MODULE_PATH
 )

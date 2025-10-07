@@ -286,6 +286,20 @@ class DragonflyCache(CacheInterface[Any]):
             logger.error("DragonflyDB clear error: %s", e)
             return 0
 
+    async def clear_pattern(self, pattern: str) -> int:
+        """Clear cache entries matching a Redis pattern."""
+
+        try:
+            client = await self.client
+            count = 0
+            async for key in client.scan_iter(match=pattern, count=100):
+                await client.delete(key)
+                count += 1
+            return count
+        except RedisError as e:
+            logger.error("DragonflyDB clear_pattern error for %s: %s", pattern, e)
+            return 0
+
     async def size(self) -> int:
         """Get approximate cache size."""
 

@@ -8,6 +8,7 @@ from fastmcp import Context
 
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.models.responses import CollectionInfo, CollectionOperationResponse
+from src.services.dependencies import get_cache_manager
 
 
 logger = logging.getLogger(__name__)
@@ -107,7 +108,7 @@ def register_tools(mcp, client_manager: ClientManager):  # pylint: disable=too-m
 
         try:
             vector_service = await client_manager.get_vector_store_service()
-            cache_manager = await client_manager.get_cache_manager()
+            cache_manager = await get_cache_manager(client_manager)
 
             delete_alias = getattr(vector_service, "delete_collection", None)
             drop_method = getattr(vector_service, "drop_collection", None)

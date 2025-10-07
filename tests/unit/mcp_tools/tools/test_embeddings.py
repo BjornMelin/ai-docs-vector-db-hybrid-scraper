@@ -1,5 +1,7 @@
 """Comprehensive test suite for MCP embeddings tools."""
 
+# pylint: disable=duplicate-code
+
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -13,7 +15,7 @@ class TestEmbeddingsTools:
     """Test suite for embeddings MCP tools."""
 
     @pytest.fixture
-    def mock_client_manager(self):
+    def mock_client_manager(self, monkeypatch):
         """Create a mock client manager with embedding service."""
         mock_manager = MagicMock()
 
@@ -53,7 +55,14 @@ class TestEmbeddingsTools:
             }
 
         mock_embedding.get_current_provider_info = mock_provider_info
-        mock_manager.get_embedding_manager = AsyncMock(return_value=mock_embedding)
+
+        embedding_dependency = AsyncMock(return_value=mock_embedding)
+        monkeypatch.setattr(
+            "src.services.dependencies.get_embedding_manager", embedding_dependency
+        )
+
+        mock_manager.embedding_dependency = embedding_dependency
+        mock_manager.embedding_mock = mock_embedding
 
         return mock_manager
 
@@ -172,9 +181,7 @@ class TestEmbeddingsTools:
         mock_embedding.generate_embeddings.side_effect = Exception(
             "Embedding service unavailable"
         )
-        mock_client_manager.get_embedding_manager = AsyncMock(
-            return_value=mock_embedding
-        )
+        mock_client_manager.embedding_dependency.return_value = mock_embedding
 
         mock_mcp = MagicMock()
         registered_tools = {}
@@ -223,7 +230,7 @@ class TestEmbeddingsTools:
 
         assert isinstance(result, EmbeddingGenerationResponse)
         assert result.embeddings == []  # Empty list for empty input
-        assert result._total_tokens == 0  # No tokens for empty input
+        assert result.total_tokens == 0  # No tokens for empty input
 
         # No specific warning required - just handle gracefully
 
@@ -319,7 +326,7 @@ class TestEmbeddingsTools:
         # Test embedding manager is retrieved
         request = EmbeddingRequest(texts=["test"])
         await generate_embeddings(request, mock_context)
-        mock_client_manager.get_embedding_manager.assert_called()
+        mock_client_manager.embedding_dependency.assert_called()
 
         # Test providers call
         await list_embedding_providers(ctx=mock_context)
@@ -379,5 +386,5 @@ class TestEmbeddingsTools:
         assert len(result.embeddings) == 1
 
         # Verify embedding manager was called with custom model details
-        embedding_manager = await mock_client_manager.get_embedding_manager()
+        embedding_manager = await mock_client_manager.embedding_dependency()
         embedding_manager.generate_embeddings.assert_called()

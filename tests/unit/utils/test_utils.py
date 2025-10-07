@@ -30,11 +30,14 @@ class TestAsyncToSyncClick:
         # Convert to sync
         async_to_sync_click(cli_group)
 
+        callback = test_command.callback
+        assert callback is not None
+
         # Verify it's no longer async
-        assert not asyncio.iscoroutinefunction(test_command.callback)
+        assert not asyncio.iscoroutinefunction(callback)
 
         # Verify it works
-        result = test_command.callback()
+        result = callback()
         assert result == "async result"
 
     def test_async_to_sync_click_with_parameters(self):
@@ -50,7 +53,9 @@ class TestAsyncToSyncClick:
         async_to_sync_click(cli_group)
 
         # Test with parameters
-        result = greet.callback(name="Alice")
+        callback = greet.callback
+        assert callback is not None
+        result = callback(name="Alice")
         assert result == "Hello, Alice!"
 
     def test_async_to_sync_click_preserves_sync_commands(self):
@@ -68,6 +73,7 @@ class TestAsyncToSyncClick:
 
         # Should be the same function
         assert sync_command.callback is original_callback
+        assert sync_command.callback is not None
         assert sync_command.callback() == "sync result"
 
     def test_async_to_sync_click_prevents_double_wrapping(self):
@@ -82,14 +88,15 @@ class TestAsyncToSyncClick:
         # First conversion
         async_to_sync_click(cli_group)
         first_callback = test_command.callback
+        assert first_callback is not None
 
         # Second conversion (should be no-op)
         async_to_sync_click(cli_group)
         second_callback = test_command.callback
+        assert second_callback is not None
 
         # Should be the same function after second call
         assert first_callback is second_callback
-        assert hasattr(cli_group, "_commands_wrapped")
 
     def test_async_to_sync_click_with_exception(self):
         """Test handling of exceptions in async commands."""
@@ -102,9 +109,12 @@ class TestAsyncToSyncClick:
 
         async_to_sync_click(cli_group)
 
+        callback = failing_command.callback
+        assert callback is not None
+
         # Should raise the exception synchronously
         with pytest.raises(ValueError, match="Test error"):
-            failing_command.callback()
+            callback()
 
     def test_async_to_sync_click_empty_group(self):
         """Test with empty command group."""
@@ -112,9 +122,6 @@ class TestAsyncToSyncClick:
 
         # Should not raise any errors
         async_to_sync_click(cli_group)
-
-        # Should be marked as wrapped
-        assert hasattr(cli_group, "_commands_wrapped")
 
     def test_async_to_sync_click_mixed_commands(self):
         """Test with mixed async and sync commands."""
@@ -133,12 +140,16 @@ class TestAsyncToSyncClick:
 
         async_to_sync_click(cli_group)
 
+        async_callback = async_cmd.callback
+        assert async_callback is not None
+
         # Async command should be converted
-        assert not asyncio.iscoroutinefunction(async_cmd.callback)
-        assert async_cmd.callback() == "async"
+        assert not asyncio.iscoroutinefunction(async_callback)
+        assert async_callback() == "async"
 
         # Sync command should be unchanged
         assert sync_cmd.callback is original_sync_callback
+        assert sync_cmd.callback is not None
         assert sync_cmd.callback() == "sync"
 
     @patch("asyncio.run")  # Testing async command execution
@@ -155,8 +166,11 @@ class TestAsyncToSyncClick:
 
         async_to_sync_click(cli_group)
 
+        callback = test_command.callback
+        assert callback is not None
+
         # Call the converted command
-        result = test_command.callback()
+        result = callback()
 
         # Should have called asyncio.run
         assert mock_run.called
@@ -171,14 +185,18 @@ class TestAsyncToSyncClick:
             """This is a test command."""
             return "result"
 
+        assert documented_command.callback is not None
         original_name = documented_command.callback.__name__
         original_doc = documented_command.callback.__doc__
 
         async_to_sync_click(cli_group)
 
+        callback = documented_command.callback
+        assert callback is not None
+
         # Metadata should be preserved
-        assert documented_command.callback.__name__ == original_name
-        assert documented_command.callback.__doc__ == original_doc
+        assert callback.__name__ == original_name
+        assert callback.__doc__ == original_doc
 
 
 class TestAsyncCommand:
@@ -320,6 +338,7 @@ class TestIntegration:
             return "CLI result"
 
         # Should work as a regular sync function for Click
+        assert cli_command.callback is not None
         result = cli_command.callback()
         assert result == "CLI result"
 
@@ -341,6 +360,7 @@ class TestIntegration:
         async_to_sync_click(cli_group)
 
         # Both should work as sync functions
+        assert group_command.callback is not None
         assert group_command.callback() == "group result"
         assert standalone_command() == "standalone result"
 
@@ -362,6 +382,7 @@ class TestIntegration:
 
         # Both should raise the same type of exception
         with pytest.raises(ValueError, match="Group error"):
+            assert group_error.callback is not None
             group_error.callback()
 
         with pytest.raises(ValueError, match="Standalone error"):

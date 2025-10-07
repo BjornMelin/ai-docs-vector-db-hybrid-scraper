@@ -372,7 +372,7 @@ When adding GPU features:
 
 For GPU-related issues:
 
-1. Check GPU compatibility in the [requirements](../requirements.txt)
+1. Review the GPU extras declared in `pyproject.toml` to confirm driver/toolkit compatibility
 2. Verify driver and CUDA versions
 3. Test with CPU fallback first
 4. Report issues with GPU specifications and error messages
