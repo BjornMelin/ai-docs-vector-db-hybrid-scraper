@@ -14,6 +14,31 @@ from src.services.cache.browser_cache import BrowserCache, BrowserCacheEntry
 from src.services.errors import CrawlServiceError
 
 
+JSONSCHEMA_REF_WARNING_FILTER = (
+    r"ignore:jsonschema\.exceptions\.RefResolutionError is deprecated:"
+    r"DeprecationWarning"
+)
+
+pytestmark = pytest.mark.filterwarnings(JSONSCHEMA_REF_WARNING_FILTER)
+
+
+@pytest.fixture(autouse=True)
+def patch_browser_monitor():
+    """Provide a patched BrowserAutomationMonitor for all tests."""
+
+    monitor = Mock()
+    monitor.start_monitoring = AsyncMock()
+    monitor.stop_monitoring = AsyncMock()
+    monitor.record_request_metrics = AsyncMock()
+    monitor.get_system_health = Mock(return_value={})
+
+    with patch(
+        "src.services.browser.unified_manager.BrowserAutomationMonitor",
+        return_value=monitor,
+    ):
+        yield monitor
+
+
 @pytest.fixture
 def mock_config():
     """Create mock configuration with caching enabled."""
@@ -31,8 +56,8 @@ def mock_config():
 def mock_browser_cache():
     """Create mock browser cache."""
     cache = Mock(spec=BrowserCache)
-    cache._generate_cache_key = Mock(
-        side_effect=lambda url, tier: f"browser:test:{url}:{tier or 'auto'}"
+    cache.generate_cache_key = Mock(
+        side_effect=lambda url, tier=None: f"browser:test:{url}:{tier or 'auto'}"
     )
     cache.get = AsyncMock(return_value=None)
     cache.set = AsyncMock(return_value=True)
@@ -53,7 +78,7 @@ async def unified_manager_with_cache(mock_config):
 class TestUnifiedManagerCaching:
     """Test UnifiedBrowserManager caching functionality."""
 
-    @patch("src.infrastructure.client_manager.ClientManager")
+    @patch("src.services.browser.unified_manager.ClientManager")
     @patch("src.services.cache.browser_cache.BrowserCache")
     @pytest.mark.asyncio
     async def test_initialization_with_cache(
@@ -115,7 +140,7 @@ class TestUnifiedManagerCaching:
         response = await unified_manager_with_cache.scrape(request)
 
         # Verify cache was checked
-        mock_browser_cache._generate_cache_key.assert_called_with(
+        mock_browser_cache.generate_cache_key.assert_called_with(
             "https://example.com", None
         )
         mock_browser_cache.get.assert_called_once()
@@ -259,7 +284,7 @@ class TestUnifiedManagerCaching:
         await unified_manager_with_cache.scrape(request)
 
         # Verify cache key includes tier
-        mock_browser_cache._generate_cache_key.assert_any_call(
+        mock_browser_cache.generate_cache_key.assert_any_call(
             "https://example.com", "lightweight"
         )
 

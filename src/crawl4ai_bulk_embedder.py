@@ -655,7 +655,7 @@ def main(  # pylint: disable=too-many-arguments,too-many-positional-arguments
     sitemap: str | None = None,
     collection: str = "bulk_embeddings",
     concurrent: int = 5,
-    _config_path: Path | None = None,
+    config_path: Path | None = None,
     state_file: Path | None = None,
     no_resume: bool = False,
     verbose: bool = False,
@@ -687,6 +687,8 @@ def main(  # pylint: disable=too-many-arguments,too-many-positional-arguments
 
     # Load configuration
     config = get_config()
+    if config_path is not None:
+        logger.debug("CLI config path provided: %s", config_path)
 
     # Validate inputs
     if not any([urls, file, sitemap]):
