@@ -159,7 +159,7 @@ class RealTimePerformanceMonitor:
             logger.warning("Low throughput detected: %.1f req/s", snapshot.request_rate)
 
         if snapshot.cache_hit_rate < 0.8:  # Cache hit rate below 80%
-            logger.warning("Low cache hit rate: %.1f%%", snapshot.cache_hit_rate * 100)
+            logger.warning(f"Low cache hit rate: {snapshot.cache_hit_rate:.1%}")
 
     async def _optimize_memory(self) -> None:
         """Trigger memory optimization when usage is high."""
