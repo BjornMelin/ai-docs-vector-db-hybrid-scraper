@@ -9,7 +9,7 @@ This project is a comprehensive AI-powered document processing and search system
 ### Primary Objectives
 1. **Portfolio Optimization**: Transform the codebase into a compelling portfolio piece showcasing modern AI architecture
 2. **Enterprise Readiness**: Ensure the system meets enterprise-grade requirements for security, performance, and scalability
-3. **Code Modernization**: Migrate to modern Python frameworks and patterns (Pydantic AI, FastMCP, etc.)
+3. **Code Modernization**: Migrate to modern Python frameworks and patterns (LangChain, FastMCP, etc.)
 4. **Agentic Capabilities**: Implement intelligent, self-healing, and autonomous system capabilities
 
 ### Success Metrics
@@ -22,7 +22,7 @@ This project is a comprehensive AI-powered document processing and search system
 
 ### Technical Stack
 - **Core Framework**: FastAPI with async/await patterns
-- **AI Integration**: Pydantic AI for intelligent orchestration
+- **AI Integration**: LangChain for intelligent orchestration
 - **MCP Protocol**: FastMCP for Model Context Protocol implementation
 - **Vector Database**: Qdrant with hybrid search capabilities
 - **Caching**: Multi-tier caching with Redis and local storage
@@ -38,7 +38,7 @@ This project is a comprehensive AI-powered document processing and search system
 ## Implementation Phases
 
 ### Phase 0: Foundation Research ✅
-- Pydantic AI integration analysis
+- LangChain integration analysis
 - Lightweight alternatives evaluation
 - Code reduction opportunities
 - Integration simplification strategies
@@ -83,7 +83,7 @@ This project is a comprehensive AI-powered document processing and search system
 ## Key Decisions and Trade-offs
 
 ### Technology Choices
-- **Pydantic AI vs Traditional Frameworks**: Chosen for native async support and type safety
+- **LangChain vs Traditional Frameworks**: Adopted for mature agent orchestration, prompt tooling, and async support that align with multi-provider workflows
 - **FastMCP vs Custom MCP**: Leverages proven patterns and reduces maintenance burden
 - **Qdrant vs Alternatives**: Superior performance for hybrid search use cases
 - **Multi-tier Caching**: Balances performance with complexity

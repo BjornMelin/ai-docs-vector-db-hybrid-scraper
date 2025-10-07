@@ -217,7 +217,7 @@ While **Full Migration** scores highest (0.7525), the high migration risk (0.30)
        depth: Literal["surface", "detailed", "comprehensive"] = "detailed",
        ctx: Context
    ) -> AgenticRAGResponse:
-       """Autonomous research with Pydantic-AI agents."""
+       """Autonomous research with LangChain agents."""
        await ctx.info(f"Starting autonomous research on: {topic}")
        # FastMCP handles all validation automatically
    ```
