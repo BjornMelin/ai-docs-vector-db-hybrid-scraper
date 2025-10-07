@@ -8,6 +8,15 @@ import pytest_asyncio
 from src.mcp_tools.tools import retrieval
 
 
+class _Ctx:
+    """Async logging stub."""
+
+    async def info(self, *_args, **_kwargs):  # noqa: D401
+        """Discard log calls."""
+
+        return None
+
+
 @pytest_asyncio.fixture()
 async def registered(fake_mcp, fake_client_manager):
     """Register tools and yield registry."""
@@ -34,7 +43,7 @@ async def test_search_documents_basic(registered):
                 "strategy": type("S", (), {"value": "hybrid"})(),
             },
         )(),
-        ctx=type("C", (), {"info": lambda *_: None})(),
+        ctx=_Ctx(),
     )
     assert len(res) == 3
     assert res[0].id == "1"
@@ -58,7 +67,7 @@ async def test_filtered_search_forwards_filters(registered):
                 "include_metadata": True,
             },
         )(),
-        ctx=type("C", (), {"info": lambda *_: None})(),
+        ctx=_Ctx(),
     )
     assert res and res[0].metadata and res[0].metadata["q"] == "q"
 
@@ -79,9 +88,25 @@ async def test_multi_stage_merges_and_dedupes(registered):
             "include_metadata": False,
         },
     )()
-    res = await fn(request=req, ctx=type("C", (), {"info": lambda *_: None})())
+    res = await fn(request=req, ctx=_Ctx())
     ids = [r.id for r in res]
     assert len(ids) == len(set(ids))
+
+
+@pytest.mark.asyncio
+async def test_search_with_context_expands_limit(registered):
+    """Context search increases retrieved candidates."""
+
+    fn = registered["search_with_context"]
+    res = await fn(
+        query="context",
+        collection="documentation",
+        limit=3,
+        context_size=2,
+        include_metadata=False,
+        ctx=_Ctx(),
+    )
+    assert len(res) == 5  # 3 base + 2 context hits
 
 
 @pytest.mark.asyncio
@@ -117,7 +142,7 @@ async def test_reranked_search_returns_limit(registered):
             "strategy": type("S", (), {"value": "hybrid"})(),
         },
     )()
-    res = await fn(request=req, ctx=type("C", (), {"info": lambda *_: None})())
+    res = await fn(request=req, ctx=_Ctx())
     assert len(res) == 7
 
 

@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.models.responses import SearchResult
 from src.services.vector_db.service import VectorStoreService
 from src.services.vector_db.types import VectorMatch
+
+
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    from src.infrastructure.client_manager import ClientManager
+else:  # pragma: no cover - runtime alias for tooling
+    ClientManager = Any
 
 
 async def ensure_vector_service(client_manager: ClientManager) -> VectorStoreService:
