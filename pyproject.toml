@@ -91,6 +91,9 @@ dependencies = [
     "langgraph>=0.6.0,<0.7.0",
     "asgi-correlation-id>=4.3.4,<5.0.0",
     "purgatory>=3.0.1,<4.0.0",
+    "aiolimiter>=1.2.1",
+    "trafilatura>=2.0.0",
+    "selectolax>=0.4.0",
 ]
 
 
@@ -162,6 +165,7 @@ browser = [
 llm = [
     "langchain-anthropic>=0.3.20,<1.0.0",
     "langchain-google-genai>=2.1.12,<3.0.0",
+    "sentence-transformers>=5.1.1",
 ]
 
 # Observability and monitoring

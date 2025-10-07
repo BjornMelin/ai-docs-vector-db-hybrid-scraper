@@ -45,15 +45,22 @@ def test_apply_defaults_installs_expected_stack(
     assert called is True
     names = _middleware_class_names(app)
     # Starlette stores middleware in reverse order of addition.
-    assert names == [
+    expected = [
         "PerformanceMiddleware",
         "SlowAPIMiddleware",
         "TimeoutMiddleware",
         "SecurityMiddleware",
-        manager.BrotliCompressionMiddleware.__name__,
-        manager.CompressionMiddleware.__name__,
-        "CorrelationIdMiddleware",
     ]
+
+    compression_cls_name = manager.CompressionMiddleware.__name__
+    if "brotli" in manager._CLASS_REGISTRY:  # type: ignore[attr-defined]
+        compression_cls_name = manager.BrotliCompressionMiddleware.__name__
+    expected.append(compression_cls_name)
+
+    if "correlation" in manager._CLASS_REGISTRY:  # type: ignore[attr-defined]
+        expected.append("CorrelationIdMiddleware")
+
+    assert names == expected
 
 
 def test_apply_defaults_sets_limiter_state(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -16,11 +16,15 @@ This keeps the public surface tiny and library-focused.
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from typing import Any
 
-from asgi_correlation_id import CorrelationIdMiddleware  # type: ignore
+
+try:  # Optional dependency
+    from asgi_correlation_id import CorrelationIdMiddleware  # type: ignore
+except ImportError:  # pragma: no cover - optional middleware
+    CorrelationIdMiddleware = None  # type: ignore[assignment]
 from starlette.applications import Starlette
 
 from .compression import BrotliCompressionMiddleware, CompressionMiddleware
@@ -38,32 +42,55 @@ class MiddlewareSpec:
     kwargs: dict[str, Any] = field(default_factory=dict)
 
 
-_CLASS_REGISTRY: dict[str, MiddlewareSpec] = {
-    "correlation": MiddlewareSpec(
-        CorrelationIdMiddleware, {"header_name": "X-Request-ID"}
-    ),
-    "compression": MiddlewareSpec(CompressionMiddleware, {"minimum_size": 500}),
-    "brotli": MiddlewareSpec(BrotliCompressionMiddleware, {"quality": 4}),
-    "security": MiddlewareSpec(SecurityMiddleware),
-    "timeout": MiddlewareSpec(TimeoutMiddleware, {"config": TimeoutConfig()}),
-    "performance": MiddlewareSpec(PerformanceMiddleware),
-}
+_CLASS_REGISTRY: dict[str, MiddlewareSpec] = {}
 
-_FUNCTION_REGISTRY: dict[str, Any] = {
+if CorrelationIdMiddleware is not None:
+    _CLASS_REGISTRY["correlation"] = MiddlewareSpec(
+        CorrelationIdMiddleware, {"header_name": "X-Request-ID"}
+    )
+
+_CLASS_REGISTRY["compression"] = MiddlewareSpec(
+    CompressionMiddleware, {"minimum_size": 500}
+)
+
+if BrotliCompressionMiddleware is not CompressionMiddleware:
+    _CLASS_REGISTRY["brotli"] = MiddlewareSpec(
+        BrotliCompressionMiddleware, {"quality": 4}
+    )
+
+_CLASS_REGISTRY["security"] = MiddlewareSpec(SecurityMiddleware)
+_CLASS_REGISTRY["timeout"] = MiddlewareSpec(
+    TimeoutMiddleware, {"config": TimeoutConfig()}
+)
+_CLASS_REGISTRY["performance"] = MiddlewareSpec(PerformanceMiddleware)
+
+_FUNCTION_REGISTRY: dict[str, Callable[..., Any]] = {
     "rate_limiting": enable_global_rate_limit,
     "prometheus": setup_prometheus,
 }
 
-_DEFAULT_SEQUENCE: tuple[str, ...] = (
-    "correlation",
-    "compression",
-    "brotli",
-    "security",
-    "timeout",
-    "rate_limiting",
-    "performance",
-    "prometheus",
-)
+def _default_stack_names() -> tuple[str, ...]:
+    """Return the canonical middleware ordering for the defaults alias."""
+
+    names: list[str] = []
+    if "correlation" in _CLASS_REGISTRY:
+        names.append("correlation")
+
+    compression_key = "brotli" if "brotli" in _CLASS_REGISTRY else "compression"
+    names.append(compression_key)
+
+    names.extend(
+        name
+        for name in (
+            "security",
+            "timeout",
+            "rate_limiting",
+            "performance",
+            "prometheus",
+        )
+        if name in _CLASS_REGISTRY or name in _FUNCTION_REGISTRY
+    )
+    return tuple(names)
 
 
 def apply_named_stack(app: Starlette, middleware_names: Iterable[str]) -> list[str]:
@@ -81,7 +108,7 @@ def apply_named_stack(app: Starlette, middleware_names: Iterable[str]) -> list[s
     applied: list[str] = []
     for name in middleware_names:
         if name == "defaults":
-            applied.extend(apply_named_stack(app, _DEFAULT_SEQUENCE))
+            applied.extend(apply_named_stack(app, _default_stack_names()))
             continue
 
         spec = _CLASS_REGISTRY.get(name)
@@ -100,7 +127,7 @@ def apply_named_stack(app: Starlette, middleware_names: Iterable[str]) -> list[s
 def apply_defaults(app: Starlette) -> None:
     """Apply a sensible production stack with minimal knobs."""
 
-    apply_named_stack(app, _DEFAULT_SEQUENCE)
+    apply_named_stack(app, _default_stack_names())
 
 
 __all__ = [
@@ -112,5 +139,7 @@ __all__ = [
     "TimeoutMiddleware",
     "SecurityMiddleware",
     "CompressionMiddleware",
-    "BrotliCompressionMiddleware",
 ]
+
+if "brotli" in _CLASS_REGISTRY:
+    __all__.append("BrotliCompressionMiddleware")
