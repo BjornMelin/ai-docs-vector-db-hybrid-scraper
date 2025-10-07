@@ -47,7 +47,7 @@ class TestSearchRequest:
             enable_reranking=False,
             include_metadata=False,
             filters={"category": "api"},
-            fusion_algorithm=FusionAlgorithm.DBSF,
+            fusion_algorithm=FusionAlgorithm.NORMALIZED,
             search_accuracy=SearchAccuracy.ACCURATE,
             embedding_model="text-embedding-3-large",
             score_threshold=0.8,
@@ -80,7 +80,7 @@ class TestSearchRequest:
     def test_missing_required_field(self):
         """Test that query is required."""
         with pytest.raises(ValidationError) as exc_info:
-            SearchRequest()
+            SearchRequest.model_validate({})
         errors = exc_info.value.errors()
         assert len(errors) == 1
         assert errors[0]["loc"] == ("query",)
@@ -163,13 +163,13 @@ class TestDocumentRequest:
         request = DocumentRequest(
             url="https://docs.example.com/api",
             collection="api_docs",
-            chunk_strategy=ChunkingStrategy.AST,
+            chunk_strategy=ChunkingStrategy.AST_AWARE,
             chunk_size=2000,
             chunk_overlap=300,
             extract_metadata=False,
         )
         assert request.collection == "api_docs"
-        assert request.chunk_strategy == ChunkingStrategy.AST
+        assert request.chunk_strategy == ChunkingStrategy.AST_AWARE
         assert request.chunk_size == 2000
         assert request.extract_metadata is False
 
@@ -257,6 +257,7 @@ class TestProjectRequest:
         )
         assert request.description == "Project for API docs"
         assert request.quality_tier == "premium"
+        assert request.urls is not None
         assert len(request.urls) == 1
 
     def test_quality_tier_validation(self):
@@ -330,22 +331,24 @@ class TestHyDESearchRequest:
 
     def test_all_fields(self):
         """Test HyDE search request with all fields."""
-        request = HyDESearchRequest(
-            query="complex query",
-            collection="research",
-            limit=20,
-            domain="machine learning",
-            num_generations=3,
-            generation_temperature=0.5,
-            max_generation_tokens=300,
-            enable_reranking=False,
-            enable_caching=False,
-            fusion_algorithm=FusionAlgorithm.DBSF,
-            search_accuracy=SearchAccuracy.ACCURATE,
-            filters={"type": "paper"},
-            include_metadata=False,
-            force_hyde=True,
-            fallback_on_error=False,
+        request = HyDESearchRequest.model_validate(
+            {
+                "query": "complex query",
+                "collection": "research",
+                "limit": 20,
+                "domain": "machine learning",
+                "num_generations": 3,
+                "generation_temperature": 0.5,
+                "max_generation_tokens": 300,
+                "enable_reranking": False,
+                "enable_caching": False,
+                "fusion_algorithm": FusionAlgorithm.NORMALIZED,
+                "search_accuracy": SearchAccuracy.ACCURATE,
+                "filters": {"type": "paper"},
+                "include_metadata": False,
+                "force_hyde": True,
+                "fallback_on_error": False,
+            }
         )
         assert request.domain == "machine learning"
         assert request.num_generations == 3
@@ -404,7 +407,7 @@ class TestMultiStageSearchRequest:
             collection="special_docs",
             limit=30,
             stages=stages,
-            fusion_algorithm=FusionAlgorithm.DBSF,
+            fusion_algorithm=FusionAlgorithm.NORMALIZED,
             search_accuracy=SearchAccuracy.ACCURATE,
             enable_reranking=False,
             include_metadata=False,
@@ -436,7 +439,6 @@ class TestFilteredSearchRequest:
             limit=25,
             filters={"category": "api", "language": "python", "version": "3.0"},
             search_accuracy=SearchAccuracy.FAST,
-            enable_reranking=False,
             include_metadata=False,
             score_threshold=0.7,
         )
@@ -447,7 +449,7 @@ class TestFilteredSearchRequest:
     def test_missing_required_filters(self):
         """Test that filters are required."""
         with pytest.raises(ValidationError) as exc_info:
-            FilteredSearchRequest(query="test")
+            FilteredSearchRequest.model_validate({"query": "test"})
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("filters",) for error in errors)
 
@@ -477,13 +479,14 @@ class TestSearchStageRequest:
             vector_name="embedding",
             vector_type=VectorType.SPARSE,
             limit=10,
+            filters=None,
         )
         assert request.filters is None
 
     def test_missing_required_fields(self):
         """Test that all required fields must be present."""
         with pytest.raises(ValidationError) as exc_info:
-            SearchStageRequest()
+            SearchStageRequest.model_validate({})
         errors = exc_info.value.errors()
         # Should have errors for all required fields
         required_fields = {"query_vector", "vector_name", "vector_type", "limit"}

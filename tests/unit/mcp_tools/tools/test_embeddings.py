@@ -43,16 +43,41 @@ class TestEmbeddingsTools:
         )
 
         # Create a smart mock that returns different results based on inputs
+        class _EmbeddingResult(dict):
+            """Dictionary-like container mirroring embedding service response."""
+
+            def __init__(
+                self,
+                embeddings: list[list[float]],
+                *,
+                sparse: list[list[float]] | None,
+                metadata: dict[str, float | str | None],
+            ) -> None:
+                payload = {
+                    "embeddings": embeddings,
+                    "sparse_embeddings": sparse,
+                    **metadata,
+                }
+                super().__init__(payload)
+
+            # Exclude token counters from items so downstream **kwargs stay unique
+            def items(self):  # pylint: disable=invalid-name
+                data = dict(self)
+                data.pop("tokens", None)
+                return data.items()
+
         async def mock_generate_embeddings(
-            texts, model=None, batch_size=32, generate_sparse=False
+            texts,
+            model=None,
+            batch_size=32,
+            generate_sparse=False,
+            **kwargs,
         ):
-            mock_result = MagicMock()
-            # Generate embeddings based on number of input texts
-            mock_result.embeddings = [
+            embeddings = [
                 [0.1 + i * 0.1, 0.2 + i * 0.1, 0.3 + i * 0.1, 0.4 + i * 0.1]
                 for i in range(len(texts))
             ]
-            mock_result.sparse_embeddings = (
+            sparse = (
                 [
                     [0.8 - i * 0.1, 0.0, 0.6 - i * 0.1, 0.0, 0.4 - i * 0.1]
                     for i in range(len(texts))
@@ -60,10 +85,15 @@ class TestEmbeddingsTools:
                 if generate_sparse
                 else None
             )
-            mock_result.model = model or "BAAI/bge-small-en-v1.5"
-            mock_result._total_tokens = len(texts) * 10  # 10 tokens per text
-            mock_result.total_tokens = None
-            return mock_result
+            return _EmbeddingResult(
+                embeddings,
+                sparse=sparse,
+                metadata={
+                    "model": model or "BAAI/bge-small-en-v1.5",
+                    "provider": "fastembed",
+                    "tokens": len(texts) * 10,
+                },
+            )
 
         mock_embedding.generate_embeddings.side_effect = mock_generate_embeddings
 
@@ -422,7 +452,6 @@ class TestEmbeddingsTools:
         # Verify embedding manager was called with custom model details
         mock_client_manager.embedding_mock.generate_embeddings.assert_called_with(
             texts=["test text"],
-            model="sentence-transformers/all-MiniLM-L6-v2",
-            batch_size=32,
+            provider_name="sentence-transformers/all-MiniLM-L6-v2",
             generate_sparse=False,
         )

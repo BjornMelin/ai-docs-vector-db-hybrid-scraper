@@ -43,26 +43,28 @@ class TestSearchResult:
         assert result.id == "doc_456"
         assert result.url == "https://example.com/tutorials/python"
         assert result.title == "Advanced Python Tutorial"
-        assert result.metadata == metadata
-        assert result.metadata["tags"] == ["python", "tutorial"]
+        metadata_result = result.metadata
+        assert metadata_result is not None
+        assert metadata_result == metadata
+        assert metadata_result["tags"] == ["python", "tutorial"]
 
     def test_missing_required_fields(self):
         """Test that required fields must be present."""
         # Missing id
         with pytest.raises(ValidationError) as exc_info:
-            SearchResult(content="test", score=0.5)
+            SearchResult.model_validate({"content": "test", "score": 0.5})
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("id",) for error in errors)
 
         # Missing content
         with pytest.raises(ValidationError) as exc_info:
-            SearchResult(id="123", score=0.5)
+            SearchResult.model_validate({"id": "123", "score": 0.5})
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("content",) for error in errors)
 
         # Missing score
         with pytest.raises(ValidationError) as exc_info:
-            SearchResult(id="123", content="test")
+            SearchResult.model_validate({"id": "123", "content": "test"})
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("score",) for error in errors)
 
@@ -72,8 +74,11 @@ class TestSearchResult:
         SearchResult(id="1", content="test", score=0.0)
         SearchResult(id="2", content="test", score=1.0)
         SearchResult(id="3", content="test", score=0.5)
-        SearchResult(id="4", content="test", score=-0.1)  # Negative scores allowed
         SearchResult(id="5", content="test", score=1.5)  # Scores > 1 allowed
+
+        # Negative scores should raise validation errors
+        with pytest.raises(ValidationError):
+            SearchResult(id="4", content="test", score=-0.1)
 
     def test_empty_content(self):
         """Test that empty content is allowed."""
@@ -89,7 +94,9 @@ class TestSearchResult:
             score=0.5,
             metadata={"key": "value"},
         )
-        assert result1.metadata["key"] == "value"
+        metadata_result1 = result1.metadata
+        assert metadata_result1 is not None
+        assert metadata_result1["key"] == "value"
 
         # Complex nested metadata
         complex_metadata = {
@@ -108,10 +115,12 @@ class TestSearchResult:
             score=0.5,
             metadata=complex_metadata,
         )
-        assert result2.metadata["nested"]["level"] == 2
-        assert result2.metadata["array"] == ["a", "b", "c"]
-        assert result2.metadata["boolean"] is True
-        assert result2.metadata["null"] is None
+        metadata_result2 = result2.metadata
+        assert metadata_result2 is not None
+        assert metadata_result2["nested"]["level"] == 2
+        assert metadata_result2["array"] == ["a", "b", "c"]
+        assert metadata_result2["boolean"] is True
+        assert metadata_result2["null"] is None
 
 
 class TestCrawlResult:
@@ -161,7 +170,9 @@ class TestCrawlResult:
         assert result.site_name == "Example Docs"
         assert result.depth == 2
         assert len(result.links) == 2
-        assert result.metadata["language"] == "en"
+        metadata_result = result.metadata
+        assert metadata_result is not None
+        assert metadata_result["language"] == "en"
         assert result.error is None
 
     def test_failed_crawl(self):
@@ -225,14 +236,17 @@ class TestCrawlResult:
             url="https://example.com",
             metadata=metadata,
         )
-        assert result.metadata["headers"]["content-type"] == "text/html"
-        assert result.metadata["extraction"]["duration_ms"] == 250
-        assert len(result.metadata["extraction"]["selectors_used"]) == 2
+        metadata_result = result.metadata
+        assert metadata_result is not None
+        assert metadata_result["headers"]["content-type"] == "text/html"
+        assert metadata_result["extraction"]["duration_ms"] == 250
+        selectors_used = metadata_result["extraction"]["selectors_used"]
+        assert len(selectors_used) == 2
 
     def test_missing_required_field(self):
         """Test that URL is required."""
         with pytest.raises(ValidationError) as exc_info:
-            CrawlResult()
+            CrawlResult.model_validate({})
         errors = exc_info.value.errors()
         assert len(errors) == 1
         assert errors[0]["loc"] == ("url",)
