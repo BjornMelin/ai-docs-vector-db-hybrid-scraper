@@ -53,6 +53,9 @@ SIMPLE_MODE_CONFIG = ModeConfig(
     enabled_services=[
         "embedding_service",
         "vector_db_service",
+        "basic_search",
+        "qdrant_client",
+        "simple_caching",
     ],
     max_complexity_features={
         "max_concurrent_crawls": 5,
@@ -81,7 +84,7 @@ SIMPLE_MODE_CONFIG = ModeConfig(
         "max_memory_usage_mb": 500,
         "max_vector_dimensions": 1536,
     },
-    middleware_stack=["security", "timeout", "performance"],
+    middleware_stack=["security", "timeout"],
     enable_advanced_monitoring=False,
     enable_deployment_features=False,
     enable_a_b_testing=False,
@@ -93,6 +96,11 @@ ENTERPRISE_MODE_CONFIG = ModeConfig(
     enabled_services=[
         "embedding_service",
         "vector_db_service",
+        "qdrant_client",
+        "advanced_search",
+        "multi_tier_caching",
+        "deployment_services",
+        "advanced_analytics",
     ],
     max_complexity_features={
         "max_concurrent_crawls": 50,
@@ -121,7 +129,7 @@ ENTERPRISE_MODE_CONFIG = ModeConfig(
         "max_memory_usage_mb": 4000,
         "max_vector_dimensions": 3072,
     },
-    middleware_stack=["security", "timeout", "performance"],
+    middleware_stack=["security", "timeout", "performance", "observability"],
     enable_advanced_monitoring=True,
     enable_deployment_features=True,
     enable_a_b_testing=True,

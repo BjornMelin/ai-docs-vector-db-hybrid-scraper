@@ -39,6 +39,8 @@ from tenacity import (
     wait_exponential,
 )
 
+from src.services.circuit_breaker.provider import get_circuit_breaker_manager
+
 
 logger = logging.getLogger(__name__)
 
@@ -340,14 +342,22 @@ def circuit_breaker(  # pylint: disable=too-many-arguments
     service_name: str | None = None,
     failure_threshold: int = 5,
     recovery_timeout: float = 60.0,
-    _half_open_max_calls: int = 3,  # Retained for backward compatibility
-    _expected_exceptions: tuple[type[Exception], ...] | None = None,
+    half_open_max_calls: int = 3,  # Retained for backward compatibility
+    expected_exceptions: tuple[type[Exception], ...] | None = None,
     *,
-    _expected_exception: type[Exception] | None = None,
-    _enable_adaptive_timeout: bool = True,
-    _enable_metrics: bool = True,
+    expected_exception: type[Exception] | None = None,
+    enable_adaptive_timeout: bool = True,
+    enable_metrics: bool = True,
 ) -> Callable[[F], F]:
     """Wrap an async function with the shared purgatory circuit breaker."""
+
+    _ = (
+        half_open_max_calls,
+        expected_exceptions,
+        expected_exception,
+        enable_adaptive_timeout,
+        enable_metrics,
+    )
 
     breaker_kwargs = _build_breaker_kwargs(failure_threshold, recovery_timeout)
 
@@ -563,9 +573,9 @@ def create_validation_error(
         message,
         {"field": field, **context},
     )
+
+
 async def _get_circuit_breaker_manager():
     """Resolve the circuit breaker manager lazily to avoid import cycles."""
-
-    from src.services.circuit_breaker.provider import get_circuit_breaker_manager
 
     return await get_circuit_breaker_manager()

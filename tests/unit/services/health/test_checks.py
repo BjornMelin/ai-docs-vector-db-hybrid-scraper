@@ -11,15 +11,15 @@ from src.services.health import HealthCheckResult, checks
 
 
 @pytest.fixture()
-def config() -> Config:
+def config(config_factory) -> Config:
     """Return a configuration object with defaults."""
 
-    cfg = Config()
-    cfg.embedding_provider = EmbeddingProvider.OPENAI
-    cfg.crawl_provider = CrawlProvider.FIRECRAWL
-    cfg.openai.api_key = "sk-test"
-    cfg.firecrawl.api_key = "fc-test"
-    return cfg
+    return config_factory(
+        embedding_provider=EmbeddingProvider.OPENAI,
+        crawl_provider=CrawlProvider.FIRECRAWL,
+        openai={"api_key": "sk-test"},
+        firecrawl={"api_key": "fc-test"},
+    )
 
 
 @pytest.mark.asyncio()

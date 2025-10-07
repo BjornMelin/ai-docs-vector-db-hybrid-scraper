@@ -5,12 +5,14 @@ from __future__ import annotations
 import os
 import sys
 import time
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from pathlib import Path
 from typing import Any, TypedDict
 
 import pytest
 from dotenv import load_dotenv
+
+from src.config import Config, Environment
 
 
 _TEST_ENV_PATH = Path(__file__).resolve().parents[1] / ".env.test"
@@ -154,8 +156,29 @@ def performance_monitor() -> Generator[_PerformanceMonitor, None, None]:
     yield monitor
 
 
+@pytest.fixture
+def config_factory(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> Callable[..., Config]:
+    """Build typed Config instances with deterministic directories."""
+
+    def _create_config(**overrides: Any) -> Config:
+        base_dir = tmp_path_factory.mktemp("config_factory")
+        payload: dict[str, Any] = {
+            "environment": Environment.TESTING,
+            "data_dir": base_dir / "data",
+            "cache_dir": base_dir / "cache",
+            "logs_dir": base_dir / "logs",
+        }
+        payload.update(overrides)
+        return Config.model_validate(payload)
+
+    return _create_config
+
+
 __all__ = [
     "app_config",
     "ci_environment_config",
     "performance_monitor",
+    "config_factory",
 ]
