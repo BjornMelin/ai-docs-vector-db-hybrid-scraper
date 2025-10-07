@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 import pytest
@@ -92,6 +93,16 @@ class _TimeoutCacheManager:
         """Raise asyncio timeout to exercise timeout handling."""
 
         raise TimeoutError("cache stats timed out")
+
+
+class _SlowAsyncCacheManager:
+    """Simulate an async cache stats call that exceeds the timeout budget."""
+
+    async def get_stats(self) -> dict[str, object]:
+        """Sleep long enough to trigger asyncio timeout."""
+
+        await asyncio.sleep(0.2)
+        return {"hit_rate": 0.5}
 
 
 class _StubClientManager:
@@ -229,6 +240,33 @@ async def test_service_health_checker_degrades_on_cache_timeout(
 
 
 @pytest.mark.asyncio
+async def test_service_health_checker_degrades_on_asyncio_timeout(
+    monkeypatch: Any,
+) -> None:
+    """Ensure async cache stats exceeding the budget degrade health."""
+
+    await _patch_client_manager(
+        monkeypatch,
+        vector_service=_StubVectorService(),
+        cache_manager=_SlowAsyncCacheManager(),
+        embedding_manager=_StubEmbeddingManager(),
+    )
+
+    checker = ServiceHealthChecker()
+    monkeypatch.setattr(
+        ServiceHealthChecker,
+        "HEALTH_TIMEOUT_SECONDS",
+        0.05,
+        raising=False,
+    )
+    result = await checker.check_health()
+
+    assert result["status"] == "degraded"
+    assert result["services"]["cache"]["status"] == "unhealthy"
+    assert result["services"]["cache"]["error_type"] == "TimeoutError"
+
+
+@pytest.mark.asyncio
 async def test_generate_embeddings_dependency_success() -> None:
     """Ensure the embedding dependency returns a serialisable response."""
 
@@ -302,3 +340,45 @@ async def test_get_cache_manager_maps_failure_to_503(monkeypatch: Any) -> None:
 
     assert err.value.status_code == 503
     assert "Cache manager not available" in err.value.detail
+
+
+@pytest.mark.asyncio
+async def test_get_client_manager_maps_failure_to_503(monkeypatch: Any) -> None:
+    """Ensure client manager failures convert to HTTP 503."""
+
+    async def _ensure_failure(*_args: Any, **_kwargs: Any) -> None:
+        raise RuntimeError("registry failure")
+
+    monkeypatch.setattr(
+        fastapi_dependencies,
+        "ensure_service_registry",
+        _ensure_failure,
+        raising=True,
+    )
+
+    with pytest.raises(HTTPException) as err:
+        await fastapi_dependencies.get_client_manager()
+
+    assert err.value.status_code == 503
+    assert "Client manager not available" in err.value.detail
+
+
+@pytest.mark.asyncio
+async def test_get_vector_service_maps_failure_to_503(monkeypatch: Any) -> None:
+    """Ensure vector service dependencies map failures to HTTP 503."""
+
+    async def _client_manager_failure() -> Any:
+        raise RuntimeError("client manager failure")
+
+    monkeypatch.setattr(
+        fastapi_dependencies,
+        "get_client_manager",
+        _client_manager_failure,
+        raising=True,
+    )
+
+    with pytest.raises(HTTPException) as err:
+        await fastapi_dependencies.get_vector_service()
+
+    assert err.value.status_code == 503
+    assert "Vector service not available" in err.value.detail

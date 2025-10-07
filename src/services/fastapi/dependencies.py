@@ -30,12 +30,12 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
+MIN_HEALTH_PROBE_TIMEOUT = 0.05
 
 
-async def initialize_dependencies(config: Config | None = None) -> None:
+async def initialize_dependencies() -> None:
     """Prime long-lived services used by the FastAPI application."""
 
-    del config  # Backwards compatibility for callers passing Config.
     await ensure_service_registry()
 
 
@@ -150,7 +150,7 @@ class ServiceHealthChecker:
         awaitable: Awaitable[T],
         remaining: float,
         *,
-        minimum_timeout: float = 0.01,
+        minimum_timeout: float = MIN_HEALTH_PROBE_TIMEOUT,
     ) -> tuple[T, float]:
         """Await a coroutine within the remaining timeout budget."""
 
@@ -235,12 +235,10 @@ class ServiceHealthChecker:
                 client_manager.get_embedding_manager(),
                 remaining,
             )
-            provider_start = perf_counter()
-            await asyncio.wait_for(
+            _, remaining = await self._await_with_budget(
                 asyncio.to_thread(manager.get_provider_info),
-                timeout=max(remaining, 0.01),
+                remaining,
             )
-            remaining = max(0.0, remaining - (perf_counter() - provider_start))
             duration_ms = (perf_counter() - start_time) * 1000
             self._mark_healthy(health, service_key, duration_ms)
             logger.debug(
@@ -275,31 +273,27 @@ class ServiceHealthChecker:
             stats_callable = getattr(cache_manager, "get_stats", None) or getattr(
                 cache_manager, "get_performance_stats", None
             )
-            if stats_callable is None:
-                msg = "Cache manager missing stats method"
+            if stats_callable is None or not callable(stats_callable):
+                msg = "Cache manager missing callable stats method"
                 raise RuntimeError(msg)
             if asyncio.iscoroutinefunction(stats_callable):
-                stats_start = perf_counter()
-                await asyncio.wait_for(
+                _, remaining = await self._await_with_budget(
                     stats_callable(),
-                    timeout=max(remaining, 0.01),
+                    remaining,
                 )
-                remaining = max(0.0, remaining - (perf_counter() - stats_start))
             else:
-                thread_start = perf_counter()
-                result = await asyncio.wait_for(
+                result, remaining = await self._await_with_budget(
                     asyncio.to_thread(stats_callable),
-                    timeout=max(remaining, 0.01),
+                    remaining,
                 )
-                elapsed = perf_counter() - thread_start
-                remaining = max(0.0, remaining - elapsed)
                 if inspect.isawaitable(result):
                     if remaining <= 0.0:
                         msg = "Cache stats awaitable exceeded timeout budget"
                         raise TimeoutError(msg)
-                    awaited_start = perf_counter()
-                    await asyncio.wait_for(result, timeout=max(remaining, 0.01))
-                    remaining = max(0.0, remaining - (perf_counter() - awaited_start))
+                    _, remaining = await self._await_with_budget(
+                        result,
+                        remaining,
+                    )
             duration_ms = (perf_counter() - start_time) * 1000
             stats_name = getattr(
                 stats_callable, "__name__", stats_callable.__class__.__name__
