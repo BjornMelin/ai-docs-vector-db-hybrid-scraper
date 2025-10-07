@@ -259,6 +259,9 @@ server = [
     { name = "purgatory", extra = ["redis"] },
     { name = "uvloop", marker = "sys_platform != 'win32'" },
 ]
+web = [
+    { name = "tavily-python" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -369,6 +372,7 @@ requires-dist = [
     { name = "sqlalchemy", specifier = ">=2.0.43,<3.0.0" },
     { name = "starlette", specifier = ">=0.48.0,<0.49.0" },
     { name = "taskipy", marker = "extra == 'dev'", specifier = ">=1.14.1,<2.0.0" },
+    { name = "tavily-python", marker = "extra == 'web'", specifier = ">=0.7.12" },
     { name = "tenacity", specifier = ">=9.1.2,<10.0.0" },
     { name = "testcontainers", marker = "extra == 'dev'", specifier = ">=4.8.1,<5.0.0" },
     { name = "tf-playwright-stealth", marker = "extra == 'browser'", specifier = ">=1.2.0,<2.0.0" },
@@ -391,7 +395,7 @@ requires-dist = [
     { name = "watchdog", specifier = ">=6.0.0,<7.0.0" },
     { name = "xformers", marker = "extra == 'gpu'", specifier = ">=0.0.28,<1.0.0" },
 ]
-provides-extras = ["eval", "dev", "docs", "contract", "accessibility", "browser", "llm", "observability", "parsing", "dataframe", "gpu", "server", "all"]
+provides-extras = ["eval", "dev", "docs", "contract", "accessibility", "browser", "llm", "observability", "parsing", "dataframe", "gpu", "server", "all", "web"]
 
 [[package]]
 name = "aiocache"
@@ -6399,6 +6403,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/c7/44/572261df3db9c6c3332f8618fafeb07a578fd18b06673c73f000f3586749/taskipy-1.14.1.tar.gz", hash = "sha256:410fbcf89692dfd4b9f39c2b49e1750b0a7b81affd0e2d7ea8c35f9d6a4774ed", size = 14475, upload-time = "2024-11-26T16:37:46.155Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/55/97/4e4cfb1391c81e926bebe3d68d5231b5dbc3bb41c6ba48349e68a881462d/taskipy-1.14.1-py3-none-any.whl", hash = "sha256:6e361520f29a0fd2159848e953599f9c75b1d0b047461e4965069caeb94908f1", size = 13052, upload-time = "2024-11-26T16:37:44.546Z" },
+]
+
+[[package]]
+name = "tavily-python"
+version = "0.7.12"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "requests" },
+    { name = "tiktoken" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/3e/42/ce2329635b844dda548110a5dfa0ab5631cdc1085e15c2d68b1850a2d112/tavily_python-0.7.12.tar.gz", hash = "sha256:661945bbc9284cdfbe70fb50de3951fd656bfd72e38e352481d333a36ae91f5a", size = 17282, upload-time = "2025-09-10T17:02:01.281Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9a/e2/dbc246d9fb24433f77b17d9ee4e750a1e2718432ebde2756589c9154cbad/tavily_python-0.7.12-py3-none-any.whl", hash = "sha256:00d09b9de3ca02ef9a994cf4e7ae43d4ec9d199f0566ba6e52cbfcbd07349bd1", size = 15473, upload-time = "2025-09-10T17:01:59.859Z" },
 ]
 
 [[package]]
