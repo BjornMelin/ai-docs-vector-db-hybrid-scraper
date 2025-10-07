@@ -36,13 +36,11 @@ name = "ai-docs-vector-db-hybrid-scraper"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "aiocache" },
     { name = "aiofiles" },
     { name = "aiohttp" },
     { name = "aiolimiter" },
     { name = "arq" },
     { name = "asgi-correlation-id" },
-    { name = "asyncio-throttle" },
     { name = "cachetools" },
     { name = "click" },
     { name = "colorlog" },
@@ -68,9 +66,7 @@ dependencies = [
     { name = "platformdirs" },
     { name = "prometheus-client" },
     { name = "prometheus-fastapi-instrumentator" },
-    { name = "psutil" },
     { name = "purgatory" },
-    { name = "purgatory-circuitbreaker" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "pydeps" },
@@ -80,7 +76,6 @@ dependencies = [
     { name = "qdrant-client", extra = ["fastembed"] },
     { name = "questionary" },
     { name = "redis", extra = ["hiredis"] },
-    { name = "respx" },
     { name = "rich" },
     { name = "scikit-learn" },
     { name = "scipy" },
@@ -139,6 +134,7 @@ all = [
     { name = "opentelemetry-sdk" },
     { name = "playwright" },
     { name = "polars" },
+    { name = "psutil" },
     { name = "purgatory", extra = ["redis"] },
     { name = "pyarrow" },
     { name = "pyjwt" },
@@ -247,6 +243,7 @@ observability = [
     { name = "opentelemetry-instrumentation-fastapi" },
     { name = "opentelemetry-instrumentation-starlette" },
     { name = "opentelemetry-sdk" },
+    { name = "psutil" },
 ]
 parsing = [
     { name = "tree-sitter" },
@@ -267,14 +264,12 @@ web = [
 requires-dist = [
     { name = "accelerate", marker = "extra == 'gpu'", specifier = ">=0.34.0,<2.0.0" },
     { name = "ai-docs-vector-db-hybrid-scraper", extras = ["dev", "contract", "accessibility", "browser", "llm", "observability", "parsing", "dataframe", "docs", "gpu", "eval", "server"], marker = "extra == 'all'" },
-    { name = "aiocache", specifier = ">=0.12.3,<0.13.0" },
     { name = "aiofiles", specifier = ">=24.1.0,<25.0.0" },
     { name = "aiohttp", specifier = ">=3.12.15,<4.0.0" },
     { name = "aiolimiter", specifier = ">=1.2.1" },
     { name = "arq", specifier = ">=0.26.3,<0.27.0" },
     { name = "asgi-correlation-id", specifier = ">=4.3.4,<5.0.0" },
     { name = "asgi-lifespan", marker = "extra == 'dev'", specifier = ">=2.1.0,<3.0.0" },
-    { name = "asyncio-throttle", specifier = ">=1.0.2,<2.0.0" },
     { name = "axe-core-python", marker = "extra == 'accessibility'", specifier = ">=0.1.0,<1.0.0" },
     { name = "beautifulsoup4", marker = "extra == 'accessibility'", specifier = ">=4.13.5,<5.0.0" },
     { name = "bitsandbytes", marker = "extra == 'gpu'", specifier = ">=0.44.0,<1.0.0" },
@@ -332,10 +327,9 @@ requires-dist = [
     { name = "polars", marker = "extra == 'dataframe'", specifier = ">=1.33.1,<2.0.0" },
     { name = "prometheus-client", specifier = ">=0.23.1,<0.24.0" },
     { name = "prometheus-fastapi-instrumentator", specifier = ">=7.1.0,<8.0.0" },
-    { name = "psutil", specifier = ">=6.1.1,<7.0.0" },
+    { name = "psutil", marker = "extra == 'observability'", specifier = ">=6.1.1" },
     { name = "purgatory", specifier = ">=3.0.1,<4.0.0" },
     { name = "purgatory", extras = ["redis"], marker = "extra == 'server'", specifier = ">=3.0.1,<4.0.0" },
-    { name = "purgatory-circuitbreaker", specifier = ">=0.7.2,<0.8.0" },
     { name = "pyarrow", marker = "extra == 'dataframe'", specifier = ">=21.0.0,<22.0.0" },
     { name = "pydantic", specifier = ">=2.11.9,<3.0.0" },
     { name = "pydantic-settings", specifier = ">=2.10.1,<3.0.0" },
@@ -353,13 +347,12 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.1.1,<2.0.0" },
     { name = "python-multipart", specifier = ">=0.0.20,<0.1.0" },
     { name = "pyyaml", specifier = ">=6.0.2,<7.0.0" },
-    { name = "qdrant-client", extras = ["fastembed"], specifier = ">=1.15.1,<1.15.2" },
+    { name = "qdrant-client", extras = ["fastembed"], specifier = ">=1.15,<2.0" },
     { name = "questionary", specifier = ">=2.1.1,<3.0.0" },
     { name = "ragas", marker = "extra == 'eval'", specifier = "==0.1.13" },
     { name = "rebrowser-playwright", marker = "extra == 'browser'", specifier = ">=1.47.0,<2.0.0" },
     { name = "redis", extras = ["hiredis"], specifier = ">=5.3.1,<6.0.0" },
     { name = "responses", marker = "extra == 'contract'", specifier = ">=0.25.8,<0.26.0" },
-    { name = "respx", specifier = ">=0.22.0,<0.23.0" },
     { name = "rich", specifier = ">=14.1.0,<15.0.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.13.1,<0.14.0" },
     { name = "schemathesis", marker = "extra == 'contract'", specifier = ">=3.39.16,<4.0.0" },
@@ -367,7 +360,7 @@ requires-dist = [
     { name = "scipy", specifier = ">=1.16.2,<2.0.0" },
     { name = "selectolax", specifier = ">=0.4.0" },
     { name = "selenium", marker = "extra == 'accessibility'", specifier = ">=4.35.0,<5.0.0" },
-    { name = "sentence-transformers", marker = "extra == 'llm'", specifier = ">=5.1.1" },
+    { name = "sentence-transformers", marker = "extra == 'llm'", specifier = ">=3,<4" },
     { name = "slowapi", specifier = ">=0.1.9,<0.2.0" },
     { name = "sqlalchemy", specifier = ">=2.0.43,<3.0.0" },
     { name = "starlette", specifier = ">=0.48.0,<0.49.0" },
@@ -396,15 +389,6 @@ requires-dist = [
     { name = "xformers", marker = "extra == 'gpu'", specifier = ">=0.0.28,<1.0.0" },
 ]
 provides-extras = ["eval", "dev", "docs", "contract", "accessibility", "browser", "llm", "observability", "parsing", "dataframe", "gpu", "server", "all", "web"]
-
-[[package]]
-name = "aiocache"
-version = "0.12.3"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/7a/64/b945b8025a9d1e6e2138845f4022165d3b337f55f50984fbc6a4c0a1e355/aiocache-0.12.3.tar.gz", hash = "sha256:f528b27bf4d436b497a1d0d1a8f59a542c153ab1e37c3621713cb376d44c4713", size = 132196, upload-time = "2024-09-25T13:20:23.823Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/37/d7/15d67e05b235d1ed8c3ce61688fe4d84130e72af1657acadfaac3479f4cf/aiocache-0.12.3-py2.py3-none-any.whl", hash = "sha256:889086fc24710f431937b87ad3720a289f7fc31c4fd8b68e9f918b9bacd8270d", size = 28199, upload-time = "2024-09-25T13:20:22.688Z" },
-]
 
 [[package]]
 name = "aiofiles"
@@ -673,15 +657,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/a5/ae/136395dfbfe00dfc94da3f3e136d0b13f394cba8f4841120e34226265780/async_timeout-5.0.1.tar.gz", hash = "sha256:d9321a7a3d5a6a5e187e824d2fa0793ce379a202935782d555d6e9d2735677d3", size = 9274, upload-time = "2024-11-06T16:41:39.6Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/fe/ba/e2081de779ca30d473f21f5b30e0e737c438205440784c7dfc81efc2b029/async_timeout-5.0.1-py3-none-any.whl", hash = "sha256:39e3809566ff85354557ec2398b55e096c8364bacac9405a7a1fa429e77fe76c", size = 6233, upload-time = "2024-11-06T16:41:37.9Z" },
-]
-
-[[package]]
-name = "asyncio-throttle"
-version = "1.0.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/13/6f/0e2d42c0e95d50edf63147b8a742703061945e02760f25d6a0e8f028ccb0/asyncio-throttle-1.0.2.tar.gz", hash = "sha256:2675282e99d9129ecc446f917e174bc205c65e36c602aa18603b4948567fcbd4", size = 3775, upload-time = "2021-04-07T13:37:50.114Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/f6/6a/d18c93722fb56dc1ffed5fb7e7fcff4f8031f80f84c5cc0427363a036b0c/asyncio_throttle-1.0.2-py3-none-any.whl", hash = "sha256:4d4c1eb3250f735f59ce842d8d92cd2927c008bd52008797ba030b5787c41f3b", size = 4079, upload-time = "2021-04-07T13:37:48.63Z" },
 ]
 
 [[package]]
@@ -4761,15 +4736,6 @@ redis = [
 ]
 
 [[package]]
-name = "purgatory-circuitbreaker"
-version = "0.7.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/8d/90/4136c2dd4e86b79390c94f88c6deaf215eea1feb506da55a1355743d78c1/purgatory-circuitbreaker-0.7.2.tar.gz", hash = "sha256:7de4282822d11fe2ebe5cb7982da932c32284134c25630ab4dacd597ffafb8a4", size = 12334, upload-time = "2022-01-18T07:41:49.295Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/d2/10/c54b75b392c7baa8e73bd03d554c8cda619b56ee5f0131dd92074a2ddbbe/purgatory_circuitbreaker-0.7.2-py3-none-any.whl", hash = "sha256:094b5abc10dba502532ca9510af3606cee05f7fbdf54f2c2acd6f85bc8f7f72f", size = 19911, upload-time = "2022-01-18T07:41:50.55Z" },
-]
-
-[[package]]
 name = "py-cpuinfo"
 version = "9.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -5687,18 +5653,6 @@ wheels = [
 ]
 
 [[package]]
-name = "respx"
-version = "0.22.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "httpx" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/f4/7c/96bd0bc759cf009675ad1ee1f96535edcb11e9666b985717eb8c87192a95/respx-0.22.0.tar.gz", hash = "sha256:3c8924caa2a50bd71aefc07aa812f2466ff489f1848c96e954a5362d17095d91", size = 28439, upload-time = "2024-12-19T22:33:59.374Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/8e/67/afbb0978d5399bc9ea200f1d4489a23c9a1dad4eee6376242b8182389c79/respx-0.22.0-py2.py3-none-any.whl", hash = "sha256:631128d4c9aba15e56903fb5f66fb1eff412ce28dd387ca3a81339e52dbd3ad0", size = 25127, upload-time = "2024-12-19T22:33:57.837Z" },
-]
-
-[[package]]
 name = "rfc3339-validator"
 version = "0.1.4"
 source = { registry = "https://pypi.org/simple" }
@@ -6063,7 +6017,7 @@ wheels = [
 
 [[package]]
 name = "sentence-transformers"
-version = "5.1.1"
+version = "3.4.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "huggingface-hub" },
@@ -6073,11 +6027,10 @@ dependencies = [
     { name = "torch" },
     { name = "tqdm" },
     { name = "transformers" },
-    { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/21/47/7d61a19ba7e6b5f36f0ffff5bbf032a1c1913612caac611e12383069eda0/sentence_transformers-5.1.1.tar.gz", hash = "sha256:8af3f844b2ecf9a6c2dfeafc2c02938a87f61202b54329d70dfd7dfd7d17a84e", size = 374434, upload-time = "2025-09-22T11:28:27.54Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/16/74/aca6f8a2b8d62b4daf8c9a0c49d2aa573381caf47dc35cbb343389229376/sentence_transformers-3.4.1.tar.gz", hash = "sha256:68daa57504ff548340e54ff117bd86c1d2f784b21e0fb2689cf3272b8937b24b", size = 223898, upload-time = "2025-01-29T14:25:55.982Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/48/21/4670d03ab8587b0ab6f7d5fa02a95c3dd6b1f39d0e40e508870201f3d76c/sentence_transformers-5.1.1-py3-none-any.whl", hash = "sha256:5ed544629eafe89ca668a8910ebff96cf0a9c5254ec14b05c66c086226c892fd", size = 486574, upload-time = "2025-09-22T11:28:26.311Z" },
+    { url = "https://files.pythonhosted.org/packages/05/89/7eb147a37b7f31d3c815543df539d8b8d0425e93296c875cc87719d65232/sentence_transformers-3.4.1-py3-none-any.whl", hash = "sha256:e026dc6d56801fd83f74ad29a30263f401b4b522165c19386d8bc10dcca805da", size = 275896, upload-time = "2025-01-29T14:25:53.614Z" },
 ]
 
 [[package]]
