@@ -7,7 +7,7 @@ import pytest
 from prometheus_client.registry import CollectorRegistry
 
 from src.services.monitoring.metrics import MetricsConfig, MetricsRegistry
-from src.services.rag.retriever import CompressionStats
+from src.services.rag import CompressionStats
 
 
 class TestMetricsConfig:

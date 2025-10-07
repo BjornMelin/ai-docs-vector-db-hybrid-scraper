@@ -52,7 +52,7 @@ def _sanitize(value: Any) -> Any:
         for key, item in processed.items():
             sanitized[key] = "<redacted>" if _should_mask(key) else _sanitize(item)
         return sanitized
-    if isinstance(processed, (list, tuple, set)):
+    if isinstance(processed, list | tuple | set):
         return [_sanitize(item) for item in processed]
     return processed
 
@@ -130,7 +130,7 @@ def _extract_child(current: Any, token: str) -> Any:
             return getattr(current, candidate)
     if token.isdigit():
         index = int(token)
-        if isinstance(current, (list, tuple)) and 0 <= index < len(current):
+        if isinstance(current, list | tuple) and 0 <= index < len(current):
             return current[index]
     return None
 

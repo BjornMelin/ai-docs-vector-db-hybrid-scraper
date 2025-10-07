@@ -9,7 +9,7 @@ import pytest
 
 from src.services.query_processing.models import SearchRequest
 from src.services.query_processing.orchestrator import SearchOrchestrator
-from src.services.rag.models import RAGConfig as ServiceRAGConfig
+from src.services.rag import RAGConfig as ServiceRAGConfig
 from src.services.vector_db.service import VectorStoreService
 from src.services.vector_db.types import VectorMatch
 
@@ -61,6 +61,8 @@ class VectorServiceStub:
 
 @pytest.mark.asyncio
 async def test_search_returns_results_with_collection_field() -> None:
+    """Ensure the orchestrator returns records annotated with collection metadata."""
+
     service = VectorServiceStub("articles")
     orchestrator = SearchOrchestrator(
         vector_store_service=cast(VectorStoreService, service)
@@ -87,6 +89,8 @@ async def test_search_returns_results_with_collection_field() -> None:
 
 @pytest.mark.asyncio
 async def test_search_uses_list_collections_when_default_missing() -> None:
+    """Fallback to list_collections when the config lacks a default collection."""
+
     service = VectorServiceStub("knowledge")
     service.config = SimpleNamespace()  # no qdrant section
     orchestrator = SearchOrchestrator(
@@ -108,6 +112,8 @@ async def test_search_uses_list_collections_when_default_missing() -> None:
 
 @pytest.mark.asyncio
 async def test_query_expansion_applied_when_enabled(monkeypatch) -> None:
+    """Apply query expansion when the feature flag is enabled."""
+
     service = VectorServiceStub("docs")
     orchestrator = SearchOrchestrator(
         vector_store_service=cast(VectorStoreService, service)
@@ -125,6 +131,8 @@ async def test_query_expansion_applied_when_enabled(monkeypatch) -> None:
 
 @pytest.mark.asyncio
 async def test_search_with_rag_pipeline(monkeypatch) -> None:
+    """Ensure the orchestrator integrates with the LangGraph RAG pipeline."""
+
     service = VectorServiceStub("docs")
     rag_config = ServiceRAGConfig()
 

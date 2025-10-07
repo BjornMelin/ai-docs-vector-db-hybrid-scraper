@@ -259,4 +259,4 @@ class TestPropertyBasedInfrastructure:
 
         embedding = embeddings[0]
         assert len(embedding) == 128
-        assert all(isinstance(value, (int, float)) for value in embedding)
+        assert all(isinstance(value, int | float) for value in embedding)

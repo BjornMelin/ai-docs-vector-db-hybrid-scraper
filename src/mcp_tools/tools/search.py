@@ -63,7 +63,7 @@ def _normalize_filters(
     for key, value in filter_conditions.items():
         if isinstance(value, dict):
             normalized[key] = value
-        elif isinstance(value, (list, tuple, set)):
+        elif isinstance(value, list | tuple | set):
             normalized[key] = list(value)
         else:
             normalized[key] = value

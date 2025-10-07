@@ -34,6 +34,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Clarified the analytics and RAG service package facades with typed ``__all__``
+  exports, refreshed coverage, and updated API docs to describe the supported
+  entry points.
 - Configuration reload and file-watching endpoints now validate override paths, surface operator errors as HTTP 400, and wait until the osquery-backed provider reports readiness before returning success.
 - Simplified the security configuration model to the fields actually enforced by the middleware, updated templates/docs, and aligned the middleware implementation with the lean schema.
 - Removed the fail-closed `search_service`/`cache_service` placeholders; mode configs now advertise only supported embedding/vector services and the health endpoint reflects the leaner set.
