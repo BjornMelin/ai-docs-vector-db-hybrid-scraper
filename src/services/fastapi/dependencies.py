@@ -1,24 +1,15 @@
-"""FastAPI dependency helpers wired directly to service singletons.
-
-This module exposes the final dependency surface for the FastAPI stack.
-It avoids the previous container-style wrapper and delegates to the
-function-based services defined under ``src.services.dependencies``.
-"""
+"""FastAPI dependency helpers wired directly to service singletons."""
 
 from __future__ import annotations
 
 import asyncio
+import inspect
 import logging
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Awaitable
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
-from typing import Any
-
-
-try:  # Optional redis dependency for cache health checks.
-    import redis
-except ImportError:  # pragma: no cover - optional dependency
-    redis = None
+from time import perf_counter
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from fastapi.exceptions import HTTPException
 from fastapi.requests import Request
@@ -26,34 +17,32 @@ from starlette.status import HTTP_503_SERVICE_UNAVAILABLE
 
 from src.config import Config, get_config
 from src.infrastructure.client_manager import ClientManager
-from src.services.dependencies import (
-    cleanup_services,
-    get_cache_manager,
-    get_database_manager,
-    get_embedding_manager,
-    get_vector_store_service,
-)
 from src.services.fastapi.middleware.correlation import get_correlation_id
-from src.services.registry import ensure_service_registry, get_service_registry
+from src.services.registry import ensure_service_registry, shutdown_service_registry
 from src.services.vector_db.service import VectorStoreService
+
+
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    from src.services.cache.manager import CacheManager
+    from src.services.embeddings.manager import EmbeddingManager
 
 
 logger = logging.getLogger(__name__)
 
-RedisErrorType = getattr(redis, "RedisError", Exception)
+T = TypeVar("T")
 
 
 async def initialize_dependencies(config: Config | None = None) -> None:
     """Prime long-lived services used by the FastAPI application."""
 
-    del config  # Configuration is resolved lazily inside the helpers.
+    del config  # Backwards compatibility for callers passing Config.
     await ensure_service_registry()
 
 
 async def cleanup_dependencies() -> None:
     """Release shared services created for FastAPI usage."""
 
-    await cleanup_services()
+    await shutdown_service_registry()
 
 
 def get_config_dependency() -> Config:
@@ -63,12 +52,13 @@ def get_config_dependency() -> Config:
 
 
 async def get_vector_service() -> VectorStoreService:
-    """Return the vector service instance, raising 503 on failure."""
+    """Return the vector service instance via the client manager."""
 
     try:
-        return get_service_registry().vector_service
+        client_manager = await get_client_manager()
+        return await client_manager.get_vector_store_service()
     except Exception as exc:  # pragma: no cover - defensive
-        logger.exception("Failed to obtain vector service")
+        logger.exception("Failed to obtain vector service via ClientManager")
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
             detail="Vector service not available",
@@ -79,13 +69,48 @@ async def get_client_manager() -> ClientManager:
     """Return the initialized ClientManager singleton."""
 
     try:
-        return get_service_registry().client_manager
+        registry = await ensure_service_registry()
+        return registry.client_manager
     except Exception as exc:  # pragma: no cover - defensive
         logger.exception("Failed to obtain client manager")
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
             detail="Client manager not available",
         ) from exc
+
+
+async def get_embedding_manager() -> EmbeddingManager:
+    """Expose the shared embedding manager instance."""
+
+    try:
+        registry = await ensure_service_registry()
+        return registry.embedding_manager
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.exception("Failed to obtain embedding manager")
+        raise HTTPException(
+            status_code=HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Embedding manager not available",
+        ) from exc
+
+
+async def get_cache_manager() -> CacheManager:
+    """Expose the cache manager maintained by the registry."""
+
+    try:
+        registry = await ensure_service_registry()
+        return registry.cache_manager
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.exception("Failed to obtain cache manager")
+        raise HTTPException(
+            status_code=HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Cache manager not available",
+        ) from exc
+
+
+async def get_vector_store_service() -> VectorStoreService:
+    """Backward-compatible alias for get_vector_service."""
+
+    return await get_vector_service()
 
 
 def get_correlation_id_dependency(request: Request) -> str:
@@ -98,8 +123,8 @@ def get_correlation_id_dependency(request: Request) -> str:
 async def database_session() -> AsyncGenerator[Any]:
     """Provide a database session with automatic cleanup."""
 
-    db_manager = await get_database_manager()
-    async with db_manager.get_session() as session:
+    registry = await ensure_service_registry()
+    async with registry.database_manager.get_session() as session:
         yield session
 
 
@@ -120,48 +145,183 @@ class ServiceHealthChecker:
 
     HEALTH_TIMEOUT_SECONDS = 2.0
 
+    @staticmethod
+    async def _await_with_budget(
+        awaitable: Awaitable[T],
+        remaining: float,
+        *,
+        minimum_timeout: float = 0.01,
+    ) -> tuple[T, float]:
+        """Await a coroutine within the remaining timeout budget."""
+
+        timeout = max(remaining, minimum_timeout)
+        start_time = perf_counter()
+        result = await asyncio.wait_for(awaitable, timeout=timeout)
+        elapsed = perf_counter() - start_time
+        new_remaining = max(0.0, remaining - elapsed)
+        return result, new_remaining
+
+    @staticmethod
+    def _mark_healthy(
+        health: dict[str, Any], service_key: str, duration_ms: float
+    ) -> None:
+        health["services"][service_key] = {
+            "service": service_key,
+            "status": "healthy",
+            "duration_ms": duration_ms,
+        }
+
+    @staticmethod
+    def _mark_unhealthy(
+        health: dict[str, Any], service_key: str, exc: Exception, duration_ms: float
+    ) -> None:
+        health["status"] = "degraded"
+        degraded = health.setdefault("degraded_services", [])
+        if service_key not in degraded:
+            degraded.append(service_key)
+        health["services"][service_key] = {
+            "service": service_key,
+            "status": "unhealthy",
+            "error": str(exc),
+            "error_type": exc.__class__.__name__,
+            "duration_ms": duration_ms,
+        }
+
     async def _probe_vector_service(self, health: dict[str, Any]) -> None:
+        service_key = "vector_db"
+        start_time = perf_counter()
         try:
-            vector_service = await get_vector_store_service()
-            await asyncio.wait_for(
-                vector_service.list_collections(),
-                timeout=self.HEALTH_TIMEOUT_SECONDS,
+            remaining = self.HEALTH_TIMEOUT_SECONDS
+            client_manager, remaining = await self._await_with_budget(
+                get_client_manager(),
+                remaining,
             )
-            health["services"]["vector_db"] = {"status": "healthy"}
+            vector_service, remaining = await self._await_with_budget(
+                client_manager.get_vector_store_service(),
+                remaining,
+            )
+            _, remaining = await self._await_with_budget(
+                vector_service.list_collections(),
+                remaining,
+            )
+            duration_ms = (perf_counter() - start_time) * 1000
+            self._mark_healthy(health, service_key, duration_ms)
+            logger.debug(
+                "Health probe for %s succeeded in %.2fms",
+                service_key,
+                duration_ms,
+            )
         except Exception as exc:  # pragma: no cover - runtime failure
-            health["status"] = "degraded"
-            health["services"]["vector_db"] = {
-                "status": "unhealthy",
-                "error": str(exc),
-            }
+            duration_ms = (perf_counter() - start_time) * 1000
+            self._mark_unhealthy(health, service_key, exc, duration_ms)
+            logger.warning(
+                "Health probe for %s failed after %.2fms: %s",
+                service_key,
+                duration_ms,
+                exc,
+                exc_info=True,
+            )
 
     async def _probe_embedding_manager(self, health: dict[str, Any]) -> None:
+        service_key = "embeddings"
+        start_time = perf_counter()
         try:
-            manager = await get_embedding_manager()
-            # Run provider lookup off the event loop to avoid blocking health checks.
-            await asyncio.to_thread(manager.get_provider_info)
-            health["services"]["embeddings"] = {"status": "healthy"}
+            remaining = self.HEALTH_TIMEOUT_SECONDS
+            client_manager, remaining = await self._await_with_budget(
+                get_client_manager(),
+                remaining,
+            )
+            manager, remaining = await self._await_with_budget(
+                client_manager.get_embedding_manager(),
+                remaining,
+            )
+            provider_start = perf_counter()
+            await asyncio.wait_for(
+                asyncio.to_thread(manager.get_provider_info),
+                timeout=max(remaining, 0.01),
+            )
+            remaining = max(0.0, remaining - (perf_counter() - provider_start))
+            duration_ms = (perf_counter() - start_time) * 1000
+            self._mark_healthy(health, service_key, duration_ms)
+            logger.debug(
+                "Health probe for %s succeeded in %.2fms",
+                service_key,
+                duration_ms,
+            )
         except Exception as exc:  # pragma: no cover - runtime failure
-            health["status"] = "degraded"
-            health["services"]["embeddings"] = {
-                "status": "unhealthy",
-                "error": str(exc),
-            }
+            duration_ms = (perf_counter() - start_time) * 1000
+            self._mark_unhealthy(health, service_key, exc, duration_ms)
+            logger.warning(
+                "Health probe for %s failed after %.2fms: %s",
+                service_key,
+                duration_ms,
+                exc,
+                exc_info=True,
+            )
 
     async def _probe_cache_manager(self, health: dict[str, Any]) -> None:
+        service_key = "cache"
+        start_time = perf_counter()
         try:
-            cache_manager = await get_cache_manager()
-            await asyncio.wait_for(
-                cache_manager.get_stats(),
-                timeout=self.HEALTH_TIMEOUT_SECONDS,
+            remaining = self.HEALTH_TIMEOUT_SECONDS
+            client_manager, remaining = await self._await_with_budget(
+                get_client_manager(),
+                remaining,
             )
-            health["services"]["cache"] = {"status": "healthy"}
-        except (RedisErrorType, ConnectionError, TimeoutError, ValueError) as exc:
-            health["status"] = "degraded"
-            health["services"]["cache"] = {
-                "status": "unhealthy",
-                "error": str(exc),
-            }
+            cache_manager, remaining = await self._await_with_budget(
+                client_manager.get_cache_manager(),
+                remaining,
+            )
+            stats_callable = getattr(cache_manager, "get_stats", None) or getattr(
+                cache_manager, "get_performance_stats", None
+            )
+            if stats_callable is None:
+                msg = "Cache manager missing stats method"
+                raise RuntimeError(msg)
+            if asyncio.iscoroutinefunction(stats_callable):
+                stats_start = perf_counter()
+                await asyncio.wait_for(
+                    stats_callable(),
+                    timeout=max(remaining, 0.01),
+                )
+                remaining = max(0.0, remaining - (perf_counter() - stats_start))
+            else:
+                thread_start = perf_counter()
+                result = await asyncio.wait_for(
+                    asyncio.to_thread(stats_callable),
+                    timeout=max(remaining, 0.01),
+                )
+                elapsed = perf_counter() - thread_start
+                remaining = max(0.0, remaining - elapsed)
+                if inspect.isawaitable(result):
+                    if remaining <= 0.0:
+                        msg = "Cache stats awaitable exceeded timeout budget"
+                        raise TimeoutError(msg)
+                    awaited_start = perf_counter()
+                    await asyncio.wait_for(result, timeout=max(remaining, 0.01))
+                    remaining = max(0.0, remaining - (perf_counter() - awaited_start))
+            duration_ms = (perf_counter() - start_time) * 1000
+            stats_name = getattr(
+                stats_callable, "__name__", stats_callable.__class__.__name__
+            )
+            self._mark_healthy(health, service_key, duration_ms)
+            health["services"][service_key]["stats_method"] = stats_name
+            logger.debug(
+                "Health probe for %s succeeded in %.2fms via %s",
+                service_key,
+                duration_ms,
+                stats_name,
+            )
+        except Exception as exc:  # pragma: no cover - defensive
+            duration_ms = (perf_counter() - start_time) * 1000
+            self._mark_unhealthy(health, service_key, exc, duration_ms)
+            logger.warning(
+                "Health probe for %s failed after %.2fms: %s",
+                service_key,
+                duration_ms,
+                exc,
+                exc_info=True,
+            )
 
     async def check_health(self) -> dict[str, Any]:
         """Execute health probes and return their aggregated status."""
@@ -169,11 +329,14 @@ class ServiceHealthChecker:
             "status": "healthy",
             "services": {},
             "timestamp": datetime.now(tz=UTC).isoformat(),
+            "degraded_services": [],
         }
 
-        await self._probe_vector_service(health)
-        await self._probe_embedding_manager(health)
-        await self._probe_cache_manager(health)
+        await asyncio.gather(
+            self._probe_vector_service(health),
+            self._probe_embedding_manager(health),
+            self._probe_cache_manager(health),
+        )
         return health
 
 
@@ -187,11 +350,14 @@ __all__ = [
     "ServiceHealthChecker",
     "cleanup_dependencies",
     "database_session",
+    "get_cache_manager",
     "get_client_manager",
     "get_config_dependency",
     "get_correlation_id_dependency",
+    "get_embedding_manager",
     "get_health_checker",
     "get_request_context",
+    "get_vector_store_service",
     "get_vector_service",
     "initialize_dependencies",
 ]

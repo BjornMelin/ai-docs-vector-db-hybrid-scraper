@@ -36,6 +36,7 @@ logger = logging.getLogger(__name__)
 
 def _raise_opentelemetry_not_available() -> None:
     """Raise ImportError for opentelemetry not available."""
+
     msg = "opentelemetry not available"
     raise ImportError(msg)
 
@@ -48,8 +49,8 @@ def _safe_escape_for_logging(value: str | None) -> str | None:
 
     Returns:
         HTML-escaped string or None if input was None
-
     """
+
     if value is None:
         return None
     return html.escape(str(value))
@@ -63,8 +64,8 @@ def get_correlation_id(request: Request) -> str:
 
     Returns:
         Correlation ID string
-
     """
+
     # Check for existing correlation ID in headers
     correlation_id = request.headers.get("x-correlation-id")
     if correlation_id:
@@ -141,10 +142,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
         except Exception as e:
             self._log_request_error(e, correlation_id, request, start_time)
             raise
-        else:
-            return self._finalize_response(
-                response, correlation_id, request, start_time
-            )
+        return self._finalize_response(response, correlation_id, request, start_time)
 
     def _log_request_error(
         self, error: Exception, correlation_id: str, request: Request, start_time: float
@@ -156,8 +154,8 @@ class TracingMiddleware(BaseHTTPMiddleware):
             correlation_id: Request correlation ID
             request: HTTP request
             start_time: Request start time
-
         """
+
         end_time = time.perf_counter()
         duration = end_time - start_time
 
@@ -190,8 +188,8 @@ class TracingMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Response with correlation headers
-
         """
+
         # Calculate processing time
         end_time = time.perf_counter()
         duration = end_time - start_time
@@ -212,8 +210,8 @@ class TracingMiddleware(BaseHTTPMiddleware):
         Args:
             request: HTTP request
             correlation_id: Request correlation ID
-
         """
+
         log_data = {
             "correlation_id": correlation_id,
             "method": request.method,
@@ -253,8 +251,8 @@ class TracingMiddleware(BaseHTTPMiddleware):
             response: HTTP response
             correlation_id: Request correlation ID
             duration: Request processing duration
-
         """
+
         log_data = {
             "correlation_id": correlation_id,
             "method": request.method,
@@ -291,8 +289,8 @@ class TracingMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Request body as string or None
-
         """
+
         try:
             # Read body
             body = await request.body()
@@ -313,9 +311,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
                     body_str += f"... (truncated at {self.max_body_size} bytes)"
             except UnicodeDecodeError:
                 return f"<binary data: {len(body)} bytes>"
-
-            else:
-                return body_str
+            return body_str
         except (RuntimeError, TypeError, UnicodeDecodeError, ValueError):
             return None
 
@@ -327,8 +323,8 @@ class TracingMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Response body as string or None
-
         """
+
         try:
             body = self._extract_response_body(response)
         except (ConnectionError, OSError, RuntimeError, TimeoutError):
@@ -347,8 +343,8 @@ class TracingMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Response body as bytes or None
-
         """
+
         if not hasattr(response, "body"):
             return None
 
@@ -362,8 +358,8 @@ class TracingMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Formatted body string
-
         """
+
         # Limit body size for logging
         if len(body) > self.max_body_size:
             body = body[: self.max_body_size]
@@ -378,8 +374,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
                 body_str += f"... (truncated at {self.max_body_size} bytes)"
         except UnicodeDecodeError:
             return f"<binary data: {len(body)} bytes>"
-        else:
-            return body_str
+        return body_str
 
     def _get_client_ip(self, request: Request) -> str:
         """Get client IP address from request.
@@ -389,8 +384,8 @@ class TracingMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Client IP address
-
         """
+
         # Check X-Forwarded-For header first
         forwarded_for = request.headers.get("x-forwarded-for")
         if forwarded_for:
@@ -421,8 +416,8 @@ class DistributedTracingMiddleware(BaseHTTPMiddleware):
         Args:
             app: ASGI application
             service_name: Name of the service for tracing
-
         """
+
         super().__init__(app)
         self.service_name = service_name
 
@@ -434,12 +429,8 @@ class DistributedTracingMiddleware(BaseHTTPMiddleware):
             self.otel_available = False
 
     def _initialize_tracing(self) -> None:
-        """Initialize OpenTelemetry tracing components.
+        """Initialize OpenTelemetry tracing components."""
 
-        Raises:
-            ImportError: If OpenTelemetry is not available
-
-        """
         if trace is None:
             _raise_opentelemetry_not_available()
 
@@ -450,6 +441,7 @@ class DistributedTracingMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Process request with distributed tracing."""
+
         if not self.otel_available:
             return await call_next(request)
 
@@ -483,9 +475,8 @@ class DistributedTracingMiddleware(BaseHTTPMiddleware):
             except Exception as e:
                 self._handle_request_exception(span, e)
                 raise
-            else:
-                self._set_response_attributes(span, response)
-                return response
+            self._set_response_attributes(span, response)
+            return response
 
     def _handle_request_exception(self, span, exception: Exception) -> None:
         """Handle request exception in tracing span.
@@ -493,8 +484,8 @@ class DistributedTracingMiddleware(BaseHTTPMiddleware):
         Args:
             span: OpenTelemetry span
             exception: Exception that occurred
-
         """
+
         span.record_exception(exception)
         span.set_status(self.Status(self.StatusCode.ERROR, str(exception)))
 
@@ -504,8 +495,8 @@ class DistributedTracingMiddleware(BaseHTTPMiddleware):
         Args:
             span: OpenTelemetry span
             response: HTTP response
-
         """
+
         span.set_attribute("http.status_code", response.status_code)
 
         # Set span status based on response
@@ -521,6 +512,7 @@ class DistributedTracingMiddleware(BaseHTTPMiddleware):
 
     def _get_client_ip(self, request: Request) -> str | None:
         """Get client IP address from request."""
+
         # Check X-Forwarded-For header first
         forwarded_for = request.headers.get("x-forwarded-for")
         if forwarded_for:

@@ -104,6 +104,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Process request with security checks and header injection."""
+
         if not self.config.enabled:
             return await call_next(request)
 
@@ -141,11 +142,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         return response
 
     def _build_security_headers(self) -> dict[str, str]:
-        """Build security headers dictionary from configuration.
-
-        Returns:
-            Dictionary of security headers
-        """
+        """Build security headers dictionary from configuration."""
 
         headers = {}
 
@@ -177,11 +174,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         return headers
 
     def _inject_security_headers(self, response: Response) -> None:
-        """Inject security headers into response.
-
-        Args:
-            response: HTTP response to modify
-        """
+        """Inject security headers into response."""
 
         for header_name, header_value in self._security_headers.items():
             # Don't override existing headers
@@ -199,8 +192,8 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Returns:
             True if request is allowed, False if rate limited
-
         """
+
         # Initialize Redis lazily if not already done
         if self.redis_client is None and not self._redis_healthy:
             await self._initialize_redis()
@@ -324,6 +317,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
     async def cleanup(self) -> None:
         """Cleanup Redis connection and resources."""
+
         if self.redis_client:
             try:
                 await self.redis_client.aclose()
@@ -335,14 +329,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                 self._redis_healthy = False
 
     def _get_client_ip(self, request: Request) -> str:
-        """Extract client IP address from request.
-
-        Args:
-            request: HTTP request
-
-        Returns:
-            Client IP address
-        """
+        """Extract client IP address from request."""
 
         # Prioritize direct client IP for security - avoids X-Forwarded-For spoofing
         if request.client:

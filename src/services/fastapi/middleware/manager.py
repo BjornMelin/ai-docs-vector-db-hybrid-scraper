@@ -31,6 +31,7 @@ class MiddlewareManager:
 
     def __init__(self, config=None):
         """Initialize middleware manager."""
+
         self.config = config or get_config()
 
     def get_middleware_stack(self) -> list[MiddlewareSpec]:
@@ -41,6 +42,7 @@ class MiddlewareManager:
         2. Timeout (request timeout)
         3. Performance (basic monitoring)
         """
+
         middleware_stack = []
 
         # 1. Security - Basic protection
@@ -64,6 +66,7 @@ class MiddlewareManager:
 
     def apply_middleware(self, app: Starlette, middleware_names: list[str]) -> None:
         """Apply specified middleware to FastAPI app."""
+
         timeout_config = self._build_timeout_config(self.config.performance)
         available_middleware = {
             "security": MiddlewareSpec(
@@ -106,4 +109,5 @@ class MiddlewareManager:
 
 def get_middleware_manager(config=None) -> MiddlewareManager:
     """Get configured middleware manager instance."""
+
     return MiddlewareManager(config or get_config())

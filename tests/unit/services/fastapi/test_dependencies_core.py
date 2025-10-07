@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+from fastapi import HTTPException
 
 from src.services import dependencies as service_dependencies
 from src.services.dependencies import EmbeddingRequest, EmbeddingServiceError
@@ -24,7 +25,7 @@ class _StubVectorService:
 class _FailingVectorService:
     """Simulate a vector service failure."""
 
-    async def list_collections(self) -> list[str]:  # pragma: no cover - negative path
+    async def list_collections(self) -> list[str]:
         """Raise to mimic an unavailable vector service."""
 
         raise RuntimeError("vector unavailable")
@@ -73,6 +74,24 @@ class _StubCacheManager:
         """Return a perfect cache hit rate to indicate health."""
 
         return {"hit_rate": 1.0}
+
+
+class _FailingCacheManager:
+    """Simulate cache manager failure surfaced via HTTPException."""
+
+    async def get_stats(self) -> dict[str, object]:
+        """Raise HTTPException to mimic degraded cache behaviour."""
+
+        raise HTTPException(status_code=503, detail="cache unavailable")
+
+
+class _TimeoutCacheManager:
+    """Simulate cache stats timing out."""
+
+    async def get_stats(self) -> dict[str, object]:
+        """Raise asyncio timeout to exercise timeout handling."""
+
+        raise TimeoutError("cache stats timed out")
 
 
 class _StubClientManager:
@@ -168,6 +187,48 @@ async def test_service_health_checker_degrades_on_vector_failure(monkeypatch: An
 
 
 @pytest.mark.asyncio
+async def test_service_health_checker_degrades_on_cache_http_exception(
+    monkeypatch: Any,
+) -> None:
+    """Verify cache HTTPExceptions degrade health instead of bubbling up."""
+
+    await _patch_client_manager(
+        monkeypatch,
+        vector_service=_StubVectorService(),
+        cache_manager=_FailingCacheManager(),
+        embedding_manager=_StubEmbeddingManager(),
+    )
+
+    checker = ServiceHealthChecker()
+    result = await checker.check_health()
+
+    assert result["status"] == "degraded"
+    assert result["services"]["cache"]["status"] == "unhealthy"
+    assert result["services"]["cache"]["error_type"] == "HTTPException"
+
+
+@pytest.mark.asyncio
+async def test_service_health_checker_degrades_on_cache_timeout(
+    monkeypatch: Any,
+) -> None:
+    """Ensure cache timeouts degrade health with timeout metadata."""
+
+    await _patch_client_manager(
+        monkeypatch,
+        vector_service=_StubVectorService(),
+        cache_manager=_TimeoutCacheManager(),
+        embedding_manager=_StubEmbeddingManager(),
+    )
+
+    checker = ServiceHealthChecker()
+    result = await checker.check_health()
+
+    assert result["status"] == "degraded"
+    assert result["services"]["cache"]["status"] == "unhealthy"
+    assert result["services"]["cache"]["error_type"] == "TimeoutError"
+
+
+@pytest.mark.asyncio
 async def test_generate_embeddings_dependency_success() -> None:
     """Ensure the embedding dependency returns a serialisable response."""
 
@@ -199,3 +260,45 @@ async def test_generate_embeddings_dependency_failure() -> None:
 
     with pytest.raises(EmbeddingServiceError):
         await service_dependencies.generate_embeddings(request, manager)
+
+
+@pytest.mark.asyncio
+async def test_get_embedding_manager_maps_failure_to_503(monkeypatch: Any) -> None:
+    """Ensure embedding manager failures convert to HTTP 503."""
+
+    async def _ensure_failure(*_args: Any, **_kwargs: Any) -> None:
+        raise RuntimeError("registry failure")
+
+    monkeypatch.setattr(
+        fastapi_dependencies,
+        "ensure_service_registry",
+        _ensure_failure,
+        raising=True,
+    )
+
+    with pytest.raises(HTTPException) as err:
+        await fastapi_dependencies.get_embedding_manager()
+
+    assert err.value.status_code == 503
+    assert "Embedding manager not available" in err.value.detail
+
+
+@pytest.mark.asyncio
+async def test_get_cache_manager_maps_failure_to_503(monkeypatch: Any) -> None:
+    """Ensure cache manager failures convert to HTTP 503."""
+
+    async def _ensure_failure(*_args: Any, **_kwargs: Any) -> None:
+        raise RuntimeError("registry failure")
+
+    monkeypatch.setattr(
+        fastapi_dependencies,
+        "ensure_service_registry",
+        _ensure_failure,
+        raising=True,
+    )
+
+    with pytest.raises(HTTPException) as err:
+        await fastapi_dependencies.get_cache_manager()
+
+    assert err.value.status_code == 503
+    assert "Cache manager not available" in err.value.detail

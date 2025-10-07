@@ -20,8 +20,8 @@ def get_correlation_id(request: Request) -> str:
 
     Returns:
         Correlation ID string
-
     """
+
     # Check for existing correlation ID in headers (most common)
     correlation_id = request.headers.get("x-correlation-id")
     if correlation_id:
@@ -53,18 +53,14 @@ def set_correlation_id(request: Request, correlation_id: str) -> None:
     Args:
         request: HTTP request object
         correlation_id: Correlation ID to set
-
     """
+
     request.state.correlation_id = correlation_id
 
 
 def generate_correlation_id() -> str:
-    """Generate a new correlation ID.
+    """Generate a new correlation ID."""
 
-    Returns:
-        New correlation ID as UUID string
-
-    """
     return str(uuid.uuid4())
 
 

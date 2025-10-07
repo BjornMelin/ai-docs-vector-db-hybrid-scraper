@@ -1,6 +1,9 @@
 """Database manager for vector store and cache operations."""
 
 import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
 
@@ -35,6 +38,15 @@ def _raise_required_services_not_available() -> None:
 
     msg = "Required services not available"
     raise ImportError(msg)
+
+
+@dataclass(slots=True)
+class DatabaseSessionContext:
+    """Lightweight view of database resources exposed to callers."""
+
+    redis: redis.Redis
+    cache_manager: "CacheManager | None"
+    vector_service: "VectorStoreService | None"
 
 
 class DatabaseManager:
@@ -107,11 +119,30 @@ class DatabaseManager:
 
         if self._vector_service:
             await self._vector_service.cleanup()
-            self._vector_service = None
+        self._vector_service = None
 
         self._redis_client = None
         self._initialized = False
         logger.info("DatabaseManager cleaned up")
+
+    @asynccontextmanager
+    async def get_session(self) -> AsyncIterator[DatabaseSessionContext]:
+        """Expose a lightweight context with database-related resources."""
+
+        if self._redis_client is None:
+            msg = "Database manager not initialized"
+            raise APIError(msg)
+
+        context = DatabaseSessionContext(
+            redis=self._redis_client,
+            cache_manager=self._cache_manager,
+            vector_service=self._vector_service,
+        )
+        try:
+            yield context
+        finally:
+            # Shared clients are managed by the manager lifecycle.
+            pass
 
     # Vector Store Operations
     async def get_collections(self) -> list[str]:

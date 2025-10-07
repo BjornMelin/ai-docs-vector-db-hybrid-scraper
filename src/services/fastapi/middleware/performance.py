@@ -72,6 +72,7 @@ class EndpointStats:
     @property
     def avg_response_time(self) -> float:
         """Calculate average response time."""
+
         return (
             self.total_response_time / self.total_requests
             if self.total_requests > 0
@@ -81,6 +82,7 @@ class EndpointStats:
     @property
     def error_rate(self) -> float:
         """Calculate error rate percentage."""
+
         return (
             (self.error_count / self.total_requests * 100)
             if self.total_requests > 0
@@ -90,6 +92,7 @@ class EndpointStats:
     @property
     def slow_request_rate(self) -> float:
         """Calculate slow request rate percentage."""
+
         return (
             (self.slow_request_count / self.total_requests * 100)
             if self.total_requests > 0
@@ -114,8 +117,8 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
         Args:
             app: ASGI application
             config: Performance configuration
-
         """
+
         super().__init__(app)
         self.config = config
 
@@ -129,6 +132,7 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Process request with performance monitoring."""
+
         if not self.config.enabled:
             return await call_next(request)
 
@@ -164,8 +168,8 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
             request: HTTP request
             start_time: Request start time
             memory_before: Memory usage before request
-
         """
+
         end_time = time.perf_counter()
         response_time = end_time - start_time
 
@@ -198,8 +202,8 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Response with performance headers
-
         """
+
         # Calculate metrics
         end_time = time.perf_counter()
         response_time = end_time - start_time
@@ -238,32 +242,21 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
             response_time: Request processing time
             memory_before: Memory usage before request
             memory_after: Memory usage after request
-
         """
+
         response.headers["X-Response-Time"] = f"{response_time:.4f}"
         if memory_after and memory_before:
             memory_delta = memory_after - memory_before
             response.headers["X-Memory-Delta"] = f"{memory_delta:.2f}"
 
     def _get_endpoint_key(self, request: Request) -> str:
-        """Generate endpoint key for metrics grouping.
+        """Generate endpoint key for metrics grouping."""
 
-        Args:
-            request: HTTP request
-
-        Returns:
-            Endpoint identifier string
-
-        """
         return f"{request.method}:{request.url.path}"
 
     def _get_memory_usage(self) -> float | None:
-        """Get current memory usage in MB.
+        """Get current memory usage in MB."""
 
-        Returns:
-            Memory usage in MB or None if not available
-
-        """
         try:
             return self._get_process_memory()
         except (subprocess.SubprocessError, OSError, TimeoutError) as e:
@@ -271,12 +264,8 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
             return None
 
     def _get_process_memory(self) -> float | None:
-        """Get process memory usage safely.
+        """Get process memory usage safely."""
 
-        Returns:
-            Memory usage in MB or None
-
-        """
         if not self._process:
             return None
 
@@ -284,12 +273,8 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
         return memory_info.rss / 1024 / 1024  # Convert to MB
 
     def _record_metrics(self, metrics: RequestMetrics) -> None:
-        """Record metrics in thread-safe manner.
+        """Record metrics in thread-safe manner."""
 
-        Args:
-            metrics: Request metrics to record
-
-        """
         with self._stats_lock:
             # Update endpoint statistics
             stats = self._endpoint_stats[metrics.endpoint]
@@ -327,12 +312,8 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
             self._recent_metrics.append(metrics)
 
     def get_metrics_summary(self) -> dict:
-        """Get comprehensive metrics summary.
+        """Get comprehensive metrics summary."""
 
-        Returns:
-            Dictionary containing all performance metrics
-
-        """
         with self._stats_lock:
             summary = {
                 "total_requests": sum(
@@ -378,15 +359,8 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
             return summary
 
     def get_endpoint_stats(self, endpoint: str) -> dict | None:
-        """Get statistics for a specific endpoint.
+        """Get statistics for a specific endpoint."""
 
-        Args:
-            endpoint: Endpoint identifier
-
-        Returns:
-            Endpoint statistics or None if not found
-
-        """
         with self._stats_lock:
             if endpoint in self._endpoint_stats:
                 stats = self._endpoint_stats[endpoint]
@@ -405,15 +379,8 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
         return None
 
     def get_recent_metrics(self, limit: int = 100) -> list[dict]:
-        """Get recent request metrics.
+        """Get recent request metrics."""
 
-        Args:
-            limit: Maximum number of metrics to return
-
-        Returns:
-            List of recent request metrics
-
-        """
         with self._stats_lock:
             recent = list(self._recent_metrics)[-limit:]
             return [
@@ -431,6 +398,7 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
 
     def reset_metrics(self) -> None:
         """Reset all collected metrics."""
+
         with self._stats_lock:
             self._endpoint_stats.clear()
             self._recent_metrics.clear()
@@ -440,12 +408,8 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
             gc.collect()
 
     def get_health_status(self) -> dict:
-        """Get overall health status based on metrics.
+        """Get overall health status based on metrics."""
 
-        Returns:
-            Health status with recommendations
-
-        """
         summary = self.get_metrics_summary()
 
         health = {"status": "healthy", "warnings": [], "metrics": summary}
@@ -499,6 +463,7 @@ async def optimized_lifespan(_app):
     - Pre-warm critical services
     - Configure optimal connection pooling
     """
+
     # Install uvloop for better async performance
     try:
         asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
@@ -518,6 +483,7 @@ async def optimized_lifespan(_app):
 
 async def _warm_services():
     """Warm up critical services for better first-request performance."""
+
     try:
         await _perform_service_warmup()
     except Exception:
@@ -526,6 +492,7 @@ async def _warm_services():
 
 async def _perform_service_warmup() -> None:
     """Perform the actual service warm-up operations."""
+
     if Config is None or ClientManager is None or EmbeddingManager is None:
         logger.warning("Required imports not available for service warm-up")
         return
@@ -545,6 +512,7 @@ async def _perform_service_warmup() -> None:
 
 async def _warm_embedding_service(config, client_manager) -> None:
     """Warm up the embedding service."""
+
     try:
         embedding_manager = EmbeddingManager(config, client_manager)
         await embedding_manager.initialize()
@@ -557,6 +525,7 @@ async def _warm_embedding_service(config, client_manager) -> None:
 
 async def _warm_vector_database(client_manager) -> None:
     """Warm up the vector database connection."""
+
     try:
         qdrant_client = await client_manager.get_qdrant_client()
         await qdrant_client.get_collections()
@@ -568,6 +537,7 @@ async def _warm_vector_database(client_manager) -> None:
 
 async def _cleanup_services():
     """Clean up services and connections."""
+
     try:
         await _perform_service_cleanup()
     except (ImportError, AttributeError) as e:
@@ -576,6 +546,7 @@ async def _cleanup_services():
 
 async def _perform_service_cleanup() -> None:
     """Perform the actual service cleanup operations."""
+
     if Config is None or ClientManager is None:
         logger.warning("Required imports not available for service cleanup")
         return
@@ -595,8 +566,8 @@ class AdvancedPerformanceMiddleware(PerformanceMiddleware):
         Args:
             app: ASGI application
             config: Performance configuration
-
         """
+
         super().__init__(app, config)
         self.connection_pool_size = 100
         self.request_timeout = 30.0
@@ -605,6 +576,7 @@ class AdvancedPerformanceMiddleware(PerformanceMiddleware):
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Enhanced request processing with throughput tracking."""
+
         if not self.config.enabled:
             return await call_next(request)
 
@@ -628,12 +600,8 @@ class AdvancedPerformanceMiddleware(PerformanceMiddleware):
         return response
 
     def get_current_throughput(self) -> float:
-        """Calculate current requests per second throughput.
+        """Calculate current requests per second throughput."""
 
-        Returns:
-            Current throughput in requests per second
-
-        """
         current_time = time.time()
         elapsed = current_time - self._throughput_start_time
 
@@ -642,12 +610,8 @@ class AdvancedPerformanceMiddleware(PerformanceMiddleware):
         return 0.0
 
     def get_enhanced_metrics(self) -> dict:
-        """Get enhanced performance metrics including throughput.
+        """Get performance metrics including throughput."""
 
-        Returns:
-            Dict containing enhanced performance metrics
-
-        """
         base_metrics = self.get_metrics_summary()
 
         # Add throughput metrics

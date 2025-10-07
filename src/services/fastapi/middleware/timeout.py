@@ -67,8 +67,8 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
         Args:
             app: ASGI application
             config: Timeout configuration
-
         """
+
         super().__init__(app)
         self.config = config
 
@@ -77,6 +77,7 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Process request with timeout and circuit breaker logic."""
+
         if not self.config.enabled:
             return await call_next(request)
 
@@ -162,15 +163,8 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
             raise
 
     def _get_endpoint_key(self, request: Request) -> str:
-        """Generate endpoint key for circuit breaker tracking.
+        """Generate endpoint key for circuit breaker tracking."""
 
-        Args:
-            request: HTTP request
-
-        Returns:
-            Endpoint identifier string
-
-        """
         # Use method + path pattern for grouping
         return f"{request.method}:{request.url.path}"
 
@@ -182,8 +176,8 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Response if circuit is open, None if request should proceed
-
         """
+
         stats = self._circuit_stats.get(endpoint, CircuitBreakerStats())
         current_time = time.time()
 
@@ -223,12 +217,8 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
         return None
 
     def _record_success(self, endpoint: str) -> None:
-        """Record successful request for circuit breaker.
+        """Record successful request for circuit breaker."""
 
-        Args:
-            endpoint: Endpoint identifier
-
-        """
         stats = self._circuit_stats.get(endpoint, CircuitBreakerStats())
         stats.success_count += 1
         stats.last_success_time = time.time()
@@ -250,12 +240,8 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
         self._circuit_stats[endpoint] = stats
 
     def _record_failure(self, endpoint: str) -> None:
-        """Record failed request for circuit breaker.
+        """Record failed request for circuit breaker."""
 
-        Args:
-            endpoint: Endpoint identifier
-
-        """
         stats = self._circuit_stats.get(endpoint, CircuitBreakerStats())
         stats.failure_count += 1
         stats.last_failure_time = time.time()
@@ -281,12 +267,8 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
         self._circuit_stats[endpoint] = stats
 
     def get_circuit_stats(self) -> dict[str, dict]:
-        """Get current circuit breaker statistics for monitoring.
+        """Get current circuit breaker statistics for monitoring."""
 
-        Returns:
-            Dictionary of endpoint statistics
-
-        """
         return {
             endpoint: {
                 "state": stats.state.value,
@@ -307,8 +289,8 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
 
         Returns:
             True if circuit was reset, False if endpoint not found
-
         """
+
         if endpoint in self._circuit_stats:
             self._circuit_stats[endpoint] = CircuitBreakerStats()
             logger.info(
@@ -332,14 +314,15 @@ class BulkheadMiddleware(BaseHTTPMiddleware):
         Args:
             app: ASGI application
             max_concurrent: Maximum concurrent requests per endpoint
-
         """
+
         super().__init__(app)
         self.max_concurrent = max_concurrent
         self._semaphores: dict[str, asyncio.Semaphore] = {}
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Process request with concurrency limiting."""
+
         endpoint = f"{request.method}:{request.url.path}"
 
         # Get or create semaphore for this endpoint
