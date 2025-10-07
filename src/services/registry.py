@@ -50,24 +50,25 @@ class ServiceRegistry:  # pylint: disable=too-many-instance-attributes
             raise RuntimeError("Failed to initialize vector service") from exc
 
         cache_config = config.cache
-        redis_ttl = max(
-            cache_config.ttl_embeddings,
-            cache_config.ttl_search_results,
-        )
-        distributed_ttl = {
-            CacheType.REDIS: redis_ttl,
-            CacheType.EMBEDDINGS: cache_config.ttl_embeddings,
-            CacheType.SEARCH: cache_config.ttl_search_results,
-            CacheType.CRAWL: cache_config.ttl_crawl,
-            CacheType.HYBRID: redis_ttl,
-        }
         cache_manager = CacheManager(
             dragonfly_url=cache_config.redis_url,
             enable_local_cache=cache_config.enable_local_cache,
             enable_distributed_cache=cache_config.enable_redis_cache,
             local_max_size=cache_config.local_max_size,
             local_max_memory_mb=float(cache_config.local_max_memory_mb),
-            distributed_ttl_seconds=distributed_ttl,
+            distributed_ttl_seconds={
+                CacheType.REDIS: max(
+                    cache_config.ttl_embeddings,
+                    cache_config.ttl_search_results,
+                ),
+                CacheType.EMBEDDINGS: cache_config.ttl_embeddings,
+                CacheType.SEARCH: cache_config.ttl_search_results,
+                CacheType.CRAWL: cache_config.ttl_crawl,
+                CacheType.HYBRID: max(
+                    cache_config.ttl_embeddings,
+                    cache_config.ttl_search_results,
+                ),
+            },
             local_cache_path=config.cache_dir / "services",
             memory_pressure_threshold=cache_config.memory_pressure_threshold,
         )

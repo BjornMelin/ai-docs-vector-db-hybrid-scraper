@@ -75,33 +75,69 @@ class _StubCacheManager:
         return {"hit_rate": 1.0}
 
 
+class _StubClientManager:
+    """Return preconfigured service stubs for dependency helpers."""
+
+    def __init__(
+        self,
+        *,
+        vector_service: Any,
+        cache_manager: Any,
+        embedding_manager: Any,
+    ) -> None:
+        self._vector_service = vector_service
+        self._cache_manager = cache_manager
+        self._embedding_manager = embedding_manager
+
+    async def get_vector_store_service(self) -> Any:
+        """Return the injected vector service stub."""
+
+        return self._vector_service
+
+    async def get_cache_manager(self) -> Any:
+        """Return the injected cache manager stub."""
+
+        return self._cache_manager
+
+    async def get_embedding_manager(self) -> Any:
+        """Return the injected embedding manager stub."""
+
+        return self._embedding_manager
+
+
+async def _patch_client_manager(
+    monkeypatch: Any,
+    *,
+    vector_service: Any,
+    cache_manager: Any,
+    embedding_manager: Any,
+) -> None:
+    """Patch FastAPI dependency to use a stubbed client manager."""
+
+    async def _client_manager() -> _StubClientManager:
+        return _StubClientManager(
+            vector_service=vector_service,
+            cache_manager=cache_manager,
+            embedding_manager=embedding_manager,
+        )
+
+    monkeypatch.setattr(
+        fastapi_dependencies,
+        "get_client_manager",
+        _client_manager,
+        raising=True,
+    )
+
+
 @pytest.mark.asyncio
 async def test_service_health_checker_reports_healthy(monkeypatch: Any) -> None:
     """Verify health checker reports a healthy status when all services respond."""
 
-    async def _vector_service() -> _StubVectorService:
-        return _StubVectorService()
-
-    async def _cache_manager() -> _StubCacheManager:
-        return _StubCacheManager()
-
-    async def _embedding_manager() -> _StubEmbeddingManager:
-        return _StubEmbeddingManager()
-
-    monkeypatch.setattr(
-        fastapi_dependencies,
-        "get_vector_store_service",
-        _vector_service,
-        raising=True,
-    )
-    monkeypatch.setattr(
-        fastapi_dependencies, "get_cache_manager", _cache_manager, raising=True
-    )
-    monkeypatch.setattr(
-        fastapi_dependencies,
-        "get_embedding_manager",
-        _embedding_manager,
-        raising=True,
+    await _patch_client_manager(
+        monkeypatch,
+        vector_service=_StubVectorService(),
+        cache_manager=_StubCacheManager(),
+        embedding_manager=_StubEmbeddingManager(),
     )
 
     checker = ServiceHealthChecker()
@@ -117,29 +153,11 @@ async def test_service_health_checker_reports_healthy(monkeypatch: Any) -> None:
 async def test_service_health_checker_degrades_on_vector_failure(monkeypatch: Any):
     """Verify health checker degrades when the vector service fails."""
 
-    async def _failing_vector_service() -> _FailingVectorService:
-        return _FailingVectorService()
-
-    async def _cache_manager() -> _StubCacheManager:
-        return _StubCacheManager()
-
-    async def _embedding_manager() -> _StubEmbeddingManager:
-        return _StubEmbeddingManager()
-
-    monkeypatch.setattr(
-        fastapi_dependencies,
-        "get_vector_store_service",
-        _failing_vector_service,
-        raising=True,
-    )
-    monkeypatch.setattr(
-        fastapi_dependencies, "get_cache_manager", _cache_manager, raising=True
-    )
-    monkeypatch.setattr(
-        fastapi_dependencies,
-        "get_embedding_manager",
-        _embedding_manager,
-        raising=True,
+    await _patch_client_manager(
+        monkeypatch,
+        vector_service=_FailingVectorService(),
+        cache_manager=_StubCacheManager(),
+        embedding_manager=_StubEmbeddingManager(),
     )
 
     checker = ServiceHealthChecker()
