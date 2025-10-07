@@ -6,7 +6,9 @@ from typing import Any
 
 import pytest
 
-from src.services.fastapi import dependencies
+from src.services import dependencies as service_dependencies
+from src.services.dependencies import EmbeddingRequest, EmbeddingServiceError
+from src.services.fastapi import dependencies as fastapi_dependencies
 from src.services.fastapi.dependencies import ServiceHealthChecker
 
 
@@ -37,6 +39,33 @@ class _StubEmbeddingManager:
         return {"fastembed": {"status": "available"}}
 
 
+class _RecordingEmbeddingManager:
+    """Capture requests passed into the dependencies wrapper."""
+
+    def __init__(self, *, fail: bool = False) -> None:
+        self.fail = fail
+        self.calls: list[dict[str, Any]] = []
+
+    async def generate_embeddings(self, **kwargs: Any) -> dict[str, Any]:
+        """Record invocation arguments and optionally simulate failure."""
+
+        self.calls.append(kwargs)
+        if self.fail:  # pragma: no cover - failure exercised in dedicated test
+            raise RuntimeError("generation failed")
+
+        return {
+            "embeddings": [[0.1, 0.2]],
+            "provider": "fastembed",
+            "model": "test-model",
+            "cost": 0.0,
+            "latency_ms": 5.0,
+            "tokens": 16,
+            "reasoning": "test",
+            "quality_tier": "balanced",
+            "cache_hit": False,
+        }
+
+
 class _StubCacheManager:
     """Provide cache manager statistics stubs."""
 
@@ -60,11 +89,19 @@ async def test_service_health_checker_reports_healthy(monkeypatch: Any) -> None:
         return _StubEmbeddingManager()
 
     monkeypatch.setattr(
-        dependencies, "get_vector_store_service", _vector_service, raising=True
+        fastapi_dependencies,
+        "get_vector_store_service",
+        _vector_service,
+        raising=True,
     )
-    monkeypatch.setattr(dependencies, "get_cache_manager", _cache_manager, raising=True)
     monkeypatch.setattr(
-        dependencies, "get_embedding_manager", _embedding_manager, raising=True
+        fastapi_dependencies, "get_cache_manager", _cache_manager, raising=True
+    )
+    monkeypatch.setattr(
+        fastapi_dependencies,
+        "get_embedding_manager",
+        _embedding_manager,
+        raising=True,
     )
 
     checker = ServiceHealthChecker()
@@ -90,11 +127,19 @@ async def test_service_health_checker_degrades_on_vector_failure(monkeypatch: An
         return _StubEmbeddingManager()
 
     monkeypatch.setattr(
-        dependencies, "get_vector_store_service", _failing_vector_service, raising=True
+        fastapi_dependencies,
+        "get_vector_store_service",
+        _failing_vector_service,
+        raising=True,
     )
-    monkeypatch.setattr(dependencies, "get_cache_manager", _cache_manager, raising=True)
     monkeypatch.setattr(
-        dependencies, "get_embedding_manager", _embedding_manager, raising=True
+        fastapi_dependencies, "get_cache_manager", _cache_manager, raising=True
+    )
+    monkeypatch.setattr(
+        fastapi_dependencies,
+        "get_embedding_manager",
+        _embedding_manager,
+        raising=True,
     )
 
     checker = ServiceHealthChecker()
@@ -102,3 +147,37 @@ async def test_service_health_checker_degrades_on_vector_failure(monkeypatch: An
 
     assert result["status"] == "degraded"
     assert result["services"]["vector_db"]["status"] == "unhealthy"
+
+
+@pytest.mark.asyncio
+async def test_generate_embeddings_dependency_success() -> None:
+    """Ensure the embedding dependency returns a serialisable response."""
+
+    manager = _RecordingEmbeddingManager()
+    request = EmbeddingRequest(
+        texts=["hello world"],
+        quality_tier="balanced",
+        provider_name="fastembed",
+        max_cost=1.0,
+        speed_priority=True,
+        auto_select=True,
+        generate_sparse=False,
+    )
+
+    response = await service_dependencies.generate_embeddings(request, manager)
+
+    assert response.provider == "fastembed"
+    assert response.embeddings and response.embeddings[0] == [0.1, 0.2]
+    assert manager.calls[0]["texts"] == ["hello world"]
+    assert manager.calls[0]["quality_tier"].value == "balanced"
+
+
+@pytest.mark.asyncio
+async def test_generate_embeddings_dependency_failure() -> None:
+    """Verify the dependency wraps underlying failures with service errors."""
+
+    manager = _RecordingEmbeddingManager(fail=True)
+    request = EmbeddingRequest(texts=["oops"])
+
+    with pytest.raises(EmbeddingServiceError):
+        await service_dependencies.generate_embeddings(request, manager)

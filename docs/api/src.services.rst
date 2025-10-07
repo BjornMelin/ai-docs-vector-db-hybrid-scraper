@@ -18,7 +18,6 @@ Subpackages
    src.services.deployment
    src.services.embeddings
    src.services.fastapi
-   src.services.functional
    src.services.hyde
    src.services.integration
    src.services.managers
