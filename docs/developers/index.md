@@ -43,13 +43,13 @@ Keep these guides bookmarked—together they answer the majority of day-to-day q
 - **[Architecture & Orchestration](./architecture-and-orchestration.md)** – System design, LangGraph stack, MCP guidance.
 - **[Configuration](./configuration.md)** – Environment variables, profile overrides, tuning knobs.
 - **[Architecture & Orchestration](./architecture-and-orchestration.md)** – Drop-in patterns for optional cache/search services.
-- **[Persistent Cache](./cache/persistent-cache.md)** – Implementation notes for the local + Dragonfly stack.
+- **[Cache & Performance](./cache-and-performance.md)** – Persistent cache, GPU notes, performance checklist.
 - **[Agentic Orchestration](./agentic-orchestration.md)** – LangGraph runner, tool discovery, and testing guidance.
 - **[FastMCP Integration](./mcp-integration.md)** – Server structure, middleware, and migration roadmap.
-- **[API Reference](./api-reference.md)** – REST + MCP endpoints, request/response schemas.
+- **[API & Contracts](./api-and-contracts.md)** – REST + MCP endpoints, request/response schemas.
 - **[Query Response Contract](./queries/response-contract.md)** – Canonical payloads returned by the pipeline.
-- **[CI/CD Workflows](./ci-cd.md)** – Pipeline layout, required checks, reusable jobs.
-- **[Contributing](./contributing.md)** – Coding standards, quality gates, review workflow.
+- **[Platform Operations](./platform-operations.md)** – Pipeline layout, required checks, reusable jobs.
+- **[Contributing & Testing](./contributing-and-testing.md)** – Coding standards, quality gates, review workflow.
 
 Supporting docs when you need more detail:
 
@@ -98,9 +98,9 @@ Optional caches or search engines should be wired via the patterns documented in
 | -------------------- | ------------------------------------- |
 | Environment details  | [Configuration](./configuration.md)   |
 | System overview      | [Architecture](./architecture.md)     |
-| API contracts        | [API Reference](./api-reference.md)   |
-| Automation basics    | [CI/CD Workflows](./ci-cd.md)         |
-| Contribution process | [Contributing](./contributing.md)     |
+| API contracts        | [API & Contracts](./api-and-contracts.md)   |
+| Automation basics    | [Platform Operations](./platform-operations.md)         |
+| Contribution process | [Contributing & Testing](./contributing-and-testing.md)     |
 | Deployment guidance  | [Deployment](./deployment.md)         |
 | Operator procedures  | [Operator Hub](../operators/index.md) |
 

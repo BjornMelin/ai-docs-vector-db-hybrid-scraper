@@ -52,9 +52,9 @@ nav:
       - System Architecture: developers/architecture-and-orchestration.md
       - Configuration Reference: developers/configuration.md
       - Service Adapters: developers/service_adapters.md
-      - API Reference: developers/api-reference.md
+      - API & Contracts: developers/api-and-contracts.md
       - App Profiles: developers/app-profiles.md
-      - CI/CD Workflows: developers/ci-cd.md
+      - Platform Operations: developers/platform-operations.md
       - Deployment Guide: developers/deployment.md
       - GPU Acceleration: developers/gpu-acceleration.md
       - GitHub Actions: developers/github-actions.md
