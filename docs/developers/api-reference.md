@@ -1,211 +1,135 @@
-# API Reference (Essential Endpoints Only)
+# API Reference (Simple Profile)
 
-## Base Configuration
-
-Base URL: https://api.example.com/v1
-
-Headers:
-- Content-Type: application/json
-- Authorization: Bearer {api_key}
-- Accept: application/json
+The simple profile exposes a minimal REST interface for testing the retrieval
+stack. Routes live under `src/api/routers/simple/` and are mounted when
+`AI_DOCS__MODE=simple`.
 
 ## Search Endpoints
 
 ### POST /search
 
-Search documents using simple query syntax.
+Executes a vector search using `SimpleSearchRequest`.
 
-Request:
+Request body:
+```json
 {
-  "query": "machine learning",
-  "collection": "research-papers",
-  "limit": 10,
-  "offset": 0
+  "query": "vector databases",
+  "collection": "documents",
+  "limit": 10
 }
+```
 
-Response:
+Response (`SimpleSearchResponse`):
+```json
 {
+  "query": "vector databases",
   "results": [
     {
-      "id": "doc_12345",
-      "title": "Introduction to Machine Learning",
-      "score": 0.95,
-      "metadata": {
-        "author": "John Smith",
-        "year": 2023
-      }
+      "id": "doc_123",
+      "score": 0.89,
+      "normalized_score": 0.91,
+      "collection": "documents",
+      "payload": {"title": "Introduction to Qdrant"}
     }
   ],
-  "total": 1,
-  "limit": 10,
-  "offset": 0
+  "total_count": 1,
+  "processing_time_ms": 12.5
 }
+```
 
-### POST /search/advanced
+### GET /search
 
-Search documents using advanced filtering and sorting.
+Query parameters mirror the POST body and return the same response model. Useful
+for quick manual checks.
 
-Request:
+### GET /search/health
+
+Returns cached collection stats and indicates whether the simple search service
+is ready.
+
+```json
 {
-  "query": "neural networks",
-  "filters": {
-    "year": {"gte": 2020},
-    "author": "Jane Doe"
-  },
-  "sort": [{"field": "year", "order": "desc"}],
-  "collection": "academic",
-  "limit": 5
+  "status": "healthy",
+  "service_type": "simple",
+  "stats": {
+    "collections": ["documents"],
+    "default_collection": "documents",
+    "default_collection_stats": {"vectors_count": 1527}
+  }
 }
+```
 
-Response:
-{
-  "results": [
-    {
-      "id": "doc_67890",
-      "title": "Deep Neural Networks in 2023",
-      "score": 0.87,
-      "metadata": {
-        "author": "Jane Doe",
-        "year": 2023,
-        "journal": "AI Review"
-      }
-    }
-  ],
-  "total": 1,
-  "limit": 5,
-  "offset": 0
-}
-
-## Document Management
+## Document Endpoints
 
 ### POST /documents
 
-Create a new document in a collection.
+Indexes a single document by calling `VectorStoreService.add_document`.
 
-Request:
+```json
 {
-  "title": "Document Title",
-  "content": "Full text content of the document",
-  "metadata": {
-    "author": "Alice Johnson",
-    "tags": ["research", "analysis"]
-  },
-  "collection": "documents"
+  "content": "Full document text",
+  "metadata": {"source": "docs"},
+  "collection_name": "documents"
 }
+```
 
 Response:
+```json
 {
   "id": "doc_abc123",
-  "title": "Document Title",
-  "created_at": "2023-01-15T10:30:00Z"
+  "status": "success",
+  "message": "Document added successfully"
 }
+```
 
 ### GET /documents/{id}
 
-Retrieve a document by its ID.
-
-Response:
-{
-  "id": "doc_abc123",
-  "title": "Document Title",
-  "content": "Full text content of the document",
-  "metadata": {
-    "author": "Alice Johnson",
-    "tags": ["research", "analysis"],
-    "created_at": "2023-01-15T10:30:00Z"
-  },
-  "collection": "documents"
-}
+Fetches a stored document from the collection. Returns `404` if not found.
 
 ### DELETE /documents/{id}
 
-Delete a document by its ID.
-
-Response:
+Removes a document. Success payload:
+```json
 {
-  "deleted": true,
-  "id": "doc_abc123"
+  "status": "success",
+  "message": "Document deleted successfully"
 }
+```
 
-## Collection Management
+### GET /documents
+
+Lists documents with basic pagination.
+
+```json
+{
+  "documents": [
+    {"id": "doc_abc123", "payload": {...}}
+  ],
+  "count": 1,
+  "limit": 10,
+  "next_offset": null
+}
+```
 
 ### GET /collections
 
-List all available collections.
+Returns the collections known to the vector store service.
 
-Response:
+```json
 {
-  "collections": [
-    {
-      "name": "research-papers",
-      "document_count": 1250
-    },
-    {
-      "name": "academic",
-      "document_count": 842
-    }
-  ]
+  "collections": ["documents", "knowledge-base"]
 }
+```
 
-### POST /collections
+## Enterprise Profile
 
-Create a new collection.
+When `AI_DOCS__MODE=enterprise`, additional routers are mounted to expose
+orchestrated retrieval endpoints and administrative tools. Refer to the LangGraph
+and FastMCP documentation for those APIs:
 
-Request:
-{
-  "name": "new-collection",
-  "description": "Collection for new documents"
-}
+- `docs/developers/agentic-orchestration.md` – agentic workflows and payloads.
+- `docs/developers/mcp-integration.md` – MCP tool interfaces and error models.
+- `docs/developers/queries/response-contract.md` – response schema (see the
+  relocated contract document).
 
-Response:
-{
-  "name": "new-collection",
-  "description": "Collection for new documents",
-  "document_count": 0,
-  "created_at": "2023-01-15T10:30:00Z"
-}
-
-### DELETE /collections/{name}
-
-Delete a collection by name.
-
-Response:
-{
-  "deleted": true,
-  "name": "new-collection"
-}
-
-## Essential Schemas
-
-### SearchRequest
-{
-  "query": "string",
-  "collection": "string",
-  "limit": "integer (optional)",
-  "offset": "integer (optional)"
-}
-
-### AdvancedSearchRequest
-{
-  "query": "string",
-  "filters": "object (optional)",
-  "sort": "array (optional)",
-  "collection": "string",
-  "limit": "integer (optional)"
-}
-
-### Document
-{
-  "id": "string",
-  "title": "string",
-  "content": "string",
-  "metadata": "object",
-  "collection": "string"
-}
-
-### Collection
-{
-  "name": "string",
-  "description": "string",
-  "document_count": "integer"
-}
+All routes surface OpenAPI documentation at `/docs` and `/openapi.json`.

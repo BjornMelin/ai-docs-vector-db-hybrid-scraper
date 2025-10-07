@@ -43,9 +43,11 @@ Keep these guides bookmarked—together they answer the majority of day-to-day q
 - **[Architecture](./architecture.md)** – Component map, request flows, scaling tactics.
 - **[Configuration](./configuration.md)** – Environment variables, profile overrides, tuning knobs.
 - **[Service Adapters](./service_adapters.md)** – Drop-in patterns for optional cache/search services.
+- **[Persistent Cache](./cache/persistent-cache.md)** – Implementation notes for the local + Dragonfly stack.
 - **[Agentic Orchestration](./agentic-orchestration.md)** – LangGraph runner, tool discovery, and testing guidance.
 - **[FastMCP Integration](./mcp-integration.md)** – Server structure, middleware, and migration roadmap.
 - **[API Reference](./api-reference.md)** – REST + MCP endpoints, request/response schemas.
+- **[Query Response Contract](./queries/response-contract.md)** – Canonical payloads returned by the pipeline.
 - **[CI/CD Workflows](./ci-cd.md)** – Pipeline layout, required checks, reusable jobs.
 - **[Contributing](./contributing.md)** – Coding standards, quality gates, review workflow.
 

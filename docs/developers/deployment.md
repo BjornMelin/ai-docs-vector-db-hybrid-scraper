@@ -1,184 +1,75 @@
 # Production Deployment Guide
 
-## 1. Docker Deployment Basics
+Use Docker Compose profiles to run the platform in either **simple** (local) or
+**enterprise** (full stack) mode. The supplied Dockerfile builds a slim Uvicorn
+image using UV-managed dependencies.
 
-### Build Optimized Image
-
-```dockerfile
-FROM python:3.9-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY . .
-EXPOSE 8000
-CMD ["gunicorn", "app:app", "-b", "0.0.0.0:8000"]
-```
-
-### Run Container with Restart Policy
+## Build the Runtime Image
 
 ```bash
-docker run -d --restart=unless-stopped --name myapp myapp:latest
+# Build the multi-stage image defined in Dockerfile
+DOCKER_BUILDKIT=1 docker build -t ai-docs-app:latest .
 ```
 
-### Use Docker Compose for Multi-Container Setup
+The build stage installs dependencies with UV and copies the runtime virtual
+environment into a slim Python 3.12 container. No manual pip steps are required.
 
-```yaml
-version: "3.8"
-services:
-  web:
-    image: myapp:latest
-    restart: unless-stopped
-    ports:
-      - "8000:8000"
-    depends_on:
-      - db
-      - redis
-  db:
-    image: postgres:13
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: myapp
-  redis:
-    image: redis:6-alpine
-    restart: unless-stopped
-```
+## Compose Profiles
 
-## 2. Environment Configuration
+| Profile | Services | Command |
+| ------- | -------- | ------- |
+| `simple` | `app`, `qdrant` | `docker compose --profile simple up -d` |
+| `enterprise` | `app`, `qdrant`, `redis`, `postgres`, `prometheus`, `grafana`, `alertmanager` | `docker compose --profile enterprise up -d` |
 
-### Environment Variables File (.env.prod)
+Profiles reuse the same `app` image but toggle supporting services and resource
+limits. Switch profiles by setting `AI_DOCS__MODE` in the application
+container or by exporting the variable locally before running CLI commands.
+
+## Environment Variables
+
+Key settings are injected via the `AI_DOCS__` prefix. Example overrides:
 
 ```bash
-DATABASE_URL=postgresql://user:pass@db:5432/myapp
-REDIS_URL=redis://redis:6379/0
-SECRET_KEY=your-secret-key-here
-DEBUG=False
-ALLOWED_HOSTS=yourdomain.com,api.yourdomain.com
+export AI_DOCS__MODE=enterprise
+export AI_DOCS__QDRANT__URL=http://qdrant:6333
+export AI_DOCS__CACHE__REDIS_URL=redis://redis:6379
+export AI_DOCS__OPENAI__API_KEY=sk-***
 ```
 
-### Load Environment in Application
+Enterprise deployments typically mount the `.env` file as a secret or supply the
+variables through your orchestrator. See `docs/developers/configuration.md` for
+section-specific keys.
 
-```python
-import os
-from dotenv import load_dotenv
+## Health Checks and Monitoring
 
-load_dotenv('.env.prod')
-DATABASE_URL = os.getenv('DATABASE_URL')
-SECRET_KEY = os.getenv('SECRET_KEY')
-```
+- Qdrant exposes `/health`. Compose defines a health check to gate the FastAPI
+  startup.
+- The FastAPI container provides `/health` and `/metrics` (Prometheus exporter).
+- Prometheus and Grafana profiles ship with default configuration under
+  `config/prometheus/` and `config/grafana/`.
 
-## 3. Essential Service Dependencies
+## Persistence
 
-### Database (PostgreSQL)
-
-- Connection pooling
-- Backup strategy
-- Read replicas for scaling
-
-### Cache (Redis)
-
-- Session storage
-- Rate limiting
-
-### Reverse Proxy (Nginx)
-
-- SSL termination
-- Static file serving
-- Load balancing
-
-### Logging Service
-
-- Centralized log aggregation
-- Log rotation
-- Error tracking integration
-
-## 4. Health Checks and Monitoring
-
-### Application Health Endpoint
-
-```python
-@app.route('/health')
-def health_check():
-    return {'status': 'healthy'}, 200
-```
-
-### Docker Health Check
-
-```dockerfile
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:8000/health || exit 1
-```
-
-### Container Resource Limits
+Named volumes are declared for Qdrant, Redis/Dragonfly, Postgres, and Prometheus.
+Ensure you snapshot these volumes for disaster recovery. Example backup command:
 
 ```bash
-docker run --memory=512m --cpus=1.0 --name myapp myapp:latest
+docker run --rm -v qdrant_data:/data -v "$PWD/backups":/backup alpine \
+  tar czf /backup/qdrant-$(date +%Y%m%d).tar.gz -C /data .
 ```
 
-### Monitoring Setup
+## Rolling Updates
 
-- CPU and memory usage tracking
-- HTTP response time monitoring
-- Database connection count
-- Error rate metrics
+1. Build and push the updated image.
+2. `docker compose pull && docker compose up -d --no-deps app`
+3. Watch health checks (`docker compose ps`, `/health`).
+4. Re-run smoke tests (`uv run pytest tests/integration/rag/test_pipeline.py -q`).
 
-## 5. Basic Scaling Considerations
+For orchestrators such as Kubernetes, reuse the same image and translate the
+compose services into Deployments/StatefulSets. Mount `.env` as a secret and
+recreate the readiness checks defined in the compose file.
 
-### Horizontal Scaling
+---
 
-```bash
-docker-compose up --scale web=3
-```
-
-### Vertical Scaling Limits
-
-- Memory: 512MB-2GB per container
-- CPU: 1-4 cores per container
-- Database connections: 100-200 max
-
-### Load Balancer Configuration
-
-```nginx
-upstream app_servers {
-    server web1:8000;
-    server web2:8000;
-    server web3:8000;
-}
-```
-
-### Session Persistence
-
-- Use Redis for shared sessions
-- Enable sticky sessions if needed
-
-## 6. Security Configuration
-
-### Container Security
-
-- Run as non-root user
-- Disable unnecessary capabilities
-- Use read-only filesystem where possible
-
-### Network Security
-
-- Internal network segmentation
-- Firewall rules for service ports
-- SSL/TLS for all external traffic
-
-### Application Security
-
-- Environment variable secrets
-- CORS policy configuration
-- Rate limiting implementation
-- Input validation and sanitization
-
-### Image Scanning
-
-```bash
-docker scan myapp:latest
-```
-
-### Runtime Security
-
-- Enable Docker content trust
-- Regular security updates
-- Log security events
+Keep this guide in sync with `docker-compose.yml` and update it whenever service
+profiles or health checks change.

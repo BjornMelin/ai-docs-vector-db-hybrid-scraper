@@ -6,7 +6,7 @@ owner: product-education
 last_reviewed: 2025-03-13
 ---
 
-# Examples & Recipes
+## Examples & Recipes
 
 > **Status**: Active  
 > **Last Updated**: 2025-01-09  
