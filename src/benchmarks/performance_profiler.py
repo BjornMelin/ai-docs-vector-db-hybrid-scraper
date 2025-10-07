@@ -180,8 +180,8 @@ class PerformanceProfiler:
 
             except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
                 logger.debug(
-                    f"Query execution failed during profiling: {e}"
-                )  # TODO: Convert f-string to logging format
+                    "Query execution failed during profiling: %s", e
+                )
 
     async def _monitor_resources(self) -> None:
         """Monitor system resources continuously."""
@@ -239,8 +239,8 @@ class PerformanceProfiler:
 
             except (ConnectionError, OSError, TimeoutError) as e:
                 logger.warning(
-                    f"Error collecting resource snapshot: {e}"
-                )  # TODO: Convert f-string to logging format
+                    "Error collecting resource snapshot: %s", e
+                )
 
             await asyncio.sleep(self.sampling_interval)
 

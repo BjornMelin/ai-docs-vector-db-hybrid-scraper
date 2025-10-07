@@ -185,7 +185,7 @@ class FailureInjector:
 
         logger.warning(
             "Injecting memory pressure: %sMB for %ss", pressure_mb, duration
-        )  # TODO: Convert f-string to logging format
+        )
 
         # Allocate memory to create pressure
         memory_hogs = []
@@ -228,7 +228,7 @@ class FailureInjector:
 
         logger.warning(
             "Injecting CPU saturation: %.1f%% load for %ss", cpu_load * 100, duration
-        )  # TODO: Convert f-string to logging format
+        )
 
         # CPU intensive work
         stop_cpu_work = threading.Event()
@@ -509,7 +509,7 @@ class StressTestOrchestrator:
             phase_results.append(phase_result)
             logger.info(
                 "Completed stress test phase %s", i + 1
-            )  # TODO: Convert f-string to logging format
+            )
 
         return phase_results
 

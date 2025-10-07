@@ -162,7 +162,7 @@ class SystemMonitor:
             except (ConnectionError, RuntimeError, OSError) as e:
                 logger.warning(
                     "Error during monitoring: %s", e
-                )  # TODO: Convert f-string to logging format
+                )
 
             time.sleep(self.collection_interval)
 
@@ -322,7 +322,7 @@ class SystemMonitor:
             self.performance_alerts.append(alert)
             logger.warning(
                 "Performance alert: %s", message
-            )  # TODO: Convert f-string to logging format
+            )
 
     def get_metrics_summary(self) -> dict[str, Any]:
         """Get summary of collected metrics."""
@@ -556,7 +556,7 @@ class TestSystemMonitoring:
                         # Handle stress operation errors
                         logger.warning(
                             "Stress operation failed: %s", e
-                        )  # TODO: Convert f-string to logging format
+                        )
                         raise
                     else:
                         return {
@@ -601,7 +601,7 @@ class TestSystemMonitoring:
             for pattern in stress_patterns:
                 logger.info(
                     "Running stress pattern: %s", pattern["name"]
-                )  # TODO: Convert f-string to logging format
+                )
 
                 # Configure stress test
                 config = LoadTestConfig(
@@ -640,7 +640,7 @@ class TestSystemMonitoring:
 
                 logger.info(
                     "Completed stress pattern: %s", pattern["name"]
-                )  # TODO: Convert f-string to logging format
+                )
 
                 # Brief pause between patterns
                 await asyncio.sleep(5)
@@ -694,7 +694,7 @@ class TestSystemMonitoring:
             )
             logger.info(
                 "  - Performance alerts: %s", final_metrics["_total_alerts"]
-            )  # TODO: Convert f-string to logging format
+            )
             logger.info(
                 "  - Peak CPU: %.2f%%", final_metrics["system_metrics"]["cpu"]["max"]
             )

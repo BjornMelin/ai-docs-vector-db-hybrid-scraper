@@ -455,7 +455,7 @@ class TestCircuitBreakers:
         for phase in phases:
             logger.info(
                 "Running recovery phase: %s", phase["name"]
-            )  # TODO: Convert f-string to logging format
+            )
 
             # Set service health
             service.set_health(phase["service_healthy"])
@@ -568,10 +568,10 @@ class TestCircuitBreakers:
         logger.info("Circuit breaker recovery completed successfully")
         logger.info(
             "Total state changes: %s", _total_state_changes
-        )  # TODO: Convert f-string to logging format
+        )
         logger.info(
             "Final circuit breaker metrics: %s", circuit_breaker.metrics
-        )  # TODO: Convert f-string to logging format
+        )
 
 
 class TestRateLimiters:
@@ -628,7 +628,7 @@ class TestRateLimiters:
         for pattern in load_patterns:
             logger.info(
                 "Testing rate limiter with load pattern: %s", pattern["name"]
-            )  # TODO: Convert f-string to logging format
+            )
 
             # Reset rate limiter for clean test
             rate_limiter.request_times.clear()

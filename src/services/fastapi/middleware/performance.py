@@ -267,7 +267,7 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
         try:
             return self._get_process_memory()
         except (subprocess.SubprocessError, OSError, TimeoutError) as e:
-            logger.warning(f"Failed to get memory usage: {e}")
+            logger.warning("Failed to get memory usage: %s", e)
             return None
 
     def _get_process_memory(self) -> float | None:
@@ -503,7 +503,7 @@ async def optimized_lifespan(_app):
     try:
         asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
     except (ConnectionError, OSError, TimeoutError) as e:
-        logger.warning(f"Failed to install uvloop: {e}")
+        logger.warning("Failed to install uvloop: %s", e)
     else:
         logger.info("uvloop event loop policy installed for better performance")
 
@@ -550,7 +550,7 @@ async def _warm_embedding_service(config, client_manager) -> None:
         await embedding_manager.initialize()
         await embedding_manager.generate_embeddings(["warmup query"])
     except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
-        logger.warning(f"Failed to warm embedding service: {e}")
+        logger.warning("Failed to warm embedding service: %s", e)
     else:
         logger.info("Embedding service warmed up successfully")
 
@@ -561,7 +561,7 @@ async def _warm_vector_database(client_manager) -> None:
         qdrant_client = await client_manager.get_qdrant_client()
         await qdrant_client.get_collections()
     except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
-        logger.warning(f"Failed to warm vector database: {e}")
+        logger.warning("Failed to warm vector database: %s", e)
     else:
         logger.info("Vector database connection warmed up successfully")
 
@@ -571,7 +571,7 @@ async def _cleanup_services():
     try:
         await _perform_service_cleanup()
     except (ImportError, ModuleNotFoundError, AttributeError) as e:
-        logger.warning(f"Service cleanup failed: {e}")
+        logger.warning("Service cleanup failed: %s", e)
 
 
 async def _perform_service_cleanup() -> None:

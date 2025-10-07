@@ -309,7 +309,7 @@ class BlueGreenDeployment:
 
         # Switch back to the other environment
         if success := await self.switch_environments(force=True):
-            logger.info(f"Rollback completed successfully: {success}")
+            logger.info("Rollback completed successfully: %s", success)
             return True
 
         logger.error("Rollback failed")
@@ -398,7 +398,7 @@ class BlueGreenDeployment:
 
         if success := await self.switch_environments():
             self._deployment_status = BlueGreenStatus.COMPLETED
-            logger.info(f"Blue-green deployment completed successfully: {success}")
+            logger.info("Blue-green deployment completed successfully: %s", success)
         else:
             self._deployment_status = BlueGreenStatus.FAILED
             logger.error("Failed to switch environments")

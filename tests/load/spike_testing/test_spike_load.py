@@ -185,7 +185,7 @@ class TestSpikeLoad:
                 )
                 logger.info(
                     "Scaled up from %s to %s", old_capacity, self.current_capacity
-                )  # TODO: Convert f-string to logging format
+                )
 
             def scale_down(self):
                 """Scale down capacity."""
