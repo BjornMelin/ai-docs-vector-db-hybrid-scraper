@@ -78,7 +78,7 @@ async def crawl_url(
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"URL crawling failed for {url}")
+        logger.exception("URL crawling failed for %s", url)
         raise HTTPException(status_code=500, detail=f"Crawling failed: {e!s}") from e
     else:
         return result

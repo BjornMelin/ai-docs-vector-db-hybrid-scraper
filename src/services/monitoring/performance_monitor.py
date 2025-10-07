@@ -152,13 +152,11 @@ class RealTimePerformanceMonitor:
         # Log performance warnings
         if snapshot.p95_response_time > 100:  # P95 > 100ms
             logger.warning(
-                f"High P95 latency detected: {snapshot.p95_response_time:.1f}ms"
+                "High P95 latency detected: %.1fms", snapshot.p95_response_time
             )
 
         if snapshot.request_rate > 0 and snapshot.request_rate < 10:  # Low throughput
-            logger.warning(
-                f"Low throughput detected: {snapshot.request_rate:.1f} req/s"
-            )
+            logger.warning("Low throughput detected: %.1f req/s", snapshot.request_rate)
 
         if snapshot.cache_hit_rate < 0.8:  # Cache hit rate below 80%
             logger.warning(f"Low cache hit rate: {snapshot.cache_hit_rate:.1%}")

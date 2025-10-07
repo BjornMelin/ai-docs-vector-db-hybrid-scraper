@@ -135,9 +135,7 @@ class LoadTestUser:
         if start_delay > 0:
             await asyncio.sleep(start_delay)
 
-        logger.debug(
-            f"User {self.user_id} starting session"
-        )  # TODO: Convert f-string to logging format
+        logger.debug("User %s starting session", self.user_id)
 
         session_start = time.time()
         requests_per_user = self.config.total_requests // self.config.concurrent_users
@@ -174,16 +172,16 @@ class LoadTestUser:
                     self.failures += 1
                     self.errors.append("timeout")
                     logger.debug(
-                        f"User {self.user_id}: Request timeout"
-                    )  # TODO: Convert f-string to logging format
+                        "User %s: Request timeout", self.user_id
+                    )
 
                 except (httpx.HTTPError, httpx.TimeoutException, ConnectionError) as e:
                     self.failures += 1
                     error_type = type(e).__name__
                     self.errors.append(error_type)
                     logger.debug(
-                        f"User {self.user_id}: Request failed - {error_type}"
-                    )  # TODO: Convert f-string to logging format
+                        "User %s: Request failed - %s", self.user_id, error_type
+                    )
 
                     if not self.config.retry_on_failure:
                         continue
@@ -226,7 +224,7 @@ class LoadTestUser:
                 await asyncio.sleep(think_time)
 
             except (TimeoutError, OSError, PermissionError):
-                logger.exception(f"User {self.user_id} session error")
+                logger.exception("User %s session error", self.user_id)
                 self.failures += 1
                 break
 
@@ -272,8 +270,9 @@ class LoadTestRunner:
 
         """
         logger.info(
-            f"Starting load test: {load_config.concurrent_users} users, "
-            f"{load_config.total_requests} requests"
+            "Starting load test: %s users, %s requests",
+            load_config.concurrent_users,
+            load_config.total_requests,
         )
 
         # Initialize users
@@ -470,9 +469,7 @@ class LoadTestRunner:
         stress_results = {}
 
         for user_count in range(step_size, max_users + 1, step_size):
-            logger.info(
-                f"Stress test step: {user_count} users"
-            )  # TODO: Convert f-string to logging format
+            logger.info("Stress test step: %s users", user_count)
 
             load_config = LoadTestConfig(
                 concurrent_users=user_count,
@@ -492,12 +489,14 @@ class LoadTestRunner:
                 # Check if system is breaking down
                 if metrics.error_rate > 0.5 or metrics.p95_response_time_ms > 10000:
                     logger.warning(
-                        f"System degradation detected at {user_count} users"
-                    )  # TODO: Convert f-string to logging format
+                        "System degradation detected at %s users", user_count
+                    )
                     break
 
             except (OSError, PermissionError):
-                logger.exception(f"Stress test failed at {user_count} users")
+                logger.exception(
+                    "Stress test failed at %s users", user_count
+                )
                 break
 
         return stress_results
@@ -535,7 +534,9 @@ class LoadTestRunner:
         )
 
         logger.info(
-            f"Starting endurance test: {duration_hours} hours, {concurrent_users} users"
+            "Starting endurance test: %s hours, %s users",
+            duration_hours,
+            concurrent_users,
         )
 
         return await self.run_load_test(search_service, test_queries, load_config)
