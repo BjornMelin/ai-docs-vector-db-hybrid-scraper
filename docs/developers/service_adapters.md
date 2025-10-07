@@ -109,3 +109,14 @@ app.dependency_overrides[Redis.from_url] = lambda: Redis.from_url("redis://cache
 
 These recipes keep the core codebase minimal while providing clear extension
 points for teams that require additional platform features.
+
+## Web Search Provider Routing
+
+Multi-provider search is coordinated in `src/services/agents/tool_execution_service.py` and `src/services/agents/dynamic_tool_discovery.py`. To register additional providers:
+
+1. Implement a thin adapter exposing `search(query: str, *, k: int, country: str | None = None)`.
+2. Register the provider with `ClientManager` so discovery can surface capability metadata (`cost_tier`, `latency_class`).
+3. Add routing weights in `config/providers/web_search.yml`; the orchestrator uses these weights plus success history to pick providers.
+4. Extend unit tests in `tests/unit/services/agents/test_tool_execution_service.py` to cover the new provider branch.
+
+During incidents, operators can disable a provider by setting `WEB_SEARCH__DISABLE_<NAME>=1` and watching the `tool=web_search_<name>` series in `*_agentic_tool_errors_total`.

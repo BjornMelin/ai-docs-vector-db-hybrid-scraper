@@ -33,7 +33,7 @@ The research encompasses 25+ specialized agents analyzing everything from founda
 
 **Status:** Completed with HIGH confidence
 **Completion Date:** 2025-01-15
-**Location:** `planning/done/P0/`
+**Reference:** `docs/plans/research-consolidation-map.md` (Phase 0 entries)
 
 ### G1: LangChain Native Composition
 
@@ -94,7 +94,7 @@ The research encompasses 25+ specialized agents analyzing everything from founda
 
 **Status:** Completed with HIGH confidence
 **Completion Date:** 2025-01-20
-**Location:** `planning/done/P1/`
+**Reference:** `docs/plans/research-consolidation-map.md` (Phase 1 entries)
 
 ### H1: FastMCP Modernization Analysis
 
@@ -155,7 +155,7 @@ The research encompasses 25+ specialized agents analyzing everything from founda
 
 **Status:** Completed with HIGH confidence
 **Completion Date:** 2025-01-25
-**Location:** `planning/done/P2/`
+**Reference:** `docs/plans/research-consolidation-map.md` (Phase 2 entries)
 
 ### I1: Advanced Browser Automation
 
@@ -260,7 +260,7 @@ The research encompasses 25+ specialized agents analyzing everything from founda
 
 **Status:** Completed with MEDIUM confidence
 **Completion Date:** 2025-01-28
-**Location:** `planning/done/P3/`
+**Reference:** `docs/plans/research-consolidation-map.md` (Phase 3 entries)
 
 ### Historical Research Analysis
 
@@ -421,10 +421,10 @@ The research encompasses 25+ specialized agents analyzing everything from founda
 
 ### Completed Research Locations
 
-- **Phase 0 (Foundation)**: `planning/done/P0/`
-- **Phase 1 (Infrastructure)**: `planning/done/P1/`
-- **Phase 2 (Agentic Capabilities)**: `planning/done/P2/`
-- **Phase 3 (Legacy Review)**: `planning/done/P3/`
+- **Phase 0 (Foundation)**: see `docs/plans/research-consolidation-map.md`
+- **Phase 1 (Infrastructure)**: see `docs/plans/research-consolidation-map.md`
+- **Phase 2 (Agentic Capabilities)**: see `docs/plans/research-consolidation-map.md`
+- **Phase 3 (Legacy Review)**: see `docs/plans/research-consolidation-map.md`
 
 ### Master Tracking Reports
 

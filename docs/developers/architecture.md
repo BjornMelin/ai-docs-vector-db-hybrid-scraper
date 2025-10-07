@@ -85,3 +85,14 @@ graph LR
 - **Observability** – Prometheus metrics and structured logs are emitted by each service
 - **Security** – Requests flow through middleware enforcing authentication, rate limiting, and content validation
 - **Extensibility** – New embedding providers or automation tiers can be registered via the DI container without modifying callers
+
+## Agentic Orchestration Stack
+
+The LangChain/LangGraph agent runner orchestrates discovery, retrieval, tool execution, and response synthesis. It relies on components documented in `docs/developers/agentic-orchestration.md` and integrates with the FastMCP server described in `docs/developers/mcp-integration.md`.
+
+- Orchestration entry point: `GraphRunner` (`src/services/agents/langgraph_runner.py`).
+- Tool discovery and execution: `DynamicToolDiscovery` and `ToolExecutionService`.
+- MCP transport: shared clients from `src/infrastructure/client_manager.py`.
+- Telemetry: Prometheus metrics + OpenTelemetry spans emitted per graph node.
+
+Operational guidance for browser automation tiers and retrieval workloads lives in `docs/operators/operations.md`.

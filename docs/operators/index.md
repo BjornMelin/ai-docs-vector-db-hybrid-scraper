@@ -14,7 +14,7 @@ Essential operational guides for running the AI Docs Vector DB platform in produ
 
 ### [Operations](./operations.md)
 
-Daily operational procedures, service management, backup/recovery, and incident response commands.
+Daily operational procedures, agentic workflow runbooks, service management, backup/recovery, and incident response commands.
 
 ### [Deployment](./deployment.md)
 

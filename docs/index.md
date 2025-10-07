@@ -58,6 +58,8 @@ graph LR
     - [Developer Hub](developers/index.md)
     - [System Architecture](developers/architecture.md)
     - [API Reference](developers/api-reference.md)
+    - [Agentic Orchestration](developers/agentic-orchestration.md)
+    - [FastMCP Integration](developers/mcp-integration.md)
     - [Contributing](developers/contributing.md)
 
 === "Operators"
