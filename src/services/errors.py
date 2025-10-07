@@ -39,8 +39,6 @@ from tenacity import (
     wait_exponential,
 )
 
-from src.services.circuit_breaker.provider import get_circuit_breaker_manager
-
 
 logger = logging.getLogger(__name__)
 
@@ -577,5 +575,9 @@ def create_validation_error(
 
 async def _get_circuit_breaker_manager():
     """Resolve the circuit breaker manager lazily to avoid import cycles."""
+
+    from src.services.circuit_breaker.provider import (  # pylint: disable=import-outside-toplevel
+        get_circuit_breaker_manager,
+    )
 
     return await get_circuit_breaker_manager()

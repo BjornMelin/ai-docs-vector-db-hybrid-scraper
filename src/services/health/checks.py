@@ -170,7 +170,7 @@ async def _check_firecrawl(config: Config) -> HealthCheckResult:
                 f"{config.firecrawl.api_url}/health", headers=headers
             )
             response.raise_for_status()
-        except (httpx.HTTPError, ValueError) as exc:
+        except Exception as exc:  # pragma: no cover - unexpected errors reported
             return HealthCheckResult(
                 service="firecrawl",
                 status="unhealthy",

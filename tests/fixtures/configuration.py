@@ -7,17 +7,19 @@ import sys
 import time
 from collections.abc import Callable, Generator
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict
 
 import pytest
 from dotenv import load_dotenv
-
-from src.config import Config, Environment
 
 
 _TEST_ENV_PATH = Path(__file__).resolve().parents[1] / ".env.test"
 if _TEST_ENV_PATH.exists():  # pragma: no cover - depends on developer machine
     load_dotenv(_TEST_ENV_PATH, override=True)
+
+
+if TYPE_CHECKING:
+    from src.config import Config
 
 
 def _is_ci_environment() -> bool:
@@ -162,7 +164,9 @@ def config_factory(
 ) -> Callable[..., Config]:
     """Build typed Config instances with deterministic directories."""
 
-    def _create_config(**overrides: Any) -> Config:
+    def _create_config(**overrides: Any):
+        from src.config import Config, Environment  # Local import to avoid cycles
+
         base_dir = tmp_path_factory.mktemp("config_factory")
         payload: dict[str, Any] = {
             "environment": Environment.TESTING,

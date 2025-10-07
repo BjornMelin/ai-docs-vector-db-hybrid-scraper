@@ -49,7 +49,6 @@ class CircuitBreakerManager:
         self.config = config
 
         # Create Redis unit of work for distributed state
-        self.redis_url = redis_url
         self.redis_storage = unit_of_work or AsyncRedisUnitOfWork(redis_url)
 
         # Get circuit breaker settings from config or use defaults
