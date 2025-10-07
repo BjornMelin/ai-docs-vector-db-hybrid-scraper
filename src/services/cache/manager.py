@@ -3,10 +3,9 @@
 import asyncio
 import hashlib
 import logging
-from collections.abc import Awaitable, Callable
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Protocol, runtime_checkable
 
 from src.config import CacheType
 
@@ -17,6 +16,21 @@ from .search_cache import SearchResultCache
 
 
 logger = logging.getLogger(__name__)
+
+
+@runtime_checkable
+class _PatternClearableCache(Protocol):
+    """Protocol describing pattern-based key management in caches."""
+
+    async def scan_keys(
+        self, pattern: str
+    ) -> list[str]:  # pragma: no cover - structural
+        """Return keys matching the supplied pattern."""
+        raise NotImplementedError
+
+    async def delete(self, key: str) -> bool:  # pragma: no cover - structural
+        """Delete a key from the cache. Returns True if the key was removed."""
+        raise NotImplementedError
 
 
 try:
@@ -475,27 +489,26 @@ class CacheManager:
         """Clear keys matching a Redis glob pattern."""
 
         distributed_cache = self._distributed_cache
-        if distributed_cache is None:
+        if not isinstance(distributed_cache, _PatternClearableCache):
+            logger.warning(
+                "Distributed cache %r missing _PatternClearableCache; skipping clear()",
+                type(distributed_cache),
+            )
             return 0
 
         try:
-            scan_func = getattr(distributed_cache, "scan_keys", None)
-            if scan_func is None or not callable(scan_func):
-                return 0
-            scan_callable = cast(Callable[[str], Awaitable[list[str]]], scan_func)
-            keys = list(await scan_callable(pattern))
+            keys = await distributed_cache.scan_keys(pattern)
         except (ConnectionError, RuntimeError, TimeoutError) as e:
             logger.error("Cache scan error for pattern %s: %s", pattern, e)
             return 0
 
         cleared = 0
-        delete_func = getattr(distributed_cache, "delete", None)
-        if delete_func is None or not callable(delete_func):
-            return cleared
-        delete_callable = cast(Callable[[str], Awaitable[object]], delete_func)
         for key in keys:
-            if bool(await delete_callable(key)):
-                cleared += 1
+            try:
+                if bool(await distributed_cache.delete(key)):
+                    cleared += 1
+            except (ConnectionError, RuntimeError, TimeoutError) as e:
+                logger.error("Distributed cache delete error for key %s: %s", key, e)
         return cleared
 
     async def _clear_keys_from_both_caches(

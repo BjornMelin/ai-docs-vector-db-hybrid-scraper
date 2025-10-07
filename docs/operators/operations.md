@@ -1,4 +1,28 @@
+
 # Operations Guide
+
+## Agentic Workflow Runbooks
+
+### Browser Automation Tiers
+- The unified manager (`src/services/browser/unified_manager.py`) orders tiers as: HTTP fetcher → lightweight headless Chromium → Crawl4AI → Browser-use → Playwright with supervised escalation.
+- Configure limits under `config/browser.yml` (`max_parallel_sessions`, `retry_budget`).
+- Use `python scripts/dev.py services --action status --stack browser` before releases to confirm tier readiness.
+- When a tier flaps, disable it via `BROWSER__DISABLE_<TIER>` environment flags and watch the `*_browser_tier_health_status` gauge until stable.
+
+### Crawling Strategy
+- Tier routing settings live in `config/crawling.yml`; adjust thresholds instead of editing code.
+- Each tier emits `crawler_tier_health` and `crawler_request_latency_seconds` metrics. Alert when health <0.9 for 10 minutes.
+- Preload frontier queues with `python scripts/dev.py crawling prime --profile standard` after cache flushes.
+
+### Retrieval and RAG Self-Healing
+- Retry budgets derive from `agentic.max_retries` in `config/agentic.yml`; they apply separately per LangGraph stage (`discover`, `retrieve`, `execute`).
+- Persist checkpoints by selecting a durable saver in the dependency wiring; checkpoints land under `storage/langgraph-checkpoints/`.
+- Run `uv run pytest tests/integration/rag/test_pipeline.py -q` before changing retrieval configuration.
+
+### Vector Database Stewardship
+- Nightly optimisation: `python scripts/dev.py vector optimize` merges Qdrant segments using thresholds in `config/vector_db.yml`.
+- Monitor `qdrant_collection_optimizer_in_progress` during compaction; expect temporary retrieval latency increases.
+- Adjust `vector_db.max_write_qps` ahead of bulk loads to keep `*_rag_stage_latency_seconds{stage="retrieve"}` under SLO limits.
 
 ## Daily Operations
 

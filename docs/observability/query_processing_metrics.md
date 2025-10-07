@@ -41,6 +41,24 @@ Phase 5. All metrics share the namespace configured via `MetricsConfig.namespace
 | `*_rag_errors_total`            | Counter   | `collection`, `stage`, `error_type`                     | Error taxonomy for pipeline stages.                   |
 | `*_rag_generation_tokens_total` | Counter   | `model`, `token_type` (`prompt`, `completion`, `total`) | Token consumption used for cost governance.           |
 
+## LangGraph Agent Metrics
+
+| Metric                                 | Type      | Labels                                           | Description                                                  |
+| -------------------------------------- | --------- | ------------------------------------------------ | ------------------------------------------------------------ |
+| `*_agentic_graph_runs_total`           | Counter   | `mode`, `status` (`success`, `error`, `timeout`) | Number of LangGraph executions by entry mode.                |
+| `*_agentic_graph_latency_ms`           | Histogram | `mode`                                           | End-to-end runtime per orchestration.                        |
+| `*_agentic_retrieval_attempts_total`   | Counter   | `collection`, `outcome` (`success`, `fallback`)  | Retrieval attempts and fallbacks per collection.             |
+| `*_agentic_retrieval_latency_ms`       | Histogram | `collection`                                     | Retrieval stage latency after tool selection.                |
+| `*_agentic_tool_errors_total`          | Counter   | `tool`, `error_code`                             | Aggregated tool failures mapped from `ToolExecutionError`.   |
+| `*_agentic_parallel_slots_in_use`      | Gauge     | `mode`                                           | Current parallel tool execution slots consumed.              |
+| `*_agentic_checkpoint_persist_latency` | Histogram | `backend`                                        | Checkpoint flush latency when persistent storage is enabled. |
+
+Operational tips:
+
+- Alert when `status="timeout"` exceeds 3% of `*_agentic_graph_runs_total` over 15 minutes.
+- Track the ratio of `outcome="fallback"` to proactive retries; increases usually point to stale tool metadata.
+- When using persistent savers, keep `*_agentic_checkpoint_persist_latency` P95 under 150 ms to avoid back-pressure.
+
 ## Integration Notes
 
 - Metrics are registered in `src/services/monitoring/metrics.py` and emitted by
