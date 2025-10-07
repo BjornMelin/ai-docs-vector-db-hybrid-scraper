@@ -131,11 +131,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         client = self._require_async_client()
         await client.delete_collection(name)
 
-    async def delete_collection(self, name: str) -> None:
-        """Backward-compatible alias for drop_collection."""
-
-        await self.drop_collection(name)
-
     async def list_collections(self) -> list[str]:
         """Return the identifiers for all collections."""
 
@@ -950,7 +945,7 @@ def _filter_from_mapping(filters: Mapping[str, Any] | None) -> models.Filter | N
                     range=models.Range(**value),
                 )
             )
-        elif isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+        elif isinstance(value, Sequence) and not isinstance(value, str | bytes):
             must_conditions.append(
                 models.FieldCondition(
                     key=key,

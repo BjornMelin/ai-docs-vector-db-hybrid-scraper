@@ -16,15 +16,9 @@ from .ml_security import (
 )
 
 
-# Add aliases for test compatibility
-SecurityError = Exception  # Simple alias for backward compatibility
-SecurityValidator = MLSecurityValidator  # Alias for test compatibility
-
 __all__ = [
     "MLSecurityValidator",
     "MinimalMLSecurityConfig",
     "SecurityCheckResult",
-    "SecurityError",
-    "SecurityValidator",
     "SimpleRateLimiter",
 ]
