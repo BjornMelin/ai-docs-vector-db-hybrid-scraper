@@ -428,7 +428,7 @@ class HybridSearchBenchmark:
                     appropriate_selections += 1
                 total_selections += 1
 
-            except (ValueError, TypeError, UnicodeDecodeError) as e:
+            except (ValueError, TypeError) as e:
                 logger.warning(
                     "Model selection failed for query '%s': %s", query_text, e
                 )
