@@ -36,6 +36,19 @@ def test_analytics_package_exports(
 def test_analytics_all_exports() -> None:
     """Validate ``__all__`` enumerates the public analytics API surface.
 
+    Also asserts that ``__all__`` is a tuple and is immutable.
+    """
+    all_exports = getattr(analytics_module, "__all__")
+
+    # Assert __all__ is a tuple
+    assert isinstance(all_exports, tuple)
+
+    # Assert __all__ is immutable
+    with pytest.raises(TypeError):
+        all_exports += ("new_export",)
+    with pytest.raises(TypeError):
+        all_exports[0] = "something_else"
+
     Returns:
         None: This test ensures the package boundary remains intentional.
     """
