@@ -123,10 +123,10 @@ dev = [
 
 # Documentation
 docs = [
-    "mkdocs>=1.6.1,<2.0.0",
-    "mkdocs-material>=9.6.20,<10.0.0",
-    "mkdocstrings>=0.30.1,<1.0.0",
-    "mkdocstrings-python>=1.18.2,<2.0.0"
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.6.20",
+    "mkdocstrings>=0.30.1",
+    "mkdocstrings-python>=1.18.2"
 ]
 
 # Contract testing tools
@@ -452,15 +452,6 @@ extra-build-dependencies = { flash-attn = [{ requirement = "torch", match-runtim
 extra-build-variables = { flash-attn = { FLASH_ATTENTION_SKIP_CUDA_BUILD = "TRUE" } }
 
 # ===== Dependency Groups =====
-[tool.uv.dependency-groups]
-docs = [
-    "mkdocs>=1.6.1,<2.0.0",
-    "mkdocs-material>=9.6.20,<10.0.0",
-    "mkdocstrings>=0.30.1,<1.0.0",
-    "mkdocstrings-python>=1.18.2,<2.0.0"
-]
-
-
 [tool.pylint]
 [tool.pylint.main]
 # Basic configuration
