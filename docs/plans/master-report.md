@@ -2,6 +2,8 @@
 
 ## Executive Summary
 
+For the consolidated summary of all research phases see `docs/plans/research-synthesis.md`.
+
 This master report consolidates comprehensive research conducted across 5 phases of analysis for the AI Docs Vector DB Hybrid Scraper project.
 The research encompasses 25+ specialized agents analyzing everything from foundational architecture to advanced agentic capabilities, resulting in a clear roadmap for portfolio optimization and enterprise readiness.
 
@@ -428,8 +430,8 @@ The research encompasses 25+ specialized agents analyzing everything from founda
 
 ### Master Tracking Reports
 
-- **Comprehensive Synthesis**: `planning/COMPREHENSIVE_SYNTHESIS_REPORT.md`
-- **Main Tracking Report**: `planning/MAIN_TRACKING_RESEARCH_REPORT.md`
+- **Comprehensive Synthesis**: `docs/plans/research-synthesis.md`
+- **Main Tracking Report**: `docs/plans/research-synthesis.md`
 
 ### Project Status
 
