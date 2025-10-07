@@ -122,9 +122,10 @@ class CacheManager:
         self._embedding_cache = None
         self._search_cache = None
         if enable_specialized_caches and self._distributed_cache:
+            # Default to an hour when no Redis-specific TTL is supplied.
             redis_ttl = self.distributed_ttl_seconds.get(
                 CacheType.REDIS,
-                max(self.distributed_ttl_seconds.values(), default=3600),
+                3600,
             )
             self._embedding_cache = EmbeddingCache(
                 cache=self._distributed_cache,

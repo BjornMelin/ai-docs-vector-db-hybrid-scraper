@@ -138,7 +138,8 @@ class ServiceHealthChecker:
     async def _probe_embedding_manager(self, health: dict[str, Any]) -> None:
         try:
             manager = await get_embedding_manager()
-            manager.get_provider_info()
+            # Run provider lookup off the event loop to avoid blocking health checks.
+            await asyncio.to_thread(manager.get_provider_info)
             health["services"]["embeddings"] = {"status": "healthy"}
         except Exception as exc:  # pragma: no cover - runtime failure
             health["status"] = "degraded"
