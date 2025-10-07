@@ -79,7 +79,7 @@ class TestUnifiedManagerCaching:
     """Test UnifiedBrowserManager caching functionality."""
 
     @patch("src.services.browser.unified_manager.ClientManager")
-    @patch("src.services.cache.browser_cache.BrowserCache")
+    @patch("src.services.browser.unified_manager.BrowserCache")
     @pytest.mark.asyncio
     async def test_initialization_with_cache(
         self, mock_browser_cache_class, mock_client_manager_class, mock_config

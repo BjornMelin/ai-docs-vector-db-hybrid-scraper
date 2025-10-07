@@ -264,9 +264,17 @@ class UnifiedBrowserManager(  # pylint: disable=too-many-instance-attributes
                 return await self._create_cached_response(
                     request, cached_entry, start_time
                 )
-        except (ConnectionError, RuntimeError, TimeoutError, ValueError):
+        except (ConnectionError, RuntimeError, TimeoutError, ValueError) as exc:
             logger.warning(
-                "Cache error for %s, continuing with fresh scrape", request.url
+                "Cache error for %s, continuing with fresh scrape: %s",
+                request.url,
+                exc,
+            )
+        except Exception:  # pragma: no cover - defensive
+            logger.warning(
+                "Unexpected cache error for %s, continuing with fresh scrape",
+                request.url,
+                exc_info=True,
             )
 
         return None
@@ -348,8 +356,12 @@ class UnifiedBrowserManager(  # pylint: disable=too-many-instance-attributes
                 challenge=challenge,
                 error_type=error_type,
             )
-        except (ConnectionError, OSError, PermissionError):
-            logger.debug("Failed to record monitoring metrics")
+        except (ConnectionError, OSError, PermissionError) as exc:
+            logger.debug("Failed to record monitoring metrics: %s", exc)
+        except Exception:  # pragma: no cover - defensive
+            logger.warning(
+                "Unexpected error while recording monitoring metrics", exc_info=True
+            )
 
     async def _try_cache_result(
         self, request: UnifiedScrapingRequest, response: UnifiedScrapingResponse
@@ -676,7 +688,8 @@ class UnifiedBrowserManager(  # pylint: disable=too-many-instance-attributes
             "monitoring_health": self._get_monitoring_health(),
             "router_metrics": self._get_router_metrics(),
             "tier_metrics": {
-                name: metrics.dict() for name, metrics in self._tier_metrics.items()
+                name: metrics.model_dump()
+                for name, metrics in self._tier_metrics.items()
             },
         }
 

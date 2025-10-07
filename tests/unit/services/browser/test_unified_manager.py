@@ -14,6 +14,31 @@ from src.services.cache.browser_cache import BrowserCacheEntry
 from src.services.errors import CrawlServiceError
 
 
+JSONSCHEMA_REF_WARNING_FILTER = (
+    r"ignore:jsonschema\.exceptions\.RefResolutionError is deprecated:"
+    r"DeprecationWarning"
+)
+
+pytestmark = pytest.mark.filterwarnings(JSONSCHEMA_REF_WARNING_FILTER)
+
+
+@pytest.fixture(autouse=True)
+def patch_browser_monitor():
+    """Provide a patched BrowserAutomationMonitor for all tests."""
+
+    monitor = Mock()
+    monitor.start_monitoring = AsyncMock()
+    monitor.stop_monitoring = AsyncMock()
+    monitor.record_request_metrics = AsyncMock()
+    monitor.get_system_health = Mock(return_value={})
+
+    with patch(
+        "src.services.browser.unified_manager.BrowserAutomationMonitor",
+        return_value=monitor,
+    ):
+        yield monitor
+
+
 @pytest.fixture
 def mock_config():
     """Create mock configuration for testing."""
@@ -69,8 +94,10 @@ class TestUnifiedBrowserManagerInitialization:
         self, unified_manager, mock_client_manager, mock_automation_router
     ):
         """Test successful initialization."""
-        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
-            mock_cm.return_value = mock_client_manager
+        with patch(
+            "src.services.browser.unified_manager.ClientManager",
+            return_value=mock_client_manager,
+        ):
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
             )
@@ -86,8 +113,10 @@ class TestUnifiedBrowserManagerInitialization:
         self, unified_manager, mock_client_manager, mock_automation_router
     ):
         """Test that initialization is idempotent."""
-        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
-            mock_cm.return_value = mock_client_manager
+        with patch(
+            "src.services.browser.unified_manager.ClientManager",
+            return_value=mock_client_manager,
+        ):
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
             )
@@ -100,8 +129,10 @@ class TestUnifiedBrowserManagerInitialization:
     @pytest.mark.asyncio
     async def test_initialization_failure(self, unified_manager, mock_client_manager):
         """Test initialization failure handling."""
-        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
-            mock_cm.return_value = mock_client_manager
+        with patch(
+            "src.services.browser.unified_manager.ClientManager",
+            return_value=mock_client_manager,
+        ):
             mock_client_manager.initialize.side_effect = Exception("Init failed")
 
             with pytest.raises(CrawlServiceError) as exc_info:
@@ -115,8 +146,10 @@ class TestUnifiedBrowserManagerInitialization:
     ):
         """Test cleanup process."""
         # Initialize first
-        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
-            mock_cm.return_value = mock_client_manager
+        with patch(
+            "src.services.browser.unified_manager.ClientManager",
+            return_value=mock_client_manager,
+        ):
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
             )
@@ -143,8 +176,10 @@ class TestUnifiedScrapingAPI:
     ):
         """Test scraping with UnifiedScrapingRequest object."""
         # Initialize manager
-        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
-            mock_cm.return_value = mock_client_manager
+        with patch(
+            "src.services.browser.unified_manager.ClientManager",
+            return_value=mock_client_manager,
+        ):
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
             )
@@ -199,7 +234,7 @@ class TestUnifiedScrapingAPI:
     ):
         """Test scraping with simple URL parameter."""
         # Initialize manager
-        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+        with patch("src.services.browser.unified_manager.ClientManager") as mock_cm:
             mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
@@ -227,7 +262,7 @@ class TestUnifiedScrapingAPI:
     ):
         """Test scraping with forced tier selection."""
         # Initialize manager
-        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+        with patch("src.services.browser.unified_manager.ClientManager") as mock_cm:
             mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
@@ -248,7 +283,7 @@ class TestUnifiedScrapingAPI:
             # Verify force_tool was set
             mock_automation_router.scrape.assert_awaited_once()
             call_args = mock_automation_router.scrape.call_args
-            assert call_args._kwargs["force_tool"] == "browser_use"
+            assert call_args.kwargs["force_tool"] == "browser_use"
 
     @pytest.mark.asyncio
     async def test_scrape_with_fallback(
@@ -256,7 +291,7 @@ class TestUnifiedScrapingAPI:
     ):
         """Test scraping with tier fallback."""
         # Initialize manager
-        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+        with patch("src.services.browser.unified_manager.ClientManager") as mock_cm:
             mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
@@ -287,7 +322,7 @@ class TestUnifiedScrapingAPI:
     ):
         """Test error handling during scraping."""
         # Initialize manager
-        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+        with patch("src.services.browser.unified_manager.ClientManager") as mock_cm:
             mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
@@ -321,7 +356,7 @@ class TestUnifiedScrapingAPI:
     ):
         """Test scraping with neither request object nor URL."""
         # Initialize manager
-        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+        with patch("src.services.browser.unified_manager.ClientManager") as mock_cm:
             mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
@@ -354,7 +389,7 @@ class TestMetricsTracking:
             assert tier in unified_manager._tier_metrics
             metrics = unified_manager._tier_metrics[tier]
             assert metrics.tier_name == tier
-            assert metrics._total_requests == 0
+            assert metrics.total_requests == 0
             assert metrics.successful_requests == 0
             assert metrics.failed_requests == 0
 
@@ -364,7 +399,7 @@ class TestMetricsTracking:
     ):
         """Test metrics update on successful scraping."""
         # Initialize manager
-        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+        with patch("src.services.browser.unified_manager.ClientManager") as mock_cm:
             mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
@@ -384,7 +419,7 @@ class TestMetricsTracking:
 
             # Check metrics
             metrics = unified_manager._tier_metrics["crawl4ai"]
-            assert metrics._total_requests == 1
+            assert metrics.total_requests == 1
             assert metrics.successful_requests == 1
             assert metrics.failed_requests == 0
             assert metrics.success_rate == 1.0
@@ -395,7 +430,7 @@ class TestMetricsTracking:
     ):
         """Test metrics update on failed scraping."""
         # Initialize manager
-        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+        with patch("src.services.browser.unified_manager.ClientManager") as mock_cm:
             mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
@@ -411,7 +446,7 @@ class TestMetricsTracking:
             # Check metrics - should track as unknown tier
             metrics = unified_manager._tier_metrics.get("unknown")
             assert metrics is not None
-            assert metrics._total_requests == 1
+            assert metrics.total_requests == 1
             assert metrics.successful_requests == 0
             assert metrics.failed_requests == 1
 
@@ -421,7 +456,7 @@ class TestMetricsTracking:
     ):
         """Test getting tier metrics."""
         # Initialize and run some scrapes
-        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+        with patch("src.services.browser.unified_manager.ClientManager") as mock_cm:
             mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
@@ -461,8 +496,8 @@ class TestMetricsTracking:
             # Verify
             assert "crawl4ai" in all_metrics
             assert "lightweight" in all_metrics
-            assert all_metrics["crawl4ai"]._total_requests == 1
-            assert all_metrics["lightweight"]._total_requests == 1
+            assert all_metrics["crawl4ai"].total_requests == 1
+            assert all_metrics["lightweight"].total_requests == 1
 
     @pytest.mark.asyncio
     async def test_average_response_time_calculation(
@@ -470,7 +505,7 @@ class TestMetricsTracking:
     ):
         """Test rolling average response time calculation."""
         # Initialize manager
-        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+        with patch("src.services.browser.unified_manager.ClientManager") as mock_cm:
             mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
@@ -505,7 +540,7 @@ class TestURLAnalysis:
     ):
         """Test successful URL analysis."""
         # Initialize manager
-        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+        with patch("src.services.browser.unified_manager.ClientManager") as mock_cm:
             mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
@@ -532,7 +567,7 @@ class TestURLAnalysis:
     ):
         """Test URL analysis error handling."""
         # Initialize manager
-        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+        with patch("src.services.browser.unified_manager.ClientManager") as mock_cm:
             mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
@@ -578,7 +613,7 @@ class TestSystemStatus:
     ):
         """Test system status when healthy."""
         # Initialize manager
-        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+        with patch("src.services.browser.unified_manager.ClientManager") as mock_cm:
             mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
@@ -595,7 +630,7 @@ class TestSystemStatus:
             # Verify
             assert status["status"] == "healthy"
             assert status["initialized"] is True
-            assert status["_total_requests"] == 2
+            assert status["total_requests"] == 2
             assert status["overall_success_rate"] == 1.0
             assert status["tier_count"] == 2
             assert status["router_available"] is True
@@ -606,7 +641,7 @@ class TestSystemStatus:
     ):
         """Test system status when degraded."""
         # Initialize manager
-        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+        with patch("src.services.browser.unified_manager.ClientManager") as mock_cm:
             mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
@@ -657,7 +692,7 @@ class TestCustomActions:
     ):
         """Test scraping with custom actions."""
         # Initialize manager
-        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+        with patch("src.services.browser.unified_manager.ClientManager") as mock_cm:
             mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
@@ -690,8 +725,8 @@ class TestCustomActions:
             # Verify custom actions were passed
             mock_automation_router.scrape.assert_awaited_once()
             call_args = mock_automation_router.scrape.call_args
-            assert call_args._kwargs["custom_actions"] == custom_actions
-            assert call_args._kwargs["interaction_required"] is True
+            assert call_args.kwargs["custom_actions"] == custom_actions
+            assert call_args.kwargs["interaction_required"] is True
 
 
 class TestUnifiedBrowserManagerMonitoring:
@@ -715,7 +750,7 @@ class TestUnifiedBrowserManagerMonitoring:
         unified_manager._monitor = mock_monitor
 
         # Initialize manager
-        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+        with patch("src.services.browser.unified_manager.ClientManager") as mock_cm:
             mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
@@ -765,7 +800,7 @@ class TestUnifiedBrowserManagerMonitoring:
         unified_manager._monitor = mock_monitor
 
         # Initialize manager
-        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+        with patch("src.services.browser.unified_manager.ClientManager") as mock_cm:
             mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
@@ -838,7 +873,7 @@ class TestUnifiedBrowserManagerMonitoring:
         unified_manager._monitor = mock_monitor
 
         # Initialize manager
-        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+        with patch("src.services.browser.unified_manager.ClientManager") as mock_cm:
             mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
@@ -874,7 +909,8 @@ class TestUnifiedBrowserManagerMonitoring:
         unified_manager._monitoring_enabled = True
 
         # Mock cache and monitoring
-        mock_cache = AsyncMock()
+        mock_cache = Mock()
+        mock_cache.get = AsyncMock()
         mock_monitor = AsyncMock()
 
         # Create cache entry
@@ -884,9 +920,8 @@ class TestUnifiedBrowserManagerMonitoring:
             metadata={"title": "Test"},
             tier_used="lightweight",
         )
-
         mock_cache.get.return_value = cache_entry
-        mock_cache._generate_cache_key.return_value = "test_key"
+        mock_cache.generate_cache_key.return_value = "test_key"
 
         unified_manager._browser_cache = mock_cache
         unified_manager._monitor = mock_monitor
@@ -896,12 +931,13 @@ class TestUnifiedBrowserManagerMonitoring:
         await unified_manager.scrape(url="https://example.com")
 
         # Verify cache hit was tracked in monitoring
+
         mock_monitor.record_request_metrics.assert_called_once()
         call_args = mock_monitor.record_request_metrics.call_args
 
-        assert call_args[1]["tier"] == "lightweight"
-        assert call_args[1]["success"] is True
-        assert call_args[1]["cache_hit"] is True
+        assert call_args.kwargs["tier"] == "lightweight"
+        assert call_args.kwargs["success"] is True
+        assert call_args.kwargs["cache_hit"] is True
 
     @pytest.mark.asyncio
     async def test_monitoring_cleanup_on_manager_cleanup(self, unified_manager):
