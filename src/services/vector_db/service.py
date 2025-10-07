@@ -945,7 +945,7 @@ def _filter_from_mapping(filters: Mapping[str, Any] | None) -> models.Filter | N
                     range=models.Range(**value),
                 )
             )
-        elif isinstance(value, Sequence) and not isinstance(value, str | bytes):
+        elif isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
             must_conditions.append(
                 models.FieldCondition(
                     key=key,
