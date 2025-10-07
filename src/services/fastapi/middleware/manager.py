@@ -1,113 +1,71 @@
-"""Middleware manager for FastAPI with essential middleware only."""
+"""
+Minimal middleware manager that wires library-first components.
+
+Order:
+1) Trusted host / CORS (configure in app factory if needed)
+2) Correlation ID (asgi-correlation-id)
+3) Compression (GZip / optional Brotli)
+4) Security headers
+5) Timeout + circuit breaker
+6) Rate limit (slowapi)
+7) Performance header
+8) OTel + Prometheus instrumentation via helpers
+
+This keeps the public surface tiny and library-focused.
+"""
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass
 from typing import Any
 
+from asgi_correlation_id import CorrelationIdMiddleware  # type: ignore
 from starlette.applications import Starlette
 
-from src.config import PerformanceConfig, get_config
-
-from .performance import PerformanceMiddleware
-from .security import SecurityMiddleware
+from .compression import BrotliCompressionMiddleware, CompressionMiddleware
+from .correlation import get_correlation_id
+from .performance import PerformanceMiddleware, setup_prometheus
+from .security import SecurityMiddleware, enable_global_rate_limit
 from .timeout import TimeoutConfig, TimeoutMiddleware
-
-
-logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
 class MiddlewareSpec:
-    """Minimal middleware specification independent of Starlette wrappers."""
+    """Simple spec that mirrors Starlette's add_middleware signature."""
 
     cls: type
     kwargs: dict[str, Any]
 
 
-class MiddlewareManager:
-    """Simple middleware manager for essential middleware only."""
+def apply_defaults(app: Starlette) -> None:
+    """Apply a sensible production stack with minimal knobs."""
+    # Trusted hosts: users should set allowed list at app construction time.
+    # Example:
+    # app.add_middleware(TrustedHostMiddleware, allowed_hosts=["example.com", "*.example.com"])  # noqa: E501
 
-    def __init__(self, config=None):
-        """Initialize middleware manager."""
+    app.add_middleware(CorrelationIdMiddleware, header_name="X-Request-ID")
+    app.add_middleware(CompressionMiddleware, minimum_size=500)
+    # If brotli is installed, stack it first; gzip will serve as fallback.
+    app.add_middleware(BrotliCompressionMiddleware, quality=4)
 
-        self.config = config or get_config()
+    app.add_middleware(SecurityMiddleware)
+    app.add_middleware(TimeoutMiddleware, config=TimeoutConfig())
 
-    def get_middleware_stack(self) -> list[MiddlewareSpec]:
-        """Get essential middleware stack in correct order.
+    # Rate limiting (Redis optional)
+    enable_global_rate_limit(app)
 
-        Simplified order:
-        1. Security (basic protection)
-        2. Timeout (request timeout)
-        3. Performance (basic monitoring)
-        """
-
-        middleware_stack = []
-
-        # 1. Security - Basic protection
-        if self.config.security.enable_rate_limiting:
-            middleware_stack.append(
-                MiddlewareSpec(SecurityMiddleware, {"config": self.config.security})
-            )
-
-        # 2. Timeout - Request timeout
-        timeout_config = self._build_timeout_config(self.config.performance)
-        middleware_stack.append(
-            MiddlewareSpec(TimeoutMiddleware, {"config": timeout_config})
-        )
-
-        # 3. Performance - Basic monitoring
-        middleware_stack.append(
-            MiddlewareSpec(PerformanceMiddleware, {"config": self.config.performance})
-        )
-
-        return middleware_stack
-
-    def apply_middleware(self, app: Starlette, middleware_names: list[str]) -> None:
-        """Apply specified middleware to FastAPI app."""
-
-        timeout_config = self._build_timeout_config(self.config.performance)
-        available_middleware = {
-            "security": MiddlewareSpec(
-                SecurityMiddleware, {"config": self.config.security}
-            ),
-            "timeout": MiddlewareSpec(TimeoutMiddleware, {"config": timeout_config}),
-            "performance": MiddlewareSpec(
-                PerformanceMiddleware, {"config": self.config.performance}
-            ),
-        }
-
-        for name in middleware_names:
-            middleware = available_middleware.get(name)
-            if middleware is None:
-                logger.warning("Unknown middleware: %s", name)
-                continue
-            app.add_middleware(middleware.cls, **middleware.kwargs)
-            logger.info("Applied middleware: %s", name)
-
-    @staticmethod
-    def _build_timeout_config(performance: PerformanceConfig) -> TimeoutConfig:
-        """Create a TimeoutConfig based on the performance settings."""
-
-        defaults = TimeoutConfig()
-        failure_threshold = max(performance.max_retries, 1)
-        recovery_timeout = max(
-            performance.retry_base_delay * failure_threshold,
-            defaults.recovery_timeout,
-        )
-
-        return TimeoutConfig(
-            enabled=defaults.enabled,
-            request_timeout=performance.request_timeout,
-            enable_circuit_breaker=defaults.enable_circuit_breaker,
-            failure_threshold=failure_threshold,
-            recovery_timeout=recovery_timeout,
-            half_open_max_calls=defaults.half_open_max_calls,
-        )
+    # Headers + /metrics
+    app.add_middleware(PerformanceMiddleware)
+    setup_prometheus(app)
 
 
-def get_middleware_manager(config=None) -> MiddlewareManager:
-    """Get configured middleware manager instance."""
-
-    return MiddlewareManager(config or get_config())
+__all__ = [
+    "MiddlewareSpec",
+    "apply_defaults",
+    "get_correlation_id",
+    "PerformanceMiddleware",
+    "TimeoutMiddleware",
+    "SecurityMiddleware",
+    "CompressionMiddleware",
+    "BrotliCompressionMiddleware",
+]
