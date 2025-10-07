@@ -89,6 +89,8 @@ dependencies = [
     "langchain-qdrant>=0.2.0,<0.4.0",
     "langchain-mcp-adapters>=0.1.10,<0.2.0",
     "langgraph>=0.6.0,<0.7.0",
+    "asgi-correlation-id>=4.3.4,<5.0.0",
+    "purgatory>=3.0.1,<4.0.0",
 ]
 
 
@@ -200,9 +202,15 @@ gpu = [
     "deepspeed>=0.14.0,<1.0.0",
 ]
 
+server = [
+    "brotli-asgi>=1.4.0,<2.0.0",
+    "purgatory[redis]>=3.0.1,<4.0.0",
+    "uvloop>=0.21.0,<1.0.0; platform_system != 'Windows'",
+]
+
 # All optional dependencies
 all = [
-    "ai-docs-vector-db-hybrid-scraper[dev,contract,accessibility,browser,llm,observability,parsing,dataframe,docs,gpu,eval]",
+    "ai-docs-vector-db-hybrid-scraper[dev,contract,accessibility,browser,llm,observability,parsing,dataframe,docs,gpu,eval,server]",
 ]
 
 [project.urls]

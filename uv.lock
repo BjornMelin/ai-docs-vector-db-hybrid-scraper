@@ -40,6 +40,7 @@ dependencies = [
     { name = "aiofiles" },
     { name = "aiohttp" },
     { name = "arq" },
+    { name = "asgi-correlation-id" },
     { name = "asyncio-throttle" },
     { name = "cachetools" },
     { name = "click" },
@@ -67,6 +68,7 @@ dependencies = [
     { name = "prometheus-client" },
     { name = "prometheus-fastapi-instrumentator" },
     { name = "psutil" },
+    { name = "purgatory" },
     { name = "purgatory-circuitbreaker" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
@@ -106,6 +108,7 @@ all = [
     { name = "axe-core-python" },
     { name = "beautifulsoup4" },
     { name = "bitsandbytes" },
+    { name = "brotli-asgi" },
     { name = "coverage" },
     { name = "datasets" },
     { name = "deepspeed" },
@@ -133,6 +136,7 @@ all = [
     { name = "opentelemetry-sdk" },
     { name = "playwright" },
     { name = "polars" },
+    { name = "purgatory", extra = ["redis"] },
     { name = "pyarrow" },
     { name = "pyjwt" },
     { name = "pylint" },
@@ -162,6 +166,7 @@ all = [
     { name = "tree-sitter-python" },
     { name = "tree-sitter-typescript" },
     { name = "triton" },
+    { name = "uvloop", marker = "sys_platform != 'win32'" },
     { name = "vllm" },
     { name = "xformers" },
 ]
@@ -244,20 +249,27 @@ parsing = [
     { name = "tree-sitter-python" },
     { name = "tree-sitter-typescript" },
 ]
+server = [
+    { name = "brotli-asgi" },
+    { name = "purgatory", extra = ["redis"] },
+    { name = "uvloop", marker = "sys_platform != 'win32'" },
+]
 
 [package.metadata]
 requires-dist = [
     { name = "accelerate", marker = "extra == 'gpu'", specifier = ">=0.34.0,<2.0.0" },
-    { name = "ai-docs-vector-db-hybrid-scraper", extras = ["dev", "contract", "accessibility", "browser", "llm", "observability", "parsing", "dataframe", "docs", "gpu", "eval"], marker = "extra == 'all'" },
+    { name = "ai-docs-vector-db-hybrid-scraper", extras = ["dev", "contract", "accessibility", "browser", "llm", "observability", "parsing", "dataframe", "docs", "gpu", "eval", "server"], marker = "extra == 'all'" },
     { name = "aiocache", specifier = ">=0.12.3,<0.13.0" },
     { name = "aiofiles", specifier = ">=24.1.0,<25.0.0" },
     { name = "aiohttp", specifier = ">=3.12.15,<4.0.0" },
     { name = "arq", specifier = ">=0.26.3,<0.27.0" },
+    { name = "asgi-correlation-id", specifier = ">=4.3.4,<5.0.0" },
     { name = "asgi-lifespan", marker = "extra == 'dev'", specifier = ">=2.1.0,<3.0.0" },
     { name = "asyncio-throttle", specifier = ">=1.0.2,<2.0.0" },
     { name = "axe-core-python", marker = "extra == 'accessibility'", specifier = ">=0.1.0,<1.0.0" },
     { name = "beautifulsoup4", marker = "extra == 'accessibility'", specifier = ">=4.13.5,<5.0.0" },
     { name = "bitsandbytes", marker = "extra == 'gpu'", specifier = ">=0.44.0,<1.0.0" },
+    { name = "brotli-asgi", marker = "extra == 'server'", specifier = ">=1.4.0,<2.0.0" },
     { name = "cachetools", specifier = ">=5.5.2,<6.0.0" },
     { name = "click", specifier = ">=8.2.1,<8.2.2" },
     { name = "colorlog", specifier = ">=6.9.0,<7.0.0" },
@@ -312,6 +324,8 @@ requires-dist = [
     { name = "prometheus-client", specifier = ">=0.23.1,<0.24.0" },
     { name = "prometheus-fastapi-instrumentator", specifier = ">=7.1.0,<8.0.0" },
     { name = "psutil", specifier = ">=6.1.1,<7.0.0" },
+    { name = "purgatory", specifier = ">=3.0.1,<4.0.0" },
+    { name = "purgatory", extras = ["redis"], marker = "extra == 'server'", specifier = ">=3.0.1,<4.0.0" },
     { name = "purgatory-circuitbreaker", specifier = ">=0.7.2,<0.8.0" },
     { name = "pyarrow", marker = "extra == 'dataframe'", specifier = ">=21.0.0,<22.0.0" },
     { name = "pydantic", specifier = ">=2.11.9,<3.0.0" },
@@ -363,11 +377,12 @@ requires-dist = [
     { name = "tree-sitter-typescript", marker = "extra == 'parsing'", specifier = ">=0.23.2,<0.24.0" },
     { name = "triton", marker = "extra == 'gpu'", specifier = ">=3.0.0,<4.0.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.36.0,<1.0.0" },
+    { name = "uvloop", marker = "sys_platform != 'win32' and extra == 'server'", specifier = ">=0.21.0,<1.0.0" },
     { name = "vllm", marker = "extra == 'gpu'", specifier = ">=0.10.0,<0.11.0" },
     { name = "watchdog", specifier = ">=6.0.0,<7.0.0" },
     { name = "xformers", marker = "extra == 'gpu'", specifier = ">=0.0.28,<1.0.0" },
 ]
-provides-extras = ["eval", "dev", "docs", "contract", "accessibility", "browser", "llm", "observability", "parsing", "dataframe", "gpu", "all"]
+provides-extras = ["eval", "dev", "docs", "contract", "accessibility", "browser", "llm", "observability", "parsing", "dataframe", "gpu", "server", "all"]
 
 [[package]]
 name = "aiocache"
@@ -575,6 +590,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/2e/00/0f6e8fcdb23ea632c866620cc872729ff43ed91d284c866b515c6342b173/arrow-1.3.0.tar.gz", hash = "sha256:d4540617648cb5f895730f1ad8c82a65f2dad0166f57b75f3ca54759c4d67a85", size = 131960, upload-time = "2023-09-30T22:11:18.25Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f8/ed/e97229a566617f2ae958a6b13e7cc0f585470eac730a73e9e82c32a3cdd2/arrow-1.3.0-py3-none-any.whl", hash = "sha256:c728b120ebc00eb84e01882a6f5e7927a53960aa990ce7dd2b10f39005a67f80", size = 66419, upload-time = "2023-09-30T22:11:16.072Z" },
+]
+
+[[package]]
+name = "asgi-correlation-id"
+version = "4.3.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "packaging" },
+    { name = "starlette" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f4/ff/a6538245ac1eaa7733ec6740774e9d5add019e2c63caa29e758c16c0afdd/asgi_correlation_id-4.3.4.tar.gz", hash = "sha256:ea6bc310380373cb9f731dc2e8b2b6fb978a76afe33f7a2384f697b8d6cd811d", size = 20075, upload-time = "2024-10-17T11:44:30.324Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d9/ab/6936e2663c47a926e0659437b9333ad87d1ff49b1375d239026e0a268eba/asgi_correlation_id-4.3.4-py3-none-any.whl", hash = "sha256:36ce69b06c7d96b4acb89c7556a4c4f01a972463d3d49c675026cbbd08e9a0a2", size = 15262, upload-time = "2024-10-17T11:44:28.739Z" },
 ]
 
 [[package]]
@@ -814,6 +842,19 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/d8/63/1c1585b2aa554fe6dbce30f0c18bdbc877fa9a1bf5ff17677d9cca0ac122/Brotli-1.1.0-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:e79e6520141d792237c70bcd7a3b122d00f2613769ae0cb61c52e89fd3443839", size = 2930029, upload-time = "2024-10-18T12:32:33.293Z" },
     { url = "https://files.pythonhosted.org/packages/5f/3b/4e3fd1893eb3bbfef8e5a80d4508bec17a57bb92d586c85c12d28666bb13/Brotli-1.1.0-cp312-cp312-win32.whl", hash = "sha256:5f4d5ea15c9382135076d2fb28dde923352fe02951e66935a9efaac8f10e81b0", size = 333276, upload-time = "2023-09-07T14:04:16.49Z" },
     { url = "https://files.pythonhosted.org/packages/3d/d5/942051b45a9e883b5b6e98c041698b1eb2012d25e5948c58d6bf85b1bb43/Brotli-1.1.0-cp312-cp312-win_amd64.whl", hash = "sha256:906bc3a79de8c4ae5b86d3d75a8b77e44404b0f4261714306e3ad248d8ab0951", size = 357255, upload-time = "2023-09-07T14:04:17.83Z" },
+]
+
+[[package]]
+name = "brotli-asgi"
+version = "1.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "brotli" },
+    { name = "starlette" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c1/6f/fce5d382b5e9de3dd5d65888b5c278b02ebb228cb2f46f336cefd8553b84/brotli-asgi-1.4.0.tar.gz", hash = "sha256:e2d6eca4b97af19716af05bbe0d4d79cffb0b0947100c188da9ed089f5b7bc2f", size = 5708, upload-time = "2023-04-24T23:52:38.08Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f5/36/2f469407b7d6cb254aaa1471a0df0b9a65ed59380941d7003b488530d18b/brotli_asgi-1.4.0-py3-none-any.whl", hash = "sha256:bc18bcb20803dc9d11abdd14ac4242f2f09ebb9d2a67f4d3a7fe4cb8bedcd226", size = 4590, upload-time = "2023-04-24T23:52:35.477Z" },
 ]
 
 [[package]]
@@ -4607,6 +4648,20 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/47/da/99f4345d4ddf2845cb5b5bd0d93d554e84542d116934fde07a0c50bd4e9f/psutil-6.1.1-cp36-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:33431e84fee02bc84ea36d9e2c4a6d395d479c9dd9bba2376c1f6ee8f3a4e0b3", size = 289017, upload-time = "2024-12-19T18:21:57.875Z" },
     { url = "https://files.pythonhosted.org/packages/38/53/bd755c2896f4461fd4f36fa6a6dcb66a88a9e4b9fd4e5b66a77cf9d4a584/psutil-6.1.1-cp37-abi3-win32.whl", hash = "sha256:eaa912e0b11848c4d9279a93d7e2783df352b082f40111e078388701fd479e53", size = 250602, upload-time = "2024-12-19T18:22:08.808Z" },
     { url = "https://files.pythonhosted.org/packages/7b/d7/7831438e6c3ebbfa6e01a927127a6cb42ad3ab844247f3c5b96bea25d73d/psutil-6.1.1-cp37-abi3-win_amd64.whl", hash = "sha256:f35cfccb065fff93529d2afb4a2e89e363fe63ca1e4a5da22b603a85833c2649", size = 254444, upload-time = "2024-12-19T18:22:11.335Z" },
+]
+
+[[package]]
+name = "purgatory"
+version = "3.0.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/21/e4/9d33c714ea9161448ce8b05d66fe139fb20d55df4c1a3855c1901bc012ac/purgatory-3.0.1.tar.gz", hash = "sha256:c4ce9b93f7a54244bea6aa281af36767ff91bbd9665591cb46fb9cf89bf18d47", size = 13256, upload-time = "2024-11-02T17:21:23.549Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5d/67/45778e3bf3af6a401ec94a19efe649a81fe451cd0964dfa8d8d89233f9fa/purgatory-3.0.1-py3-none-any.whl", hash = "sha256:1ee8ac2d949b09ebacc8a58b947115d49518593492cad84c14f0feedd1b22a21", size = 21485, upload-time = "2024-11-02T17:21:22.099Z" },
+]
+
+[package.optional-dependencies]
+redis = [
+    { name = "redis" },
 ]
 
 [[package]]
