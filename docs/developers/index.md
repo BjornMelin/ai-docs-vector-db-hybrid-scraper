@@ -38,37 +38,35 @@ uv run pytest -q
 
 ## 2. Essential References
 
-Keep these guides bookmarked—together they answer the majority of day-to-day questions:
+Keep these guides bookmarked—together they answer most day-to-day questions:
 
-- **[Architecture & Orchestration](./architecture-and-orchestration.md)** – System design, LangGraph stack, MCP guidance.
-- **[Configuration](./configuration.md)** – Environment variables, profile overrides, tuning knobs.
-- **[Architecture & Orchestration](./architecture-and-orchestration.md)** – Drop-in patterns for optional cache/search services.
-- **[Cache & Performance](./cache-and-performance.md)** – Persistent cache, GPU notes, performance checklist.
-- **[Agentic Orchestration](./agentic-orchestration.md)** – LangGraph runner, tool discovery, and testing guidance.
-- **[FastMCP Integration](./mcp-integration.md)** – Server structure, middleware, and migration roadmap.
-- **[API & Contracts](./api-and-contracts.md)** – REST + MCP endpoints, request/response schemas.
-- **[Query Response Contract](./queries/response-contract.md)** – Canonical payloads returned by the pipeline.
-- **[Platform Operations](./platform-operations.md)** – Pipeline layout, required checks, reusable jobs.
-- **[Contributing & Testing](./contributing-and-testing.md)** – Coding standards, quality gates, review workflow.
+- **[Setup & Configuration](./setup-and-configuration.md)** – Environment prerequisites, profiles, and config loader.
+- **[Architecture & Orchestration](./architecture-and-orchestration.md)** – System design, LangGraph stack, FastMCP patterns.
+- **[Agentic Orchestration](./agentic-orchestration.md)** – LangGraph runner, tool discovery, testing guidance.
+- **[Cache & Performance](./cache-and-performance.md)** – Persistent cache internals, GPU notes, performance checklist.
+- **[Platform Operations](./platform-operations.md)** – Deployment workflow, CI/CD, compatibility matrix.
+- **[API & Contracts](./api-and-contracts.md)** – REST endpoints, canonical response DTOs.
+- **[Contributing & Testing](./contributing-and-testing.md)** – Coding standards, quality gates, test strategy.
 
 Supporting docs when you need more detail:
 
-- **[Developer Setup Guide](./getting-started.md)** – OS-specific prerequisites and local tooling.
-- **[GPU Acceleration Guide](./gpu-acceleration.md)** – Optional CUDA/MPS configuration and helper APIs.
-- **[Setup & Configuration](./setup-and-configuration.md)** – Environment prerequisites, profiles, and configuration loader.
-- **[Deployment Guide](./deployment.md)** – Production rollout patterns and rollback steps.
+- **[Setup & Configuration](./setup-and-configuration.md)** – Environment prerequisites, profiles, and config loader.
+- **[Architecture & Orchestration](./architecture-and-orchestration.md)** – Additional design background and FastMCP notes.
+- **[Cache & Performance](./cache-and-performance.md)** – Persistent cache internals and performance checklist.
+- **[GPU Acceleration](./gpu-acceleration.md)** – Optional CUDA/MPS setup and helper utilities.
+- **[Platform Operations](./platform-operations.md)** – Deployment, workflows, compatibility matrix.
 - **[Document Metadata](./document-metadata.md)** – Indexing schema and required fields.
 
 ## 3. Common Tasks
 
-| Task               | Checklist                                                                  |
-| ------------------ | -------------------------------------------------------------------------- | ---- | --------------------------- |
-| Start a feature    | Sync `main`, run `uv run pytest -q`, branch, follow lint/type gates        |
-| Add a dependency   | Edit `pyproject.toml`, run `uv sync`, capture notes in configuration docs  |
-| Touch the API      | Update Pydantic models + OpenAPI schema, extend API tests, document change |
-| Tune performance   | Adjust config knobs, capture metrics via `/metrics`, note changes for ops  |
-| Operate locally    | `python scripts/dev.py services start                                      | stop | logs`, use `docker compose` |
-| Ship to production | Follow CI/CD checklist, update release notes, notify operators             |
+| Task | Checklist |
+| --- | --- |
+| Start a feature | Sync `main`, run `uv run pytest -q`, create a branch, follow lint/type gates. |
+| Add a dependency | Edit `pyproject.toml`, run `uv sync`, document config changes. |
+| Touch the API | Update models + OpenAPI schema, extend API tests, update docs. |
+| Tune performance | Adjust config knobs, capture metrics via `/metrics`, note operator impact. |
+| Operate locally | `python scripts/dev.py services start/stop/logs`, use `docker compose`. |
+| Ship to production | Follow platform operations checklist, update release notes, notify operators. |
 
 ## 4. Development Patterns
 

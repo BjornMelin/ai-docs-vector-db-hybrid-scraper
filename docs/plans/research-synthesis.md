@@ -8,10 +8,10 @@ that previously lived under `planning/`.
 
 | Phase | Focus                                | Outcome                                                                                                                  | References                                                                                                 |
 | ----- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
-| P0    | Foundation research (G1-G5)          | Confirmed native agent orchestration could replace bespoke frameworks; set targets for code reduction and observability. | `docs/developers/agentic-orchestration.md`, `docs/developers/service_adapters.md`                          |
-| P1    | Infrastructure modernization (H1-H5) | Validated FastMCP server composition, middleware consolidation, and shared service container.                            | `docs/developers/mcp-integration.md`, `docs/operators/operations.md`                                       |
+| P0    | Foundation research (G1-G5)          | Confirmed native agent orchestration could replace bespoke frameworks; set targets for code reduction and observability. | `docs/developers/agentic-orchestration.md`, `docs/developers/architecture-and-orchestration.md`                          |
+| P1    | Infrastructure modernization (H1-H5) | Validated FastMCP server composition, middleware consolidation, and shared service container.                            | `docs/developers/architecture-and-orchestration.md`, `docs/operators/operations.md`                                       |
 | P2    | Agentic capabilities (I1-I5, J1-J4)  | Established browser automation tiers, self-healing retrieval, and enterprise telemetry.                                  | `docs/operators/operations.md`, `docs/observability/query_processing_metrics.md`, `docs/security/index.md` |
-| P3    | Legacy review (A1-A2, B1-B2, C1-C2)  | Migrated orchestration to LangChain/LangGraph and Simplified FastMCP tooling.                                            | `docs/developers/agentic-orchestration.md`, `docs/developers/mcp-integration.md`                           |
+| P3    | Legacy review (A1-A2, B1-B2, C1-C2)  | Migrated orchestration to LangChain/LangGraph and Simplified FastMCP tooling.                                            | `docs/developers/agentic-orchestration.md`, `docs/developers/architecture-and-orchestration.md`                           |
 
 ## Key Decisions
 
@@ -19,7 +19,7 @@ that previously lived under `planning/`.
   agent wrappers highlighted during the A1/A2 reviews. Tool discovery and execution are now described
   in `docs/developers/agentic-orchestration.md`.
 - **FastMCP Implementation:** Retain the FastMCP stack but lean on decorators, middleware, and server
-  composition to shrink custom code. Migration guidance lives in `docs/developers/mcp-integration.md`.
+  composition to shrink custom code. Migration guidance lives in `docs/developers/architecture-and-orchestration.md`.
 - **Operational Readiness:** Browser automation tiers, retrieval retries, and telemetry standards are
   formalised in the operator playbooks (`docs/operators/operations.md`) and observability guide
   (`docs/observability/query_processing_metrics.md`).

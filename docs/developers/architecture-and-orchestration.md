@@ -158,7 +158,7 @@ version ranges.
 
 ## 5. Related Docs
 
-- `docs/developers/mcp-integration.md` – deep dive into server composition and
+- `docs/developers/architecture-and-orchestration.md` – deep dive into server composition and
   migration tasks.
 - `docs/developers/setup-and-configuration.md` – prerequisites and config
   management.
