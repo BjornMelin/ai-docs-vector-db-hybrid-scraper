@@ -8,8 +8,9 @@ best practices with lazy initialization and modular tool registration.
 import asyncio
 import logging
 import os
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, suppress
-from typing import Literal, cast
+from typing import Any, Literal, cast
 
 from fastmcp import FastMCP
 
@@ -28,6 +29,96 @@ from src.services.monitoring.initialization import (
 
 
 logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def managed_lifespan(server: FastMCP[Any]) -> AsyncIterator[None]:
+    """Server lifecycle management with lazy initialization."""
+
+    configure_logging()
+    monitoring_tasks: list[asyncio.Task[Any]] = []
+    client_manager: ClientManager | None = None
+    metrics_registry = None
+    health_manager = None
+    try:
+        validate_configuration()
+
+        logger.info("Initializing AI Documentation Vector DB MCP Server...")
+
+        config = get_config()
+        client_manager = ClientManager()
+        await client_manager.initialize()
+
+        logger.info("Initializing monitoring system...")
+        qdrant_client = getattr(client_manager, "qdrant_client", None)
+
+        cache_config = getattr(config, "cache", None)
+        enable_dragonfly = bool(getattr(cache_config, "enable_dragonfly_cache", False))
+        dragonfly_url_value = getattr(cache_config, "dragonfly_url", None)
+        redis_url = (
+            str(dragonfly_url_value)
+            if enable_dragonfly and dragonfly_url_value
+            else None
+        )
+
+        metrics_registry, health_manager = initialize_monitoring_system(
+            config, qdrant_client, redis_url
+        )
+
+        if metrics_registry and health_manager:
+            setup_fastmcp_monitoring(server, config, metrics_registry, health_manager)
+
+            if config.monitoring.enabled:
+                health_check_task = asyncio.create_task(
+                    run_periodic_health_checks(health_manager, interval_seconds=60.0)
+                )
+                monitoring_tasks.append(health_check_task)
+
+                if config.monitoring.include_system_metrics:
+                    metrics_task = asyncio.create_task(
+                        update_system_metrics_periodically(
+                            metrics_registry,
+                            interval_seconds=config.monitoring.system_metrics_interval,
+                        )
+                    )
+                    monitoring_tasks.append(metrics_task)
+
+                cache_config = config.cache
+                if metrics_registry and (
+                    getattr(cache_config, "enable_local_cache", False)
+                    or getattr(cache_config, "enable_dragonfly_cache", False)
+                ):
+                    cache_manager = await get_cache_manager(client_manager)
+                    cache_metrics_task = asyncio.create_task(
+                        update_cache_metrics_periodically(
+                            metrics_registry,
+                            cache_manager,
+                            interval_seconds=30.0,
+                        )
+                    )
+                    monitoring_tasks.append(cache_metrics_task)
+
+                logger.info("Started background monitoring tasks")
+
+        logger.info("Registering MCP tools...")
+        await register_all_tools(server, client_manager)
+
+        logger.info("Server initialization complete")
+        yield
+
+    finally:
+        logger.info("Shutting down server...")
+
+        for task in monitoring_tasks:
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
+
+        if client_manager:
+            await client_manager.cleanup()
+
+        logger.info("Server shutdown complete")
+
 
 # Initialize FastMCP server with streaming support
 mcp = FastMCP(
@@ -51,15 +142,20 @@ mcp = FastMCP(
     - Environment variables: FASTMCP_TRANSPORT, FASTMCP_HOST, FASTMCP_PORT
     - Automatic fallback to stdio for Claude Desktop compatibility
     """,
+    lifespan=managed_lifespan,
 )
 
 TransportName = Literal["stdio", "http", "sse", "streamable-http"]
 
+DEFAULT_TRANSPORT: TransportName = "streamable-http"
+SUPPORTED_TRANSPORTS: frozenset[TransportName] = frozenset(
+    {"stdio", "http", "sse", "streamable-http"}
+)
+
 
 def _normalize_transport(value: str) -> TransportName:
     """Normalize FASTMCP transport value to a supported literal."""
-    allowed: set[str] = {"stdio", "http", "sse", "streamable-http"}
-    if value not in allowed:
+    if value not in SUPPORTED_TRANSPORTS:
         logger.warning(
             "Unsupported FASTMCP_TRANSPORT '%s'; defaulting to 'stdio'", value
         )
@@ -86,8 +182,8 @@ def _get_int_env(var_name: str, default: int) -> int:
 
 def _validate_streaming_config(errors: list, warnings: list) -> None:
     """Validate streaming configuration parameters."""
-    transport = os.getenv("FASTMCP_TRANSPORT", "streamable-http")
-    if transport != "streamable-http":
+    transport = os.getenv("FASTMCP_TRANSPORT", DEFAULT_TRANSPORT)
+    if transport != DEFAULT_TRANSPORT:
         return
 
     # Validate port
@@ -162,116 +258,9 @@ def validate_configuration() -> None:
     logger.info("Configuration validation passed")
 
 
-@asynccontextmanager
-async def lifespan():
-    """Server lifecycle management with lazy initialization."""
-
-    configure_logging()
-    monitoring_tasks: list[asyncio.Task[object]] = []
-    client_manager: ClientManager | None = None
-    metrics_registry = None
-    health_manager = None
-    try:
-        # Validate configuration first
-        validate_configuration()
-
-        # Initialize client manager with unified config
-        logger.info("Initializing AI Documentation Vector DB MCP Server...")
-
-        config = get_config()
-        client_manager = ClientManager()
-        await client_manager.initialize()
-
-        # Initialize monitoring system
-        logger.info("Initializing monitoring system...")
-        qdrant_client = getattr(client_manager, "qdrant_client", None)
-
-        cache_config = getattr(config, "cache", None)
-        enable_dragonfly = bool(getattr(cache_config, "enable_dragonfly_cache", False))
-        dragonfly_url_value = getattr(cache_config, "dragonfly_url", None)
-        redis_url = (
-            str(dragonfly_url_value)
-            if enable_dragonfly and dragonfly_url_value
-            else None
-        )
-
-        metrics_registry, health_manager = initialize_monitoring_system(
-            config, qdrant_client, redis_url
-        )
-
-        # Set up FastMCP monitoring integration
-        if metrics_registry and health_manager:
-            setup_fastmcp_monitoring(mcp, config, metrics_registry, health_manager)
-
-            # Start background monitoring tasks
-            if config.monitoring.enabled:
-                # Start periodic health checks
-                health_check_task = asyncio.create_task(
-                    run_periodic_health_checks(health_manager, interval_seconds=60.0)
-                )
-                monitoring_tasks.append(health_check_task)
-
-                # Start periodic system metrics updates
-                if config.monitoring.include_system_metrics:
-                    metrics_task = asyncio.create_task(
-                        update_system_metrics_periodically(
-                            metrics_registry,
-                            interval_seconds=config.monitoring.system_metrics_interval,
-                        )
-                    )
-                    monitoring_tasks.append(metrics_task)
-
-                # Start periodic cache metrics updates
-                cache_config = config.cache
-                if metrics_registry and (
-                    getattr(cache_config, "enable_local_cache", False)
-                    or getattr(cache_config, "enable_dragonfly_cache", False)
-                ):
-                    # Initialize cache manager first to ensure it's available
-                    # for monitoring
-                    cache_manager = await get_cache_manager(client_manager)
-                    cache_metrics_task = asyncio.create_task(
-                        update_cache_metrics_periodically(
-                            metrics_registry,
-                            cache_manager,
-                            interval_seconds=30.0,
-                        )
-                    )
-                    monitoring_tasks.append(cache_metrics_task)
-
-                logger.info("Started background monitoring tasks")
-
-        # Register all tools
-        logger.info("Registering MCP tools...")
-        await register_all_tools(mcp, client_manager)
-
-        logger.info("Server initialization complete")
-        yield
-
-    finally:
-        # Cleanup on shutdown
-        logger.info("Shutting down server...")
-
-        # Cancel monitoring tasks
-        for task in monitoring_tasks:
-            task.cancel()
-            with suppress(asyncio.CancelledError):
-                await task
-
-        if client_manager:
-            await client_manager.cleanup()
-
-
-logger.info("Server shutdown complete")
-
-
-# Set the lifespan
-mcp.lifespan = lifespan
-
-
 if __name__ == "__main__":
     configure_logging()
-    transport = _normalize_transport(os.getenv("FASTMCP_TRANSPORT", "streamable-http"))
+    transport = _normalize_transport(os.getenv("FASTMCP_TRANSPORT", DEFAULT_TRANSPORT))
 
     logger.info("Starting MCP server with transport: %s", transport)
 
@@ -282,6 +271,6 @@ if __name__ == "__main__":
         host = os.getenv("FASTMCP_HOST", "127.0.0.1")
         port = _get_int_env("FASTMCP_PORT", 8000)
         logger.info("Starting %s server on %s:%s", transport, host, port)
-        if transport == "streamable-http":
+        if transport == DEFAULT_TRANSPORT:
             logger.info("Enhanced streaming support enabled for large search results")
         mcp.run(transport=transport, host=host, port=port)

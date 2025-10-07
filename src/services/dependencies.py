@@ -235,10 +235,16 @@ async def get_cache_manager(
         if _cache_manager is None:
             config = get_config()
             cache_config = config.cache
+            redis_ttl = max(
+                cache_config.ttl_embeddings,
+                cache_config.ttl_search_results,
+            )
             distributed_ttl = {
+                CacheType.REDIS: redis_ttl,
                 CacheType.EMBEDDINGS: cache_config.ttl_embeddings,
                 CacheType.SEARCH: cache_config.ttl_search_results,
                 CacheType.CRAWL: cache_config.ttl_crawl,
+                CacheType.HYBRID: redis_ttl,
             }
             _cache_manager = CacheManager(
                 dragonfly_url=cache_config.redis_url,

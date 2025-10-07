@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from . import paths
 from .async_utils import async_command, async_to_sync_click
 from .gpu import (
     get_gpu_device,
@@ -22,4 +23,5 @@ __all__ = [
     "is_gpu_available",
     "optimize_gpu_memory",
     "safe_gpu_operation",
+    "paths",
 ]
