@@ -25,7 +25,6 @@ from src.services.content_intelligence.models import (
     ContentType,
     QualityScore,
 )
-from src.services.dependencies import get_content_intelligence_service
 
 
 logger = logging.getLogger(__name__)
@@ -59,7 +58,7 @@ def register_tools(  # pylint: disable=too-many-statements
             )
 
             # Get Content Intelligence Service
-            content_service = await get_content_intelligence_service(client_manager)
+            content_service = await client_manager.get_content_intelligence_service()
 
             if not content_service:
                 await ctx.error("Content Intelligence Service not available")
@@ -133,7 +132,7 @@ def register_tools(  # pylint: disable=too-many-statements
             await ctx.info(f"Classifying content type for URL: {request.url}")
 
             # Get Content Intelligence Service
-            content_service = await get_content_intelligence_service(client_manager)
+            content_service = await client_manager.get_content_intelligence_service()
 
             if not content_service:
                 await ctx.error("Content Intelligence Service not available")
@@ -194,7 +193,7 @@ def register_tools(  # pylint: disable=too-many-statements
             await ctx.info("Assessing content quality")
 
             # Get Content Intelligence Service
-            content_service = await get_content_intelligence_service(client_manager)
+            content_service = await client_manager.get_content_intelligence_service()
 
             if not content_service:
                 await ctx.error("Content Intelligence Service not available")
@@ -257,7 +256,7 @@ def register_tools(  # pylint: disable=too-many-statements
             await ctx.info(f"Extracting metadata for URL: {request.url}")
 
             # Get Content Intelligence Service
-            content_service = await get_content_intelligence_service(client_manager)
+            content_service = await client_manager.get_content_intelligence_service()
 
             if not content_service:
                 await ctx.error("Content Intelligence Service not available")
@@ -322,7 +321,7 @@ def register_tools(  # pylint: disable=too-many-statements
                 await ctx.info(f"Generating adaptation recommendations for: {url}")
 
             # Get Content Intelligence Service
-            content_service = await get_content_intelligence_service(client_manager)
+            content_service = await client_manager.get_content_intelligence_service()
 
             if not content_service:
                 if ctx:
@@ -372,7 +371,7 @@ def register_tools(  # pylint: disable=too-many-statements
                 await ctx.info("Retrieving Content Intelligence Service metrics")
 
             # Get Content Intelligence Service
-            content_service = await get_content_intelligence_service(client_manager)
+            content_service = await client_manager.get_content_intelligence_service()
 
             if not content_service:
                 if ctx:

@@ -38,6 +38,19 @@ logger = logging.getLogger(__name__)
 #### HELPER FUNCTIONS & DECORATORS ####
 
 
+async def _resolve_client_manager(
+    client_manager: ClientManager | None,
+) -> ClientManager:
+    """Return an initialized ClientManager instance."""
+
+    if client_manager is not None:
+        return client_manager
+
+    manager = ClientManager.from_unified_config()
+    await manager.initialize()
+    return manager
+
+
 def create_service_error_handler(
     service_name: str,
     error_class: type[Exception] = RuntimeError,
@@ -117,9 +130,8 @@ async def get_embedding_manager(
 ) -> Any:
     """Get initialized EmbeddingManager service."""
 
-    del client_manager
-    registry = await ensure_service_registry()
-    return registry.embedding_manager
+    manager = await _resolve_client_manager(client_manager)
+    return await manager.get_embedding_manager()
 
 
 EmbeddingManagerDep = Annotated[Any, Depends(get_embedding_manager)]
@@ -181,9 +193,8 @@ async def get_cache_manager(
 ) -> Any:
     """Get initialized CacheManager service."""
 
-    del client_manager
-    registry = await ensure_service_registry()
-    return registry.cache_manager
+    manager = await _resolve_client_manager(client_manager)
+    return await manager.get_cache_manager()
 
 
 CacheManagerDep = Annotated[Any, Depends(get_cache_manager)]
@@ -195,10 +206,17 @@ async def cache_get(
     cache_manager: CacheManagerDep = None,
 ) -> Any:
     """Get value from cache."""
+    manager = cache_manager or await get_cache_manager()
     try:
-        return await cache_manager.get(key, CacheType(cache_type))
-    except (OSError, ConnectionError, ImportError, ModuleNotFoundError):
-        logger.exception("Cache get failed for key")
+        return await manager.get(key, CacheType(cache_type))
+    except (
+        OSError,
+        ConnectionError,
+        ImportError,
+        ModuleNotFoundError,
+        ValueError,
+    ):
+        logger.exception("Cache get failed for key %s", key)
         return None
 
 
@@ -210,10 +228,17 @@ async def cache_set(
     cache_manager: CacheManagerDep = None,
 ) -> bool:
     """Set value in cache."""
+    manager = cache_manager or await get_cache_manager()
     try:
-        return await cache_manager.set(key, value, CacheType(cache_type), ttl)
-    except (OSError, ConnectionError, ImportError, ModuleNotFoundError):
-        logger.exception("Cache set failed for key")
+        return await manager.set(key, value, CacheType(cache_type), ttl)
+    except (
+        OSError,
+        ConnectionError,
+        ImportError,
+        ModuleNotFoundError,
+        ValueError,
+    ):
+        logger.exception("Cache set failed for key %s", key)
         return False
 
 
@@ -223,10 +248,17 @@ async def cache_delete(
     cache_manager: CacheManagerDep = None,
 ) -> bool:
     """Delete value from cache."""
+    manager = cache_manager or await get_cache_manager()
     try:
-        return await cache_manager.delete(key, CacheType(cache_type))
-    except (OSError, ConnectionError, ImportError, ModuleNotFoundError):
-        logger.exception("Cache delete failed for key")
+        return await manager.delete(key, CacheType(cache_type))
+    except (
+        OSError,
+        ConnectionError,
+        ImportError,
+        ModuleNotFoundError,
+        ValueError,
+    ):
+        logger.exception("Cache delete failed for key %s", key)
         return False
 
 
@@ -266,9 +298,8 @@ async def get_crawl_manager(
     client_manager: ClientManager | None = None,
 ) -> Any:
     """Get initialized CrawlManager service."""
-    del client_manager
-    registry = await ensure_service_registry()
-    return registry.crawl_manager
+    manager = await _resolve_client_manager(client_manager)
+    return await manager.get_crawl_manager()
 
 
 CrawlManagerDep = Annotated[Any, Depends(get_crawl_manager)]
@@ -357,10 +388,8 @@ async def get_vector_store_service(
     client_manager: ClientManager | None = None,
 ) -> VectorStoreService:
     """Get initialized vector store service."""
-
-    del client_manager
-    registry = await ensure_service_registry()
-    return registry.vector_service
+    manager = await _resolve_client_manager(client_manager)
+    return await manager.get_vector_store_service()
 
 
 VectorStoreServiceDep = Annotated[VectorStoreService, Depends(get_vector_store_service)]
@@ -371,10 +400,8 @@ async def get_content_intelligence_service(
     client_manager: ClientManager | None = None,
 ) -> Any:
     """Get initialized ContentIntelligenceService."""
-
-    del client_manager
-    registry = await ensure_service_registry()
-    return registry.content_intelligence
+    manager = await _resolve_client_manager(client_manager)
+    return await manager.get_content_intelligence_service()
 
 
 ContentIntelligenceServiceDep = Annotated[
@@ -507,13 +534,14 @@ async def generate_rag_answer(
         internal_request = _convert_to_internal_rag_request(request)
         result = await rag_generator.generate_answer(internal_request)
 
+        raw_sources = list(getattr(result, "sources", []) or [])
         sources = _format_rag_sources(request, result)
         metrics = _format_rag_metrics(result)
 
         return RAGResponse(
             answer=result.answer,
             confidence_score=result.confidence_score or 0.0,
-            sources_used=len(result.sources),
+            sources_used=len(raw_sources),
             generation_time_ms=result.generation_time_ms,
             sources=sources,
             metrics=metrics,
@@ -524,7 +552,7 @@ async def generate_rag_answer(
     except Exception as e:
         logger.exception("RAG answer generation failed")
         msg = f"Failed to generate RAG answer: {e}"
-        raise EmbeddingServiceError(msg) from e
+        raise RuntimeError(msg) from e
 
 
 async def get_rag_metrics(
@@ -577,11 +605,7 @@ async def get_project_storage(
     client_manager: ClientManagerDep,
 ) -> Any:
     """Get initialized ProjectStorage service."""
-
-    del client_manager
-
-    registry = await ensure_service_registry()
-    return registry.project_storage
+    return await client_manager.get_project_storage()
 
 
 ProjectStorageDep = Annotated[Any, Depends(get_project_storage)]

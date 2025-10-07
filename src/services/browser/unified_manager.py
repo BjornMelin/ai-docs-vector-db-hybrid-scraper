@@ -13,19 +13,12 @@ import redis
 from pydantic import BaseModel, Field
 
 from src.config import Config
+from src.infrastructure.client_manager import ClientManager
 from src.services.base import BaseService
 from src.services.errors import CrawlServiceError
 
 from .monitoring import BrowserAutomationMonitor
 
-
-# Optional imports that may not be available in all configurations
-try:
-    from src.infrastructure.client_manager import ClientManager
-    from src.services.dependencies import get_cache_manager
-except ImportError:
-    ClientManager = None
-    get_cache_manager = None  # type: ignore[assignment]
 
 try:
     from src.services.cache.browser_cache import BrowserCache, BrowserCacheEntry
@@ -34,10 +27,8 @@ except ImportError:
     BrowserCacheEntry = None
 
 if TYPE_CHECKING:
-    from src.infrastructure.client_manager import ClientManager as ClientManagerType
     from src.services.cache.browser_cache import BrowserCache as BrowserCacheType
 else:
-    ClientManagerType = Any
     BrowserCacheType = Any
 
 logger = logging.getLogger(__name__)
@@ -135,7 +126,7 @@ class UnifiedBrowserManager(  # pylint: disable=too-many-instance-attributes
 
         super().__init__(config)
         self._automation_router: Any = None
-        self._client_manager: ClientManagerType | None = None
+        self._client_manager: ClientManager | None = None
         self._browser_cache: BrowserCacheType | None = None
         self._tier_metrics: dict[str, TierMetrics] = {}
         self._initialized = False
@@ -182,7 +173,7 @@ class UnifiedBrowserManager(  # pylint: disable=too-many-instance-attributes
             msg = "ClientManager not available"
             raise ImportError(msg)
 
-        client_manager_cls = cast(type[ClientManagerType], ClientManager)
+        client_manager_cls = cast(type[ClientManager], ClientManager)
         self._client_manager = client_manager_cls()
         await self._client_manager.initialize()
 
@@ -207,12 +198,7 @@ class UnifiedBrowserManager(  # pylint: disable=too-many-instance-attributes
             self._cache_enabled = False
             return
 
-        if get_cache_manager is None:
-            logger.warning("Cache manager dependency unavailable; disabling cache")
-            self._cache_enabled = False
-            return
-
-        cache_manager = await get_cache_manager(cast(ClientManagerType, client_manager))
+        cache_manager = await cast(ClientManager, client_manager).get_cache_manager()
 
         cache_config = getattr(self.config, "cache", None)
         self._browser_cache = BrowserCache(

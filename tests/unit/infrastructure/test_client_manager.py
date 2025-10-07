@@ -2,6 +2,7 @@
 
 import asyncio
 import time
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -318,6 +319,109 @@ class TestClientManagerServiceIntegration:
             router1 = await client_manager_with_mocks.get_browser_automation_router()
             assert router1 is mock_router
             mock_router.initialize.assert_awaited_once()
+
+            router2 = await client_manager_with_mocks.get_browser_automation_router()
+            assert router2 is router1
+            mock_router.initialize.assert_awaited_once()
+
+
+class TestClientManagerAccessors:
+    """Test typed service accessors added for DI consolidation."""
+
+    @pytest.mark.asyncio
+    async def test_get_cache_manager(self, client_manager_with_mocks):
+        fake_cache = MagicMock(name="cache_manager")
+        fake_registry = SimpleNamespace(cache_manager=fake_cache)
+
+        with patch(
+            "src.infrastructure.client_manager.ensure_service_registry",
+            new=AsyncMock(return_value=fake_registry),
+        ) as ensure_registry:
+            result = await client_manager_with_mocks.get_cache_manager()
+            assert result is fake_cache
+            # Cached access should bypass subsequent registry calls
+            assert await client_manager_with_mocks.get_cache_manager() is fake_cache
+            ensure_registry.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_get_embedding_manager(self, client_manager_with_mocks):
+        fake_embedding = MagicMock(name="embedding_manager")
+        fake_registry = SimpleNamespace(embedding_manager=fake_embedding)
+
+        with patch(
+            "src.infrastructure.client_manager.ensure_service_registry",
+            new=AsyncMock(return_value=fake_registry),
+        ) as ensure_registry:
+            result = await client_manager_with_mocks.get_embedding_manager()
+            assert result is fake_embedding
+            assert (
+                await client_manager_with_mocks.get_embedding_manager()
+                is fake_embedding
+            )
+            ensure_registry.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_get_crawl_manager(self, client_manager_with_mocks):
+        fake_crawl = MagicMock(name="crawl_manager")
+        fake_registry = SimpleNamespace(crawl_manager=fake_crawl)
+
+        with patch(
+            "src.infrastructure.client_manager.ensure_service_registry",
+            new=AsyncMock(return_value=fake_registry),
+        ) as ensure_registry:
+            result = await client_manager_with_mocks.get_crawl_manager()
+            assert result is fake_crawl
+            assert await client_manager_with_mocks.get_crawl_manager() is fake_crawl
+            ensure_registry.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_get_content_intelligence_service(self, client_manager_with_mocks):
+        fake_service = MagicMock(name="content_intelligence")
+        fake_registry = SimpleNamespace(content_intelligence=fake_service)
+
+        with patch(
+            "src.infrastructure.client_manager.ensure_service_registry",
+            new=AsyncMock(return_value=fake_registry),
+        ) as ensure_registry:
+            result = await client_manager_with_mocks.get_content_intelligence_service()
+            assert result is fake_service
+            assert (
+                await client_manager_with_mocks.get_content_intelligence_service()
+                is fake_service
+            )
+            ensure_registry.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_get_project_storage(self, client_manager_with_mocks):
+        fake_storage = MagicMock(name="project_storage")
+        fake_registry = SimpleNamespace(project_storage=fake_storage)
+
+        with patch(
+            "src.infrastructure.client_manager.ensure_service_registry",
+            new=AsyncMock(return_value=fake_registry),
+        ) as ensure_registry:
+            result = await client_manager_with_mocks.get_project_storage()
+            assert result is fake_storage
+            assert await client_manager_with_mocks.get_project_storage() is fake_storage
+            ensure_registry.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_get_rag_generator_cached(self, client_manager_with_mocks):
+        fake_generator = AsyncMock()
+        fake_generator.cleanup = AsyncMock()
+
+        with patch(
+            "src.services.rag.generator.RAGGenerator",
+            return_value=fake_generator,
+        ) as generator_cls:
+            result = await client_manager_with_mocks.get_rag_generator()
+            assert result is fake_generator
+            generator_cls.assert_called_once()
+            fake_generator.initialize.assert_awaited_once()
+
+            fake_generator.initialize.reset_mock()
+            assert await client_manager_with_mocks.get_rag_generator() is fake_generator
+            fake_generator.initialize.assert_not_called()
 
             router2 = await client_manager_with_mocks.get_browser_automation_router()
             assert router2 is router1

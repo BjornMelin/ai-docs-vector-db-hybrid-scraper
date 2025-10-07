@@ -1,11 +1,16 @@
+# pylint: disable=too-many-lines
 """Intelligent browser automation router with three-tier hierarchy."""
 
 import json
 import logging
+import os
 import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 from urllib.parse import urlparse
+
+from pydantic import BaseModel, Field, ValidationError
 
 from src.config import Config
 from src.services.base import BaseService
@@ -19,8 +24,74 @@ from .playwright_adapter import PlaywrightAdapter
 
 logger = logging.getLogger(__name__)
 
+ROUTING_RULES_ENV = "AI_DOCS_BROWSER_ROUTING_RULES_PATH"
+SUPPORTED_ROUTING_TOOLS = {
+    "lightweight",
+    "crawl4ai",
+    "crawl4ai_enhanced",
+    "browser_use",
+    "playwright",
+}
 
-class AutomationRouter(BaseService):
+
+class RoutingRulesModel(BaseModel):
+    """Schema for routing rules configuration."""
+
+    routing_rules: dict[str, list[str]] = Field(default_factory=dict)
+
+
+class ScrapeRequest(BaseModel):
+    """Normalized request payload passed to automation adapters."""
+
+    url: str
+    timeout_ms: int
+    custom_actions: list[dict[str, Any]] | None = None
+    interaction_required: bool = False
+
+
+class ScrapeResult(BaseModel):
+    """Standardized automation response structure."""
+
+    success: bool
+    url: str = ""
+    content: Any | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    error: str | None = None
+    provider: str | None = None
+    fallback_from: str | None = None
+    automation_time_ms: float | None = None
+    raw: Any | None = None
+
+    def as_dict(self) -> dict[str, Any]:
+        """Serialize result into legacy dictionary format."""
+
+        return self.model_dump(exclude_none=True)
+
+
+class TimeoutBudget:
+    """Track remaining time for a multi-attempt automation workflow."""
+
+    def __init__(self, timeout_ms: int) -> None:
+        normalized_timeout = max(timeout_ms, 0)
+        self._deadline = time.monotonic() + normalized_timeout / 1000
+
+    def remaining_ms(self) -> int:
+        """Return remaining milliseconds (clamped at zero)."""
+        remaining = self._deadline - time.monotonic()
+        if remaining <= 0:
+            return 0
+        return int(remaining * 1000)
+
+
+@dataclass
+class CircuitBreakerState:
+    """Track failure streaks and open intervals for adapters."""
+
+    failures: int = 0
+    opened_until: float | None = None
+
+
+class AutomationRouter(BaseService):  # pylint: disable=too-many-instance-attributes
     """Intelligently route scraping tasks to appropriate automation tool.
 
     Implements a five-tier automation hierarchy:
@@ -83,6 +154,9 @@ class AutomationRouter(BaseService):
                 "total_time": 0.0,
             },
         }
+        self._breaker_state: dict[str, CircuitBreakerState] = {}
+        self._breaker_failure_threshold = 3
+        self._breaker_cooldown_seconds = 60.0
 
     def _load_routing_rules(self) -> dict[str, list[str]]:
         """Load routing rules from configuration file.
@@ -92,21 +166,49 @@ class AutomationRouter(BaseService):
 
         """
         try:
-            # Get project root directory (3 levels up from this file)
-            project_root = Path(__file__).parent.parent.parent.parent
-            config_file = project_root / "config" / "browser-routing-rules.json"
-
-            if config_file.exists():
-                with config_file.open() as f:
-                    config = json.load(f)
-                    routing_rules = config.get("routing_rules", {})
-                    logger.info("Loaded routing rules from %s", config_file)
-                    return routing_rules
+            env_path = os.getenv(ROUTING_RULES_ENV)
+            if env_path:
+                config_file = Path(env_path).expanduser()
             else:
-                logger.warning("Routing rules file not found")
+                project_root = Path(__file__).parent.parent.parent.parent
+                config_file = project_root / "config" / "browser-routing-rules.json"
 
-        except (AttributeError, FileNotFoundError, OSError):
-            logger.exception("Failed to load routing rules")
+            with config_file.open(encoding="utf-8") as f:
+                payload = json.load(f)
+
+            rules_config = RoutingRulesModel.model_validate(payload)
+
+            filtered_rules: dict[str, list[str]] = {}
+            for tool, domains in rules_config.routing_rules.items():
+                if tool not in SUPPORTED_ROUTING_TOOLS:
+                    self.logger.warning(
+                        "Skipping routing rule for unsupported tool '%s'", tool
+                    )
+                    continue
+                clean_domains = [
+                    domain.strip().lower()
+                    for domain in domains
+                    if isinstance(domain, str) and domain.strip()
+                ]
+                if not clean_domains:
+                    continue
+                filtered_rules[tool] = clean_domains
+
+            if filtered_rules:
+                self.logger.info("Loaded routing rules from %s", config_file)
+                return filtered_rules
+
+            self.logger.warning(
+                "Routing rules file %s contained no supported entries; using defaults",
+                config_file,
+            )
+
+        except FileNotFoundError:
+            self.logger.warning("Routing rules file not found; using defaults")
+        except (OSError, json.JSONDecodeError, ValidationError):
+            self.logger.exception(
+                "Failed to load routing rules; falling back to defaults"
+            )
 
         # Fallback to default rules if loading fails
         return self._get_default_routing_rules()
@@ -216,7 +318,7 @@ class AutomationRouter(BaseService):
         self._adapters.clear()
         self._initialized = False
 
-    async def scrape(
+    async def scrape(  # pylint: disable=too-many-arguments,too-many-locals
         self,
         url: str,
         interaction_required: bool = False,
@@ -255,52 +357,84 @@ class AutomationRouter(BaseService):
 
         # Determine which tool to use
         if force_tool:
-            if force_tool not in self._adapters and force_tool not in {
-                "crawl4ai_enhanced",
-                "firecrawl",
-            }:
-                msg = f"Forced tool '{force_tool}' not available"
-                raise CrawlServiceError(msg)
-            tool = force_tool
+            tool = self._validate_forced_tool(force_tool)
         else:
             tool = await self._select_tool(url, interaction_required, custom_actions)
 
         self.logger.info("Using %s for %s", tool, url)
 
-        # Execute with selected tool
+        budget = TimeoutBudget(timeout)
         start_time = time.time()
 
         try:
-            if tool == "lightweight":
-                result = await self._try_lightweight(url, timeout)
-            elif tool == "crawl4ai":
-                result = await self._try_crawl4ai(url, custom_actions, timeout)
-            elif tool == "crawl4ai_enhanced":
-                result = await self._try_crawl4ai_enhanced(url, custom_actions, timeout)
-            elif tool == "browser_use":
-                result = await self._try_browser_use(url, custom_actions, timeout)
-            elif tool == "firecrawl":
-                result = await self._try_firecrawl(url, timeout)
-            else:  # playwright
-                result = await self._try_playwright(url, custom_actions, timeout)
+            remaining_ms = budget.remaining_ms()
+            if remaining_ms <= 0:
+                msg = "Timeout budget exhausted before executing automation"
+                raise CrawlServiceError(msg)
 
-            # Update metrics
+            request = ScrapeRequest(
+                url=url,
+                timeout_ms=remaining_ms,
+                custom_actions=custom_actions,
+                interaction_required=interaction_required,
+            )
+
+            result = await self._execute_tool(tool, request)
             elapsed = time.time() - start_time
-            self._update_metrics(tool, True, elapsed)
 
-            result["provider"] = tool
-            result["automation_time_ms"] = elapsed * 1000
+            result = result.model_copy(
+                update={
+                    "provider": tool,
+                    "automation_time_ms": elapsed * 1000,
+                    "url": result.url or url,
+                }
+            )
 
-        except (OSError, PermissionError):
+            self._update_metrics(tool, result.success, elapsed)
+
+            if not result.success:
+                self.logger.warning(
+                    "%s returned unsuccessful result for %s; attempting fallback",
+                    tool,
+                    url,
+                )
+                fallback_result = await self._fallback_scrape(
+                    url,
+                    tool,
+                    request,
+                    budget,
+                    initial_result=result,
+                )
+                return fallback_result.as_dict()
+
+            return result.as_dict()
+
+        except (
+            OSError,
+            PermissionError,
+            TimeoutError,
+            CrawlServiceError,
+            KeyError,
+        ) as exc:
             self.logger.exception("%s failed for %s", tool, url)
             elapsed = time.time() - start_time
             self._update_metrics(tool, False, elapsed)
 
-            # Try fallback
-            return await self._fallback_scrape(url, tool, custom_actions, timeout)
+            request = ScrapeRequest(
+                url=url,
+                timeout_ms=budget.remaining_ms(),
+                custom_actions=custom_actions,
+                interaction_required=interaction_required,
+            )
 
-        else:
-            return result
+            fallback_result = await self._fallback_scrape(
+                url,
+                tool,
+                request,
+                budget,
+                failure_reason=str(exc),
+            )
+            return fallback_result.as_dict()
 
     async def _select_tool(
         self,
@@ -324,17 +458,24 @@ class AutomationRouter(BaseService):
         # Check explicit routing rules first
         route_tool = self._check_routing_rules(domain)
         if route_tool:
-            return route_tool
+            if self._is_tool_available_for_use(route_tool):
+                return route_tool
+            self.logger.info(
+                "Routing rule chose %s but it is unavailable; using heuristics",
+                route_tool,
+            )
 
         # Check for interaction requirements (forces higher tiers)
         if interaction_required or custom_actions:
-            return self._get_interaction_tool()
+            interaction_tool = self._get_interaction_tool()
+            if interaction_tool:
+                return interaction_tool
 
         # Tier 0: Try lightweight HTTP first (fastest, $0 cost)
-        if "lightweight" in self._adapters:
+        if self._is_tool_available_for_use("lightweight"):
             try:
                 can_handle = await self._adapters["lightweight"].can_handle(url)
-                if can_handle:
+                if self._lightweight_can_handle(can_handle):
                     return "lightweight"
             except TimeoutError:
                 self.logger.debug("Lightweight adapter can_handle check failed")
@@ -342,67 +483,204 @@ class AutomationRouter(BaseService):
         # Check for JavaScript-heavy patterns that need higher tiers
         js_patterns = ["spa", "react", "vue", "angular", "app", "dashboard", "console"]
         if any(pattern in url.lower() for pattern in js_patterns):
-            return self._get_enhanced_tool()
+            enhanced_tool = self._get_enhanced_tool()
+            if enhanced_tool:
+                return enhanced_tool
 
         # Default fallback hierarchy
-        return self._get_default_tool()
+        default_tool = self._get_default_tool()
+        if default_tool:
+            return default_tool
+
+        msg = "No automation adapters available for selection"
+        raise CrawlServiceError(msg)
 
     def _check_routing_rules(self, domain: str) -> str | None:
         """Check if domain matches explicit routing rules."""
         for tool, domains in self.routing_rules.items():
-            if any(d in domain for d in domains) and tool in self._adapters:
+            if not self._is_tool_available_for_use(tool):
+                continue
+
+            for configured_domain in domains:
+                if self._domain_matches(domain, configured_domain):
+                    return tool
+        return None
+
+    def _get_default_tool(self) -> str | None:
+        """Get default tool based on adapter availability."""
+        for tool in ("crawl4ai", "lightweight", "playwright", "browser_use"):
+            if self._is_tool_available_for_use(tool):
                 return tool
         return None
 
-    def _check_interaction_requirements(
-        self, url: str, interaction_required: bool, custom_actions: list[dict] | None
-    ) -> str | None:
-        """Check if interaction requirements suggest a specific tool."""
-        if interaction_required or custom_actions:
-            if "browser_use" in self._adapters:
-                return "browser_use"
-            if "playwright" in self._adapters:
-                return "playwright"
-
-        # Check for complex JavaScript patterns in URL
-        js_patterns = ["spa", "react", "vue", "angular", "app"]
-        if (
-            any(pattern in url.lower() for pattern in js_patterns)
-            and "browser_use" in self._adapters
-        ):
-            return "browser_use"
-
+    def _get_interaction_tool(self) -> str | None:
+        """Get best tool for interactive requirements."""
+        for tool in ("browser_use", "playwright", "crawl4ai"):
+            if self._is_tool_available_for_use(tool):
+                return tool
         return None
 
-    def _get_default_tool(self) -> str:
-        """Get default tool based on 5-tier hierarchy."""
-        # Prefer Tier 1 (Crawl4AI Basic) as default
-        if "crawl4ai" in self._adapters:
-            return "crawl4ai"
-        # Fall back to Tier 0 if available
-        if "lightweight" in self._adapters:
-            return "lightweight"
-        # Then Tier 3 (Playwright)
-        if "playwright" in self._adapters:
-            return "playwright"
-        # Finally Tier 2 (BrowserUse)
-        return "browser_use"
-
-    def _get_interaction_tool(self) -> str:
-        """Get best tool for interactive requirements."""
-        if "browser_use" in self._adapters:
-            return "browser_use"
-        if "playwright" in self._adapters:
-            return "playwright"
-        return "crawl4ai"
-
-    def _get_enhanced_tool(self) -> str:
+    def _get_enhanced_tool(self) -> str | None:
         """Get best tool for enhanced/JavaScript-heavy content."""
-        if "browser_use" in self._adapters:
+        if self._is_tool_available_for_use("browser_use"):
             return "browser_use"
-        if "crawl4ai" in self._adapters:
+        if self._is_tool_available_for_use("crawl4ai_enhanced"):
             return "crawl4ai_enhanced"  # Use enhanced mode
-        return "playwright"
+        if self._is_tool_available_for_use("playwright"):
+            return "playwright"
+        return None
+
+    async def _execute_tool(
+        self,
+        tool: str,
+        request: ScrapeRequest,
+    ) -> ScrapeResult:
+        """Execute the selected tool respecting the remaining timeout budget."""
+        timeout_ms = max(request.timeout_ms, 0)
+
+        if tool == "lightweight":
+            raw = await self._try_lightweight(request.url, timeout=timeout_ms)
+        elif tool == "crawl4ai":
+            raw = await self._try_crawl4ai(
+                request.url, request.custom_actions, timeout=timeout_ms
+            )
+        elif tool == "crawl4ai_enhanced":
+            raw = await self._try_crawl4ai_enhanced(
+                request.url, request.custom_actions, timeout=timeout_ms
+            )
+        elif tool == "browser_use":
+            raw = await self._try_browser_use(
+                request.url, request.custom_actions, timeout=timeout_ms
+            )
+        elif tool == "firecrawl":
+            raw = await self._try_firecrawl(request.url, _timeout=timeout_ms)
+        else:
+            raw = await self._try_playwright(
+                request.url, request.custom_actions, timeout=timeout_ms
+            )
+
+        return self._normalize_result(tool, raw, request)
+
+    def _normalize_result(
+        self, tool: str, raw: Any, request: ScrapeRequest
+    ) -> ScrapeResult:
+        """Convert adapter-specific payloads into a standardized result."""
+
+        if isinstance(raw, ScrapeResult):
+            return raw
+
+        if isinstance(raw, dict):
+            metadata = raw.get("metadata") or {}
+            if not isinstance(metadata, dict):
+                metadata = {"metadata": metadata}
+
+            return ScrapeResult(
+                success=bool(raw.get("success", True)),
+                url=str(raw.get("url") or request.url),
+                content=raw.get("content"),
+                metadata=dict(metadata),
+                error=raw.get("error"),
+                provider=raw.get("provider") or tool,
+                fallback_from=raw.get("fallback_from"),
+                automation_time_ms=raw.get("automation_time_ms"),
+                raw=raw,
+            )
+
+        return ScrapeResult(
+            success=False,
+            url=request.url,
+            error=f"Unsupported result type '{type(raw).__name__}' from {tool}",
+            provider=tool,
+            metadata={"raw_result": raw},
+        )
+
+    def _validate_forced_tool(
+        self,
+        force_tool: Literal[
+            "lightweight",
+            "crawl4ai",
+            "crawl4ai_enhanced",
+            "browser_use",
+            "playwright",
+            "firecrawl",
+        ],
+    ) -> str:
+        """Ensure the requested forced tool is available and supported."""
+        if force_tool == "crawl4ai_enhanced":
+            if "crawl4ai" not in self._adapters:
+                msg = "Forced tool 'crawl4ai_enhanced' requires Crawl4AI adapter"
+                raise CrawlServiceError(msg)
+            return force_tool
+
+        if force_tool == "firecrawl":
+            msg = "Forced tool 'firecrawl' not available"
+            raise CrawlServiceError(msg)
+
+        if force_tool not in self._adapters:
+            msg = f"Forced tool '{force_tool}' not available"
+            raise CrawlServiceError(msg)
+
+        return force_tool
+
+    @staticmethod
+    def _domain_matches(domain: str, rule: str) -> bool:
+        """Determine whether a domain matches a routing rule entry."""
+        candidate = domain.lower()
+        expected = rule.strip().lower()
+        if not expected:
+            return False
+        if candidate == expected:
+            return True
+        return candidate.endswith(f".{expected}")
+
+    @staticmethod
+    def _lightweight_can_handle(result: Any) -> bool:
+        """Interpret lightweight adapter capability result safely."""
+        if isinstance(result, bool):
+            return result
+        if isinstance(result, dict):
+            return bool(result.get("can_handle"))
+        if hasattr(result, "can_handle"):
+            return bool(result.can_handle)
+        return bool(result)
+
+    def _is_tool_available_for_use(self, tool: str) -> bool:
+        """Check if a tool is initialized and not blocked by circuit breaker."""
+
+        if tool == "crawl4ai_enhanced":
+            return "crawl4ai" in self._adapters and not self._is_breaker_open(tool)
+
+        return tool in self._adapters and not self._is_breaker_open(tool)
+
+    def _is_breaker_open(self, tool: str) -> bool:
+        """Return True when the circuit breaker is open for a tool."""
+
+        state = self._breaker_state.get(tool)
+        if not state or state.opened_until is None:
+            return False
+        if state.opened_until <= time.monotonic():
+            self._breaker_state[tool] = CircuitBreakerState()
+            return False
+        return True
+
+    def _record_breaker_outcome(self, tool: str, success: bool) -> None:
+        """Update circuit breaker state with the result of an attempt."""
+
+        state = self._breaker_state.setdefault(tool, CircuitBreakerState())
+        if success:
+            state.failures = 0
+            state.opened_until = None
+            return
+
+        state.failures += 1
+        if state.failures >= self._breaker_failure_threshold:
+            cooldown_until = time.monotonic() + self._breaker_cooldown_seconds
+            state.opened_until = cooldown_until
+            self.logger.warning(
+                "Circuit breaker opened for %s for %.0f seconds",
+                tool,
+                self._breaker_cooldown_seconds,
+            )
 
     async def _try_crawl4ai(
         self,
@@ -491,8 +769,8 @@ class AutomationRouter(BaseService):
 
         Returns:
             Scraping result
-
         """
+
         adapter = self._adapters["playwright"]
 
         return await adapter.scrape(
@@ -501,20 +779,25 @@ class AutomationRouter(BaseService):
             timeout=timeout,
         )
 
-    async def _fallback_scrape(
+    async def _fallback_scrape(  # pylint: disable=too-many-arguments,too-many-locals
         self,
         url: str,
         failed_tool: str,
-        custom_actions: list[dict] | None,
-        timeout: int,  # noqa: ASYNC109
-    ) -> dict[str, Any]:
+        base_request: ScrapeRequest,
+        timeout_budget: TimeoutBudget,
+        *,
+        initial_result: ScrapeResult | None = None,
+        failure_reason: str | None = None,
+    ) -> ScrapeResult:
         """Fallback to next tool in hierarchy.
 
         Args:
             url: URL to scrape
-            failed_tool: Tool that failed
-            custom_actions: Custom actions to perform
-            timeout: Timeout in milliseconds
+            failed_tool: Tool that failed initially
+            base_request: Original scrape request context
+            timeout_budget: Remaining timeout budget for attempts
+            initial_result: Result returned by the failed tool (if any)
+            failure_reason: Error message from the last failure
 
         Returns:
             Scraping result or error
@@ -522,7 +805,9 @@ class AutomationRouter(BaseService):
         """
         # Define fallback order
         fallback_order = {
+            "lightweight": ["crawl4ai", "browser_use", "playwright"],
             "crawl4ai": ["browser_use", "playwright"],
+            "crawl4ai_enhanced": ["browser_use", "playwright", "crawl4ai"],
             "browser_use": ["playwright", "crawl4ai"],
             "playwright": ["browser_use", "crawl4ai"],
         }
@@ -530,48 +815,78 @@ class AutomationRouter(BaseService):
         fallback_tools = [
             tool
             for tool in fallback_order.get(failed_tool, [])
-            if tool in self._adapters
+            if self._is_tool_available_for_use(tool)
         ]
 
+        attempted_tools = [failed_tool]
+        unsuccessful_results: list[ScrapeResult] = []
+
         for fallback_tool in fallback_tools:
+            remaining_ms = timeout_budget.remaining_ms()
+            if remaining_ms <= 0:
+                break
+
+            start_time = time.time()
+
             try:
                 self.logger.info("Falling back to %s for %s", fallback_tool, url)
 
-                start_time = time.time()
-
-                if fallback_tool == "crawl4ai":
-                    result = await self._try_crawl4ai(url, custom_actions, timeout)
-                elif fallback_tool == "browser_use":
-                    result = await self._try_browser_use(url, custom_actions, timeout)
-                else:
-                    result = await self._try_playwright(url, custom_actions, timeout)
+                fallback_request = base_request.model_copy(
+                    update={"timeout_ms": remaining_ms}
+                )
+                result = await self._execute_tool(fallback_tool, fallback_request)
 
                 # Update metrics for successful fallback
                 elapsed = time.time() - start_time
-                self._update_metrics(fallback_tool, True, elapsed)
+                result = result.model_copy(
+                    update={
+                        "provider": fallback_tool,
+                        "fallback_from": failed_tool,
+                        "automation_time_ms": elapsed * 1000,
+                        "url": result.url or base_request.url or url,
+                    }
+                )
+                self._update_metrics(fallback_tool, result.success, elapsed)
 
-                result["provider"] = fallback_tool
-                result["fallback_from"] = failed_tool
-                result["automation_time_ms"] = elapsed * 1000
+                attempted_tools.append(fallback_tool)
 
-            except (OSError, PermissionError):
+                if result.success:
+                    return result
+
+                unsuccessful_results.append(result)
+
+            except (OSError, PermissionError, TimeoutError, CrawlServiceError) as exc:
                 self.logger.exception("Fallback %s also failed", fallback_tool)
                 elapsed = time.time() - start_time
                 self._update_metrics(fallback_tool, False, elapsed)
+                attempted_tools.append(fallback_tool)
+                unsuccessful_results.append(
+                    ScrapeResult(
+                        success=False,
+                        url=base_request.url or url,
+                        error=str(exc),
+                        provider=fallback_tool,
+                    )
+                )
                 continue
 
-            else:
-                return result
         # All tools failed
-        return {
-            "success": False,
-            "error": f"All automation tools failed for {url}",
-            "content": "",
-            "metadata": {},
-            "url": url,
-            "provider": "none",
-            "failed_tools": [failed_tool, *fallback_tools],
+        metadata: dict[str, Any] = {
+            "failed_tools": attempted_tools,
+            "unsuccessful_results": [res.as_dict() for res in unsuccessful_results],
         }
+        if failure_reason:
+            metadata["failure_reason"] = failure_reason
+        if initial_result:
+            metadata["initial_result"] = initial_result.as_dict()
+
+        return ScrapeResult(
+            success=False,
+            url=base_request.url or url,
+            error=f"All automation tools failed for {url}",
+            provider="none",
+            metadata=metadata,
+        )
 
     def _get_basic_js(self, _url: str) -> str:
         """Get basic JavaScript for common scenarios.
@@ -700,8 +1015,8 @@ class AutomationRouter(BaseService):
             tool: Tool name
             success: Whether the operation succeeded
             elapsed: Time elapsed in seconds
-
         """
+
         metrics = self.metrics[tool]
 
         if success:
@@ -716,13 +1031,15 @@ class AutomationRouter(BaseService):
         if total_attempts > 0:
             metrics["avg_time"] = metrics["total_time"] / total_attempts
 
+        self._record_breaker_outcome(tool, success)
+
     def get_metrics(self) -> dict[str, Any]:
         """Get performance metrics for all tools.
 
         Returns:
             Dictionary with metrics for each tool including success rate
-
         """
+
         result = {}
 
         for tool, metrics in self.metrics.items():
@@ -735,7 +1052,7 @@ class AutomationRouter(BaseService):
                 **metrics,
                 "success_rate": success_rate,
                 "total_attempts": total_attempts,
-                "available": tool in self._adapters,
+                "available": self._is_tool_available_for_use(tool),
             }
 
         return result
@@ -748,8 +1065,8 @@ class AutomationRouter(BaseService):
 
         Returns:
             Recommended tool name
-
         """
+
         # Get base recommendation from selection logic
         base_tool = await self._select_tool(url, False, None)
 
@@ -793,15 +1110,19 @@ class AutomationRouter(BaseService):
 
         Returns:
             Scraping result
-
         """
+
         adapter = self._adapters["lightweight"]
 
+        if timeout <= 0:
+            msg = "Timeout budget exhausted before lightweight attempt"
+            raise CrawlServiceError(msg)
+
         # Convert timeout to seconds for LightweightScraper
-        timeout / 1000
+        timeout_seconds = max(timeout, 0) / 1000
 
         # LightweightScraper returns different format than other adapters
-        scrape_result = await adapter.scrape(url)
+        scrape_result = await adapter.scrape(url, timeout=timeout_seconds)
 
         if scrape_result is None:
             # Escalate to higher tier
@@ -840,8 +1161,8 @@ class AutomationRouter(BaseService):
 
         Returns:
             Scraping result
-
         """
+
         adapter = self._adapters["crawl4ai"]
 
         # Enhanced mode uses more sophisticated JavaScript
@@ -868,8 +1189,8 @@ class AutomationRouter(BaseService):
 
         Returns:
             Scraping result
-
         """
+
         # TODO: Implement Firecrawl adapter
         # For now, return error indicating not available
         msg = "Firecrawl adapter not yet implemented"
@@ -886,8 +1207,8 @@ class AutomationRouter(BaseService):
 
         Returns:
             Enhanced JavaScript code
-
         """
+
         enhanced_js = """
         // Enhanced JavaScript for dynamic content
         console.log('Enhanced mode: Starting advanced content extraction');
