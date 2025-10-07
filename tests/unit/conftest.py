@@ -85,7 +85,6 @@ _MODULE_SPECS: tuple[tuple[str, str, bool], ...] = (
     ("collection_management", "register_tools", False),
     ("projects", "register_tools", False),
     ("search_tools", "register_tools", False),
-    ("query_processing", "register_tools", False),
     ("query_processing_tools", "register_tools", False),
     ("payload_indexing", "register_tools", False),
     ("analytics", "register_tools", False),

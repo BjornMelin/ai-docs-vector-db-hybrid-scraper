@@ -130,19 +130,13 @@ def documents_env(monkeypatch) -> SimpleNamespace:  # pylint: disable=too-many-l
     )
     monkeypatch.setattr(documents, "DocumentChunker", DummyChunker)
 
-    cache_dependency = AsyncMock(return_value=cache_manager)
-    crawl_dependency = AsyncMock(return_value=crawl_manager)
-    content_dependency = AsyncMock(return_value=content_intelligence)
-
-    monkeypatch.setattr("src.services.dependencies.get_cache_manager", cache_dependency)
-    monkeypatch.setattr("src.services.dependencies.get_crawl_manager", crawl_dependency)
-    monkeypatch.setattr(
-        "src.services.dependencies.get_content_intelligence_service",
-        content_dependency,
-    )
-
     client_manager = Mock()
     client_manager.get_vector_store_service = AsyncMock(return_value=vector_service)
+    client_manager.get_cache_manager = AsyncMock(return_value=cache_manager)
+    client_manager.get_crawl_manager = AsyncMock(return_value=crawl_manager)
+    client_manager.get_content_intelligence_service = AsyncMock(
+        return_value=content_intelligence
+    )
 
     mock_mcp = MagicMock()
     registered: dict[str, Callable] = {}
@@ -166,9 +160,9 @@ def documents_env(monkeypatch) -> SimpleNamespace:  # pylint: disable=too-many-l
         cache_manager=cache_manager,
         crawl_manager=crawl_manager,
         content_intelligence=content_intelligence,
-        cache_dependency=cache_dependency,
-        crawl_dependency=crawl_dependency,
-        content_dependency=content_dependency,
+        cache_dependency=client_manager.get_cache_manager,
+        crawl_dependency=client_manager.get_crawl_manager,
+        content_dependency=client_manager.get_content_intelligence_service,
         client_manager=client_manager,
         context=ctx,
         validator=validator,

@@ -92,14 +92,11 @@ async def test_recommend_similar_returns_results(fake_mcp, client_manager, conte
     """recommend_similar should return formatted matches excluding the seed."""
 
     vector_service = AsyncMock()
-    vector_service.retrieve_documents.return_value = [
-        SimpleNamespace(
-            id="seed",
-            vector=[0.1, 0.2],
-            payload={"content": "src"},
-        )
-    ]
-    vector_service.recommend_similar.return_value = [
+    vector_service.get_document.return_value = SimpleNamespace(
+        id="seed",
+        payload={"content": "src"},
+    )
+    vector_service.recommend.return_value = [
         SimpleNamespace(id="seed", score=1.0, payload={}),
         SimpleNamespace(id="match", score=0.95, payload={"content": "match"}),
     ]
@@ -128,13 +125,8 @@ async def test_recommend_similar_returns_results(fake_mcp, client_manager, conte
             ctx=context,
         )
 
-    vector_service.retrieve_documents.assert_awaited_once_with(
-        "docs",
-        ["seed"],
-        with_payload=True,
-        with_vectors=True,
-    )
-    vector_service.recommend_similar.assert_awaited_once()
+    vector_service.get_document.assert_awaited_once_with("docs", "seed")
+    vector_service.recommend.assert_awaited_once()
     assert results == [
         {
             "id": "match",
@@ -152,7 +144,7 @@ async def test_recommend_similar_raises_for_missing_source(
     """recommend_similar should raise when the source document is missing."""
 
     vector_service = AsyncMock()
-    vector_service.retrieve_documents.return_value = []
+    vector_service.get_document.return_value = None
 
     patched_get = AsyncMock(return_value=vector_service)
 
@@ -163,3 +155,5 @@ async def test_recommend_similar_raises_for_missing_source(
             await fake_mcp.registered["recommend_similar"](
                 point_id="missing-id", collection="docs", limit=1, ctx=context
             )
+
+    vector_service.get_document.assert_awaited_once_with("docs", "missing-id")

@@ -136,20 +136,13 @@ def mock_content_intelligence_service():
 
 
 @pytest.fixture
-def mock_client_manager():
+def mock_client_manager(mock_content_intelligence_service):
     """Create mock client manager."""
-    return Mock(spec=ClientManager)
-
-
-@pytest.fixture
-def content_dependency(monkeypatch, mock_content_intelligence_service):
-    """Patch content intelligence dependency."""
-    dependency = AsyncMock(return_value=mock_content_intelligence_service)
-    monkeypatch.setattr(
-        "src.mcp_tools.tools.content_intelligence.get_content_intelligence_service",
-        dependency,
+    manager = AsyncMock(spec=ClientManager)
+    manager.get_content_intelligence_service.return_value = (
+        mock_content_intelligence_service
     )
-    return dependency
+    return manager
 
 
 @pytest.fixture
@@ -176,7 +169,7 @@ def mock_context():
 
 
 @pytest.fixture(autouse=True)
-def setup_tools(mock_mcp, mock_client_manager, content_dependency):
+def setup_tools(mock_mcp, mock_client_manager):
     """Register tools for testing."""
     register_tools(mock_mcp, mock_client_manager)
 
@@ -252,11 +245,11 @@ class TestAnalyzeContentIntelligence:
         self,
         mock_mcp,
         mock_context,
-        content_dependency,
+        mock_client_manager,
     ):
         """Test handling when content intelligence service is unavailable."""
         # Make service unavailable
-        content_dependency.return_value = None
+        mock_client_manager.get_content_intelligence_service.return_value = None
 
         request = ContentIntelligenceAnalysisRequest(
             content="Test content", url="https://example.com/test"
@@ -279,7 +272,7 @@ class TestAnalyzeContentIntelligence:
     ):
         """Test exception handling during analysis."""
         # Make service raise exception
-        mock_content_intelligence_service.analyze_content.side_effect = Exception(
+        mock_content_intelligence_service.analyze_content.side_effect = ValueError(
             "Service error"
         )
 
@@ -295,7 +288,10 @@ class TestAnalyzeContentIntelligence:
         assert "Analysis failed: Service error" in result.error
 
         # Verify error logging
-        assert any("failed: Service error" in msg for msg in mock_context.logs["error"])
+        assert any(
+            "Content intelligence analysis failed: Service error" in msg
+            for msg in mock_context.logs["error"]
+        )
 
 
 class TestClassifyContentType:
@@ -339,10 +335,10 @@ class TestClassifyContentType:
         self,
         mock_mcp,
         mock_context,
-        content_dependency,
+        mock_client_manager,
     ):
         """Test classification when service is unavailable."""
-        content_dependency.return_value = None
+        mock_client_manager.get_content_intelligence_service.return_value = None
 
         request = ContentIntelligenceClassificationRequest(
             content="Test content", url="https://example.com/test"
@@ -364,8 +360,8 @@ class TestClassifyContentType:
         self, mock_mcp, mock_context, mock_content_intelligence_service
     ):
         """Test exception handling during classification."""
-        mock_content_intelligence_service.classify_content_type.side_effect = Exception(
-            "Classification error"
+        mock_content_intelligence_service.classify_content_type.side_effect = (
+            RuntimeError("Classification error")
         )
 
         request = ContentIntelligenceClassificationRequest(
@@ -426,10 +422,10 @@ class TestAssessContentQuality:
         self,
         mock_mcp,
         mock_context,
-        content_dependency,
+        mock_client_manager,
     ):
         """Test quality assessment when service is unavailable."""
-        content_dependency.return_value = None
+        mock_client_manager.get_content_intelligence_service.return_value = None
 
         request = ContentIntelligenceQualityRequest(
             content="Test content", confidence_threshold=0.8
@@ -453,7 +449,7 @@ class TestAssessContentQuality:
     ):
         """Test exception handling during quality assessment."""
         mock_content_intelligence_service.assess_extraction_quality.side_effect = (
-            Exception("Assessment error")
+            RuntimeError("Assessment error")
         )
 
         request = ContentIntelligenceQualityRequest(
@@ -514,10 +510,10 @@ class TestExtractContentMetadata:
         self,
         mock_mcp,
         mock_context,
-        content_dependency,
+        mock_client_manager,
     ):
         """Test metadata extraction when service is unavailable."""
-        content_dependency.return_value = None
+        mock_client_manager.get_content_intelligence_service.return_value = None
 
         request = ContentIntelligenceMetadataRequest(
             content="Test content with multiple words here",
@@ -539,7 +535,7 @@ class TestExtractContentMetadata:
         self, mock_mcp, mock_context, mock_content_intelligence_service
     ):
         """Test exception handling during metadata extraction."""
-        mock_content_intelligence_service.extract_metadata.side_effect = Exception(
+        mock_content_intelligence_service.extract_metadata.side_effect = RuntimeError(
             "Extraction error"
         )
 

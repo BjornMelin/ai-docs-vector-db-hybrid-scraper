@@ -12,16 +12,7 @@ async def test_register_all_tools_invokes_each_module(monkeypatch, build_tool_mo
     """register_all_tools should forward registration to every module exactly once."""
     registered: list[str] = []
     modules = build_tool_modules(registered)
-
-    monkeypatch.setattr(tool_registry, "tools", modules)
-
-    mcp = MagicMock()
-    mcp.tool = MagicMock(return_value=lambda func: func)
-    client_manager = AsyncMock()
-
-    await tool_registry.register_all_tools(mcp, client_manager)
-
-    expected = [
+    pipeline_order = [
         "search",
         "documents",
         "embeddings",
@@ -29,7 +20,6 @@ async def test_register_all_tools_invokes_each_module(monkeypatch, build_tool_mo
         "collection_management",
         "projects",
         "search_tools",
-        "query_processing",
         "query_processing_tools",
         "payload_indexing",
         "analytics",
@@ -37,7 +27,27 @@ async def test_register_all_tools_invokes_each_module(monkeypatch, build_tool_mo
         "utilities",
         "content_intelligence",
     ]
-    assert registered[: len(expected)] == expected
+    pipeline = [
+        (name, getattr(modules, name).register_tools) for name in pipeline_order
+    ]
+
+    monkeypatch.setattr(
+        tool_registry, "_REGISTRATION_PIPELINE", pipeline, raising=False
+    )
+    monkeypatch.setattr(
+        tool_registry.tools,
+        "agentic_rag",
+        modules.agentic_rag,
+        raising=False,
+    )
+
+    mcp = MagicMock()
+    mcp.tool = MagicMock(return_value=lambda func: func)
+    client_manager = AsyncMock()
+
+    await tool_registry.register_all_tools(mcp, client_manager)
+
+    assert registered[: len(pipeline_order)] == pipeline_order
     assert "agentic_rag" not in registered  # optional module failure is tolerated
 
 
@@ -54,7 +64,34 @@ async def test_register_all_tools_propagates_required_module_failure(
             "documents": {"raises": RuntimeError("documents failure")},
         },
     )
-    monkeypatch.setattr(tool_registry, "tools", modules)
+    pipeline_order = [
+        "search",
+        "documents",
+        "embeddings",
+        "lightweight_scrape",
+        "collection_management",
+        "projects",
+        "search_tools",
+        "query_processing_tools",
+        "payload_indexing",
+        "analytics",
+        "cache",
+        "utilities",
+        "content_intelligence",
+    ]
+    pipeline = [
+        (name, getattr(modules, name).register_tools) for name in pipeline_order
+    ]
+
+    monkeypatch.setattr(
+        tool_registry, "_REGISTRATION_PIPELINE", pipeline, raising=False
+    )
+    monkeypatch.setattr(
+        tool_registry.tools,
+        "agentic_rag",
+        modules.agentic_rag,
+        raising=False,
+    )
 
     mcp = MagicMock()
     mcp.tool = MagicMock(return_value=lambda func: func)

@@ -13,7 +13,7 @@ class TestCollectionsTools:
     """Test suite for collections MCP tools."""
 
     @pytest.fixture
-    def mock_client_manager(self, monkeypatch):
+    def mock_client_manager(self):
         """Create a mock client manager with collections service."""
         mock_manager = MagicMock()
 
@@ -39,14 +39,9 @@ class TestCollectionsTools:
         # Mock cache manager
         mock_cache = AsyncMock()
         mock_cache.clear.return_value = 10  # cleared items
-        cache_dependency = AsyncMock(return_value=mock_cache)
-        monkeypatch.setattr(
-            "src.mcp_tools.tools.collection_management.get_cache_manager",
-            cache_dependency,
-        )
-
         mock_manager.get_vector_store_service = AsyncMock(return_value=mock_vector)
-        mock_manager.cache_dependency = cache_dependency
+        mock_manager.get_cache_manager = AsyncMock(return_value=mock_cache)
+        mock_manager.cache_mock = mock_cache
 
         return mock_manager
 
@@ -142,6 +137,10 @@ class TestCollectionsTools:
         mock_context.info.assert_called()
         mock_vector.delete_collection.assert_awaited_once_with("old_collection")
         mock_vector.drop_collection.assert_not_awaited()
+        mock_client_manager.get_cache_manager.assert_awaited_once()
+        mock_client_manager.cache_mock.clear_pattern.assert_awaited_once_with(
+            "*:old_collection:*"
+        )
 
     @pytest.mark.asyncio
     async def test_delete_collection_falls_back_to_drop(
@@ -170,6 +169,7 @@ class TestCollectionsTools:
 
         assert result.status == "deleted"
         mock_vector.drop_collection.assert_awaited_once_with("legacy_collection")
+        mock_client_manager.get_cache_manager.assert_awaited()
 
     @pytest.mark.asyncio
     async def test_delete_collection_missing_methods(
