@@ -570,7 +570,7 @@ async def _cleanup_services():
     """Clean up services and connections."""
     try:
         await _perform_service_cleanup()
-    except (ImportError, ModuleNotFoundError, AttributeError) as e:
+    except (ImportError, AttributeError) as e:
         logger.warning("Service cleanup failed: %s", e)
 
 
