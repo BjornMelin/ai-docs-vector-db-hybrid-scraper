@@ -74,6 +74,11 @@ graph LR
 - **Hybrid search orchestrator** – Coordinates dense, sparse, and reranking stages; supports budget controls and fallback strategies
 - **Browser manager** – Routes requests through lightweight HTTP fetchers, Crawl4AI tiers, browser-use, or Playwright depending on page complexity
 
+### Dependency injection rationale
+
+The migration to LangChain and LangGraph preserved the existing `dependency_injector` container because it still centralises infrastructure wiring. Core clients (OpenAI, Qdrant, Dragonfly, Firecrawl) and shared resources (HTTP session pools, telemetry emitters) are provisioned through the container,
+which keeps lifecycle management and test overrides consistent across the hybrid stack. Removing the library would duplicate this wiring logic in multiple services, so it remains an intentional dependency for now.
+
 ## Data Stores and Caches
 
 - **Qdrant** – Primary vector store for dense + sparse embeddings, payload metadata, and filtering

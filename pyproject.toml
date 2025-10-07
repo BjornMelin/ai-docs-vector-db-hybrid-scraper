@@ -82,6 +82,7 @@ dependencies = [
     "tool>=0.8.0",
     "httpx>=0.28.1,<0.29.0",
     "opentelemetry-instrumentation-fastapi>=0.58b0,<0.59.0",
+    # dependency-injector wires core clients (OpenAI, Qdrant, Dragonfly, Firecrawl) via ApplicationContainer.
     "dependency-injector>=4.48.2",
     "pydeps>=3.0.1",
     "scikit-learn>=1.7.2,<2.0.0",

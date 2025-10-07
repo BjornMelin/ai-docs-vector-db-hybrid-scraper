@@ -28,8 +28,8 @@ class _PatternClearableCache(Protocol):
         """Return keys matching the supplied pattern."""
         raise NotImplementedError
 
-    async def delete(self, key: str) -> bool | int:  # pragma: no cover - structural
-        """Delete a key from the cache and report success."""
+    async def delete(self, key: str) -> bool:  # pragma: no cover - structural
+        """Delete a key from the cache. Returns True if the key was removed."""
         raise NotImplementedError
 
 
@@ -490,6 +490,10 @@ class CacheManager:
 
         distributed_cache = self._distributed_cache
         if not isinstance(distributed_cache, _PatternClearableCache):
+            logger.warning(
+                "Distributed cache %r missing _PatternClearableCache; skipping clear()",
+                type(distributed_cache),
+            )
             return 0
 
         try:
