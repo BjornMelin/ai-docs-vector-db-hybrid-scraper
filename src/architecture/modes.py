@@ -5,11 +5,15 @@ by providing distinct simple and enterprise modes with different feature sets an
 complexity levels.
 """
 
-import os
 from enum import Enum
-from typing import Any, cast
+from types import SimpleNamespace
+from typing import TYPE_CHECKING, Any, cast
 
 from pydantic import BaseModel, Field
+
+
+if TYPE_CHECKING:
+    from src.config import Config
 
 
 class ApplicationMode(Enum):
@@ -125,75 +129,111 @@ ENTERPRISE_MODE_CONFIG = ModeConfig(
 )
 
 
-def detect_mode_from_environment() -> ApplicationMode:
-    """Detect application mode from environment variables."""
-    mode_env = os.getenv("AI_DOCS_MODE", "simple").lower()
+def _resolve_settings(config: "Config | None" = None) -> Any:
+    """Return the active settings object, defaulting to the shared provider."""
+
+    if config is not None:
+        return config
 
     try:
-        return ApplicationMode(mode_env)
-    except ValueError:
-        # Default to simple mode if invalid value
-        return ApplicationMode.SIMPLE
+        from src.config import get_config  # Local import to avoid circular dependency
+    except ImportError:
+        return SimpleNamespace(mode=ApplicationMode.SIMPLE)
+
+    try:
+        return get_config()
+    except Exception:  # pragma: no cover - configuration not yet initialized
+        # During module import the global configuration provider may still be wiring
+        # dependencies. Default to simple mode to avoid circular imports.
+        return SimpleNamespace(mode=ApplicationMode.SIMPLE)
 
 
-def get_mode_config(mode: ApplicationMode | None = None) -> ModeConfig:
+def resolve_mode(config: "Config | None" = None) -> ApplicationMode:
+    """Resolve the current application mode from configuration settings."""
+
+    settings = _resolve_settings(config)
+    return getattr(settings, "mode", ApplicationMode.SIMPLE)
+
+
+def get_mode_config(
+    mode: ApplicationMode | None = None, *, config: "Config | None" = None
+) -> ModeConfig:
     """Get configuration for the specified mode.
 
     Args:
         mode: Application mode to get config for. If None, detects from environment.
+        config: Optional configuration override providing the active mode.
 
     Returns:
         ModeConfig instance for the specified mode.
-
     """
+
     if mode is None:
-        mode = detect_mode_from_environment()
+        mode = resolve_mode(config)
 
     if mode == ApplicationMode.SIMPLE:
         return SIMPLE_MODE_CONFIG
     if mode == ApplicationMode.ENTERPRISE:
         return ENTERPRISE_MODE_CONFIG
+
     msg = f"Unknown application mode: {mode}"
     raise ValueError(msg)
 
 
-def get_current_mode() -> ApplicationMode:
-    """Get the current application mode from environment."""
-    return detect_mode_from_environment()
+def get_current_mode(config: "Config | None" = None) -> ApplicationMode:
+    """Get the current application mode from configuration settings."""
+
+    return resolve_mode(config)
 
 
-def is_simple_mode() -> bool:
+def is_simple_mode(config: "Config | None" = None) -> bool:
     """Check if running in simple mode."""
-    return get_current_mode() == ApplicationMode.SIMPLE
+
+    return get_current_mode(config) == ApplicationMode.SIMPLE
 
 
-def is_enterprise_mode() -> bool:
+def is_enterprise_mode(config: "Config | None" = None) -> bool:
     """Check if running in enterprise mode."""
-    return get_current_mode() == ApplicationMode.ENTERPRISE
+
+    return get_current_mode(config) == ApplicationMode.ENTERPRISE
 
 
-def get_enabled_services() -> list[str]:
+def get_enabled_services(config: "Config | None" = None) -> list[str]:
     """Get list of services enabled in current mode."""
-    config = get_mode_config()
-    return config.enabled_services
+
+    mode_config = get_mode_config(config=config)
+    return mode_config.enabled_services
 
 
-def is_service_enabled(service_name: str) -> bool:
+def is_service_enabled(service_name: str, *, config: "Config | None" = None) -> bool:
     """Check if a service is enabled in the current mode."""
-    return service_name in get_enabled_services()
+
+    return service_name in get_enabled_services(config=config)
 
 
-def get_feature_setting(feature_name: str, default: Any = False) -> Any:
+def get_feature_setting(
+    feature_name: str,
+    default: Any = False,
+    *,
+    config: "Config | None" = None,
+) -> Any:
     """Get a feature setting value for the current mode."""
-    config = get_mode_config()
-    config_dump = config.model_dump()
+
+    mode_config = get_mode_config(config=config)
+    config_dump = mode_config.model_dump()
     features = cast(dict[str, Any], config_dump["max_complexity_features"])
     return features.get(feature_name, default)
 
 
-def get_resource_limit(resource_name: str, default: int = 0) -> int:
+def get_resource_limit(
+    resource_name: str,
+    default: int = 0,
+    *,
+    config: "Config | None" = None,
+) -> int:
     """Get a resource limit for the current mode."""
-    config = get_mode_config()
-    config_dump = config.model_dump()
+
+    mode_config = get_mode_config(config=config)
+    config_dump = mode_config.model_dump()
     limits = cast(dict[str, int], config_dump["resource_limits"])
     return limits.get(resource_name, default)

@@ -181,6 +181,27 @@ class Config(BaseSettings):
             raise ValueError(msg)
         return self
 
+    @model_validator(mode="after")
+    def create_runtime_directories(self) -> Config:
+        for directory in (self.data_dir, self.cache_dir, self.logs_dir):
+            directory.mkdir(parents=True, exist_ok=True)
+        return self
+
+    @model_validator(mode="after")
+    def apply_mode_adjustments(self) -> Config:
+        if self.mode is ApplicationMode.SIMPLE:
+            self.performance.max_concurrent_crawls = min(
+                self.performance.max_concurrent_crawls, 10
+            )
+            self.cache.local_max_memory_mb = min(self.cache.local_max_memory_mb, 200)
+            self.reranking.enabled = False
+            self.observability.enabled = False
+        elif self.mode is ApplicationMode.ENTERPRISE:
+            self.performance.max_concurrent_crawls = min(
+                self.performance.max_concurrent_crawls, 50
+            )
+        return self
+
     def is_enterprise_mode(self) -> bool:
         """Return True when the enterprise application mode is active."""
 

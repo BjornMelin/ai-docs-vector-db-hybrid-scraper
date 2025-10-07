@@ -8,7 +8,7 @@ import asyncio
 import logging
 from collections.abc import Awaitable, Callable
 from functools import wraps
-from typing import Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from .modes import ApplicationMode, ModeConfig, get_current_mode, get_mode_config
 
@@ -18,29 +18,51 @@ logger = logging.getLogger(__name__)
 F = TypeVar("F", bound=Callable[..., Any])
 AsyncF = TypeVar("AsyncF", bound=Callable[..., Awaitable[Any]])
 
+if TYPE_CHECKING:
+    from src.config import Config
+
 
 class FeatureFlag:
     """Feature flag manager for mode-aware feature enabling."""
 
-    def __init__(self, mode_config: ModeConfig | None = None):
+    def __init__(
+        self,
+        mode_config: ModeConfig | None = None,
+        *,
+        config: "Config | None" = None,
+    ):
         """Initialize feature flag manager.
 
         Args:
             mode_config: Mode configuration to use. If None, uses current mode config.
+            config: Optional configuration override for resolving mode settings.
 
         """
-        self.mode_config = mode_config or get_mode_config()
-        self.current_mode = get_current_mode()
+        self._mode_config_override = mode_config
+        self._config_override = config
+
+    @property
+    def mode_config(self) -> ModeConfig:
+        """Lazy accessor for the active mode configuration."""
+
+        if self._mode_config_override is None:
+            self._mode_config_override = get_mode_config(config=self._config_override)
+        return self._mode_config_override
+
+    def _current_mode(self) -> ApplicationMode:
+        """Resolve the current application mode."""
+
+        return get_current_mode(config=self._config_override)
 
     def is_enterprise_mode(self) -> bool:
         """Check if running in enterprise mode."""
         # Use get_current_mode() to allow for runtime testing/mocking
-        return get_current_mode() == ApplicationMode.ENTERPRISE
+        return self._current_mode() == ApplicationMode.ENTERPRISE
 
     def is_simple_mode(self) -> bool:
         """Check if running in simple mode."""
         # Use get_current_mode() to allow for runtime testing/mocking
-        return get_current_mode() == ApplicationMode.SIMPLE
+        return self._current_mode() == ApplicationMode.SIMPLE
 
     def is_feature_enabled(self, feature_name: str) -> bool:
         """Check if a feature is enabled in the current mode."""
@@ -298,12 +320,16 @@ class ModeAwareFeatureManager:
             return False
 
 
-# Global feature manager instance
-_feature_manager = ModeAwareFeatureManager()
+# Global feature manager instance (lazily initialized to avoid import cycles)
+_feature_manager: ModeAwareFeatureManager | None = None
 
 
 def get_feature_manager() -> ModeAwareFeatureManager:
     """Get the global feature manager instance."""
+
+    global _feature_manager
+    if _feature_manager is None:
+        _feature_manager = ModeAwareFeatureManager()
     return _feature_manager
 
 
@@ -311,9 +337,9 @@ def register_feature(
     name: str, simple_config: dict[str, Any], enterprise_config: dict[str, Any]
 ) -> None:
     """Register a feature with the global feature manager."""
-    _feature_manager.register_feature(name, simple_config, enterprise_config)
+    get_feature_manager().register_feature(name, simple_config, enterprise_config)
 
 
 def get_feature_config(name: str) -> dict[str, Any]:
     """Get feature configuration from the global feature manager."""
-    return _feature_manager.get_feature_config(name)
+    return get_feature_manager().get_feature_config(name)
