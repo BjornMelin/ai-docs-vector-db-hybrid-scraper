@@ -13,7 +13,7 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 from src.config import get_config
-from src.services.fastapi.middleware.manager import get_middleware_manager
+from src.services.fastapi.middleware.manager import apply_defaults, apply_named_stack
 from src.services.logging_config import configure_logging
 
 
@@ -40,7 +40,7 @@ class ProductionMCPServer:
     def __init__(self, config=None):
         """Initialize production MCP server."""
         self.config = config or get_config()
-        self.middleware_manager = None
+        self._middleware_names: list[str] = ["rate_limiting"]
         self._mcp_server: FastMCP | None = None
         self._app: Starlette | None = None
         self._shutdown_event = asyncio.Event()
@@ -83,8 +83,11 @@ class ProductionMCPServer:
             enable_color=self.config.debug,
         )
 
-        # Initialize middleware manager
-        self.middleware_manager = get_middleware_manager(self.config)
+        stack = getattr(self.config, "middleware_stack", None)
+        if isinstance(stack, list) and stack:
+            self._middleware_names = list(stack)
+        else:
+            self._middleware_names = ["rate_limiting"]
 
         logger.info("Production MCP server startup complete")
 
@@ -125,11 +128,10 @@ class ProductionMCPServer:
             lifespan=self.lifespan,
         )
 
-        # Apply middleware
-        if self.middleware_manager:
-            self.middleware_manager.apply_middleware(
-                app, middleware_names=["rate_limiting"]
-            )
+        if self._middleware_names:
+            apply_named_stack(app, self._middleware_names)
+        else:
+            apply_defaults(app)
 
         self._app = app
         return app

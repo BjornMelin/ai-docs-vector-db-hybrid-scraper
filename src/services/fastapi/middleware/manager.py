@@ -1,5 +1,5 @@
 """
-Minimal middleware manager that wires library-first components.
+Middleware manager.
 
 Order:
 1) Trusted host / CORS (configure in app factory if needed)
@@ -16,7 +16,8 @@ This keeps the public surface tiny and library-focused.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections.abc import Iterable
+from dataclasses import dataclass, field
 from typing import Any
 
 from asgi_correlation_id import CorrelationIdMiddleware  # type: ignore
@@ -31,37 +32,81 @@ from .timeout import TimeoutConfig, TimeoutMiddleware
 
 @dataclass(slots=True)
 class MiddlewareSpec:
-    """Simple spec that mirrors Starlette's add_middleware signature."""
+    """Simple spec mirroring Starlette's add_middleware signature."""
 
     cls: type
-    kwargs: dict[str, Any]
+    kwargs: dict[str, Any] = field(default_factory=dict)
+
+
+_CLASS_REGISTRY: dict[str, MiddlewareSpec] = {
+    "correlation": MiddlewareSpec(
+        CorrelationIdMiddleware, {"header_name": "X-Request-ID"}
+    ),
+    "compression": MiddlewareSpec(CompressionMiddleware, {"minimum_size": 500}),
+    "brotli": MiddlewareSpec(BrotliCompressionMiddleware, {"quality": 4}),
+    "security": MiddlewareSpec(SecurityMiddleware),
+    "timeout": MiddlewareSpec(TimeoutMiddleware, {"config": TimeoutConfig()}),
+    "performance": MiddlewareSpec(PerformanceMiddleware),
+}
+
+_FUNCTION_REGISTRY: dict[str, Any] = {
+    "rate_limiting": enable_global_rate_limit,
+    "prometheus": setup_prometheus,
+}
+
+_DEFAULT_SEQUENCE: tuple[str, ...] = (
+    "correlation",
+    "compression",
+    "brotli",
+    "security",
+    "timeout",
+    "rate_limiting",
+    "performance",
+    "prometheus",
+)
+
+
+def apply_named_stack(app: Starlette, middleware_names: Iterable[str]) -> list[str]:
+    """Apply middleware/components by registry name.
+
+    Args:
+        app: Target Starlette/FastAPI application.
+        middleware_names: Iterable of registry keys. The special name
+            ``"defaults"`` expands to the curated production sequence.
+
+    Returns:
+        List of successfully applied middleware identifiers.
+    """
+
+    applied: list[str] = []
+    for name in middleware_names:
+        if name == "defaults":
+            applied.extend(apply_named_stack(app, _DEFAULT_SEQUENCE))
+            continue
+
+        spec = _CLASS_REGISTRY.get(name)
+        if spec:
+            app.add_middleware(spec.cls, **spec.kwargs)
+            applied.append(name)
+            continue
+
+        func = _FUNCTION_REGISTRY.get(name)
+        if func:
+            func(app)
+            applied.append(name)
+    return applied
 
 
 def apply_defaults(app: Starlette) -> None:
     """Apply a sensible production stack with minimal knobs."""
-    # Trusted hosts: users should set allowed list at app construction time.
-    # Example:
-    # app.add_middleware(TrustedHostMiddleware, allowed_hosts=["example.com", "*.example.com"])  # noqa: E501
 
-    app.add_middleware(CorrelationIdMiddleware, header_name="X-Request-ID")
-    app.add_middleware(CompressionMiddleware, minimum_size=500)
-    # If brotli is installed, stack it first; gzip will serve as fallback.
-    app.add_middleware(BrotliCompressionMiddleware, quality=4)
-
-    app.add_middleware(SecurityMiddleware)
-    app.add_middleware(TimeoutMiddleware, config=TimeoutConfig())
-
-    # Rate limiting (Redis optional)
-    enable_global_rate_limit(app)
-
-    # Headers + /metrics
-    app.add_middleware(PerformanceMiddleware)
-    setup_prometheus(app)
+    apply_named_stack(app, _DEFAULT_SEQUENCE)
 
 
 __all__ = [
     "MiddlewareSpec",
     "apply_defaults",
+    "apply_named_stack",
     "get_correlation_id",
     "PerformanceMiddleware",
     "TimeoutMiddleware",

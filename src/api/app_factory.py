@@ -19,7 +19,7 @@ from src.architecture.service_factory import (
     set_service_factory,
 )
 from src.services.fastapi.dependencies import get_health_checker
-from src.services.fastapi.middleware.manager import get_middleware_manager
+from src.services.fastapi.middleware.manager import apply_defaults, apply_named_stack
 
 
 try:
@@ -162,8 +162,14 @@ def _configure_cors(app: FastAPI, mode: ApplicationMode) -> None:
 
 def _apply_middleware_stack(app: FastAPI, middleware_stack: list[str]) -> None:
     """Apply mode-specific middleware stack."""
-    middleware_manager = get_middleware_manager()
-    middleware_manager.apply_middleware(app, middleware_stack)
+
+    if not middleware_stack:
+        apply_defaults(app)
+        return
+
+    applied = apply_named_stack(app, middleware_stack)
+    if not applied:
+        apply_defaults(app)
 
 
 def _configure_routes(app: FastAPI, profile: AppProfile, mode: ApplicationMode) -> None:

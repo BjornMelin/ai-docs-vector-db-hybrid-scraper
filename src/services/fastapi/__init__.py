@@ -20,7 +20,7 @@ from .middleware import (
     TracingMiddleware,
     get_correlation_id,
 )
-from .middleware.manager import MiddlewareManager, get_middleware_manager
+from .middleware.manager import apply_defaults, apply_named_stack
 from .production_server import (
     ProductionMCPServer,
     create_production_server,
@@ -33,8 +33,8 @@ __all__ = [
     # Middleware components
     "CompressionMiddleware",
     # Middleware management
-    "MiddlewareManager",
-    "get_middleware_manager",
+    "apply_defaults",
+    "apply_named_stack",
     "PerformanceMiddleware",
     # Production server
     "ProductionMCPServer",

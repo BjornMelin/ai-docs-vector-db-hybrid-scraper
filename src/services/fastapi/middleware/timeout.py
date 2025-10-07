@@ -1,347 +1,122 @@
-"""Timeout and circuit breaker middleware for production resilience.
+"""
+Timeout and circuit breaker middleware.
 
-This middleware provides request timeouts and circuit breaker patterns
-to prevent cascading failures and improve system resilience.
+- AnyIO-based request timeout.
+- Circuit breaker via `purgatory` to prevent cascades.
+
+References:
+- Purgatory (async-friendly, pluggable storage).
 """
 
-import asyncio
-import logging
-import time
+from __future__ import annotations
+
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
+from typing import TYPE_CHECKING
 
+import anyio
+from purgatory import AsyncCircuitBreakerFactory
+from purgatory.domain.model import OpenedState
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
 
-logger = logging.getLogger(__name__)
+if TYPE_CHECKING:  # pragma: no cover - import for typing only
+    from purgatory.service._async.circuitbreaker import AsyncCircuitBreaker
 
 
-class CircuitState(Enum):
-    """Circuit breaker states."""
+class CircuitState(str, Enum):
+    """Expose states without leaking library types."""
 
-    CLOSED = "closed"  # Normal operation
-    OPEN = "open"  # Failing, reject requests
-    HALF_OPEN = "half_open"  # Testing recovery
+    CLOSED = "closed"
+    OPEN = "open"
+    HALF_OPEN = "half_open"
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class TimeoutConfig:
-    """Timeout middleware configuration."""
+    """Timeout + breaker configuration."""
 
     enabled: bool = True
     request_timeout: float = 30.0
-    enable_circuit_breaker: bool = True
     failure_threshold: int = 5
     recovery_timeout: float = 60.0
     half_open_max_calls: int = 3
 
 
-@dataclass
-class CircuitBreakerStats:
-    """Circuit breaker statistics."""
-
-    failure_count: int = 0
-    success_count: int = 0
-    last_failure_time: float = 0
-    last_success_time: float = 0
-    state: CircuitState = CircuitState.CLOSED
-    half_open_calls: int = 0
-
-
 class TimeoutMiddleware(BaseHTTPMiddleware):
-    """Request timeout middleware with circuit breaker pattern.
+    """Apply a per-request timeout and route through circuit breaker."""
 
-    Features:
-    - Configurable request timeouts
-    - Circuit breaker for endpoint resilience
-    - Graceful timeout handling
-    - Circuit state monitoring and recovery
-    """
-
-    def __init__(self, app: Callable, config: TimeoutConfig):
-        """Initialize timeout middleware.
-
-        Args:
-            app: ASGI application
-            config: Timeout configuration
-        """
-
+    def __init__(self, app: Callable, *, config: TimeoutConfig) -> None:
         super().__init__(app)
-        self.config = config
-
-        # Circuit breaker state per endpoint
-        self._circuit_stats: dict[str, CircuitBreakerStats] = {}
+        self._cfg = config
+        self._factory = AsyncCircuitBreakerFactory(
+            default_threshold=config.failure_threshold,
+            default_ttl=config.recovery_timeout,
+        )
+        self._breaker: AsyncCircuitBreaker | None = None
+        self._breaker_name = "fastapi_request_timeout"
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        """Process request with timeout and circuit breaker logic."""
-
-        if not self.config.enabled:
+        if not self._cfg.enabled:
             return await call_next(request)
 
-        endpoint = self._get_endpoint_key(request)
+        breaker = await self._ensure_breaker()
 
-        # Check circuit breaker state
-        if self.config.enable_circuit_breaker:
-            circuit_response = self._check_circuit_breaker(endpoint)
-            if circuit_response:
-                return circuit_response
-
-        # Execute request with timeout
-        try:
-            response = await self._execute_with_timeout(request, call_next)
-        except TimeoutError:
-            # Handle timeout
-            logger.warning(
-                "Request timeout",
-                extra={
-                    "endpoint": endpoint,
-                    "timeout": self.config.request_timeout,
-                    "method": request.method,
-                    "path": request.url.path,
-                },
+        # Reject immediately if breaker is open.
+        if breaker.context.state == "opened":
+            return JSONResponse(
+                status_code=503,
+                content={"error": "Service temporarily unavailable", "circuit": "open"},
             )
 
-            # Record failure for circuit breaker
-            if self.config.enable_circuit_breaker:
-                self._record_failure(endpoint)
+        async def _guarded() -> Response:
+            return await call_next(request)
 
+        try:
+            # Half-open allows limited probes internally.
+            async with breaker:
+                with anyio.fail_after(self._cfg.request_timeout):
+                    return await _guarded()
+        except TimeoutError:
             return JSONResponse(
                 status_code=504,
                 content={
                     "error": "Request timeout",
-                    "timeout": self.config.request_timeout,
+                    "timeout": self._cfg.request_timeout,
                 },
             )
-
-        except (ConnectionError, OSError, PermissionError):
-            # Record failure for circuit breaker
-            if self.config.enable_circuit_breaker:
-                self._record_failure(endpoint)
-
-            # Re-raise the exception
-            raise
-        else:
-            # Record success for circuit breaker
-            if self.config.enable_circuit_breaker:
-                self._record_success(endpoint)
-
-            return response
-
-    async def _execute_with_timeout(
-        self, request: Request, call_next: Callable
-    ) -> Response:
-        """Execute request with timeout protection.
-
-        Args:
-            request: HTTP request
-            call_next: Next middleware/handler
-
-        Returns:
-            HTTP response
-
-        Raises:
-            asyncio.TimeoutError: If request times out
-
-        """
-        try:
-            return await asyncio.wait_for(
-                call_next(request), timeout=self.config.request_timeout
-            )
-        except TimeoutError:
-            # Log timeout details
-            logger.warning(
-                "Request execution timeout",
-                extra={
-                    "method": request.method,
-                    "path": request.url.path,
-                    "timeout": self.config.request_timeout,
-                },
-            )
-            raise
-
-    def _get_endpoint_key(self, request: Request) -> str:
-        """Generate endpoint key for circuit breaker tracking."""
-
-        # Use method + path pattern for grouping
-        return f"{request.method}:{request.url.path}"
-
-    def _check_circuit_breaker(self, endpoint: str) -> Response | None:
-        """Check circuit breaker state and return early response if needed.
-
-        Args:
-            endpoint: Endpoint identifier
-
-        Returns:
-            Response if circuit is open, None if request should proceed
-        """
-
-        stats = self._circuit_stats.get(endpoint, CircuitBreakerStats())
-        current_time = time.time()
-
-        if stats.state == CircuitState.OPEN:
-            # Check if enough time has passed to try recovery
-            if current_time - stats.last_failure_time >= self.config.recovery_timeout:
-                stats.state = CircuitState.HALF_OPEN
-                stats.half_open_calls = 0
-                logger.info(
-                    "Circuit breaker entering HALF_OPEN state for %s",
-                    endpoint,
-                )
-            else:
-                # Circuit is still open, reject request
-                return JSONResponse(
-                    status_code=503,
-                    content={
-                        "error": "Service temporarily unavailable",
-                        "circuit_state": "open",
-                    },
-                )
-
-        elif stats.state == CircuitState.HALF_OPEN:
-            # Limit calls in half-open state
-            if stats.half_open_calls >= self.config.half_open_max_calls:
-                return JSONResponse(
-                    status_code=503,
-                    content={
-                        "error": "Service testing recovery",
-                        "circuit_state": "half_open",
-                    },
-                )
-            stats.half_open_calls += 1
-
-        # Store updated stats
-        self._circuit_stats[endpoint] = stats
-        return None
-
-    def _record_success(self, endpoint: str) -> None:
-        """Record successful request for circuit breaker."""
-
-        stats = self._circuit_stats.get(endpoint, CircuitBreakerStats())
-        stats.success_count += 1
-        stats.last_success_time = time.time()
-
-        if stats.state == CircuitState.HALF_OPEN:
-            # Successful call in half-open state - close the circuit
-            stats.state = CircuitState.CLOSED
-            stats.failure_count = 0
-            stats.half_open_calls = 0
-            logger.info(
-                "Circuit breaker CLOSED for %s after successful recovery",
-                endpoint,
+        except OpenedState:
+            return JSONResponse(
+                status_code=503,
+                content={"error": "Circuit rejecting requests", "circuit": "open"},
             )
 
-        elif stats.state == CircuitState.CLOSED:
-            # Reset failure count on success
-            stats.failure_count = max(0, stats.failure_count - 1)
-
-        self._circuit_stats[endpoint] = stats
-
-    def _record_failure(self, endpoint: str) -> None:
-        """Record failed request for circuit breaker."""
-
-        stats = self._circuit_stats.get(endpoint, CircuitBreakerStats())
-        stats.failure_count += 1
-        stats.last_failure_time = time.time()
-
-        if stats.state == CircuitState.HALF_OPEN:
-            # Failure in half-open state - open the circuit again
-            stats.state = CircuitState.OPEN
-            logger.warning(
-                "Circuit breaker re-OPENED for %s after failure in half-open state",
-                endpoint,
+    async def _ensure_breaker(self) -> AsyncCircuitBreaker:
+        if self._breaker is None:
+            self._breaker = await self._factory.get_breaker(
+                self._breaker_name,
+                threshold=self._cfg.failure_threshold,
+                ttl=self._cfg.recovery_timeout,
             )
-
-        elif stats.state == CircuitState.CLOSED:
-            # Check if we should open the circuit
-            if stats.failure_count >= self.config.failure_threshold:
-                stats.state = CircuitState.OPEN
-                logger.warning(
-                    "Circuit breaker OPENED for %s after %d failures",
-                    endpoint,
-                    stats.failure_count,
-                )
-
-        self._circuit_stats[endpoint] = stats
-
-    def get_circuit_stats(self) -> dict[str, dict]:
-        """Get current circuit breaker statistics for monitoring."""
-
-        return {
-            endpoint: {
-                "state": stats.state.value,
-                "failure_count": stats.failure_count,
-                "success_count": stats.success_count,
-                "last_failure_time": stats.last_failure_time,
-                "last_success_time": stats.last_success_time,
-                "half_open_calls": stats.half_open_calls,
-            }
-            for endpoint, stats in self._circuit_stats.items()
-        }
-
-    def reset_circuit(self, endpoint: str) -> bool:
-        """Manually reset circuit breaker for an endpoint.
-
-        Args:
-            endpoint: Endpoint identifier
-
-        Returns:
-            True if circuit was reset, False if endpoint not found
-        """
-
-        if endpoint in self._circuit_stats:
-            self._circuit_stats[endpoint] = CircuitBreakerStats()
-            logger.info(
-                "Manually reset circuit breaker for %s",
-                endpoint,
-            )
-            return True
-        return False
+        return self._breaker
 
 
 class BulkheadMiddleware(BaseHTTPMiddleware):
-    """Bulkhead pattern middleware for resource isolation.
+    """Per-endpoint concurrency limiter using AnyIO capacity limiters."""
 
-    Simple implementation that limits concurrent requests per endpoint
-    to prevent resource exhaustion.
-    """
-
-    def __init__(self, app, max_concurrent=10):
-        """Initialize bulkhead middleware.
-
-        Args:
-            app: ASGI application
-            max_concurrent: Maximum concurrent requests per endpoint
-        """
-
+    def __init__(self, app: Callable, *, max_concurrent: int = 10) -> None:
         super().__init__(app)
-        self.max_concurrent = max_concurrent
-        self._semaphores: dict[str, asyncio.Semaphore] = {}
+        self._max = max_concurrent
+        self._locks: dict[str, anyio.CapacityLimiter] = {}
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        """Process request with concurrency limiting."""
-
-        endpoint = f"{request.method}:{request.url.path}"
-
-        # Get or create semaphore for this endpoint
-        if endpoint not in self._semaphores:
-            self._semaphores[endpoint] = asyncio.Semaphore(self.max_concurrent)
-
-        semaphore = self._semaphores[endpoint]
-
-        # Try to acquire semaphore
-        if semaphore.locked():
-            # Too many concurrent requests
-            return JSONResponse(
-                status_code=503,
-                content={"error": "Too many concurrent requests for this endpoint"},
-            )
-
-        async with semaphore:
+        key = f"{request.method}:{request.url.path}"
+        limiter = self._locks.setdefault(key, anyio.CapacityLimiter(self._max))
+        async with limiter:
             return await call_next(request)
 
 
-# Export middleware classes
-__all__ = ["BulkheadMiddleware", "CircuitState", "TimeoutMiddleware"]
+__all__ = ["TimeoutMiddleware", "BulkheadMiddleware", "CircuitState", "TimeoutConfig"]
