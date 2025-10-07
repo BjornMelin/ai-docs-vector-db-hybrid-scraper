@@ -13,7 +13,7 @@ from src.config import ChunkingConfig, ChunkingStrategy
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.models.requests import BatchRequest, DocumentRequest
 from src.mcp_tools.models.responses import AddDocumentResponse, DocumentBatchResponse
-from src.security import SecurityValidator
+from src.security import MLSecurityValidator
 from src.services.dependencies import (
     get_cache_manager,
     get_content_intelligence_service,
@@ -309,9 +309,8 @@ def register_tools(mcp, client_manager: ClientManager):
             vector_service = await _get_vector_service(client_manager)
             cache_manager = await get_cache_manager(client_manager)
 
-            request.url = SecurityValidator.from_unified_config().validate_url(
-                request.url
-            )
+            security_validator = MLSecurityValidator.from_unified_config()
+            request.url = security_validator.validate_url(request.url)
 
             cache_key = f"doc:{request.url}"
             cached_result = await cache_manager.get(cache_key)
@@ -393,7 +392,7 @@ def register_tools(mcp, client_manager: ClientManager):
             async with semaphore:
                 try:
                     # Validate URL first
-                    security_validator = SecurityValidator.from_unified_config()
+                    security_validator = MLSecurityValidator.from_unified_config()
                     validated_url = security_validator.validate_url(url)
 
                     doc_request = DocumentRequest(

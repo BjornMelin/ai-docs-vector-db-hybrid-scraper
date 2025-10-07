@@ -65,7 +65,6 @@ def _normalise_summary(
         "indexed_fields_count": len(indexed_fields),
         "indexed_fields": indexed_fields,
         "total_points": points,
-        "_total_points": points,  # Retain legacy key for compatibility
         "payload_schema": payload_schema,
     }
     if request_id is not None:
@@ -143,7 +142,6 @@ def register_tools(mcp, client_manager: ClientManager):
                 "indexes_after": after["indexed_fields_count"],
                 "indexed_fields": after["indexed_fields"],
                 "total_points": after.get("points_count", 0),
-                "_total_points": after.get("points_count", 0),
                 "request_id": request_id,
             },
         )
@@ -203,7 +201,6 @@ def register_tools(mcp, client_manager: ClientManager):
             "performance_estimate": performance_estimate,
             "results": results,
             "total_points": stats.get("points_count", 0),
-            "_total_points": stats.get("points_count", 0),
             "indexed_fields": summary["indexed_fields"],
         }
         if ctx:
