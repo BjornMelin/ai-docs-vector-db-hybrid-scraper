@@ -90,12 +90,19 @@ GraphSearchOutcome = cast(Any, graph_module.GraphSearchOutcome)
 
 
 class DummyClientManager:
+    def __init__(self) -> None:
+        self.config = types.SimpleNamespace(
+            agentic=types.SimpleNamespace(
+                run_timeout_seconds=42.0, max_parallel_tools=5, retrieval_limit=9
+            )
+        )
+
     async def get_mcp_client(self):  # pragma: no cover - not used in tests
         raise AssertionError("get_mcp_client should not be called")
 
 
 def _install_agentic_stubs() -> dict[str, Any]:
-    created: dict[str, Any] = {"originals": {}}
+    created: dict[str, Any] = {}
 
     class DiscoveryStub:
         def __init__(self, client_manager, **_kwargs) -> None:
@@ -124,15 +131,29 @@ def _install_agentic_stubs() -> dict[str, Any]:
         async def run_search(self, **_kwargs):  # pragma: no cover - set later
             raise AssertionError("run_search not configured")
 
-    originals = cast(dict[str, Any], created["originals"])
-    originals["DynamicToolDiscovery"] = orchestrator_module.DynamicToolDiscovery
-    originals["ToolExecutionService"] = orchestrator_module.ToolExecutionService
-    originals["RetrievalHelper"] = orchestrator_module.RetrievalHelper
-    originals["GraphRunner"] = orchestrator_module.GraphRunner
-    orchestrator_module.DynamicToolDiscovery = DiscoveryStub
-    orchestrator_module.ToolExecutionService = ToolServiceStub
-    orchestrator_module.RetrievalHelper = RetrievalStub
-    orchestrator_module.GraphRunner = GraphRunnerStub
+    created["original_build_components"] = (
+        orchestrator_module.GraphRunner.build_components
+    )
+
+    def fake_build_components(_, client_manager):
+        discovery = DiscoveryStub(client_manager)
+        tool_service = ToolServiceStub(client_manager)
+        retrieval_helper = RetrievalStub(client_manager)
+        agentic_cfg = getattr(client_manager.config, "agentic", None)
+        runner = GraphRunnerStub(
+            max_parallel_tools=getattr(agentic_cfg, "max_parallel_tools", 3),
+            run_timeout_seconds=getattr(agentic_cfg, "run_timeout_seconds", 30.0),
+            retrieval_limit=getattr(agentic_cfg, "retrieval_limit", 8),
+        )
+        created["discovery_instance"] = discovery
+        created["discovery_client"] = client_manager
+        created["tool_service_client"] = client_manager
+        created["retrieval_client"] = client_manager
+        return discovery, tool_service, retrieval_helper, runner
+
+    orchestrator_module.GraphRunner.build_components = classmethod(
+        fake_build_components
+    )
     return created
 
 
@@ -149,12 +170,14 @@ async def test_initialize_agentic_components_builds_graph_runner():
         assert created["discovery_client"] is service.client_manager
         assert created["tool_service_client"] is service.client_manager
         assert created["retrieval_client"] is service.client_manager
-        assert created["graph_kwargs"]["run_timeout_seconds"] == 30.0
+        assert created["graph_kwargs"]["run_timeout_seconds"] == 42.0
+        assert created["graph_kwargs"]["max_parallel_tools"] == 5
+        assert created["graph_kwargs"]["retrieval_limit"] == 9
         assert created["discovery_instance"].refresh_calls == [True]
     finally:
-        originals = cast(dict[str, Any], created["originals"])
-        for attr, original in originals.items():
-            setattr(orchestrator_module, attr, original)
+        orchestrator_module.GraphRunner.build_components = created[
+            "original_build_components"
+        ]
 
 
 @pytest.mark.asyncio
@@ -213,6 +236,6 @@ async def test_orchestrate_multi_service_workflow_uses_graph_runner():
         assert result["workflow_results"]["answer"] == "done"
         assert result["workflow_results"]["results"]
     finally:
-        originals = cast(dict[str, Any], created["originals"])
-        for attr, original in originals.items():
-            setattr(orchestrator_module, attr, original)
+        orchestrator_module.GraphRunner.build_components = created[
+            "original_build_components"
+        ]

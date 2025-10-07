@@ -1,5 +1,7 @@
 """Comprehensive test suite for MCP cache tools."""
 
+# pylint: disable=duplicate-code
+
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -12,7 +14,7 @@ class TestCacheTools:
     """Test suite for cache MCP tools."""
 
     @pytest.fixture
-    def mock_client_manager(self):
+    def mock_client_manager(self, monkeypatch):
         """Create a mock client manager with cache service."""
         mock_manager = MagicMock()
 
@@ -25,7 +27,14 @@ class TestCacheTools:
             "size": 1500,
             "_total_requests": 25000,
         }
-        mock_manager.get_cache_manager = AsyncMock(return_value=mock_cache)
+
+        cache_dependency = AsyncMock(return_value=mock_cache)
+        monkeypatch.setattr(
+            "src.services.dependencies.get_cache_manager", cache_dependency
+        )
+
+        mock_manager.cache_dependency = cache_dependency
+        mock_manager.cache_mock = mock_cache
 
         return mock_manager
 
@@ -112,7 +121,7 @@ class TestCacheTools:
         assert isinstance(result, CacheStatsResponse)
         assert result.hit_rate == 0.92
         assert result.size == 1500
-        assert result._total_requests == 25000
+        assert result.total_requests == 25000
 
         # Verify context logging
         mock_context.info.assert_called()
@@ -124,7 +133,7 @@ class TestCacheTools:
         # Make cache manager raise an exception
         mock_cache = AsyncMock()
         mock_cache.clear_all.side_effect = Exception("Cache service unavailable")
-        mock_client_manager.get_cache_manager = AsyncMock(return_value=mock_cache)
+        mock_client_manager.cache_dependency.return_value = mock_cache
 
         mock_mcp = MagicMock()
         registered_tools = {}
@@ -152,7 +161,7 @@ class TestCacheTools:
         # Make cache manager raise an exception
         mock_cache = AsyncMock()
         mock_cache.get_stats.side_effect = Exception("Stats unavailable")
-        mock_client_manager.get_cache_manager = AsyncMock(return_value=mock_cache)
+        mock_client_manager.cache_dependency.return_value = mock_cache
 
         mock_mcp = MagicMock()
         registered_tools = {}
@@ -194,11 +203,11 @@ class TestCacheTools:
 
     def test_cache_stats_response_validation(self):
         """Test cache stats response model validation."""
-        response = CacheStatsResponse(hit_rate=0.95, size=2000, _total_requests=50000)
+        response = CacheStatsResponse(hit_rate=0.95, size=2000, total_requests=50000)
 
         assert response.hit_rate == 0.95
         assert response.size == 2000
-        assert response._total_requests == 50000
+        assert response.total_requests == 50000
 
     @pytest.mark.asyncio
     async def test_context_logging_integration(self, mock_client_manager, mock_context):
@@ -254,11 +263,11 @@ class TestCacheTools:
 
         # Test cache manager is retrieved
         await clear_cache(pattern=None, ctx=mock_context)
-        mock_client_manager.get_cache_manager.assert_called()
+        mock_client_manager.cache_dependency.assert_called()
 
         # Test stats call
         await get_cache_stats(ctx=mock_context)
-        cache_manager = await mock_client_manager.get_cache_manager()
+        cache_manager = await mock_client_manager.cache_dependency()
         cache_manager.get_stats.assert_called()
 
     @pytest.mark.asyncio

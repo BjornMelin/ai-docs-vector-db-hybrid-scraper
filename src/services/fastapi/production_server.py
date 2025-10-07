@@ -1,8 +1,4 @@
-"""Simplified production FastMCP server with essential middleware only.
-
-This module provides a basic production wrapper around FastMCP server,
-following KISS principles with only essential middleware for V1.
-"""
+"""Simplified production FastMCP server with essential middleware only."""
 
 import asyncio
 import logging
@@ -10,22 +6,21 @@ import os
 import signal
 import sys
 from contextlib import asynccontextmanager
-
-from starlette.applications import Starlette
-
-
-try:
-    import uvicorn
-except ImportError:
-    uvicorn = None
 from typing import TYPE_CHECKING
 
+from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 from src.config import get_config
 from src.services.fastapi.middleware.manager import get_middleware_manager
 from src.services.logging_config import configure_logging
+
+
+try:
+    import uvicorn
+except ImportError:
+    uvicorn = None
 
 
 if TYPE_CHECKING:
@@ -83,7 +78,10 @@ class ProductionMCPServer:
     async def startup(self) -> None:
         """Initialize server components."""
         # Configure logging
-        configure_logging(self.config.log_level.value, self.config.debug)
+        configure_logging(
+            level=self.config.log_level.value,
+            enable_color=self.config.debug,
+        )
 
         # Initialize middleware manager
         self.middleware_manager = get_middleware_manager(self.config)
@@ -129,7 +127,9 @@ class ProductionMCPServer:
 
         # Apply middleware
         if self.middleware_manager:
-            self.middleware_manager.apply_middleware(app)
+            self.middleware_manager.apply_middleware(
+                app, middleware_names=["rate_limiting"]
+            )
 
         self._app = app
         return app

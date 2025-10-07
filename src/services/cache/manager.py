@@ -3,9 +3,10 @@
 import asyncio
 import hashlib
 import logging
+from collections.abc import Awaitable, Callable
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from src.config import CacheType
 
@@ -432,6 +433,29 @@ class CacheManager:
             return await self._clear_specific_cache_type(cache_type)
         return await self._clear_all_caches()
 
+    async def clear_all(self) -> int:
+        """Clear all cache layers and return cleared entry count from L2."""
+
+        cleared = 0
+        if isinstance(self._distributed_cache, DragonflyCache):
+            cleared = await self._distributed_cache.clear()
+        if self._local_cache:
+            await self._local_cache.clear()
+        return cleared
+
+    async def clear_pattern(self, pattern: str) -> int:
+        """Clear cache entries matching a pattern in distributed cache."""
+
+        if not isinstance(self._distributed_cache, DragonflyCache):
+            if self._distributed_cache is None:
+                return 0
+            cleared = await self._clear_keys_matching_pattern(pattern)
+        else:
+            cleared = await self._distributed_cache.clear_pattern(pattern)
+        if self._local_cache:
+            await self._local_cache.clear()
+        return cleared
+
     async def _clear_specific_cache_type(self, cache_type: CacheType) -> bool:
         """Clear specific cache type by pattern."""
         pattern = f"{self.key_prefix}{cache_type.value}:*"
@@ -446,6 +470,33 @@ class CacheManager:
             return False
 
         return await self._clear_keys_from_both_caches(keys, cache_type)
+
+    async def _clear_keys_matching_pattern(self, pattern: str) -> int:
+        """Clear keys matching a Redis glob pattern."""
+
+        distributed_cache = self._distributed_cache
+        if distributed_cache is None:
+            return 0
+
+        try:
+            scan_func = getattr(distributed_cache, "scan_keys", None)
+            if scan_func is None or not callable(scan_func):
+                return 0
+            scan_callable = cast(Callable[[str], Awaitable[list[str]]], scan_func)
+            keys = list(await scan_callable(pattern))
+        except (ConnectionError, RuntimeError, TimeoutError) as e:
+            logger.error("Cache scan error for pattern %s: %s", pattern, e)
+            return 0
+
+        cleared = 0
+        delete_func = getattr(distributed_cache, "delete", None)
+        if delete_func is None or not callable(delete_func):
+            return cleared
+        delete_callable = cast(Callable[[str], Awaitable[object]], delete_func)
+        for key in keys:
+            if bool(await delete_callable(key)):
+                cleared += 1
+        return cleared
 
     async def _clear_keys_from_both_caches(
         self, keys: list[str], cache_type: CacheType

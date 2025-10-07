@@ -11,7 +11,7 @@ import time
 from collections.abc import AsyncIterator, Mapping
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any
 
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from mcp.types import CallToolResult
@@ -124,19 +124,18 @@ class ToolExecutionService:
         """Execute an MCP tool and return the structured result."""
 
         payload = _validate_arguments(arguments)
-        client = cast(
-            MultiServerMCPClient,
-            await cast(Any, self._client_manager).get_mcp_client(),
-        )
-        config = cast(Any, self._client_manager.config)
-        timeout_ms = read_timeout_ms or config.mcp_client.request_timeout_ms
-
-        server_candidates = (
-            [server_name] if server_name else [server.name for server in config.servers]
-        )
-        if not server_candidates:
+        client = await self._client_manager.get_mcp_client()
+        mcp_config = getattr(self._client_manager.config, "mcp_client", None)
+        if not mcp_config or not mcp_config.servers:
             msg = "No MCP servers configured for tool execution"
             raise ToolExecutionFailure(msg)
+        timeout_ms = read_timeout_ms or mcp_config.request_timeout_ms
+
+        server_candidates = (
+            [server_name]
+            if server_name
+            else [server.name for server in mcp_config.servers]
+        )
 
         last_error: ToolExecutionError | None = None
         for candidate in server_candidates:

@@ -136,13 +136,20 @@ def mock_content_intelligence_service():
 
 
 @pytest.fixture
-def mock_client_manager(mock_content_intelligence_service):
+def mock_client_manager():
     """Create mock client manager."""
-    manager = Mock(spec=ClientManager)
-    manager.get_content_intelligence_service = AsyncMock(
-        return_value=mock_content_intelligence_service
+    return Mock(spec=ClientManager)
+
+
+@pytest.fixture
+def content_dependency(monkeypatch, mock_content_intelligence_service):
+    """Patch content intelligence dependency."""
+    dependency = AsyncMock(return_value=mock_content_intelligence_service)
+    monkeypatch.setattr(
+        "src.mcp_tools.tools.content_intelligence.get_content_intelligence_service",
+        dependency,
     )
-    return manager
+    return dependency
 
 
 @pytest.fixture
@@ -169,7 +176,7 @@ def mock_context():
 
 
 @pytest.fixture(autouse=True)
-def setup_tools(mock_mcp, mock_client_manager):
+def setup_tools(mock_mcp, mock_client_manager, content_dependency):
     """Register tools for testing."""
     register_tools(mock_mcp, mock_client_manager)
 
@@ -242,11 +249,14 @@ class TestAnalyzeContentIntelligence:
 
     @pytest.mark.asyncio
     async def test_service_unavailable(
-        self, mock_mcp, mock_context, mock_client_manager
+        self,
+        mock_mcp,
+        mock_context,
+        content_dependency,
     ):
         """Test handling when content intelligence service is unavailable."""
         # Make service unavailable
-        mock_client_manager.get_content_intelligence_service.return_value = None
+        content_dependency.return_value = None
 
         request = ContentIntelligenceAnalysisRequest(
             content="Test content", url="https://example.com/test"
@@ -326,10 +336,13 @@ class TestClassifyContentType:
 
     @pytest.mark.asyncio
     async def test_classification_service_unavailable(
-        self, mock_mcp, mock_context, mock_client_manager
+        self,
+        mock_mcp,
+        mock_context,
+        content_dependency,
     ):
         """Test classification when service is unavailable."""
-        mock_client_manager.get_content_intelligence_service.return_value = None
+        content_dependency.return_value = None
 
         request = ContentIntelligenceClassificationRequest(
             content="Test content", url="https://example.com/test"
@@ -410,10 +423,13 @@ class TestAssessContentQuality:
 
     @pytest.mark.asyncio
     async def test_quality_assessment_service_unavailable(
-        self, mock_mcp, mock_context, mock_client_manager
+        self,
+        mock_mcp,
+        mock_context,
+        content_dependency,
     ):
         """Test quality assessment when service is unavailable."""
-        mock_client_manager.get_content_intelligence_service.return_value = None
+        content_dependency.return_value = None
 
         request = ContentIntelligenceQualityRequest(
             content="Test content", confidence_threshold=0.8
@@ -495,10 +511,13 @@ class TestExtractContentMetadata:
 
     @pytest.mark.asyncio
     async def test_metadata_extraction_service_unavailable(
-        self, mock_mcp, mock_context, mock_client_manager
+        self,
+        mock_mcp,
+        mock_context,
+        content_dependency,
     ):
         """Test metadata extraction when service is unavailable."""
-        mock_client_manager.get_content_intelligence_service.return_value = None
+        content_dependency.return_value = None
 
         request = ContentIntelligenceMetadataRequest(
             content="Test content with multiple words here",

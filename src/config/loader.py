@@ -14,6 +14,7 @@ from pydantic.fields import ModelPrivateAttr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from .models import (
+    AgenticConfig,
     ApplicationMode,
     BrowserUseConfig,
     CacheConfig,
@@ -31,6 +32,7 @@ from .models import (
     FirecrawlConfig,
     HyDEConfig,
     LogLevel,
+    MCPClientConfig,
     MonitoringConfig,
     ObservabilityConfig,
     OpenAIConfig,
@@ -125,6 +127,9 @@ class Config(BaseSettings):
     browser_use: BrowserUseConfig = Field(
         default_factory=BrowserUseConfig, description="browser-use configuration"
     )
+    mcp_client: MCPClientConfig = Field(
+        default_factory=MCPClientConfig, description="MCP client configuration"
+    )
     chunking: ChunkingConfig = Field(
         default_factory=ChunkingConfig, description="Document chunking settings"
     )
@@ -133,6 +138,9 @@ class Config(BaseSettings):
     )
     hyde: HyDEConfig = Field(
         default_factory=HyDEConfig, description="HyDE configuration"
+    )
+    agentic: AgenticConfig = Field(
+        default_factory=AgenticConfig, description="Agentic workflow configuration"
     )
     rag: RAGConfig = Field(default_factory=RAGConfig, description="RAG configuration")
     reranking: ReRankingConfig = Field(
