@@ -69,6 +69,7 @@ dependencies = [
     "prometheus-client>=0.23.1,<0.24.0",
     "prometheus-fastapi-instrumentator>=7.1.0,<8.0.0",
     "sqlalchemy>=2.0.43,<3.0.0",
+    "sqlmodel>=0.0.16,<0.0.17",
     "tomli-w>=1.2.0,<2.0.0",
     "jsonschema2md>=1.7.0,<2.0.0",
     "watchdog>=6.0.0,<7.0.0",
