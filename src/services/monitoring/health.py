@@ -9,17 +9,20 @@ import logging
 import time
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 import aiohttp
-import httpx
 import redis.asyncio as redis
 from pydantic import BaseModel, Field
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.http.exceptions import UnexpectedResponse
 
 from .metrics import MetricsRegistry
+
+
+if TYPE_CHECKING:
+    from src.config import Config
 
 
 # Optional dependencies
@@ -41,12 +44,38 @@ class HealthCheckConfig(BaseModel):
     )
     timeout: float = Field(default=10.0, description="Health check timeout in seconds")
     max_retries: int = Field(default=3, description="Maximum retry attempts")
-    qdrant_url: str = Field(
-        default="http://localhost:6333", description="Qdrant URL for health checks"
+    qdrant_url: str | None = Field(
+        default=None, description="Qdrant URL for health checks"
     )
-    redis_url: str = Field(
-        default="redis://localhost:6379", description="Redis URL for health checks"
+    redis_url: str | None = Field(
+        default=None, description="Redis URL for health checks"
     )
+
+    @classmethod
+    def from_unified_config(cls, settings: "Config") -> "HealthCheckConfig":
+        """Build health-check configuration from the unified settings model."""
+
+        redis_enabled = getattr(settings.cache, "enable_redis_cache", False) or getattr(  # type: ignore[attr-defined]
+            settings.cache, "enable_dragonfly_cache", False
+        )
+        redis_url: str | None = None
+        if redis_enabled:
+            redis_url = getattr(settings.cache, "redis_url", None)
+            dragonfly_url = getattr(settings.cache, "dragonfly_url", None)
+            if (
+                getattr(settings.cache, "enable_dragonfly_cache", False)
+                and dragonfly_url
+            ):
+                redis_url = dragonfly_url
+
+        return cls(
+            enabled=settings.monitoring.enable_health_checks,
+            interval=settings.monitoring.system_metrics_interval,
+            timeout=settings.monitoring.health_check_timeout,
+            max_retries=3,
+            qdrant_url=settings.qdrant.url,
+            redis_url=redis_url,
+        )
 
 
 class HealthStatus(str, Enum):
@@ -364,7 +393,7 @@ class HTTPHealthCheck(HealthCheck):
             return await self._make_http_request()
         except aiohttp.ClientError as e:
             return self._create_http_error_result(f"HTTP request failed: {e!s}")
-        except (httpx.HTTPError, httpx.TimeoutException, ConnectionError) as e:
+        except ConnectionError as e:
             return self._create_http_error_result(f"HTTP health check error: {e!s}")
 
     async def _make_http_request(self) -> HealthCheckResult:
@@ -595,17 +624,7 @@ class HealthCheckManager:
         self.metrics_registry = metrics_registry
         self._last_results: dict[str, HealthCheckResult] = {}
 
-        # Add default health checks if enabled
-        if config.enabled:
-            # Create Qdrant client for health check
-            qdrant_client = AsyncQdrantClient(url=config.qdrant_url)
-            self.health_checks.extend(
-                [
-                    QdrantHealthCheck(qdrant_client),
-                    RedisHealthCheck(config.redis_url),
-                    SystemResourceHealthCheck(),
-                ]
-            )
+        # Default health checks are added explicitly via helper methods.
 
     def add_health_check(self, health_check: HealthCheck) -> None:
         """Add a health check to the manager.

@@ -305,10 +305,6 @@ class VectorDBManager:
             return False
         return True
 
-    async def get_stats(self) -> DatabaseStats | None:
-        """Alias for get_database_stats for backward compatibility."""
-        return await self.get_database_stats()
-
 
 def _create_manager_from_context(ctx) -> VectorDBManager:
     """Create VectorDBManager using the shared service registry."""

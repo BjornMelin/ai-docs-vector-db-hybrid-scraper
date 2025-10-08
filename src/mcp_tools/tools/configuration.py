@@ -64,8 +64,8 @@ def _collect_provider_warnings(config: Config) -> list[str]:
         and not (openai_api_key or getattr(openai_settings, "api_key", None))
     ):
         warnings.append(
-            "OpenAI embeddings selected but API key not configured; "
-            "falling back to FastEmbed"
+            "OpenAI embeddings selected but API key not configured; embeddings will "
+            "be unavailable (consider switching to FastEmbed)"
         )
     if (
         firecrawl_api_key is None

@@ -7,6 +7,7 @@ using Pydantic models and user-friendly error messages.
 from __future__ import annotations
 
 import json
+import os
 import re
 from pathlib import Path
 from typing import Any
@@ -26,7 +27,22 @@ class WizardValidator:
 
     def __init__(self):
         """Initialize validator."""
-        self.validation_cache: dict[str, bool] = {}
+        self.validation_rules = {
+            "openai": {
+                "pattern": r"^(sk-|sk-proj-)[A-Za-z0-9_-]{10,}$",
+                "message": (
+                    "OpenAI API key must start with 'sk-' or 'sk-proj-' and be at least"
+                    " 10 characters"
+                ),
+            },
+            "firecrawl": {
+                "pattern": r"^fc-[A-Za-z0-9_-]{10,}$",
+                "message": (
+                    "Firecrawl API key must start with 'fc-' and be at least"
+                    " 10 characters"
+                ),
+            },
+        }
 
     def validate_api_key(self, provider: str, api_key: str) -> tuple[bool, str | None]:
         """Validate API key format for specific providers.
@@ -42,25 +58,7 @@ class WizardValidator:
         if not api_key:
             return False, "API key cannot be empty"
 
-        validation_rules = {
-            "openai": {
-                "pattern": r"^sk-[a-zA-Z0-9_-]{20,}$",
-                "message": "OpenAI API key must start with 'sk-' and be at least "
-                "20 characters",
-            },
-            "firecrawl": {
-                "pattern": r"^fc-[a-zA-Z0-9_-]{20,}$",
-                "message": "Firecrawl API key must start with 'fc-' and be at least "
-                "20 characters",
-            },
-            "anthropic": {
-                "pattern": r"^sk-ant-[a-zA-Z0-9_-]{20,}$",
-                "message": "Anthropic API key must start with 'sk-ant-' "
-                "and be at least 20 characters",
-            },
-        }
-
-        rule = validation_rules.get(provider.lower())
+        rule = self.validation_rules.get(provider.lower())
         if not rule:
             # Generic validation for unknown providers
             if len(api_key) < 10:
@@ -154,9 +152,9 @@ class WizardValidator:
         try:
             check_path = path_obj if path_obj.exists() else path_obj.parent
             if not check_path.exists():
-                check_path.mkdir(parents=True, exist_ok=True)
-        except PermissionError:
-            return False, f"No write permission for path: {path}"
+                return False, f"Parent directory does not exist: {check_path}"
+            if not os.access(check_path, os.W_OK | os.X_OK):
+                return False, f"No write permission for path: {path}"
         except (OSError, ValueError) as e:
             return False, f"Invalid path: {e}"
 
@@ -317,8 +315,7 @@ class WizardValidator:
             parsed = json.loads(json_str)
         except json.JSONDecodeError as e:
             return False, f"Invalid JSON: {e}", None
-        else:
-            return True, None, parsed
+        return True, None, parsed
 
     def show_validation_summary(self, config) -> None:
         """Show validation summary for successful configuration.

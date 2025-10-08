@@ -35,6 +35,8 @@ class TestHealthCheckConfig:
         assert config.enabled is True
         assert config.interval == 30.0
         assert config.timeout == 10.0
+        assert config.qdrant_url is None
+        assert config.redis_url is None
 
     def test_custom_config(self):
         """Test custom configuration values."""
@@ -42,10 +44,34 @@ class TestHealthCheckConfig:
             enabled=False,
             interval=60.0,
             timeout=5.0,
+            qdrant_url="http://example:6333",
+            redis_url="redis://cache:6379",
         )
         assert config.enabled is False
         assert config.interval == 60.0
         assert config.timeout == 5.0
+        assert config.qdrant_url == "http://example:6333"
+        assert config.redis_url == "redis://cache:6379"
+
+    def test_from_unified_config(self):
+        """Health check config mirrors unified settings."""
+
+        settings = MagicMock()
+        settings.monitoring.enable_health_checks = True
+        settings.monitoring.system_metrics_interval = 45.0
+        settings.monitoring.health_check_timeout = 12.0
+        settings.qdrant.url = "http://qdrant:6333"
+        settings.cache.enable_redis_cache = True
+        settings.cache.enable_dragonfly_cache = False
+        settings.cache.redis_url = "redis://redis:6379"
+
+        config = HealthCheckConfig.from_unified_config(settings)
+
+        assert config.enabled is True
+        assert config.interval == 45.0
+        assert config.timeout == 12.0
+        assert config.qdrant_url == "http://qdrant:6333"
+        assert config.redis_url == "redis://redis:6379"
 
 
 class TestHealthCheckResult:
@@ -219,7 +245,7 @@ class TestSystemResourceHealthCheck:
     def health_check(self):
         """Create SystemResourceHealthCheck instance."""
         return SystemResourceHealthCheck(
-            "system_resources",
+            name="system_resources",
             cpu_threshold=80.0,
             memory_threshold=85.0,
             disk_threshold=90.0,
@@ -418,7 +444,9 @@ class TestHealthCheckIntegration:
         mock_qdrant.get_cluster_info.return_value = mock_cluster_info
         qdrant_check = QdrantHealthCheck(mock_qdrant, "qdrant")
 
-        system_check = SystemResourceHealthCheck("system", cpu_threshold=90.0)
+        system_check = SystemResourceHealthCheck(
+            name="system", cpu_threshold=90.0
+        )
 
         manager.add_health_check(qdrant_check)
         manager.add_health_check(system_check)
