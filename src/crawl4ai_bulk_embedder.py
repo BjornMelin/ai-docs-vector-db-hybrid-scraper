@@ -32,8 +32,7 @@ from rich.progress import (  # type: ignore[import]
 from rich.table import Table  # type: ignore[import]
 
 from .chunking import DocumentChunker
-from .config import get_settings
-from .config.loader import Settings
+from .config.loader import Settings, get_settings
 from .infrastructure.client_manager import ClientManager
 from .services.embeddings.manager import EmbeddingManager, QualityTier
 from .services.logging_config import configure_logging

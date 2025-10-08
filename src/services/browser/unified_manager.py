@@ -9,7 +9,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from src.config import Settings
+from src.config.loader import Settings
 from src.services.base import BaseService
 from src.services.errors import CrawlServiceError
 

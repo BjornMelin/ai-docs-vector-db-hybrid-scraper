@@ -14,7 +14,7 @@ from qdrant_client.models import (
     DeleteAliasOperation,
 )
 
-from src.config import Settings
+from src.config.loader import Settings
 from src.services.base import BaseService
 from src.services.errors import QdrantServiceError
 

@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Annotated, Any
 from fastapi import Depends  # type: ignore[attr-defined]
 from pydantic import BaseModel, Field
 
-from src.config import Settings, get_settings
+from src.config.loader import Settings, get_settings
 from src.config.models import CacheType
 from src.services.circuit_breaker.decorators import (
     circuit_breaker,

@@ -15,7 +15,7 @@ from fastapi.exceptions import HTTPException
 from fastapi.requests import Request  # type: ignore
 from starlette.status import HTTP_503_SERVICE_UNAVAILABLE
 
-from src.config import Settings, get_settings
+from src.config.loader import Settings, get_settings
 from src.infrastructure.client_manager import ClientManager
 from src.services.fastapi.middleware.correlation import get_correlation_id
 from src.services.registry import ensure_service_registry, shutdown_service_registry

@@ -164,6 +164,7 @@ def with_service_context(service_name: str) -> LogContext:
     return LogContext(service=service_name)
 
 
+# pylint: disable=too-many-arguments,too-many-locals
 def configure_logging(
     level: str | None = None,
     *,

@@ -4,14 +4,11 @@ import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
 
 import redis
-from dependency_injector.wiring import Provide, inject
 
 from src.config.models import CacheType
-from src.infrastructure.container import ApplicationContainer
 from src.services.errors import APIError
 from src.services.vector_db.types import VectorRecord
 
@@ -20,24 +17,7 @@ if TYPE_CHECKING:
     from src.services.cache.manager import CacheManager
     from src.services.vector_db.service import VectorStoreService
 
-# Imports to avoid circular dependencies
-try:
-    from src.config import get_settings
-    from src.services.cache.manager import CacheManager as _CacheManager
-    from src.services.vector_db.service import VectorStoreService as _VectorStoreService
-except ImportError:
-    get_settings = None
-    _VectorStoreService = None
-    _CacheManager = None
-
 logger = logging.getLogger(__name__)
-
-
-def _raise_required_services_not_available() -> None:
-    """Raise ImportError for required services not available."""
-
-    msg = "Required services not available"
-    raise ImportError(msg)
 
 
 @dataclass(slots=True)
@@ -56,56 +36,30 @@ class DatabaseManager:
     and distributed cache management with single responsibility.
     """
 
-    def __init__(self):
-        """Initialize database manager."""
-        self._redis_client: redis.Redis | None = None
-        self._cache_manager: CacheManager | None = None
-        self._vector_service: VectorStoreService | None = None
+    def __init__(
+        self,
+        *,
+        redis_client: redis.Redis,
+        cache_manager: "CacheManager",
+        vector_service: "VectorStoreService",
+    ) -> None:
+        """Initialize database manager with explicit dependencies."""
+        self._redis_client: redis.Redis = redis_client
+        self._cache_manager: CacheManager = cache_manager
+        self._vector_service: VectorStoreService = vector_service
         self._initialized = False
 
-    @inject
-    async def initialize(
-        self,
-        qdrant_client: Any | None = Provide[ApplicationContainer.qdrant_client],
-        redis_client: redis.Redis = Provide[ApplicationContainer.redis_client],
-    ) -> None:
-        """Initialize database clients using dependency injection.
-
-        Args:
-            qdrant_client: vector store service from DI container
-            redis_client: Redis client from DI container
-        """
-
+    async def initialize(self) -> None:
+        """Initialize database clients."""
         if self._initialized:
             return
 
-        self._redis_client = redis_client
-
-        # Initialize cache manager
-        if _CacheManager is None:
-            msg = "CacheManager not available"
-            raise ImportError(msg)
-
-        cache_root = Path("cache") / "database_manager"
-        self._cache_manager = _CacheManager(
-            enable_local_cache=True,
-            enable_distributed_cache=True,
-            enable_specialized_caches=True,
-            local_cache_path=cache_root,
-        )
-
-        # Initialize vector store service
-        if get_settings is None or _VectorStoreService is None:
-            _raise_required_services_not_available()
-        else:
-            try:
-                config = get_settings()
-                self._vector_service = _VectorStoreService(config)
-                await self._vector_service.initialize()
-            except Exception as exc:
-                logger.exception("Failed to initialize vector store service")
-                msg = f"Failed to initialize vector store service: {exc}"
-                raise APIError(msg) from exc
+        try:
+            await self._vector_service.initialize()
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.exception("Failed to initialize vector store service")
+            msg = f"Failed to initialize vector store service: {exc}"
+            raise APIError(msg) from exc
 
         self._initialized = True
         logger.info("DatabaseManager initialized with DI clients")
@@ -113,25 +67,13 @@ class DatabaseManager:
     async def cleanup(self) -> None:
         """Cleanup database resources."""
 
-        if self._cache_manager:
-            await self._cache_manager.close()
-            self._cache_manager = None
-
-        if self._vector_service:
-            await self._vector_service.cleanup()
-        self._vector_service = None
-
-        self._redis_client = None
+        await self._vector_service.cleanup()
         self._initialized = False
         logger.info("DatabaseManager cleaned up")
 
     @asynccontextmanager
     async def get_session(self) -> AsyncIterator[DatabaseSessionContext]:
         """Expose a lightweight context with database-related resources."""
-
-        if self._redis_client is None:
-            msg = "Database manager not initialized"
-            raise APIError(msg)
 
         context = DatabaseSessionContext(
             redis=self._redis_client,

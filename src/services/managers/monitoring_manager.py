@@ -20,7 +20,7 @@ from src.services.monitoring.performance_monitor import RealTimePerformanceMonit
 
 
 if TYPE_CHECKING:
-    from src.config import Settings
+    from src.config.loader import Settings
 
 
 @dataclass

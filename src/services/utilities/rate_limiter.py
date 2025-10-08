@@ -5,7 +5,7 @@ import logging
 import time
 from typing import TypeVar
 
-from src.config import Settings
+from src.config.loader import Settings
 from src.services.errors import APIError
 
 

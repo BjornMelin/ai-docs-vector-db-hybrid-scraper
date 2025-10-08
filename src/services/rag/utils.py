@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from src.config import Settings
+from src.config.loader import Settings
 from src.services.vector_db.service import VectorStoreService
 
 from .generator import RAGGenerator

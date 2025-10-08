@@ -7,7 +7,7 @@ from typing import Any, Literal
 
 from dependency_injector.wiring import Provide, inject
 
-from src.config import Settings
+from src.config.loader import Settings
 from src.infrastructure.container import ApplicationContainer
 from src.services.browser.unified_manager import (
     UnifiedBrowserManager,

@@ -25,7 +25,7 @@ class EmbeddingOptions:
 
 
 if TYPE_CHECKING:
-    from src.config import Settings
+    from src.config.loader import Settings
     from src.infrastructure.client_manager import ClientManager
     from src.services.embeddings.manager import (
         EmbeddingManager as CoreEmbeddingManager,

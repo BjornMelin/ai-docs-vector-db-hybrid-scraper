@@ -13,7 +13,7 @@ from qdrant_client import AsyncQdrantClient
 from qdrant_client.http.exceptions import UnexpectedResponse
 from redis import asyncio as redis_async
 
-from src.config import Settings
+from src.config.loader import Settings
 from src.config.models import CrawlProvider, EmbeddingProvider
 
 

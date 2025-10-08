@@ -14,7 +14,7 @@ try:
 except ImportError:
     CacheManager = None  # type: ignore[assignment]
 
-from src.config import Settings
+from src.config.loader import Settings
 from src.config.models import EmbeddingConfig as SettingsEmbeddingConfig
 from src.services.errors import EmbeddingServiceError
 

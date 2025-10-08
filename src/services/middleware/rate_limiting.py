@@ -14,7 +14,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 
-from src.config import Settings
+from src.config.loader import Settings
 
 
 logger = logging.getLogger(__name__)

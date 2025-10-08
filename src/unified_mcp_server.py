@@ -14,7 +14,7 @@ from typing import Any, Literal, cast
 
 from fastmcp import FastMCP
 
-from src.config import get_settings
+from src.config.loader import get_settings
 from src.config.models import CrawlProvider, EmbeddingProvider
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.tool_registry import register_all_tools
@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def managed_lifespan(server: FastMCP[Any]) -> AsyncIterator[None]:
+async def managed_lifespan(server: FastMCP[Any]) -> AsyncIterator[None]:  # pylint: disable=too-many-locals
     """Server lifecycle management with lazy initialization."""
 
     config = get_settings()

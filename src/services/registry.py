@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from src.config import Settings, get_settings
+from src.config.loader import Settings, get_settings
 from src.config.models import CacheType
 from src.infrastructure.client_manager import ClientManager
 from src.services.cache.manager import CacheManager

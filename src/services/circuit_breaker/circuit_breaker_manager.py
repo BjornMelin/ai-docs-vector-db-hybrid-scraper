@@ -28,7 +28,7 @@ except ModuleNotFoundError:
         },
     )
 
-from src.config import Settings
+from src.config.loader import Settings
 
 
 logger = logging.getLogger(__name__)

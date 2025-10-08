@@ -22,7 +22,7 @@ from .metrics import MetricsRegistry
 
 
 if TYPE_CHECKING:
-    from src.config import Settings
+    from src.config.loader import Settings
 
 
 # Optional dependencies

@@ -7,7 +7,7 @@ from typing import Any
 import numpy as np
 from qdrant_client import models
 
-from src.config import Settings
+from src.config.loader import Settings
 from src.services.base import BaseService
 from src.services.errors import QdrantServiceError
 

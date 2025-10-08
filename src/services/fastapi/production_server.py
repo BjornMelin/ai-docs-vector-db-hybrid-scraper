@@ -12,7 +12,7 @@ from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
-from src.config import get_settings
+from src.config.loader import get_settings
 from src.services.fastapi.middleware.manager import apply_defaults, apply_named_stack
 from src.services.logging_config import configure_logging
 

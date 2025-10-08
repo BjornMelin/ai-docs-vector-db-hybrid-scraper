@@ -11,7 +11,7 @@ import time
 from fastapi.responses import JSONResponse
 from qdrant_client import AsyncQdrantClient
 
-from src.config import Settings
+from src.config.loader import Settings
 from src.config.models import MonitoringConfig
 
 from .health import HealthCheckConfig, HealthCheckManager, HealthStatus
