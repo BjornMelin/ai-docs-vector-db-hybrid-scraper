@@ -8,11 +8,14 @@ This package provides comprehensive monitoring infrastructure including:
 - FastMCP integration
 """
 
-from .health import HealthCheckManager
-from .initialization import initialize_monitoring_system, setup_fastmcp_monitoring
-from .metrics import MetricsRegistry
-from .middleware import PrometheusMiddleware
-from .telemetry_repository import get_telemetry_repository
+from src.services.health.manager import HealthCheckManager
+from src.services.monitoring.initialization import (
+    initialize_monitoring_system,
+    setup_fastmcp_monitoring,
+)
+from src.services.monitoring.metrics import MetricsRegistry
+from src.services.monitoring.middleware import PrometheusMiddleware
+from src.services.monitoring.telemetry_repository import get_telemetry_repository
 
 
 __all__ = [

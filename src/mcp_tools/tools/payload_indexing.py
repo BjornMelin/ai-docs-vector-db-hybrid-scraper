@@ -18,7 +18,7 @@ from src.mcp_tools.models.responses import (
     GenericDictResponse,
     ReindexCollectionResponse,
 )
-from src.security import MLSecurityValidator
+from src.security.ml_security import MLSecurityValidator
 
 
 logger = logging.getLogger(__name__)

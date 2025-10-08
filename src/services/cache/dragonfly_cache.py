@@ -187,7 +187,7 @@ class DragonflyCache(CacheInterface[Any]):
         ttl: int | None = None,
         nx: bool = False,
         xx: bool = False,
-    ) -> bool:
+    ) -> bool:  # pylint: disable=too-many-arguments
         """Set value in DragonflyDB with TTL and conditional options."""
 
         # Monitor cache operations with Prometheus if available
@@ -209,7 +209,7 @@ class DragonflyCache(CacheInterface[Any]):
         ttl: int | None = None,
         nx: bool = False,
         xx: bool = False,
-    ) -> bool:
+    ) -> bool:  # pylint: disable=too-many-arguments
         """Execute the actual set operation."""
 
         try:

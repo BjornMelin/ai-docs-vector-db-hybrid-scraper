@@ -142,3 +142,9 @@ uv run ruff format . --check        # formatting
 
 Re-run the test and lint suites after modifying configuration models or adding
 new environment variables.
+
+## 7. Service Access Patterns
+
+- **Client access**: FastAPI and MCP layers request services via the dependency helpers in `src/services/dependencies.py`, which resolve a shared `ClientManager`. Avoid constructing managers directly; the helper ensures consistent caching and telemetry wiring.
+- **Observability**: Metrics, traces, and health checks are configured through `src/services/observability/` and `src/services/monitoring/`. Use `ObservabilityConfig` to enable OpenTelemetry exporters and rely on `setup_prometheus` for registry bootstrap.
+- **Health checks**: The centralized `HealthCheckManager` (`src/services/monitoring/health.py`) tracks service probes and feeds `/health` endpoints. When adding new services, register probes via the manager instead of ad-hoc endpoints.

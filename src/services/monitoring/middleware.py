@@ -10,8 +10,12 @@ from fastapi.responses import JSONResponse, Response
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from prometheus_fastapi_instrumentator import Instrumentator, metrics
 
-from .health import HealthCheckConfig, HealthCheckManager, HealthStatus
-from .metrics import MetricsRegistry
+from src.services.health.manager import (
+    HealthCheckConfig,
+    HealthCheckManager,
+    HealthStatus,
+)
+from src.services.monitoring.metrics import MetricsRegistry
 
 
 logger = logging.getLogger(__name__)

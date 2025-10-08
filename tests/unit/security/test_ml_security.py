@@ -6,6 +6,7 @@ Tests the minimalistic ML security approach with >90% coverage goal.
 import json
 import subprocess
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -14,6 +15,7 @@ from src.security.ml_security import (
     MinimalMLSecurityConfig,
     MLSecurityValidator,
     SecurityCheckResult,
+    SecurityError,
     SimpleRateLimiter,
 )
 
@@ -60,34 +62,32 @@ class TestSecurityCheckResult:
         assert result.timestamp <= datetime.now(tz=UTC)
 
 
-class TestMLSecurityValidator:
+class TestMLSecurityValidator:  # pylint: disable=too-many-public-methods
     """Test MLSecurityValidator."""
 
     @pytest.fixture
     def validator(self):
-        """Create validator instance."""
-        mock_config = MagicMock()
-        mock_config.security.enable_ml_input_validation = True
-        mock_config.security.max_ml_input_size = 1_000_000
-        mock_config.security.enable_dependency_scanning = True
-        mock_config.security.dependency_scan_on_startup = True
-        mock_config.security.suspicious_patterns = [
-            "<script",
-            "DROP TABLE",
-            "__import__",
-            "eval(",
-        ]
+        """Create validator instance with patched configuration."""
 
-        with (
-            patch("src.security.ml_security.get_settings", return_value=mock_config),
-            patch("src.security.ml_security.BaseSecurityValidator.from_unified_config"),
-        ):
+        security_config = SimpleNamespace(
+            enable_ml_input_validation=True,
+            max_ml_input_size=1_000_000,
+            enable_dependency_scanning=True,
+            dependency_scan_on_startup=True,
+            suspicious_patterns=["<script", "DROP TABLE", "__import__", "eval("],
+            allowed_domains=["example.com"],
+            blocked_domains=["bad.com"],
+            max_query_length=512,
+        )
+        mock_config = SimpleNamespace(security=security_config)
+
+        with patch("src.security.ml_security.get_settings", return_value=mock_config):
             return MLSecurityValidator()
 
     def test_init(self, validator):
         """Test validator initialization."""
         assert validator.config is not None
-        assert validator.base_validator is not None
+        assert validator.security_config is not None
         assert validator.checks_performed == []
 
     def test_validate_input_success(self, validator):
@@ -157,7 +157,10 @@ class TestMLSecurityValidator:
         mock_result.returncode = 0
         mock_result.stdout = json.dumps({"vulnerabilities": []})
 
-        with patch("subprocess.run", return_value=mock_result):
+        with (
+            patch("shutil.which", return_value="/usr/bin/pip-audit"),
+            patch("subprocess.run", return_value=mock_result),
+        ):
             result = validator.check_dependencies()
 
             assert result.passed is True
@@ -174,7 +177,10 @@ class TestMLSecurityValidator:
         mock_result.returncode = 0
         mock_result.stdout = json.dumps({"vulnerabilities": vulnerabilities})
 
-        with patch("subprocess.run", return_value=mock_result):
+        with (
+            patch("shutil.which", return_value="/usr/bin/pip-audit"),
+            patch("subprocess.run", return_value=mock_result),
+        ):
             result = validator.check_dependencies()
 
             assert result.passed is False
@@ -184,27 +190,29 @@ class TestMLSecurityValidator:
 
     def test_check_dependencies_pip_audit_not_available(self, validator):
         """Test dependency check when pip-audit is not available."""
-        mock_result = MagicMock()
-        mock_result.returncode = 1
 
-        with patch("subprocess.run", return_value=mock_result):
+        with patch("shutil.which", return_value=None):
             result = validator.check_dependencies()
 
-            assert result.passed is True
-            assert "pip-audit not available" in result.message
+        assert result.passed is True
+        assert "pip-audit not available" in result.message
 
     def test_check_dependencies_timeout(self, validator):
         """Test dependency check timeout."""
-        with patch("subprocess.run", side_effect=subprocess.TimeoutExpired("cmd", 30)):
+        with (
+            patch("shutil.which", return_value="/usr/bin/pip-audit"),
+            patch("subprocess.run", side_effect=subprocess.TimeoutExpired("cmd", 30)),
+        ):
             result = validator.check_dependencies()
 
             assert result.passed is True
-            assert "timed out" in result.message
+            assert result.message == "Dependency scan timed out"
             assert result.severity == "info"
 
     def test_check_dependencies_exception(self, validator):
         """Test dependency check exception handling."""
         with (
+            patch("shutil.which", return_value="/usr/bin/pip-audit"),
             patch("subprocess.run", side_effect=Exception("Test error")),
             patch("src.security.ml_security.logger") as mock_logger,
         ):
@@ -213,7 +221,7 @@ class TestMLSecurityValidator:
             assert result.passed is True
             assert "scan failed" in result.message
             assert result.severity == "info"
-            mock_logger.error.assert_called_once()
+            mock_logger.exception.assert_called_once()
 
     def test_check_container_success(self, validator):
         """Test successful container scan."""
@@ -222,8 +230,11 @@ class TestMLSecurityValidator:
         mock_result.returncode = 0
         mock_result.stdout = json.dumps(scan_data)
 
-        with patch("subprocess.run", return_value=mock_result):
-            result = validator.check_container("myapp:latest")
+        with (
+            patch("shutil.which", return_value="/usr/bin/trivy"),
+            patch("subprocess.run", return_value=mock_result),
+        ):
+            result = validator.check_container("example/myapp:latest")
 
             assert result.passed is True
             assert result.message == "No critical vulnerabilities found"
@@ -241,8 +252,11 @@ class TestMLSecurityValidator:
         mock_result.returncode = 0
         mock_result.stdout = json.dumps(scan_data)
 
-        with patch("subprocess.run", return_value=mock_result):
-            result = validator.check_container("myapp:latest")
+        with (
+            patch("shutil.which", return_value="/usr/bin/trivy"),
+            patch("subprocess.run", return_value=mock_result),
+        ):
+            result = validator.check_container("example/myapp:latest")
 
             assert result.passed is False
             assert "Found 3 high/critical vulnerabilities" in result.message
@@ -254,8 +268,11 @@ class TestMLSecurityValidator:
         mock_result = MagicMock()
         mock_result.returncode = 1
 
-        with patch("subprocess.run", return_value=mock_result):
-            result = validator.check_container("myapp:latest")
+        with (
+            patch("shutil.which", return_value=None),
+            patch("subprocess.run", return_value=mock_result),
+        ):
+            result = validator.check_container("example/myapp:latest")
 
             assert result.passed is True
             assert "trivy not available" in result.message
@@ -263,15 +280,16 @@ class TestMLSecurityValidator:
     def test_check_container_exception(self, validator):
         """Test container scan exception handling."""
         with (
+            patch("shutil.which", return_value="/usr/bin/trivy"),
             patch("subprocess.run", side_effect=Exception("Test error")),
             patch("src.security.ml_security.logger") as mock_logger,
         ):
-            result = validator.check_container("myapp:latest")
+            result = validator.check_container("example/myapp:latest")
 
             assert result.passed is True
-            assert "not performed" in result.message
+            assert "scan failed" in result.message
             assert result.severity == "info"
-            mock_logger.info.assert_called_once()
+            mock_logger.exception.assert_called_once()
 
     @pytest.mark.parametrize(
         ("severity", "log_method"),
@@ -293,16 +311,17 @@ class TestMLSecurityValidator:
             log_func.assert_called_once()
 
             # Check logged data
-            call_args = log_func.call_args[0][0]
-            assert "Security event:" in call_args
-            assert "test_event" in call_args
-            assert "key" in call_args
+            call_args = log_func.call_args
+            assert call_args.args[0] == "Security event: %s"
+            assert call_args.args[1] == "test_event"
+            assert call_args.kwargs["extra"] == {"key": "value"}
 
     def test_get_security_summary_empty(self, validator):
         """Test security summary with no checks."""
+
         summary = validator.get_security_summary()
 
-        assert summary["_total_checks"] == 0
+        assert summary["total_checks"] == 0
         assert summary["passed"] == 0
         assert summary["failed"] == 0
         assert summary["critical_issues"] == 0
@@ -310,13 +329,19 @@ class TestMLSecurityValidator:
 
     def test_get_security_summary_with_checks(self, validator):
         """Test security summary with multiple checks."""
-        # Add some checks
+
         validator.checks_performed = [
             SecurityCheckResult(
-                check_type="test1", passed=True, message="OK", severity="info"
+                check_type="test1",
+                passed=True,
+                message="OK",
+                severity="info",
             ),
             SecurityCheckResult(
-                check_type="test2", passed=False, message="Failed", severity="error"
+                check_type="test2",
+                passed=False,
+                message="Failed",
+                severity="error",
             ),
             SecurityCheckResult(
                 check_type="test3",
@@ -328,11 +353,60 @@ class TestMLSecurityValidator:
 
         summary = validator.get_security_summary()
 
-        assert summary["_total_checks"] == 3
+        assert summary["total_checks"] == 3
         assert summary["passed"] == 1
         assert summary["failed"] == 2
         assert summary["critical_issues"] == 1
         assert summary["last_check"] is not None
+
+    def test_validate_url_allows_configured_domain(self, validator):
+        """URL validation should allow configured safe domains."""
+
+        url = "https://example.com/resource"
+        assert validator.validate_url(url) == url
+
+    def test_validate_url_blocks_listed_domain(self, validator):
+        """URL validation should block domains marked as unsafe."""
+
+        with pytest.raises(SecurityError, match="blocked"):
+            validator.validate_url("https://bad.com/resource")
+
+    def test_validate_url_rejects_scheme(self, validator):
+        """URL validation should reject unsupported schemes."""
+
+        with pytest.raises(SecurityError, match="scheme"):
+            validator.validate_url("ftp://example.com/file")
+
+    def test_validate_collection_name_success(self, validator):
+        """Collection name validation returns sanitized value."""
+
+        assert validator.validate_collection_name("Valid_Name-01") == "Valid_Name-01"
+
+    def test_validate_collection_name_invalid_chars(self, validator):
+        """Invalid collection names raise SecurityError."""
+
+        with pytest.raises(SecurityError, match="letters, numbers"):
+            validator.validate_collection_name("invalid name!")
+
+    def test_validate_query_string_length(self, validator):
+        """Query validation enforces configured maximum length."""
+
+        long_query = "x" * 600
+        with pytest.raises(SecurityError, match="max 512"):
+            validator.validate_query_string(long_query)
+
+    def test_validate_query_string_sanitizes(self, validator):
+        """Query validation strips unsafe characters."""
+
+        cleaned = validator.validate_query_string("<script>alert(1)</script>")
+        assert "<" not in cleaned
+        assert ">" not in cleaned
+
+    def test_sanitize_filename(self, validator):
+        """Filename sanitization removes unsafe characters."""
+
+        sanitized = validator.sanitize_filename("../../etc/passwd")
+        assert sanitized == "passwd"
 
 
 class TestSimpleRateLimiter:
@@ -398,22 +472,20 @@ class TestIntegration:
     @pytest.fixture
     def validator(self):
         """Create validator for integration tests."""
-        mock_config = MagicMock()
-        mock_config.security.enable_ml_input_validation = True
-        mock_config.security.max_ml_input_size = 1_000_000
-        mock_config.security.enable_dependency_scanning = True
-        mock_config.security.dependency_scan_on_startup = True
-        mock_config.security.suspicious_patterns = [
-            "<script",
-            "DROP TABLE",
-            "__import__",
-            "eval(",
-        ]
 
-        with (
-            patch("src.security.ml_security.get_settings", return_value=mock_config),
-            patch("src.security.ml_security.BaseSecurityValidator.from_unified_config"),
-        ):
+        security_config = SimpleNamespace(
+            enable_ml_input_validation=True,
+            max_ml_input_size=1_000_000,
+            enable_dependency_scanning=True,
+            dependency_scan_on_startup=True,
+            suspicious_patterns=["<script", "DROP TABLE", "__import__", "eval("],
+            allowed_domains=["example.com"],
+            blocked_domains=["bad.com"],
+            max_query_length=512,
+        )
+        mock_config = SimpleNamespace(security=security_config)
+
+        with patch("src.security.ml_security.get_settings", return_value=mock_config):
             return MLSecurityValidator()
 
     def test_full_security_workflow(self, validator):
@@ -441,7 +513,7 @@ class TestIntegration:
         summary = validator.get_security_summary()
 
         # Note: checks are already tracked in checks_performed by the methods
-        assert summary["_total_checks"] >= 2  # May have more from automatic tracking
+        assert summary["total_checks"] >= 2  # May have more from automatic tracking
         assert summary["passed"] >= 2
         assert summary["failed"] == 0
 
@@ -454,7 +526,10 @@ class TestIntegration:
         assert malicious_result.passed is False
 
         # 2. Check dependencies with vulnerabilities
-        with patch("subprocess.run") as mock_run:
+        with (
+            patch("shutil.which", return_value="/usr/bin/pip-audit"),
+            patch("subprocess.run") as mock_run,
+        ):
             mock_run.return_value.returncode = 0
             mock_run.return_value.stdout = json.dumps(
                 {"vulnerabilities": [{"package": "vulnerable-pkg"}]}
@@ -473,6 +548,6 @@ class TestIntegration:
         summary = validator.get_security_summary()
 
         # The validator automatically tracks all checks, so we should have at least 2
-        assert summary["_total_checks"] >= 2
+        assert summary["total_checks"] >= 2
         assert summary["failed"] >= 2  # Both checks should have failed
         assert summary["passed"] == 0

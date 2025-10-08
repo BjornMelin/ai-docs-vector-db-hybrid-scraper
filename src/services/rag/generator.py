@@ -301,7 +301,7 @@ class RAGGenerator(BaseService):
         scores = []
         for doc in documents:
             score = doc.metadata.get("score")
-            if isinstance(score, (int, float)):
+            if isinstance(score, int | float):
                 scores.append(float(score))
         if not scores:
             return None
@@ -312,7 +312,7 @@ class RAGGenerator(BaseService):
 def _normalize_score(value: Any) -> float | None:
     """Normalise scores to the [0, 1] range when possible."""
 
-    if isinstance(value, (int, float)):
+    if isinstance(value, int | float):
         if -1.0 <= value <= 1.0:
             return (float(value) + 1) / 2
         if 0.0 <= value <= 1.0:

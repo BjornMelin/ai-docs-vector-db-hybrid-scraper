@@ -9,13 +9,20 @@ import logging
 import time
 
 from fastapi.responses import JSONResponse
-from qdrant_client import AsyncQdrantClient
 
 from src.config.loader import Settings
 from src.config.models import MonitoringConfig
-
-from .health import HealthCheckConfig, HealthCheckManager, HealthStatus
-from .metrics import MetricsConfig, MetricsRegistry, initialize_metrics
+from src.services.health.manager import (
+    HealthCheckConfig,
+    HealthCheckManager,
+    HealthStatus,
+    build_health_manager,
+)
+from src.services.monitoring.metrics import (
+    MetricsConfig,
+    MetricsRegistry,
+    initialize_metrics,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -179,43 +186,14 @@ def initialize_monitoring_system(
     # Initialize metrics registry
     metrics_registry = initialize_metrics(metrics_config)
 
-    # Create health check manager
+    # Create health check manager using centralized builder
 
-    health_config = HealthCheckConfig.from_unified_config(config)
-    health_manager = HealthCheckManager(health_config, metrics_registry)
-
-    # Add system resource checks
-    health_manager.add_system_resource_check(
-        cpu_threshold=config.monitoring.cpu_threshold,
-        memory_threshold=config.monitoring.memory_threshold,
-        disk_threshold=config.monitoring.disk_threshold,
-        timeout_seconds=config.monitoring.health_check_timeout,
+    health_manager = build_health_manager(
+        config,
+        metrics_registry=metrics_registry,
+        qdrant_client=qdrant_client,
+        redis_url=redis_url,
     )
-
-    # Add Qdrant health check if configured
-    if health_config.qdrant_url:
-        client = qdrant_client or AsyncQdrantClient(url=health_config.qdrant_url)
-        health_manager.add_qdrant_check(
-            client, timeout_seconds=config.monitoring.health_check_timeout
-        )
-        logger.info("Added Qdrant health check")
-
-    # Add Redis/Dragonfly health check if configured
-    if health_config.redis_url:
-        redis_url = redis_url or health_config.redis_url
-        health_manager.add_redis_check(
-            redis_url, timeout_seconds=config.monitoring.health_check_timeout
-        )
-        logger.info("Added Redis health check")
-
-    # Add external service health checks
-    for service_name, service_url in config.monitoring.external_services.items():
-        health_manager.add_http_check(
-            url=service_url,
-            name=service_name,
-            timeout_seconds=config.monitoring.health_check_timeout,
-        )
-        logger.info("Added external service health check")
 
     # Start metrics server
     if metrics_config.enabled:

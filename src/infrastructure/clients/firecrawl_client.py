@@ -35,23 +35,6 @@ class FirecrawlClientProvider:
             return None
         return self._client
 
-    async def health_check(self) -> bool:
-        """Check Firecrawl client health."""
-
-        try:
-            if not self._client:
-                return False
-
-            # Firecrawl doesn't have a direct health endpoint
-            # We'll assume it's healthy if client exists and has API key
-        except (AttributeError, TypeError, ValueError) as e:
-            logger.warning("Firecrawl health check failed: %s", e)
-            self._healthy = False
-            return False
-
-        self._healthy = True
-        return True
-
     async def scrape_url(
         self, url: str, params: dict[str, Any] | None = None
     ) -> dict[str, Any]:

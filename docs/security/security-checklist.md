@@ -25,7 +25,7 @@ Use this checklist before deploying or promoting a new release.
 
 ## Application Hardening
 
-- [ ] Middleware rate limits configured in `config/rate_limits.yml`.
+- [ ] SlowAPI rate limiting enabled and tuned via `SecurityConfig` (`AI_DOCS__SECURITY__DEFAULT_RATE_LIMIT`, `AI_DOCS__SECURITY__RATE_LIMIT_WINDOW`).
 - [ ] LangGraph `agentic.max_parallel_tools` tuned to prevent exhaustion.
 - [ ] Tool inputs validated (via `ToolExecutionService`) before execution.
 - [ ] FastAPI CORS, CSP, and security headers enabled.

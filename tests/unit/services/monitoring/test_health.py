@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.services.monitoring.health import (
+from src.services.health.manager import (
     HealthCheckConfig,
     HealthCheckManager,
     HealthCheckResult,
@@ -24,6 +24,8 @@ class TestHealthStatus:
         assert HealthStatus.HEALTHY == "healthy"
         assert HealthStatus.UNHEALTHY == "unhealthy"
         assert HealthStatus.DEGRADED == "degraded"
+        assert HealthStatus.UNKNOWN == "unknown"
+        assert HealthStatus.SKIPPED == "skipped"
 
 
 class TestHealthCheckConfig:

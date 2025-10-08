@@ -103,45 +103,6 @@ async def search_documents_get(
     return await search_documents(request, client_manager)
 
 
-@router.get("/search/health")
-async def search_health(
-    client_manager: ClientManagerDependency,
-) -> dict[str, Any]:
-    """Get search service health status."""
-    try:
-        stats = await _get_search_stats(client_manager)
-    except Exception as e:
-        logger.exception("Search health check failed")
-        return {
-            "status": "unhealthy",
-            "error": str(e),
-        }
-
-    return {
-        "status": "healthy",
-        "service_type": "simple",
-        "stats": stats,
-    }
-
-
-async def _get_search_stats(client_manager: ClientManager) -> dict[str, Any]:
-    """Get search service statistics."""
-    vector_service = await _get_vector_store_service(client_manager)
-    collections = await vector_service.list_collections()
-    stats: dict[str, Any] = {"collections": collections}
-    qdrant_config = getattr(vector_service.config, "qdrant", None)
-    primary_collection = getattr(qdrant_config, "collection_name", None) or "documents"
-    if primary_collection in collections:
-        try:
-            stats["primary_collection"] = primary_collection
-            stats["primary_collection_stats"] = await vector_service.collection_stats(
-                primary_collection
-            )
-        except Exception as exc:  # pragma: no cover - defensive logging branch
-            stats["primary_collection_error"] = str(exc)
-    return stats
-
-
 async def _get_vector_store_service(
     client_manager: ClientManager,
 ) -> VectorStoreService:

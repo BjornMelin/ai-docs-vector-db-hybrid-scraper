@@ -47,7 +47,7 @@ class DatabaseManager:
         query_monitor: QueryMonitor | None = None,
         circuit_breaker_manager: CircuitBreakerManager | None = None,
         breaker_service_name: str = "infrastructure.database",
-    ):
+    ):  # pylint: disable=too-many-arguments
         """Initialize enterprise database manager.
 
         Args:

@@ -295,7 +295,7 @@ def _load_thresholds() -> dict[str, float]:
     thresholds: dict[str, float] = {}
     for key in ("similarity_avg", "precision_at_k", "recall_at_k", "max_latency_ms"):
         value = raw.get(key)
-        if isinstance(value, (int, float)):
+        if isinstance(value, int | float):
             thresholds[key] = float(value)
     return thresholds
 
