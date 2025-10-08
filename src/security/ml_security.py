@@ -278,8 +278,8 @@ class MLSecurityValidator:
 
         Returns:
             Security check result
-
         """
+
         try:
             # Try trivy first with full path for security
             trivy_path = shutil.which("trivy")
