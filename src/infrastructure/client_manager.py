@@ -32,9 +32,9 @@ if TYPE_CHECKING:  # pragma: no cover - imported for typing only
     from src.services.cache.manager import CacheManager
     from src.services.content_intelligence.service import ContentIntelligenceService
     from src.services.core.project_storage import ProjectStorage
-    from src.services.embeddings.manager import EmbeddingManager
     from src.services.errors import APIError
     from src.services.managers.crawling_manager import CrawlingManager
+    from src.services.managers.embedding_manager import EmbeddingManager
     from src.services.rag.generator import RAGGenerator
     from src.services.vector_db.service import VectorStoreService
 else:  # pragma: no cover - runtime fallback for optional services
@@ -43,37 +43,8 @@ else:  # pragma: no cover - runtime fallback for optional services
     ) = RAGGenerator = VectorStoreService = APIError = Any
 
 
-# Import dependencies for health checks
-if TYPE_CHECKING:  # pragma: no cover - import only for type checking
-    HealthStatusCallable = Callable[[], Awaitable[dict[str, dict[str, Any]]]]
-    OverallHealthCallable = Callable[[], Awaitable[dict[str, Any]]]
-else:
-    HealthStatusCallable = Callable[[], Awaitable[dict[str, dict[str, Any]]]]
-    OverallHealthCallable = Callable[[], Awaitable[dict[str, Any]]]
-
-_dependencies_module = None
-try:  # pragma: no cover - optional dependency
-    _dependencies_module = import_module("src.services.dependencies")
-except ImportError:
-    _dependencies_module = None
-
-if _dependencies_module is not None:
-    _deps_get_health_status = getattr(_dependencies_module, "get_health_status", None)
-    _deps_get_overall_health = getattr(_dependencies_module, "get_overall_health", None)
-else:
-    _deps_get_health_status = None
-    _deps_get_overall_health = None
-
-deps_get_health_status: HealthStatusCallable | None = (
-    cast(HealthStatusCallable, _deps_get_health_status)
-    if _deps_get_health_status is not None
-    else None
-)
-deps_get_overall_health: OverallHealthCallable | None = (
-    cast(OverallHealthCallable, _deps_get_overall_health)
-    if _deps_get_overall_health is not None
-    else None
-)
+HealthStatusCallable = Callable[[], Awaitable[dict[str, dict[str, Any]]]]
+OverallHealthCallable = Callable[[], Awaitable[dict[str, Any]]]
 
 
 logger = logging.getLogger(__name__)
@@ -116,6 +87,9 @@ async def _ensure_service_registry():  # pragma: no cover - thin wrapper
 
 
 _API_ERROR_TYPE: type[Exception] | None = None
+_HEALTH_FUNCS: (
+    tuple[HealthStatusCallable | None, OverallHealthCallable | None] | None
+) = None
 
 
 def _resolve_api_error_type() -> type[Exception]:
@@ -133,6 +107,41 @@ def _raise_api_error(message: str) -> NoReturn:
 
     error_type = _resolve_api_error_type()
     raise error_type(message)
+
+
+def _resolve_health_dependencies() -> tuple[
+    HealthStatusCallable | None, OverallHealthCallable | None
+]:
+    """Dynamically resolve health dependency functions to avoid import cycles."""
+
+    global _HEALTH_FUNCS  # pylint: disable=global-statement
+    if _HEALTH_FUNCS is not None:
+        return _HEALTH_FUNCS
+
+    try:
+        module = import_module("src.services.dependencies")
+    except ImportError:
+        return (None, None)
+
+    status_func = getattr(module, "get_health_status", None)
+    overall_func = getattr(module, "get_overall_health", None)
+
+    resolved_status = (
+        cast(HealthStatusCallable | None, status_func)
+        if callable(status_func)
+        else None
+    )
+    resolved_overall = (
+        cast(OverallHealthCallable | None, overall_func)
+        if callable(overall_func)
+        else None
+    )
+
+    if resolved_status is None and resolved_overall is None:
+        return (None, None)
+
+    _HEALTH_FUNCS = (resolved_status, resolved_overall)
+    return _HEALTH_FUNCS
 
 
 class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instance-attributes
@@ -491,8 +500,9 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
 
     async def get_health_status(self) -> dict[str, dict[str, Any]]:
         """Get health status using function-based dependencies."""
-        if deps_get_health_status:
-            return await deps_get_health_status()
+        status_callable, _ = _resolve_health_dependencies()
+        if status_callable:
+            return await status_callable()
         logger.warning(
             "Health status monitoring not available - function-based dependency "
             "not found"
@@ -501,8 +511,9 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
 
     async def get_overall_health(self) -> dict[str, Any]:
         """Get overall health using function-based dependencies."""
-        if deps_get_overall_health:
-            return await deps_get_overall_health()
+        _, overall_callable = _resolve_health_dependencies()
+        if overall_callable:
+            return await overall_callable()
         return {
             "overall_healthy": False,
             "error": "Health monitoring not available",

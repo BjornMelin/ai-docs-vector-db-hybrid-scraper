@@ -1,12 +1,6 @@
-"""Application mode definitions and configurations.
-
-This module defines the core dual-mode architecture that resolves the Enterprise Paradox
-by providing distinct simple and enterprise modes with different feature sets and
-complexity levels.
-"""
+"""Application mode definitions and configurations."""
 
 from enum import Enum
-from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
@@ -137,30 +131,19 @@ ENTERPRISE_MODE_CONFIG = ModeConfig(
 )
 
 
-def _resolve_settings(config: "Settings | None" = None) -> Any:
-    """Return the active settings object, defaulting to the shared provider."""
+def _get_global_settings() -> "Settings":
+    """Return the cached settings instance without creating import cycles."""
+    # pylint: disable=import-outside-toplevel
+    from src.config.loader import get_settings as _get_settings
 
-    if config is not None:
-        return config
-
-    try:
-        from src.config import get_settings  # Local import to avoid circular dependency
-    except ImportError:
-        return SimpleNamespace(mode=ApplicationMode.SIMPLE)
-
-    try:
-        return get_settings()
-    except Exception:  # pragma: no cover - configuration not yet initialized
-        # During module import the global configuration provider may still be wiring
-        # dependencies. Default to simple mode to avoid circular imports.
-        return SimpleNamespace(mode=ApplicationMode.SIMPLE)
+    return _get_settings()
 
 
 def resolve_mode(config: "Settings | None" = None) -> ApplicationMode:
     """Resolve the current application mode from configuration settings."""
 
-    settings = _resolve_settings(config)
-    return getattr(settings, "mode", ApplicationMode.SIMPLE)
+    active_settings = config or _get_global_settings()
+    return active_settings.mode
 
 
 def get_mode_config(
@@ -179,9 +162,9 @@ def get_mode_config(
     if mode is None:
         mode = resolve_mode(config)
 
-    if mode == ApplicationMode.SIMPLE:
+    if mode is ApplicationMode.SIMPLE:
         return SIMPLE_MODE_CONFIG
-    if mode == ApplicationMode.ENTERPRISE:
+    if mode is ApplicationMode.ENTERPRISE:
         return ENTERPRISE_MODE_CONFIG
 
     msg = f"Unknown application mode: {mode}"

@@ -31,6 +31,7 @@ except ModuleNotFoundError:  # pragma: no cover
 
 logger = logging.getLogger(__name__)
 F = TypeVar("F", bound=Callable[..., Any])
+_LEGACY_ARGS_NOTICE_EMITTED = False
 
 
 def _build_breaker_kwargs(
@@ -80,13 +81,14 @@ def circuit_breaker(  # pylint: disable=too-many-arguments
 ) -> Callable[[F], F]:
     """Wrap an async function with the shared purgatory circuit breaker."""
 
-    _ = (
-        half_open_max_calls,
-        expected_exceptions,
-        expected_exception,
-        enable_adaptive_timeout,
-        enable_metrics,
-    )
+    if _legacy_params_supplied(
+        half_open_max_calls=half_open_max_calls,
+        expected_exceptions=expected_exceptions,
+        expected_exception=expected_exception,
+        enable_adaptive_timeout=enable_adaptive_timeout,
+        enable_metrics=enable_metrics,
+    ):
+        _emit_legacy_args_notice()
 
     breaker_kwargs = _build_breaker_kwargs(failure_threshold, recovery_timeout)
 
@@ -186,6 +188,41 @@ async def _get_circuit_breaker_manager():
     )
 
     return await get_circuit_breaker_manager()
+
+
+def _legacy_params_supplied(
+    *,
+    half_open_max_calls: int,
+    expected_exceptions: tuple[type[Exception], ...] | None,
+    expected_exception: type[Exception] | None,
+    enable_adaptive_timeout: bool,
+    enable_metrics: bool,
+) -> bool:
+    """Return True when ignored legacy parameters were provided."""
+
+    return any(
+        (
+            half_open_max_calls != 3,
+            expected_exceptions is not None,
+            expected_exception is not None,
+            not enable_adaptive_timeout,
+            not enable_metrics,
+        )
+    )
+
+
+def _emit_legacy_args_notice() -> None:
+    """Log once when callers rely on ignored legacy parameters."""
+
+    global _LEGACY_ARGS_NOTICE_EMITTED  # pylint: disable=global-statement
+    if _LEGACY_ARGS_NOTICE_EMITTED:
+        return
+    logger.warning(
+        "Legacy circuit_breaker parameters (half_open_max_calls, expected_exceptions, "
+        "expected_exception, enable_adaptive_timeout, enable_metrics) are ignored. "
+        "Please update call sites to the new configuration semantics."
+    )
+    _LEGACY_ARGS_NOTICE_EMITTED = True
 
 
 __all__ = [

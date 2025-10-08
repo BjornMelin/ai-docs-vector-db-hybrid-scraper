@@ -220,9 +220,8 @@ def safe_response(success: bool, **kwargs) -> dict[str, Any]:
         response.update(kwargs)
     else:
         # Sanitize error messages
-        error = kwargs.get("error", "Unknown error")
-        if isinstance(error, Exception):
-            error = str(error)
+        raw_error = kwargs.get("error", "Unknown error")
+        error = str(raw_error)
 
         # Don't expose internal paths or sensitive info
         error = error.replace("/home/", "/****/")

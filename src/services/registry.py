@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import logging
 from dataclasses import dataclass
 from pathlib import Path
@@ -169,7 +170,9 @@ class ServiceRegistry:  # pylint: disable=too-many-instance-attributes
         """Invoke cleanup callable and handle errors without aborting shutdown."""
 
         try:
-            await cleanup_callable()
+            result = cleanup_callable()
+            if inspect.isawaitable(result):
+                await result
         except Exception:  # pragma: no cover - defensive
             logger.exception("Failed to cleanup %s", component_name)
 

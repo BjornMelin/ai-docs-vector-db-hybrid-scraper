@@ -20,7 +20,13 @@ from src.services.circuit_breaker.decorators import (
 )
 from src.services.circuit_breaker.provider import get_circuit_breaker_manager
 from src.services.embeddings.manager import QualityTier
-from src.services.errors import CrawlServiceError, EmbeddingServiceError
+from src.services.errors import (
+    CrawlServiceError,
+    EmbeddingServiceError,
+    ExternalServiceError,
+    NetworkError,
+    RateLimitError,
+)
 from src.services.rag.models import RAGRequest as InternalRAGRequest
 from src.services.registry import (
     ensure_service_registry,
@@ -158,6 +164,13 @@ async def generate_embeddings(
         )
 
         return EmbeddingResponse(**result)
+    except (
+        ExternalServiceError,
+        NetworkError,
+        RateLimitError,
+        EmbeddingServiceError,
+    ):
+        raise
     except Exception as e:
         logger.exception("Embedding generation failed")
         msg = f"Failed to generate embeddings: {e}"
@@ -315,6 +328,13 @@ async def scrape_url(
         result = await crawl_manager.scrape_url(
             url=request.url, preferred_provider=request.preferred_provider
         )
+    except (
+        ExternalServiceError,
+        NetworkError,
+        RateLimitError,
+        CrawlServiceError,
+    ):
+        raise
     except Exception as e:
         logger.exception("URL scraping failed for %s", request.url)
         msg = f"Failed to scrape URL: {e}"
