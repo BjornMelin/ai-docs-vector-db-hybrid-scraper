@@ -8,7 +8,7 @@ import httpx
 import pytest
 import respx
 
-from src.config import Settings
+from src.config.loader import Settings
 from src.config.models import Environment
 from src.services.browser.lightweight_scraper import LightweightScraper
 

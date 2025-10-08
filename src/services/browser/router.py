@@ -39,7 +39,7 @@ except ModuleNotFoundError as exc:  # pragma: no cover - import guard
         "Install with `pip install pydantic`."
     ) from exc
 
-from ...config import Config
+from ...config.loader import Settings
 from ...config.models import AutomationRouterConfig
 from ..errors import CrawlServiceError
 from .browser_use_adapter import BrowserUseAdapter
@@ -111,26 +111,26 @@ class AutomationRouter:
     The router enforces a global deadline per request and per-tier rate limits.
     """
 
-    def __init__(self, config: Config) -> None:
+    def __init__(self, settings: Settings) -> None:
         """Initialize the router and providers."""
 
-        self._config = config
-
         # Providers
-        self._t0 = LightweightScraper(config)
-        self._t1 = Crawl4AIAdapter(config.crawl4ai)
-        self._t2 = PlaywrightAdapter(config.playwright)
-        self._t3 = BrowserUseAdapter(config.browser_use)
+        self._t0 = LightweightScraper(settings)
+        self._t1 = Crawl4AIAdapter(settings.crawl4ai)
+        self._t2 = PlaywrightAdapter(settings.playwright)
+        self._t3 = BrowserUseAdapter(settings.browser_use)
         self._t4 = FirecrawlAdapter(
             FirecrawlAdapterConfig(
-                api_key=getattr(getattr(config, "firecrawl", object()), "api_key", ""),
+                api_key=getattr(
+                    getattr(settings, "firecrawl", object()), "api_key", ""
+                ),
                 api_url=getattr(
-                    getattr(config, "firecrawl", object()), "api_url", None
+                    getattr(settings, "firecrawl", object()), "api_url", None
                 ),
             )
         )
 
-        router_cfg = getattr(config, "automation_router", AutomationRouterConfig())
+        router_cfg = getattr(settings, "automation_router", AutomationRouterConfig())
         if not isinstance(router_cfg, AutomationRouterConfig):
             router_cfg = AutomationRouterConfig()
         self._router_config = router_cfg

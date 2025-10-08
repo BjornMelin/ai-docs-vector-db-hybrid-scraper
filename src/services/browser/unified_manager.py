@@ -36,7 +36,7 @@ class UnifiedBrowserManager(BaseService):
     """Single orchestration manager for scraping and crawling."""
 
     def __init__(self, config: Settings) -> None:
-        super().__init__()
+        super().__init__(config)
         self._config = config
         self._router = AutomationRouter(config)
         self._fc = FirecrawlAdapter(

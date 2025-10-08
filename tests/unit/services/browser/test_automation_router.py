@@ -7,7 +7,8 @@ from typing import Any
 import pytest
 
 import src.services.browser.router as router_module
-from src.config import Environment, Settings
+from src.config.loader import Settings
+from src.config.models import Environment
 from src.services.browser.router import AutomationRouter, ScrapeRequest
 from src.services.errors import CrawlServiceError
 

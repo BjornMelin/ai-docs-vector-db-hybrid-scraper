@@ -6,7 +6,8 @@ from typing import Any
 
 import pytest
 
-from src.config import Environment, Settings
+from src.config.loader import Settings
+from src.config.models import Environment
 from src.services.browser.unified_manager import (
     UnifiedBrowserManager,
     UnifiedScrapingRequest,
