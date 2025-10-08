@@ -95,6 +95,10 @@ advancing AI-powered documentation processing through:
 ### Configuration Changes
 [Detailed configuration diff and explanation]
 
+> **Guardrail:** The lint job runs `python scripts/guards/check_settings_usage.py`
+> to ensure legacy `get_config`/`set_config` helpers never reappear. Run this
+> locally before opening a pull request whenever you touch configuration code.
+
 ### Reproducibility
 All tests reproducible with: `uv run python scripts/benchmark_optimization.py --config results/config_v1.2.json`
 ```

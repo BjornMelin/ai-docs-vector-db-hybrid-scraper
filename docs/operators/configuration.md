@@ -15,7 +15,8 @@ export AI_DOCS__QDRANT__COLLECTION_NAME="documents"
 
 # Environment
 export AI_DOCS__ENVIRONMENT=production
-export AI_DOCS_CONFIG_PATH="config/production.json"
+# Optional: point CLI helpers at a baseline file
+uv run python -m src.cli.main config load config/production.json --validate-only
 ```
 
 ### Production Settings
@@ -105,6 +106,21 @@ services:
     "batch_size": 50
   }
 }
+```
+
+### CLI helpers
+
+Use the bundled CLI to inspect or export settings without editing JSON by hand:
+
+```bash
+# Show the active configuration in a table
+uv run python -m src.cli.main config show --format table
+
+# Export the current in-memory settings to YAML (requires PyYAML)
+uv run python -m src.cli.main config export --format yaml -o exports/production.yaml
+
+# Validate a file without loading it
+uv run python -m src.cli.main config load config/production.json --validate-only
 ```
 
 ## Security Configuration
