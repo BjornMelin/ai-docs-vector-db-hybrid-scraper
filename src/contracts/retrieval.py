@@ -128,7 +128,7 @@ class SearchRecord(BaseModel):
         )
 
         def _coerce_float(value: Any) -> float | None:
-            if isinstance(value, int | float):
+            if isinstance(value, (int, float)):
                 return float(value)
             return None
 
