@@ -154,25 +154,6 @@ docker system prune -f
 docker-compose up -d
 ```
 
-## Task Queue Operations
-
-### Queue Monitoring
-```bash
-# Check queue status
-redis-cli -n 1 ping
-redis-cli -n 1 llen arq:queue:default
-
-# View failed jobs
-redis-cli -n 1 zrange arq:dead 0 -1 withscores
-
-# Monitor processing
-redis-cli -n 1 monitor | grep -E "(enqueue|dequeue)"
-
-# Worker management
-docker-compose --profile worker up -d task-worker
-docker-compose logs -f task-worker
-```
-
 ## Performance Management
 
 ### Resource Monitoring

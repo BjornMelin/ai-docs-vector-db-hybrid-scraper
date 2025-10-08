@@ -103,7 +103,6 @@ autodoc_mock_imports = [
     "tree_sitter_python",
     "tree_sitter_javascript",
     "tree_sitter_typescript",
-    "arq",
     "uvicorn",
     "prometheus_client",
     "prometheus_fastapi_instrumentator",
