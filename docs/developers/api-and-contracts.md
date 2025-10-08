@@ -88,7 +88,7 @@ Fields:
   - `collection`
   - `raw_score` (unnormalised), `normalized_score`
   - `group_id`, `group_rank`, `grouping_applied`
-  - `metadata` (provider-specific payload)
+  - `metadata` (provider-specific annotations, replaces legacy vector payloads)
 - `total_results`: number of returned records
 - `query`: processed query text
 - `expanded_query`: optional expanded variant

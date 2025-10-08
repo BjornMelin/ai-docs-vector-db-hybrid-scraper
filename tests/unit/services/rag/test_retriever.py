@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -11,6 +10,7 @@ from langchain_core.callbacks.manager import AsyncCallbackManagerForRetrieverRun
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 
+from src.contracts.retrieval import SearchRecord
 from src.services.rag import RAGConfig, VectorServiceRetriever
 
 
@@ -45,10 +45,12 @@ async def test_aget_relevant_documents_initializes_service() -> None:
 async def test_aget_relevant_documents_returns_documents() -> None:
     """Documents returned by the vector store should be normalized."""
 
-    match = SimpleNamespace(
+    match = SearchRecord(
         id="doc-1",
         score=0.87,
-        payload={"content": "lorem", "title": "Note"},
+        content="lorem",
+        title="Note",
+        metadata={"content": "lorem", "title": "Note"},
     )
 
     vector_store = _make_vector_store_mock()
@@ -109,15 +111,19 @@ async def test_compression_pipeline_filters_documents(monkeypatch) -> None:
         "src.services.rag.retriever.FastEmbedEmbeddings", _StubEmbeddings
     )
 
-    match_keep = SimpleNamespace(
+    match_keep = SearchRecord(
         id="doc-keep",
         score=0.9,
-        payload={"content": "please keep this", "title": "Keep"},
+        content="please keep this",
+        title="Keep",
+        metadata={"content": "please keep this", "title": "Keep"},
     )
-    match_drop = SimpleNamespace(
+    match_drop = SearchRecord(
         id="doc-drop",
         score=0.6,
-        payload={"content": "discard me", "title": "Drop"},
+        content="discard me",
+        title="Drop",
+        metadata={"content": "discard me", "title": "Drop"},
     )
 
     vector_store = _make_vector_store_mock()

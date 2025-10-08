@@ -61,3 +61,23 @@ def test_from_vector_match_prefers_normalized_score() -> None:
     assert record.score == 0.75
     assert record.normalized_score == 0.75
     assert record.raw_score == 0.2
+
+
+def test_from_vector_match_coerces_numeric_types() -> None:
+    """Integer-like values should coerce to floats for scoring fields."""
+
+    match = VectorMatch(
+        id="num",
+        score=1,
+        raw_score=None,
+        normalized_score=None,
+        payload={"quality_overall": 1, "content_confidence": 0},
+        collection=None,
+    )
+
+    record = SearchRecord.from_vector_match(match, collection_name="fallback")
+
+    assert isinstance(record.score, float) and record.score == 1.0
+    assert isinstance(record.raw_score, float) and record.raw_score == 1.0
+    assert record.quality_overall == 1.0
+    assert record.content_confidence == 0.0

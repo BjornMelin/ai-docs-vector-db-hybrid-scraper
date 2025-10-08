@@ -5,7 +5,7 @@ Simplified search endpoints optimized for solo developers.
 
 import logging
 from time import perf_counter
-from typing import Annotated, Any, cast
+from typing import Annotated, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field

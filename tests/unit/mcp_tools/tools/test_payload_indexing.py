@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 
+from src.contracts.retrieval import SearchRecord
 from src.mcp_tools.tools.payload_indexing import register_tools
-from src.services.vector_db.types import VectorMatch
 
 
 @pytest.fixture(autouse=True)
@@ -65,11 +65,17 @@ def mock_vector_service():
     service.collection_stats = AsyncMock(return_value={"points_count": 5000})
     service.search_documents = AsyncMock(
         return_value=[
-            VectorMatch(
-                id="doc1", score=0.9, payload={"content": "Result 1"}, vector=None
+            SearchRecord(
+                id="doc1",
+                score=0.9,
+                content="Result 1",
+                metadata={"content": "Result 1"},
             ),
-            VectorMatch(
-                id="doc2", score=0.8, payload={"content": "Result 2"}, vector=None
+            SearchRecord(
+                id="doc2",
+                score=0.8,
+                content="Result 2",
+                metadata={"content": "Result 2"},
             ),
         ]
     )
@@ -243,3 +249,5 @@ async def test_benchmark_filtered_search(mock_client_manager, mock_context):
         "word_count",
         "crawl_timestamp",
     ]
+    assert response.results[0]["metadata"] == {"content": "Result 1"}
+    assert "payload" not in response.results[0]

@@ -177,7 +177,7 @@ class DatabaseManager:
                 {
                     "id": match.id,
                     "score": match.score,
-                    "payload": dict(match.payload or {}),
+                    "metadata": dict(match.metadata or {}),
                 }
                 for match in matches
             ]
