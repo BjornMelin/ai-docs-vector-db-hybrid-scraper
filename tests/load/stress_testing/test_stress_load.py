@@ -9,6 +9,8 @@ import logging
 import os
 import random
 import time
+from contextlib import suppress
+from typing import Any
 
 import psutil
 import pytest
@@ -54,48 +56,79 @@ class TestStressLoad:
         )
 
         # Track metrics at each step
-        step_metrics = []
-        breaking_point = None
+        step_metrics: list[dict[str, float]] = []
+        breaking_point: int | None = None
+        last_recorded_users = -1
 
-        @env.events.stats_reset.add_listener
-        def on_stats_reset(**__kwargs):
-            """Capture metrics at each step."""
-            nonlocal breaking_point
+        def record_step_metrics(
+            _request_type: str,
+            _name: str,
+            _response_time: float,
+            _response_length: int,
+            _response: Any,
+            _context: dict[str, Any],
+            _exception: Exception | None,
+            *_args: Any,
+            **_kwargs: Any,
+        ) -> None:
+            nonlocal breaking_point, last_recorded_users
 
-            stats = env.stats
-            _total_requests = stats.total._total_num_requests
-            _total_failures = stats.total._total_num_failures
+            stats_total = env.stats.total
+            total_requests = stats_total.num_requests
+            if total_requests == 0:
+                return
 
-            if _total_requests > 0:
-                error_rate = (_total_failures / _total_requests) * 100
-                avg_response_time = stats.total.avg_response_time
+            total_failures = stats_total.num_failures
+            error_rate = (total_failures / total_requests) * 100
+            avg_response_time = stats_total.avg_response_time
+            current_users = env.runner.user_count if env.runner else 0
 
-                current_users = env.runner.user_count if env.runner else 0
-
+            if current_users != last_recorded_users and current_users > 0:
                 step_metrics.append(
                     {
                         "users": current_users,
                         "error_rate": error_rate,
                         "avg_response_time": avg_response_time,
-                        "throughput": stats.total.current_rps,
+                        "throughput": stats_total.current_rps,
                     }
                 )
+                last_recorded_users = current_users
 
-                # Check if we've hit breaking point
-                if error_rate > 10.0 or (
-                    avg_response_time > 3000 and breaking_point is None
-                ):
-                    breaking_point = current_users
-                    logger.warning(
-                        "Breaking point detected at %s users", current_users
-                    )
+            if (
+                breaking_point is None
+                and current_users > 0
+                and (error_rate > 10.0 or avg_response_time > 3000)
+            ):
+                breaking_point = current_users
+                logger.warning("Breaking point detected at %s users", current_users)
+
+        env.events.request.add_listener(record_step_metrics)
 
         # Run stress test
-        load_test_runner.run_load_test(
-            config=config,
-            target_function=self._high_load_operation,
-            environment=env,
-        )
+        try:
+            load_test_runner.run_load_test(
+                config=config,
+                target_function=self._high_load_operation,
+                environment=env,
+            )
+        finally:
+            with suppress(ValueError):
+                env.events.request.remove_listener(record_step_metrics)
+
+        if not step_metrics and env.stats.total.num_requests > 0:
+            stats_total = env.stats.total
+            step_metrics.append(
+                {
+                    "users": env.runner.user_count if env.runner else 0,
+                    "error_rate": (
+                        (stats_total.num_failures / stats_total.num_requests) * 100
+                        if stats_total.num_requests
+                        else 0.0
+                    ),
+                    "avg_response_time": stats_total.avg_response_time,
+                    "throughput": stats_total.current_rps,
+                }
+            )
 
         # Analyze results
         assert breaking_point is not None, "Failed to find breaking point"
@@ -187,12 +220,11 @@ class TestStressLoad:
                 if not self.service_health[service]:
                     msg = f"{service} service unavailable"
                     raise TestError(msg)
-                    msg = f"{service} service unavailable"
-                    raise TestError(msg)
 
+                self.failure_counts[service] += 1
                 # Simulate load-based failure probability
-                failure_chance = self.failure_counts[service] / 1000
-                if asyncio.create_task(asyncio.sleep(0)) and failure_chance > 0.5:
+                failure_chance = min(self.failure_counts[service] / 1000, 1.0)
+                if random.random() < failure_chance:
                     self.service_health[service] = False
                     msg = f"{service} service degraded"
                     raise TestError(msg)
@@ -206,23 +238,27 @@ class TestStressLoad:
         async def test_with_dependencies(**__kwargs):
             """Test operation with service dependencies."""
             try:
-                # Call multiple services
                 await services.call_service("cache")
-            except (TimeoutError, ConnectionError, RuntimeError, MemoryError) as e:
-                # Check if failure is cascading
-                logger.warning(
-                    "Service failure: %s", e
-                )
-            else:
                 await services.call_service("embedding")
                 await services.call_service("vector_db")
-                return {"status": "success"}
-                failed_services = sum(
-                    1 for h in services.service_health.values() if not h
-                )
-                if failed_services > 1:
-                    msg = f"Cascading failure: {failed_services} services down"
-                    raise TestError(msg) from None
+            except (
+                TimeoutError,
+                ConnectionError,
+                RuntimeError,
+                MemoryError,
+                TestError,
+            ) as exc:
+                logger.warning("Service failure: %s", exc)
+                return {"status": "error", "reason": str(exc)}
+
+            failed_services = sum(
+                1 for healthy in services.service_health.values() if not healthy
+            )
+            if failed_services > 1:
+                msg = f"Cascading failure: {failed_services} services down"
+                raise TestError(msg) from None
+
+            return {"status": "success"}
 
         # Run stress test
         config = LoadTestConfig(

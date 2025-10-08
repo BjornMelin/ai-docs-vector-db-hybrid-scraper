@@ -10,11 +10,15 @@ import logging
 import os
 import random
 import time
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, ClassVar
 
 from locust import HttpUser, TaskSet, between, events, task
 from locust.env import Environment
 from locust.log import setup_logging
+
+from tests.load.performance_utils import grade_from_score
 
 
 logger = logging.getLogger(__name__)
@@ -22,6 +26,10 @@ logger = logging.getLogger(__name__)
 
 class VectorDBSearchBehavior(TaskSet):
     """Search-focused user behavior scenarios."""
+
+    search_queries: list[str]
+    collections: list[str]
+    search_filters: list[dict[str, Any]]
 
     def on_start(self):
         """Initialize search behavior."""
@@ -142,7 +150,7 @@ class VectorDBSearchBehavior(TaskSet):
     def _track_search_quality(self, data: dict[str, Any]):
         """Track search quality metrics."""
         # Store metrics for later analysis
-        if hasattr(self.user, "search_metrics"):
+        if isinstance(self.user, VectorDBUser):
             results = data.get("results", [])
             if results:
                 avg_score = sum(r.get("score", 0) for r in results) / len(results)
@@ -158,6 +166,9 @@ class VectorDBSearchBehavior(TaskSet):
 
 class VectorDBDocumentBehavior(TaskSet):
     """Document management user behavior scenarios."""
+
+    test_urls: list[str]
+    projects: list[str]
 
     def on_start(self):
         """Initialize document behavior."""
@@ -263,6 +274,10 @@ class VectorDBDocumentBehavior(TaskSet):
 class VectorDBEmbeddingBehavior(TaskSet):
     """Embedding generation user behavior scenarios."""
 
+    test_texts: list[str]
+    providers: list[str]
+    models: dict[str, list[str]]
+
     def on_start(self):
         """Initialize embedding behavior."""
         self.test_texts = [
@@ -343,7 +358,7 @@ class VectorDBEmbeddingBehavior(TaskSet):
 
     def _track_embedding_metrics(self, data: dict[str, Any]):
         """Track embedding generation metrics."""
-        if hasattr(self.user, "embedding_metrics"):
+        if isinstance(self.user, VectorDBUser):
             embeddings = data.get("embeddings", [])
             if embeddings:
                 self.user.embedding_metrics.append(
@@ -359,12 +374,20 @@ class VectorDBEmbeddingBehavior(TaskSet):
 class VectorDBUser(HttpUser):
     """Simulated user for vector database load testing."""
 
-    tasks: ClassVar[dict[type, int]] = {
-        VectorDBSearchBehavior: 60,  # 60% search operations
-        VectorDBDocumentBehavior: 25,  # 25% document operations
-        VectorDBEmbeddingBehavior: 15,  # 15% embedding operations
-    }
+    search_metrics: list[dict[str, Any]]
+    embedding_metrics: list[dict[str, Any]]
+    start_time: float
+
+    _WEIGHTED_TASKS: ClassVar[tuple[type[TaskSet], ...]] = tuple(
+        [VectorDBSearchBehavior] * 60
+        + [VectorDBDocumentBehavior] * 25
+        + [VectorDBEmbeddingBehavior] * 15
+    )
     wait_time = between(1, 5)  # Wait 1-5 seconds between tasks
+
+    def __init__(self, environment: Environment, **kwargs: Any):
+        super().__init__(environment, **kwargs)
+        self.tasks = list(self._WEIGHTED_TASKS)
 
     def on_start(self):
         """Initialize user session."""
@@ -455,6 +478,17 @@ class AdminUser(HttpUser):
                 response.failure("{operation} failed")
 
 
+@dataclass(slots=True)
+class RequestMetric:
+    """Structured representation of a single request metric."""
+
+    request_type: str
+    name: str
+    response_time: float
+    content_length: int
+    exception: Exception | None = None
+
+
 class LoadTestMetricsCollector:
     """Enhanced metrics collector for load testing."""
 
@@ -481,24 +515,17 @@ class LoadTestMetricsCollector:
         self.test_end_time = time.time()
         logger.info("Load test metrics collection stopped")
 
-    def add_request_metric(
-        self,
-        request_type: str,
-        name: str,
-        response_time: float,
-        content_length: int,
-        exception: Exception | None,
-    ):
+    def add_request_metric(self, metric: RequestMetric) -> None:
         """Add request metric."""
         self.request_metrics.append(
             {
                 "timestamp": time.time(),
-                "request_type": request_type,
-                "name": name,
-                "response_time": response_time,
-                "content_length": content_length,
-                "success": exception is None,
-                "error": str(exception) if exception else None,
+                "request_type": metric.request_type,
+                "name": metric.name,
+                "response_time": metric.response_time,
+                "content_length": metric.content_length,
+                "success": metric.exception is None,
+                "error": str(metric.exception) if metric.exception else None,
             }
         )
 
@@ -572,16 +599,7 @@ class LoadTestMetricsCollector:
         # Deduct for errors
         score -= error_rate * 10
 
-        # Convert to grade
-        if score >= 90:
-            return "A"
-        if score >= 80:
-            return "B"
-        if score >= 70:
-            return "C"
-        if score >= 60:
-            return "D"
-        return "F"
+        return grade_from_score(score)
 
     def _check_thresholds(self) -> list[str]:
         """Check performance threshold violations."""
@@ -662,9 +680,14 @@ def on_request(
     **__kwargs,
 ):
     """Handle request completion event."""
-    metrics_collector.add_request_metric(
-        request_type, name, response_time, response_length, exception
+    metric = RequestMetric(
+        request_type=request_type,
+        name=name,
+        response_time=response_time,
+        content_length=response_length,
+        exception=exception,
     )
+    metrics_collector.add_request_metric(metric)
 
 
 def save_load_test_report(summary: dict[str, Any], environment: Environment):
@@ -693,11 +716,9 @@ def save_load_test_report(summary: dict[str, Any], environment: Environment):
     }
 
     try:
-        with report_file.open("w") as f:
+        with Path(report_file).open("w", encoding="utf-8") as f:
             json.dump(full_report, f, indent=2)
-        logger.info(
-            "Load test report saved to %s", report_file
-        )
+        logger.info("Load test report saved to %s", report_file)
     except Exception:
         logger.exception("Failed to save load test report")
 

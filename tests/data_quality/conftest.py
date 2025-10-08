@@ -189,7 +189,7 @@ def data_quality_validator():
                     value = record[rule.field_name]
 
                     # Type validation
-                    if "expected_type" in rule.reference_data:
+                    if rule.reference_data and "expected_type" in rule.reference_data:
                         expected_type = rule.reference_data["expected_type"]
                         if not isinstance(value, expected_type):
                             failed_records += 1
@@ -213,8 +213,11 @@ def data_quality_validator():
 
                     # Range validation
                     if (
-                        "min_value" in rule.reference_data
-                        or "max_value" in rule.reference_data
+                        rule.reference_data
+                        and (
+                            "min_value" in rule.reference_data
+                            or "max_value" in rule.reference_data
+                        )
                     ) and isinstance(value, int | float):
                         min_val = rule.reference_data.get("min_value")
                         max_val = rule.reference_data.get("max_value")
@@ -428,7 +431,8 @@ def data_quality_validator():
                 field_profile["data_types"] = {t: types.count(t) for t in set(types)}
                 field_profile["dominant_type"] = (
                     max(
-                        field_profile["data_types"], key=field_profile["data_types"].get
+                        field_profile["data_types"],
+                        key=lambda k, fp=field_profile: fp["data_types"][k],
                     )
                     if types
                     else None
