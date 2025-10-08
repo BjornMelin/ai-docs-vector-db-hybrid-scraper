@@ -109,17 +109,13 @@ def register_tools(mcp, client_manager: ClientManager):  # pylint: disable=too-m
             vector_service = await client_manager.get_vector_store_service()
             cache_manager = await client_manager.get_cache_manager()
 
-            delete_alias = getattr(vector_service, "delete_collection", None)
             drop_method = getattr(vector_service, "drop_collection", None)
-            if callable(delete_alias):
-                delete_callable = cast(Callable[[str], Awaitable[None]], delete_alias)
-                await delete_callable(collection_name)
-            elif callable(drop_method):
-                drop_callable = cast(Callable[[str], Awaitable[None]], drop_method)
-                await drop_callable(collection_name)
-            else:  # pragma: no cover - defensive compatibility guard
+            if not callable(drop_method):  # pragma: no cover - defensive guard
                 msg = "Vector service does not expose a collection deletion method"
                 raise AttributeError(msg)
+
+            drop_callable = cast(Callable[[str], Awaitable[None]], drop_method)
+            await drop_callable(collection_name)
             if ctx:
                 await ctx.debug(f"Collection {collection_name} deleted from Qdrant")
 

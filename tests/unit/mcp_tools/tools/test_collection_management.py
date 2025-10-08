@@ -34,7 +34,6 @@ class TestCollectionsTools:
 
         mock_vector.collection_stats.side_effect = mock_stats
         mock_vector.drop_collection = AsyncMock()
-        mock_vector.delete_collection = AsyncMock()
 
         # Mock cache manager
         mock_cache = AsyncMock()
@@ -178,7 +177,6 @@ class TestCollectionsTools:
         """Ensure an explicit error surfaces when delete/drop are unavailable."""
 
         mock_vector = await mock_client_manager.get_vector_store_service()
-        mock_vector.delete_collection = None
         mock_vector.drop_collection = None
 
         mock_mcp = MagicMock()
