@@ -344,7 +344,7 @@ class QualityAssessor:
 
             # Check for extraction quality indicators
             quality_score = extraction_metadata.get("quality_score", 0.5)
-            if isinstance(quality_score, (int, float)):
+            if isinstance(quality_score, int | float):
                 base_confidence = (base_confidence + quality_score) / 2
 
             # Check for tier/method used

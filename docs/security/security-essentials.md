@@ -105,29 +105,37 @@ openssl s_client -connect localhost:8443 -servername localhost
 
 ## Rate Limiting
 
-### Redis Setup for Rate Limiting
+### Configure SlowAPI Limits
 
 ```bash
-# Start Redis for rate limiting
-docker run -d --name redis-rate-limit -p 6379:6379 redis:alpine
+# Enable SlowAPI rate limiting
+export SECURITY_ENABLE_RATE_LIMITING=true
+export SECURITY_DEFAULT_RATE_LIMIT=100      # requests per window
+export SECURITY_RATE_LIMIT_WINDOW=60        # window length in seconds
 
-# Test Redis connection
-redis-cli ping
-
-# Verify rate limiting works
-curl -X POST localhost:8000/api/test -H "Content-Type: application/json" -d '{}' | jq .rate_limit
+# Optional: use Redis for distributed counters
+export SECURITY_REDIS_URL=redis://localhost:6379
+export SECURITY_REDIS_PASSWORD=changeme      # omit if Redis has no auth
 ```
 
-### Rate Limit Configuration
+### Verify Enforcement
 
 ```bash
-# Configure rate limits
-export RATE_LIMIT_REQUESTS=100
-export RATE_LIMIT_WINDOW=3600
+# Warm up the API (ensure uvicorn is running separately)
+for i in {1..110}; do
+  curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8000/api/v1/health
+done | sort | uniq -c
 
-# Test rate limit enforcement
-for i in {1..105}; do curl -s localhost:8000/api/test; done
+# Expected output includes HTTP 429 counts once the limit is exceeded
 ```
+
+## MLSecurityValidator Configuration
+
+- `AI_DOCS__SECURITY__ENABLE_ML_INPUT_VALIDATION` — toggle payload validation in `MLSecurityValidator`.
+- `AI_DOCS__SECURITY__MAX_ML_INPUT_SIZE` — cap request size before rejection.
+- `AI_DOCS__SECURITY__ALLOWED_DOMAINS` / `AI_DOCS__SECURITY__BLOCKED_DOMAINS` — restrict outbound URLs.
+- `AI_DOCS__SECURITY__SUSPICIOUS_PATTERNS` — extend the default pattern deny-list.
+- `AI_DOCS__SECURITY__ENABLE_DEPENDENCY_SCANNING` — disable `pip-audit` integration if CI already covers it.
 
 ## Security Validation
 

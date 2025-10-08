@@ -53,7 +53,7 @@ class LightweightScraper:
         browser_config = getattr(config, "browser_use", None)
         default_timeout = getattr(browser_config, "timeout", 15000)
         timeout_seconds = (
-            default_timeout / 1000 if isinstance(default_timeout, (int, float)) else 15
+            default_timeout / 1000 if isinstance(default_timeout, int | float) else 15
         )
         self._timeout = max(timeout_seconds, 1)
         self._max_retries = getattr(browser_config, "max_retries", 3)

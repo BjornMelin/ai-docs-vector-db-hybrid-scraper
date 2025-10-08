@@ -370,7 +370,7 @@ class FirecrawlAdapter:
         elif isinstance(value, str):
             result = [value]
         elif isinstance(value, Sequence) and not isinstance(
-            value, (str, bytes, bytearray)
+            value, str | bytes | bytearray
         ):
             result = [str(item) for item in value]
         else:
@@ -395,7 +395,7 @@ class FirecrawlAdapter:
 
         payload = cls._ensure_dict(data)
         nested = payload.get("data")
-        if isinstance(nested, (BaseModel, Mapping)):
+        if isinstance(nested, BaseModel | Mapping):
             root = cls._ensure_dict(nested)
         else:
             root = payload
@@ -478,7 +478,7 @@ class FirecrawlAdapter:
         data = cls._ensure_dict(result)
         normalized: dict[str, Any] = {}
         for key, raw_items in data.items():
-            if isinstance(raw_items, (str, bytes)) or not isinstance(
+            if isinstance(raw_items, str | bytes) or not isinstance(
                 raw_items, Sequence
             ):
                 continue

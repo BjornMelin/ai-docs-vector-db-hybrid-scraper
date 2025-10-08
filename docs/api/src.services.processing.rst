@@ -4,23 +4,15 @@ src.services.processing package
 Submodules
 ----------
 
-src.services.processing.algorithms module
------------------------------------------
-
-.. automodule:: src.services.processing.algorithms
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-src.services.processing.batch\_optimizer module
------------------------------------------------
+src.services.processing.batch_optimizer module
+----------------------------------------------
 
 .. automodule:: src.services.processing.batch_optimizer
    :members:
    :show-inheritance:
    :undoc-members:
 
-src.services.processing.parallel\_integration module
+src.services.processing.parallel_integration module
 ----------------------------------------------------
 
 .. automodule:: src.services.processing.parallel_integration

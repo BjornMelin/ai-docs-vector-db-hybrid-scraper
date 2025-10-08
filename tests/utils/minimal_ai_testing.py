@@ -97,7 +97,7 @@ class MinimalEmbeddingTestUtils:
 
         # Check for valid numbers
         if not all(
-            isinstance(x, (int, float)) and not math.isnan(x) and not math.isinf(x)
+            isinstance(x, int | float) and not math.isnan(x) and not math.isinf(x)
             for x in embedding
         ):
             errors.append("Contains invalid numbers (NaN or Inf)")

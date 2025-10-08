@@ -7,7 +7,7 @@ from typing import Any, Literal
 from fastmcp import Context
 
 from src.infrastructure.client_manager import ClientManager
-from src.security import MLSecurityValidator
+from src.security.ml_security import MLSecurityValidator
 
 
 # Lazy import to avoid hard dependency

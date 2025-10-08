@@ -74,7 +74,7 @@ def register_tools(mcp, client_manager: ClientManager):
             hit_rate_value = stats.get("hit_rate")
             hit_rate = (
                 float(hit_rate_value)
-                if isinstance(hit_rate_value, (int, float))
+                if isinstance(hit_rate_value, int | float)
                 else None
             )
 
