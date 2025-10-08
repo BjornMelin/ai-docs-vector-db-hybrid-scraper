@@ -165,7 +165,7 @@ async def test_successful_scrape_returns_expected_payload(
 
     crawl_getter.assert_awaited_once()
     crawl_manager.scrape_url.assert_awaited_once_with(
-        url="https://example.com/page", preferred_provider="lightweight"
+        url="https://example.com/page", tier="lightweight"
     )
 
     assert response["success"] is True

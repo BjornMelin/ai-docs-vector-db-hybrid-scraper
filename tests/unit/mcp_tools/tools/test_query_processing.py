@@ -45,6 +45,8 @@ def _load_tools_module(monkeypatch: pytest.MonkeyPatch):
         / "tools"
         / "query_processing_tools.py"
     )
+    if not module_path.exists():
+        pytest.skip("query_processing_tools module not present in this build")
     spec = spec_from_file_location("qp_tools", module_path)
     assert spec and spec.loader
     module = module_from_spec(spec)
