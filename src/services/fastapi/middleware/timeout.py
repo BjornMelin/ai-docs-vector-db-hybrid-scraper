@@ -16,15 +16,28 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 import anyio
-from purgatory import AsyncCircuitBreakerFactory
-from purgatory.domain.model import OpenedState
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
 
+try:
+    from purgatory import AsyncCircuitBreakerFactory  # type: ignore[import]
+    from purgatory.domain.model import OpenedState  # type: ignore[import]
+except ModuleNotFoundError:
+    AsyncCircuitBreakerFactory = None  # type: ignore[assignment]
+
+    OpenedState = type(
+        "OpenedState",
+        (Exception,),
+        {
+            "__doc__": "Fallback OpenedState when purgatory is unavailable.",
+        },
+    )
+
+
 if TYPE_CHECKING:  # pragma: no cover - import for typing only
-    from purgatory.service._async.circuitbreaker import AsyncCircuitBreaker
+    from purgatory.service._async.circuitbreaker import AsyncCircuitBreaker  # type: ignore  # noqa: I001
 
 
 class CircuitState(str, Enum):
@@ -52,10 +65,13 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
     def __init__(self, app: Callable, *, config: TimeoutConfig) -> None:
         super().__init__(app)
         self._cfg = config
-        self._factory = AsyncCircuitBreakerFactory(
-            default_threshold=config.failure_threshold,
-            default_ttl=config.recovery_timeout,
-        )
+        if AsyncCircuitBreakerFactory is not None:
+            self._factory = AsyncCircuitBreakerFactory(
+                default_threshold=config.failure_threshold,
+                default_ttl=config.recovery_timeout,
+            )
+        else:
+            self._factory = None
         self._breaker: AsyncCircuitBreaker | None = None
         self._breaker_name = "fastapi_request_timeout"
 
@@ -63,9 +79,23 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
         if not self._cfg.enabled:
             return await call_next(request)
 
+        if self._factory is None:
+            with anyio.move_on_after(self._cfg.request_timeout) as scope:
+                response = await call_next(request)
+                return response
+            if scope.cancel_called:  # pragma: no cover - defensive
+                return JSONResponse(
+                    status_code=504,
+                    content={
+                        "error": "Request timeout",
+                        "timeout": self._cfg.request_timeout,
+                    },
+                )
+            # If not cancelled, response was returned inside the with
+            raise RuntimeError("Unexpected state")  # pragma: no cover
+
         breaker = await self._ensure_breaker()
 
-        # Reject immediately if breaker is open.
         if breaker.context.state == "opened":
             return JSONResponse(
                 status_code=503,
@@ -76,7 +106,6 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         try:
-            # Half-open allows limited probes internally.
             async with breaker:
                 with anyio.fail_after(self._cfg.request_timeout):
                     return await _guarded()
@@ -96,6 +125,8 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
 
     async def _ensure_breaker(self) -> AsyncCircuitBreaker:
         if self._breaker is None:
+            if self._factory is None:
+                raise RuntimeError("Circuit breaker factory not available")
             self._breaker = await self._factory.get_breaker(
                 self._breaker_name,
                 threshold=self._cfg.failure_threshold,

@@ -444,9 +444,7 @@ class TestHealthCheckIntegration:
         mock_qdrant.get_cluster_info.return_value = mock_cluster_info
         qdrant_check = QdrantHealthCheck(mock_qdrant, "qdrant")
 
-        system_check = SystemResourceHealthCheck(
-            name="system", cpu_threshold=90.0
-        )
+        system_check = SystemResourceHealthCheck(name="system", cpu_threshold=90.0)
 
         manager.add_health_check(qdrant_check)
         manager.add_health_check(system_check)

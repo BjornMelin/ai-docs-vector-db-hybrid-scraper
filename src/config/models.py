@@ -816,6 +816,13 @@ class MonitoringConfig(BaseModel):
     health_check_timeout: float = Field(
         default=10.0, gt=0, description="Health check timeout seconds"
     )
+    namespace: str = Field(default="ml_app", description="Metrics namespace prefix")
+    cpu_threshold: float = Field(default=90.0, description="CPU usage threshold %")
+    memory_threshold: float = Field(default=90.0, description="Memory threshold %")
+    disk_threshold: float = Field(default=90.0, description="Disk usage threshold %")
+    external_services: dict[str, str] = Field(
+        default_factory=dict, description="External services to monitor"
+    )
 
 
 class ObservabilityConfig(BaseModel):

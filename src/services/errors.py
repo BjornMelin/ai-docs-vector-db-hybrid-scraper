@@ -29,7 +29,19 @@ import time
 from collections.abc import Callable
 from typing import Any, LiteralString, TypeVar
 
-from purgatory.domain.model import OpenedState
+
+try:  # pragma: no cover - optional purgatory integration
+    from purgatory.domain.model import OpenedState
+except ModuleNotFoundError:  # pragma: no cover
+    OpenedState = type(
+        "OpenedState",
+        (Exception,),
+        {
+            "__doc__": "Fallback OpenedState when purgatory is unavailable.",
+        },
+    )
+
+
 from pydantic import ValidationError as PydanticValidationError
 from pydantic_core import PydanticCustomError
 from tenacity import (
