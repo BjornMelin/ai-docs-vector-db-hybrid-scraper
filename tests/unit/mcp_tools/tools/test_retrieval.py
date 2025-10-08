@@ -36,6 +36,7 @@ async def test_search_documents_basic(registered):
             query="hello",
             collection="documentation",
             limit=3,
+            offset=0,
             include_metadata=True,
         ),
         ctx=_Ctx(),
@@ -55,6 +56,7 @@ async def test_filtered_search_forwards_filters(registered):
             query="q",
             collection="documentation",
             limit=2,
+            offset=0,
             filters={"site_name": {"value": "docs"}},
             include_metadata=True,
         ),
@@ -75,7 +77,7 @@ async def test_multi_stage_merges_and_dedupes(registered):
         stages=[{"limit": 5}, {"limit": 5, "filters": {"k": 1}}],
         include_metadata=False,
     )
-    res = await fn(request=req, ctx=_Ctx())
+    res = await fn(payload=req, ctx=_Ctx())
     ids = [r.id for r in res]
     assert len(ids) == len(set(ids))
 
@@ -121,6 +123,7 @@ async def test_reranked_search_returns_limit(registered):
         collection="documentation",
         query="y",
         limit=7,
+        offset=0,
         include_metadata=False,
     )
     res = await fn(request=req, ctx=_Ctx())

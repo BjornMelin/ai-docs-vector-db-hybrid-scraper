@@ -34,6 +34,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- MCP tools, fixtures, and tests now consume the unified service payload models
+  (content intelligence, embeddings, retrieval, analytics, collection management,
+  lightweight scrape) with optional dependency guards; CLI batch/setup helpers
+  and docs were refreshed, and the full unit suite passes with the new entrypoints.
 - CLI and MCP tooling now load settings via `load_settings_from_file`, supporting JSON/YAML config import/export, refreshing CLI configuration tests and fixtures.
 - Configuration documentation (developer, user, operator guides) updated to reflect the unified settings loader and CLI helpers.
 - CI lint workflow now runs `python scripts/guards/check_settings_usage.py` to prevent legacy `get_config`/`set_config` usage from regressing.
