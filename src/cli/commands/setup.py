@@ -52,6 +52,8 @@ def _abort_profile_not_found(profile: str, available_profiles: list[str]) -> Non
 class ConfigurationWizard:
     """Template-driven configuration wizard with validation."""
 
+    # pylint: disable=too-many-instance-attributes
+    # This class manages multiple aspects of configuration setup
     def __init__(self, config_dir: Path | None = None):
         """Initialize the configuration wizard.
 
@@ -346,11 +348,11 @@ class ConfigurationWizard:
                     f"📄 Environment file created: [green]{env_path}[/green]"
                 )
 
+            return config_path
+
         except Exception as e:
             self.console.print(f"❌ Error saving configuration: [red]{e}[/red]")
             raise
-        else:
-            return config_path
 
     def run_setup(self) -> Path:
         """Run the complete template-driven setup wizard."""
@@ -367,25 +369,26 @@ class ConfigurationWizard:
 
         try:
             # Step 1: Profile Selection (unless pre-selected)
-            if not self.selected_profile:
-                self.selected_profile = self.select_profile()
+            profile_name = self.selected_profile
+            if profile_name is None:
+                profile_name = self.select_profile()
+                self.selected_profile = profile_name
 
             # Get template name for the selected profile
-            template_name = self.profile_manager.profile_templates.get(
-                self.selected_profile
-            )
-            if not template_name:
-                _abort_no_template(self.selected_profile)
+            template_name = self.profile_manager.profile_templates.get(profile_name)
+            if template_name is None:
+                _abort_no_template(profile_name)
 
             # Step 2: Template Customization
-            self.customizations = self.customize_template(template_name)
+            self.customizations = self.customize_template(template_name)  # type: ignore
 
             # Step 3: Validation
             self.console.print("\n[bold cyan]✅ Validating Configuration[/bold cyan]")
 
             # Create config from template + customizations
             config = self.template_manager.create_config_from_template(
-                template_name, self.customizations
+                template_name,  # type: ignore
+                self.customizations,
             )
 
             # Validate configuration
@@ -402,9 +405,7 @@ class ConfigurationWizard:
                     _abort_validation_errors()
 
             # Step 4: Save Configuration
-            config_path = self.save_configuration(
-                self.selected_profile, self.customizations
-            )
+            config_path = self.save_configuration(profile_name, self.customizations)
 
             # Step 5: Success Message
             self._show_success_message(config_path)
@@ -415,25 +416,28 @@ class ConfigurationWizard:
         except Exception as e:
             self.console.print(f"\n[red]Setup failed: {e}[/red]")
             raise
-        else:
-            return config_path
+        return config_path
 
     def _show_success_message(self, config_path: Path) -> None:
         """Show final success message with next steps."""
         success_text = Text()
         success_text.append("🎉 Setup Complete!\n\n", style="bold green")
+        profile_name = self.selected_profile or "unknown"
         success_text.append(
-            f"Your '{self.selected_profile}' profile is now configured "
-            "and ready to use.\n\n",
+            f"Your '{profile_name}' profile is now configured and ready to use.\n\n",
             style="",
         )
 
         success_text.append("Configuration details:\n", style="bold")
-        success_text.append(f"• Profile: {self.selected_profile}\n", style="cyan")
+        success_text.append(f"• Profile: {profile_name}\n", style="cyan")
         success_text.append(f"• Config file: {config_path}\n", style="cyan")
+        template_name = None
+        if self.selected_profile:
+            template_name = self.profile_manager.profile_templates.get(
+                self.selected_profile
+            )
         success_text.append(
-            f"• Template: "
-            f"{self.profile_manager.profile_templates.get(self.selected_profile)}\n",
+            f"• Template: {template_name or 'unknown'}\n",
             style="cyan",
         )
 
@@ -456,8 +460,7 @@ class ConfigurationWizard:
         )
 
         success_text.append(
-            f"\n💡 To use this profile again: "
-            f"./setup.sh --profile {self.selected_profile}",
+            f"\n💡 To use this profile again: ./setup.sh --profile {profile_name}",
             style="dim",
         )
 
@@ -535,7 +538,7 @@ def setup(ctx: click.Context, profile: str | None, config_dir: Path):
                     "[yellow]Using wizard validation "
                     "(config command not available)[/yellow]"
                 )
-                config_data = json.loads(config_path.read_text())
+                config_data = json.loads(config_path.read_text(encoding="utf-8"))
                 wizard.validator.validate_and_show_errors(config_data)
 
     except KeyboardInterrupt:

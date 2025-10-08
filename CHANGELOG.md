@@ -34,6 +34,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- CLI and MCP tooling now load settings via `load_settings_from_file`, supporting JSON/YAML config import/export, refreshing CLI configuration tests and fixtures.
+- Configuration documentation (developer, user, operator guides) updated to reflect the unified settings loader and CLI helpers.
+- CI lint workflow now runs `python scripts/guards/check_settings_usage.py` to prevent legacy `get_config`/`set_config` usage from regressing.
 - Lightweight scraper escalates 4xx/5xx responses without raising, mode helpers resolve from injected settings, Qdrant default collection alias was removed, typed config fixtures were introduced for tests, and docs/env guidance now reference `primary_collection` and `AI_DOCS_CONFIG_PATH`.
 - Clarified the analytics and RAG service package facades with typed `__all__`
   exports, refreshed coverage, and updated API docs to describe the supported
