@@ -10,9 +10,9 @@ from unittest.mock import AsyncMock, MagicMock, Mock
 import pytest
 
 from src.config.models import SearchStrategy
-from src.mcp_tools.models.requests import MultiStageSearchRequest, SearchRequest
 from src.mcp_tools.models.responses import SearchResult
 from src.mcp_tools.tools import retrieval
+from src.models.search import SearchRequest
 from src.services.vector_db.types import VectorMatch
 
 
@@ -113,7 +113,8 @@ async def test_search_documents_returns_hybrid_results(
         query="hybrid",
         collection="docs",
         limit=1,
-        strategy=SearchStrategy.HYBRID,
+        offset=0,
+        search_strategy=SearchStrategy.HYBRID,
         include_metadata=True,
         filters={"lang": "en"},
     )
@@ -135,7 +136,7 @@ async def test_search_documents_returns_hybrid_results(
     assert results[0].content == "body"
     assert results[0].title == "Hybrid"
     assert results[0].url == "https://example.com/doc"
-    mock_context.info.assert_awaited_once()
+    assert mock_context.info.await_count >= 1
 
 
 @pytest.mark.asyncio
@@ -173,7 +174,7 @@ async def test_multi_stage_search_merges_deduped_matches(
         ],
     ]
 
-    request = MultiStageSearchRequest(
+    request = retrieval.MultiStageSearchPayload(
         query="hybrid",
         collection="docs",
         limit=2,

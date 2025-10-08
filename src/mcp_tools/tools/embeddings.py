@@ -93,6 +93,8 @@ def register_tools(mcp, client_manager: ClientManager):
                 )
 
             total_tokens = _extract_total_tokens(result)
+            if total_tokens is None and not request.texts:
+                total_tokens = 0
 
             embeddings = _normalize_dense_embeddings(result.get("embeddings"))
             sparse_embeddings = _normalize_sparse_embeddings(

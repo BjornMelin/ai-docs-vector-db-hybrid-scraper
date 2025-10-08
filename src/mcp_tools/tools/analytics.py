@@ -11,7 +11,11 @@ from fastmcp import Context
 
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.models.requests import AnalyticsRequest
-from src.mcp_tools.models.responses import AnalyticsResponse
+from src.mcp_tools.models.responses import (
+    AnalyticsResponse,
+    SystemHealthResponse,
+    SystemHealthServiceStatus,
+)
 from src.services.vector_db.service import VectorStoreService
 
 
@@ -102,3 +106,29 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
                 f"Analytics generated for {len(collection_stats)} collections"
             )  # noqa: E501
         return AnalyticsResponse(**payload)
+
+    @mcp.tool()
+    async def get_system_health(ctx: Context | None = None) -> SystemHealthResponse:
+        """Report high-level system health for analytics dependencies."""
+
+        vector_status = SystemHealthServiceStatus(status="healthy", error=None)
+        overall_status = "healthy"
+
+        try:
+            vector_service = await _get_vector_service(client_manager)
+            await vector_service.list_collections()
+            if ctx:
+                await ctx.info("Vector store service responded successfully")
+        except Exception as exc:  # pragma: no cover - defensive guard
+            overall_status = "unhealthy"
+            vector_status = SystemHealthServiceStatus(
+                status="unhealthy", error=str(exc)
+            )
+            if ctx:
+                await ctx.info(f"Vector store reported unhealthy: {exc}")
+
+        return SystemHealthResponse(
+            status=overall_status,
+            timestamp=_timestamp(),
+            services={"vector_store": vector_status},
+        )

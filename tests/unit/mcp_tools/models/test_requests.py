@@ -8,7 +8,6 @@ from src.config import (
     FusionAlgorithm,
     SearchAccuracy,
     SearchStrategy,
-    VectorType,
 )
 from src.mcp_tools.models.requests import (
     AnalyticsRequest,
@@ -16,13 +15,9 @@ from src.mcp_tools.models.requests import (
     CostEstimateRequest,
     DocumentRequest,
     EmbeddingRequest,
-    FilteredSearchRequest,
-    HyDESearchRequest,
-    MultiStageSearchRequest,
     ProjectRequest,
-    SearchRequest,
-    SearchStageRequest,
 )
+from src.models.search import SearchRequest
 
 
 class TestSearchRequest:
@@ -30,11 +25,11 @@ class TestSearchRequest:
 
     def test_minimal_valid_request(self):
         """Test minimal valid search request."""
-        request = SearchRequest(query="test query")
+        request = SearchRequest(query="test query", limit=10, offset=0)
         assert request.query == "test query"
         assert request.collection == "documentation"
         assert request.limit == 10
-        assert request.strategy == SearchStrategy.HYBRID
+        assert request.search_strategy == SearchStrategy.HYBRID
         assert request.enable_reranking is True
 
     def test_all_fields(self):
@@ -43,7 +38,8 @@ class TestSearchRequest:
             query="advanced search",
             collection="custom_collection",
             limit=50,
-            strategy=SearchStrategy.DENSE,
+            offset=0,
+            search_strategy=SearchStrategy.DENSE,
             enable_reranking=False,
             include_metadata=False,
             filters={"category": "api"},
@@ -51,7 +47,6 @@ class TestSearchRequest:
             search_accuracy=SearchAccuracy.ACCURATE,
             embedding_model="text-embedding-3-large",
             score_threshold=0.8,
-            rerank=False,
             cache_ttl=3600,
         )
         assert request.query == "advanced search"
@@ -63,17 +58,17 @@ class TestSearchRequest:
     def test_limit_constraints(self):
         """Test limit field constraints."""
         # Valid limits
-        SearchRequest(query="test", limit=1)
-        SearchRequest(query="test", limit=100)
+        SearchRequest(query="test", limit=1, offset=0)
+        SearchRequest(query="test", limit=1000, offset=0)
 
         # Invalid limits
         with pytest.raises(ValidationError) as exc_info:
-            SearchRequest(query="test", limit=0)
+            SearchRequest(query="test", limit=0, offset=0)
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("limit",) for error in errors)
 
         with pytest.raises(ValidationError) as exc_info:
-            SearchRequest(query="test", limit=101)
+            SearchRequest(query="test", limit=1001, offset=0)
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("limit",) for error in errors)
 
@@ -91,11 +86,13 @@ class TestSearchRequest:
         # Valid enums
         request = SearchRequest(
             query="test",
-            strategy=SearchStrategy.SPARSE,
+            search_strategy=SearchStrategy.SPARSE,
             fusion_algorithm=FusionAlgorithm.RRF,
             search_accuracy=SearchAccuracy.FAST,
+            limit=10,
+            offset=0,
         )
-        assert request.strategy == SearchStrategy.SPARSE
+        assert request.search_strategy == SearchStrategy.SPARSE
         assert request.fusion_algorithm == FusionAlgorithm.RRF
         assert request.search_accuracy == SearchAccuracy.FAST
 
@@ -316,179 +313,3 @@ class TestAnalyticsRequest:
         assert request.collection == "api_docs"
         assert request.include_performance is False
         assert request.include_costs is False
-
-
-class TestHyDESearchRequest:
-    """Test HyDESearchRequest model."""
-
-    def test_minimal_valid_request(self):
-        """Test minimal valid HyDE search request."""
-        request = HyDESearchRequest(query="What is RAG?")
-        assert request.query == "What is RAG?"
-        assert request.collection == "documentation"
-        assert request.limit == 10
-        assert request.num_generations == 5
-
-    def test_all_fields(self):
-        """Test HyDE search request with all fields."""
-        request = HyDESearchRequest.model_validate(
-            {
-                "query": "complex query",
-                "collection": "research",
-                "limit": 20,
-                "domain": "machine learning",
-                "num_generations": 3,
-                "generation_temperature": 0.5,
-                "max_generation_tokens": 300,
-                "enable_reranking": False,
-                "enable_caching": False,
-                "fusion_algorithm": FusionAlgorithm.NORMALIZED,
-                "search_accuracy": SearchAccuracy.ACCURATE,
-                "filters": {"type": "paper"},
-                "include_metadata": False,
-                "force_hyde": True,
-                "fallback_on_error": False,
-            }
-        )
-        assert request.domain == "machine learning"
-        assert request.num_generations == 3
-        assert request.generation_temperature == 0.5
-        assert request.force_hyde is True
-
-    def test_generation_constraints(self):
-        """Test generation parameter constraints."""
-        # Valid values
-        HyDESearchRequest(query="test", num_generations=1)
-        HyDESearchRequest(query="test", num_generations=10)
-        HyDESearchRequest(query="test", generation_temperature=0.0)
-        HyDESearchRequest(query="test", generation_temperature=1.0)
-        HyDESearchRequest(query="test", max_generation_tokens=50)
-        HyDESearchRequest(query="test", max_generation_tokens=500)
-
-        # Invalid values
-        with pytest.raises(ValidationError) as exc_info:
-            HyDESearchRequest(query="test", num_generations=0)
-        errors = exc_info.value.errors()
-        assert any(error["loc"] == ("num_generations",) for error in errors)
-
-        with pytest.raises(ValidationError) as exc_info:
-            HyDESearchRequest(query="test", generation_temperature=-0.1)
-        errors = exc_info.value.errors()
-        assert any(error["loc"] == ("generation_temperature",) for error in errors)
-
-        with pytest.raises(ValidationError) as exc_info:
-            HyDESearchRequest(query="test", max_generation_tokens=49)
-        errors = exc_info.value.errors()
-        assert any(error["loc"] == ("max_generation_tokens",) for error in errors)
-
-
-class TestMultiStageSearchRequest:
-    """Test MultiStageSearchRequest model."""
-
-    def test_minimal_valid_request(self):
-        """Test minimal valid multi-stage search request."""
-        stages = [
-            {"vector": [0.1, 0.2], "limit": 10},
-            {"vector": [0.3, 0.4], "limit": 20},
-        ]
-        request = MultiStageSearchRequest(
-            query="multi-stage query",
-            stages=stages,
-        )
-        assert request.query == "multi-stage query"
-        assert len(request.stages) == 2
-        assert request.fusion_algorithm == FusionAlgorithm.RRF
-
-    def test_all_fields(self):
-        """Test multi-stage search request with all fields."""
-        stages = [{"type": "dense", "vector": [0.5] * 100}]
-        request = MultiStageSearchRequest(
-            query="advanced multi-stage",
-            collection="special_docs",
-            limit=30,
-            stages=stages,
-            fusion_algorithm=FusionAlgorithm.NORMALIZED,
-            search_accuracy=SearchAccuracy.ACCURATE,
-            enable_reranking=False,
-            include_metadata=False,
-            filters={"lang": "en"},
-        )
-        assert request.collection == "special_docs"
-        assert request.limit == 30
-        assert request.filters == {"lang": "en"}
-
-
-class TestFilteredSearchRequest:
-    """Test FilteredSearchRequest model."""
-
-    def test_minimal_valid_request(self):
-        """Test minimal valid filtered search request."""
-        request = FilteredSearchRequest(
-            query="filtered search",
-            filters={"category": "tutorial"},
-        )
-        assert request.query == "filtered search"
-        assert request.filters == {"category": "tutorial"}
-        assert request.collection == "documentation"
-
-    def test_all_fields(self):
-        """Test filtered search request with all fields."""
-        request = FilteredSearchRequest(
-            query="advanced filtered search",
-            collection="knowledge_base",
-            limit=25,
-            filters={"category": "api", "language": "python", "version": "3.0"},
-            search_accuracy=SearchAccuracy.FAST,
-            include_metadata=False,
-            score_threshold=0.7,
-        )
-        assert request.collection == "knowledge_base"
-        assert len(request.filters) == 3
-        assert request.score_threshold == 0.7
-
-    def test_missing_required_filters(self):
-        """Test that filters are required."""
-        with pytest.raises(ValidationError) as exc_info:
-            FilteredSearchRequest.model_validate({"query": "test"})
-        errors = exc_info.value.errors()
-        assert any(error["loc"] == ("filters",) for error in errors)
-
-
-class TestSearchStageRequest:
-    """Test SearchStageRequest model."""
-
-    def test_valid_request(self):
-        """Test valid search stage request."""
-        request = SearchStageRequest(
-            query_vector=[0.1, 0.2, 0.3],
-            vector_name="dense",
-            vector_type=VectorType.DENSE,
-            limit=50,
-            filters={"type": "doc"},
-        )
-        assert len(request.query_vector) == 3
-        assert request.vector_name == "dense"
-        assert request.vector_type == VectorType.DENSE
-        assert request.limit == 50
-        assert request.filters == {"type": "doc"}
-
-    def test_minimal_request(self):
-        """Test minimal search stage request."""
-        request = SearchStageRequest(
-            query_vector=[1.0],
-            vector_name="embedding",
-            vector_type=VectorType.SPARSE,
-            limit=10,
-            filters=None,
-        )
-        assert request.filters is None
-
-    def test_missing_required_fields(self):
-        """Test that all required fields must be present."""
-        with pytest.raises(ValidationError) as exc_info:
-            SearchStageRequest.model_validate({})
-        errors = exc_info.value.errors()
-        # Should have errors for all required fields
-        required_fields = {"query_vector", "vector_name", "vector_type", "limit"}
-        error_fields = {error["loc"][0] for error in errors if len(error["loc"]) == 1}
-        assert required_fields.issubset(error_fields)

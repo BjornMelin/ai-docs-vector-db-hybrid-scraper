@@ -7,10 +7,12 @@ import importlib
 import inspect
 
 import pytest
+from pydantic import ValidationError
 
 from src.mcp_tools import tool_registry
-from src.mcp_tools.models.requests import DocumentRequest, SearchRequest
+from src.mcp_tools.models.requests import DocumentRequest
 from src.mcp_tools.tools import __all__ as tool_modules
+from src.models.search import SearchRequest
 
 
 class TestContextTyping:
@@ -101,18 +103,33 @@ class TestContextTyping:
         """Verify request models have proper field validation."""
 
         # Test SearchRequest validation
-        with pytest.raises(ValueError):
-            SearchRequest(query="", collection="docs")  # Empty query
+        with pytest.raises(ValidationError):
+            SearchRequest(
+                query="",
+                collection="docs",
+                limit=10,
+                offset=0,
+            )  # Empty query
 
-        with pytest.raises(ValueError):
-            SearchRequest(query="test", collection="")  # Empty collection
+        with pytest.raises(ValidationError):
+            SearchRequest(
+                query="test",
+                collection="",
+                limit=10,
+                offset=0,
+            )  # Empty collection
 
         # Test DocumentRequest validation
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError):
             DocumentRequest(url="", collection="docs")  # Empty URL
 
         # Test valid requests
-        valid_search = SearchRequest(query="test query", collection="docs")
+        valid_search = SearchRequest(
+            query="test query",
+            collection="docs",
+            limit=10,
+            offset=0,
+        )
         assert valid_search.query == "test query"
 
         valid_doc = DocumentRequest(url="https://example.com", collection="docs")

@@ -22,6 +22,7 @@ def register_tools(mcp, client_manager: ClientManager):  # pylint: disable=too-m
 
         Returns information about each collection including size and status.
         """
+
         if ctx:
             await ctx.info("Retrieving list of all collections")
 
@@ -102,6 +103,7 @@ def register_tools(mcp, client_manager: ClientManager):  # pylint: disable=too-m
 
         Permanently removes the collection and all its data.
         """
+
         if ctx:
             await ctx.info(f"Starting deletion of collection: {collection_name}")
 
@@ -109,15 +111,35 @@ def register_tools(mcp, client_manager: ClientManager):  # pylint: disable=too-m
             vector_service = await client_manager.get_vector_store_service()
             cache_manager = await client_manager.get_cache_manager()
 
-            drop_method = getattr(vector_service, "drop_collection", None)
-            if not callable(drop_method):  # pragma: no cover - defensive guard
+            instance_dict = getattr(vector_service, "__dict__", {})
+            delete_method = instance_dict.get("delete_collection")
+            drop_method = instance_dict.get("drop_collection")
+
+            if delete_method is None:
+                attr = getattr(type(vector_service), "delete_collection", None)
+                if attr is not None:
+                    delete_method = attr.__get__(vector_service, type(vector_service))
+
+            if drop_method is None:
+                attr = getattr(type(vector_service), "drop_collection", None)
+                if attr is not None:
+                    drop_method = attr.__get__(vector_service, type(vector_service))
+            delete_callable: Callable[[str], Awaitable[None]] | None = None
+
+            if callable(delete_method):
+                delete_callable = cast(Callable[[str], Awaitable[None]], delete_method)
+            elif callable(drop_method):
+                delete_callable = cast(Callable[[str], Awaitable[None]], drop_method)
+
+            if delete_callable is None:  # pragma: no cover - defensive guard
                 msg = "Vector service does not expose a collection deletion method"
                 raise AttributeError(msg)
 
-            drop_callable = cast(Callable[[str], Awaitable[None]], drop_method)
-            await drop_callable(collection_name)
+            await delete_callable(collection_name)
             if ctx:
-                await ctx.debug(f"Collection {collection_name} deleted from Qdrant")
+                await ctx.debug(
+                    "Collection %s deleted from vector store", collection_name
+                )
 
             # Clear cache entries for this collection
             await cache_manager.clear_pattern(f"*:{collection_name}:*")
@@ -146,6 +168,7 @@ def register_tools(mcp, client_manager: ClientManager):  # pylint: disable=too-m
 
         Rebuilds indexes and optimizes storage.
         """
+
         if ctx:
             await ctx.info(f"Starting optimization of collection: {collection_name}")
 

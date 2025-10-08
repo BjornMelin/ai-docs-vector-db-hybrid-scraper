@@ -71,7 +71,7 @@ def _dedupe_by_id(matches: Iterable[VectorMatch]) -> list[VectorMatch]:
         prev = ranked.get(m.id)
         if prev is None or m.score > prev.score:
             ranked[m.id] = m
-    return sorted(ranked.values(), key=lambda match: match.score, reverse=True)
+    return list(ranked.values())
 
 
 def _to_results(

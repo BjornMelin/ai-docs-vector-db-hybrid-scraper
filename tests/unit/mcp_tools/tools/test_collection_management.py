@@ -33,6 +33,7 @@ class TestCollectionsTools:
             }
 
         mock_vector.collection_stats.side_effect = mock_stats
+        mock_vector.delete_collection = AsyncMock()
         mock_vector.drop_collection = AsyncMock()
 
         # Mock cache manager
@@ -178,6 +179,7 @@ class TestCollectionsTools:
 
         mock_vector = await mock_client_manager.get_vector_store_service()
         mock_vector.drop_collection = None
+        mock_vector.delete_collection = None
 
         mock_mcp = MagicMock()
         registered_tools = {}

@@ -451,10 +451,10 @@ class TestEmbeddingsTools:
 
         # Verify embedding manager was called with custom model details
         mock_client_manager.embedding_mock.generate_embeddings.assert_called()
-        call_args, call_kwargs = (
+        _call_args, call_kwargs = (
             mock_client_manager.embedding_mock.generate_embeddings.call_args
         )
-        assert call_args == (["test text"],)
+        assert call_kwargs.get("texts") == ["test text"]
         options = call_kwargs.get("options")
         assert options is not None
         assert options.provider_name == "sentence-transformers/all-MiniLM-L6-v2"
