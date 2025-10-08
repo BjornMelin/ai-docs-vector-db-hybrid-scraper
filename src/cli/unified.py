@@ -74,8 +74,8 @@ def cli():
 def dev(mode: str, reload: bool, host: str, port: int):
     """Start development server"""
     os.environ["AI_DOCS__MODE"] = mode
-    click.echo(f"🚀 Starting development server in {mode} mode")
-    click.echo(f"📍 Server: http://{host}:{port}")
+    click.echo(f"Starting development server in {mode} mode")
+    click.echo(f"Server: http://{host}:{port}")
 
     uvicorn.run("src.api.main:app", reload=reload, host=host, port=port)
 
@@ -114,19 +114,19 @@ def test(
         cmd.append("--")
         cmd.extend(extra_args)
 
-    click.echo(f"🧪 Running {profile} test profile")
+    click.echo(f"Running {profile} test profile")
     _run_command(cmd)
 
 
 @cli.command()
 def setup():
     """Complete development environment setup."""
-    click.echo("🔧 Setting up development environment...")
+    click.echo("Setting up development environment...")
 
     # Create .env.local if it doesn't exist
     env_local = Path(".env.local")
     if not env_local.exists():
-        click.echo("📝 Creating .env.local from template...")
+        click.echo("Creating .env.local from template...")
         env_example = Path(".env.example")
         if env_example.exists():
             env_local.write_text(
@@ -140,14 +140,14 @@ def setup():
             )
 
     # Install pre-commit hooks
-    click.echo("🪝 Installing pre-commit hooks...")
+    click.echo("Installing pre-commit hooks...")
     _run_command(["uv", "run", "pre-commit", "install"], capture_output=True)
 
     # Validate configuration
-    click.echo("✅ Validating configuration...")
+    click.echo("Validating configuration...")
     _run_command(_dev_script_command("validate"), capture_output=True)
 
-    click.echo("✅ Setup complete! Run 'task dev' to start development.")
+    click.echo("Setup complete. Run 'task dev' to start development.")
 
 
 @cli.command()
@@ -161,13 +161,13 @@ def quality(skip_format: bool, fix_lint: bool):
     if fix_lint:
         cmd.append("--fix-lint")
 
-    click.echo("🔍 Running code quality checks...")
+    click.echo("Running code quality checks...")
     result = _run_command(cmd)
 
     if result.returncode == 0:
-        click.echo("✅ All quality checks passed!")
+        click.echo("All quality checks passed.")
     else:
-        click.echo("❌ Quality checks failed!")
+        click.echo("Quality checks failed.")
         sys.exit(result.returncode)
 
 
@@ -176,7 +176,7 @@ def quality(skip_format: bool, fix_lint: bool):
 @click.option("--port", default=8001)
 def docs(host: str, port: int):
     """Serve documentation locally"""
-    click.echo(f"📚 Starting documentation server at http://{host}:{port}")
+    click.echo(f"Starting documentation server at http://{host}:{port}")
     _run_command(["mkdocs", "serve", "--host", host, "--port", str(port)])
 
 
@@ -199,7 +199,7 @@ def services(action: str, stack: str, skip_health_check: bool):
     if skip_health_check:
         cmd.append("--skip-health-check")
 
-    click.echo(f"🚀 Services command: {action} ({stack})")
+    click.echo(f"Running services command: {action} ({stack})")
     _run_command(cmd)
 
 
@@ -209,7 +209,7 @@ def services(action: str, stack: str, skip_health_check: bool):
 )
 def benchmark(profile: str):
     """Run performance benchmarks."""
-    click.echo(f"⚡ Running {profile} benchmark profile...")
+    click.echo(f"Running {profile} benchmark profile...")
     suite = BENCHMARK_SUITES.get(profile, "performance")
     _run_command(_dev_script_command("benchmark", "--suite", suite))
 
@@ -246,7 +246,7 @@ def run_eval(  # pylint: disable=too-many-arguments,too-many-positional-argument
 ):
     """Run the RAG golden evaluation harness."""
 
-    click.echo("🎯 Running RAG golden evaluation harness")
+    click.echo("Running RAG golden evaluation harness")
     cmd: list[str | os.PathLike[str]] = _dev_script_command(
         "eval",
         "--dataset",
@@ -277,16 +277,16 @@ def run_eval(  # pylint: disable=too-many-arguments,too-many-positional-argument
 @cli.command()
 def validate():
     """Validate project configuration and health."""
-    click.echo("🔍 Validating project configuration...")
+    click.echo("Validating project configuration...")
 
     result = _run_command(
         _dev_script_command("validate", "--check-docs"),
     )
 
     if result.returncode == 0:
-        click.echo("✅ All validations passed!")
+        click.echo("All validations passed.")
     else:
-        click.echo("❌ Validation failed!")
+        click.echo("Validation failed.")
         sys.exit(result.returncode)
 
 

@@ -24,10 +24,9 @@ from fastmcp import Context
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.config.models import SearchStrategy
-from src.mcp_tools.models.responses import SearchResult
-from src.mcp_tools.tools._shared import ensure_vector_service, match_to_result
+from src.contracts.retrieval import SearchRecord
+from src.mcp_tools.tools._shared import ensure_vector_service
 from src.models.search import SearchRequest as CoreSearchRequest
-from src.services.vector_db.types import VectorMatch
 
 
 logger = logging.getLogger(__name__)
@@ -63,33 +62,37 @@ else:  # pragma: no cover - runtime alias for tooling
     ClientManager = Any
 
 
-def _dedupe_by_id(matches: Iterable[VectorMatch]) -> list[VectorMatch]:
+def _dedupe_by_id(matches: Iterable[SearchRecord]) -> list[SearchRecord]:
     """Return matches deduped by id while keeping highest score."""
 
-    ranked: OrderedDict[str, VectorMatch] = OrderedDict()
-    for m in matches:
-        prev = ranked.get(m.id)
-        if prev is None or m.score > prev.score:
-            ranked[m.id] = m
+    ranked: OrderedDict[str, SearchRecord] = OrderedDict()
+    for record in matches:
+        previous = ranked.get(record.id)
+        if previous is None or record.score > previous.score:
+            ranked[record.id] = record
     return list(ranked.values())
 
 
-def _to_results(
-    matches: Iterable[VectorMatch], *, include_metadata: bool
-) -> list[SearchResult]:
-    """Convert vector matches to SearchResult objects."""
+def _maybe_strip_metadata(
+    records: Iterable[SearchRecord], *, include_metadata: bool
+) -> list[SearchRecord]:
+    """Return records with optional metadata stripping."""
 
-    return [match_to_result(m, include_metadata=include_metadata) for m in matches]
+    if include_metadata:
+        return list(records)
+    return [
+        record.model_copy(update={"metadata": None}, deep=True) for record in records
+    ]
 
 
-def _rrf_rank(matches: list[VectorMatch], *, k: int = 60) -> list[VectorMatch]:
+def _rrf_rank(matches: list[SearchRecord], *, k: int = 60) -> list[SearchRecord]:
     """Return matches ranked by Reciprocal Rank Fusion."""
 
-    scored: list[tuple[float, VectorMatch]] = []
-    for idx, m in enumerate(matches, start=1):
-        scored.append((1.0 / (k + idx), m))
+    scored: list[tuple[float, SearchRecord]] = []
+    for idx, record in enumerate(matches, start=1):
+        scored.append((1.0 / (k + idx), record))
     scored.sort(key=lambda item: item[0], reverse=True)
-    return [m for _, m in scored]
+    return [record for _, record in scored]
 
 
 async def _search_matches(
@@ -97,7 +100,7 @@ async def _search_matches(
     request: CoreSearchRequest,
     *,
     ctx: Context | None = None,
-) -> list[VectorMatch]:
+) -> list[SearchRecord]:
     """Run a vector search and return the raw matches."""
 
     service = await ensure_vector_service(client_manager)
@@ -135,25 +138,25 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
     @mcp.tool()
     async def search_documents(
         request: CoreSearchRequest, ctx: Context
-    ) -> list[SearchResult]:
+    ) -> list[SearchRecord]:
         """Execute a single-stage search."""
 
         matches = await _search_matches(client_manager, request, ctx=ctx)
-        return _to_results(
+        return _maybe_strip_metadata(
             matches[: request.limit], include_metadata=request.include_metadata
         )
 
     @mcp.tool()
     async def filtered_search(
         request: CoreSearchRequest, ctx: Context
-    ) -> list[SearchResult]:
+    ) -> list[SearchRecord]:
         """Execute a search with structured filters."""
 
         normalized_request = request.model_copy(
             update={"search_strategy": SearchStrategy.HYBRID}
         )
         matches = await _search_matches(client_manager, normalized_request, ctx=ctx)
-        return _to_results(
+        return _maybe_strip_metadata(
             matches[: normalized_request.limit],
             include_metadata=normalized_request.include_metadata,
         )
@@ -161,11 +164,11 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
     @mcp.tool()
     async def multi_stage_search(
         payload: MultiStageSearchPayload, ctx: Context
-    ) -> list[SearchResult]:
+    ) -> list[SearchRecord]:
         """Execute a simplified multi‑stage search."""
 
         service = await ensure_vector_service(client_manager)
-        all_matches: list[VectorMatch] = []
+        all_matches: list[SearchRecord] = []
 
         for stage in payload.stages:
             stage_limit = int(stage.get("limit", payload.limit))
@@ -184,7 +187,7 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
 
         deduped = _dedupe_by_id(all_matches)
         await ctx.info(f"multi_stage_search -> {len(deduped)} unique after merge")
-        return _to_results(
+        return _maybe_strip_metadata(
             deduped[: payload.limit],
             include_metadata=payload.include_metadata,
         )
@@ -197,7 +200,7 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
         context_size: int = 3,
         include_metadata: bool = True,
         ctx: Context | None = None,
-    ) -> list[SearchResult]:
+    ) -> list[SearchRecord]:
         """Return primary results plus an extended context set."""
 
         extended_limit = max(limit + max(context_size, 0), limit)
@@ -212,7 +215,9 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
             }
         )
         matches = await _search_matches(client_manager, base_request, ctx=ctx)
-        return _to_results(matches[:extended_limit], include_metadata=include_metadata)
+        return _maybe_strip_metadata(
+            matches[:extended_limit], include_metadata=include_metadata
+        )
 
     @mcp.tool()
     async def recommend_similar(  # pylint: disable=too-many-arguments,too-many-positional-arguments
@@ -223,7 +228,7 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
         filters: dict[str, Any] | None = None,
         include_metadata: bool = True,
         ctx: Context | None = None,
-    ) -> list[SearchResult]:
+    ) -> list[SearchRecord]:
         """Recommend documents similar to a given point."""
 
         service = await ensure_vector_service(client_manager)
@@ -242,12 +247,14 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
         filtered = [
             m for m in matches if m.id != point_id and m.score >= score_threshold
         ]
-        return _to_results(filtered[:limit], include_metadata=include_metadata)
+        return _maybe_strip_metadata(
+            filtered[:limit], include_metadata=include_metadata
+        )
 
     @mcp.tool()
     async def reranked_search(
         request: CoreSearchRequest, ctx: Context
-    ) -> list[SearchResult]:
+    ) -> list[SearchRecord]:
         """Search then apply RRF scoring for shallow reranking."""
 
         service = await ensure_vector_service(client_manager)
@@ -259,7 +266,7 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
             filters=request.filters,
         )
         ranked = _rrf_rank(baseline)
-        return _to_results(
+        return _maybe_strip_metadata(
             ranked[: request.limit], include_metadata=request.include_metadata
         )
 

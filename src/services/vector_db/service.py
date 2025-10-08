@@ -18,6 +18,7 @@ from qdrant_client import AsyncQdrantClient, QdrantClient, models
 
 from src.config.loader import Settings
 from src.config.models import QueryProcessingConfig, ScoreNormalizationStrategy
+from src.contracts.retrieval import SearchRecord
 from src.services.base import BaseService
 from src.services.embeddings.base import EmbeddingProvider
 from src.services.embeddings.fastembed_provider import FastEmbedProvider
@@ -430,7 +431,7 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         group_size: int | None = None,
         overfetch_multiplier: float | None = None,
         normalize_scores: bool | None = None,
-    ) -> list[VectorMatch]:  # pylint: disable=too-many-arguments
+    ) -> list[SearchRecord]:  # pylint: disable=too-many-arguments
         """Execute a dense similarity search with optional grouping."""
 
         vector = await self.embed_query(query)
@@ -449,7 +450,10 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
             grouping_applied=grouping_applied,
         )
         matches = self._normalize_scores(matches, enabled=normalize_scores)
-        return matches
+        return self._matches_to_records(
+            matches,
+            default_collection=collection,
+        )
 
     async def search_vector(
         self,
@@ -458,7 +462,7 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         *,
         limit: int = 10,
         filters: Mapping[str, Any] | None = None,
-    ) -> list[VectorMatch]:
+    ) -> list[SearchRecord]:
         """Perform a similarity search using a precomputed vector."""
 
         matches, _ = await self._query_with_optional_grouping(
@@ -470,7 +474,10 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
             filters=filters,
             overfetch_multiplier=None,
         )
-        return matches
+        return self._matches_to_records(
+            matches,
+            default_collection=collection,
+        )
 
     async def hybrid_search(
         self,
@@ -480,7 +487,7 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         *,
         limit: int = 10,
         filters: Mapping[str, Any] | None = None,
-    ) -> list[VectorMatch]:  # pylint: disable=too-many-arguments
+    ) -> list[SearchRecord]:  # pylint: disable=too-many-arguments
         """Perform a hybrid search when sparse vectors are supplied."""
 
         if not sparse_vector:
@@ -532,7 +539,10 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
                     collection=collection,
                 )
             )
-        return matches
+        return self._matches_to_records(
+            matches,
+            default_collection=collection,
+        )
 
     async def recommend(
         self,
@@ -542,7 +552,7 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         vector: Sequence[float] | None = None,
         limit: int = 10,
         filters: Mapping[str, Any] | None = None,
-    ) -> list[VectorMatch]:
+    ) -> list[SearchRecord]:
         """Return records related to supplied positive examples."""
 
         if not positive_ids and vector is None:
@@ -576,7 +586,10 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
                     collection=collection,
                 )
             )
-        return matches
+        return self._matches_to_records(
+            matches,
+            default_collection=collection,
+        )
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -856,6 +869,21 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
 
         return matches
 
+    def _matches_to_records(
+        self,
+        matches: Sequence[VectorMatch],
+        *,
+        default_collection: str,
+    ) -> list[SearchRecord]:
+        """Convert internal vector matches into canonical search records."""
+        return [
+            SearchRecord.from_vector_match(
+                match,
+                collection_name=default_collection,
+            )
+            for match in matches
+        ]
+
     def _build_sync_client(self, cfg: Any) -> QdrantClient:
         timeout = getattr(cfg, "timeout", 30)
         return QdrantClient(
@@ -941,7 +969,7 @@ def _filter_from_mapping(filters: Mapping[str, Any] | None) -> models.Filter | N
                     range=models.Range(**value),
                 )
             )
-        elif isinstance(value, Sequence) and not isinstance(value, str | bytes):
+        elif isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
             must_conditions.append(
                 models.FieldCondition(
                     key=key,

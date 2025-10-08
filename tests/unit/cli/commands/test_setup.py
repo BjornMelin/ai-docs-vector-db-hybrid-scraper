@@ -204,7 +204,7 @@ class TestSetupCommand:
         result = cli_runner.invoke(setup, ["--help"])
 
         assert result.exit_code == 0
-        assert "Modern template-driven configuration wizard" in result.output
+        assert "Template-driven configuration wizard." in result.output
 
     def test_setup_command_with_profile(self, cli_runner):
         """Test setup command with profile option."""

@@ -160,7 +160,7 @@ class ConfigAuditor:
 
     def show_audit_summary(self) -> None:
         """Display a summary of recent wizard activity."""
-        console.print("\n[bold cyan]🔍 Recent Wizard Activity[/bold cyan]")
+        console.print("\n[bold cyan]Recent Wizard Activity[/bold cyan]")
 
         recent_activity = self.get_recent_activity(days=30)
 

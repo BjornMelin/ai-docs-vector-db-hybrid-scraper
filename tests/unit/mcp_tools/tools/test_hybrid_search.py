@@ -10,10 +10,9 @@ from unittest.mock import AsyncMock, MagicMock, Mock
 import pytest
 
 from src.config.models import SearchStrategy
-from src.mcp_tools.models.responses import SearchResult
+from src.contracts.retrieval import SearchRecord
 from src.mcp_tools.tools import retrieval
 from src.models.search import SearchRequest
-from src.services.vector_db.types import VectorMatch
 
 
 if "src.infrastructure.client_manager" not in sys.modules:
@@ -90,22 +89,26 @@ async def test_search_documents_returns_hybrid_results(
     mock_vector_service: Mock,
     mock_context: Mock,
 ) -> None:
-    """Ensure hybrid search converts matches into SearchResult records."""
+    """Ensure hybrid search returns canonical search records."""
 
     mock_vector_service.search_documents.return_value = [
-        VectorMatch(
+        SearchRecord(
             id="doc-1",
             score=0.87,
-            payload={
+            content="body",
+            title="Hybrid",
+            url="https://example.com/doc",
+            metadata={
                 "content": "body",
                 "title": "Hybrid",
                 "url": "https://example.com/doc",
             },
         ),
-        VectorMatch(
+        SearchRecord(
             id="doc-2",
             score=0.45,
-            payload={"content": "ignored"},
+            content="ignored",
+            metadata={"content": "ignored"},
         ),
     ]
 
@@ -125,7 +128,7 @@ async def test_search_documents_returns_hybrid_results(
         "docs", "hybrid", limit=1, filters={"lang": "en"}
     )
     assert len(results) == 1
-    assert isinstance(results[0], SearchResult)
+    assert isinstance(results[0], SearchRecord)
     assert results[0].id == "doc-1"
     assert results[0].score == pytest.approx(0.87)
     assert results[0].metadata == {
@@ -149,27 +152,31 @@ async def test_multi_stage_search_merges_deduped_matches(
 
     mock_vector_service.search_documents.side_effect = [
         [
-            VectorMatch(
+            SearchRecord(
                 id="doc-1",
                 score=0.55,
-                payload={"content": "stage-one"},
+                content="stage-one",
+                metadata={"content": "stage-one"},
             ),
-            VectorMatch(
+            SearchRecord(
                 id="doc-2",
                 score=0.52,
-                payload={"content": "first-pass"},
+                content="first-pass",
+                metadata={"content": "first-pass"},
             ),
         ],
         [
-            VectorMatch(
+            SearchRecord(
                 id="doc-1",
                 score=0.91,
-                payload={"content": "stage-two"},
+                content="stage-two",
+                metadata={"content": "stage-two"},
             ),
-            VectorMatch(
+            SearchRecord(
                 id="doc-3",
                 score=0.64,
-                payload={"content": "new"},
+                content="new",
+                metadata={"content": "new"},
             ),
         ],
     ]

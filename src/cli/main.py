@@ -35,9 +35,9 @@ class RichCLI:
         self.console = Console()
 
     def show_welcome(self):
-        """Display welcome message with project info."""
+        """Display welcome message with project information."""
         welcome_text = Text()
-        welcome_text.append("🚀 AI Documentation Scraper\n", style="bold cyan")
+        welcome_text.append("AI Documentation Scraper\n", style="bold cyan")
         welcome_text.append("CLI Interface v1.0.0\n", style="dim")
         welcome_text.append(
             (
@@ -59,7 +59,7 @@ class RichCLI:
     def show_error(self, message: str, details: str | None = None):
         """Display error message with Rich formatting."""
         error_text = Text()
-        error_text.append("❌ Error: ", style="bold red")
+        error_text.append("Error: ", style="bold red")
         error_text.append(message, style="red")
 
         if details:
@@ -90,12 +90,11 @@ rich_cli = RichCLI()
 @click.version_option(version="1.0.0", prog_name="AI Documentation Scraper CLI")
 @click.pass_context
 def main(ctx: click.Context, config: Path | None, quiet: bool):
-    """🚀 AI Documentation Scraper - CLI Interface.
+    """AI Documentation Scraper command-line interface.
 
-    A command-line interface for managing your AI documentation
-    scraping workflow with vector database integration.
-
-    Use --help with any command to get detailed information.
+    Provides commands for configuration, database management, and batch
+    operations supporting the hybrid retrieval workflow. Use --help with any
+    command for additional information.
     """
     # Ensure context object exists
     ctx.ensure_object(dict)
@@ -120,11 +119,11 @@ def main(ctx: click.Context, config: Path | None, quiet: bool):
 
         # Show available commands
         click.echo("\nAvailable commands:")
-        click.echo("  setup    🧙 Interactive configuration wizard")
-        click.echo("  config   ⚙️  Configuration management")
-        click.echo("  database 🗄️  Vector database operations")
-        click.echo("  batch    📦 Batch operations")
-        click.echo("  --help   ❓ Show this help message")
+        click.echo("  setup    Interactive configuration wizard")
+        click.echo("  config   Configuration management")
+        click.echo("  database Vector database operations")
+        click.echo("  batch    Batch operations")
+        click.echo("  --help   Show this help message")
         click.echo("\nUse 'ai-docs COMMAND --help' for command-specific help.")
 
 

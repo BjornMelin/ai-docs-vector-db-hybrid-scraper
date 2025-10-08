@@ -56,8 +56,10 @@ def _serialise_document(document: Any) -> dict[str, Any]:
 
     identifier = getattr(document, "id", None)
     score = float(getattr(document, "score", 0.0))
-    payload = getattr(document, "payload", None)
-    return {"id": identifier, "score": score, "payload": payload}
+    metadata = getattr(document, "metadata", None)
+    if metadata is None and hasattr(document, "dict"):
+        metadata = document.dict().get("metadata")  # type: ignore[call-arg]
+    return {"id": identifier, "score": score, "metadata": metadata}
 
 
 class AgenticGraphState(TypedDict, total=False):
@@ -281,7 +283,9 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
                     RetrievedDocument(
                         id=str(item.get("id", idx)),
                         score=float(item.get("score", 0.0)),
-                        payload=item.get("payload"),
+                        metadata=item.get("metadata")
+                        if "metadata" in item
+                        else item.get("payload"),
                         raw=None,
                     )
                 )
@@ -705,7 +709,7 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
         documents = state.get("retrieved_documents", [])
         if documents:
             arguments["documents"] = [
-                doc.get("payload") for doc in documents if doc.get("payload")
+                doc.get("metadata") for doc in documents if doc.get("metadata")
             ]
         user_context = state.get("user_context")
         if isinstance(user_context, Mapping):
@@ -717,7 +721,7 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
             {
                 "id": doc.get("id"),
                 "score": doc.get("score"),
-                "payload": doc.get("payload"),
+                "metadata": doc.get("metadata"),
             }
             for doc in state.get("retrieved_documents", [])
         ]
@@ -741,7 +745,7 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
                 {
                     "id": doc.get("id"),
                     "score": doc.get("score"),
-                    "payload": doc.get("payload"),
+                    "metadata": doc.get("metadata"),
                 }
                 for doc in state.get("retrieved_documents", [])
             ],

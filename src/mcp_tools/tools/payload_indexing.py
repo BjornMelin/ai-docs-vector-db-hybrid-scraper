@@ -20,6 +20,8 @@ from src.mcp_tools.models.responses import (
 )
 from src.security.ml_security import MLSecurityValidator
 
+from ._shared import search_record_to_dict
+
 
 logger = logging.getLogger(__name__)
 
@@ -174,12 +176,7 @@ def register_tools(mcp, client_manager: ClientManager):
         elapsed_ms = (perf_counter() - start) * 1000
 
         results = [
-            {
-                "id": match.id,
-                "score": match.score,
-                "payload": match.payload or {},
-            }
-            for match in matches
+            search_record_to_dict(match, include_metadata=True) for match in matches
         ]
 
         stats = await service.collection_stats(safe_name)

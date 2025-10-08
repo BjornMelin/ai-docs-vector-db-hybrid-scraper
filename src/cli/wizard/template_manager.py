@@ -150,7 +150,7 @@ class TemplateManager:
             return
 
         table = Table(
-            title="📋 Available Configuration Templates",
+            title="Available Configuration Templates",
             show_header=True,
             header_style="bold cyan",
             border_style="cyan",
@@ -200,26 +200,26 @@ class TemplateManager:
 
             # Style the template name based on recommendation
             if template_name == "personal-use":
-                name_text = Text(f"🏆 {template_name}", style="bold green")
+                name_text = Text(template_name, style="bold green")
             elif template_name == "development":
-                name_text = Text(f"🛠️ {template_name}", style="bold blue")
+                name_text = Text(template_name, style="bold blue")
             elif template_name == "production":
-                name_text = Text(f"🚀 {template_name}", style="bold magenta")
+                name_text = Text(template_name, style="bold magenta")
             else:
-                name_text = Text(f"📄 {template_name}", style="bold")
+                name_text = Text(template_name, style="bold")
 
             table.add_row(
                 name_text,
                 metadata["use_case"],
                 metadata["features"],
                 embedding_provider,
-                "✅" if cache_enabled else "❌",
+                "Enabled" if cache_enabled else "Disabled",
             )
 
         console.print(table)
         console.print(
-            "\n[dim]💡 Recommended: 'personal-use' for "
-            "individual developers, 'production' for deployment[/dim]"
+            "\n[dim]Recommendation: 'personal-use' for individual developers, "
+            "'production' for deployment.[/dim]"
         )
 
     def preview_template(self, name: str) -> None:
@@ -232,7 +232,7 @@ class TemplateManager:
         metadata = self.get_template_metadata(name)
 
         # Create preview panel
-        console.print(f"\n[bold cyan]📋 Template Preview: {name}[/bold cyan]")
+        console.print(f"\n[bold cyan]Template Preview: {name}[/bold cyan]")
         if metadata and "description" in metadata:
             console.print(f"[dim]{metadata['description']}[/dim]\n")
         else:

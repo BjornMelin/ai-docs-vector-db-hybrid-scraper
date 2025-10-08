@@ -322,10 +322,20 @@ class HyDEQueryEngine(BaseService):
             )
             results: list[dict[str, Any]] = []
             for match in matches:
-                payload = dict(getattr(match, "payload", {}) or {})
-                payload.setdefault("id", getattr(match, "id", None))
-                payload.setdefault("score", getattr(match, "score", 0.0))
-                results.append(payload)
+                record = {
+                    "id": match.id,
+                    "score": match.score,
+                    "content": match.content,
+                    "title": match.title,
+                    "url": match.url,
+                    "collection": match.collection,
+                    "metadata": dict(match.metadata or {}),
+                }
+                if match.normalized_score is not None:
+                    record["normalized_score"] = match.normalized_score
+                if match.raw_score is not None:
+                    record["raw_score"] = match.raw_score
+                results.append(record)
             return results
 
         except Exception as e:
@@ -371,10 +381,20 @@ class HyDEQueryEngine(BaseService):
             )
             results: list[dict[str, Any]] = []
             for match in matches:
-                payload = dict(getattr(match, "payload", {}) or {})
-                payload.setdefault("id", getattr(match, "id", None))
-                payload.setdefault("score", getattr(match, "score", 0.0))
-                results.append(payload)
+                record = {
+                    "id": match.id,
+                    "score": match.score,
+                    "content": match.content,
+                    "title": match.title,
+                    "url": match.url,
+                    "collection": match.collection,
+                    "metadata": dict(match.metadata or {}),
+                }
+                if match.normalized_score is not None:
+                    record["normalized_score"] = match.normalized_score
+                if match.raw_score is not None:
+                    record["raw_score"] = match.raw_score
+                results.append(record)
             return results
 
         except Exception as e:

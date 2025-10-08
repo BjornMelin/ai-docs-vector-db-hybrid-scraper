@@ -4,9 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from src.mcp_tools.models.responses import SearchResult
+from src.contracts.retrieval import SearchRecord
 from src.services.vector_db.service import VectorStoreService
-from src.services.vector_db.types import VectorMatch
 
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
@@ -24,18 +23,40 @@ async def ensure_vector_service(client_manager: ClientManager) -> VectorStoreSer
     return service
 
 
-def match_to_result(match: VectorMatch, *, include_metadata: bool) -> SearchResult:
-    """Convert a vector match into the MCP ``SearchResult`` schema."""
+def search_record_to_dict(
+    record: SearchRecord,
+    *,
+    include_metadata: bool = True,
+) -> dict[str, Any]:
+    """Serialize a :class:`SearchRecord` into a plain dictionary."""
 
-    payload: dict[str, Any] = dict(match.payload or {})
-    metadata: dict[str, Any] | None = payload if include_metadata else None
-    url_value = payload.get("url")
-    title_value = payload.get("title")
-    return SearchResult(
-        id=match.id,
-        content=str(payload.get("content") or payload.get("text") or ""),
-        score=float(match.score),
-        url=str(url_value) if isinstance(url_value, str) else None,
-        title=str(title_value) if isinstance(title_value, str) else None,
-        metadata=metadata,
-    )
+    payload: dict[str, Any] = {
+        "id": record.id,
+        "score": record.score,
+    }
+
+    if record.content:
+        payload["content"] = record.content
+    if record.title is not None:
+        payload["title"] = record.title
+    if record.url is not None:
+        payload["url"] = record.url
+    if record.collection is not None:
+        payload["collection"] = record.collection
+    if record.normalized_score is not None:
+        payload["normalized_score"] = record.normalized_score
+    if record.raw_score is not None:
+        payload["raw_score"] = record.raw_score
+    if record.group_id is not None:
+        payload["group_id"] = record.group_id
+    if record.group_rank is not None:
+        payload["group_rank"] = record.group_rank
+    if record.grouping_applied is not None:
+        payload["grouping_applied"] = record.grouping_applied
+    if record.content_type is not None:
+        payload["content_type"] = record.content_type
+
+    if include_metadata:
+        payload["metadata"] = dict(record.metadata or {})
+
+    return payload

@@ -19,7 +19,6 @@ from src.services.base import BaseService
 from src.services.rag.langgraph_pipeline import LangGraphRAGPipeline
 from src.services.rag.models import RAGConfig as ServiceRAGConfig
 from src.services.vector_db.service import VectorStoreService
-from src.services.vector_db.types import VectorMatch
 
 from .models import SearchRequest, SearchResponse
 
@@ -123,7 +122,7 @@ class SearchOrchestrator(BaseService):
             )
 
         collection = await self._resolve_collection(request)
-        matches = await self._vector_store_service.search_documents(
+        records = await self._vector_store_service.search_documents(
             collection=collection,
             query=processed_query,
             limit=request.limit,
@@ -132,11 +131,6 @@ class SearchOrchestrator(BaseService):
             group_size=request.group_size,
             overfetch_multiplier=request.overfetch_multiplier,
             normalize_scores=request.normalize_scores,
-        )
-        records = self._build_search_records(
-            matches,
-            collection=collection,
-            normalize_applied=request.normalize_scores,
         )
 
         grouping_applied = any((record.grouping_applied is True) for record in records)
@@ -274,71 +268,6 @@ class SearchOrchestrator(BaseService):
             rag_result.get("confidence"),
             rag_result.get("sources"),
         )
-
-    @staticmethod
-    def _build_search_records(
-        matches: list[VectorMatch],
-        *,
-        collection: str,
-        normalize_applied: bool,
-    ) -> list[SearchRecord]:
-        """Build search records from vector matches.
-
-        Args:
-            matches: List of vector matches from the search.
-            collection: Collection name for the search.
-            normalize_applied: Whether score normalization was applied.
-
-        Returns:
-            List of search records with extracted metadata.
-        """
-        records: list[SearchRecord] = []
-        for match in matches:
-            payload: dict[str, Any] = dict(match.payload or {})
-            source_collection_value = payload.get("collection") or payload.get(
-                "_collection"
-            )
-            if isinstance(source_collection_value, str):
-                source_collection = source_collection_value
-            elif isinstance(match.collection, str):
-                source_collection = match.collection
-            else:
-                source_collection = collection
-
-            group_info_raw = payload.get("_grouping")
-            group_info: dict[str, Any] = (
-                dict(group_info_raw) if isinstance(group_info_raw, Mapping) else {}
-            )
-            normalized_score = match.normalized_score if normalize_applied else None
-            score_value = (
-                normalized_score
-                if normalized_score is not None
-                else float(match.raw_score or match.score)
-            )
-            record = SearchRecord(
-                id=match.id,
-                content=str(payload.get("content") or payload.get("text") or ""),
-                title=(
-                    payload["title"]
-                    if isinstance(payload.get("title"), str)
-                    else (
-                        payload["name"]
-                        if isinstance(payload.get("name"), str)
-                        else None
-                    )
-                ),
-                url=payload.get("url") if isinstance(payload.get("url"), str) else None,
-                metadata=payload,
-                score=score_value,
-                raw_score=float(match.raw_score or score_value),
-                normalized_score=normalized_score,
-                collection=source_collection,
-                group_id=group_info.get("group_id"),
-                group_rank=group_info.get("rank"),
-                grouping_applied=group_info.get("applied"),
-            )
-            records.append(record)
-        return records
 
     async def _resolve_collection(self, request: SearchRequest) -> str:
         """Determine which collection should be queried for this request.

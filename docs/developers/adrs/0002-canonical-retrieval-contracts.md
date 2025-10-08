@@ -23,9 +23,11 @@
 - Schema drift is eliminated: updating `SearchRecord` automatically propagates to service pipelines, MCP tooling, and CLI helpers. Tests reference the same contract snapshot.
 - Grouped-result consumers (federated merges, orchestrator, MCP tools, analytics) now read consistent metadata, enabling removal of bespoke dedup loops and accurate telemetry.
 - Telemetry surfaces grouping adoption and latency; alerting and dashboards can react when fallbacks or runtime issues occur.
-- Rollout required updating import paths, tests, and payload converters but retained backwards compatibility by re-exporting the canonical contract.
+- Rollout required updating import paths, tests, and payload converters. The vector service now emits `SearchRecord`
+  instances directly so downstream layers no longer maintain bespoke adapters.
 
 ## Status Notes
 
-- Remaining follow-up items include wiring grouping metrics into operational dashboards and retiring legacy helpers in CLI utilities that still rely on bespoke `SearchResult` definitions.
+- Grouping metrics still need to be wired into operational dashboards, but all CLI and MCP helpers now consume the shared
+  `SearchRecord` contract without bespoke `SearchResult` shims.
 - Additional contracts (e.g., ingestion and analytics payloads) may migrate into `src/contracts/` over time to ensure consistent reuse.

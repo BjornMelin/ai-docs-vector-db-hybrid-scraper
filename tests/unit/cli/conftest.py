@@ -96,8 +96,8 @@ def mock_vector_db_manager():
     # Mock document operations
     mock_manager.add_documents.return_value = {"ids": ["doc1", "doc2"], "success": True}
     mock_manager.search_documents.return_value = [
-        {"id": "doc1", "score": 0.95, "payload": {"title": "Test Document 1"}},
-        {"id": "doc2", "score": 0.88, "payload": {"title": "Test Document 2"}},
+        {"id": "doc1", "score": 0.95, "metadata": {"title": "Test Document 1"}},
+        {"id": "doc2", "score": 0.88, "metadata": {"title": "Test Document 2"}},
     ]
     mock_manager.delete_documents.return_value = {"deleted": 2, "success": True}
 
@@ -155,7 +155,7 @@ def sample_collection_data():
         {
             "id": "doc1",
             "vector": [0.1, 0.2, 0.3, 0.4],
-            "payload": {
+            "metadata": {
                 "title": "Test Document 1",
                 "url": "https://example.com/doc1",
                 "content": "This is test content for document 1",
@@ -164,7 +164,7 @@ def sample_collection_data():
         {
             "id": "doc2",
             "vector": [0.2, 0.3, 0.4, 0.5],
-            "payload": {
+            "metadata": {
                 "title": "Test Document 2",
                 "url": "https://example.com/doc2",
                 "content": "This is test content for document 2",

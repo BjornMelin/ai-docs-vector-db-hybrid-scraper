@@ -5,8 +5,8 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
+from src.contracts.retrieval import SearchRecord
 from src.infrastructure.client_manager import ClientManager
-from src.services.vector_db.types import VectorMatch
 
 
 @dataclass(slots=True)
@@ -28,19 +28,12 @@ class RetrievalQuery:
 
 @dataclass(slots=True)
 class RetrievedDocument:
-    """Normalised representation of a retrieved document.
-
-    Attributes:
-        id: Identifier of the retrieved vector record.
-        score: Similarity score provided by the vector service.
-        payload: Optional metadata payload stored alongside the vector.
-        raw: Original match object returned by the vector service.
-    """
+    """Normalised representation of a retrieved document."""
 
     id: str
     score: float
-    payload: Mapping[str, object] | None
-    raw: VectorMatch | None
+    metadata: Mapping[str, object] | None
+    raw: SearchRecord | None
 
 
 class RetrievalHelper:
@@ -61,7 +54,7 @@ class RetrievalHelper:
         """
 
         service = await self._client_manager.get_vector_store_service()
-        matches = await service.search_documents(
+        records = await service.search_documents(
             query.collection,
             query.text,
             limit=max(1, query.top_k),
@@ -69,12 +62,12 @@ class RetrievalHelper:
         )
         return [
             RetrievedDocument(
-                id=match.id,
-                score=match.score,
-                payload=match.payload,
-                raw=match,
+                id=record.id,
+                score=record.score,
+                metadata=record.metadata or {},
+                raw=record,
             )
-            for match in matches
+            for record in records
         ]
 
 

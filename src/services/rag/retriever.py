@@ -157,12 +157,16 @@ class VectorServiceRetriever(BaseRetriever):
 
         documents: list[Document] = []
         for match in matches:
-            payload = dict(match.payload or {})
-            content = str(payload.get("content") or payload.get("text") or "")
-            metadata = payload.copy()
+            metadata = dict(match.metadata or {})
+            content = match.content or str(
+                metadata.get("content") or metadata.get("text") or ""
+            )
             metadata.setdefault("source_id", match.id)
             metadata.setdefault("score", match.score)
-            metadata.setdefault("title", payload.get("title"))
+            if match.title is not None:
+                metadata.setdefault("title", match.title)
+            if match.url is not None:
+                metadata.setdefault("url", match.url)
             documents.append(Document(page_content=content, metadata=metadata))
 
         documents = await self._maybe_compress_documents(query, documents)

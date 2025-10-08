@@ -214,13 +214,11 @@ class WizardValidator:
             error_text.append(f"{i}. ", style="red")
             error_text.append(f"{error}\n", style="")
 
-        error_text.append(
-            "\n💡 Tip: Check your input values and try again.", style="dim"
-        )
+        error_text.append("\nTip: Check your input values and try again.", style="dim")
 
         panel = Panel(
             error_text,
-            title="❌ Validation Errors",
+            title="Validation Errors",
             border_style="red",
             padding=(1, 2),
         )
@@ -325,7 +323,7 @@ class WizardValidator:
         """
 
         summary_text = Text()
-        summary_text.append("✅ Configuration is valid!\n\n", style="bold green")
+        summary_text.append("Configuration is valid.\n\n", style="bold green")
 
         summary_text.append("Configuration Summary:\n", style="bold")
 
@@ -345,12 +343,12 @@ class WizardValidator:
             summary_text.append("• Debug mode: Enabled\n", style="yellow")
 
         summary_text.append(
-            "\n🎉 Ready to start processing documents!", style="bold green"
+            "\nReady to start processing documents!", style="bold green"
         )
 
         panel = Panel(
             summary_text,
-            title="✅ Configuration Valid",
+            title="Configuration Valid",
             title_align="left",
             border_style="green",
             padding=(1, 2),

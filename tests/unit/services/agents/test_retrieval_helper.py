@@ -49,7 +49,7 @@ async def test_fetch_uses_client_manager() -> None:
         def __init__(self, identifier: str, score: float) -> None:
             self.id = identifier
             self.score = score
-            self.payload = {"title": f"Doc {identifier}"}
+            self.metadata = {"title": f"Doc {identifier}"}
 
     class DummyVectorStoreService:
         async def search_documents(self, collection, query, *, limit, filters=None):  # noqa: D401, ANN001
@@ -77,5 +77,5 @@ async def test_fetch_uses_client_manager() -> None:
     results = await helper.fetch(query)
     assert len(results) == 2
     assert results[0].id == "1"
-    assert results[0].payload == {"title": "Doc 1"}
+    assert results[0].metadata == {"title": "Doc 1"}
     assert results[0].raw is not None

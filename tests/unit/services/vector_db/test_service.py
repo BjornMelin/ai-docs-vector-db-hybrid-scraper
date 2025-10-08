@@ -8,8 +8,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from langchain_core.documents import Document
+from qdrant_client import models
 
-from src.services.vector_db.service import VectorStoreService
+from src.services.vector_db.service import VectorStoreService, _filter_from_mapping
 from src.services.vector_db.types import CollectionSchema, TextDocument, VectorRecord
 from tests.unit.services.vector_db.conftest import (
     ClientManagerStub,
@@ -194,6 +195,55 @@ async def test_upsert_vectors_calls_qdrant_async_client(
     assert point.payload["foo"] == "bar"
 
 
+def test_filter_from_mapping_handles_sequences_and_scalars() -> None:
+    """Sequence values should map to MatchAny, scalars to MatchValue."""
+
+    filters = _filter_from_mapping({"tags": ["doc", "faq"], "lang": "en"})
+    assert isinstance(filters, models.Filter)
+    raw_must = filters.must
+    if raw_must is None:
+        must_conditions: list[models.Condition] = []
+    elif isinstance(raw_must, list):
+        must_conditions = list(raw_must)
+    else:
+        must_conditions = [raw_must]
+    match_any = None
+    for condition in must_conditions:
+        if getattr(condition, "key", None) != "tags":
+            continue
+        candidate = getattr(condition, "match", None)
+        if isinstance(candidate, models.MatchAny):
+            match_any = candidate
+            break
+    assert match_any is not None
+    assert isinstance(match_any, models.MatchAny)
+    assert match_any.any == ["doc", "faq"]
+
+    match_value = None
+    for condition in must_conditions:
+        if getattr(condition, "key", None) != "lang":
+            continue
+        candidate = getattr(condition, "match", None)
+        if isinstance(candidate, models.MatchValue):
+            match_value = candidate
+            break
+    assert match_value is not None
+    assert match_value.value == "en"
+
+
+def test_filter_from_mapping_treats_strings_as_scalars() -> None:
+    """String sequences should not be treated as iterables for MatchAny."""
+
+    filters = _filter_from_mapping({"category": "docs"})
+    assert isinstance(filters, models.Filter)
+    raw_must = filters.must
+    assert raw_must is not None
+    condition = raw_must[0] if isinstance(raw_must, list) else raw_must
+    condition_match = getattr(condition, "match", None)
+    assert isinstance(condition_match, models.MatchValue)
+    assert condition_match.value == "docs"
+
+
 @pytest.mark.asyncio
 async def test_search_documents_returns_vector_matches(
     initialized_service: VectorStoreService,
@@ -224,6 +274,6 @@ async def test_search_documents_returns_vector_matches(
     assert len(matches) == 1
     match = matches[0]
     assert match.id == "doc-123"
-    assert match.payload is not None
-    assert match.payload["topic"] == "testing"
+    assert match.metadata is not None
+    assert match.metadata["topic"] == "testing"
     assert pytest.approx(match.score) == 0.87

@@ -9,11 +9,11 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from click.testing import CliRunner
 
+from src.contracts.retrieval import SearchRecord
 from src.manage_vector_db import (
     CollectionInfo,
     CollectionSchema,
     DatabaseStats,
-    SearchResult,
     VectorDBManager,
     cli,
 )
@@ -35,10 +35,11 @@ def vector_service_mock() -> AsyncMock:
     )
     service.search_documents = AsyncMock(
         return_value=[
-            SimpleNamespace(
+            SearchRecord(
                 id="doc-1",
                 score=0.9,
-                payload={"url": "https://example"},
+                content="",
+                metadata={"url": "https://example"},
             )
         ]
     )
@@ -155,14 +156,14 @@ async def test_get_collection_info_maps_stats(
 async def test_search_documents_returns_models(
     manager_setup: SimpleNamespace,
 ) -> None:
-    """search_documents should wrap adapter matches into SearchResult objects."""
+    """search_documents should return canonical SearchRecord objects."""
 
     manager = manager_setup.manager
 
     results = await manager.search_documents("docs", "query", limit=1)
 
     assert len(results) == 1
-    assert isinstance(results[0], SearchResult)
+    assert isinstance(results[0], SearchRecord)
     manager_setup.vector_service.search_documents.assert_awaited_once_with(
         "docs",
         "query",
@@ -244,7 +245,7 @@ def test_cli_create_collection_reports_success() -> None:
 def test_cli_search_prints_results() -> None:
     """search command should display formatted search results."""
 
-    search_result = SearchResult(
+    search_result = SearchRecord(
         id="doc-1",
         score=0.8,
         url="https://example",

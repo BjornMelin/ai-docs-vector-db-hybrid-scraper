@@ -12,9 +12,10 @@ from uuid import uuid4
 from fastmcp import Context
 
 from src.config.models import SearchStrategy
+from src.contracts.retrieval import SearchRecord
 from src.mcp_tools.models.requests import ProjectRequest
-from src.mcp_tools.models.responses import OperationStatus, ProjectInfo, SearchResult
-from src.mcp_tools.tools._shared import ensure_vector_service, match_to_result
+from src.mcp_tools.models.responses import OperationStatus, ProjectInfo
+from src.mcp_tools.tools._shared import ensure_vector_service
 from src.services.vector_db.types import CollectionSchema
 
 
@@ -175,7 +176,7 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
         limit: int = 10,
         strategy: SearchStrategy = SearchStrategy.HYBRID,
         ctx: Context | None = None,
-    ) -> list[SearchResult]:
+    ) -> list[SearchRecord]:
         """Search within a project's dedicated collection."""
 
         project_storage = await client_manager.get_project_storage()
@@ -190,15 +191,13 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
             raise ValueError(msg)
 
         vector_service = await ensure_vector_service(client_manager)
-        matches = await vector_service.search_documents(
+        records = await vector_service.search_documents(
             collection,
             query,
             limit=limit,
         )
 
-        results = [
-            match_to_result(match, include_metadata=True) for match in matches[:limit]
-        ]
+        results = list(records[:limit])
         if ctx:
             summary = (
                 f"Project search returned {len(results)} results for project "

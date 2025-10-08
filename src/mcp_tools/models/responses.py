@@ -9,9 +9,6 @@ from src.contracts.retrieval import SearchRecord
 from src.services.content_intelligence.models import ContentType as _ContentType
 
 
-SearchResult = SearchRecord
-SearchResult.__doc__ = "Search result with metadata"
-
 # Re-export ContentType for backward compatibility with earlier imports.
 ContentType = _ContentType
 
@@ -371,7 +368,7 @@ class QueryProcessingResponse(BaseModel):
     """Complete response from query processing pipeline."""
 
     success: bool = Field(default=True, description="Whether processing succeeded")
-    results: list[SearchResult] = Field(
+    results: list[SearchRecord] = Field(
         default_factory=list, description="Search results"
     )
     total_results: int = Field(default=0, description="Total number of results")

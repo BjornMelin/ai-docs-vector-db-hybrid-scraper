@@ -87,7 +87,7 @@ class StubRetrievalHelper:
             RetrievedDocument(
                 id="doc-1",
                 score=0.9,
-                payload={"title": "Doc"},
+                metadata={"title": "Doc"},
                 raw=None,
             ),
         )
@@ -182,7 +182,7 @@ async def test_run_analysis_returns_summary() -> None:
 
     outcome = await runner.run_analysis(
         query="summarise metrics",
-        context_documents=[{"id": "1", "score": 0.7, "payload": {"title": "Metrics"}}],
+        context_documents=[{"id": "1", "score": 0.7, "metadata": {"title": "Metrics"}}],
     )
 
     assert outcome.success
