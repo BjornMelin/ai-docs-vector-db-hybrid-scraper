@@ -32,7 +32,7 @@ class TestRichCLI:
         rich_cli.show_welcome()
 
         # Verify welcome content
-        rich_output_capturer.assert_contains("🚀 AI Documentation Scraper")
+        rich_output_capturer.assert_contains("AI Documentation Scraper")
         rich_output_capturer.assert_contains("CLI Interface v1.0.0")
         rich_output_capturer.assert_contains("Hybrid AI documentation scraping system")
         rich_output_capturer.assert_contains("Welcome")
@@ -45,7 +45,7 @@ class TestRichCLI:
         rich_cli.show_error("Test error message")
 
         # Verify error content
-        rich_output_capturer.assert_contains("❌ Error:")
+        rich_output_capturer.assert_contains("Error:")
         rich_output_capturer.assert_contains("Test error message")
         rich_output_capturer.assert_contains("Error")
 
@@ -57,7 +57,7 @@ class TestRichCLI:
         rich_cli.show_error("Configuration failed", details="Missing API key")
 
         # Verify error content with details
-        rich_output_capturer.assert_contains("❌ Error:")
+        rich_output_capturer.assert_contains("Error:")
         rich_output_capturer.assert_contains("Configuration failed")
         rich_output_capturer.assert_contains("Details: Missing API key")
 
@@ -113,7 +113,7 @@ class TestMainCommand:
 
         assert result.exit_code == 0
         # Should not contain welcome message
-        assert "🚀 AI Documentation Scraper" not in result.output
+        assert "AI Documentation Scraper" not in result.output
         # But should contain command list
         assert "Available commands:" in result.output
 
@@ -128,10 +128,10 @@ class TestMainCommand:
 
         assert result.exit_code == 0
         assert "Available commands:" in result.output
-        assert "setup    🧙 Interactive configuration wizard" in result.output
-        assert "config   ⚙️  Configuration management" in result.output
-        assert "database 🗄️  Vector database operations" in result.output
-        assert "batch    📦 Batch operations" in result.output
+        assert "setup    Interactive configuration wizard" in result.output
+        assert "config   Configuration management" in result.output
+        assert "database Vector database operations" in result.output
+        assert "batch    Batch operations" in result.output
 
     @patch("src.cli.main.get_settings")
     def test_main_command_context_setup(self, mock_get_config, cli_runner, mock_config):
@@ -332,7 +332,7 @@ class TestMainIntegration:
 
         assert result.exit_code == 0
         # Verify help contains essential information
-        assert "AI Documentation Scraper - Advanced CLI Interface" in result.output
+        assert "AI Documentation Scraper command-line interface." in result.output
         assert "Usage:" in result.output
         assert "--config" in result.output
         assert "--quiet" in result.output

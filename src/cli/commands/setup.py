@@ -74,22 +74,20 @@ class ConfigurationWizard:
     def welcome(self):
         """Display welcome message for the wizard."""
         welcome_text = Text()
-        welcome_text.append("🧙 Configuration Wizard\n", style="bold magenta")
+        welcome_text.append("Configuration Wizard\n", style="bold magenta")
         welcome_text.append(
-            "Welcome to the AI Documentation Scraper setup wizard!\n\n", style="dim"
+            "Welcome to the AI Documentation Scraper setup wizard.\n\n", style="dim"
         )
         welcome_text.append("This wizard offers:\n", style="")
-        welcome_text.append(
-            "• 🎯 Profile-based configuration templates\n", style="cyan"
-        )
-        welcome_text.append("• ⚡ Validation with helpful feedback\n", style="cyan")
-        welcome_text.append("• 🛠️ Customization options\n", style="cyan")
-        welcome_text.append("• 📋 Template preview and comparison\n", style="cyan")
-        welcome_text.append("• 🔧 Environment-specific optimizations", style="cyan")
+        welcome_text.append("• Profile-based configuration templates\n", style="cyan")
+        welcome_text.append("• Validation with actionable feedback\n", style="cyan")
+        welcome_text.append("• Customization options\n", style="cyan")
+        welcome_text.append("• Template preview and comparison\n", style="cyan")
+        welcome_text.append("• Environment-specific optimizations", style="cyan")
 
         panel = Panel(
             welcome_text,
-            title="🚀 Template-Driven Setup",
+            title="Template-Driven Setup",
             title_align="left",
             border_style="magenta",
             padding=(1, 2),
@@ -98,24 +96,20 @@ class ConfigurationWizard:
 
     def select_profile(self) -> str:
         """Let user select a configuration profile."""
-        self.console.print("\n[bold cyan]🎯 Profile Selection[/bold cyan]")
+        self.console.print("\n[bold cyan]Profile Selection[/bold cyan]")
 
         # Show available profiles
         self.profile_manager.show_profiles_table()
 
         # Get user choice using questionary
         profile_choices = [
-            questionary.Choice(
-                title=f"🏆 {name} (Recommended for most users)", value=name
-            )
+            questionary.Choice(title=f"{name} (recommended for most users)", value=name)
             if name == "personal"
             else questionary.Choice(
-                title=f"🛠️ {name} (Development and debugging)", value=name
+                title=f"{name} (development and debugging)", value=name
             )
             if name == "development"
-            else questionary.Choice(
-                title=f"🚀 {name} (Production deployment)", value=name
-            )
+            else questionary.Choice(title=f"{name} (production deployment)", value=name)
             if name == "production"
             else questionary.Choice(title=name, value=name)
             for name in self.profile_manager.list_profiles()
@@ -148,7 +142,7 @@ class ConfigurationWizard:
     def customize_template(self, template_name: str) -> dict[str, Any]:
         """Allow user to customize the selected template."""
         self.console.print(
-            f"\n[bold cyan]🛠️ Customizing '{template_name}' Template[/bold cyan]"
+            f"\n[bold cyan]Customizing '{template_name}' Template[/bold cyan]"
         )
 
         template_data = self.template_manager.get_template(template_name)
@@ -317,7 +311,7 @@ class ConfigurationWizard:
         self, profile_name: str, config_data: dict[str, Any]
     ) -> Path:
         """Save the configuration using profile manager."""
-        self.console.print("\n[bold cyan]💾 Saving Configuration[/bold cyan]")
+        self.console.print("\n[bold cyan]Saving Configuration[/bold cyan]")
 
         try:
             # Create profile configuration
@@ -345,13 +339,13 @@ class ConfigurationWizard:
             if env_choice:
                 env_path = self.profile_manager.generate_env_file(profile_name)
                 self.console.print(
-                    f"📄 Environment file created: [green]{env_path}[/green]"
+                    f"Environment file created: [green]{env_path}[/green]"
                 )
 
             return config_path
 
         except Exception as e:
-            self.console.print(f"❌ Error saving configuration: [red]{e}[/red]")
+            self.console.print(f"Error saving configuration: [red]{e}[/red]")
             raise
 
     def run_setup(self) -> Path:
@@ -383,7 +377,7 @@ class ConfigurationWizard:
             self.customizations = self.customize_template(template_name)  # type: ignore
 
             # Step 3: Validation
-            self.console.print("\n[bold cyan]✅ Validating Configuration[/bold cyan]")
+            self.console.print("\n[bold cyan]Validating Configuration[/bold cyan]")
 
             # Create config from template + customizations
             config = self.template_manager.create_config_from_template(
@@ -421,7 +415,7 @@ class ConfigurationWizard:
     def _show_success_message(self, config_path: Path) -> None:
         """Show final success message with next steps."""
         success_text = Text()
-        success_text.append("🎉 Setup Complete!\n\n", style="bold green")
+        success_text.append("Setup Complete\n\n", style="bold green")
         profile_name = self.selected_profile or "unknown"
         success_text.append(
             f"Your '{profile_name}' profile is now configured and ready to use.\n\n",
@@ -460,13 +454,13 @@ class ConfigurationWizard:
         )
 
         success_text.append(
-            f"\n💡 To use this profile again: ./setup.sh --profile {profile_name}",
+            f"\nReuse this profile with ./setup.sh --profile {profile_name}",
             style="dim",
         )
 
         panel = Panel(
             success_text,
-            title="🚀 Template-Driven Setup Complete",
+            title="Template-Driven Setup Complete",
             title_align="left",
             border_style="green",
             padding=(1, 2),
@@ -489,18 +483,18 @@ class ConfigurationWizard:
 )
 @click.pass_context
 def setup(ctx: click.Context, profile: str | None, config_dir: Path):
-    r"""🧙 Template-driven configuration wizard.
+    r"""Template-driven configuration wizard.
 
-    This wizard uses configuration profiles and templates to guide you through
-    setting up your AI Documentation Scraper with best practices and validation.
+    Guides configuration using pre-defined profiles and templates with
+    validation and customization support.
 
     \b
     Features:
-    • 🎯 Profile-based templates (personal, development, production)
-    • ⚡ Validation with helpful error messages
-    • 🛠️ Customization with questionary interactions
-    • 📋 Template preview and comparison
-    • 🔧 Environment-specific optimizations
+    • Profile-based templates (personal, development, production)
+    • Validation with detailed error messages
+    • Customization using questionary prompts
+    • Template preview and comparison utilities
+    • Environment-specific defaults
 
     \b
     Available profiles:

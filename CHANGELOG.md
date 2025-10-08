@@ -34,6 +34,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- CLI commands, wizard utilities, and tests now emit technical, emoji-free
+  messaging aligned with the canonical `SearchRecord` workflow, ensuring
+  consistent help output across CLI entry points.
 - MCP tools, fixtures, and tests now consume the unified service payload models
   (content intelligence, embeddings, retrieval, analytics, collection management,
   lightweight scrape) with optional dependency guards; CLI batch/setup helpers
@@ -79,6 +82,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Canonicalized query-processing payloads around the shared `SearchRecord` model and
   updated MCP response adapters to subclass the service-layer Pydantic types,
   eliminating duplicate DTO maintenance.
+- VectorStoreService now emits canonical `SearchRecord` objects directly, deleting bespoke
+  `SearchResult`/`SearchResultItem` models, unifying API and MCP responses, and refreshing
+  the CLI/test suites around the single retrieval contract.
+- Centralized VectorMatch to `SearchRecord` conversion through the new
+  `SearchRecord.from_vector_match` factory and added contract-focused unit tests to guard
+  the normalized payload mapping.
 - Refined MCP tool registrars to route all success and error paths through the
   shared response converter, returning consistent warnings metadata and
   serializing enums via the canonical service models.

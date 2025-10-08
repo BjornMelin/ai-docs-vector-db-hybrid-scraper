@@ -26,7 +26,7 @@ console = Console()
 
 @click.group()
 def config():
-    """⚙️ Configuration management commands."""
+    """Configuration management commands."""
 
 
 @config.command()
@@ -68,15 +68,16 @@ def export(ctx: click.Context, output: str, export_format: str):
         elif export_format == "yaml":
             if yaml is None:
                 console.print(
-                    "❌ YAML support not available. Please install PyYAML", style="red"
+                    "YAML support not available. Install PyYAML to enable export.",
+                    style="red",
                 )
                 return
             with output_path.open("w", encoding="utf-8") as f:
                 yaml.dump(config_obj.model_dump(), f, default_flow_style=False)
 
-        console.print(f"✅ Configuration exported to {output_path}", style="green")
+        console.print(f"Configuration exported to {output_path}", style="green")
     except (OSError, ValueError) as e:
-        console.print(f"❌ Export failed: {e}", style="red")
+        console.print(f"Export failed: {e}", style="red")
 
 
 @config.command()
@@ -89,14 +90,14 @@ def load(ctx: click.Context, config_file: Path, validate_only: bool):
         config_obj = load_settings_from_file(config_file)
 
         if validate_only:
-            console.print("✅ Configuration file is valid", style="green")
+            console.print("Configuration file is valid", style="green")
         else:
             ctx.obj["config"] = config_obj
-            console.print(f"✅ Configuration loaded from {config_file}", style="green")
+            console.print(f"Configuration loaded from {config_file}", style="green")
             _show_config_table(config_obj)
 
     except (OSError, ValueError, ImportError) as exc:
-        console.print(f"❌ Failed to load configuration: {exc}", style="red")
+        console.print(f"Failed to load configuration: {exc}", style="red")
 
 
 @config.command()
@@ -107,7 +108,7 @@ def validate(ctx: click.Context):
 
     try:
         # Basic validation - config is already validated on creation
-        console.print("✅ Configuration is valid", style="green")
+        console.print("Configuration is valid", style="green")
 
         # Show environment and provider info
         table = Table(title="Configuration Summary", show_header=True)
@@ -123,7 +124,7 @@ def validate(ctx: click.Context):
         console.print(table)
 
     except (ValueError, AttributeError) as e:
-        console.print(f"❌ Configuration validation failed: {e}", style="red")
+        console.print(f"Configuration validation failed: {e}", style="red")
 
 
 def _show_config_table(config_obj: Settings):
@@ -189,7 +190,8 @@ def _show_config_yaml(config_obj: Settings):
     """Display configuration as YAML."""
     if yaml is None:
         console.print(
-            "❌ YAML support not available. Please install PyYAML", style="red"
+            "YAML support not available. Install PyYAML to enable export.",
+            style="red",
         )
         return
 

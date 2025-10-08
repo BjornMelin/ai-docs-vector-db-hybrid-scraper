@@ -8,6 +8,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from src.contracts.retrieval import SearchRecord
+
 
 # Base Models
 class MCPRequest(BaseModel):
@@ -65,26 +67,11 @@ class AdvancedSearchRequest(MCPRequest):
     filters: dict[str, Any] | None = Field(default=None, description="Search filters")
 
 
-class SearchResultItem(BaseModel):
-    """Individual search result item."""
-
-    id: str = Field(..., description="Document ID")
-    score: float = Field(..., description="Relevance score")
-    title: str | None = Field(default=None, description="Document title")
-    content: str | None = Field(default=None, description="Document content excerpt")
-    url: str | None = Field(default=None, description="Document URL")
-    doc_type: str | None = Field(default=None, description="Document type")
-    language: str | None = Field(default=None, description="Document language")
-    metadata: dict[str, Any] = Field(
-        default_factory=dict, description="Additional metadata"
-    )
-
-
 class SearchResponse(MCPResponse):
     """Response model for search operations."""
 
     success: bool = Field(default=True)
-    results: list[SearchResultItem] = Field(
+    results: list[SearchRecord] = Field(
         default_factory=list, description="Search results"
     )
     total_count: int = Field(default=0, description="Total matching documents")
@@ -316,7 +303,6 @@ __all__ = [
     "MetricData",
     "SearchRequest",
     "SearchResponse",
-    "SearchResultItem",
     "ValidationRequest",
     "ValidationResponse",
 ]

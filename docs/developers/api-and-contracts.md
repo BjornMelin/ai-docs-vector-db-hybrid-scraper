@@ -25,10 +25,12 @@ Response (`SimpleSearchResponse`):
   "results": [
     {
       "id": "doc_123",
+      "content": "Qdrant is a vector database...",
       "score": 0.89,
+      "raw_score": 0.93,
       "normalized_score": 0.91,
       "collection": "documents",
-      "payload": {"title": "Introduction to Qdrant"}
+      "metadata": {"title": "Introduction to Qdrant"}
     }
   ],
   "total_count": 1,

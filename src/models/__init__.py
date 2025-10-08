@@ -46,7 +46,6 @@ from .api_contracts import (
     MCPResponse,
     MetricData,
     SearchResponse as ApiSearchResponse,
-    SearchResultItem,
     ValidationRequest,
     ValidationResponse,
 )
@@ -161,7 +160,6 @@ __all__ = [  # noqa: RUF022 - organized by category for readability
     "ScrapingStats",
     # API Contracts
     "ApiSearchResponse",
-    "SearchResultItem",
     # Vector Search - Stage models
     "SearchStage",
     # Vector Search - Base classes and enums

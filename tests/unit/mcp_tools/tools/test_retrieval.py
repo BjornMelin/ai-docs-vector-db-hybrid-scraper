@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 import pytest_asyncio
 
+from src.contracts.retrieval import SearchRecord
 from src.mcp_tools.tools import retrieval
 from src.models.search import SearchRequest
 
@@ -28,7 +29,7 @@ async def registered(fake_mcp, fake_client_manager):
 
 @pytest.mark.asyncio
 async def test_search_documents_basic(registered):
-    """Search returns SearchResult objects."""
+    """Search returns SearchRecord objects."""
 
     fn = registered["search_documents"]
     res = await fn(
@@ -42,6 +43,7 @@ async def test_search_documents_basic(registered):
         ctx=_Ctx(),
     )
     assert len(res) == 3
+    assert all(isinstance(item, SearchRecord) for item in res)
     assert res[0].id == "1"
     assert res[0].metadata is not None
 
@@ -96,6 +98,7 @@ async def test_search_with_context_expands_limit(registered):
         ctx=_Ctx(),
     )
     assert len(res) == 5  # 3 base + 2 context hits
+    assert all(record.metadata is None for record in res)
 
 
 @pytest.mark.asyncio
@@ -112,6 +115,7 @@ async def test_recommend_similar_excludes_seed(registered):
         ctx=None,
     )
     assert all(r.id != "d0" for r in res)
+    assert all(r.metadata is not None for r in res)
 
 
 @pytest.mark.asyncio

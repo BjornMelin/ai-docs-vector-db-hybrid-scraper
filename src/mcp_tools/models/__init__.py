@@ -1,5 +1,7 @@
 """MCP Server Models - Request and response models for all tools."""
 
+from src.contracts.retrieval import SearchRecord
+
 from .requests import (
     AnalyticsRequest,
     BatchRequest,
@@ -36,7 +38,6 @@ from .responses import (
     QueryProcessingResponse,
     ReindexCollectionResponse,
     SearchMetrics,
-    SearchResult,
     SearchStrategyResult,
     SystemHealthResponse,
     SystemHealthServiceStatus,
@@ -77,7 +78,7 @@ __all__ = [
     "QueryProcessingResponse",
     "ReindexCollectionResponse",
     "SearchMetrics",
-    "SearchResult",
+    "SearchRecord",
     "SearchStrategyResult",
     "SystemHealthResponse",
     "SystemHealthServiceStatus",

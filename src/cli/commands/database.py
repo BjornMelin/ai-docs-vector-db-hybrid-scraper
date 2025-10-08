@@ -70,11 +70,7 @@ def complete_collection_name(
 
 @click.group()
 def database():
-    """🗄️ Vector database operations with enhanced visualization.
-
-    Manage your Qdrant vector database collections with Rich progress
-    indicators, beautiful table displays, and interactive features.
-    """
+    """Vector database operations with Rich-powered visualization."""
 
 
 @database.command("list")
@@ -151,11 +147,11 @@ def _display_collections_table(collections: list[dict[str, Any]], rich_cli):
         # Status with emoji
         status = collection.get("status", "unknown")
         status_display = {
-            "green": "✅ Ready",
-            "yellow": "⚠️ Indexing",
-            "red": "❌ Error",
-            "grey": "⏸️ Stopped",
-        }.get(status, f"❓ {status}")
+            "green": "Ready",
+            "yellow": "Indexing",
+            "red": "Error",
+            "grey": "Stopped",
+        }.get(status, status or "unknown")
 
         table.add_row(
             collection.get("name", "Unknown"),
@@ -285,7 +281,7 @@ def create_collection(
 
     # Success message
     success_text = Text()
-    success_text.append("✅ Collection created successfully!\n", style="bold green")
+    success_text.append("Collection created successfully.\n", style="bold green")
     success_text.append(f"Name: {collection_name}\n", style="cyan")
     success_text.append(f"Dimension: {dimension}\n", style="blue")
     success_text.append(f"Distance: {distance}", style="yellow")
@@ -336,7 +332,7 @@ def delete_collection(ctx: click.Context, collection_name: str, yes: bool):
         finally:
             asyncio.run(db_manager.cleanup())
 
-    rich_cli.console.print(f"✅ Collection '{collection_name}' deleted successfully.")
+    rich_cli.console.print(f"Collection '{collection_name}' deleted successfully.")
 
 
 @database.command("info")

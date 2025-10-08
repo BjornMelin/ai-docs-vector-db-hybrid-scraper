@@ -29,12 +29,6 @@ from src.utils import async_command
 console = Console()
 
 
-class SearchResult(SearchRecord):
-    """Search result from vector database."""
-
-    metadata: dict[str, Any] | None = Field(default_factory=dict)
-
-
 class CollectionInfo(BaseModel):
     """Collection information."""
 
@@ -88,25 +82,6 @@ class VectorDBManager:
 
         client_manager = await ensure_client_manager(force=force_reload)
         self._vector_service = await client_manager.get_vector_store_service()
-
-    @staticmethod
-    def _build_search_results(matches: list[Any]) -> list[SearchResult]:
-        """Convert vector search matches to CLI-friendly results."""
-
-        results: list[SearchResult] = []
-        for match in matches:
-            payload = dict(getattr(match, "payload", {}) or {})
-            results.append(
-                SearchResult(
-                    id=str(getattr(match, "id", "")),
-                    score=float(getattr(match, "score", 0.0) or 0.0),
-                    url=str(payload.get("url", "")),
-                    title=str(payload.get("title", payload.get("name", ""))),
-                    content=str(payload.get("content", "")),
-                    metadata=payload,
-                )
-            )
-        return results
 
     async def get_vector_store_service(self) -> VectorStoreService:
         """Return the shared vector store service."""
@@ -197,17 +172,17 @@ class VectorDBManager:
         collection_name: str,
         query: str,
         limit: int = 5,
-    ) -> list[SearchResult]:
+    ) -> list[SearchRecord]:
         """Search for similar documents using dense embeddings."""
         try:
             await self.initialize()
             vector_service = await self.get_vector_store_service()
-            matches = await vector_service.search_documents(
+            records = await vector_service.search_documents(
                 collection_name,
                 query,
                 limit=limit,
             )
-            return self._build_search_results(matches)
+            return records
         except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             console.print(f"❌ Error searching collection: {e}", style="red")
             return []
@@ -218,19 +193,19 @@ class VectorDBManager:
         query_vector: list[float],
         limit: int = 5,
         filters: Mapping[str, Any] | None = None,
-    ) -> list[SearchResult]:
+    ) -> list[SearchRecord]:
         """Search using a pre-computed embedding vector."""
 
         try:
             await self.initialize()
             vector_service = await self.get_vector_store_service()
-            matches = await vector_service.search_vector(
+            records = await vector_service.search_vector(
                 collection_name,
                 query_vector,
                 limit=limit,
                 filters=filters,
             )
-            return self._build_search_results(matches)
+            return records
         except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             console.print(f"❌ Error searching by vector: {e}", style="red")
             return []

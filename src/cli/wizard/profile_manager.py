@@ -88,7 +88,7 @@ class ProfileManager:
     def show_profiles_table(self) -> None:
         """Display a table of available profiles."""
         table = Table(
-            title="🎯 Available Configuration Profiles",
+            title="Available Configuration Profiles",
             show_header=True,
             header_style="bold cyan",
             border_style="cyan",
@@ -111,11 +111,11 @@ class ProfileManager:
             if info:
                 # Highlight recommended profiles
                 if profile_name == "personal":
-                    name_text = Text(f"🏆 {profile_name}", style="bold green")
+                    name_text = Text(profile_name, style="bold green")
                 elif profile_name == "development":
-                    name_text = Text(f"🛠️ {profile_name}", style="bold blue")
+                    name_text = Text(profile_name, style="bold blue")
                 elif profile_name == "production":
-                    name_text = Text(f"🚀 {profile_name}", style="bold magenta")
+                    name_text = Text(profile_name, style="bold magenta")
                 else:
                     name_text = Text(profile_name, style="bold")
 
@@ -142,7 +142,9 @@ class ProfileManager:
                 )
 
         console.print(table)
-        console.print("\n[dim]💡 Most users should start with 'personal' profile[/dim]")
+        console.print(
+            "\n[dim]Most users should start with the 'personal' profile.[/dim]"
+        )
 
     def create_profile_config(
         self,
@@ -210,7 +212,7 @@ class ProfileManager:
         # Copy to target location
         shutil.copy2(profile_config_path, target_path)
 
-        console.print(f"✅ Activated profile '{profile_name}' -> {target_path}")
+        console.print(f"Activated profile '{profile_name}' -> {target_path}")
         return target_path
 
     def get_environment_overrides(self, profile_name: str) -> dict[str, str]:
@@ -316,7 +318,8 @@ class ProfileManager:
 
         instructions_text = Text()
         instructions_text.append(
-            f"🎯 Setup Instructions for '{profile_name}' Profile\n\n", style="bold cyan"
+            f"Setup Instructions for '{profile_name}' Profile\n\n",
+            style="bold cyan",
         )
 
         instructions_text.append(f"Description: {info['description']}\n", style="")

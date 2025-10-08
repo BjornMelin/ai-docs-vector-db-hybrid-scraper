@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import os
 from collections.abc import Iterable
-from dataclasses import dataclass, field
 from typing import Any
 
 import pytest
+
+from src.contracts.retrieval import SearchRecord
 
 
 class FakeMCP:
@@ -27,15 +28,6 @@ class FakeMCP:
             return fn
 
         return _decorator
-
-
-@dataclass
-class FakeVectorMatch:
-    """Simple VectorMatch stand-in."""
-
-    id: str
-    score: float
-    payload: dict[str, Any] = field(default_factory=dict)
 
 
 class FakeVectorStoreService:
@@ -122,16 +114,22 @@ class FakeVectorStoreService:
         *,
         limit: int,
         filters: dict | None,
-    ) -> list[FakeVectorMatch]:
+    ) -> list[SearchRecord]:
         """Return synthetic matches."""
 
-        base = [
-            FakeVectorMatch(id=str(i), score=1.0 - i * 0.01, payload={"q": query})
-            for i in range(1, limit + 1)
-        ]
-        if filters:
-            for m in base:
-                m.payload.update({"filters": filters})
+        base: list[SearchRecord] = []
+        for i in range(1, limit + 1):
+            payload: dict[str, Any] = {"q": query}
+            if filters:
+                payload["filters"] = filters
+            base.append(
+                SearchRecord(
+                    id=str(i),
+                    score=1.0 - i * 0.01,
+                    content="",
+                    metadata=payload,
+                )
+            )
         return base
 
     async def recommend(
@@ -141,19 +139,27 @@ class FakeVectorStoreService:
         positive_ids: list[str],
         limit: int,
         filters: dict | None,
-    ) -> list[FakeVectorMatch]:
+    ) -> list[SearchRecord]:
         """Recommend based on seed."""
 
         seed = positive_ids[0]
-        recs = [
-            FakeVectorMatch(id=f"rec{i}", score=0.95 - i * 0.05, payload={"seed": seed})
-            for i in range(limit + 1)
-        ]
-        if filters:
-            for m in recs:
-                m.payload.update({"filters": filters})
+        recs: list[SearchRecord] = []
+        for i in range(limit + 1):
+            payload: dict[str, Any] = {"seed": seed}
+            if filters:
+                payload["filters"] = filters
+            recs.append(
+                SearchRecord(
+                    id=f"rec{i}",
+                    score=0.95 - i * 0.05,
+                    content="",
+                    metadata=payload,
+                )
+            )
         # include the seed itself to test exclusion
-        recs.append(FakeVectorMatch(id=seed, score=1.0))
+        recs.append(
+            SearchRecord(id=seed, score=1.0, content="", metadata={"seed": seed})
+        )
         return recs
 
     async def ensure_payload_indexes(self, name: str, defs: dict[str, Any]) -> dict:

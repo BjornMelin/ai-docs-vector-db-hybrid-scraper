@@ -4,9 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from src.mcp_tools.models.responses import SearchResult
 from src.services.vector_db.service import VectorStoreService
-from src.services.vector_db.types import VectorMatch
 
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
@@ -22,20 +20,3 @@ async def ensure_vector_service(client_manager: ClientManager) -> VectorStoreSer
     if not service.is_initialized():
         await service.initialize()
     return service
-
-
-def match_to_result(match: VectorMatch, *, include_metadata: bool) -> SearchResult:
-    """Convert a vector match into the MCP ``SearchResult`` schema."""
-
-    payload: dict[str, Any] = dict(match.payload or {})
-    metadata: dict[str, Any] | None = payload if include_metadata else None
-    url_value = payload.get("url")
-    title_value = payload.get("title")
-    return SearchResult(
-        id=match.id,
-        content=str(payload.get("content") or payload.get("text") or ""),
-        score=float(match.score),
-        url=str(url_value) if isinstance(url_value, str) else None,
-        title=str(title_value) if isinstance(title_value, str) else None,
-        metadata=metadata,
-    )

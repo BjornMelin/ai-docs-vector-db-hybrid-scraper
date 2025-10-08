@@ -138,15 +138,15 @@ class OperationQueue:
 
                 try:
                     op.function(*op.args, **op.kwargs)
-                    progress.console.print(f"✅ {op.name}")
+                    progress.console.print(f"{op.name} completed successfully.")
                 except (ValueError, RuntimeError, OSError) as e:
-                    progress.console.print(f"❌ {op.name}: {e}")
+                    progress.console.print(f"{op.name} failed: {e}")
                     return False
 
                 progress.advance(task)
 
         self.console.print(
-            f"✅ All {len(self.operations)} operations completed successfully!"
+            f"All {len(self.operations)} operations completed successfully."
         )
         return True
 
@@ -157,11 +157,7 @@ class OperationQueue:
 
 @click.group()
 def batch():
-    """📦 Batch operations with progress tracking.
-
-    Perform bulk operations on collections, documents, and configurations
-    with Rich progress visualization and operation queuing.
-    """
+    """Batch operations with progress tracking and queuing."""
 
 
 @batch.command("index-documents")
@@ -239,7 +235,7 @@ def index_documents(
                     progress.advance(main_task)
 
         success_text = Text()
-        success_text.append("✅ Batch indexing completed!\n", style="bold green")
+        success_text.append("Batch indexing completed.\n", style="bold green")
         success_text.append(f"Documents indexed: {len(doc_list)}\n", style="cyan")
         success_text.append(f"Collection: {collection_name}\n", style="blue")
         success_text.append(f"Batch size: {batch_size}", style="dim")
@@ -262,7 +258,7 @@ def _show_indexing_preview(
 ):
     """Show a preview of what would be indexed."""
     preview_text = Text()
-    preview_text.append("📋 Indexing Preview\n\n", style="bold cyan")
+    preview_text.append("Indexing Preview\n\n", style="bold cyan")
     preview_text.append(f"Collection: {collection_name}\n", style="")
     preview_text.append(f"Documents: {len(documents)}\n", style="")
     preview_text.append(f"Batch size: {batch_size}\n", style="")
@@ -348,7 +344,7 @@ def create_collections(  # pylint: disable=too-many-locals
     if success:
         success_text = Text()
         success_text.append(
-            "✅ Batch collection creation completed!\n", style="bold green"
+            "Batch collection creation completed.\n", style="bold green"
         )
         success_text.append(
             f"Collections created: {len(collection_list)}", style="cyan"
@@ -375,7 +371,7 @@ def delete_collections(ctx: click.Context, collections: tuple, yes: bool):
 
     # Show what will be deleted
     warning_text = Text()
-    warning_text.append("⚠️ WARNING: Collection Deletion\n\n", style="bold red")
+    warning_text.append("WARNING: Collection Deletion\n\n", style="bold red")
     warning_text.append(
         "The following collections will be permanently deleted:\n", style=""
     )
@@ -423,7 +419,7 @@ def delete_collections(ctx: click.Context, collections: tuple, yes: bool):
 
     if success:
         rich_cli.console.print(
-            f"✅ {len(collection_list)} collections deleted successfully."
+            f"{len(collection_list)} collections deleted successfully."
         )
 
 
@@ -465,7 +461,7 @@ def backup_collections(
 
     # Show backup plan
     backup_text = Text()
-    backup_text.append("📦 Backup Plan\n\n", style="bold cyan")
+    backup_text.append("Backup Plan\n\n", style="bold cyan")
     backup_text.append(f"Collections: {len(collection_names)}\n", style="")
     backup_text.append(f"Output directory: {output_dir}\n", style="")
     backup_text.append(f"Format: {backup_format.upper()}", style="")
