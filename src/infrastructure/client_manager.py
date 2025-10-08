@@ -8,6 +8,7 @@ import threading
 from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
 from importlib import import_module
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, Literal, NoReturn, cast
 
 from dependency_injector.wiring import Provide, inject
@@ -15,7 +16,7 @@ from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_mcp_adapters.sessions import Connection
 
 from src.config import Settings, get_settings
-from src.config.models import MCPClientConfig, MCPServerConfig, MCPTransport
+from src.config.models import CacheType, MCPClientConfig, MCPServerConfig, MCPTransport
 from src.infrastructure.clients import (
     FirecrawlClientProvider,
     HTTPClientProvider,
@@ -24,22 +25,19 @@ from src.infrastructure.clients import (
     RedisClientProvider,
 )
 from src.infrastructure.container import ApplicationContainer, get_container
+from src.services.cache.manager import CacheManager
+from src.services.circuit_breaker import CircuitBreakerManager
+from src.services.content_intelligence.service import ContentIntelligenceService
+from src.services.core.project_storage import ProjectStorage
 from src.services.embeddings.fastembed_provider import FastEmbedProvider
+from src.services.managers.crawling_manager import CrawlingManager
+from src.services.managers.database_manager import DatabaseManager
+from src.services.managers.embedding_manager import EmbeddingManager
 
 
 if TYPE_CHECKING:  # pragma: no cover - imported for typing only
-    from src.services.cache.manager import CacheManager
-    from src.services.content_intelligence.service import ContentIntelligenceService
-    from src.services.core.project_storage import ProjectStorage
-    from src.services.errors import APIError
-    from src.services.managers.crawling_manager import CrawlingManager
-    from src.services.managers.embedding_manager import EmbeddingManager
     from src.services.rag.generator import RAGGenerator
     from src.services.vector_db.service import VectorStoreService
-else:  # pragma: no cover - runtime fallback for optional services
-    CacheManager = ContentIntelligenceService = ProjectStorage = EmbeddingManager = (
-        CrawlingManager
-    ) = RAGGenerator = VectorStoreService = APIError = Any
 
 
 HealthStatusCallable = Callable[[], Awaitable[dict[str, dict[str, Any]]]]
@@ -77,12 +75,6 @@ def _load_automation_router() -> type[Any]:
         raise RuntimeError(msg) from exc
 
     return cast(type[Any], router_cls)
-
-
-async def _ensure_service_registry():  # pragma: no cover - thin wrapper
-    registry_module = import_module("src.services.registry")
-    ensure_service_registry = registry_module.ensure_service_registry
-    return await ensure_service_registry()
 
 
 _API_ERROR_TYPE: type[Exception] | None = None
@@ -179,11 +171,12 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         self._content_intelligence: ContentIntelligenceService | None = None
         self._project_storage: ProjectStorage | None = None
         self._rag_generator: RAGGenerator | None = None
+        self._database_manager: DatabaseManager | None = None
+        self._circuit_breaker_manager: CircuitBreakerManager | None = None
         self._config = get_settings()
         self._automation_router: Any | None = None
         self._mcp_client: MultiServerMCPClient | None = None
         self._mcp_client_lock = asyncio.Lock()
-        self._service_registry: Any | None = None
 
     @property
     def config(self) -> Settings:
@@ -280,15 +273,51 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
             except Exception:  # pragma: no cover - defensive
                 logger.exception("Failed to cleanup automation router")
             self._automation_router = None
-        self._cache_manager = None
-        self._embedding_manager = None
-        self._crawl_manager = None
-        self._content_intelligence = None
-        self._project_storage = None
+        if self._database_manager is not None:
+            try:
+                await self._database_manager.cleanup()
+            except Exception:  # pragma: no cover - defensive
+                logger.exception("Failed to cleanup database manager")
+            self._database_manager = None
+        if self._embedding_manager is not None:
+            try:
+                await self._embedding_manager.cleanup()
+            except Exception:  # pragma: no cover - defensive
+                logger.exception("Failed to cleanup embedding manager")
+            self._embedding_manager = None
+        if self._cache_manager is not None:
+            try:
+                await self._cache_manager.close()
+            except Exception:  # pragma: no cover - defensive
+                logger.exception("Failed to close cache manager")
+            self._cache_manager = None
+        if self._crawl_manager is not None:
+            try:
+                await self._crawl_manager.cleanup()
+            except Exception:  # pragma: no cover - defensive
+                logger.exception("Failed to cleanup crawl manager")
+            self._crawl_manager = None
+        if self._content_intelligence is not None:
+            try:
+                await self._content_intelligence.cleanup()
+            except Exception:  # pragma: no cover - defensive
+                logger.exception("Failed to cleanup content intelligence service")
+            self._content_intelligence = None
+        if self._project_storage is not None:
+            try:
+                await self._project_storage.cleanup()
+            except Exception:  # pragma: no cover - defensive
+                logger.exception("Failed to cleanup project storage")
+            self._project_storage = None
+        if self._circuit_breaker_manager is not None:
+            try:
+                await self._circuit_breaker_manager.close()
+            except Exception:  # pragma: no cover - defensive
+                logger.exception("Failed to close circuit breaker manager")
+            self._circuit_breaker_manager = None
         await self._close_mcp_client()
         self._providers.clear()
         self._parallel_processing_system = None
-        self._service_registry = None
         self._initialized = False
         logger.info("ClientManager cleaned up")
 
@@ -429,28 +458,63 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         return service
 
     async def get_cache_manager(self) -> CacheManager:
+        """Return the cache manager configured for the application."""
+
         cache_manager = self._cache_manager
-        if cache_manager is None:
-            registry = await self._get_service_registry()
-            cache_manager = registry.cache_manager
-            self._cache_manager = cache_manager
+        if cache_manager is not None:
+            return cache_manager
+
+        cache_config = self._config.cache
+        distributed_ttl_seconds = {
+            CacheType.REDIS: max(
+                cache_config.ttl_embeddings,
+                cache_config.ttl_search_results,
+            ),
+            CacheType.EMBEDDINGS: cache_config.ttl_embeddings,
+            CacheType.SEARCH: cache_config.ttl_search_results,
+            CacheType.CRAWL: cache_config.ttl_crawl,
+            CacheType.HYBRID: max(
+                cache_config.ttl_embeddings,
+                cache_config.ttl_search_results,
+            ),
+        }
+
+        cache_manager = CacheManager(
+            dragonfly_url=cache_config.redis_url,
+            enable_local_cache=cache_config.enable_local_cache,
+            enable_distributed_cache=cache_config.enable_redis_cache,
+            local_max_size=cache_config.local_max_size,
+            local_max_memory_mb=float(cache_config.local_max_memory_mb),
+            distributed_ttl_seconds=distributed_ttl_seconds,
+            local_cache_path=self._config.cache_dir / "services",
+            memory_pressure_threshold=cache_config.memory_pressure_threshold,
+        )
+        self._cache_manager = cache_manager
         return cache_manager
 
     async def get_embedding_manager(self) -> EmbeddingManager:
+        """Return the embedding manager, initializing it on first use."""
+
         embedding_manager = self._embedding_manager
-        if embedding_manager is None:
-            registry = await self._get_service_registry()
-            embedding_manager = cast(EmbeddingManager, registry.embedding_manager)
-            self._embedding_manager = embedding_manager
-        return embedding_manager
+        if embedding_manager is not None:
+            return embedding_manager
+
+        manager = EmbeddingManager()
+        await manager.initialize(config=self._config, client_manager=self)
+        self._embedding_manager = manager
+        return manager
 
     async def get_crawl_manager(self) -> CrawlingManager:
+        """Return the crawling manager, creating it as needed."""
+
         crawling_manager = self._crawl_manager
-        if crawling_manager is None:
-            registry = await self._get_service_registry()
-            crawling_manager = registry.crawl_manager
-            self._crawl_manager = crawling_manager
-        return crawling_manager
+        if crawling_manager is not None:
+            return crawling_manager
+
+        manager = CrawlingManager()
+        await manager.initialize(config=self._config)
+        self._crawl_manager = manager
+        return manager
 
     async def get_crawling_manager(self) -> CrawlingManager:
         """Alias for get_crawl_manager for compatibility with new naming."""
@@ -460,20 +524,72 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
     async def get_content_intelligence_service(
         self,
     ) -> ContentIntelligenceService:
+        """Return the content intelligence service instance."""
+
         content_intelligence = self._content_intelligence
-        if content_intelligence is None:
-            registry = await self._get_service_registry()
-            content_intelligence = registry.content_intelligence
-            self._content_intelligence = content_intelligence
-        return content_intelligence
+        if content_intelligence is not None:
+            return content_intelligence
+
+        embedding_manager = await self.get_embedding_manager()
+        cache_manager = await self.get_cache_manager()
+        service = ContentIntelligenceService(
+            config=self._config,
+            embedding_manager=embedding_manager,
+            cache_manager=cache_manager,
+        )
+        await service.initialize()
+        self._content_intelligence = service
+        return service
 
     async def get_project_storage(self) -> ProjectStorage:
+        """Return the project storage service."""
+
         project_storage = self._project_storage
-        if project_storage is None:
-            registry = await self._get_service_registry()
-            project_storage = registry.project_storage
-            self._project_storage = project_storage
-        return project_storage
+        if project_storage is not None:
+            return project_storage
+
+        data_dir = getattr(self._config, "data_dir", None)
+        if data_dir is None:
+            msg = "Configuration missing data_dir for project storage"
+            raise RuntimeError(msg)
+
+        storage = ProjectStorage(data_dir=Path(data_dir))
+        await storage.initialize()
+        self._project_storage = storage
+        return storage
+
+    async def get_database_manager(self) -> DatabaseManager:
+        """Return the database manager composed from shared services."""
+
+        database_manager = self._database_manager
+        if database_manager is not None:
+            return database_manager
+
+        redis_client = await self.get_redis_client()
+        cache_manager = await self.get_cache_manager()
+        vector_service = await self.get_vector_store_service()
+        manager = DatabaseManager(
+            redis_client=redis_client,
+            cache_manager=cache_manager,
+            vector_service=vector_service,
+        )
+        await manager.initialize()
+        self._database_manager = manager
+        return manager
+
+    async def get_circuit_breaker_manager(self) -> CircuitBreakerManager:
+        """Return the circuit breaker manager instance."""
+
+        circuit_manager = self._circuit_breaker_manager
+        if circuit_manager is not None:
+            return circuit_manager
+
+        manager = CircuitBreakerManager(
+            redis_url=self._config.cache.redis_url,
+            config=self._config,
+        )
+        self._circuit_breaker_manager = manager
+        return manager
 
     async def get_rag_generator(self) -> RAGGenerator:
         if self._rag_generator:
@@ -521,11 +637,6 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
 
     async def get_http_client(self):
         return self._get_provider_client("http")
-
-    async def _get_service_registry(self) -> Any:
-        if self._service_registry is None:
-            self._service_registry = await _ensure_service_registry()
-        return self._service_registry
 
     # Function-based dependency access methods (backward compatibility)
 
@@ -624,3 +735,47 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         Used by function-based dependencies for singleton pattern.
         """
         return cls()
+
+
+_GLOBAL_CLIENT_MANAGER: ClientManager | None = None
+_GLOBAL_CLIENT_LOCK = asyncio.Lock()
+
+
+async def ensure_client_manager(force: bool = False) -> ClientManager:
+    """Return an initialized global ClientManager instance."""
+
+    global _GLOBAL_CLIENT_MANAGER  # pylint: disable=global-statement
+    if _GLOBAL_CLIENT_MANAGER is not None and not force:
+        return _GLOBAL_CLIENT_MANAGER
+
+    async with _GLOBAL_CLIENT_LOCK:
+        if _GLOBAL_CLIENT_MANAGER is None or force:
+            if _GLOBAL_CLIENT_MANAGER is not None and force:
+                await _GLOBAL_CLIENT_MANAGER.cleanup()
+            manager = ClientManager.from_unified_config()
+            await manager.initialize()
+            _GLOBAL_CLIENT_MANAGER = manager
+    return _GLOBAL_CLIENT_MANAGER
+
+
+def get_client_manager() -> ClientManager:
+    """Return the initialized global ClientManager.
+
+    Raises:
+        RuntimeError: If the client manager has not been initialized yet.
+    """
+
+    if _GLOBAL_CLIENT_MANAGER is None:
+        msg = "ClientManager has not been initialized"
+        raise RuntimeError(msg)
+    return _GLOBAL_CLIENT_MANAGER
+
+
+async def shutdown_client_manager() -> None:
+    """Shutdown the global ClientManager and release resources."""
+
+    global _GLOBAL_CLIENT_MANAGER  # pylint: disable=global-statement
+    if _GLOBAL_CLIENT_MANAGER is None:
+        return
+    await _GLOBAL_CLIENT_MANAGER.cleanup()
+    _GLOBAL_CLIENT_MANAGER = None
