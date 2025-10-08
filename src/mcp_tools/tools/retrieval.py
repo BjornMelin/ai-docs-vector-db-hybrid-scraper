@@ -21,19 +21,40 @@ from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
 from fastmcp import Context
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.config.models import SearchStrategy
-from src.mcp_tools.models.requests import (  # type: ignore[import]
-    FilteredSearchRequest,
-    MultiStageSearchRequest,
-    SearchRequest,
-)
 from src.mcp_tools.models.responses import SearchResult
 from src.mcp_tools.tools._shared import ensure_vector_service, match_to_result
+from src.models.search import SearchRequest as CoreSearchRequest
 from src.services.vector_db.types import VectorMatch
 
 
 logger = logging.getLogger(__name__)
+
+
+class MultiStageSearchPayload(BaseModel):
+    """Payload for multi-stage retrieval combining several filter passes."""
+
+    query: str = Field(..., min_length=1, description="User query text.")
+    collection: str = Field(
+        default="documentation", min_length=1, description="Target collection name."
+    )
+    stages: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Ordered stage definitions with optional filters and limits.",
+    )
+    limit: int = Field(
+        default=10, ge=1, le=1000, description="Maximum number of results to return."
+    )
+    include_metadata: bool = Field(
+        default=True, description="Whether to include metadata in results."
+    )
+    filters: dict[str, Any] | None = Field(
+        default=None, description="Base filters applied to each stage."
+    )
+
+    model_config = ConfigDict(extra="forbid")
 
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
@@ -73,21 +94,27 @@ def _rrf_rank(matches: list[VectorMatch], *, k: int = 60) -> list[VectorMatch]:
 
 async def _search_matches(
     client_manager: ClientManager,
-    request: SearchRequest,
+    request: CoreSearchRequest,
     *,
     ctx: Context | None = None,
 ) -> list[VectorMatch]:
     """Run a vector search and return the raw matches."""
 
     service = await ensure_vector_service(client_manager)
+    collection_value = request.collection or "documentation"
     if ctx:
+        strategy_value = (
+            request.search_strategy.value
+            if hasattr(request.search_strategy, "value")
+            else str(request.search_strategy)
+        )
         await ctx.info(
-            f"search: strategy={request.strategy.value} "
-            f"collection={request.collection} limit={request.limit}"
+            f"search: strategy={strategy_value} "
+            f"collection={collection_value} limit={request.limit}"
         )
     try:
         matches = await service.search_documents(
-            request.collection,
+            collection_value,
             request.query,
             limit=request.limit,
             filters=request.filters,
@@ -107,7 +134,7 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
 
     @mcp.tool()
     async def search_documents(
-        request: SearchRequest, ctx: Context
+        request: CoreSearchRequest, ctx: Context
     ) -> list[SearchResult]:
         """Execute a single-stage search."""
 
@@ -118,36 +145,35 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
 
     @mcp.tool()
     async def filtered_search(
-        request: FilteredSearchRequest, ctx: Context
+        request: CoreSearchRequest, ctx: Context
     ) -> list[SearchResult]:
         """Execute a search with structured filters."""
 
-        base = SearchRequest(
-            query=request.query,
-            collection=request.collection,
-            limit=request.limit,
-            filters=request.filters,
-            include_metadata=request.include_metadata,
-            strategy=SearchStrategy.HYBRID,
+        normalized_request = request.model_copy(
+            update={"search_strategy": SearchStrategy.HYBRID}
         )
-        return await search_documents(base, ctx)  # noqa: B023
+        matches = await _search_matches(client_manager, normalized_request, ctx=ctx)
+        return _to_results(
+            matches[: normalized_request.limit],
+            include_metadata=normalized_request.include_metadata,
+        )
 
     @mcp.tool()
     async def multi_stage_search(
-        request: MultiStageSearchRequest, ctx: Context
+        payload: MultiStageSearchPayload, ctx: Context
     ) -> list[SearchResult]:
         """Execute a simplified multi‑stage search."""
 
         service = await ensure_vector_service(client_manager)
         all_matches: list[VectorMatch] = []
 
-        for stage in request.stages:
-            stage_limit = int(stage.get("limit", request.limit))
+        for stage in payload.stages:
+            stage_limit = int(stage.get("limit", payload.limit))
             stage_filters = stage.get("filters") or stage.get("filter")
             try:
                 stage_matches = await service.search_documents(
-                    request.collection,
-                    request.query,
+                    payload.collection,
+                    payload.query,
                     limit=stage_limit,
                     filters=stage_filters,
                 )
@@ -159,7 +185,8 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
         deduped = _dedupe_by_id(all_matches)
         await ctx.info(f"multi_stage_search -> {len(deduped)} unique after merge")
         return _to_results(
-            deduped[: request.limit], include_metadata=request.include_metadata
+            deduped[: payload.limit],
+            include_metadata=payload.include_metadata,
         )
 
     @mcp.tool()
@@ -174,13 +201,15 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
         """Return primary results plus an extended context set."""
 
         extended_limit = max(limit + max(context_size, 0), limit)
-        base_request = SearchRequest(
-            query=query,
-            collection=collection,
-            limit=extended_limit,
-            include_metadata=include_metadata,
-            filters=None,
-            strategy=SearchStrategy.HYBRID,
+        base_request = CoreSearchRequest.model_validate(
+            {
+                "query": query,
+                "collection": collection,
+                "limit": extended_limit,
+                "include_metadata": include_metadata,
+                "filters": None,
+                "search_strategy": SearchStrategy.HYBRID,
+            }
         )
         matches = await _search_matches(client_manager, base_request, ctx=ctx)
         return _to_results(matches[:extended_limit], include_metadata=include_metadata)
@@ -217,13 +246,14 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
 
     @mcp.tool()
     async def reranked_search(
-        request: SearchRequest, ctx: Context
+        request: CoreSearchRequest, ctx: Context
     ) -> list[SearchResult]:
         """Search then apply RRF scoring for shallow reranking."""
 
         service = await ensure_vector_service(client_manager)
+        collection_value = request.collection or "documentation"
         baseline = await service.search_documents(
-            request.collection,
+            collection_value,
             request.query,
             limit=max(50, request.limit),
             filters=request.filters,

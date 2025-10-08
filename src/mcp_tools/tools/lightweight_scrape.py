@@ -203,9 +203,7 @@ def register_tools(mcp, client_manager: ClientManager):
             start_time = time.time()
 
             # Force lightweight tier by specifying preferred_provider
-            result = await crawl_manager.scrape_url(
-                url=url, preferred_provider="lightweight"
-            )
+            result = await crawl_manager.scrape_url(url=url, tier="lightweight")
 
             elapsed_ms = (time.time() - start_time) * 1000
 
