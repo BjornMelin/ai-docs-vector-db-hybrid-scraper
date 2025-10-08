@@ -6,12 +6,12 @@ readability, and duplicate detection with similarity thresholds.
 """
 
 import logging
-import math
 import re
 from datetime import UTC, datetime
 from typing import Any
 
 from .models import QualityScore
+from .utils import cosine_similarity
 
 
 logger = logging.getLogger(__name__)
@@ -25,8 +25,8 @@ class QualityAssessor:
 
         Args:
             embedding_manager: Optional EmbeddingManager for semantic similarity
-
         """
+
         self.embedding_manager = embedding_manager
         self._initialized = False
 
@@ -80,6 +80,7 @@ class QualityAssessor:
 
     async def initialize(self) -> None:
         """Initialize the quality assessor."""
+
         self._initialized = True
         logger.info("QualityAssessor initialized with multi-metric scoring")
 
@@ -102,8 +103,8 @@ class QualityAssessor:
 
         Returns:
             QualityScore: Comprehensive quality assessment
-
         """
+
         if not self._initialized:
             await self.initialize()
 
@@ -176,8 +177,8 @@ class QualityAssessor:
 
         Returns:
             float: Completeness score (0-1)
-
         """
+
         if not content.strip():
             return 0.0
 
@@ -256,8 +257,8 @@ class QualityAssessor:
 
         Returns:
             float: Relevance score (0-1)
-
         """
+
         if not query_context:
             return 0.5  # Neutral score when no context provided
 
@@ -273,7 +274,7 @@ class QualityAssessor:
                     and len(result.get("embeddings", [])) == 2
                 ):
                     embeddings = result["embeddings"]
-                    similarity = self._cosine_similarity(embeddings[0], embeddings[1])
+                    similarity = cosine_similarity(embeddings[0], embeddings[1])
                     return max(0.0, min(1.0, similarity))
 
             # Fallback to keyword-based relevance
@@ -315,8 +316,8 @@ class QualityAssessor:
 
         Returns:
             float: Confidence score (0-1)
-
         """
+
         base_confidence = 0.7  # Start with reasonable baseline
 
         # Check for positive quality indicators
@@ -370,8 +371,8 @@ class QualityAssessor:
 
         Returns:
             float: Freshness score (0-1)
-
         """
+
         now = datetime.now(tz=UTC)
 
         # Try to extract date from metadata first
@@ -452,8 +453,8 @@ class QualityAssessor:
 
         Returns:
             float: Freshness score (0-1)
-
         """
+
         if days_old < 0:
             return 1.0  # Future dates (edge case)
         if days_old <= self._quality_config["freshness_days_excellent"]:
@@ -491,8 +492,8 @@ class QualityAssessor:
 
         Returns:
             float: Structure quality score (0-1)
-
         """
+
         if not content.strip():
             return 0.0
 
@@ -554,8 +555,8 @@ class QualityAssessor:
 
         Returns:
             float: Readability score (0-1)
-
         """
+
         if not content.strip():
             return 0.0
 
@@ -645,8 +646,8 @@ class QualityAssessor:
 
         Returns:
             float: Maximum similarity score (0-1, where 1 means identical)
-
         """
+
         if not existing_content:
             return 0.0
 
@@ -668,7 +669,7 @@ class QualityAssessor:
 
                     max_similarity = 0.0
                     for existing_embedding in existing_embeddings:
-                        similarity = self._cosine_similarity(
+                        similarity = cosine_similarity(
                             content_embedding, existing_embedding
                         )
                         max_similarity = max(max_similarity, similarity)
@@ -694,29 +695,6 @@ class QualityAssessor:
         else:
             return max_similarity
 
-    def _cosine_similarity(self, vec1: list[float], vec2: list[float]) -> float:
-        """Calculate cosine similarity between two vectors.
-
-        Args:
-            vec1: First vector
-            vec2: Second vector
-
-        Returns:
-            float: Cosine similarity between vectors
-
-        """
-        try:
-            dot_product = sum(a * b for a, b in zip(vec1, vec2, strict=False))
-            magnitude1 = math.sqrt(sum(a * a for a in vec1))
-            magnitude2 = math.sqrt(sum(a * a for a in vec2))
-
-            if magnitude1 == 0 or magnitude2 == 0:
-                return 0.0
-
-            return dot_product / (magnitude1 * magnitude2)
-        except (AttributeError, RuntimeError, ValueError):
-            return 0.0
-
     def _identify_quality_issues(
         self,
         content: str,
@@ -736,8 +714,8 @@ class QualityAssessor:
 
         Returns:
             list[str]: List of identified quality issues
-
         """
+
         issues = []
 
         if completeness < 0.5:
@@ -802,8 +780,8 @@ class QualityAssessor:
 
         Returns:
             list[str]: List of improvement suggestions
-
         """
+
         suggestions = []
 
         if completeness < 0.7:
@@ -842,5 +820,6 @@ class QualityAssessor:
 
     async def cleanup(self) -> None:
         """Cleanup quality assessor resources."""
+
         self._initialized = False
         logger.info("QualityAssessor cleaned up")
