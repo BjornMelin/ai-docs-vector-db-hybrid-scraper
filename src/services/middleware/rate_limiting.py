@@ -8,13 +8,13 @@ import logging
 from collections.abc import Callable
 from typing import Any
 
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request, Response  # type: ignore
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 
-from src.config import Config
+from src.config import Settings
 
 
 logger = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ class ModernRateLimiter:
         redis_url: str = "redis://localhost:6379",
         key_func: Callable | None = None,
         default_limits: list[str] | None = None,
-        config: Config | None = None,
+        config: Settings | None = None,
     ):
         """Initialize modern rate limiter.
 
@@ -56,7 +56,7 @@ class ModernRateLimiter:
         self.limiter = Limiter(
             key_func=self.key_func,
             storage_uri=redis_url,
-            default_limits=default_limits or ["1000/hour", "100/minute"],
+            default_limits=default_limits or ["1000/hour", "100/minute"],  # type: ignore[arg-type]
         )
 
         # Attach limiter to app state for access in route handlers
@@ -69,8 +69,9 @@ class ModernRateLimiter:
         app.add_middleware(SlowAPIMiddleware)
 
         logger.info(
-            f"ModernRateLimiter initialized with Redis: {redis_url}, "
-            f"default_limits: {default_limits}",
+            "ModernRateLimiter initialized with Redis: %s, default_limits: %s",
+            redis_url,
+            default_limits,
         )
 
     def limit(self, rate: str, per_method: bool = False):
@@ -110,8 +111,8 @@ class ModernRateLimiter:
 
         """
         # Example exemption logic - customize as needed
-        if hasattr(self.config, "rate_limiting") and self.config.rate_limiting:
-            exempt_ips = getattr(self.config.rate_limiting, "exempt_ips", [])
+        if hasattr(self.config, "rate_limiting") and self.config.rate_limiting:  # type: ignore[attr-defined]
+            exempt_ips = getattr(self.config.rate_limiting, "exempt_ips", [])  # type: ignore[attr-defined]
             client_ip = get_remote_address(request)
             return client_ip in exempt_ips
 
@@ -139,21 +140,24 @@ class ModernRateLimiter:
 
         # Add rate limit headers if available
         if hasattr(exc, "retry_after"):
-            response.headers["Retry-After"] = str(exc.retry_after)
+            response.headers["Retry-After"] = str(exc.retry_after)  # type: ignore[attr-defined]
 
         if hasattr(exc, "limit"):
             response.headers["X-RateLimit-Limit"] = str(exc.limit)
 
         if hasattr(exc, "remaining"):
-            response.headers["X-RateLimit-Remaining"] = str(exc.remaining)
+            response.headers["X-RateLimit-Remaining"] = str(exc.remaining)  # type: ignore[attr-defined]
 
         if hasattr(exc, "reset"):
-            response.headers["X-RateLimit-Reset"] = str(exc.reset)
+            response.headers["X-RateLimit-Reset"] = str(exc.reset)  # type: ignore[attr-defined]
 
         # Log rate limit exceeded for monitoring
         client_ip = get_remote_address(request)
         logger.warning(
-            f"Rate limit exceeded for {client_ip} on {request.url.path}: {exc.detail}",
+            "Rate limit exceeded for %s on %s: %s",
+            client_ip,
+            request.url.path,
+            exc.detail,
         )
 
         return response
@@ -299,7 +303,7 @@ def create_user_based_limiter(redis_url: str) -> Limiter:
 def setup_rate_limiting(
     app: FastAPI,
     redis_url: str = "redis://localhost:6379",
-    config: Config | None = None,
+    config: Settings | None = None,
 ) -> ModernRateLimiter:
     """Set up rate limiting for a FastAPI application.
 
@@ -315,7 +319,7 @@ def setup_rate_limiting(
     # Determine rate limits from config
     default_limits = ["1000/hour", "100/minute"]
     if config and hasattr(config, "rate_limiting"):
-        default_limits = getattr(config.rate_limiting, "default_limits", default_limits)
+        default_limits = getattr(config.rate_limiting, "default_limits", default_limits)  # type: ignore[attr-defined]
 
     return ModernRateLimiter(
         app=app,

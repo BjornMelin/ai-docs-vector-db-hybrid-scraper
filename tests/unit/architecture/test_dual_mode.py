@@ -28,7 +28,7 @@ from src.architecture.modes import (
     resolve_mode,
 )
 from src.architecture.service_factory import ModeAwareServiceFactory
-from src.config import get_config, reset_config, set_config
+from src.config import get_settings, refresh_settings
 from src.config.models import Environment
 
 
@@ -60,14 +60,14 @@ def _install_default_config(
 ) -> Generator[None, None, None]:
     """Provision an isolated Config instance for each test."""
     monkeypatch.delenv("AI_DOCS_MODE", raising=False)
-    set_config(
-        config_factory(
+    refresh_settings(
+        settings=config_factory(
             mode=ApplicationMode.SIMPLE,
             environment=Environment.TESTING,
         )
     )
     yield
-    reset_config()
+    refresh_settings()
 
 
 def _install_flag_stub(
@@ -144,8 +144,8 @@ class TestModeDetection:
         ],
     )
     def test_resolve_mode_reflects_settings(self, expected: ApplicationMode) -> None:
-        current = get_config()
-        set_config(current.model_copy(update={"mode": expected}))
+        current = get_settings()
+        refresh_settings(settings=current.model_copy(update={"mode": expected}))
         assert resolve_mode() is expected
 
     def test_resolve_mode_defaults_to_current_settings(self) -> None:
@@ -154,20 +154,30 @@ class TestModeDetection:
     def test_get_mode_config_auto_uses_detection(
         self,
     ) -> None:
-        set_config(get_config().model_copy(update={"mode": ApplicationMode.ENTERPRISE}))
+        refresh_settings(
+            settings=get_settings().model_copy(
+                update={"mode": ApplicationMode.ENTERPRISE}
+            )
+        )
         assert get_mode_config() == ENTERPRISE_MODE_CONFIG
 
     def test_helper_functions_reflect_mode(self) -> None:
-        set_config(get_config().model_copy(update={"mode": ApplicationMode.ENTERPRISE}))
+        refresh_settings(
+            settings=get_settings().model_copy(
+                update={"mode": ApplicationMode.ENTERPRISE}
+            )
+        )
         assert resolve_mode() is ApplicationMode.ENTERPRISE
-        enterprise = get_mode_config(config=get_config())
+        enterprise = get_mode_config(config=get_settings())
         assert "advanced_search" in enterprise.enabled_services
         assert enterprise.max_complexity_features["enable_advanced_monitoring"] is True
         assert enterprise.resource_limits["max_concurrent_requests"] == 100
 
-        set_config(get_config().model_copy(update={"mode": ApplicationMode.SIMPLE}))
+        refresh_settings(
+            settings=get_settings().model_copy(update={"mode": ApplicationMode.SIMPLE})
+        )
         assert resolve_mode() is ApplicationMode.SIMPLE
-        simple = get_mode_config(config=get_config())
+        simple = get_mode_config(config=get_settings())
         assert "advanced_search" not in simple.enabled_services
         assert simple.max_complexity_features["enable_advanced_monitoring"] is False
         assert simple.resource_limits["max_concurrent_requests"] == 5

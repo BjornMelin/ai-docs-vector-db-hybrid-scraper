@@ -57,7 +57,7 @@ def dummy_config():
 
 @pytest.fixture
 def patched_get_config(monkeypatch: pytest.MonkeyPatch, dummy_config: DummyConfig):
-    """Patch ``get_config`` to return the dummy configuration."""
+    """Patch ``get_settings`` to return the dummy configuration."""
 
     monkeypatch.setattr(
         configuration_module, "load_unified_config", lambda: dummy_config
@@ -86,7 +86,7 @@ class TestConfigurationTools:
         """Global configuration export should mask sensitive keys."""
 
         configuration_module.register_tools(mock_mcp, MagicMock())
-        get_config_tool = mock_mcp._registered["get_config"]
+        get_config_tool = mock_mcp._registered["get_settings"]
 
         result = await get_config_tool(ctx=None)
 
@@ -105,7 +105,7 @@ class TestConfigurationTools:
         """Requesting an explicit key should return sanitized data."""
 
         configuration_module.register_tools(mock_mcp, MagicMock())
-        get_config_tool = mock_mcp._registered["get_config"]
+        get_config_tool = mock_mcp._registered["get_settings"]
 
         response = await get_config_tool(key="misc_setting", ctx=None)
 
@@ -141,4 +141,4 @@ class TestConfigurationTools:
         """Registering configuration tools should expose two MCP endpoints."""
 
         configuration_module.register_tools(mock_mcp, MagicMock())
-        assert set(mock_mcp._registered.keys()) == {"get_config", "validate_config"}
+        assert set(mock_mcp._registered.keys()) == {"get_settings", "validate_config"}

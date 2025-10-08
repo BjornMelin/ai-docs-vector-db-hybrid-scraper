@@ -8,17 +8,18 @@ Clean 2025 implementation of enterprise features:
 """
 
 import logging
+from collections.abc import AsyncGenerator
 from contextlib import AsyncExitStack, asynccontextmanager
 from typing import Any
 
-from sqlalchemy.ext.asyncio import (
+from sqlalchemy.ext.asyncio import (  # type: ignore[import]
     AsyncEngine,
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
 
-from src.config import Config
+from src.config import Settings
 from src.services.circuit_breaker import CircuitBreakerManager
 
 from .monitoring import LoadMonitor, QueryMonitor
@@ -41,7 +42,7 @@ class DatabaseManager:
 
     def __init__(
         self,
-        config: Config,
+        config: Settings,
         load_monitor: LoadMonitor | None = None,
         query_monitor: QueryMonitor | None = None,
         circuit_breaker_manager: CircuitBreakerManager | None = None,
@@ -137,7 +138,7 @@ class DatabaseManager:
             logger.exception("Error during database cleanup")
 
     @asynccontextmanager
-    async def session(self) -> Any:
+    async def session(self) -> AsyncGenerator[Any, None]:
         """Get enterprise database session with monitoring.
 
         This context manager provides:
@@ -148,8 +149,8 @@ class DatabaseManager:
 
         Yields:
             AsyncSession: Monitored database session
-
         """
+
         if not self._session_factory:
             msg = "Database manager not initialized"
             raise RuntimeError(msg)
@@ -192,8 +193,8 @@ class DatabaseManager:
             "load_metrics": await self.load_monitor.get_current_metrics(),
             "query_metrics": await self.query_monitor.get_performance_summary(),
             "circuit_breaker_status": await self._get_circuit_breaker_state(),
-            "pool_size": self._engine.pool.size() if self._engine else 0,
-            "pool_checked_out": self._engine.pool.checkedout() if self._engine else 0,
+            "pool_size": self._engine.pool.size() if self._engine else 0,  # type: ignore[attr-defined]
+            "pool_checked_out": self._engine.pool.checked_out() if self._engine else 0,  # type: ignore[attr-defined]
         }
 
     @property

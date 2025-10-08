@@ -9,7 +9,7 @@ import httpx
 import pytest
 import respx
 
-from src.config import Config
+from src.config import Settings
 from src.config.models import Environment
 from src.services.browser.lightweight_scraper import (
     ContentAnalysis,
@@ -22,10 +22,10 @@ class TestModernHTTPMocking:
     """Test HTTP mocking patterns with respx and the real scraper."""
 
     @pytest.fixture
-    def config(self, tmp_path: Path) -> Config:
+    def config(self, tmp_path: Path) -> Settings:
         """Create test configuration with browser automation hints."""
         base = tmp_path / "http_mocks"
-        return Config.model_validate(
+        return Settings.model_validate(
             {
                 "environment": Environment.TESTING,
                 "data_dir": base / "data",
@@ -35,7 +35,7 @@ class TestModernHTTPMocking:
         )
 
     @pytest.fixture
-    async def scraper(self, config: Config):
+    async def scraper(self, config: Settings):
         """Create and initialize the real lightweight scraper."""
         scraper = LightweightScraper(config)
         await scraper.initialize()

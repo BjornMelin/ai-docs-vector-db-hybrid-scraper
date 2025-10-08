@@ -1,13 +1,11 @@
-"""Settings provider for the AI documentation platform."""
+"""Application settings definitions and providers."""
 
-# pylint: disable=no-member
+# pylint: disable=global-statement
 
 from __future__ import annotations
 
-import threading
-from collections.abc import Callable, Iterable
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from pydantic import Field, ValidationError, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -48,10 +46,7 @@ from .models import (
 from .security.config import SecurityConfig
 
 
-SettingsCallback = Callable[["Config", "Config | None"], None]
-
-
-class Config(BaseSettings):
+class Settings(BaseSettings):
     """Normalized application settings sourced from environment variables."""
 
     model_config = SettingsConfigDict(
@@ -126,7 +121,7 @@ class Config(BaseSettings):
         default_factory=BrowserUseConfig, description="browser-use configuration"
     )
     mcp_client: MCPClientConfig = Field(
-        default_factory=cast(Callable[[], MCPClientConfig], MCPClientConfig),
+        default_factory=MCPClientConfig,  # type: ignore[call-arg]
         description="MCP client configuration",
     )
     chunking: ChunkingConfig = Field(
@@ -169,42 +164,18 @@ class Config(BaseSettings):
     )
 
     @model_validator(mode="after")
-    def validate_provider_keys(self) -> Config:
+    def validate_provider_keys(self) -> Settings:
         if self.environment == Environment.TESTING:
             return self
-        if (
-            self.embedding_provider is EmbeddingProvider.OPENAI
-            and not self.openai.api_key
-        ):
+        openai_api_key = getattr(self.openai, "api_key", None)
+        firecrawl_api_key = getattr(self.firecrawl, "api_key", None)
+
+        if self.embedding_provider is EmbeddingProvider.OPENAI and not openai_api_key:
             msg = "OpenAI API key required when using OpenAI embedding provider"
             raise ValueError(msg)
-        if (
-            self.crawl_provider is CrawlProvider.FIRECRAWL
-            and not self.firecrawl.api_key
-        ):
+        if self.crawl_provider is CrawlProvider.FIRECRAWL and not firecrawl_api_key:
             msg = "Firecrawl API key required when using Firecrawl provider"
             raise ValueError(msg)
-        return self
-
-    @model_validator(mode="after")
-    def create_runtime_directories(self) -> Config:
-        for directory in (self.data_dir, self.cache_dir, self.logs_dir):
-            directory.mkdir(parents=True, exist_ok=True)
-        return self
-
-    @model_validator(mode="after")
-    def apply_mode_adjustments(self) -> Config:
-        if self.mode is ApplicationMode.SIMPLE:
-            self.performance.max_concurrent_crawls = min(
-                self.performance.max_concurrent_crawls, 10
-            )
-            self.cache.local_max_memory_mb = min(self.cache.local_max_memory_mb, 200)
-            self.reranking.enabled = False
-            self.observability.enabled = False
-        elif self.mode is ApplicationMode.ENTERPRISE:
-            self.performance.max_concurrent_crawls = min(
-                self.performance.max_concurrent_crawls, 50
-            )
         return self
 
     def is_enterprise_mode(self) -> bool:
@@ -227,7 +198,7 @@ class Config(BaseSettings):
 
         if self.mode is ApplicationMode.SIMPLE:
             return ChunkingStrategy.BASIC
-        return self.chunking.strategy
+        return getattr(self.chunking, "strategy", ChunkingStrategy.BASIC)
 
     def get_effective_search_strategy(self) -> SearchStrategy:
         """Return search strategy, forcing DENSE for simple mode."""
@@ -237,132 +208,94 @@ class Config(BaseSettings):
         return SearchStrategy.HYBRID
 
 
-def ensure_runtime_directories(settings: Config) -> None:
-    """Create runtime directories required by the application.
-
-    Args:
-        settings: Active settings instance whose directory attributes should exist.
-    """
+def ensure_runtime_directories(settings: Settings) -> None:
+    """Create runtime directories required by the application."""
 
     for directory in (settings.data_dir, settings.cache_dir, settings.logs_dir):
         directory.mkdir(parents=True, exist_ok=True)
 
 
-class SettingsProvider:
-    """Thread-safe provider for application settings."""
+def apply_mode_overrides(settings: Settings) -> None:
+    """Apply mode-specific adjustments to the loaded settings."""
 
-    def __init__(self, *, factory: Callable[..., Config] | None = None) -> None:
-        self._factory: Callable[..., Config] = factory or Config
-        self._lock = threading.RLock()
-        self._settings: Config | None = None
-        self._callbacks: list[SettingsCallback] = []
-
-    def get(
-        self,
-        *,
-        force_reload: bool = False,
-        overrides: dict[str, Any] | None = None,
-    ) -> Config:
-        """Return the cached settings, reloading when requested.
-
-        Args:
-            force_reload: When ``True`` the provider rebuilds the settings model even
-                if a cached instance exists.
-            overrides: Optional field overrides applied when refreshing settings.
-
-        Returns:
-            The cached or newly constructed settings instance.
-        """
-
-        with self._lock:
-            if force_reload or overrides or self._settings is None:
-                overrides = overrides or {}
-                settings = self._factory(**overrides)
-                ensure_runtime_directories(settings)
-                previous = self._settings
-                self._settings = settings
-                self._notify_listeners(settings, previous)
-            return self._settings
-
-    def set(self, settings: Config) -> None:
-        """Replace the cached settings instance.
-
-        Args:
-            settings: Settings instance that becomes the new cached value.
-        """
-
-        with self._lock:
-            ensure_runtime_directories(settings)
-            previous = self._settings
-            self._settings = settings
-            self._notify_listeners(settings, previous)
-
-    def reset(self) -> None:
-        """Clear the cached settings instance."""
-
-        with self._lock:
-            self._settings = None
-
-    def register_callback(self, callback: SettingsCallback) -> Callable[[], None]:
-        """Register a callback invoked after settings are applied.
-
-        Args:
-            callback: Callable receiving the new settings and the previous instance.
-
-        Returns:
-            Callable that removes the callback when invoked.
-        """
-
-        with self._lock:
-            self._callbacks.append(callback)
-
-        def unregister() -> None:
-            with self._lock:
-                if callback in self._callbacks:
-                    self._callbacks.remove(callback)
-
-        return unregister
-
-    def _notify_listeners(
-        self,
-        new_settings: Config,
-        previous_settings: Config | None,
-    ) -> None:
-        callbacks: Iterable[SettingsCallback] = list(self._callbacks)
-        for callback in callbacks:
-            callback(new_settings, previous_settings)
+    if settings.mode is ApplicationMode.SIMPLE:
+        settings.performance.max_concurrent_crawls = min(
+            settings.performance.max_concurrent_crawls, 10
+        )
+        settings.cache.local_max_memory_mb = min(
+            settings.cache.local_max_memory_mb, 200
+        )
+        settings.reranking.enabled = False
+        settings.observability.enabled = False
+        return
+    if settings.mode is ApplicationMode.ENTERPRISE:
+        settings.performance.max_concurrent_crawls = min(
+            settings.performance.max_concurrent_crawls, 50
+        )
 
 
-_SETTINGS_PROVIDER = SettingsProvider()
+def resolve_mode(settings: Settings | None = None) -> ApplicationMode:
+    """Return the active application mode."""
+
+    if settings is None:
+        settings = get_settings()
+    return settings.mode
 
 
-def load_config(**overrides: Any) -> Config:
-    """Instantiate settings from the environment without caching.
+def load_settings(**overrides: Any) -> Settings:
+    """Instantiate settings from the environment without caching."""
 
-    Args:
-        **overrides: Field overrides passed directly to :class:`Config`.
-
-    Returns:
-        Newly constructed settings instance.
-    """
-
-    settings = Config(**overrides)
+    settings = Settings(**overrides)
+    apply_mode_overrides(settings)
     ensure_runtime_directories(settings)
     return settings
 
 
-def validate_config_payload(
-    payload: dict[str, Any], *, base: dict[str, Any] | None = None
-) -> tuple[bool, list[str], Config | None]:
-    """Validate configuration data using the Config model.
+_ACTIVE_SETTINGS: Settings | None = None
+
+
+def get_settings() -> Settings:
+    """Return the cached application settings instance."""
+
+    global _ACTIVE_SETTINGS  # noqa: PLW0603 - intentional module-level cache
+    if _ACTIVE_SETTINGS is None:
+        _ACTIVE_SETTINGS = load_settings()
+    return _ACTIVE_SETTINGS
+
+
+def refresh_settings(
+    *,
+    settings: Settings | None = None,
+    **overrides: Any,
+) -> Settings:
+    """Replace the cached settings instance.
 
     Args:
-        payload: Configuration values to validate.
-        base: Optional baseline values merged ahead of payload.
+        settings: Optional pre-built settings instance to promote to the cache.
+        **overrides: Keyword arguments forwarded to ``load_settings``.
 
     Returns:
-        Tuple of (is_valid, errors, config_instance). Config is ``None`` on failure.
+        The newly cached settings instance.
     """
+
+    global _ACTIVE_SETTINGS  # noqa: PLW0603 - intentional module-level cache
+    if settings is not None and overrides:
+        msg = "Provide either a concrete settings instance or overrides, not both."
+        raise ValueError(msg)
+    if settings is not None:
+        _ACTIVE_SETTINGS = settings
+        return _ACTIVE_SETTINGS
+    if overrides:
+        _ACTIVE_SETTINGS = load_settings(**overrides)
+        return _ACTIVE_SETTINGS
+    _ACTIVE_SETTINGS = load_settings()
+    return _ACTIVE_SETTINGS
+
+
+def validate_settings_payload(
+    payload: dict[str, Any], *, base: dict[str, Any] | None = None
+) -> tuple[bool, list[str], Settings | None]:
+    """Validate configuration data using the Settings model."""
 
     merged: dict[str, Any] = {
         "environment": Environment.DEVELOPMENT,
@@ -374,7 +307,7 @@ def validate_config_payload(
     merged.update(payload)
 
     try:
-        settings = Config(**merged)
+        settings = load_settings(**merged)
     except ValidationError as exc:
         errors = []
         for error in exc.errors():
@@ -387,60 +320,13 @@ def validate_config_payload(
     return True, [], settings
 
 
-def get_config(*, force_reload: bool = False, **overrides: Any) -> Config:
-    """Return cached application settings.
-
-    Args:
-        force_reload: Reload the settings even if a cached copy exists.
-        **overrides: Field overrides that force the provider to rebuild settings.
-
-    Returns:
-        Cached or newly built settings instance.
-    """
-
-    if overrides:
-        return _SETTINGS_PROVIDER.get(force_reload=True, overrides=overrides)
-    return _SETTINGS_PROVIDER.get(force_reload=force_reload)
-
-
-def set_config(settings: Config) -> None:
-    """Replace the cached settings instance.
-
-    Args:
-        settings: Settings instance that should become the cached value.
-    """
-
-    _SETTINGS_PROVIDER.set(settings)
-
-
-def reset_config() -> None:
-    """Clear the cached settings instance."""
-
-    _SETTINGS_PROVIDER.reset()
-
-
-def on_settings_applied(callback: SettingsCallback) -> Callable[[], None]:
-    """Register a callback invoked after settings changes are applied.
-
-    Args:
-        callback: Callable invoked after settings refresh with the new and previous
-            instances.
-
-    Returns:
-        Callable that unregisters the callback when invoked.
-    """
-
-    return _SETTINGS_PROVIDER.register_callback(callback)
-
-
 __all__ = [
-    "Config",
-    "SettingsProvider",
+    "Settings",
+    "apply_mode_overrides",
     "ensure_runtime_directories",
-    "get_config",
-    "load_config",
-    "validate_config_payload",
-    "on_settings_applied",
-    "reset_config",
-    "set_config",
+    "get_settings",
+    "load_settings",
+    "refresh_settings",
+    "resolve_mode",
+    "validate_settings_payload",
 ]

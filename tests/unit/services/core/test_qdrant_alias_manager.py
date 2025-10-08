@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from qdrant_client.models import CreateAliasOperation, DeleteAliasOperation
 
-from src.config import Config
+from src.config import Settings
 from src.services.base import BaseService
 from src.services.core.qdrant_alias_manager import (
     MAX_NAME_LENGTH,
@@ -124,7 +124,7 @@ class TestQdrantAliasManager:
     @pytest.fixture
     def mock_config(self):
         """Create mock unified config."""
-        return MagicMock(spec=Config)
+        return MagicMock(spec=Settings)
 
     @pytest.fixture
     def mock_client(self):

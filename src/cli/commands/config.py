@@ -12,7 +12,7 @@ from rich.panel import Panel
 from rich.syntax import Syntax
 from rich.table import Table
 
-from src.config import Config
+from src.config import Settings
 
 
 try:
@@ -63,7 +63,7 @@ def export(ctx: click.Context, output: str, export_format: str):
 
     try:
         if export_format == "json":
-            with output_path.open("w") as f:
+            with output_path.open("w", encoding="utf-8") as f:
                 json.dump(config_obj.model_dump(), f, indent=2)
         elif export_format == "yaml":
             if yaml is None:
@@ -71,7 +71,7 @@ def export(ctx: click.Context, output: str, export_format: str):
                     "❌ YAML support not available. Please install PyYAML", style="red"
                 )
                 return
-            with output_path.open("w") as f:
+            with output_path.open("w", encoding="utf-8") as f:
                 yaml.dump(config_obj.model_dump(), f, default_flow_style=False)
 
         console.print(f"✅ Configuration exported to {output_path}", style="green")
@@ -86,7 +86,7 @@ def load(config_file: str, validate_only: bool):
     """Load configuration from file."""
     try:
         config_path = Path(config_file)
-        config_obj = Config.load_from_file(config_path)
+        config_obj = Settings.load_from_file(config_path)  # type: ignore[attr-defined]
 
         if validate_only:
             console.print("✅ Configuration file is valid", style="green")
@@ -125,7 +125,7 @@ def validate(ctx: click.Context):
         console.print(f"❌ Configuration validation failed: {e}", style="red")
 
 
-def _show_config_table(config_obj: Config):
+def _show_config_table(config_obj: Settings):
     """Display configuration as a formatted table."""
     table = Table(
         title="Configuration Settings", show_header=True, header_style="bold cyan"
@@ -161,7 +161,7 @@ def _show_config_table(config_obj: Config):
     # Cache settings
     cache_settings = [
         f"Enabled: {config_obj.cache.enable_caching}",
-        f"URL: {config_obj.cache.dragonfly_url}",
+        f"URL: {config_obj.cache.dragonfly_url}",  # type: ignore[attr-defined]
         f"Max Size: {config_obj.cache.local_max_size}",
     ]
     table.add_row("Cache", "\n".join(cache_settings))
@@ -169,7 +169,7 @@ def _show_config_table(config_obj: Config):
     console.print(table)
 
 
-def _show_config_json(config_obj: Config):
+def _show_config_json(config_obj: Settings):
     """Display configuration as JSON."""
     config_json = json.dumps(config_obj.model_dump(), indent=2)
     syntax = Syntax(config_json, "json", theme="monokai", line_numbers=True)
@@ -182,7 +182,7 @@ def _show_config_json(config_obj: Config):
     console.print(panel)
 
 
-def _show_config_yaml(config_obj: Config):
+def _show_config_yaml(config_obj: Settings):
     """Display configuration as YAML."""
     if yaml is None:
         console.print(

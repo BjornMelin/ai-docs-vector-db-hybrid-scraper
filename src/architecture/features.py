@@ -16,7 +16,7 @@ from .modes import ApplicationMode, ModeConfig, get_mode_config, resolve_mode
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from src.config import Config
+    from src.config import Settings
 
 
 class FeatureFlag:
@@ -26,7 +26,7 @@ class FeatureFlag:
         self,
         mode_config: ModeConfig | None = None,
         *,
-        config: "Config | None" = None,
+        config: "Settings | None" = None,
     ):
         """Initialize feature flag manager.
 

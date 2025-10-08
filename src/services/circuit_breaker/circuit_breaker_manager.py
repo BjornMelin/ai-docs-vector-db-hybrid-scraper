@@ -10,14 +10,25 @@ import logging
 from collections.abc import Awaitable, Callable
 from typing import Any, TypeVar
 
-from purgatory import (
-    AsyncCircuitBreakerFactory,
-    AsyncRedisUnitOfWork,
-)
-from purgatory.domain.model import ClosedState
-from purgatory.service._async.unit_of_work import AsyncAbstractUnitOfWork
 
-from src.config import Config
+try:
+    from purgatory import (
+        AsyncCircuitBreakerFactory,
+        AsyncRedisUnitOfWork,
+    )
+    from purgatory.domain.model import ClosedState
+except ModuleNotFoundError:
+    AsyncCircuitBreakerFactory = None  # type: ignore[assignment]
+    AsyncRedisUnitOfWork = None  # type: ignore[assignment]
+    ClosedState = type(
+        "ClosedState",
+        (Exception,),
+        {
+            "__doc__": "Fallback ClosedState when purgatory is unavailable.",
+        },
+    )
+
+from src.config import Settings
 
 
 logger = logging.getLogger(__name__)
@@ -35,8 +46,8 @@ class CircuitBreakerManager:
     def __init__(
         self,
         redis_url: str,
-        config: Config | None = None,
-        unit_of_work: AsyncAbstractUnitOfWork | None = None,
+        config: Settings | None = None,
+        unit_of_work: Any | None = None,
     ):
         """Initialize circuit breaker manager.
 
@@ -49,6 +60,10 @@ class CircuitBreakerManager:
         self.config = config
 
         # Create Redis unit of work for distributed state
+        if AsyncRedisUnitOfWork is None:
+            raise RuntimeError(
+                "purgatory-circuitbreaker library is required but not installed"
+            )
         self.redis_storage = unit_of_work or AsyncRedisUnitOfWork(redis_url)
 
         # Get circuit breaker settings from config or use defaults
@@ -64,6 +79,10 @@ class CircuitBreakerManager:
             default_ttl = 60
 
         # Create circuit breaker factory with distributed storage
+        if AsyncCircuitBreakerFactory is None:
+            raise RuntimeError(
+                "purgatory-circuitbreaker library is required but not installed"
+            )
         self.factory = AsyncCircuitBreakerFactory(
             default_threshold=default_threshold,
             default_ttl=default_ttl,
@@ -253,7 +272,7 @@ class CircuitBreakerManager:
 
 # Convenience function for creating circuit breaker manager
 def create_circuit_breaker_manager(
-    redis_url: str, config: Config | None = None
+    redis_url: str, config: Settings | None = None
 ) -> CircuitBreakerManager:
     """Create a circuit breaker manager instance.
 

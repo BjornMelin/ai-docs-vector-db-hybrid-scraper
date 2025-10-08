@@ -124,7 +124,7 @@ async def clear_cache(
 
 
 @router.get("/config")
-async def get_config(
+async def get_settings(
     config: ConfigDep,
 ) -> dict[str, Any]:
     """Get current RAG configuration.

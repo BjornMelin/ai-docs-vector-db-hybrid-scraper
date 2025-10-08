@@ -18,7 +18,7 @@ try:
 except ImportError:
     redis = None
 
-from src.config import Config
+from src.config import Settings
 from src.services.base import BaseService
 from src.services.errors import APIError
 
@@ -51,7 +51,7 @@ class ContentIntelligenceService(BaseService):
 
     def __init__(
         self,
-        config: Config,
+        config: Settings,
         embedding_manager: Any = None,
         cache_manager: Any = None,
     ):

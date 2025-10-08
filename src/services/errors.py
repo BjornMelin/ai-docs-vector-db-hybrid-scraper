@@ -29,19 +29,6 @@ import time
 from collections.abc import Callable
 from typing import Any, LiteralString, TypeVar
 
-
-try:  # pragma: no cover - optional purgatory integration
-    from purgatory.domain.model import OpenedState
-except ModuleNotFoundError:  # pragma: no cover
-    OpenedState = type(
-        "OpenedState",
-        (Exception,),
-        {
-            "__doc__": "Fallback OpenedState when purgatory is unavailable.",
-        },
-    )
-
-
 from pydantic import ValidationError as PydanticValidationError
 from pydantic_core import PydanticCustomError
 from tenacity import (
@@ -50,6 +37,18 @@ from tenacity import (
     stop_after_attempt,
     wait_exponential,
 )
+
+
+try:  # pragma: no cover - optional purgatory integration
+    from purgatory.domain.model import OpenedState  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover
+    OpenedState = type(
+        "OpenedState",
+        (Exception,),
+        {
+            "__doc__": "Fallback OpenedState when purgatory is unavailable.",
+        },
+    )
 
 
 logger = logging.getLogger(__name__)
@@ -117,7 +116,7 @@ class ValidationError(BaseError):
     """Input validation error with Pydantic integration."""
 
     @classmethod
-    def from_pydantic(cls, exc: PydanticValidationError) -> "ValidationError":
+    def from_pydantic(cls, exc: PydanticValidationError) -> "ValidationError":  # type: ignore[name-defined]
         """Create ValidationError from Pydantic ValidationError."""
 
         errors = exc.errors()

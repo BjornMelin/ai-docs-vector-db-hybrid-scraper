@@ -49,7 +49,7 @@ AI_DOCS__MODE=enterprise uv run python scripts/dev.py test --profile quick
 
 ## 4. Configuration Loader
 
-`src/config/loader.Config` is a Pydantic `BaseSettings` class that reads
+`src/config/loader.Settings` is a Pydantic `BaseSettings` class that reads
 configuration from environment variables. Key behaviours:
 
 - Nested keys use double underscores (e.g. `AI_DOCS__QDRANT__URL`).
@@ -96,10 +96,9 @@ your orchestrator's secret manager. Setting top-level keys such as
 `AI_DOCS__OPENAI__API_KEY` automatically mirrors values into nested config
 sections.
 
-### Hot Reloading
+### Refreshing Settings
 
-`src/config/reloader.py` offers an opt-in watcher for local development. Disable
-it in production to avoid unintended restarts.
+Hot reloading has been removed. When configuration changes are required, refresh settings through the `/config/refresh` API or restart the process to ensure a clean environment.
 
 ## 5. Running Services
 

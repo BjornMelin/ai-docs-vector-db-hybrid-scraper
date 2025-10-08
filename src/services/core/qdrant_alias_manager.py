@@ -14,7 +14,7 @@ from qdrant_client.models import (
     DeleteAliasOperation,
 )
 
-from src.config import Config
+from src.config import Settings
 from src.services.base import BaseService
 from src.services.errors import QdrantServiceError
 
@@ -31,7 +31,7 @@ class QdrantAliasManager(BaseService):
 
     def __init__(
         self,
-        config: Config,
+        config: Settings,
         client: AsyncQdrantClient,
     ):
         """Initialize alias manager.

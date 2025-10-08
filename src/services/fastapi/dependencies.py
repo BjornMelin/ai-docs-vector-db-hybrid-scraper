@@ -12,10 +12,10 @@ from time import perf_counter
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from fastapi.exceptions import HTTPException
-from fastapi.requests import Request
+from fastapi.requests import Request  # type: ignore
 from starlette.status import HTTP_503_SERVICE_UNAVAILABLE
 
-from src.config import Config, get_config
+from src.config import Settings, get_settings
 from src.infrastructure.client_manager import ClientManager
 from src.services.fastapi.middleware.correlation import get_correlation_id
 from src.services.registry import ensure_service_registry, shutdown_service_registry
@@ -24,7 +24,7 @@ from src.services.vector_db.service import VectorStoreService
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from src.services.cache.manager import CacheManager
-    from src.services.embeddings.manager import EmbeddingManager
+    from src.services.managers.embedding_manager import EmbeddingManager
 
 
 logger = logging.getLogger(__name__)
@@ -45,10 +45,10 @@ async def cleanup_dependencies() -> None:
     await shutdown_service_registry()
 
 
-def get_config_dependency() -> Config:
+def get_config_dependency() -> Settings:
     """Return application configuration for FastAPI routes."""
 
-    return get_config()
+    return get_settings()
 
 
 async def get_vector_service() -> VectorStoreService:

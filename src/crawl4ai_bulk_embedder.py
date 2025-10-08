@@ -17,21 +17,27 @@ from pathlib import Path
 from typing import Any, cast
 from urllib.parse import urlparse
 
-import aiofiles
-import click
-import httpx
-from defusedxml import ElementTree
-from pydantic import BaseModel, Field
-from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
-from rich.table import Table
+import aiofiles  # type: ignore[import]
+import click  # type: ignore[import]
+import httpx  # type: ignore[import]
+from defusedxml import ElementTree  # type: ignore[import]
+from pydantic import BaseModel, Field  # type: ignore[import]
+from rich.console import Console  # type: ignore[import]
+from rich.progress import (  # type: ignore[import]
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    TimeElapsedColumn,
+)
+from rich.table import Table  # type: ignore[import]
 
 from .chunking import DocumentChunker
-from .config import Config, get_config
+from .config import get_settings
+from .config.loader import Settings
 from .infrastructure.client_manager import ClientManager
-from .services.crawling.manager import CrawlManager
 from .services.embeddings.manager import EmbeddingManager, QualityTier
 from .services.logging_config import configure_logging
+from .services.managers.crawling_manager import CrawlingManager
 from .services.vector_db.service import VectorStoreService
 from .services.vector_db.types import CollectionSchema, VectorRecord
 
@@ -87,7 +93,7 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
 
     def __init__(
         self,
-        config: Config,
+        config: Settings,
         client_manager: ClientManager,
         collection_name: str = "bulk_embeddings",
         state_file: Path | None = None,
@@ -149,11 +155,8 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
         """Initialize all required services."""
         # Get services from client manager
         if self.crawl_manager is None:
-            self.crawl_manager = CrawlManager(
-                config=self.config,
-                rate_limiter=None,
-            )
-            await self.crawl_manager.initialize()
+            self.crawl_manager = CrawlingManager()
+            await self.crawl_manager.initialize(self.config)
 
         if self.embedding_manager is None:
             self.embedding_manager = EmbeddingManager(
@@ -686,7 +689,7 @@ def main(  # pylint: disable=too-many-arguments,too-many-positional-arguments
     )
 
     # Load configuration
-    config = get_config()
+    config = get_settings()
     if config_path is not None:
         logger.debug("CLI config path provided: %s", config_path)
 
@@ -717,7 +720,7 @@ async def _async_main(  # pylint: disable=too-many-arguments,too-many-locals
     sitemap: str | None = None,
     collection: str = "bulk_embeddings",
     concurrent: int = 5,
-    config: Config,
+    config: Settings,
     state_file: Path,
     resume: bool = True,
 ) -> None:
@@ -773,4 +776,4 @@ async def _async_main(  # pylint: disable=too-many-arguments,too-many-locals
 
 
 if __name__ == "__main__":
-    main()  # pylint: disable=no-value-for-parameter  # Click handles CLI arguments
+    main()  # pylint: disable=no-value-for-parameter  # type: ignore[call-arg]  # Click handles CLI arguments

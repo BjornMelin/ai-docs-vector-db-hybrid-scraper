@@ -179,12 +179,12 @@ curl -s http://localhost:6333/health
 redis-cli ping
 ```
 
-### Configuration Reload
+### Configuration Refresh
 ```bash
-# Reload configuration without restart
-docker-compose kill -s SIGHUP api
+# Refresh settings (applies environment overrides)
+curl -X POST http://localhost:9000/config/refresh -H 'Content-Type: application/json' -d '{}'
 
-# Full restart with new configuration
+# Restart the stack after editing .env or config files
 docker-compose down
 docker-compose up -d
 ```
