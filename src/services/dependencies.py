@@ -28,7 +28,6 @@ from src.services.errors import (
     tenacity_circuit_breaker,
 )
 from src.services.managers.database_manager import DatabaseManager
-from src.services.rag.generator import RAGGenerator
 from src.services.rag.models import RAGRequest as InternalRAGRequest
 from src.services.vector_db.service import VectorStoreService
 
@@ -183,6 +182,7 @@ async def generate_embeddings(
     embedding_manager: EmbeddingManagerDep,
 ) -> EmbeddingResponse:
     """Generate embeddings with smart provider selection."""
+
     try:
         quality_tier = (
             QualityTier(request.quality_tier) if request.quality_tier else None
@@ -225,6 +225,7 @@ async def get_cache_manager(
     client_manager: ClientManagerDep,
 ) -> Any:
     """Get initialized CacheManager service."""
+
     del client_manager  # Signature retained for FastAPI dependency wiring.
 
     global _cache_manager
@@ -268,6 +269,7 @@ async def cache_get(
     cache_manager: CacheManagerDep = None,
 ) -> Any:
     """Get value from cache."""
+
     try:
         return await cache_manager.get(key, CacheType(cache_type))
     except (OSError, ConnectionError, ImportError, ModuleNotFoundError):
@@ -283,6 +285,7 @@ async def cache_set(
     cache_manager: CacheManagerDep = None,
 ) -> bool:
     """Set value in cache."""
+
     try:
         return await cache_manager.set(key, value, CacheType(cache_type), ttl)
     except (OSError, ConnectionError, ImportError, ModuleNotFoundError):
@@ -296,6 +299,7 @@ async def cache_delete(
     cache_manager: CacheManagerDep = None,
 ) -> bool:
     """Delete value from cache."""
+
     try:
         return await cache_manager.delete(key, CacheType(cache_type))
     except (OSError, ConnectionError, ImportError, ModuleNotFoundError):
@@ -339,6 +343,7 @@ async def get_crawl_manager(
     client_manager: ClientManagerDep,
 ) -> Any:
     """Get initialized CrawlManager service."""
+
     del client_manager
 
     global _crawl_manager
@@ -370,6 +375,7 @@ async def scrape_url(
     crawl_manager: CrawlManagerDep,
 ) -> CrawlResponse:
     """Scrape URL with provider selection."""
+
     try:
         result = await crawl_manager.scrape_url(
             url=request.url, preferred_provider=request.preferred_provider
@@ -387,6 +393,7 @@ async def crawl_site(
     crawl_manager: CrawlManagerDep,
 ) -> dict[str, Any]:
     """Crawl entire website from starting URL."""
+
     try:
         result = await crawl_manager.crawl_site(
             url=request.url,
@@ -406,6 +413,7 @@ async def get_database_manager(
     client_manager: ClientManagerDep,
 ) -> Any:
     """Get initialized DatabaseManager service."""
+
     del client_manager
     global _database_manager
     if _database_manager is not None:
@@ -431,6 +439,7 @@ async def get_database_session(
     db_manager: DatabaseManagerDep,
 ) -> AsyncGenerator[Any]:
     """Get database session with automatic cleanup."""
+
     async with db_manager.get_session() as session:
         yield session
 
@@ -463,6 +472,7 @@ async def get_content_intelligence_service(
     client_manager: ClientManagerDep,
 ) -> Any:
     """Get initialized ContentIntelligenceService."""
+
     global _content_intelligence
     if _content_intelligence is not None:
         return _content_intelligence
@@ -527,10 +537,10 @@ async def get_rag_generator(
     client_manager: ClientManagerDep,
 ) -> Any:
     """Get initialized RAGGenerator service."""
-    # RAGGenerator imported at top-level
 
-    generator = RAGGenerator(config.rag, client_manager)  # type: ignore[arg-type]
-    await generator.initialize()
+    del config
+
+    generator = await client_manager.get_rag_generator()
     return generator
 
 
@@ -539,6 +549,7 @@ RAGGeneratorDep = Annotated[Any, Depends(get_rag_generator)]
 
 def _convert_to_internal_rag_request(request: RAGRequest) -> InternalRAGRequest:
     """Convert external RAG request to internal format."""
+
     # Extract top_k from search_results length as a reasonable default
     if request.search_results:
         top_k = request.max_context_results or len(request.search_results)
@@ -564,6 +575,7 @@ def _format_rag_sources(
     request: RAGRequest, result: Any
 ) -> list[dict[str, Any]] | None:
     """Format RAG sources for response."""
+
     if not (request.include_sources and result.sources):
         return None
 
@@ -581,6 +593,7 @@ def _format_rag_sources(
 
 def _format_rag_metrics(result: Any) -> dict[str, Any] | None:
     """Format RAG metrics for response."""
+
     if not result.metrics:
         return None
 
@@ -605,6 +618,7 @@ async def generate_rag_answer(
     rag_generator: RAGGeneratorDep,
 ) -> RAGResponse:
     """Generate contextual answer from search results using RAG."""
+
     try:
         internal_request = _convert_to_internal_rag_request(request)
         result = await rag_generator.generate_answer(internal_request)
@@ -633,6 +647,7 @@ async def get_rag_metrics(
     rag_generator: RAGGeneratorDep,
 ) -> dict[str, Any]:
     """Get RAG service performance metrics."""
+
     try:
         metrics = rag_generator.get_metrics()
         # Convert RAGServiceMetrics to dict if it's a Pydantic model
@@ -648,6 +663,7 @@ async def clear_rag_cache(
     rag_generator: RAGGeneratorDep,
 ) -> dict[str, str]:
     """Clear RAG answer cache."""
+
     try:
         rag_generator.clear_cache()
         # RAGGenerator.clear_cache is a no-op (no cache to purge)
@@ -665,6 +681,7 @@ async def get_browser_automation_router(
     client_manager: ClientManagerDep,
 ) -> Any:
     """Get initialized BrowserAutomationRouter service."""
+
     return await client_manager.get_browser_automation_router()
 
 
@@ -676,6 +693,7 @@ async def get_project_storage(
     client_manager: ClientManagerDep,
 ) -> Any:
     """Get initialized ProjectStorage service."""
+
     del client_manager
 
     global _project_storage
@@ -697,6 +715,7 @@ ProjectStorageDep = Annotated[Any, Depends(get_project_storage)]
 # Circuit Breaker Monitoring Functions
 async def get_circuit_breaker_status() -> dict[str, Any]:
     """Get status of all circuit breakers."""
+
     try:
         all_status = CircuitBreakerRegistry.get_all_status()
 
@@ -824,6 +843,7 @@ async def get_service_health() -> dict[str, Any]:
 # Service Performance Metrics
 async def get_service_metrics() -> dict[str, Any]:
     """Get performance metrics for all services."""
+
     try:
         client_manager = get_client_manager()
 
@@ -861,6 +881,7 @@ async def get_service_metrics() -> dict[str, Any]:
 # Cleanup Function
 async def cleanup_services() -> None:
     """Cleanup all services and release resources."""
+
     try:
         client_manager = get_client_manager()
         await client_manager.cleanup()
@@ -913,6 +934,7 @@ async def bulk_scrape_urls(
     crawl_manager: CrawlManagerDep,
 ) -> list[dict[str, Any]]:
     """Scrape multiple URLs concurrently (consolidated implementation)."""
+
     try:
         # Try built-in bulk_scrape if available
         if hasattr(crawl_manager, "bulk_scrape"):
@@ -961,6 +983,7 @@ async def get_crawl_recommended_tool(
     crawl_manager: CrawlManagerDep,
 ) -> str:
     """Get recommended tool for a URL based on performance metrics."""
+
     try:
         return await crawl_manager.get_recommended_tool(url)
     except (ConnectionError, TimeoutError, ValueError) as e:
@@ -974,6 +997,7 @@ async def map_website_urls(
     crawl_manager: CrawlManagerDep = None,
 ) -> dict[str, Any]:
     """Map a website to get list of URLs."""
+
     try:
         return await crawl_manager.map_url(url, include_subdomains)
     except (ConnectionError, TimeoutError, ValueError) as e:
@@ -990,6 +1014,7 @@ async def get_crawl_tier_metrics(
     crawl_manager: CrawlManagerDep,
 ) -> dict[str, dict]:
     """Get performance metrics for all crawling tiers."""
+
     try:
         return crawl_manager.get_tier_metrics()
     except (ConnectionError, TimeoutError, ValueError) as e:
@@ -1022,6 +1047,7 @@ async def register_health_check_function(
     check_function: Callable[[], Any],
 ) -> dict[str, str]:
     """Register a health check for a service."""
+
     try:
         _health_checks[request.service_name] = {
             "check_function": check_function,
@@ -1047,6 +1073,7 @@ async def register_health_check_function(
 
 def _update_health_success(health: dict[str, Any]) -> None:
     """Update health check state for successful check."""
+
     health["last_check"] = time.time()
     health["state"] = "healthy"
     health["consecutive_failures"] = 0
@@ -1055,6 +1082,7 @@ def _update_health_success(health: dict[str, Any]) -> None:
 
 def _update_health_failure(health: dict[str, Any], error_msg: str) -> None:
     """Update health check state for failed check."""
+
     health["last_check"] = time.time()
     health["last_error"] = error_msg
     health["consecutive_failures"] = health.get("consecutive_failures", 0) + 1
@@ -1063,6 +1091,7 @@ def _update_health_failure(health: dict[str, Any], error_msg: str) -> None:
 
 async def check_service_health_function(service_name: str) -> bool:
     """Check health of a specific service."""
+
     if service_name not in _health_checks:
         logger.warning("No health check registered for %s", service_name)
         return False
@@ -1088,6 +1117,7 @@ async def check_service_health_function(service_name: str) -> bool:
 
 async def get_all_health_status() -> dict[str, dict[str, Any]]:
     """Get health status of all monitored services."""
+
     status = {}
 
     for service_name, health in _health_checks.items():
@@ -1104,6 +1134,7 @@ async def get_all_health_status() -> dict[str, dict[str, Any]]:
 
 async def get_overall_health_summary() -> dict[str, Any]:
     """Get overall system health summary."""
+
     health_status = await get_all_health_status()
 
     total_services = len(health_status)
@@ -1134,6 +1165,7 @@ async def track_operation_performance(
     **kwargs: Any,
 ) -> Any:
     """Track performance of an operation."""
+
     start_time = time.time()
 
     try:
@@ -1163,6 +1195,7 @@ async def rerank_search_results(
     embedding_manager: EmbeddingManagerDep,
 ) -> list[dict[str, Any]]:
     """Rerank search results using BGE reranker."""
+
     try:
         return await embedding_manager.rerank_results(request.query, request.results)
     except Exception:
@@ -1177,6 +1210,7 @@ async def estimate_embedding_cost(
     embedding_manager: EmbeddingManagerDep = None,
 ) -> dict[str, dict[str, float]] | dict[str, dict[str, str | float]]:
     """Estimate embedding generation cost."""
+
     try:
         return embedding_manager.estimate_cost(texts, provider_name)
     except Exception as e:
@@ -1188,6 +1222,7 @@ async def get_embedding_provider_info(
     embedding_manager: EmbeddingManagerDep,
 ) -> dict[str, dict[str, Any]]:
     """Get information about available embedding providers."""
+
     try:
         return embedding_manager.get_provider_info()
     except Exception as e:
@@ -1202,6 +1237,7 @@ async def get_optimal_embedding_provider(
     embedding_manager: EmbeddingManagerDep = None,
 ) -> str:
     """Select optimal provider based on constraints."""
+
     try:
         return await embedding_manager.get_optimal_provider(
             text_length, quality_required, budget_limit
@@ -1223,6 +1259,7 @@ async def analyze_text_characteristics(
     embedding_manager: EmbeddingManagerDep,
 ) -> dict[str, Any]:
     """Analyze text characteristics for smart model selection."""
+
     try:
         analysis = embedding_manager.analyze_text_characteristics(request.texts)
         # Convert TextAnalysis to dict for service boundary
@@ -1253,6 +1290,7 @@ async def get_embedding_usage_report(
     embedding_manager: EmbeddingManagerDep,
 ) -> dict[str, Any]:
     """Get comprehensive embedding usage report."""
+
     try:
         return embedding_manager.get_usage_report()
     except Exception as e:

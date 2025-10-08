@@ -26,6 +26,8 @@ from src.infrastructure.container import ApplicationContainer, get_container
 from src.services.browser.automation_router import AutomationRouter
 from src.services.embeddings.fastembed_provider import FastEmbedProvider
 from src.services.errors import APIError
+from src.services.rag.generator import RAGGenerator
+from src.services.rag.utils import initialise_rag_generator
 from src.services.vector_db.service import VectorStoreService
 
 
@@ -90,6 +92,8 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         self._parallel_processing_system: Any | None = None
         self._initialized = False
         self._vector_store_service: VectorStoreService | None = None
+        self._rag_generator: RAGGenerator | None = None
+        self._rag_generator_lock = asyncio.Lock()
         self._config = get_config()
         self._automation_router: AutomationRouter | None = None
         self._mcp_client: MultiServerMCPClient | None = None
@@ -172,6 +176,9 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         if self._vector_store_service:
             await self._vector_store_service.cleanup()
             self._vector_store_service = None
+        if self._rag_generator:
+            await self._rag_generator.cleanup()
+            self._rag_generator = None
         self._mcp_client = None
         self._providers.clear()
         self._parallel_processing_system = None
@@ -274,6 +281,22 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         await service.initialize()
         self._vector_store_service = service
         return service
+
+    async def get_rag_generator(self) -> RAGGenerator:
+        """Return an initialized and cached RAG generator instance."""
+
+        if self._rag_generator is not None:
+            return self._rag_generator
+
+        async with self._rag_generator_lock:
+            if self._rag_generator is None:
+                vector_store = await self.get_vector_store_service()
+                rag_generator, _ = await initialise_rag_generator(
+                    self._config, vector_store
+                )
+                self._rag_generator = rag_generator
+        assert self._rag_generator is not None
+        return self._rag_generator
 
     async def get_redis_client(self):
         provider = self._providers.get("redis")

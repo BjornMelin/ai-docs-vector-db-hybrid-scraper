@@ -113,6 +113,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Centralized the MCP config and tool-module builders in `tests/unit/conftest.py`, parameterized streaming guard checks, and
   added coverage for empty hybrid-search results plus orchestrator partial-initialization guard rails.
 - Pinned the regression workflow `uv` dependency to `0.2.37` to stabilize CI setup.
+- Centralized RAG generator management through the shared ClientManager cache for MCP tooling and FastAPI dependencies, refreshing unit coverage to assert reuse and disabled-mode handling.
 
 ### Removed
 
