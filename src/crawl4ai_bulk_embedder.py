@@ -34,9 +34,8 @@ from rich.table import Table  # type: ignore[import]
 from .chunking import DocumentChunker
 from .config.loader import Settings, get_settings
 from .infrastructure.client_manager import ClientManager
-from .services.embeddings.manager import EmbeddingManager, QualityTier
+from .services.embeddings.manager import QualityTier
 from .services.logging_config import configure_logging
-from .services.managers.crawling_manager import CrawlingManager
 from .services.vector_db.service import VectorStoreService
 from .services.vector_db.types import CollectionSchema, VectorRecord
 
@@ -159,17 +158,10 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
 
         # Get services from client manager
         if self.crawl_manager is None:
-            self.crawl_manager = CrawlingManager()
-            await self.crawl_manager.initialize(self.config)
+            self.crawl_manager = await self.client_manager.get_crawl_manager()
 
         if self.embedding_manager is None:
-            self.embedding_manager = EmbeddingManager(
-                config=self.config,
-                client_manager=self.client_manager,
-                budget_limit=None,
-                rate_limiter=None,
-            )
-            await self.embedding_manager.initialize()
+            self.embedding_manager = await self.client_manager.get_embedding_manager()
 
         self.vector_service = await self.client_manager.get_vector_store_service()
         if self.vector_service and not self.vector_service.is_initialized():

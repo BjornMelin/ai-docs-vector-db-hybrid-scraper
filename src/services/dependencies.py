@@ -360,22 +360,13 @@ async def crawl_site(
 
 
 # Database Dependencies
-async def get_database_manager() -> Any:
-    """Get initialized DatabaseManager service."""
-
-    manager = await ensure_global_client_manager()
-    return await manager.get_database_manager()
-
-
-DatabaseManagerDep = Annotated[Any, Depends(get_database_manager)]
-
-
 async def get_database_session(
-    db_manager: DatabaseManagerDep,
+    client_manager: ClientManager | None = None,
 ) -> AsyncGenerator[Any]:
     """Get database session with automatic cleanup."""
 
-    async with db_manager.get_session() as session:
+    manager = await _resolve_client_manager(client_manager)
+    async with manager.database_session() as session:
         yield session
 
 

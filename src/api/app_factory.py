@@ -371,7 +371,7 @@ async def _initialize_mode_services(
         "multi_tier_caching": client_manager.get_cache_manager,
         "advanced_search": client_manager.get_vector_store_service,
         "basic_search": client_manager.get_vector_store_service,
-        "deployment_services": client_manager.get_database_manager,
+        "deployment_services": client_manager.ensure_database_ready,
         "advanced_analytics": client_manager.get_content_intelligence_service,
     }
 
