@@ -80,22 +80,23 @@ def export(ctx: click.Context, output: str, export_format: str):
 
 
 @config.command()
-@click.argument("config_file", type=click.Path(exists=True))
+@click.argument("config_file", type=click.Path(exists=True, path_type=Path))
 @click.option("--validate-only", is_flag=True, help="Only validate, don't load")
-def load(config_file: str, validate_only: bool):
+@click.pass_context
+def load(ctx: click.Context, config_file: Path, validate_only: bool):
     """Load configuration from file."""
     try:
-        config_path = Path(config_file)
-        config_obj = load_settings_from_file(config_path)
+        config_obj = load_settings_from_file(config_file)
 
         if validate_only:
             console.print("✅ Configuration file is valid", style="green")
         else:
-            console.print(f"✅ Configuration loaded from {config_path}", style="green")
+            ctx.obj["config"] = config_obj
+            console.print(f"✅ Configuration loaded from {config_file}", style="green")
             _show_config_table(config_obj)
 
-    except (OSError, ValueError) as e:
-        console.print(f"❌ Failed to load configuration: {e}", style="red")
+    except (OSError, ValueError, ImportError) as exc:
+        console.print(f"❌ Failed to load configuration: {exc}", style="red")
 
 
 @config.command()
@@ -151,18 +152,20 @@ def _show_config_table(config_obj: Settings):
     table.add_row("Providers", "\n".join(provider_settings))
 
     # Database settings
+    qdrant = getattr(config_obj, "qdrant", None)
     db_settings = [
-        f"Qdrant URL: {config_obj.qdrant.url}",
-        f"Collection: {config_obj.qdrant.collection_name}",
-        f"Timeout: {config_obj.qdrant.timeout}s",
+        f"Qdrant URL: {getattr(qdrant, 'url', 'n/a')}",
+        f"Collection: {getattr(qdrant, 'collection_name', 'n/a')}",
+        f"Timeout: {getattr(qdrant, 'timeout', 'n/a')}s",
     ]
     table.add_row("Database", "\n".join(db_settings))
 
     # Cache settings
+    cache = getattr(config_obj, "cache", None)
     cache_settings = [
-        f"Enabled: {config_obj.cache.enable_caching}",
-        f"URL: {config_obj.cache.dragonfly_url}",  # type: ignore[attr-defined]
-        f"Max Size: {config_obj.cache.local_max_size}",
+        f"Local Cache: {getattr(cache, 'enable_local_cache', False)}",
+        f"Redis Cache: {getattr(cache, 'enable_redis_cache', False)}",
+        f"Redis URL: {getattr(cache, 'redis_url', 'n/a')}",
     ]
     table.add_row("Cache", "\n".join(cache_settings))
 

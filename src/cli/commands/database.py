@@ -8,7 +8,7 @@ indicators, beautiful table displays, and interactive features.
 
 import asyncio
 import json
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import click
 from click.shell_completion import CompletionItem
@@ -21,6 +21,10 @@ from rich.table import Table
 from rich.text import Text
 
 from src.manage_vector_db import VectorDBManager
+
+
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    pass
 
 
 class CollectionCreationError(Exception):

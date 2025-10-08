@@ -4,7 +4,10 @@ This module tests configuration management commands including validation,
 display, export, and load functionality with Rich console output.
 """
 
+from pathlib import Path
 from unittest.mock import MagicMock
+
+import pytest
 
 from src.cli.commands.config import (
     _show_config_json,
@@ -13,6 +16,11 @@ from src.cli.commands.config import (
     config,
 )
 
+
+# Fixture paths
+CONFIG_FIXTURE_DIR = Path("tests/fixtures/configs")
+JSON_CONFIG_PATH = CONFIG_FIXTURE_DIR / "sample.json"
+YAML_CONFIG_PATH = CONFIG_FIXTURE_DIR / "sample.yaml"
 
 # Test constants to avoid hardcoded sensitive values
 TEST_SECRET_VALUE = "test_secret"  # noqa: S105
@@ -119,6 +127,49 @@ class TestLoadCommand:
 
         assert result.exit_code == 0
         assert "Load configuration from file" in result.output
+
+    def test_load_command_json(self, cli_runner):
+        """Ensure JSON configuration files are loaded into context."""
+        result = cli_runner.invoke(
+            config, ["load", str(JSON_CONFIG_PATH)], obj={"config": None}
+        )
+
+        assert result.exit_code == 0
+        assert "Configuration loaded" in result.output
+
+    def test_load_command_validate_only(self, cli_runner):
+        """Validate-only mode should not mutate context but confirm validity."""
+        ctx_obj = {"config": None}
+        result = cli_runner.invoke(
+            config,
+            ["load", str(JSON_CONFIG_PATH), "--validate-only"],
+            obj=ctx_obj,
+        )
+
+        assert result.exit_code == 0
+        assert "Configuration file is valid" in result.output
+        assert ctx_obj["config"] is None
+
+    def test_load_command_updates_context(self, cli_runner):
+        """Loading without validate flag should update CLI context."""
+        ctx_obj = {"config": None}
+        result = cli_runner.invoke(
+            config,
+            ["load", str(JSON_CONFIG_PATH)],
+            obj=ctx_obj,
+        )
+
+        assert result.exit_code == 0
+        assert ctx_obj["config"] is not None
+
+    def test_load_command_yaml(self, cli_runner):
+        """YAML configuration files load when PyYAML is available."""
+        pytest.importorskip("yaml")
+
+        result = cli_runner.invoke(
+            config, ["load", str(YAML_CONFIG_PATH)], obj={"config": None}
+        )
+        assert result.exit_code == 0
 
 
 class TestConfigDisplayHelpers:
