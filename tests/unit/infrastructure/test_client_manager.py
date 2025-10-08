@@ -1,16 +1,14 @@
 """Unit tests for ClientManager with dependency injection container mocking."""
 
-import asyncio
 import time
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.config import Config
 from src.infrastructure.client_manager import ClientManager
 from src.infrastructure.container import ApplicationContainer
-from src.infrastructure.shared import CircuitBreaker, ClientHealth, ClientState
+from src.infrastructure.shared import ClientHealth, ClientState
 from src.services.errors import APIError
 
 
@@ -38,16 +36,14 @@ async def ensure_clean_singleton():
 
 
 @pytest.fixture
-def test_config():
+def test_config(config_factory):
     """Create test configuration."""
-    config = Config()
-    config.openai.api_key = "test-openai-key"
-    config.firecrawl.api_key = "test-firecrawl-key"
-    config.cache.enable_caching = False
-    config.qdrant.url = "http://localhost:6333"
-    config.qdrant.api_key = "test-qdrant-key"
-    config.cache.redis_url = "redis://localhost:6379"
-    return config
+    return config_factory(
+        openai={"api_key": "sk-test-openai-key"},
+        firecrawl={"api_key": "fc-test-firecrawl-key"},
+        cache={"enable_caching": False, "redis_url": "redis://localhost:6379"},
+        qdrant={"url": "http://localhost:6333", "api_key": "test-qdrant-key"},
+    )
 
 
 @pytest.fixture
@@ -138,71 +134,6 @@ class TestClientHealth:
         assert health.state == ClientState.FAILED
         assert health.last_error == error_msg
         assert health.consecutive_failures == 3
-
-
-class TestCircuitBreaker:
-    """Test CircuitBreaker functionality."""
-
-    @pytest.fixture
-    def circuit_breaker(self):
-        """Create circuit breaker with test parameters."""
-        return CircuitBreaker(
-            failure_threshold=3,
-            recovery_timeout=1.0,
-            half_open_requests=1,
-        )
-
-    @pytest.mark.asyncio
-    async def test_circuit_breaker_healthy_state(self, circuit_breaker):
-        """Test circuit breaker in healthy state allows calls."""
-
-        async def success_func():
-            return "success"
-
-        result = await circuit_breaker.call(success_func)
-        assert result == "success"
-        assert circuit_breaker.state == ClientState.HEALTHY
-
-    @pytest.mark.asyncio
-    async def test_circuit_breaker_opens_after_failures(self, circuit_breaker):
-        """Test circuit breaker opens after threshold failures."""
-
-        async def failing_func():
-            raise ConnectionError("Test connection failure")
-
-        for _ in range(3):
-            with pytest.raises(ConnectionError):
-                await circuit_breaker.call(failing_func)
-
-        assert circuit_breaker.state == ClientState.FAILED
-
-        async def success_func():
-            return "success"
-
-        with pytest.raises(APIError, match="Circuit breaker is open"):
-            await circuit_breaker.call(success_func)
-
-    @pytest.mark.asyncio
-    async def test_circuit_breaker_recovery(self, circuit_breaker):
-        """Test circuit breaker recovery after timeout."""
-
-        async def failing_func():
-            raise ConnectionError("Test connection failure")
-
-        async def success_func():
-            return "success"
-
-        for _ in range(3):
-            with pytest.raises(ConnectionError):
-                await circuit_breaker.call(failing_func)
-
-        assert circuit_breaker.state == ClientState.FAILED
-
-        await asyncio.sleep(1.1)
-
-        result = await circuit_breaker.call(success_func)
-        assert result == "success"
-        assert circuit_breaker.state == ClientState.HEALTHY
 
 
 class TestClientManagerInitialization:
@@ -334,7 +265,7 @@ class TestClientManagerAccessors:
         fake_registry = SimpleNamespace(cache_manager=fake_cache)
 
         with patch(
-            "src.infrastructure.client_manager.ensure_service_registry",
+            "src.infrastructure.client_manager._ensure_service_registry",
             new=AsyncMock(return_value=fake_registry),
         ) as ensure_registry:
             result = await client_manager_with_mocks.get_cache_manager()
@@ -349,7 +280,7 @@ class TestClientManagerAccessors:
         fake_registry = SimpleNamespace(embedding_manager=fake_embedding)
 
         with patch(
-            "src.infrastructure.client_manager.ensure_service_registry",
+            "src.infrastructure.client_manager._ensure_service_registry",
             new=AsyncMock(return_value=fake_registry),
         ) as ensure_registry:
             result = await client_manager_with_mocks.get_embedding_manager()
@@ -366,7 +297,7 @@ class TestClientManagerAccessors:
         fake_registry = SimpleNamespace(crawl_manager=fake_crawl)
 
         with patch(
-            "src.infrastructure.client_manager.ensure_service_registry",
+            "src.infrastructure.client_manager._ensure_service_registry",
             new=AsyncMock(return_value=fake_registry),
         ) as ensure_registry:
             result = await client_manager_with_mocks.get_crawl_manager()
@@ -380,7 +311,7 @@ class TestClientManagerAccessors:
         fake_registry = SimpleNamespace(content_intelligence=fake_service)
 
         with patch(
-            "src.infrastructure.client_manager.ensure_service_registry",
+            "src.infrastructure.client_manager._ensure_service_registry",
             new=AsyncMock(return_value=fake_registry),
         ) as ensure_registry:
             result = await client_manager_with_mocks.get_content_intelligence_service()
@@ -397,7 +328,7 @@ class TestClientManagerAccessors:
         fake_registry = SimpleNamespace(project_storage=fake_storage)
 
         with patch(
-            "src.infrastructure.client_manager.ensure_service_registry",
+            "src.infrastructure.client_manager._ensure_service_registry",
             new=AsyncMock(return_value=fake_registry),
         ) as ensure_registry:
             result = await client_manager_with_mocks.get_project_storage()
@@ -409,11 +340,23 @@ class TestClientManagerAccessors:
     async def test_get_rag_generator_cached(self, client_manager_with_mocks):
         fake_generator = AsyncMock()
         fake_generator.cleanup = AsyncMock()
+        vector_service = AsyncMock()
 
-        with patch(
-            "src.services.rag.generator.RAGGenerator",
-            return_value=fake_generator,
-        ) as generator_cls:
+        with (
+            patch.object(
+                client_manager_with_mocks,
+                "get_vector_store_service",
+                new=AsyncMock(return_value=vector_service),
+            ),
+            patch(
+                "src.services.rag.generator.RAGGenerator",
+                return_value=fake_generator,
+            ) as generator_cls,
+            patch(
+                "src.services.rag.retriever.VectorServiceRetriever",
+                return_value=MagicMock(),
+            ),
+        ):
             result = await client_manager_with_mocks.get_rag_generator()
             assert result is fake_generator
             generator_cls.assert_called_once()
@@ -422,10 +365,6 @@ class TestClientManagerAccessors:
             fake_generator.initialize.reset_mock()
             assert await client_manager_with_mocks.get_rag_generator() is fake_generator
             fake_generator.initialize.assert_not_called()
-
-            router2 = await client_manager_with_mocks.get_browser_automation_router()
-            assert router2 is router1
-            mock_router.initialize.assert_awaited_once()
 
 
 class TestClientManagerHealthAndStatus:

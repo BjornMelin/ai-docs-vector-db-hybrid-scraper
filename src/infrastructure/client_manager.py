@@ -23,10 +23,26 @@ from src.infrastructure.clients import (
     RedisClientProvider,
 )
 from src.infrastructure.container import ApplicationContainer, get_container
-from src.services.browser.automation_router import AutomationRouter
 from src.services.embeddings.fastembed_provider import FastEmbedProvider
 from src.services.errors import APIError
 from src.services.vector_db.service import VectorStoreService
+
+
+if TYPE_CHECKING:
+    from src.services.browser.automation_router import (
+        AutomationRouter as AutomationRouterProtocol,
+    )
+else:  # pragma: no cover - type checking guard
+    AutomationRouterProtocol = Any
+
+try:  # pragma: no cover - optional dependency
+    from src.services.browser.automation_router import (
+        AutomationRouter as _AutomationRouterImpl,
+    )
+except ModuleNotFoundError:  # pragma: no cover - optional dependency
+    _AutomationRouterImpl = None
+
+AutomationRouterImpl: type[AutomationRouterProtocol] | None = _AutomationRouterImpl
 
 
 if TYPE_CHECKING:  # pragma: no cover - imported for typing only
@@ -114,7 +130,7 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         self._project_storage: ProjectStorage | None = None
         self._rag_generator: RAGGenerator | None = None
         self._config = get_config()
-        self._automation_router: AutomationRouter | None = None
+        self._automation_router: AutomationRouterProtocol | None = None
         self._mcp_client: MultiServerMCPClient | None = None
         self._mcp_client_lock = asyncio.Lock()
 
@@ -322,7 +338,7 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
             return self._embedding_manager
 
         registry = await _ensure_service_registry()
-        self._embedding_manager = registry.embedding_manager
+        self._embedding_manager = cast("EmbeddingManager", registry.embedding_manager)
         return self._embedding_manager
 
     async def get_crawl_manager(self) -> "CrawlManager":
@@ -452,9 +468,14 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
             AutomationRouter instance for intelligent browser automation
         """
 
+        if AutomationRouterImpl is None:
+            msg = "Automation router is unavailable; browser features are disabled"
+            raise RuntimeError(msg)
+
         if self._automation_router is None:
-            self._automation_router = AutomationRouter(self._config)
-            await self._automation_router.initialize()
+            router = AutomationRouterImpl(self._config)
+            await router.initialize()
+            self._automation_router = router
         return self._automation_router
 
     @asynccontextmanager

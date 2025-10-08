@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
-from typing import Any, cast
+from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from click.testing import CliRunner
 
-from src.infrastructure.client_manager import ClientManager
 from src.manage_vector_db import (
     CollectionInfo,
     CollectionSchema,
@@ -18,20 +17,6 @@ from src.manage_vector_db import (
     VectorDBManager,
     cli,
 )
-
-
-class ClientManagerHarness:
-    """Minimal async client manager harness for VectorDBManager tests."""
-
-    def __init__(self, vector_service: AsyncMock) -> None:
-        self._service = vector_service
-        self.initialize = AsyncMock(side_effect=self._mark_initialized)
-        self.cleanup = AsyncMock()
-        self.get_vector_store_service = AsyncMock(return_value=vector_service)
-        self.is_initialized = False
-
-    async def _mark_initialized(self) -> None:
-        self.is_initialized = True
 
 
 @pytest.fixture()
@@ -61,80 +46,101 @@ def vector_service_mock() -> AsyncMock:
 
 
 @pytest.fixture()
-def client_manager_harness(vector_service_mock: AsyncMock) -> ClientManagerHarness:
-    """Construct the client manager harness bound to the vector service mock."""
+def manager_setup(
+    monkeypatch: pytest.MonkeyPatch, vector_service_mock: AsyncMock
+) -> SimpleNamespace:
+    """Create a VectorDBManager wired to stubbed service registry helpers."""
 
-    return ClientManagerHarness(vector_service_mock)
+    registry = SimpleNamespace(vector_service=vector_service_mock)
+    ensure_registry = AsyncMock(return_value=registry)
+    shutdown_registry = AsyncMock()
 
+    monkeypatch.setattr(
+        "src.manage_vector_db.ensure_service_registry",
+        ensure_registry,
+    )
+    monkeypatch.setattr(
+        "src.manage_vector_db.shutdown_service_registry",
+        shutdown_registry,
+    )
 
-@pytest.fixture()
-def manager(client_manager_harness: ClientManagerHarness) -> VectorDBManager:
-    """Create the VectorDBManager under test."""
+    manager = VectorDBManager()
 
-    return VectorDBManager(client_manager=cast(ClientManager, client_manager_harness))
+    return SimpleNamespace(
+        manager=manager,
+        ensure_registry=ensure_registry,
+        shutdown_registry=shutdown_registry,
+        vector_service=vector_service_mock,
+    )
 
 
 @pytest.mark.asyncio
-async def test_initialize_invokes_client_manager(
-    manager: VectorDBManager,
-    client_manager_harness: ClientManagerHarness,
-) -> None:
-    """initialize should delegate to the client manager once."""
+async def test_initialize_use_service_registry(manager_setup: SimpleNamespace) -> None:
+    """initialize should resolve the vector service via the registry."""
+
+    manager = manager_setup.manager
 
     await manager.initialize()
 
-    assert manager._initialized is True
-    assert client_manager_harness.initialize.await_count == 1
+    manager_setup.ensure_registry.assert_awaited_once()
+    service = await manager.get_vector_store_service()
+    assert service is manager_setup.vector_service
 
 
 @pytest.mark.asyncio
 async def test_list_collections_uses_vector_service(
-    manager: VectorDBManager,
-    vector_service_mock: AsyncMock,
+    manager_setup: SimpleNamespace,
 ) -> None:
     """list_collections should call the vector service and return results."""
+
+    manager = manager_setup.manager
 
     collections = await manager.list_collections()
 
     assert collections == ["docs"]
-    vector_service_mock.list_collections.assert_awaited_once()
+    manager_setup.vector_service.list_collections.assert_awaited_once()
 
 
 @pytest.mark.asyncio
 async def test_create_collection_builds_schema(
-    manager: VectorDBManager,
-    vector_service_mock: AsyncMock,
+    manager_setup: SimpleNamespace,
 ) -> None:
     """create_collection should construct the schema and invoke ensure_collection."""
+
+    manager = manager_setup.manager
 
     result = await manager.create_collection("analytics", vector_size=256)
 
     assert result is True
-    vector_service_mock.ensure_collection.assert_awaited_once()
-    schema: CollectionSchema = vector_service_mock.ensure_collection.call_args.args[0]
+    manager_setup.vector_service.ensure_collection.assert_awaited_once()
+    schema: CollectionSchema = (
+        manager_setup.vector_service.ensure_collection.call_args.args[0]
+    )
     assert schema.name == "analytics"
     assert schema.vector_size == 256
 
 
 @pytest.mark.asyncio
 async def test_delete_collection_drops_via_service(
-    manager: VectorDBManager,
-    vector_service_mock: AsyncMock,
+    manager_setup: SimpleNamespace,
 ) -> None:
     """delete_collection should call drop_collection and report success."""
+
+    manager = manager_setup.manager
 
     result = await manager.delete_collection("obsolete")
 
     assert result is True
-    vector_service_mock.drop_collection.assert_awaited_once_with("obsolete")
+    manager_setup.vector_service.drop_collection.assert_awaited_once_with("obsolete")
 
 
 @pytest.mark.asyncio
 async def test_get_collection_info_maps_stats(
-    manager: VectorDBManager,
-    vector_service_mock: AsyncMock,
+    manager_setup: SimpleNamespace,
 ) -> None:
     """get_collection_info should translate stats into CollectionInfo."""
+
+    manager = manager_setup.manager
 
     info = await manager.get_collection_info("docs")
 
@@ -145,16 +151,17 @@ async def test_get_collection_info_maps_stats(
 
 @pytest.mark.asyncio
 async def test_search_documents_returns_models(
-    manager: VectorDBManager,
-    vector_service_mock: AsyncMock,
+    manager_setup: SimpleNamespace,
 ) -> None:
     """search_documents should wrap adapter matches into SearchResult objects."""
+
+    manager = manager_setup.manager
 
     results = await manager.search_documents("docs", "query", limit=1)
 
     assert len(results) == 1
     assert isinstance(results[0], SearchResult)
-    vector_service_mock.search_documents.assert_awaited_once_with(
+    manager_setup.vector_service.search_documents.assert_awaited_once_with(
         "docs",
         "query",
         limit=1,
@@ -163,16 +170,29 @@ async def test_search_documents_returns_models(
 
 @pytest.mark.asyncio
 async def test_clear_collection_recreates(
-    manager: VectorDBManager,
-    vector_service_mock: AsyncMock,
+    manager_setup: SimpleNamespace,
 ) -> None:
     """clear_collection should drop and then ensure the collection."""
+
+    manager = manager_setup.manager
 
     result = await manager.clear_collection("docs")
 
     assert result is True
-    vector_service_mock.drop_collection.assert_awaited()
-    vector_service_mock.ensure_collection.assert_awaited()
+    manager_setup.vector_service.drop_collection.assert_awaited()
+    manager_setup.vector_service.ensure_collection.assert_awaited()
+
+
+@pytest.mark.asyncio
+async def test_cleanup_shuts_down_registry(manager_setup: SimpleNamespace) -> None:
+    """cleanup should release the registry-managed services."""
+
+    manager = manager_setup.manager
+
+    await manager.initialize()
+    await manager.cleanup()
+
+    manager_setup.shutdown_registry.assert_awaited_once()
 
 
 def _run_cli(command: list[str], manager_stub: AsyncMock) -> Any:
@@ -200,8 +220,8 @@ def test_cli_list_collections_outputs_results() -> None:
 
     assert result.exit_code == 0, result.output
     assert "docs" in result.output
-    assert manager_stub.list_collections.await_count == 1
-    assert manager_stub.cleanup.await_count == 1
+    manager_stub.list_collections.assert_awaited_once()
+    manager_stub.cleanup.assert_awaited_once()
 
 
 def test_cli_create_collection_reports_success() -> None:
@@ -216,6 +236,7 @@ def test_cli_create_collection_reports_success() -> None:
     assert result.exit_code == 0, result.output
     assert "Successfully created collection" in result.output
     manager_stub.create_collection.assert_awaited_once_with("docs", vector_size=1536)
+    manager_stub.cleanup.assert_awaited_once()
 
 
 def test_cli_search_prints_results() -> None:
@@ -238,6 +259,7 @@ def test_cli_search_prints_results() -> None:
     assert result.exit_code == 0, result.output
     assert "Example" in result.output
     manager_stub.search_documents.assert_awaited_once_with("docs", "query", limit=5)
+    manager_stub.cleanup.assert_awaited_once()
 
 
 def test_cli_stats_prints_table() -> None:
@@ -257,3 +279,4 @@ def test_cli_stats_prints_table() -> None:
     assert result.exit_code == 0, result.output
     assert "Total Collections" in result.output
     manager_stub.get_database_stats.assert_awaited_once()
+    manager_stub.cleanup.assert_awaited_once()
