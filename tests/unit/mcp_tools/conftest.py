@@ -96,7 +96,7 @@ class FakeVectorStoreService:
 
         for d in docs:
             self._docs.setdefault(name, []).append(
-                {"id": d.id, "content": d.content, "payload": d.metadata}
+                {"id": d.id, "content": d.content, "metadata": d.metadata}
             )
 
     async def get_document(self, name: str, point_id: str) -> dict | None:
