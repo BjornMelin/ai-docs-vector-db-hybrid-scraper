@@ -41,3 +41,7 @@ and tracing where it improves operability—import the helpers from
 `src/services/logging_config.py` and emit actionable messages (context, impact,
 next steps). Use existing OpenTelemetry utilities under `src/services/monitoring`
 to attach spans/metrics when expanding service boundaries.
+
+## DISALLOWED GIT COMMANDS
+
+- You must NEVER run the any `git restore` or `git checkout --` commands unless explicitly asked to, never restore or revert changes unles you have been explicitly asked to by the user.
