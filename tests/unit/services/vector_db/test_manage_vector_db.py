@@ -49,40 +49,42 @@ def vector_service_mock() -> AsyncMock:
 def manager_setup(
     monkeypatch: pytest.MonkeyPatch, vector_service_mock: AsyncMock
 ) -> SimpleNamespace:
-    """Create a VectorDBManager wired to stubbed service registry helpers."""
+    """Create a VectorDBManager wired to stubbed client manager helpers."""
 
-    registry = SimpleNamespace(vector_service=vector_service_mock)
-    ensure_registry = AsyncMock(return_value=registry)
-    shutdown_registry = AsyncMock()
+    client_manager = SimpleNamespace(
+        get_vector_store_service=AsyncMock(return_value=vector_service_mock)
+    )
+    ensure_manager = AsyncMock(return_value=client_manager)
+    shutdown_manager = AsyncMock()
 
     monkeypatch.setattr(
-        "src.manage_vector_db.ensure_service_registry",
-        ensure_registry,
+        "src.manage_vector_db.ensure_client_manager",
+        ensure_manager,
     )
     monkeypatch.setattr(
-        "src.manage_vector_db.shutdown_service_registry",
-        shutdown_registry,
+        "src.manage_vector_db.shutdown_client_manager",
+        shutdown_manager,
     )
 
     manager = VectorDBManager()
 
     return SimpleNamespace(
         manager=manager,
-        ensure_registry=ensure_registry,
-        shutdown_registry=shutdown_registry,
+        ensure_manager=ensure_manager,
+        shutdown_manager=shutdown_manager,
         vector_service=vector_service_mock,
     )
 
 
 @pytest.mark.asyncio
-async def test_initialize_use_service_registry(manager_setup: SimpleNamespace) -> None:
-    """initialize should resolve the vector service via the registry."""
+async def test_initialize_use_client_manager(manager_setup: SimpleNamespace) -> None:
+    """initialize should resolve the vector service via the client manager."""
 
     manager = manager_setup.manager
 
     await manager.initialize()
 
-    manager_setup.ensure_registry.assert_awaited_once()
+    manager_setup.ensure_manager.assert_awaited()
     service = await manager.get_vector_store_service()
     assert service is manager_setup.vector_service
 
@@ -184,15 +186,15 @@ async def test_clear_collection_recreates(
 
 
 @pytest.mark.asyncio
-async def test_cleanup_shuts_down_registry(manager_setup: SimpleNamespace) -> None:
-    """cleanup should release the registry-managed services."""
+async def test_cleanup_shuts_down_manager(manager_setup: SimpleNamespace) -> None:
+    """cleanup should release the client-manager-managed services."""
 
     manager = manager_setup.manager
 
     await manager.initialize()
     await manager.cleanup()
 
-    manager_setup.shutdown_registry.assert_awaited_once()
+    manager_setup.shutdown_manager.assert_awaited_once()
 
 
 def _run_cli(command: list[str], manager_stub: AsyncMock) -> Any:

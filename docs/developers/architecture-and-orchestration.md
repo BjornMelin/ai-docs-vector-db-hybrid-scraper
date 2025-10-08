@@ -44,7 +44,7 @@ Core layers:
 graph LR
     subgraph Core Services
         Config[Config loader]
-        Registry[ServiceRegistry]
+        ClientMgr[ClientManager]
         Scheduler[Async task scheduler]
     end
     subgraph Application
@@ -54,29 +54,29 @@ graph LR
         EmbeddingMgr[Embedding manager]
         CacheMgr[Dragonfly cache]
     end
-    Config --> Registry
-    Registry --> API
-    Registry --> HybridSearch
-    Registry --> BrowserMgr
-    Registry --> EmbeddingMgr
-    Registry --> CacheMgr
+    Config --> ClientMgr
+    ClientMgr --> API
+    ClientMgr --> HybridSearch
+    ClientMgr --> BrowserMgr
+    ClientMgr --> EmbeddingMgr
+    ClientMgr --> CacheMgr
     HybridSearch --> Qdrant[(Qdrant)]
     BrowserMgr --> AutomationBackends
     EmbeddingMgr --> Providers
 ```
 
-The `ServiceRegistry` (``src/services/registry.py``) eagerly initialises shared
-infrastructure—client manager, vector store, embedding manager, cache manager,
-content-intelligence service, and project storage—during FastAPI lifespan
-startup. Each dependency helper simply reads from the registry rather than
-keeping its own singleton or resurrecting bespoke containers. The previous
-`DependencyContainer` layer, module-level locks, and ad-hoc health trackers have
-been removed.
+The global `ClientManager` (``src/infrastructure/client_manager.py``) now
+initialises shared infrastructure—vector store, embedding manager, cache
+manager, circuit breaker, content-intelligence service, and project storage—on
+first use. FastAPI lifespan hooks ensure a single manager instance is prepared
+before routers execute, and every dependency helper requests services from that
+singleton. This removes the previous `ServiceRegistry` layer, shaving one level
+of indirection while retaining deterministic startup and teardown semantics.
 
-`dependency_injector` still wires optional providers (OpenAI, Qdrant, Redis)
-for CLI tooling; however, HTTP request handling now relies on native FastAPI
-`Depends` + lifespan state for clarity and testability. Outside FastAPI, scripts
-interact with ``get_service_registry()`` to obtain the shared services.
+`dependency_injector` still wires optional providers (OpenAI, Qdrant, Redis) for
+CLI tooling; however, HTTP request handling now relies on the shared
+`ClientManager` via native FastAPI dependencies. Outside FastAPI, scripts call
+``ensure_client_manager()`` to obtain the shared services.
 
 ## 2. LangChain / LangGraph Orchestration
 

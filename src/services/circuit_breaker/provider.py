@@ -11,8 +11,8 @@ try:
 except ModuleNotFoundError:  # pragma: no cover - optional dependency
     AsyncInMemoryUnitOfWork = None  # type: ignore[assignment]
 
+from src.infrastructure.client_manager import ensure_client_manager, get_client_manager
 from src.services.circuit_breaker import CircuitBreakerManager
-from src.services.registry import ensure_service_registry, get_service_registry
 
 
 logger = logging.getLogger(__name__)
@@ -24,10 +24,10 @@ _manager_lock = asyncio.Lock()
 
 async def _resolve_registry_manager() -> CircuitBreakerManager | None:
     try:
-        registry = get_service_registry()
+        registry = get_client_manager()
     except RuntimeError:
         try:
-            registry = await ensure_service_registry()
+            registry = await ensure_client_manager()
         except Exception as exc:  # pragma: no cover - startup race conditions
             logger.debug(
                 "Service registry unavailable for circuit breaker manager: %s",
@@ -35,7 +35,7 @@ async def _resolve_registry_manager() -> CircuitBreakerManager | None:
                 exc_info=True,
             )
             return None
-    return registry.circuit_breaker_manager
+    return await registry.get_circuit_breaker_manager()
 
 
 def _build_fallback_manager() -> CircuitBreakerManager:
@@ -59,7 +59,7 @@ def _build_fallback_manager() -> CircuitBreakerManager:
 
 
 async def get_circuit_breaker_manager() -> CircuitBreakerManager:
-    """Return the shared CircuitBreakerManager instance from the registry."""
+    """Return the shared CircuitBreakerManager instance from the ClientManager."""
 
     global _manager  # pylint: disable=global-statement
     if _manager is not None:

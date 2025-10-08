@@ -10,10 +10,8 @@ from typing import Annotated, Any, cast
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from src.architecture.service_factory import (
-    ModeAwareServiceFactory,
-    get_request_service_factory,
-)
+from src.api.dependencies import get_vector_client_manager
+from src.infrastructure.client_manager import ClientManager
 from src.services.vector_db import VectorMatch
 from src.services.vector_db.service import VectorStoreService
 
@@ -42,15 +40,13 @@ class SimpleSearchResponse(BaseModel):
     )
 
 
-FactoryDependency = Annotated[
-    ModeAwareServiceFactory, Depends(get_request_service_factory)
-]
+ClientManagerDependency = Annotated[ClientManager, Depends(get_vector_client_manager)]
 
 
 @router.post("/search", response_model=SimpleSearchResponse)
 async def search_documents(
     request: SimpleSearchRequest,
-    factory: FactoryDependency,
+    client_manager: ClientManagerDependency,
 ) -> SimpleSearchResponse:
     """Search documents using simple vector search.
 
@@ -58,7 +54,7 @@ async def search_documents(
     like reranking, query expansion, or hybrid search.
     """
     try:
-        return await _perform_search(request, factory)
+        return await _perform_search(request, client_manager)
     except Exception as e:
         logger.exception("Search failed")
         # Return generic error message to prevent information disclosure
@@ -69,10 +65,10 @@ async def search_documents(
 
 
 async def _perform_search(
-    request: SimpleSearchRequest, factory: ModeAwareServiceFactory
+    request: SimpleSearchRequest, client_manager: ClientManager
 ) -> SimpleSearchResponse:
     """Perform search with service lookup and response conversion."""
-    vector_service = await _get_vector_store_service(factory)
+    vector_service = await _get_vector_store_service(client_manager)
     started = perf_counter()
     matches = await vector_service.search_documents(
         request.collection,
@@ -94,7 +90,7 @@ async def _perform_search(
 
 @router.get("/search", response_model=SimpleSearchResponse)
 async def search_documents_get(
-    factory: FactoryDependency,
+    client_manager: ClientManagerDependency,
     q: str = Query(..., min_length=1, max_length=500, description="Search query"),
     limit: int = Query(default=10, ge=1, le=25, description="Maximum results"),
     collection: str = Query(default="documents", description="Collection to search"),
@@ -105,16 +101,16 @@ async def search_documents_get(
         limit=limit,
         collection=collection,
     )
-    return await search_documents(request, factory)
+    return await search_documents(request, client_manager)
 
 
 @router.get("/search/health")
 async def search_health(
-    factory: FactoryDependency,
+    client_manager: ClientManagerDependency,
 ) -> dict[str, Any]:
     """Get search service health status."""
     try:
-        stats = await _get_search_stats(factory)
+        stats = await _get_search_stats(client_manager)
     except Exception as e:
         logger.exception("Search health check failed")
         return {
@@ -129,9 +125,9 @@ async def search_health(
     }
 
 
-async def _get_search_stats(factory: ModeAwareServiceFactory) -> dict[str, Any]:
+async def _get_search_stats(client_manager: ClientManager) -> dict[str, Any]:
     """Get search service statistics."""
-    vector_service = await _get_vector_store_service(factory)
+    vector_service = await _get_vector_store_service(client_manager)
     collections = await vector_service.list_collections()
     stats: dict[str, Any] = {"collections": collections}
     qdrant_config = getattr(vector_service.config, "qdrant", None)
@@ -148,11 +144,11 @@ async def _get_search_stats(factory: ModeAwareServiceFactory) -> dict[str, Any]:
 
 
 async def _get_vector_store_service(
-    factory: ModeAwareServiceFactory,
+    client_manager: ClientManager,
 ) -> VectorStoreService:
     """Resolve the initialized vector store service from the factory."""
 
-    service = await factory.get_service("vector_db_service")
+    service = await client_manager.get_vector_store_service()
     if not isinstance(service, VectorStoreService):  # pragma: no cover - safety net
         msg = "Vector DB service is not a VectorStoreService instance"
         raise TypeError(msg)

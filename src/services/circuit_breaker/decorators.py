@@ -181,6 +181,8 @@ async def _get_circuit_breaker_manager():
     )
 
     return await get_circuit_breaker_manager()
+
+
 __all__ = [
     "circuit_breaker",
     "tenacity_circuit_breaker",
