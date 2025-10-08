@@ -302,7 +302,7 @@ class ProfileManager:
         )
 
         # Write .env file
-        with output_path.open("w") as f:
+        with output_path.open("w", encoding="utf-8") as f:
             f.write("\n".join(env_content))
 
         return output_path

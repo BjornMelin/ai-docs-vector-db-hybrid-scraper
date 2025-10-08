@@ -26,7 +26,7 @@ try:  # Optional adapters
     from .crawl4ai_adapter import Crawl4AIAdapter
 
     __all__.append("Crawl4AIAdapter")
-except ModuleNotFoundError:  # pragma: no cover - optional dependency
+except (ModuleNotFoundError, ImportError):  # pragma: no cover - optional dependency
     Crawl4AIAdapter = None  # type: ignore
 
 try:

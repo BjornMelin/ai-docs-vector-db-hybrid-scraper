@@ -43,10 +43,15 @@ from ...config.loader import Settings
 from ...config.models import AutomationRouterConfig
 from ..errors import CrawlServiceError
 from .browser_use_adapter import BrowserUseAdapter
-from .crawl4ai_adapter import Crawl4AIAdapter
 from .firecrawl_adapter import FirecrawlAdapter, FirecrawlAdapterConfig
 from .lightweight_scraper import LightweightScraper
 from .playwright_adapter import PlaywrightAdapter
+
+
+try:  # pragma: no cover - optional dependency
+    from .crawl4ai_adapter import Crawl4AIAdapter
+except ImportError:  # pragma: no cover - optional dependency
+    Crawl4AIAdapter = None  # type: ignore[assignment]
 
 
 try:  # pragma: no cover - import guard
@@ -116,7 +121,11 @@ class AutomationRouter:
 
         # Providers
         self._t0 = LightweightScraper(settings)
-        self._t1 = Crawl4AIAdapter(settings.crawl4ai)
+        if Crawl4AIAdapter is None:
+            self._t1 = None
+            logger.warning("Crawl4AI adapter unavailable; disabling crawl4ai tier")
+        else:
+            self._t1 = Crawl4AIAdapter(settings.crawl4ai)
         self._t2 = PlaywrightAdapter(settings.playwright)
         self._t3 = BrowserUseAdapter(settings.browser_use)
         self._t4 = FirecrawlAdapter(
@@ -320,6 +329,11 @@ class AutomationRouter:
                 payload.setdefault("success", True)
                 return payload
             case "crawl4ai":
+                if self._t1 is None:
+                    raise CrawlServiceError(
+                        "Crawl4AI adapter not available; "
+                        "install optional crawling extras"
+                    )
                 return cast(
                     dict[str, Any],
                     await self._t1.scrape(

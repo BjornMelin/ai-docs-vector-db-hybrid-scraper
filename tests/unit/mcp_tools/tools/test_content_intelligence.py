@@ -6,20 +6,22 @@
 - Modern pytest patterns
 """
 
+from typing import cast
 from unittest.mock import AsyncMock, Mock
 
 import pytest
 
 from src.infrastructure.client_manager import ClientManager
-from src.mcp_tools.models.requests import (
-    ContentIntelligenceAnalysisRequest,
-    ContentIntelligenceClassificationRequest,
-    ContentIntelligenceMetadataRequest,
-    ContentIntelligenceQualityRequest,
-)
 from src.mcp_tools.models.responses import ContentIntelligenceResult
-from src.mcp_tools.tools.content_intelligence import register_tools
+from src.mcp_tools.tools.content_intelligence import (
+    ContentAnalysisToolPayload,
+    ContentClassificationToolPayload,
+    ContentMetadataToolPayload,
+    ContentQualityToolPayload,
+    register_tools,
+)
 from src.services.content_intelligence.models import (
+    ContentAnalysisRequest,
     ContentAnalysisResponse,
     ContentClassification,
     ContentMetadata,
@@ -200,7 +202,7 @@ class TestAnalyzeContentIntelligence:
         self, mock_mcp, mock_context, mock_content_intelligence_service
     ):
         """Test successful content intelligence analysis."""
-        request = ContentIntelligenceAnalysisRequest(
+        analysis_payload = ContentAnalysisRequest(
             content="This is a comprehensive API documentation page "
             "explaining authentication.",
             url="https://example.com/docs/auth",
@@ -211,6 +213,7 @@ class TestAnalyzeContentIntelligence:
             enable_metadata_extraction=True,
             enable_adaptations=True,
         )
+        request = ContentAnalysisToolPayload(analysis=analysis_payload)
 
         tool_func = mock_mcp.tools["analyze_content_intelligence"]
         result = await tool_func(request, mock_context)
@@ -227,10 +230,13 @@ class TestAnalyzeContentIntelligence:
 
         # Verify service was called correctly
         mock_content_intelligence_service.analyze_content.assert_called_once()
-        call_args = mock_content_intelligence_service.analyze_content.call_args[0][0]
-        assert call_args.content == request.content
-        assert call_args.url == request.url
-        assert call_args.confidence_threshold == request.confidence_threshold
+        call_args = cast(
+            ContentAnalysisRequest,
+            mock_content_intelligence_service.analyze_content.call_args[0][0],
+        )
+        assert call_args.content == analysis_payload.content
+        assert call_args.url == analysis_payload.url
+        assert call_args.confidence_threshold == analysis_payload.confidence_threshold
 
         # Verify logging
         assert len(mock_context.logs["info"]) >= 2
@@ -251,8 +257,10 @@ class TestAnalyzeContentIntelligence:
         # Make service unavailable
         mock_client_manager.get_content_intelligence_service.return_value = None
 
-        request = ContentIntelligenceAnalysisRequest(
-            content="Test content", url="https://example.com/test"
+        request = ContentAnalysisToolPayload(
+            analysis=ContentAnalysisRequest(
+                content="Test content", url="https://example.com/test"
+            )
         )
 
         tool_func = mock_mcp.tools["analyze_content_intelligence"]
@@ -276,8 +284,10 @@ class TestAnalyzeContentIntelligence:
             "Service error"
         )
 
-        request = ContentIntelligenceAnalysisRequest(
-            content="Test content", url="https://example.com/test"
+        request = ContentAnalysisToolPayload(
+            analysis=ContentAnalysisRequest(
+                content="Test content", url="https://example.com/test"
+            )
         )
 
         tool_func = mock_mcp.tools["analyze_content_intelligence"]
@@ -302,7 +312,7 @@ class TestClassifyContentType:
         self, mock_mcp, mock_context, mock_content_intelligence_service
     ):
         """Test successful content type classification."""
-        request = ContentIntelligenceClassificationRequest(
+        request = ContentClassificationToolPayload(
             content="# API Reference\\n\\nThis document provides "
             "comprehensive API documentation.",
             url="https://example.com/api-docs",
@@ -340,7 +350,7 @@ class TestClassifyContentType:
         """Test classification when service is unavailable."""
         mock_client_manager.get_content_intelligence_service.return_value = None
 
-        request = ContentIntelligenceClassificationRequest(
+        request = ContentClassificationToolPayload(
             content="Test content", url="https://example.com/test"
         )
 
@@ -364,7 +374,7 @@ class TestClassifyContentType:
             RuntimeError("Classification error")
         )
 
-        request = ContentIntelligenceClassificationRequest(
+        request = ContentClassificationToolPayload(
             content="Test content", url="https://example.com/test"
         )
 
@@ -387,7 +397,7 @@ class TestAssessContentQuality:
         self, mock_mcp, mock_context, mock_content_intelligence_service
     ):
         """Test successful content quality assessment."""
-        request = ContentIntelligenceQualityRequest(
+        request = ContentQualityToolPayload(
             content="Well-structured documentation with clear examples "
             "and good formatting.",
             confidence_threshold=0.8,
@@ -427,7 +437,7 @@ class TestAssessContentQuality:
         """Test quality assessment when service is unavailable."""
         mock_client_manager.get_content_intelligence_service.return_value = None
 
-        request = ContentIntelligenceQualityRequest(
+        request = ContentQualityToolPayload(
             content="Test content", confidence_threshold=0.8
         )
 
@@ -452,7 +462,7 @@ class TestAssessContentQuality:
             RuntimeError("Assessment error")
         )
 
-        request = ContentIntelligenceQualityRequest(
+        request = ContentQualityToolPayload(
             content="Test content", confidence_threshold=0.8
         )
 
@@ -472,7 +482,7 @@ class TestExtractContentMetadata:
         self, mock_mcp, mock_context, mock_content_intelligence_service
     ):
         """Test successful metadata extraction."""
-        request = ContentIntelligenceMetadataRequest(
+        request = ContentMetadataToolPayload(
             content="# API Documentation\\n\\nComprehensive guide to our "
             "REST API with examples.",
             url="https://example.com/docs/api",
@@ -515,7 +525,7 @@ class TestExtractContentMetadata:
         """Test metadata extraction when service is unavailable."""
         mock_client_manager.get_content_intelligence_service.return_value = None
 
-        request = ContentIntelligenceMetadataRequest(
+        request = ContentMetadataToolPayload(
             content="Test content with multiple words here",
             url="https://example.com/test",
         )
@@ -539,7 +549,7 @@ class TestExtractContentMetadata:
             "Extraction error"
         )
 
-        request = ContentIntelligenceMetadataRequest(
+        request = ContentMetadataToolPayload(
             content="Test content with several words", url="https://example.com/test"
         )
 
@@ -558,8 +568,10 @@ class TestContentIntelligenceIntegration:
     async def test_minimal_request_handling(self, mock_mcp, mock_context):
         """Test tools handle minimal request data correctly."""
         # Test with minimal analysis request
-        minimal_request = ContentIntelligenceAnalysisRequest(
-            content="Basic content", url="https://example.com"
+        minimal_request = ContentAnalysisToolPayload(
+            analysis=ContentAnalysisRequest(
+                content="Basic content", url="https://example.com"
+            )
         )
 
         tool_func = mock_mcp.tools["analyze_content_intelligence"]
@@ -575,7 +587,7 @@ class TestContentIntelligenceIntegration:
         url = "https://example.com/api-docs"
 
         # 1. Classify content type
-        classification_request = ContentIntelligenceClassificationRequest(
+        classification_request = ContentClassificationToolPayload(
             content=content, url=url, title="API Documentation"
         )
 
@@ -583,7 +595,7 @@ class TestContentIntelligenceIntegration:
         classification = await classify_func(classification_request, mock_context)
 
         # 2. Assess quality
-        quality_request = ContentIntelligenceQualityRequest(
+        quality_request = ContentQualityToolPayload(
             content=content, confidence_threshold=0.8
         )
 
@@ -591,7 +603,7 @@ class TestContentIntelligenceIntegration:
         quality = await quality_func(quality_request, mock_context)
 
         # 3. Extract metadata
-        metadata_request = ContentIntelligenceMetadataRequest(content=content, url=url)
+        metadata_request = ContentMetadataToolPayload(content=content, url=url)
 
         metadata_func = mock_mcp.tools["extract_content_metadata"]
         metadata = await metadata_func(metadata_request, mock_context)

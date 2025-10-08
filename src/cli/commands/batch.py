@@ -10,7 +10,7 @@ import asyncio
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import click
 from click.shell_completion import CompletionItem
@@ -28,8 +28,12 @@ from rich.table import Table
 from rich.text import Text
 
 
-if TYPE_CHECKING:  # pragma: no cover - typing only
-    pass
+def _init_vector_manager():
+    """Create a VectorDB manager without importing at module load."""
+    # pylint: disable=import-outside-toplevel
+    from src.manage_vector_db import VectorDBManager
+
+    return VectorDBManager()
 
 
 console = Console()
@@ -45,10 +49,8 @@ def complete_collection_name(
         if not config:
             return []
 
-        # Initialize manager and retrieve collections
-        from src.manage_vector_db import VectorDBManager
-
-        db_manager = VectorDBManager()
+        # Initialize manager and retrieve collections lazily to avoid heavy import
+        db_manager = _init_vector_manager()
 
         # Get collection names (synchronously for completion)
         collections = asyncio.run(db_manager.list_collections())
@@ -298,7 +300,7 @@ def _show_indexing_preview(
 )
 @click.option("--force", is_flag=True, help="Recreate collections if they exist")
 @click.pass_context
-def create_collections(
+def create_collections(  # pylint: disable=too-many-locals
     ctx: click.Context, collections: tuple, dimension: int, distance: str, _force: bool
 ):
     """Create multiple collections in batch."""
@@ -324,9 +326,7 @@ def create_collections(
 
     # Create operation queue
     queue = OperationQueue()
-    from src.manage_vector_db import VectorDBManager
-
-    db_manager = VectorDBManager()
+    db_manager = _init_vector_manager()
 
     success = False
     try:
@@ -402,9 +402,7 @@ def delete_collections(ctx: click.Context, collections: tuple, yes: bool):
 
     # Create operation queue
     queue = OperationQueue()
-    from src.manage_vector_db import VectorDBManager
-
-    db_manager = VectorDBManager()
+    db_manager = _init_vector_manager()
 
     success = False
     try:
@@ -454,9 +452,7 @@ def backup_collections(
 
     # If no collections specified, backup all
     if not collections:
-        from src.manage_vector_db import VectorDBManager
-
-        db_manager = VectorDBManager()
+        db_manager = _init_vector_manager()
         try:
             collection_names = asyncio.run(db_manager.list_collections())
         finally:

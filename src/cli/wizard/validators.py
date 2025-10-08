@@ -123,7 +123,7 @@ class WizardValidator:
 
         return True, None
 
-    def validate_path(
+    def validate_path(  # pylint: disable=too-many-return-statements
         self, path: str, must_exist: bool = False, must_be_dir: bool = False
     ) -> tuple[bool, str | None]:
         """Validate file/directory path.

@@ -233,7 +233,7 @@ def benchmark(profile: str):
     multiple=True,
     help="Restrict the Prometheus metrics snapshot to specific names",
 )
-def run_eval(
+def run_eval(  # pylint: disable=too-many-arguments,too-many-positional-arguments
     dataset: str,
     output: str | None,
     limit: int,

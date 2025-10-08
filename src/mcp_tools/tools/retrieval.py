@@ -190,7 +190,7 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
         )
 
     @mcp.tool()
-    async def search_with_context(
+    async def search_with_context(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         query: str,
         collection: str,
         limit: int = 10,
@@ -215,7 +215,7 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
         return _to_results(matches[:extended_limit], include_metadata=include_metadata)
 
     @mcp.tool()
-    async def recommend_similar(  # pylint: disable=too-many-arguments
+    async def recommend_similar(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         point_id: str,
         collection: str,
         limit: int = 10,
