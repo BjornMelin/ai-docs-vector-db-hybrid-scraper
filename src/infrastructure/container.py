@@ -1,6 +1,7 @@
 """Dependency injection container for the application."""
 
 import asyncio
+import importlib
 import logging
 from collections.abc import AsyncGenerator
 from functools import lru_cache
@@ -14,17 +15,6 @@ from dependency_injector.wiring import Provide
 from firecrawl import AsyncFirecrawlApp
 from openai import AsyncOpenAI
 from qdrant_client import AsyncQdrantClient
-
-
-# Import parallel processing components
-try:
-    from src.services.processing.parallel_integration import (
-        OptimizationConfig,
-        ParallelProcessingSystem,
-    )
-except ImportError:
-    OptimizationConfig = None
-    ParallelProcessingSystem = None
 
 
 logger = logging.getLogger(__name__)
@@ -58,7 +48,7 @@ def _create_qdrant_client(config: Any) -> AsyncQdrantClient:
         qdrant_config = getattr(config, "qdrant", None)
         url = getattr(qdrant_config, "url", None) or "http://localhost:6333"
         api_key = getattr(qdrant_config, "api_key", None)
-        timeout = float(getattr(qdrant_config, "timeout", None) or 30.0)
+        timeout = int(getattr(qdrant_config, "timeout", None) or 30)
         prefer_grpc = getattr(qdrant_config, "prefer_grpc", None) or False
         return AsyncQdrantClient(
             url=url, api_key=api_key, timeout=timeout, prefer_grpc=prefer_grpc
@@ -104,41 +94,22 @@ async def _create_http_client() -> AsyncGenerator[Any]:
             yield session
 
 
-def _create_parallel_processing_system(embedding_manager: Any) -> Any:
-    """Create parallel processing system with optimizations.
+def _create_parallel_processing_system(*, embedding_manager: Any) -> Any:
+    """Construct the parallel processing system if available.
 
-    Args:
-        embedding_manager: EmbeddingManager instance
-
-    Returns:
-        ParallelProcessingSystem instance
+    Falls back to a lightweight stub when the optional dependency graph is absent.
     """
 
-    if OptimizationConfig and ParallelProcessingSystem:
-        # Create optimization configuration
-        config = OptimizationConfig(
-            enable_parallel_processing=True,
-            enable_caching=True,
-            enable_optimized_algorithms=True,
-            performance_monitoring=True,
-            auto_optimization=True,
+    try:  # Lazy import to avoid mandatory dependency.
+        module = importlib.import_module(
+            "src.services.processing.parallel_processing_system"
         )
+        factory = module.create_parallel_processing_system
+    except (ModuleNotFoundError, AttributeError):
+        logger.debug("Parallel processing factory unavailable; using embedding manager")
+        return embedding_manager()
 
-        try:
-            return ParallelProcessingSystem(embedding_manager, config)
-        except (AttributeError, TypeError, ValueError) as e:
-            logger.warning("Failed to create parallel processing system: %s", e)
-            # Fall through to mock system
-
-    # Return a minimal mock system if creation fails or components unavailable
-    class MockParallelProcessingSystem:
-        async def get_system_status(self):
-            return {"system_health": {"status": "unavailable"}}
-
-        async def cleanup(self):
-            pass
-
-    return MockParallelProcessingSystem()
+    return factory(embedding_manager=embedding_manager())
 
 
 class ApplicationContainer(containers.DeclarativeContainer):  # pylint: disable=c-extension-no-member

@@ -76,6 +76,7 @@ async def mock_container(test_config):
 @pytest.fixture
 async def client_manager_with_mocks(mock_container):
     """Create ClientManager with mocked dependency injection container."""
+
     ClientManager.reset_singleton()
 
     with patch(
@@ -95,6 +96,7 @@ class TestClientState:
 
     def test_client_state_values(self):
         """Verify all expected states exist."""
+
         assert ClientState.UNINITIALIZED.value == "uninitialized"
         assert ClientState.HEALTHY.value == "healthy"
         assert ClientState.DEGRADED.value == "degraded"
@@ -102,6 +104,7 @@ class TestClientState:
 
     def test_client_state_enum_completeness(self):
         """Verify enum contains all expected members."""
+
         expected_states = {"UNINITIALIZED", "HEALTHY", "DEGRADED", "FAILED"}
         actual_states = {state.name for state in ClientState}
         assert actual_states == expected_states
@@ -112,6 +115,7 @@ class TestClientHealth:
 
     def test_client_health_initialization(self):
         """Test basic initialization."""
+
         health = ClientHealth(
             state=ClientState.HEALTHY,
             last_check=time.time(),
@@ -124,6 +128,7 @@ class TestClientHealth:
 
     def test_client_health_with_error(self):
         """Test health with error state."""
+
         error_msg = "Connection failed"
         health = ClientHealth(
             state=ClientState.FAILED,
@@ -142,6 +147,7 @@ class TestClientManagerInitialization:
     @pytest.mark.asyncio
     async def test_singleton_pattern(self):
         """Test that ClientManager follows singleton pattern."""
+
         ClientManager.reset_singleton()
 
         with patch(
@@ -162,6 +168,7 @@ class TestClientManagerInitialization:
         self, client_manager_with_mocks
     ):
         """Test initialization with dependency injection container."""
+
         assert client_manager_with_mocks.is_initialized
         assert client_manager_with_mocks._providers is not None
         assert len(client_manager_with_mocks._providers) == 5
@@ -173,30 +180,35 @@ class TestClientManagerClientAccess:
     @pytest.mark.asyncio
     async def test_get_qdrant_client(self, client_manager_with_mocks):
         """Test Qdrant client access through dependency injection."""
+
         client = await client_manager_with_mocks.get_qdrant_client()
         assert client is not None
 
     @pytest.mark.asyncio
     async def test_get_openai_client(self, client_manager_with_mocks):
         """Test OpenAI client access through dependency injection."""
+
         client = await client_manager_with_mocks.get_openai_client()
         assert client is not None
 
     @pytest.mark.asyncio
     async def test_get_redis_client(self, client_manager_with_mocks):
         """Test Redis client access through dependency injection."""
+
         client = await client_manager_with_mocks.get_redis_client()
         assert client is not None
 
     @pytest.mark.asyncio
     async def test_get_firecrawl_client(self, client_manager_with_mocks):
         """Test Firecrawl client access through dependency injection."""
+
         client = await client_manager_with_mocks.get_firecrawl_client()
         assert client is not None
 
     @pytest.mark.asyncio
     async def test_get_http_client(self, client_manager_with_mocks):
         """Test HTTP client access through dependency injection."""
+
         client = await client_manager_with_mocks.get_http_client()
         assert client is not None
 
@@ -234,15 +246,20 @@ class TestClientManagerServiceIntegration:
     @pytest.mark.asyncio
     async def test_get_parallel_processing_system(self, client_manager_with_mocks):
         """Test parallel processing system access."""
+
         system = await client_manager_with_mocks.get_parallel_processing_system()
         assert system is not None
 
     @pytest.mark.asyncio
     async def test_get_browser_automation_router(self, client_manager_with_mocks):
         """Test browser automation router creation and caching."""
+
         with patch(
-            "src.infrastructure.client_manager.AutomationRouter"
-        ) as mock_router_class:
+            "src.infrastructure.client_manager._load_automation_router"
+        ) as load_router:
+            mock_router_class = MagicMock()
+            load_router.return_value = mock_router_class
+
             mock_router = MagicMock()
             mock_router.initialize = AsyncMock()
             mock_router_class.return_value = mock_router
@@ -293,6 +310,8 @@ class TestClientManagerAccessors:
 
     @pytest.mark.asyncio
     async def test_get_embedding_manager(self, client_manager_with_mocks):
+        """Test embedding manager accessor."""
+
         fake_embedding = MagicMock(name="embedding_manager")
         fake_registry = SimpleNamespace(embedding_manager=fake_embedding)
 
@@ -310,6 +329,8 @@ class TestClientManagerAccessors:
 
     @pytest.mark.asyncio
     async def test_get_crawl_manager(self, client_manager_with_mocks):
+        """Test crawling manager accessor."""
+
         fake_crawl = MagicMock(name="crawl_manager")
         fake_registry = SimpleNamespace(crawl_manager=fake_crawl)
 
@@ -323,7 +344,28 @@ class TestClientManagerAccessors:
             ensure_registry.assert_awaited_once()
 
     @pytest.mark.asyncio
+    async def test_get_crawling_manager_alias(self, client_manager_with_mocks):
+        """Test crawling manager accessor as alias to crawl manager."""
+
+        fake_crawl = MagicMock(name="crawl_manager")
+        fake_registry = SimpleNamespace(crawl_manager=fake_crawl)
+
+        with patch(
+            "src.infrastructure.client_manager._ensure_service_registry",
+            new=AsyncMock(return_value=fake_registry),
+        ) as ensure_registry:
+            result = await client_manager_with_mocks.get_crawling_manager()
+            assert result is fake_crawl
+            # Underlying cache should still be used
+            assert (
+                await client_manager_with_mocks.get_crawling_manager()
+            ) is fake_crawl
+            ensure_registry.assert_awaited_once()
+
+    @pytest.mark.asyncio
     async def test_get_content_intelligence_service(self, client_manager_with_mocks):
+        """Test content intelligence service accessor."""
+
         fake_service = MagicMock(name="content_intelligence")
         fake_registry = SimpleNamespace(content_intelligence=fake_service)
 
@@ -341,6 +383,8 @@ class TestClientManagerAccessors:
 
     @pytest.mark.asyncio
     async def test_get_project_storage(self, client_manager_with_mocks):
+        """Test project storage accessor."""
+
         fake_storage = MagicMock(name="project_storage")
         fake_registry = SimpleNamespace(project_storage=fake_storage)
 
@@ -355,6 +399,8 @@ class TestClientManagerAccessors:
 
     @pytest.mark.asyncio
     async def test_get_rag_generator_cached(self, client_manager_with_mocks):
+        """Test RAG generator creation and caching."""
+
         fake_generator = AsyncMock()
         fake_generator.cleanup = AsyncMock()
         vector_service = AsyncMock()
@@ -390,6 +436,7 @@ class TestClientManagerHealthAndStatus:
     @pytest.mark.asyncio
     async def test_get_health_status(self, client_manager_with_mocks):
         """Test health status retrieval."""
+
         with patch(
             "src.infrastructure.client_manager.deps_get_health_status",
             new_callable=AsyncMock,
@@ -403,6 +450,7 @@ class TestClientManagerHealthAndStatus:
     @pytest.mark.asyncio
     async def test_get_overall_health(self, client_manager_with_mocks):
         """Test overall health retrieval."""
+
         with patch(
             "src.infrastructure.client_manager.deps_get_overall_health",
             new_callable=AsyncMock,
@@ -416,6 +464,7 @@ class TestClientManagerHealthAndStatus:
     @pytest.mark.asyncio
     async def test_get_service_status(self, client_manager_with_mocks):
         """Test service status information."""
+
         status = await client_manager_with_mocks.get_service_status()
 
         assert isinstance(status, dict)
@@ -431,6 +480,7 @@ class TestClientManagerContextManager:
     @pytest.mark.asyncio
     async def test_async_context_manager(self, client_manager_with_mocks):
         """Test async context manager protocol."""
+
         async with client_manager_with_mocks as manager:
             assert manager.is_initialized
 
@@ -439,12 +489,14 @@ class TestClientManagerContextManager:
     @pytest.mark.asyncio
     async def test_managed_client_context(self, client_manager_with_mocks):
         """Test managed client context manager."""
+
         async with client_manager_with_mocks.managed_client("qdrant") as client:
             assert client is not None
 
     @pytest.mark.asyncio
     async def test_managed_client_invalid_type(self, client_manager_with_mocks):
         """Test managed client with invalid type raises ValueError."""
+
         with pytest.raises(ValueError, match="Unknown client type"):
             async with client_manager_with_mocks.managed_client("invalid_type"):
                 pass
@@ -456,6 +508,7 @@ class TestClientManagerCleanup:
     @pytest.mark.asyncio
     async def test_cleanup_resets_state(self, client_manager_with_mocks):
         """Test that cleanup properly resets manager state."""
+
         assert client_manager_with_mocks.is_initialized
 
         await client_manager_with_mocks.cleanup()
@@ -467,6 +520,7 @@ class TestClientManagerCleanup:
     @pytest.mark.asyncio
     async def test_cleanup_with_vector_store_service(self, client_manager_with_mocks):
         """Test cleanup when vector store service exists."""
+
         with (
             patch(
                 "src.infrastructure.client_manager.FastEmbedProvider"
@@ -495,6 +549,7 @@ class TestClientManagerErrorHandling:
     @pytest.mark.asyncio
     async def test_get_qdrant_client_provider_error(self, client_manager_with_mocks):
         """Test error when Qdrant provider is not available."""
+
         original_provider = client_manager_with_mocks._providers.get("qdrant")
         client_manager_with_mocks._providers["qdrant"] = None
 
@@ -508,6 +563,7 @@ class TestClientManagerErrorHandling:
     @pytest.mark.asyncio
     async def test_get_redis_client_provider_error(self, client_manager_with_mocks):
         """Test error when Redis provider is not available."""
+
         original_provider = client_manager_with_mocks._providers.get("redis")
         client_manager_with_mocks._providers["redis"] = None
 
@@ -521,6 +577,7 @@ class TestClientManagerErrorHandling:
     @pytest.mark.asyncio
     async def test_get_http_client_provider_error(self, client_manager_with_mocks):
         """Test error when HTTP provider is not available."""
+
         original_provider = client_manager_with_mocks._providers.get("http")
         client_manager_with_mocks._providers["http"] = None
 

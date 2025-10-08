@@ -4,13 +4,14 @@ This module provides custom Hypothesis strategies for generating test data
 that matches the structure and constraints of configuration models.
 """
 
+import string
 import tempfile
 from pathlib import Path
 from typing import Any
 
 import hypothesis.strategies as st
 
-from src.config import (
+from src.config.models import (
     ChunkingStrategy,
     CrawlProvider,
     EmbeddingProvider,
@@ -65,7 +66,7 @@ def redis_urls(draw) -> str:
         st.one_of(
             st.none(),
             st.text(
-                alphabet="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+                alphabet=string.ascii_letters + string.digits + string.punctuation,
                 min_size=8,
                 max_size=32,
             ),
@@ -223,7 +224,11 @@ def database_urls(draw) -> str:
         )
     )
     password = draw(
-        st.text(alphabet=st.characters(printable=True), min_size=8, max_size=32)
+        st.text(
+            alphabet=string.ascii_letters + string.digits + string.punctuation,
+            min_size=8,
+            max_size=32,
+        )
     )
 
     return f"{scheme}://{username}:{password}@{host}:{port}/{database}"
