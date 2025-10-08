@@ -135,8 +135,14 @@ flowchart LR
 ### Observability & Operations
 
 - Prometheus metrics and health endpoints instrument both the API and MCP servers; see `config/prometheus.yml` and `docs/operators/monitoring.md`.
-- Optional Dragonfly cache, PostgreSQL, and Grafana dashboards are provisioned via `docker-compose.yml` profiles.
-- Structured logging and rate limiting middleware are wired through the service factory and CORS/middleware managers (`src/services/fastapi/middleware/`).
+- Optional Dragonfly cache, PostgreSQL, ARQ workers, and Grafana dashboards are provisioned via `docker-compose.yml` profiles.
+- Structured logging and SlowAPI-based rate limiting are configured through the middleware manager (`src/services/fastapi/middleware/manager.py`) and security helpers (`src/services/fastapi/middleware/security.py`).
+
+### Security & Validation
+
+- `src/security/ml_security.py` provides the consolidated `MLSecurityValidator` for URL, query, and filename validation alongside dependency and container scanning hooks.
+- FastAPI and MCP flows use the shared validator via dependency helpers, ensuring a single source of truth for sanitization and auditing logic.
+- Rate limiting defaults (`default_rate_limit`, `rate_limit_window`, optional Redis storage) are controlled through `SecurityConfig` and applied via the global SlowAPI limiter.
 
 ## Quick Start
 

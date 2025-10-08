@@ -232,7 +232,7 @@ def _normalize_dense_embeddings(data: Any) -> list[list[float]]:
 
     matrix: list[list[float]] = []
     for row in data:
-        if not isinstance(row, Iterable) or isinstance(row, (str, bytes)):
+        if not isinstance(row, Iterable) or isinstance(row, str | bytes):
             continue
         try:
             vector = [float(value) for value in row]
@@ -250,7 +250,7 @@ def _normalize_sparse_embeddings(data: Any) -> list[list[float]] | None:
 
     normalized: list[list[float]] = []
     for entry in data:
-        if not isinstance(entry, Iterable) or isinstance(entry, (str, bytes)):
+        if not isinstance(entry, Iterable) or isinstance(entry, str | bytes):
             return None
         try:
             normalized.append([float(value) for value in entry])

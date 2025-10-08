@@ -572,7 +572,6 @@ class TestCircuitBreaker:
         @circuit_breaker(
             service_name="tests.unit.services.test_service_errors.custom_exception",
             failure_threshold=1,
-            expected_exception=ValueError,
         )
         async def custom_exception_func(raise_value_error=True):
             if raise_value_error:

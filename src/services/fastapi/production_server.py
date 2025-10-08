@@ -1,5 +1,6 @@
 """Simplified production FastMCP server with essential middleware only."""
 
+# asyncio is required for shutdown coordination via Event/create_task
 import asyncio
 import logging
 import os

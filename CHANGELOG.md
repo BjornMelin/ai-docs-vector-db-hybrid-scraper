@@ -32,6 +32,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Published the consolidated MCP test strategy doc (`docs/testing/mcp-unit-tests.md`) capturing the coverage map, decision
   record, and technical debt register for the new suites.
 
+### Refactor
+
+- **Architectural Unification:** Consolidated the `monitoring` and `observability` packages into a single, OpenTelemetry-based `observability` service. This centralizes all metrics, tracing, and health check logic.
+- **Dead Code Elimination:** Removed several unused and legacy modules, including `services/middleware/rate_limiting.py`, `services/processing/algorithms.py`, and the top-level `security.py`, significantly reducing codebase size.
+- **API Modernization:** Updated all calls to the `@circuit_breaker` decorator to use the modern `purgatory` API, removing deprecated arguments and silencing warnings.
+- **Test Suite Overhaul:** Deleted test suites corresponding to removed modules and modernized remaining tests to align with the refactored implementation, ensuring full test coverage and correctness.
+
 ### Changed
 
 - MCP tools, fixtures, and tests now consume the unified service payload models

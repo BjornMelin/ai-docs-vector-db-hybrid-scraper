@@ -13,7 +13,7 @@ from src.config.models import ChunkingConfig, ChunkingStrategy
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.models.requests import BatchRequest, DocumentRequest
 from src.mcp_tools.models.responses import AddDocumentResponse, DocumentBatchResponse
-from src.security import MLSecurityValidator
+from src.security.ml_security import MLSecurityValidator
 from src.services.dependencies import (
     get_cache_manager,
     get_content_intelligence_service,

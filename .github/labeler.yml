@@ -92,7 +92,7 @@
 'area/security':
 - changed-files:
   - any-glob-to-any-file:
-    - 'src/security.py'
+    - 'src/security/**/*'
     - '.github/workflows/security.yml'
     - '.gitleaks.toml'
 

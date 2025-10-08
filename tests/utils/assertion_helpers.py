@@ -232,7 +232,7 @@ def assert_valid_embedding_vector(
 
     # Check that all elements are numbers
     for i, value in enumerate(vector):
-        assert isinstance(value, (int, float)), (
+        assert isinstance(value, int | float), (
             f"Vector element {i} is not a number: {value}"
         )
 
@@ -267,7 +267,7 @@ def assert_search_results_relevant(
         assert "content" in result, f"Result {i} missing 'content' field"
 
         score = result["score"]
-        assert isinstance(score, (int, float)), f"Result {i} score must be numeric"
+        assert isinstance(score, int | float), f"Result {i} score must be numeric"
         assert score >= min_relevance_score, (
             f"Result {i} relevance score {score} below minimum {min_relevance_score}"
         )
