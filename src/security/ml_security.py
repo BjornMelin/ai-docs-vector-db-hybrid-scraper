@@ -215,19 +215,23 @@ class MLSecurityValidator:
                 shell=False,  # Explicitly disable shell
             )
         except subprocess.TimeoutExpired:
-            check_result = SecurityCheckResult(
-                check_type="dependency_scan",
-                passed=True,
-                message="Dependency scan timed out",
-                severity="info",
+            return self._record_result(
+                SecurityCheckResult(
+                    check_type="dependency_scan",
+                    passed=True,
+                    message="Dependency scan timed out",
+                    severity="info",
+                )
             )
         except (OSError, PermissionError):
             logger.exception("Dependency check error")
-            check_result = SecurityCheckResult(
-                check_type="dependency_scan",
-                passed=True,
-                message="Dependency scan failed",
-                severity="info",
+            return self._record_result(
+                SecurityCheckResult(
+                    check_type="dependency_scan",
+                    passed=True,
+                    message="Dependency scan failed",
+                    severity="info",
+                )
             )
         except Exception:  # noqa: BLE001 - capture unexpected subprocess errors
             logger.exception("Unexpected dependency check error")
@@ -239,30 +243,30 @@ class MLSecurityValidator:
                     severity="info",
                 )
             )
-        else:
-            if result.returncode == 0:
-                audit_data = json.loads(result.stdout)
-                vulnerabilities = audit_data.get("vulnerabilities", [])
-                if vulnerabilities:
-                    check_result = SecurityCheckResult(
-                        check_type="dependency_scan",
-                        passed=False,
-                        message=f"Found {len(vulnerabilities)} vulnerabilities",
-                        severity="warning",
-                        details={"count": len(vulnerabilities)},
-                    )
-                else:
-                    check_result = SecurityCheckResult(
-                        check_type="dependency_scan",
-                        passed=True,
-                        message="No vulnerabilities found",
-                    )
+
+        if result.returncode == 0:
+            audit_data = json.loads(result.stdout)
+            vulnerabilities = audit_data.get("vulnerabilities", [])
+            if vulnerabilities:
+                check_result = SecurityCheckResult(
+                    check_type="dependency_scan",
+                    passed=False,
+                    message=f"Found {len(vulnerabilities)} vulnerabilities",
+                    severity="warning",
+                    details={"count": len(vulnerabilities)},
+                )
             else:
                 check_result = SecurityCheckResult(
                     check_type="dependency_scan",
                     passed=True,
-                    message="Dependency scan skipped (pip-audit unavailable or failed)",
+                    message="No vulnerabilities found",
                 )
+        else:
+            check_result = SecurityCheckResult(
+                check_type="dependency_scan",
+                passed=True,
+                message="Dependency scan skipped (pip-audit unavailable or failed)",
+            )
 
         return self._record_result(check_result)
 
