@@ -7,7 +7,7 @@ complexity levels.
 
 from enum import Enum
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
@@ -186,62 +186,3 @@ def get_mode_config(
 
     msg = f"Unknown application mode: {mode}"
     raise ValueError(msg)
-
-
-def get_current_mode(config: "Config | None" = None) -> ApplicationMode:
-    """Get the current application mode from configuration settings."""
-
-    return resolve_mode(config)
-
-
-def is_simple_mode(config: "Config | None" = None) -> bool:
-    """Check if running in simple mode."""
-
-    return get_current_mode(config) == ApplicationMode.SIMPLE
-
-
-def is_enterprise_mode(config: "Config | None" = None) -> bool:
-    """Check if running in enterprise mode."""
-
-    return get_current_mode(config) == ApplicationMode.ENTERPRISE
-
-
-def get_enabled_services(config: "Config | None" = None) -> list[str]:
-    """Get list of services enabled in current mode."""
-
-    mode_config = get_mode_config(config=config)
-    return mode_config.enabled_services
-
-
-def is_service_enabled(service_name: str, *, config: "Config | None" = None) -> bool:
-    """Check if a service is enabled in the current mode."""
-
-    return service_name in get_enabled_services(config=config)
-
-
-def get_feature_setting(
-    feature_name: str,
-    default: Any = False,
-    *,
-    config: "Config | None" = None,
-) -> Any:
-    """Get a feature setting value for the current mode."""
-
-    mode_config = get_mode_config(config=config)
-    config_dump = mode_config.model_dump()
-    features = cast(dict[str, Any], config_dump["max_complexity_features"])
-    return features.get(feature_name, default)
-
-
-def get_resource_limit(
-    resource_name: str,
-    default: int = 0,
-    *,
-    config: "Config | None" = None,
-) -> int:
-    """Get a resource limit for the current mode."""
-
-    mode_config = get_mode_config(config=config)
-    config_dump = mode_config.model_dump()
-    limits = cast(dict[str, int], config_dump["resource_limits"])
-    return limits.get(resource_name, default)

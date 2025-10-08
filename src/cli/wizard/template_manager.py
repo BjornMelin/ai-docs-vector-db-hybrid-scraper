@@ -1,18 +1,24 @@
-"""Template management for configuration wizard.
+"""Template management for the configuration wizard.
 
 Handles loading, validating, and managing configuration templates
 with Pydantic integration for real-time validation.
 """
 
+from __future__ import annotations
+
 import json
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from rich.console import Console
 from rich.table import Table
 from rich.text import Text
 
-from src.config import Config
+from src.config import validate_config_payload
+
+
+if TYPE_CHECKING:  # pragma: no cover - import for typing only
+    from src.config import Config
 
 
 console = Console()
@@ -132,12 +138,10 @@ class TemplateManager:
             Tuple of (is_valid, error_message)
 
         """
-        try:
-            Config(**template_data)
-        except (ValueError, TypeError) as e:
-            return False, str(e)
-        else:
-            return True, None
+        is_valid, errors, _ = validate_config_payload(template_data)
+        if not is_valid:
+            return False, errors[0] if errors else "Validation failed"
+        return True, None
 
     def show_template_comparison(self) -> None:
         """Display a comparison table of all templates."""
@@ -287,11 +291,13 @@ class TemplateManager:
             template_data = {**template_data, **overrides}
 
         # Validate and create config
-        try:
-            return Config(**template_data)
-        except Exception as e:
-            msg = f"Failed to create config from template: {e}"
-            raise ValueError(msg) from e
+        is_valid, errors, settings = validate_config_payload(template_data)
+        if not is_valid or settings is None:
+            details = "; ".join(errors) if errors else "unknown error"
+            msg = f"Failed to create config from template: {details}"
+            raise ValueError(msg)
+
+        return settings
 
     def save_template(self, name: str, config: Config, description: str = "") -> Path:
         """Save a Config object as a new template.

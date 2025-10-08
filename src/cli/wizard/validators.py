@@ -1,20 +1,21 @@
-"""Validation for configuration wizard.
+"""Validation helpers for the configuration wizard.
 
 Provides validation feedback during wizard interaction
 using Pydantic models and user-friendly error messages.
 """
+
+from __future__ import annotations
 
 import json
 import re
 from pathlib import Path
 from typing import Any
 
-from pydantic import ValidationError
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 
-from src.config import Config
+from src.config import validate_config_payload
 
 
 console = Console()
@@ -175,28 +176,13 @@ class WizardValidator:
         """
         errors = []
 
-        try:
-            # Try to create Config object with minimal required fields
-            # Add defaults for missing required fields for validation
-            validation_data = {
-                "environment": "development",
-                "debug": False,
-                "log_level": "INFO",
-                **config_data,
-            }
+        is_valid, validation_errors, _ = validate_config_payload(config_data)
 
-            Config(**validation_data)
-
-        except ValidationError as e:
-            for error in e.errors():
-                field_path = " -> ".join(str(x) for x in error["loc"])
-                error_msg = error["msg"]
-                errors.append(f"{field_path}: {error_msg}")
-
-        except (TypeError, ValueError) as e:
-            errors.append(f"Validation error: {e!s}")
-        else:
+        if is_valid:
             return True, []
+
+        for error in validation_errors:
+            errors.append(error)
 
         return False, errors
 
@@ -256,15 +242,17 @@ class WizardValidator:
         for error in errors:
             if "api_key" in error.lower():
                 if "openai" in error.lower():
-                    suggestions["openai_api_key"] = "Format: sk-your_actual_key_here"
+                    suggestions["openai.api_key"] = "Format: sk-your_actual_key_here"
                 elif "firecrawl" in error.lower():
-                    suggestions["firecrawl_api_key"] = "Format: fc-your_actual_key_here"
+                    suggestions["firecrawl.api_key"] = (
+                        "Format: fc-your_actual_key_here"
+                    )
 
             elif "url" in error.lower():
                 if "qdrant" in error.lower():
-                    suggestions["qdrant_url"] = "http://localhost:6333"
+                    suggestions["qdrant.url"] = "http://localhost:6333"
                 elif "redis" in error.lower():
-                    suggestions["redis_url"] = "redis://localhost:6379"
+                    suggestions["cache.redis_url"] = "redis://localhost:6379"
 
             elif "port" in error.lower():
                 suggestions["port"] = "Use a port number between 1024-65535"

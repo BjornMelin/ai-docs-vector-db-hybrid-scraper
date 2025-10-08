@@ -9,7 +9,7 @@ from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import Any, cast
 
-from pydantic import Field, model_validator
+from pydantic import Field, ValidationError, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from src.architecture.modes import ApplicationMode
@@ -351,6 +351,42 @@ def load_config(**overrides: Any) -> Config:
     return settings
 
 
+def validate_config_payload(
+    payload: dict[str, Any], *, base: dict[str, Any] | None = None
+) -> tuple[bool, list[str], Config | None]:
+    """Validate configuration data using the Config model.
+
+    Args:
+        payload: Configuration values to validate.
+        base: Optional baseline values merged ahead of payload.
+
+    Returns:
+        Tuple of (is_valid, errors, config_instance). Config is ``None`` on failure.
+    """
+
+    merged: dict[str, Any] = {
+        "environment": Environment.DEVELOPMENT,
+        "debug": False,
+        "log_level": LogLevel.INFO,
+    }
+    if base:
+        merged.update(base)
+    merged.update(payload)
+
+    try:
+        settings = Config(**merged)
+    except ValidationError as exc:
+        errors = []
+        for error in exc.errors():
+            field_path = " -> ".join(str(part) for part in error["loc"])
+            errors.append(f"{field_path}: {error['msg']}")
+        return False, errors, None
+    except (TypeError, ValueError) as exc:  # pragma: no cover - defensive branch
+        return False, [str(exc)], None
+
+    return True, [], settings
+
+
 def get_config(*, force_reload: bool = False, **overrides: Any) -> Config:
     """Return cached application settings.
 
@@ -403,6 +439,7 @@ __all__ = [
     "ensure_runtime_directories",
     "get_config",
     "load_config",
+    "validate_config_payload",
     "on_settings_applied",
     "reset_config",
     "set_config",

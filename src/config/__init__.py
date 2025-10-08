@@ -16,6 +16,7 @@ from .loader import (
     on_settings_applied,
     reset_config,
     set_config,
+    validate_config_payload,
 )
 from .models import (
     AgenticConfig,
@@ -115,6 +116,7 @@ __all__ = [
     "on_settings_applied",
     "reset_config",
     "set_config",
+    "validate_config_payload",
     "AgenticConfig",
     "BrowserUseConfig",
     "CacheConfig",

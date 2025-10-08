@@ -1,13 +1,15 @@
 """Client coordination layer using function-based dependencies."""
 
+from __future__ import annotations
+
 import asyncio
-import importlib
 import logging
 import threading
 from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any, cast
+from importlib import import_module
+from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
 from dependency_injector.wiring import Provide, inject
 from langchain_mcp_adapters.client import MultiServerMCPClient
@@ -25,34 +27,20 @@ from src.infrastructure.clients import (
 from src.infrastructure.container import ApplicationContainer, get_container
 from src.services.embeddings.fastembed_provider import FastEmbedProvider
 from src.services.errors import APIError
-from src.services.rag.generator import RAGGenerator
 from src.services.vector_db.service import VectorStoreService
-
-
-if TYPE_CHECKING:
-    from src.services.browser.automation_router import (
-        AutomationRouter as AutomationRouterProtocol,
-    )
-else:  # pragma: no cover - type checking guard
-    AutomationRouterProtocol = Any
-
-try:  # pragma: no cover - optional dependency
-    from src.services.browser.automation_router import (
-        AutomationRouter as _AutomationRouterImpl,
-    )
-except ModuleNotFoundError:  # pragma: no cover - optional dependency
-    _AutomationRouterImpl = None
-
-AutomationRouterImpl: type[AutomationRouterProtocol] | None = _AutomationRouterImpl
 
 
 if TYPE_CHECKING:  # pragma: no cover - imported for typing only
     from src.services.cache.manager import CacheManager
     from src.services.content_intelligence.service import ContentIntelligenceService
     from src.services.core.project_storage import ProjectStorage
-    from src.services.crawling.manager import CrawlManager
     from src.services.embeddings.manager import EmbeddingManager
+    from src.services.managers.crawling_manager import CrawlingManager
     from src.services.rag.generator import RAGGenerator
+else:  # pragma: no cover - runtime fallback for optional services
+    CacheManager = ContentIntelligenceService = ProjectStorage = EmbeddingManager = (
+        CrawlingManager
+    ) = RAGGenerator = Any
 
 
 # Import dependencies for health checks
@@ -65,7 +53,7 @@ else:
 
 _dependencies_module = None
 try:  # pragma: no cover - optional dependency
-    _dependencies_module = importlib.import_module("src.services.dependencies")
+    _dependencies_module = import_module("src.services.dependencies")
 except ImportError:
     _dependencies_module = None
 
@@ -90,6 +78,36 @@ deps_get_overall_health: OverallHealthCallable | None = (
 
 logger = logging.getLogger(__name__)
 
+ProviderKey = Literal["firecrawl", "http", "openai", "qdrant", "redis"]
+_PROVIDER_ERROR_MESSAGES: Final[dict[ProviderKey, str]] = {
+    "openai": "OpenAI client provider not available",
+    "qdrant": "Qdrant client provider not available",
+    "redis": "Redis client provider not available",
+    "firecrawl": "Firecrawl client provider not available",
+    "http": "HTTP client provider not available",
+}
+
+
+def _load_automation_router() -> type[Any]:
+    """Dynamically import the automation router implementation."""
+
+    try:
+        module = import_module("src.services.browser.router")
+    except ModuleNotFoundError as exc:  # pragma: no cover - optional dependency
+        msg = "Automation router is unavailable; browser features are disabled"
+        raise RuntimeError(msg) from exc
+    except ImportError as exc:  # pragma: no cover - defensive
+        msg = "Failed to import automation router"
+        raise RuntimeError(msg) from exc
+
+    try:
+        router_cls = module.AutomationRouter
+    except AttributeError as exc:  # pragma: no cover - defensive
+        msg = "Automation router module does not define AutomationRouter"
+        raise RuntimeError(msg) from exc
+
+    return cast(type[Any], router_cls)
+
 
 async def _ensure_service_registry():  # pragma: no cover - thin wrapper
     # pylint: disable=import-outside-toplevel
@@ -103,7 +121,7 @@ async def _ensure_service_registry():  # pragma: no cover - thin wrapper
 class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instance-attributes
     """Client coordination layer using function-based dependencies."""
 
-    _instance: "ClientManager | None" = None
+    _instance: ClientManager | None = None
     _lock = asyncio.Lock()
     _init_lock = threading.Lock()
 
@@ -121,20 +139,21 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
             return
 
         # Provider compatibility layer
-        self._providers: dict[str, Any] = {}
+        self._providers: dict[ProviderKey, Any] = {}
         self._parallel_processing_system: Any | None = None
         self._initialized = False
         self._vector_store_service: VectorStoreService | None = None
         self._cache_manager: CacheManager | None = None
         self._embedding_manager: EmbeddingManager | None = None
-        self._crawl_manager: CrawlManager | None = None
+        self._crawl_manager: CrawlingManager | None = None
         self._content_intelligence: ContentIntelligenceService | None = None
         self._project_storage: ProjectStorage | None = None
         self._rag_generator: RAGGenerator | None = None
         self._config = get_config()
-        self._automation_router: AutomationRouterProtocol | None = None
+        self._automation_router: Any | None = None
         self._mcp_client: MultiServerMCPClient | None = None
         self._mcp_client_lock = asyncio.Lock()
+        self._service_registry: Any | None = None
 
     @property
     def config(self) -> Config:
@@ -219,14 +238,21 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
             except Exception:  # pragma: no cover - defensive
                 logger.exception("Failed to cleanup RAG generator")
             self._rag_generator = None
+        if self._automation_router is not None:
+            try:
+                await self._automation_router.cleanup()
+            except Exception:  # pragma: no cover - defensive
+                logger.exception("Failed to cleanup automation router")
+            self._automation_router = None
         self._cache_manager = None
         self._embedding_manager = None
         self._crawl_manager = None
         self._content_intelligence = None
         self._project_storage = None
-        self._mcp_client = None
+        await self._close_mcp_client()
         self._providers.clear()
         self._parallel_processing_system = None
+        self._service_registry = None
         self._initialized = False
         logger.info("ClientManager cleaned up")
 
@@ -236,19 +262,35 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         with cls._init_lock:
             cls._instance = None
 
-    async def get_openai_client(self):
-        provider = self._providers.get("openai")
-        if not provider:
-            msg = "OpenAI client provider not available"
-            raise APIError(msg)
+    def _get_provider_client(self, key: ProviderKey) -> Any:
+        provider = self._providers.get(key)
+        if provider is None:
+            raise APIError(_PROVIDER_ERROR_MESSAGES[key])
         return provider.client
 
+    async def _close_mcp_client(self) -> None:
+        async with self._mcp_client_lock:
+            client = self._mcp_client
+            if client is None:
+                return
+
+            close_async = getattr(client, "aclose", None)
+            if close_async is not None:
+                async_closer = cast(Callable[[], Awaitable[Any]], close_async)
+                await async_closer()
+            else:
+                close_sync = getattr(client, "close", None)
+                if close_sync is not None:
+                    sync_closer = cast(Callable[[], Any], close_sync)
+                    sync_closer()
+
+            self._mcp_client = None
+
+    async def get_openai_client(self):
+        return self._get_provider_client("openai")
+
     async def get_qdrant_client(self):
-        provider = self._providers.get("qdrant")
-        if not provider:
-            msg = "Qdrant client provider not available"
-            raise APIError(msg)
-        return provider.client
+        return self._get_provider_client("qdrant")
 
     async def get_mcp_client(self) -> MultiServerMCPClient:
         """Return a cached MultiServerMCPClient built from configuration."""
@@ -327,49 +369,54 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         self._vector_store_service = service
         return service
 
-    async def get_cache_manager(self) -> "CacheManager":
-        if self._cache_manager:
-            return self._cache_manager
+    async def get_cache_manager(self) -> CacheManager:
+        cache_manager = self._cache_manager
+        if cache_manager is None:
+            registry = await self._get_service_registry()
+            cache_manager = registry.cache_manager
+            self._cache_manager = cache_manager
+        return cache_manager
 
-        registry = await _ensure_service_registry()
-        self._cache_manager = registry.cache_manager
-        return self._cache_manager
+    async def get_embedding_manager(self) -> EmbeddingManager:
+        embedding_manager = self._embedding_manager
+        if embedding_manager is None:
+            registry = await self._get_service_registry()
+            embedding_manager = cast(EmbeddingManager, registry.embedding_manager)
+            self._embedding_manager = embedding_manager
+        return embedding_manager
 
-    async def get_embedding_manager(self) -> "EmbeddingManager":
-        if self._embedding_manager:
-            return self._embedding_manager
+    async def get_crawl_manager(self) -> CrawlingManager:
+        crawling_manager = self._crawl_manager
+        if crawling_manager is None:
+            registry = await self._get_service_registry()
+            crawling_manager = registry.crawl_manager
+            self._crawl_manager = crawling_manager
+        return crawling_manager
 
-        registry = await _ensure_service_registry()
-        self._embedding_manager = cast("EmbeddingManager", registry.embedding_manager)
-        return self._embedding_manager
+    async def get_crawling_manager(self) -> CrawlingManager:
+        """Alias for get_crawl_manager for compatibility with new naming."""
 
-    async def get_crawl_manager(self) -> "CrawlManager":
-        if self._crawl_manager:
-            return self._crawl_manager
-
-        registry = await _ensure_service_registry()
-        self._crawl_manager = registry.crawl_manager
-        return self._crawl_manager
+        return await self.get_crawl_manager()
 
     async def get_content_intelligence_service(
         self,
-    ) -> "ContentIntelligenceService":
-        if self._content_intelligence:
-            return self._content_intelligence
+    ) -> ContentIntelligenceService:
+        content_intelligence = self._content_intelligence
+        if content_intelligence is None:
+            registry = await self._get_service_registry()
+            content_intelligence = registry.content_intelligence
+            self._content_intelligence = content_intelligence
+        return content_intelligence
 
-        registry = await _ensure_service_registry()
-        self._content_intelligence = registry.content_intelligence
-        return self._content_intelligence
+    async def get_project_storage(self) -> ProjectStorage:
+        project_storage = self._project_storage
+        if project_storage is None:
+            registry = await self._get_service_registry()
+            project_storage = registry.project_storage
+            self._project_storage = project_storage
+        return project_storage
 
-    async def get_project_storage(self) -> "ProjectStorage":
-        if self._project_storage:
-            return self._project_storage
-
-        registry = await _ensure_service_registry()
-        self._project_storage = registry.project_storage
-        return self._project_storage
-
-    async def get_rag_generator(self) -> "RAGGenerator":
+    async def get_rag_generator(self) -> RAGGenerator:
         if self._rag_generator:
             return self._rag_generator
 
@@ -408,25 +455,18 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         return generator
 
     async def get_redis_client(self):
-        provider = self._providers.get("redis")
-        if not provider:
-            msg = "Redis client provider not available"
-            raise APIError(msg)
-        return provider.client
+        return self._get_provider_client("redis")
 
     async def get_firecrawl_client(self):
-        provider = self._providers.get("firecrawl")
-        if not provider:
-            msg = "Firecrawl client provider not available"
-            raise APIError(msg)
-        return provider.client
+        return self._get_provider_client("firecrawl")
 
     async def get_http_client(self):
-        provider = self._providers.get("http")
-        if not provider:
-            msg = "HTTP client provider not available"
-            raise APIError(msg)
-        return provider.client
+        return self._get_provider_client("http")
+
+    async def _get_service_registry(self) -> Any:
+        if self._service_registry is None:
+            self._service_registry = await _ensure_service_registry()
+        return self._service_registry
 
     # Function-based dependency access methods (backward compatibility)
 
@@ -463,22 +503,22 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         """Get parallel processing system instance."""
         return self._parallel_processing_system
 
-    async def get_browser_automation_router(self):
-        """Get browser automation router for intelligent scraping.
-
-        Returns:
-            AutomationRouter instance for intelligent browser automation
-        """
-
-        if AutomationRouterImpl is None:
-            msg = "Automation router is unavailable; browser features are disabled"
-            raise RuntimeError(msg)
+    async def get_browser_automation_router(self) -> Any:
+        """Get browser automation router for intelligent scraping."""
 
         if self._automation_router is None:
-            router = AutomationRouterImpl(self._config)
+            router_cls = _load_automation_router()
+            router = router_cls(self._config)
             await router.initialize()
             self._automation_router = router
         return self._automation_router
+
+    def get_browser_automation_metrics(self) -> dict[str, dict[str, int]]:
+        """Return router metrics if the router has been initialized."""
+
+        if self._automation_router is None:
+            return {}
+        return self._automation_router.get_metrics_snapshot()
 
     @asynccontextmanager
     async def managed_client(self, client_type: str):
@@ -510,7 +550,7 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         return False
 
     @classmethod
-    def from_unified_config(cls) -> "ClientManager":
+    def from_unified_config(cls) -> ClientManager:
         """Create ClientManager instance from unified config.
 
         Used by function-based dependencies for singleton pattern.
