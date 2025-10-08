@@ -231,11 +231,13 @@ class MLSecurityValidator:
             )
         except Exception:  # noqa: BLE001 - capture unexpected subprocess errors
             logger.exception("Unexpected dependency check error")
-            check_result = SecurityCheckResult(
-                check_type="dependency_scan",
-                passed=True,
-                message="Dependency scan failed",
-                severity="info",
+            return self._record_result(
+                SecurityCheckResult(
+                    check_type="dependency_scan",
+                    passed=True,
+                    message="Dependency scan failed",
+                    severity="info",
+                )
             )
         else:
             if result.returncode == 0:
@@ -329,31 +331,27 @@ class MLSecurityValidator:
                 )
 
                 if vuln_count > 0:
-                    return self._record_result(
-                        SecurityCheckResult(
-                            check_type="container_scan",
-                            passed=False,
-                            message=(
-                                f"Found {vuln_count} high/critical vulnerabilities"
-                            ),
-                            severity="error",
-                            details={"vulnerability_count": vuln_count},
-                        )
+                    check_result = SecurityCheckResult(
+                        check_type="container_scan",
+                        passed=False,
+                        message=(f"Found {vuln_count} high/critical vulnerabilities"),
+                        severity="error",
+                        details={"vulnerability_count": vuln_count},
                     )
-                return self._record_result(
-                    SecurityCheckResult(
+                else:
+                    check_result = SecurityCheckResult(
                         check_type="container_scan",
                         passed=True,
                         message="No critical vulnerabilities found",
                     )
-                )
-            return self._record_result(
-                SecurityCheckResult(
+            else:
+                check_result = SecurityCheckResult(
                     check_type="container_scan",
                     passed=True,
                     message="Container scan skipped (trivy unavailable or failed)",
                 )
-            )
+
+            return self._record_result(check_result)
 
         except (AttributeError, RuntimeError, ValueError):
             logger.info("Container scan skipped")
