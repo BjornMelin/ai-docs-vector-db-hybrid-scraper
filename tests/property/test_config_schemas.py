@@ -12,7 +12,7 @@ import pytest
 from hypothesis import assume, example, given, note, strategies as st
 from pydantic import ValidationError
 
-from src.config import Config
+from src.config import Settings
 from src.config.models import (
     CacheConfig,
     ChunkingConfig,
@@ -510,7 +510,7 @@ class TestDocumentationSiteProperties:
 
 
 class TestCompleteConfigProperties:
-    """Property-based tests for the complete Config class."""
+    """Property-based tests for the complete Settings class."""
 
     @given(complete_configurations())
     def test_complete_config_valid_properties(self, config_data: dict[str, Any]):
@@ -530,7 +530,7 @@ class TestCompleteConfigProperties:
                 config_data["firecrawl"] = {}
             config_data["firecrawl"]["api_key"] = "fc-test-key-for-property-testing"
 
-        config = Config(**config_data)
+        config = Settings(**config_data)
 
         # Verify basic properties
         assert isinstance(config.environment, Environment)
@@ -565,16 +565,16 @@ class TestCompleteConfigProperties:
         if provider == EmbeddingProvider.OPENAI:
             # Should fail without API key
             with pytest.raises(ValidationError, match="OpenAI API key required"):
-                Config(embedding_provider=provider, openai=OpenAIConfig(api_key=None))
+                Settings(embedding_provider=provider, openai=OpenAIConfig(api_key=None))
 
             # Should succeed with API key
-            config = Config(
+            config = Settings(
                 embedding_provider=provider, openai=OpenAIConfig(api_key="sk-test-key")
             )
             assert config.embedding_provider == provider
         else:
             # Other providers should work without special keys
-            config = Config(embedding_provider=provider)
+            config = Settings(embedding_provider=provider)
             assert config.embedding_provider == provider
 
     @given(st.sampled_from(list(CrawlProvider)))
@@ -583,17 +583,19 @@ class TestCompleteConfigProperties:
         if provider == CrawlProvider.FIRECRAWL:
             # Should fail without API key
             with pytest.raises(ValidationError, match="Firecrawl API key required"):
-                Config(crawl_provider=provider, firecrawl=FirecrawlConfig(api_key=None))
+                Settings(
+                    crawl_provider=provider, firecrawl=FirecrawlConfig(api_key=None)
+                )
 
             # Should succeed with API key
-            config = Config(
+            config = Settings(
                 crawl_provider=provider,
                 firecrawl=FirecrawlConfig(api_key="fc-test-key"),
             )
             assert config.crawl_provider == provider
         else:
             # Other providers should work without special keys
-            config = Config(crawl_provider=provider)
+            config = Settings(crawl_provider=provider)
             assert config.crawl_provider == provider
 
     @given(complete_configurations())
@@ -608,11 +610,11 @@ class TestCompleteConfigProperties:
                 config_data["firecrawl"] = {}
             config_data["firecrawl"]["api_key"] = "fc-test-key"
 
-        original_config = Config(**config_data)
+        original_config = Settings(**config_data)
 
         # Serialize to dict and back
         serialized = original_config.model_dump()
-        deserialized = Config(**serialized)
+        deserialized = Settings(**serialized)
 
         # Verify critical properties match
         assert deserialized.environment == original_config.environment
@@ -628,14 +630,14 @@ class TestCompleteConfigProperties:
             cache_dir = temp_path / "test_cache"
             logs_dir = temp_path / "test_logs"
 
-            config = Config(data_dir=data_dir, cache_dir=cache_dir, logs_dir=logs_dir)
+            config = Settings(data_dir=data_dir, cache_dir=cache_dir, logs_dir=logs_dir)
 
             # Directories should be created
             assert data_dir.exists()
             assert cache_dir.exists()
             assert logs_dir.exists()
 
-            # Config should store correct paths
+            # Settings should store correct paths
             assert config.data_dir == data_dir
             assert config.cache_dir == cache_dir
             assert config.logs_dir == logs_dir
@@ -655,7 +657,7 @@ class TestConfigPropertyInvariants:
                 config_data["firecrawl"] = {}
             config_data["firecrawl"]["api_key"] = "fc-test-key"
 
-        config = Config(**config_data)
+        config = Settings(**config_data)
 
         # Cache values
         assert config.cache.local_max_size > 0
@@ -688,7 +690,7 @@ class TestConfigPropertyInvariants:
                 config_data["firecrawl"] = {}
             config_data["firecrawl"]["api_key"] = "fc-test-key"
 
-        config = Config(**config_data)
+        config = Settings(**config_data)
 
         # Chunk size relationships
         assert config.chunking.chunk_overlap < config.chunking.chunk_size
@@ -706,7 +708,7 @@ class TestConfigPropertyInvariants:
                 config_data["firecrawl"] = {}
             config_data["firecrawl"]["api_key"] = "fc-test-key"
 
-        config = Config(**config_data)
+        config = Settings(**config_data)
 
         # URL formats
         assert config.qdrant.url.startswith(("http://", "https://"))
@@ -727,7 +729,7 @@ class TestConfigPropertyInvariants:
                 config_data["firecrawl"] = {}
             config_data["firecrawl"]["api_key"] = "fc-test-key"
 
-        config = Config(**config_data)
+        config = Settings(**config_data)
 
         # API key formats
         if config.openai.api_key:
@@ -780,7 +782,7 @@ class TestConfigMutationTesting:
         if mutation_type == "negative_cache_size":
             base_config["cache"]["local_max_size"] = data.draw(st.integers(max_value=0))
             with pytest.raises(ValidationError):
-                Config(**base_config)
+                Settings(**base_config)
 
         elif mutation_type == "invalid_chunk_overlap":
             chunk_size = base_config["chunking"]["chunk_size"]
@@ -788,18 +790,18 @@ class TestConfigMutationTesting:
                 st.integers(min_value=chunk_size)
             )
             with pytest.raises(ValidationError):
-                Config(**base_config)
+                Settings(**base_config)
 
         elif mutation_type == "invalid_api_key_format":
             base_config["embedding_provider"] = EmbeddingProvider.OPENAI
             base_config["openai"]["api_key"] = data.draw(invalid_api_keys())
             assume(not base_config["openai"]["api_key"].startswith("sk-"))
             with pytest.raises(ValidationError):
-                Config(**base_config)
+                Settings(**base_config)
 
         elif mutation_type == "invalid_provider_combination":
             # Use provider that requires API key without providing it
             base_config["embedding_provider"] = EmbeddingProvider.OPENAI
             base_config["openai"]["api_key"] = None
             with pytest.raises(ValidationError):
-                Config(**base_config)
+                Settings(**base_config)

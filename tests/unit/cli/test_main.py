@@ -4,8 +4,11 @@ This module tests the main CLI entry point, RichCLI class, and core commands
 including version, completion, and status functionality.
 """
 
+from typing import cast
 from unittest.mock import MagicMock, patch
 
+import click
+from click.core import Group
 from rich.console import Console
 
 from src.cli.main import RichCLI, main
@@ -62,7 +65,7 @@ class TestRichCLI:
 class TestMainCommand:
     """Test the main CLI command group and core functionality."""
 
-    @patch("src.cli.main.get_config")
+    @patch("src.cli.main.get_settings")
     def test_main_command_default_config(
         self, mock_get_config, cli_runner, mock_config
     ):
@@ -90,7 +93,7 @@ class TestMainCommand:
         assert result.exit_code == 0
         mock_parse_file.assert_called_once_with(temp_config_file)
 
-    @patch("src.cli.main.get_config")
+    @patch("src.cli.main.get_settings")
     def test_main_command_config_error(self, mock_get_config, cli_runner):
         """Test main command with configuration loading error."""
         mock_get_config.side_effect = Exception("Config error")
@@ -101,7 +104,7 @@ class TestMainCommand:
         # The error may be captured differently by click
         assert "Config error" in result.output or result.exception is not None
 
-    @patch("src.cli.main.get_config")
+    @patch("src.cli.main.get_settings")
     def test_main_command_quiet_flag(self, mock_get_config, cli_runner, mock_config):
         """Test main command with quiet flag suppresses welcome."""
         mock_get_config.return_value = mock_config
@@ -114,7 +117,7 @@ class TestMainCommand:
         # But should contain command list
         assert "Available commands:" in result.output
 
-    @patch("src.cli.main.get_config")
+    @patch("src.cli.main.get_settings")
     def test_main_command_shows_welcome_and_commands(
         self, mock_get_config, cli_runner, mock_config
     ):
@@ -130,7 +133,7 @@ class TestMainCommand:
         assert "database 🗄️  Vector database operations" in result.output
         assert "batch    📦 Batch operations" in result.output
 
-    @patch("src.cli.main.get_config")
+    @patch("src.cli.main.get_settings")
     def test_main_command_context_setup(self, mock_get_config, cli_runner, mock_config):
         """Test that context object is properly set up."""
         mock_get_config.return_value = mock_config
@@ -146,7 +149,7 @@ class TestMainCommand:
 class TestVersionCommand:
     """Test the version command functionality."""
 
-    @patch("src.cli.main.get_config")
+    @patch("src.cli.main.get_settings")
     def test_version_command(self, mock_get_config, cli_runner, mock_config):
         """Test version command display."""
         mock_get_config.return_value = mock_config
@@ -159,7 +162,7 @@ class TestVersionCommand:
         assert "Python:" in result.output
         assert "Version Information" in result.output
 
-    @patch("src.cli.main.get_config")
+    @patch("src.cli.main.get_settings")
     def test_version_flag(self, mock_get_config, cli_runner, mock_config):
         """Test --version flag functionality."""
         mock_get_config.return_value = mock_config
@@ -173,7 +176,7 @@ class TestVersionCommand:
 class TestCompletionCommand:
     """Test shell completion generation functionality."""
 
-    @patch("src.cli.main.get_config")
+    @patch("src.cli.main.get_settings")
     def test_completion_bash(self, mock_get_config, cli_runner, mock_config):
         """Test bash completion script generation."""
         mock_get_config.return_value = mock_config
@@ -184,7 +187,7 @@ class TestCompletionCommand:
         # Bash completion scripts typically contain these patterns
         assert "complete" in result.output or "bash" in result.output
 
-    @patch("src.cli.main.get_config")
+    @patch("src.cli.main.get_settings")
     def test_completion_zsh(self, mock_get_config, cli_runner, mock_config):
         """Test zsh completion script generation."""
         mock_get_config.return_value = mock_config
@@ -195,7 +198,7 @@ class TestCompletionCommand:
         # Should generate some form of completion script
         assert len(result.output) > 0
 
-    @patch("src.cli.main.get_config")
+    @patch("src.cli.main.get_settings")
     def test_completion_fish(self, mock_get_config, cli_runner, mock_config):
         """Test fish completion script generation."""
         mock_get_config.return_value = mock_config
@@ -205,7 +208,7 @@ class TestCompletionCommand:
         assert result.exit_code == 0
         assert len(result.output) > 0
 
-    @patch("src.cli.main.get_config")
+    @patch("src.cli.main.get_settings")
     def test_completion_powershell(self, mock_get_config, cli_runner, mock_config):
         """Test PowerShell completion script generation."""
         mock_get_config.return_value = mock_config
@@ -217,7 +220,7 @@ class TestCompletionCommand:
         if result.exit_code == 0:
             assert len(result.output) > 0
 
-    @patch("src.cli.main.get_config")
+    @patch("src.cli.main.get_settings")
     @patch("src.cli.main.get_completion_class")
     def test_completion_unsupported_shell(
         self, mock_get_completion_class, mock_get_config, cli_runner, mock_config
@@ -231,7 +234,7 @@ class TestCompletionCommand:
         assert result.exit_code == 1
         assert "not supported for completion" in result.output
 
-    @patch("src.cli.main.get_config")
+    @patch("src.cli.main.get_settings")
     @patch("src.cli.main.get_completion_class")
     def test_completion_generation_error(
         self, mock_get_completion_class, mock_get_config, cli_runner, mock_config
@@ -257,7 +260,7 @@ class TestCompletionCommand:
 class TestStatusCommand:
     """Test system status and health check functionality."""
 
-    @patch("src.cli.main.get_config")
+    @patch("src.cli.main.get_settings")
     @patch("src.cli.main.perform_health_checks")
     def test_status_command_all_healthy(
         self, mock_health_checks, mock_get_config, cli_runner, mock_config
@@ -282,7 +285,7 @@ class TestStatusCommand:
         assert "Redis" in result.output
         mock_health_checks.assert_called_once_with(mock_config)
 
-    @patch("src.cli.main.get_config")
+    @patch("src.cli.main.get_settings")
     @patch("src.cli.main.perform_health_checks")
     def test_status_command_with_errors(
         self, mock_health_checks, mock_get_config, cli_runner, mock_config
@@ -302,7 +305,7 @@ class TestStatusCommand:
         assert "System Status" in result.output
         assert "Connection refused" in result.output
 
-    @patch("src.cli.main.get_config")
+    @patch("src.cli.main.get_settings")
     @patch("src.cli.main.perform_health_checks")
     def test_status_command_health_check_exception(
         self, mock_health_checks, mock_get_config, cli_runner, mock_config
@@ -320,7 +323,7 @@ class TestStatusCommand:
 class TestMainIntegration:
     """Integration tests for the main CLI functionality."""
 
-    @patch("src.cli.main.get_config")
+    @patch("src.cli.main.get_settings")
     def test_main_cli_help_output(self, mock_get_config, cli_runner, mock_config):
         """Test main CLI help output contains all expected information."""
         mock_get_config.return_value = mock_config
@@ -336,7 +339,7 @@ class TestMainIntegration:
         assert "--version" in result.output
         assert "--help" in result.output
 
-    @patch("src.cli.main.get_config")
+    @patch("src.cli.main.get_settings")
     def test_subcommand_integration(self, mock_get_config, cli_runner, mock_config):
         """Test that subcommands are properly registered."""
         mock_get_config.return_value = mock_config
@@ -354,7 +357,7 @@ class TestMainIntegration:
         result = cli_runner.invoke(main, ["batch", "--help"])
         assert result.exit_code == 0
 
-    @patch("src.cli.main.get_config")
+    @patch("src.cli.main.get_settings")
     def test_invalid_subcommand(self, mock_get_config, cli_runner, mock_config):
         """Test handling of invalid subcommands."""
         mock_get_config.return_value = mock_config
@@ -389,7 +392,9 @@ class TestCLIUtilities:
         """Test that all commands are properly registered."""
 
         # Verify expected commands are registered
-        command_names = list(main.commands.keys())
+        main_command = cast(Group, main)
+        ctx = click.Context(main_command)
+        command_names = main_command.list_commands(ctx)
         expected_commands = [
             "setup",
             "config",

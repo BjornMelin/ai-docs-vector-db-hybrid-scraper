@@ -5,24 +5,28 @@ for service lifecycle management, error handling, and configuration.
 """
 
 import asyncio
+from typing import Any, cast
 from unittest.mock import Mock
 
 import pytest
 
-from src.config import Config
+from src.config import Settings
 from src.services.base import BaseService
 from src.services.errors import APIError
+
+
+# pylint: disable=protected-access  # tests intentionally verify internal state transitions
 
 
 class ConcreteService(BaseService):
     """Concrete implementation of BaseService for testing."""
 
-    def __init__(self, config: Config | None = None):
+    def __init__(self, config: Settings | None = None):
         super().__init__(config)
         self.init_called = False
         self.cleanup_called = False
-        self.init_error = None
-        self.cleanup_error = None
+        self.init_error: Exception | None = None
+        self.cleanup_error: Exception | None = None
 
     async def initialize(self) -> None:
         """Initialize service resources."""
@@ -44,7 +48,7 @@ class TestBaseService:
 
     def test_base_service_init_with_config(self):
         """Test BaseService initialization with config."""
-        config = Mock(spec=Config)
+        config = cast(Settings, Mock(spec=Settings))
         service = ConcreteService(config)
 
         assert service.config is config
@@ -136,6 +140,8 @@ class TestBaseService:
         """Test __aenter__ method."""
         service = ConcreteService()
 
+        # Direct call verifies the object returned by __aenter__.
+        # pylint: disable=unnecessary-dunder-call
         result = await service.__aenter__()
 
         assert result is service
@@ -263,11 +269,11 @@ class TestServiceIntegration:
     @pytest.mark.asyncio
     async def test_concurrent_service_operations(self):
         """Test concurrent service operations."""
-        services = [ConcreteService() for _ in range(3)]
+        services: list[ConcreteService] = [ConcreteService() for _ in range(3)]
 
-        async def use_service(service):
+        async def use_service(service: ConcreteService) -> bool:
             async with service.context():
-                await asyncio.sleep(0.01)  # Simulate work
+                await asyncio.sleep(0.01)
                 return service.init_called
 
         results = await asyncio.gather(*[use_service(s) for s in services])
@@ -278,14 +284,15 @@ class TestServiceIntegration:
     @pytest.mark.asyncio
     async def test_service_with_configuration(self):
         """Test service with actual configuration object."""
-        config = Mock(spec=Config)
-        config.some_setting = "test_value"
+        config = cast(Settings, Mock(spec=Settings))
+        cast(Any, config).some_setting = "test_value"
 
         service = ConcreteService(config)
 
         async with service.context():
             assert service.config is config
-            assert service.config.some_setting == "test_value"
+            assert service.config is not None
+            assert cast(Any, service.config).some_setting == "test_value"
 
     # NOTE: Retry integration test removed as _retry_with_backoff method
     # has been replaced with @retry_async decorator from src.services.errors.
@@ -295,7 +302,7 @@ class TestServiceIntegration:
         """Test service cleanup when exception occurs during usage."""
         service = ConcreteService()
 
-        async def _test_service_with_exception():
+        async def _test_service_with_exception() -> None:
             async with service.context():
                 assert service.init_called
                 msg = "test exception"
@@ -334,8 +341,10 @@ class TestServiceIntegration:
     def test_abstract_base_service_cannot_be_instantiated(self):
         """Test that BaseService cannot be directly instantiated."""
         # This should raise TypeError due to abstract methods
+        # Instantiation under test ensures abstract class raises at runtime.
         with pytest.raises(TypeError):
-            BaseService()
+            # pylint: disable=abstract-class-instantiated
+            cast(type[Any], BaseService)()  # pyright: ignore[reportAbstractUsage]
 
     def test_base_service_abstract_methods_defined(self):
         """Test that abstract methods are properly defined in base class."""
