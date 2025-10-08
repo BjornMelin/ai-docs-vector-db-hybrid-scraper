@@ -750,7 +750,7 @@ async def ensure_client_manager(force: bool = False) -> ClientManager:
 
     async with _GLOBAL_CLIENT_LOCK:
         if _GLOBAL_CLIENT_MANAGER is None or force:
-            if _GLOBAL_CLIENT_MANAGER is not None and force:
+            if _GLOBAL_CLIENT_MANAGER is not None:
                 await _GLOBAL_CLIENT_MANAGER.cleanup()
             manager = ClientManager.from_unified_config()
             await manager.initialize()
