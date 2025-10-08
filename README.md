@@ -31,8 +31,8 @@ applications.
   management, analytics, and content intelligence tools for Claude Desktop /
   Code.
 - Observability built in: Prometheus instrumentation, structured logging,
-  health checks, optional Dragonfly cache + ARQ worker, and configuration-driven
-  monitoring (`src/services/monitoring/`).
+  health checks, optional Dragonfly cache, and configuration-driven monitoring
+  (`src/services/monitoring/`).
 - Developer ergonomics with uv-managed environments, dependency-injector driven
   service wiring, Ruff + pytest quality gates, and a unified developer CLI
   (`scripts/dev.py`).
@@ -135,7 +135,7 @@ flowchart LR
 ### Observability & Operations
 
 - Prometheus metrics and health endpoints instrument both the API and MCP servers; see `config/prometheus.yml` and `docs/operators/monitoring.md`.
-- Optional Dragonfly cache, PostgreSQL, ARQ workers, and Grafana dashboards are provisioned via `docker-compose.yml` profiles.
+- Optional Dragonfly cache, PostgreSQL, and Grafana dashboards are provisioned via `docker-compose.yml` profiles.
 - Structured logging and rate limiting middleware are wired through the service factory and CORS/middleware managers (`src/services/fastapi/middleware/`).
 
 ## Quick Start

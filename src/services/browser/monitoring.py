@@ -136,7 +136,7 @@ class MonitoringConfig(BaseModel):
     )
 
 
-class BrowserAutomationMonitor:
+class BrowserAutomationMonitor:  # pylint: disable=too-many-instance-attributes
     """Monitoring system for 5-tier browser automation."""
 
     def __init__(self, config: MonitoringConfig | None = None):
@@ -206,7 +206,7 @@ class BrowserAutomationMonitor:
         cache_hit: bool = False,
         runtime: str | None = None,
         challenge: str | None = None,
-    ):
+    ):  # pylint: disable=too-many-arguments,too-many-locals
         """Record metrics for a single request.
 
         Args:
@@ -401,7 +401,7 @@ class BrowserAutomationMonitor:
         message: str,
         tier: str | None = None,
         metadata: dict[str, Any] | None = None,
-    ):
+    ):  # pylint: disable=too-many-arguments
         """Raise an alert if conditions are met."""
         # Check cooldown
         cooldown_key = f"{tier}:{alert_type}"
