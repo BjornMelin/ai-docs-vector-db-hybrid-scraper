@@ -386,7 +386,7 @@ class EmbeddingManager:
             raw_scores = reranker.compute_score(pairs, normalize=True, strict=False)
 
             score_sequence: list[float]
-            if isinstance(raw_scores, int | float):
+            if isinstance(raw_scores, (int, float)):
                 score_sequence = [float(raw_scores)]
             elif hasattr(raw_scores, "tolist"):
                 score_sequence = [float(score) for score in raw_scores.tolist()]  # type: ignore[assignment]

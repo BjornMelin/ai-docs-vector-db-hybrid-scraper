@@ -209,7 +209,7 @@ class ModernAITestingUtils:
 
         assert isinstance(embedding, list), "Embedding must be a list"
         assert len(embedding) == expected_dim, f"Embedding dim must be {expected_dim}"
-        assert all(isinstance(x, int | float) for x in embedding), (
+        assert all(isinstance(x, (int, float)) for x in embedding), (
             "Embedding values must be numbers"
         )
 

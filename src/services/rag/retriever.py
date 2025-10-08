@@ -51,9 +51,11 @@ class CompressionStats:
     def reduction_ratio(self) -> float:
         """Return the token reduction ratio achieved by compression."""
 
-        if self.tokens_before == 0:
+        if self.tokens_before <= 0:
             return 0.0
-        return 1.0 - (self.tokens_after / self.tokens_before)
+        adjusted_after = max(self.tokens_after, 0)
+        ratio = 1.0 - (adjusted_after / self.tokens_before)
+        return max(0.0, min(1.0, ratio))
 
     def to_dict(self) -> dict[str, float | int]:
         """Serialize statistics for logging or metrics exports."""
@@ -262,4 +264,4 @@ def _estimate_tokens(content: str) -> int:
     return max(1, len(content.split()))
 
 
-__all__ = ["VectorServiceRetriever", "CompressionStats"]
+__all__ = ("VectorServiceRetriever", "CompressionStats")

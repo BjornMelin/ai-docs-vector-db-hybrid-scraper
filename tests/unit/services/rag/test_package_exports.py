@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import operator
+
 import pytest
 
 from src.services import rag as rag_module
@@ -64,6 +66,11 @@ def test_rag_all_exports_alignment() -> None:
         None: This test ensures the module contract remains deliberate.
     """
 
+    assert isinstance(rag_module.__all__, tuple)
+
+    with pytest.raises(TypeError):
+        operator.setitem(rag_module.__all__, 0, "something_else")  # type: ignore[operator]
+
     expected_exports = tuple(name for name, _ in EXPECTED_EXPORTS)
 
     assert rag_module.__all__ == expected_exports
@@ -78,5 +85,24 @@ def test_compression_stats_dataclass_behaviour() -> None:
 
     stats = CompressionStats(documents_processed=10, tokens_before=100, tokens_after=40)
 
-    assert stats.reduction_ratio == 0.6
-    assert stats.to_dict()["reduction_ratio"] == 0.6
+    assert stats.reduction_ratio == pytest.approx(0.6)
+    assert stats.to_dict()["reduction_ratio"] == pytest.approx(0.6)
+
+
+@pytest.mark.parametrize(
+    ("tokens_before", "tokens_after", "expected_ratio"),
+    (
+        (0, 10, 0.0),
+        (-5, 10, 0.0),
+        (10, -5, 1.0),
+        (0, 0, 0.0),
+    ),
+)
+def test_compression_stats_edge_cases(
+    tokens_before: int, tokens_after: int, expected_ratio: float
+) -> None:
+    """Ensure ``CompressionStats`` handles non-positive token counts safely."""
+
+    stats = CompressionStats(tokens_before=tokens_before, tokens_after=tokens_after)
+
+    assert stats.reduction_ratio == expected_ratio

@@ -178,7 +178,7 @@ async def _coerce_results(raw: Any) -> list[CrawlResult]:
     if isinstance(raw, AsyncIterator) or hasattr(raw, "__aiter__"):
         iterator = _ensure_async_iter(raw)
         return [item async for item in iterator]
-    if isinstance(raw, str | bytes):
+    if isinstance(raw, (str, bytes)):
         msg = "Unexpected Crawl4AI result type: string-like payload"
         raise TypeError(msg)
     if isinstance(raw, Iterable):
