@@ -306,6 +306,7 @@ def register_tools(  # pylint: disable=too-many-statements
             if not content_service:
                 await ctx.error("Content Intelligence Service not available")
                 return ContentMetadata(
+                    url=payload.url,
                     word_count=len(payload.content.split()),
                     char_count=len(payload.content),
                 )
@@ -326,6 +327,7 @@ def register_tools(  # pylint: disable=too-many-statements
         except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             await ctx.error(f"Metadata extraction failed: {e}")
             return ContentMetadata(
+                url=payload.url,
                 word_count=len(payload.content.split()),
                 char_count=len(payload.content),
             )

@@ -107,7 +107,6 @@ class EmbeddingResponse(BaseModel):
     service_name="embedding_manager",
     failure_threshold=3,
     recovery_timeout=30.0,
-    enable_adaptive_timeout=True,
 )
 async def get_embedding_manager(
     client_manager: ClientManager | None = None,
@@ -182,7 +181,6 @@ class CacheRequest(BaseModel):
     service_name="cache_manager",
     failure_threshold=2,
     recovery_timeout=10.0,
-    enable_adaptive_timeout=True,
 )
 async def get_cache_manager(
     client_manager: ClientManager | None = None,
@@ -288,7 +286,6 @@ class CrawlResponse(BaseModel):
     service_name="crawl_manager",
     failure_threshold=5,
     recovery_timeout=60.0,
-    enable_adaptive_timeout=True,
 )
 async def get_crawl_manager(
     client_manager: ClientManager | None = None,
@@ -390,7 +387,6 @@ DatabaseSessionDep = Annotated[Any, Depends(get_database_session)]
     service_name="vector_store_service",
     failure_threshold=3,
     recovery_timeout=15.0,
-    enable_adaptive_timeout=True,
 )
 async def get_vector_store_service(
     client_manager: ClientManager | None = None,
@@ -450,7 +446,6 @@ class RAGResponse(BaseModel):
     service_name="rag_generator",
     failure_threshold=3,
     recovery_timeout=30.0,
-    enable_adaptive_timeout=True,
 )
 async def get_rag_generator(
     config: ConfigDep,

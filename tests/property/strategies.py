@@ -14,6 +14,7 @@ import hypothesis.strategies as st
 from src.config.models import (
     ChunkingStrategy,
     CrawlProvider,
+    DeploymentTier,
     EmbeddingProvider,
     Environment,
     LogLevel,
@@ -322,17 +323,33 @@ def cache_configurations(draw) -> dict[str, Any]:
     return {
         "enable_caching": draw(st.booleans()),
         "enable_local_cache": draw(st.booleans()),
-        "enable_dragonfly_cache": draw(st.booleans()),
-        "dragonfly_url": draw(redis_urls()),
+        "enable_redis_cache": draw(st.booleans()),
+        "redis_url": draw(redis_urls()),
+        "redis_password": draw(st.one_of(st.none(), st.text(min_size=8, max_size=32))),
+        "redis_database": draw(st.integers(min_value=0, max_value=15)),
         "local_max_size": draw(positive_integers(min_value=10, max_value=10000)),
         "local_max_memory_mb": draw(positive_integers(min_value=10, max_value=1000)),
-        "ttl_seconds": draw(positive_integers(min_value=60, max_value=86400)),
+        "ttl_embeddings": draw(positive_integers(min_value=60, max_value=86400)),
+        "ttl_crawl": draw(positive_integers(min_value=60, max_value=86400)),
+        "ttl_queries": draw(positive_integers(min_value=60, max_value=86400)),
+        "ttl_search_results": draw(positive_integers(min_value=60, max_value=86400)),
         "cache_ttl_seconds": draw(
             st.dictionaries(
                 keys=st.sampled_from(["search_results", "embeddings", "collections"]),
                 values=st.integers(min_value=60, max_value=86400),
                 min_size=1,
                 max_size=10,
+            )
+        ),
+        "memory_pressure_threshold": draw(
+            st.one_of(
+                st.none(),
+                st.floats(
+                    min_value=0.0,
+                    max_value=1.0,
+                    allow_nan=False,
+                    allow_infinity=False,
+                ),
             )
         ),
     }
@@ -344,10 +361,6 @@ def circuit_breaker_configurations(draw) -> dict[str, Any]:
     return {
         "failure_threshold": draw(st.integers(min_value=1, max_value=20)),
         "recovery_timeout": draw(positive_floats(min_value=5.0, max_value=300.0)),
-        "half_open_max_calls": draw(st.integers(min_value=1, max_value=10)),
-        "enable_adaptive_timeout": draw(st.booleans()),
-        "enable_bulkhead_isolation": draw(st.booleans()),
-        "enable_metrics_collection": draw(st.booleans()),
         "service_overrides": draw(
             st.dictionaries(
                 keys=st.sampled_from(["openai", "firecrawl", "qdrant", "redis"]),
@@ -370,7 +383,7 @@ def circuit_breaker_configurations(draw) -> dict[str, Any]:
 @st.composite
 def deployment_configurations(draw) -> dict[str, Any]:
     """Generate valid deployment configurations."""
-    tier = draw(st.sampled_from(["personal", "professional", "enterprise"]))
+    tier = draw(st.sampled_from(list(DeploymentTier)))
 
     return {
         "tier": tier,
@@ -385,7 +398,6 @@ def deployment_configurations(draw) -> dict[str, Any]:
         "enable_blue_green": draw(st.booleans()),
         "enable_canary": draw(st.booleans()),
         "enable_monitoring": draw(st.booleans()),
-        "deployment_tier": tier,  # Legacy field should match tier
     }
 
 
@@ -451,7 +463,6 @@ def complete_configurations(draw) -> dict[str, Any]:
         "qdrant": draw(qdrant_configurations()),
         "openai": draw(openai_configurations()),
         "chunking": draw(chunk_configurations()),
-        "circuit_breaker": draw(circuit_breaker_configurations()),
         "deployment": draw(deployment_configurations()),
         "rag": draw(rag_configurations()),
         "documentation_sites": draw(

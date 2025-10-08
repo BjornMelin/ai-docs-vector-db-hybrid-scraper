@@ -54,6 +54,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Simplified the security configuration model to the fields actually enforced by the middleware, updated templates/docs, and aligned the middleware implementation with the lean schema.
 - Removed the fail-closed `search_service`/`cache_service` placeholders; mode configs now advertise only supported embedding/vector services and the health endpoint reflects the leaner set.
 - Dependency re-exports for FastAPI helpers now live under `src/services/fastapi/dependencies/__init__.py`, trimming redundant wrapper modules.
+- Collection deletion tooling now requires a native `delete_collection` implementation and removes legacy `drop_collection` shims; CI fails fast on unexpected skips to prevent dead suites from lingering.
+- Chunking defaults route `ChunkingStrategy.BASIC` through the enhanced semantic pipeline, and circuit breaker decorators/configuration have dropped all deprecated parameters.
 - Replaced the bespoke FastAPI `DependencyContainer` and module-level singletons with a new `ServiceRegistry` (`src/services/registry.py`), wiring FastAPI lifespan, CLI tooling, and dependency helpers to the shared registry.
 - MCP embeddings tools now normalise provider metadata directly from `EmbeddingManager`, cache snapshots with fallbacks, and expose the reusable `provider_metadata` helper for other tooling.
 - `/health` now consumes `ServiceHealthChecker` and returns structured JSON/HTTP status codes; async fixtures use `httpx` + `asgi-lifespan`, and vector-db CLI commands reuse the registry rather than instantiating private managers.

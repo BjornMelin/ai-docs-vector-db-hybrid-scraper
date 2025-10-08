@@ -13,6 +13,18 @@ from src.mcp_tools.models.responses import CollectionInfo, CollectionOperationRe
 logger = logging.getLogger(__name__)
 
 
+def _resolve_delete_callable(
+    vector_service: object,
+) -> Callable[[str], Awaitable[None]]:
+    """Return the deletion callable exposed by the vector service."""
+
+    delete_method = getattr(vector_service, "delete_collection", None)
+    if not callable(delete_method):
+        msg = "Vector service does not expose a collection deletion method"
+        raise AttributeError(msg)
+    return cast(Callable[[str], Awaitable[None]], delete_method)
+
+
 def register_tools(mcp, client_manager: ClientManager):  # pylint: disable=too-many-statements
     """Register collection management tools with the MCP server."""
 
@@ -111,30 +123,7 @@ def register_tools(mcp, client_manager: ClientManager):  # pylint: disable=too-m
             vector_service = await client_manager.get_vector_store_service()
             cache_manager = await client_manager.get_cache_manager()
 
-            instance_dict = getattr(vector_service, "__dict__", {})
-            delete_method = instance_dict.get("delete_collection")
-            drop_method = instance_dict.get("drop_collection")
-
-            if delete_method is None:
-                attr = getattr(type(vector_service), "delete_collection", None)
-                if attr is not None:
-                    delete_method = attr.__get__(vector_service, type(vector_service))
-
-            if drop_method is None:
-                attr = getattr(type(vector_service), "drop_collection", None)
-                if attr is not None:
-                    drop_method = attr.__get__(vector_service, type(vector_service))
-            delete_callable: Callable[[str], Awaitable[None]] | None = None
-
-            if callable(delete_method):
-                delete_callable = cast(Callable[[str], Awaitable[None]], delete_method)
-            elif callable(drop_method):
-                delete_callable = cast(Callable[[str], Awaitable[None]], drop_method)
-
-            if delete_callable is None:  # pragma: no cover - defensive guard
-                msg = "Vector service does not expose a collection deletion method"
-                raise AttributeError(msg)
-
+            delete_callable = _resolve_delete_callable(vector_service)
             await delete_callable(collection_name)
             if ctx:
                 await ctx.debug(

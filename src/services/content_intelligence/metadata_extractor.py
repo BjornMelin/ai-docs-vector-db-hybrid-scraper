@@ -124,7 +124,7 @@ class MetadataExtractor:
             await self.initialize()
 
         # Start with basic analysis
-        metadata = ContentMetadata()
+        metadata = ContentMetadata(url=url)
 
         # Extract basic content characteristics
         words = content.split()

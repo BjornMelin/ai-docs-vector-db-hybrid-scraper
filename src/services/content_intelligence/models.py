@@ -129,6 +129,7 @@ class QualityScore(BaseModel):
 class ContentMetadata(BaseModel):
     """Structured metadata extracted from content and page elements."""
 
+    url: str = Field(..., description="Source URL for the extracted metadata")
     # Basic metadata
     title: str | None = Field(default=None, description="Page or content title")
     description: str | None = Field(default=None, description="Content description")

@@ -759,18 +759,6 @@ class CircuitBreakerConfig(BaseModel):
     recovery_timeout: float = Field(
         default=60.0, gt=0, description="Recovery timeout seconds"
     )
-    half_open_max_calls: int = Field(
-        default=3, gt=0, le=10, description="Max calls allowed in half-open"
-    )
-    enable_adaptive_timeout: bool = Field(
-        default=True, description="Enable adaptive timeouts"
-    )
-    enable_bulkhead_isolation: bool = Field(
-        default=True, description="Enable bulkhead isolation"
-    )
-    enable_metrics_collection: bool = Field(
-        default=True, description="Collect circuit breaker metrics"
-    )
     service_overrides: dict[str, dict[str, Any]] = Field(
         default_factory=lambda: {
             "openai": {"failure_threshold": 3, "recovery_timeout": 30.0},
