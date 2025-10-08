@@ -1,20 +1,22 @@
-"""Validation for configuration wizard.
+"""Validation helpers for the configuration wizard.
 
 Provides validation feedback during wizard interaction
 using Pydantic models and user-friendly error messages.
 """
 
+from __future__ import annotations
+
 import json
+import os
 import re
 from pathlib import Path
 from typing import Any
 
-from pydantic import ValidationError
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 
-from src.config import Config
+from src.config import validate_settings_payload
 
 
 console = Console()
@@ -25,7 +27,22 @@ class WizardValidator:
 
     def __init__(self):
         """Initialize validator."""
-        self.validation_cache: dict[str, bool] = {}
+        self.validation_rules = {
+            "openai": {
+                "pattern": r"^(sk-|sk-proj-)[A-Za-z0-9_-]{10,}$",
+                "message": (
+                    "OpenAI API key must start with 'sk-' or 'sk-proj-' and be at least"
+                    " 10 characters"
+                ),
+            },
+            "firecrawl": {
+                "pattern": r"^fc-[A-Za-z0-9_-]{10,}$",
+                "message": (
+                    "Firecrawl API key must start with 'fc-' and be at least"
+                    " 10 characters"
+                ),
+            },
+        }
 
     def validate_api_key(self, provider: str, api_key: str) -> tuple[bool, str | None]:
         """Validate API key format for specific providers.
@@ -36,30 +53,12 @@ class WizardValidator:
 
         Returns:
             Tuple of (is_valid, error_message)
-
         """
+
         if not api_key:
             return False, "API key cannot be empty"
 
-        validation_rules = {
-            "openai": {
-                "pattern": r"^sk-[a-zA-Z0-9_-]{20,}$",
-                "message": "OpenAI API key must start with 'sk-' and be at least "
-                "20 characters",
-            },
-            "firecrawl": {
-                "pattern": r"^fc-[a-zA-Z0-9_-]{20,}$",
-                "message": "Firecrawl API key must start with 'fc-' and be at least "
-                "20 characters",
-            },
-            "anthropic": {
-                "pattern": r"^sk-ant-[a-zA-Z0-9_-]{20,}$",
-                "message": "Anthropic API key must start with 'sk-ant-' "
-                "and be at least 20 characters",
-            },
-        }
-
-        rule = validation_rules.get(provider.lower())
+        rule = self.validation_rules.get(provider.lower())
         if not rule:
             # Generic validation for unknown providers
             if len(api_key) < 10:
@@ -85,8 +84,8 @@ class WizardValidator:
 
         Returns:
             Tuple of (is_valid, error_message)
-
         """
+
         if not url:
             return False, "URL cannot be empty"
 
@@ -109,8 +108,8 @@ class WizardValidator:
 
         Returns:
             Tuple of (is_valid, error_message)
-
         """
+
         try:
             port_int = int(port)
         except (ValueError, TypeError):
@@ -124,7 +123,7 @@ class WizardValidator:
 
         return True, None
 
-    def validate_path(
+    def validate_path(  # pylint: disable=too-many-return-statements
         self, path: str, must_exist: bool = False, must_be_dir: bool = False
     ) -> tuple[bool, str | None]:
         """Validate file/directory path.
@@ -136,8 +135,8 @@ class WizardValidator:
 
         Returns:
             Tuple of (is_valid, error_message)
-
         """
+
         if not path:
             return False, "Path cannot be empty"
 
@@ -153,9 +152,9 @@ class WizardValidator:
         try:
             check_path = path_obj if path_obj.exists() else path_obj.parent
             if not check_path.exists():
-                check_path.mkdir(parents=True, exist_ok=True)
-        except PermissionError:
-            return False, f"No write permission for path: {path}"
+                return False, f"Parent directory does not exist: {check_path}"
+            if not os.access(check_path, os.W_OK | os.X_OK):
+                return False, f"No write permission for path: {path}"
         except (OSError, ValueError) as e:
             return False, f"Invalid path: {e}"
 
@@ -171,32 +170,17 @@ class WizardValidator:
 
         Returns:
             Tuple of (is_valid, error_messages)
-
         """
+
         errors = []
 
-        try:
-            # Try to create Config object with minimal required fields
-            # Add defaults for missing required fields for validation
-            validation_data = {
-                "environment": "development",
-                "debug": False,
-                "log_level": "INFO",
-                **config_data,
-            }
+        is_valid, validation_errors, _ = validate_settings_payload(config_data)
 
-            Config(**validation_data)
-
-        except ValidationError as e:
-            for error in e.errors():
-                field_path = " -> ".join(str(x) for x in error["loc"])
-                error_msg = error["msg"]
-                errors.append(f"{field_path}: {error_msg}")
-
-        except (TypeError, ValueError) as e:
-            errors.append(f"Validation error: {e!s}")
-        else:
+        if is_valid:
             return True, []
+
+        for error in validation_errors:
+            errors.append(error)
 
         return False, errors
 
@@ -208,8 +192,8 @@ class WizardValidator:
 
         Returns:
             True if valid, False otherwise
-
         """
+
         is_valid, errors = self.validate_config_partial(config_data)
 
         if not is_valid:
@@ -219,6 +203,7 @@ class WizardValidator:
 
     def _show_validation_errors(self, errors: list[str]) -> None:
         """Display validation errors in a user-friendly format."""
+
         if not errors:
             return
 
@@ -249,22 +234,22 @@ class WizardValidator:
 
         Returns:
             Dictionary of field -> suggested_fix
-
         """
+
         suggestions = {}
 
         for error in errors:
             if "api_key" in error.lower():
                 if "openai" in error.lower():
-                    suggestions["openai_api_key"] = "Format: sk-your_actual_key_here"
+                    suggestions["openai.api_key"] = "Format: sk-your_actual_key_here"
                 elif "firecrawl" in error.lower():
-                    suggestions["firecrawl_api_key"] = "Format: fc-your_actual_key_here"
+                    suggestions["firecrawl.api_key"] = "Format: fc-your_actual_key_here"
 
             elif "url" in error.lower():
                 if "qdrant" in error.lower():
-                    suggestions["qdrant_url"] = "http://localhost:6333"
+                    suggestions["qdrant.url"] = "http://localhost:6333"
                 elif "redis" in error.lower():
-                    suggestions["redis_url"] = "redis://localhost:6379"
+                    suggestions["cache.redis_url"] = "redis://localhost:6379"
 
             elif "port" in error.lower():
                 suggestions["port"] = "Use a port number between 1024-65535"
@@ -292,8 +277,8 @@ class WizardValidator:
 
         Returns:
             Tuple of (is_valid, error_message)
-
         """
+
         return self.validate_path(path, must_exist=must_exist, must_be_dir=False)
 
     def validate_directory_path(
@@ -307,8 +292,8 @@ class WizardValidator:
 
         Returns:
             Tuple of (is_valid, error_message)
-
         """
+
         return self.validate_path(path, must_exist=must_exist, must_be_dir=True)
 
     def validate_json_string(
@@ -321,8 +306,8 @@ class WizardValidator:
 
         Returns:
             Tuple of (is_valid, error_message, parsed_data)
-
         """
+
         if not json_str:
             return False, "JSON string cannot be empty", None
 
@@ -330,33 +315,26 @@ class WizardValidator:
             parsed = json.loads(json_str)
         except json.JSONDecodeError as e:
             return False, f"Invalid JSON: {e}", None
-        else:
-            return True, None, parsed
+        return True, None, parsed
 
     def show_validation_summary(self, config) -> None:
         """Show validation summary for successful configuration.
 
         Args:
             config: Validated configuration object
-
         """
+
         summary_text = Text()
         summary_text.append("✅ Configuration is valid!\n\n", style="bold green")
 
         summary_text.append("Configuration Summary:\n", style="bold")
 
         # Show key configuration points
-        if hasattr(config, "qdrant"):
-            if hasattr(config.qdrant, "host"):
-                summary_text.append(
-                    f"• Database: Qdrant at {config.qdrant.host}:"
-                    f"{config.qdrant.port}\n",
-                    style="cyan",
-                )
-            elif hasattr(config.qdrant, "url"):
-                summary_text.append(
-                    f"• Database: Qdrant Cloud at {config.qdrant.url}\n", style="cyan"
-                )
+        if hasattr(config, "qdrant") and hasattr(config.qdrant, "url"):
+            summary_text.append(
+                f"• Database: Qdrant at {config.qdrant.url}\n",
+                style="cyan",
+            )
 
         if hasattr(config, "openai") and hasattr(config.openai, "model"):
             summary_text.append(
@@ -390,8 +368,8 @@ class WizardValidator:
 
         Returns:
             Tuple of (is_valid, error_messages)
-
         """
+
         # Merge template with customizations
         merged_data = {**template_data, **customizations}
 

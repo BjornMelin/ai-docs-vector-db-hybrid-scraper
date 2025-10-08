@@ -74,7 +74,7 @@ def configured_app(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
             max_context_length=4096,
         )
     )
-    monkeypatch.setattr(rag_module, "get_config", lambda: config)
+    monkeypatch.setattr(rag_module, "get_settings", lambda: config)
     return config
 
 

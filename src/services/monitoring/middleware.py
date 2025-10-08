@@ -1,21 +1,17 @@
-"""FastAPI middleware for Prometheus metrics integration.
+"""FastAPI middleware for Prometheus metrics integration."""
 
-This module provides middleware components for automatic HTTP request monitoring,
-health check endpoints, and Prometheus metrics exposure.
-"""
+# pylint: disable=too-many-arguments
 
 import logging
 import time
-from collections.abc import Callable
 
-from fastapi import FastAPI, Request, Response
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI  # type: ignore[import]
+from fastapi.responses import JSONResponse, Response
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from prometheus_fastapi_instrumentator import Instrumentator, metrics
-from starlette.middleware.base import BaseHTTPMiddleware
 
-from .health import HealthCheckManager, HealthStatus
-from .metrics import MetricsRegistry, get_metrics_registry
+from .health import HealthCheckConfig, HealthCheckManager, HealthStatus
+from .metrics import MetricsRegistry
 
 
 logger = logging.getLogger(__name__)
@@ -43,8 +39,8 @@ class PrometheusMiddleware:
             metrics_path: Path for Prometheus metrics endpoint
             health_path: Path for health check endpoint
             enable_default_metrics: Enable default HTTP metrics
-
         """
+
         self.app = app
         self.metrics_registry = metrics_registry
         self.health_manager = health_manager
@@ -67,9 +63,9 @@ class PrometheusMiddleware:
             # Add default metrics (using available metrics)
             try:
                 # Try the new API first
-                if hasattr(metrics, "request_size_and_response_size"):
+                if hasattr(metrics, "request_size_and_response_size"):  # type: ignore[attr-defined]
                     self.instrumentator.add(
-                        metrics.request_size_and_response_size(
+                        metrics.request_size_and_response_size(  # type: ignore[attr-defined]
                             should_include_handler=True,
                             should_include_method=True,
                             should_include_status=True,
@@ -128,6 +124,7 @@ class PrometheusMiddleware:
         )
         async def metrics_endpoint():
             """Prometheus metrics endpoint."""
+
             # Update system metrics before generating output
             if self.metrics_registry.config.include_system_metrics:
                 self.metrics_registry.update_system_metrics()
@@ -146,6 +143,7 @@ class PrometheusMiddleware:
         )
         async def health_endpoint():
             """Health check endpoint."""
+
             if not self.health_manager:
                 return JSONResponse(
                     content={
@@ -181,6 +179,7 @@ class PrometheusMiddleware:
         )
         async def liveness_endpoint():
             """Kubernetes liveness probe endpoint."""
+
             return JSONResponse(
                 content={"status": "alive", "timestamp": time.time()}, status_code=200
             )
@@ -193,6 +192,7 @@ class PrometheusMiddleware:
         )
         async def readiness_endpoint():
             """Kubernetes readiness probe endpoint."""
+
             if not self.health_manager:
                 return JSONResponse(
                     content={
@@ -232,64 +232,12 @@ class PrometheusMiddleware:
             self.instrumentator.expose(self.app, endpoint=self.metrics_path)
 
 
-class CustomMetricsMiddleware(BaseHTTPMiddleware):
-    """Custom middleware for additional application-specific metrics."""
-
-    def __init__(self, app, metrics_registry: MetricsRegistry | None = None):
-        """Initialize custom metrics middleware.
-
-        Args:
-            app: ASGI application
-            metrics_registry: Optional metrics registry
-
-        """
-        super().__init__(app)
-        self.metrics_registry = metrics_registry or get_metrics_registry()
-
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        """Process request and collect custom metrics.
-
-        Args:
-            request: HTTP request
-            call_next: Next middleware in chain
-
-        Returns:
-            HTTP response
-
-        """
-        start_time = time.time()
-
-        # Extract request metadata
-        method = request.method
-        path = request.url.path
-
-        # Process request
-        response = await call_next(request)
-
-        # Calculate duration
-        duration = time.time() - start_time
-
-        # Record custom metrics (if enabled)
-        if self.metrics_registry:
-            custom_duration_metric = self.metrics_registry.get_metric(
-                "custom_request_duration"
-            )
-            if custom_duration_metric:
-                # Record request duration by endpoint
-                custom_duration_metric.labels(
-                    method=method, endpoint=path, status_code=response.status_code
-                ).observe(duration)
-
-        return response
-
-
 def setup_monitoring(
     app: FastAPI,
     metrics_registry: MetricsRegistry,
     *,
     health_manager: HealthCheckManager | None = None,
     enable_default_metrics: bool = True,
-    enable_custom_metrics: bool = True,
     metrics_path: str = "/metrics",
     health_path: str = "/health",
 ) -> PrometheusMiddleware:
@@ -300,14 +248,13 @@ def setup_monitoring(
         metrics_registry: Metrics registry
         health_manager: Optional health check manager
         enable_default_metrics: Enable default HTTP metrics
-        enable_custom_metrics: Enable custom metrics middleware
         metrics_path: Path for metrics endpoint
         health_path: Path for health endpoint
 
     Returns:
         Configured PrometheusMiddleware instance
-
     """
+
     # Set up Prometheus middleware
     prometheus_middleware = PrometheusMiddleware(
         app=app,
@@ -317,10 +264,6 @@ def setup_monitoring(
         health_path=health_path,
         enable_default_metrics=enable_default_metrics,
     )
-
-    # Add custom metrics middleware if enabled
-    if enable_custom_metrics:
-        app.add_middleware(CustomMetricsMiddleware, metrics_registry=metrics_registry)
 
     return prometheus_middleware
 
@@ -341,9 +284,9 @@ def create_health_manager_with_defaults(
 
     Returns:
         Configured HealthCheckManager
-
     """
-    health_manager = HealthCheckManager(metrics_registry)
+
+    health_manager = HealthCheckManager(HealthCheckConfig(), metrics_registry)
 
     # Add system resource check
     health_manager.add_system_resource_check()

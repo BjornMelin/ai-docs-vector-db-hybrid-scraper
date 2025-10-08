@@ -6,7 +6,8 @@ from typing import cast
 
 import pytest
 
-from src.config import Config, Environment, ObservabilityConfig
+from src.config import Settings
+from src.config.models import Environment, ObservabilityConfig
 
 
 @pytest.fixture(name="default_config")
@@ -50,8 +51,8 @@ class TestObservabilityConfig:
         assert getattr(default_config, attribute) is True
 
     def test_config_embeds_observability_model(self) -> None:
-        """`Config` exposes an instance of `ObservabilityConfig`."""
-        settings = Config()
+        """`Settings` exposes an instance of `ObservabilityConfig`."""
+        settings = Settings()
         observability_config = cast(
             ObservabilityConfig, object.__getattribute__(settings, "observability")
         )
@@ -115,7 +116,7 @@ class TestConfigIntegration:
 
     def test_development_defaults(self) -> None:
         """Development mode keeps observability disabled by default."""
-        settings = Config(environment=Environment.DEVELOPMENT)
+        settings = Settings(environment=Environment.DEVELOPMENT)
         observability_config = cast(
             ObservabilityConfig, object.__getattribute__(settings, "observability")
         )
@@ -124,7 +125,7 @@ class TestConfigIntegration:
 
     def test_runtime_updates(self) -> None:
         """Runtime modifications to nested observability config are retained."""
-        settings = Config()
+        settings = Settings()
         observability_config = cast(
             ObservabilityConfig, object.__getattribute__(settings, "observability")
         )

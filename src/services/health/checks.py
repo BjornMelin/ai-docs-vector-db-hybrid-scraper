@@ -13,7 +13,7 @@ from qdrant_client import AsyncQdrantClient
 from qdrant_client.http.exceptions import UnexpectedResponse
 from redis import asyncio as redis_async
 
-from src.config import Config
+from src.config.loader import Settings
 from src.config.models import CrawlProvider, EmbeddingProvider
 
 
@@ -40,7 +40,9 @@ class HealthCheckResult:
         return self.status == "healthy"
 
 
-async def _check_qdrant(config: Config) -> HealthCheckResult:
+async def _check_qdrant(config: Settings) -> HealthCheckResult:
+    """Perform health check for Qdrant vector database."""
+
     start = perf_counter()
     client = AsyncQdrantClient(
         url=config.qdrant.url,
@@ -73,7 +75,9 @@ async def _check_qdrant(config: Config) -> HealthCheckResult:
     )
 
 
-async def _check_redis(config: Config) -> HealthCheckResult:
+async def _check_redis(config: Settings) -> HealthCheckResult:
+    """Perform health check for Redis cache service."""
+
     if not config.cache.enable_redis_cache:
         return HealthCheckResult(
             service="redis",
@@ -101,14 +105,16 @@ async def _check_redis(config: Config) -> HealthCheckResult:
     )
 
 
-async def _check_openai(config: Config) -> HealthCheckResult:
+async def _check_openai(config: Settings) -> HealthCheckResult:
+    """Perform health check for OpenAI API service."""
+
     if config.embedding_provider != EmbeddingProvider.OPENAI:
         return HealthCheckResult(
             service="openai",
             status="skipped",
             details={"reason": "provider_disabled"},
         )
-    api_key = config.openai.api_key or config.openai_api_key
+    api_key = config.openai.api_key or config.openai.api_key
     if not api_key:
         return HealthCheckResult(
             service="openai",
@@ -140,14 +146,16 @@ async def _check_openai(config: Config) -> HealthCheckResult:
     )
 
 
-async def _check_firecrawl(config: Config) -> HealthCheckResult:
+async def _check_firecrawl(config: Settings) -> HealthCheckResult:
+    """Perform health check for Firecrawl API service."""
+
     if config.crawl_provider != CrawlProvider.FIRECRAWL:
         return HealthCheckResult(
             service="firecrawl",
             status="skipped",
             details={"reason": "provider_disabled"},
         )
-    api_key = config.firecrawl.api_key or config.firecrawl_api_key
+    api_key = config.firecrawl.api_key or config.firecrawl.api_key
     if not api_key:
         return HealthCheckResult(
             service="firecrawl",
@@ -162,7 +170,7 @@ async def _check_firecrawl(config: Config) -> HealthCheckResult:
                 f"{config.firecrawl.api_url}/health", headers=headers
             )
             response.raise_for_status()
-        except (httpx.HTTPError, ValueError) as exc:
+        except Exception as exc:  # pragma: no cover - unexpected errors reported
             return HealthCheckResult(
                 service="firecrawl",
                 status="unhealthy",
@@ -177,7 +185,7 @@ async def _check_firecrawl(config: Config) -> HealthCheckResult:
     )
 
 
-async def perform_health_checks(config: Config) -> list[HealthCheckResult]:
+async def perform_health_checks(config: Settings) -> list[HealthCheckResult]:
     """Run all configured health checks concurrently."""
 
     results = await asyncio.gather(

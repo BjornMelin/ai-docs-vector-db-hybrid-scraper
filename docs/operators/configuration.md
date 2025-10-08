@@ -11,10 +11,12 @@ export AI_DOCS__FIRECRAWL__API_KEY=${FIRECRAWL_API_KEY}
 # Database URLs
 export AI_DOCS__CACHE__DRAGONFLY_URL="redis://dragonfly:6379"
 export AI_DOCS__QDRANT__URL="http://qdrant:6333"
+export AI_DOCS__QDRANT__COLLECTION_NAME="documents"
 
 # Environment
 export AI_DOCS__ENVIRONMENT=production
-export CONFIG_FILE=config/production.json
+# Optional: point CLI helpers at a baseline file
+uv run python -m src.cli.main config load config/production.json --validate-only
 ```
 
 ### Production Settings
@@ -79,6 +81,7 @@ services:
     "cache_ttl": 3600
   },
   "qdrant": {
+    "collection_name": "documents",
     "collection_config": {
       "vector_size": 1536,
       "distance": "Cosine",
@@ -103,6 +106,21 @@ services:
     "batch_size": 50
   }
 }
+```
+
+### CLI helpers
+
+Use the bundled CLI to inspect or export settings without editing JSON by hand:
+
+```bash
+# Show the active configuration in a table
+uv run python -m src.cli.main config show --format table
+
+# Export the current in-memory settings to YAML (requires PyYAML)
+uv run python -m src.cli.main config export --format yaml -o exports/production.yaml
+
+# Validate a file without loading it
+uv run python -m src.cli.main config load config/production.json --validate-only
 ```
 
 ## Security Configuration
@@ -177,12 +195,12 @@ curl -s http://localhost:6333/health
 redis-cli ping
 ```
 
-### Configuration Reload
+### Configuration Refresh
 ```bash
-# Reload configuration without restart
-docker-compose kill -s SIGHUP api
+# Refresh settings (applies environment overrides)
+curl -X POST http://localhost:9000/config/refresh -H 'Content-Type: application/json' -d '{}'
 
-# Full restart with new configuration
+# Restart the stack after editing .env or config files
 docker-compose down
 docker-compose up -d
 ```

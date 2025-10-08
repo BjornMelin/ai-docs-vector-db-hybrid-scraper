@@ -38,32 +38,27 @@ class ErrorResponse(MCPResponse):
 
 # Search API Models
 class SearchRequest(MCPRequest):
-    """Request model for search operations."""
+    """Basic search request model for MCP API."""
 
-    query: str = Field(..., description="Search query text", min_length=1)
+    query: str = Field(..., description="Search query string")
     collection_name: str = Field(default="documents", description="Target collection")
-    limit: int = Field(default=10, ge=1, le=100, description="Number of results")
+    limit: int = Field(default=10, ge=1, le=1000, description="Maximum results")
     score_threshold: float = Field(
         default=0.0, ge=0.0, le=1.0, description="Minimum score"
     )
-    enable_hyde: bool = Field(default=False, description="Enable HyDE enhancement")
+    enable_hyde: bool = Field(default=False, description="Enable HyDE expansion")
     filters: dict[str, Any] | None = Field(default=None, description="Search filters")
 
 
 class AdvancedSearchRequest(MCPRequest):
-    """Request model for advanced search operations."""
+    """Advanced search request model for MCP API."""
 
-    query: str = Field(..., description="Search query text", min_length=1)
+    query: str = Field(..., description="Search query string")
     collection_name: str = Field(default="documents", description="Target collection")
-    search_strategy: str = Field(
-        default="hybrid", description="Search strategy (dense, hybrid, multi_stage)"
-    )
-    limit: int = Field(default=10, ge=1, le=100, description="Number of results")
-    accuracy_level: str = Field(
-        default="balanced",
-        description="Accuracy level (fast, balanced, accurate, exact)",
-    )
-    enable_reranking: bool = Field(default=False, description="Enable result reranking")
+    search_strategy: str = Field(default="hybrid", description="Search strategy")
+    limit: int = Field(default=10, ge=1, le=1000, description="Maximum results")
+    accuracy_level: str = Field(default="balanced", description="Accuracy level")
+    enable_reranking: bool = Field(default=False, description="Enable reranking")
     hyde_config: dict[str, Any] | None = Field(
         default=None, description="HyDE configuration"
     )

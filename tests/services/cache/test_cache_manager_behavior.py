@@ -52,6 +52,53 @@ def test_cache_manager_delete_removes_hashed_local_entry(tmp_path: Path) -> None
     run(manager.close())
 
 
+def test_specialized_cache_defaults_to_safe_ttl(monkeypatch) -> None:
+    """Embedding caches fall back to safe defaults but honor explicit TTLs."""
+
+    class StubDistributedCache:
+        def __init__(self, **_kwargs):
+            self.enable_compression = True
+            self.redis_url = "mock://redis"
+
+        async def close(self) -> None:  # pragma: no cover - simple stub
+            return None
+
+    monkeypatch.setattr(
+        "src.services.cache.manager.DragonflyCache",
+        StubDistributedCache,
+    )
+
+    manager = CacheManager(
+        enable_local_cache=False,
+        enable_distributed_cache=True,
+        enable_specialized_caches=True,
+        enable_metrics=False,
+        distributed_ttl_seconds={CacheType.EMBEDDINGS: 120},
+    )
+
+    assert manager.embedding_cache is not None
+    assert manager.search_cache is not None
+    assert manager.embedding_cache.default_ttl == 3600
+    assert manager.search_cache.default_ttl == 3600
+
+    run(manager.close())
+
+    manager_with_explicit_ttl = CacheManager(
+        enable_local_cache=False,
+        enable_distributed_cache=True,
+        enable_specialized_caches=True,
+        enable_metrics=False,
+        distributed_ttl_seconds={CacheType.REDIS: 7200},
+    )
+
+    assert manager_with_explicit_ttl.embedding_cache is not None
+    assert manager_with_explicit_ttl.search_cache is not None
+    assert manager_with_explicit_ttl.embedding_cache.default_ttl == 7200
+    assert manager_with_explicit_ttl.search_cache.default_ttl == 7200
+
+    run(manager_with_explicit_ttl.close())
+
+
 def test_delete_in_batches_counts_successful_deletions() -> None:
     """Test that delete_in_batches correctly counts successful deletions."""
 

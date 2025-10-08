@@ -1,4 +1,4 @@
-"""Configuration management tools exposing the unified Config model."""
+"""Configuration management tools exposing the unified Settings model."""
 
 from __future__ import annotations
 
@@ -11,23 +11,13 @@ from typing import Any, cast
 
 from fastmcp import Context
 
-from src.config import Config, get_config as load_unified_config
+from src.config.loader import Settings, get_settings as load_unified_config
 from src.infrastructure.client_manager import ClientManager
 
 
 logger = logging.getLogger(__name__)
 
 _SENSITIVE_SUFFIXES = ("api_key", "api_keys", "token", "secret", "password")
-
-
-class AppSettings(Config):
-    """Backward-compatible alias that mirrors the unified :class:`Config`."""
-
-    @classmethod
-    def load(cls) -> Config:
-        """Return the shared configuration instance without re-parsing env vars."""
-
-        return load_unified_config()
 
 
 def _should_mask(key: str) -> bool:
@@ -43,7 +33,7 @@ def _sanitize(value: Any) -> Any:
         return processed.value
     if isinstance(processed, Path):
         return str(processed)
-    if isinstance(processed, Config) or (
+    if isinstance(processed, Settings) or (
         hasattr(processed, "model_dump") and callable(processed.model_dump)
     ):
         processed = processed.model_dump()
@@ -57,14 +47,15 @@ def _sanitize(value: Any) -> Any:
     return processed
 
 
-def _collect_provider_warnings(config: Config) -> list[str]:
+def _collect_provider_warnings(config: Settings) -> list[str]:
     """Identify potential provider configuration gaps."""
 
     warnings: list[str] = []
     embedding_provider = getattr(config, "embedding_provider", None)
-    openai_api_key = getattr(config, "openai_api_key", None)
     openai_settings = getattr(config, "openai", None)
-    firecrawl_api_key = getattr(config, "firecrawl_api_key", None)
+    openai_api_key = getattr(openai_settings, "api_key", None)
+    firecrawl_settings = getattr(config, "firecrawl", None)
+    firecrawl_api_key = getattr(firecrawl_settings, "api_key", None)
     crawl_provider = getattr(config, "crawl_provider", None)
 
     if (
@@ -73,8 +64,8 @@ def _collect_provider_warnings(config: Config) -> list[str]:
         and not (openai_api_key or getattr(openai_settings, "api_key", None))
     ):
         warnings.append(
-            "OpenAI embeddings selected but API key not configured; "
-            "falling back to FastEmbed"
+            "OpenAI embeddings selected but API key not configured; embeddings will "
+            "be unavailable (consider switching to FastEmbed)"
         )
     if (
         firecrawl_api_key is None
@@ -88,7 +79,7 @@ def _collect_provider_warnings(config: Config) -> list[str]:
 
 
 async def _grouping_support_status(
-    config: Config, client_manager: ClientManager
+    config: Settings, client_manager: ClientManager
 ) -> tuple[list[str], bool | None]:
     """Check QueryPointGroups readiness and emit warnings if required."""
 
@@ -135,7 +126,7 @@ def _extract_child(current: Any, token: str) -> Any:
     return None
 
 
-def _resolve_key(config: Config, key: str) -> Any:
+def _resolve_key(config: Settings, key: str) -> Any:
     """Resolve dotted configuration keys (case-insensitive)."""
 
     parts = [part for part in key.replace("__", ".").split(".") if part]
@@ -181,18 +172,18 @@ def register_tools(mcp, client_manager: ClientManager):
     config_loader = load_unified_config
 
     @mcp.tool()
-    async def get_config(
+    async def get_settings(
         key: str | None = None,
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Return configuration values from the unified settings model."""
 
         try:
-            config: Config = cast(Config, config_loader())
+            config: Settings = cast(Settings, config_loader())
             if key:
                 raw_value = _resolve_key(config, key)
                 if raw_value is None:
-                    message = f"Config key '{key}' not found"
+                    message = f"Settings key '{key}' not found"
                     if ctx:
                         await ctx.warning(message)
                     return {"key": key, "found": False, "value": None}
@@ -211,7 +202,7 @@ def register_tools(mcp, client_manager: ClientManager):
         except Exception as exc:  # pragma: no cover - unexpected failure
             logger.exception("Failed to read configuration")
             if ctx:
-                await ctx.error(f"Config error: {exc}")
+                await ctx.error(f"Settings error: {exc}")
             return {"error": str(exc)}
 
     @mcp.tool()
@@ -221,7 +212,7 @@ def register_tools(mcp, client_manager: ClientManager):
         """Validate configuration health and highlight potential issues."""
 
         try:
-            config: Config = cast(Config, config_loader())
+            config: Settings = cast(Settings, config_loader())
             issues: list[str] = []
             warnings = _collect_provider_warnings(config)
             grouping_warnings, grouping_supported = await _grouping_support_status(
@@ -261,9 +252,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 "config": sanitized,
             }
         except Exception as exc:  # pragma: no cover - defensive guardrail
-            logger.exception("Config validation failed")
+            logger.exception("Settings validation failed")
             if ctx:
                 await ctx.error(f"Validation error: {exc}")
             return {"valid": False, "error": str(exc)}
-
-    # Retain legacy endpoint names for existing clients

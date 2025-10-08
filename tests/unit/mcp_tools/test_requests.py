@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from src.config import (
+from src.config.models import (
     ChunkingStrategy,
     FusionAlgorithm,
     SearchAccuracy,
@@ -13,16 +13,15 @@ from src.mcp_tools.models.requests import (
     BatchRequest,
     DocumentRequest,
     EmbeddingRequest,
-    FilteredSearchRequest,
-    SearchRequest,
 )
+from src.models.search import SearchRequest
 
 
 @pytest.mark.parametrize(
     "payload",
     [
-        {"query": "", "collection": "docs"},
-        {"query": "docs", "collection": ""},
+        {"query": "", "collection": "docs", "limit": 10, "offset": 0},
+        {"query": "docs", "collection": "", "limit": 10, "offset": 0},
     ],
 )
 def test_search_request_rejects_blank_fields(payload):
@@ -33,12 +32,12 @@ def test_search_request_rejects_blank_fields(payload):
 
 @pytest.mark.parametrize(
     "limit",
-    [0, 101],
+    [0, 1001],
 )
 def test_search_request_enforces_limit_bounds(limit):
     """SearchRequest.limit must stay within the documented bounds."""
     with pytest.raises(ValidationError):
-        SearchRequest(query="test", limit=limit)
+        SearchRequest(query="test", limit=limit, offset=0)
 
 
 @pytest.mark.parametrize(
@@ -52,12 +51,14 @@ def test_search_request_accepts_supported_enums(strategy, fusion, accuracy):
     """Enumerated configuration options should round-trip correctly."""
     request = SearchRequest(
         query="hello",
-        strategy=strategy,
+        search_strategy=strategy,
         fusion_algorithm=fusion,
         search_accuracy=accuracy,
+        limit=10,
+        offset=0,
     )
 
-    assert request.strategy is strategy
+    assert request.search_strategy is strategy
     assert request.fusion_algorithm is fusion
     assert request.search_accuracy is accuracy
 
@@ -87,13 +88,6 @@ def test_batch_request_validates_inputs(payload):
     """BatchRequest validates list contents and concurrency limits."""
     with pytest.raises(ValidationError):
         BatchRequest(**payload)
-
-
-def test_filtered_search_request_requires_filters():
-    """FilteredSearchRequest must include at least one filter."""
-    invalid_payload: dict[str, object] = {"query": "hello", "filters": None}
-    with pytest.raises(ValidationError):
-        FilteredSearchRequest.model_validate(invalid_payload)
 
 
 def test_document_request_defaults_apply():

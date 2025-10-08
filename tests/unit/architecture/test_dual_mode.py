@@ -1,7 +1,10 @@
 """Unit tests for dual-mode architecture utilities."""
 
+# pylint: disable=duplicate-code
+
 from __future__ import annotations
 
+from collections.abc import Generator
 from types import SimpleNamespace
 from typing import cast
 
@@ -21,16 +24,12 @@ from src.architecture.modes import (
     ENTERPRISE_MODE_CONFIG,
     SIMPLE_MODE_CONFIG,
     ApplicationMode,
-    detect_mode_from_environment,
-    get_enabled_services,
-    get_feature_setting,
     get_mode_config,
-    get_resource_limit,
-    is_enterprise_mode,
-    is_service_enabled,
-    is_simple_mode,
+    resolve_mode,
 )
 from src.architecture.service_factory import ModeAwareServiceFactory
+from src.config import get_settings, refresh_settings
+from src.config.models import Environment
 
 
 EXPECTED_SIMPLE_SERVICES = {
@@ -56,9 +55,19 @@ FORBIDDEN_SIMPLE_SERVICES = {
 
 
 @pytest.fixture(autouse=True)
-def _clear_mode_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Ensure mode environment variables never leak between tests."""
+def _install_default_config(
+    config_factory, monkeypatch: pytest.MonkeyPatch
+) -> Generator[None, None, None]:
+    """Provision an isolated Config instance for each test."""
     monkeypatch.delenv("AI_DOCS_MODE", raising=False)
+    refresh_settings(
+        settings=config_factory(
+            mode=ApplicationMode.SIMPLE,
+            environment=Environment.TESTING,
+        )
+    )
+    yield
+    refresh_settings()
 
 
 def _install_flag_stub(
@@ -128,50 +137,50 @@ class TestModeDetection:
     """Validate environment-driven mode detection and derived helpers."""
 
     @pytest.mark.parametrize(
-        ("env_value", "expected"),
+        "expected",
         [
-            ("simple", ApplicationMode.SIMPLE),
-            ("enterprise", ApplicationMode.ENTERPRISE),
+            ApplicationMode.SIMPLE,
+            ApplicationMode.ENTERPRISE,
         ],
     )
-    def test_detect_mode_from_environment(
-        self, monkeypatch: pytest.MonkeyPatch, env_value: str, expected: ApplicationMode
-    ) -> None:
-        monkeypatch.setenv("AI_DOCS_MODE", env_value)
-        assert detect_mode_from_environment() is expected
+    def test_resolve_mode_reflects_settings(self, expected: ApplicationMode) -> None:
+        current = get_settings()
+        refresh_settings(settings=current.model_copy(update={"mode": expected}))
+        assert resolve_mode() is expected
 
-    def test_detect_mode_defaults_to_simple(self) -> None:
-        assert detect_mode_from_environment() is ApplicationMode.SIMPLE
-
-    def test_detect_mode_handles_invalid_values(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.setenv("AI_DOCS_MODE", "invalid")
-        assert detect_mode_from_environment() is ApplicationMode.SIMPLE
+    def test_resolve_mode_defaults_to_current_settings(self) -> None:
+        assert resolve_mode() is ApplicationMode.SIMPLE
 
     def test_get_mode_config_auto_uses_detection(
-        self, monkeypatch: pytest.MonkeyPatch
+        self,
     ) -> None:
-        monkeypatch.setenv("AI_DOCS_MODE", "enterprise")
+        refresh_settings(
+            settings=get_settings().model_copy(
+                update={"mode": ApplicationMode.ENTERPRISE}
+            )
+        )
         assert get_mode_config() == ENTERPRISE_MODE_CONFIG
 
-    def test_helper_functions_reflect_mode(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.setenv("AI_DOCS_MODE", "enterprise")
-        assert is_enterprise_mode() is True
-        assert is_simple_mode() is False
-        assert "advanced_search" in get_enabled_services()
-        assert is_service_enabled("advanced_search") is True
-        assert get_feature_setting("enable_advanced_monitoring") is True
-        assert get_resource_limit("max_concurrent_requests") == 100
+    def test_helper_functions_reflect_mode(self) -> None:
+        refresh_settings(
+            settings=get_settings().model_copy(
+                update={"mode": ApplicationMode.ENTERPRISE}
+            )
+        )
+        assert resolve_mode() is ApplicationMode.ENTERPRISE
+        enterprise = get_mode_config(config=get_settings())
+        assert "advanced_search" in enterprise.enabled_services
+        assert enterprise.max_complexity_features["enable_advanced_monitoring"] is True
+        assert enterprise.resource_limits["max_concurrent_requests"] == 100
 
-        monkeypatch.setenv("AI_DOCS_MODE", "simple")
-        assert is_simple_mode() is True
-        assert is_enterprise_mode() is False
-        assert is_service_enabled("advanced_search") is False
-        assert get_feature_setting("enable_advanced_monitoring") is False
-        assert get_resource_limit("max_concurrent_requests") == 5
+        refresh_settings(
+            settings=get_settings().model_copy(update={"mode": ApplicationMode.SIMPLE})
+        )
+        assert resolve_mode() is ApplicationMode.SIMPLE
+        simple = get_mode_config(config=get_settings())
+        assert "advanced_search" not in simple.enabled_services
+        assert simple.max_complexity_features["enable_advanced_monitoring"] is False
+        assert simple.resource_limits["max_concurrent_requests"] == 5
 
 
 class TestFeatureFlag:
@@ -179,8 +188,7 @@ class TestFeatureFlag:
 
     def test_feature_flag_respects_modes(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(
-            "src.architecture.features.get_current_mode",
-            lambda: ApplicationMode.SIMPLE,
+            "src.architecture.features.resolve_mode", lambda *_: ApplicationMode.SIMPLE
         )
         flag = FeatureFlag(SIMPLE_MODE_CONFIG)
         assert flag.is_simple_mode() is True
@@ -188,8 +196,8 @@ class TestFeatureFlag:
         assert flag.is_feature_enabled("enable_advanced_monitoring") is False
 
         monkeypatch.setattr(
-            "src.architecture.features.get_current_mode",
-            lambda: ApplicationMode.ENTERPRISE,
+            "src.architecture.features.resolve_mode",
+            lambda *_: ApplicationMode.ENTERPRISE,
         )
         flag = FeatureFlag(ENTERPRISE_MODE_CONFIG)
         assert flag.is_simple_mode() is False
@@ -267,7 +275,7 @@ class TestServiceFactory:
 
     def test_auto_detect_mode(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(
-            "src.architecture.service_factory.get_current_mode",
+            "src.architecture.service_factory.resolve_mode",
             lambda: ApplicationMode.ENTERPRISE,
         )
         factory = ModeAwareServiceFactory()

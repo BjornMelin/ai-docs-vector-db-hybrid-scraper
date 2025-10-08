@@ -13,7 +13,7 @@ import httpx
 import pytest
 from click.testing import CliRunner
 
-from src.config import Config
+from src.config import Settings
 from src.crawl4ai_bulk_embedder import (
     BulkEmbedder,
     ProcessingState,
@@ -74,7 +74,7 @@ def stub_async_client(
 def mock_config() -> MagicMock:
     """Return a configuration stub with embedding defaults."""
 
-    config = MagicMock(spec=Config)
+    config = MagicMock(spec=Settings)
     config.openai = MagicMock(dimensions=1536, model="text-embedding-3-small")
     config.fastembed = MagicMock(generate_sparse=True, model="BAAI/bge-small-en-v1.5")
     config.chunking = MagicMock(chunk_size=1000, chunk_overlap=200)
@@ -738,7 +738,7 @@ class TestCLI:
     def test_cli_with_urls(self) -> None:
         with (
             patch("src.crawl4ai_bulk_embedder.asyncio.run") as mock_run,
-            patch("src.crawl4ai_bulk_embedder.get_config") as mock_get_config,
+            patch("src.crawl4ai_bulk_embedder.get_settings") as mock_get_config,
             patch("src.crawl4ai_bulk_embedder.configure_logging"),
         ):
             mock_get_config.return_value = MagicMock()
@@ -758,7 +758,7 @@ class TestCLI:
 
         with (
             patch("src.crawl4ai_bulk_embedder.asyncio.run") as mock_run,
-            patch("src.crawl4ai_bulk_embedder.get_config") as mock_get_config,
+            patch("src.crawl4ai_bulk_embedder.get_settings") as mock_get_config,
             patch("src.crawl4ai_bulk_embedder.configure_logging"),
         ):
             mock_get_config.return_value = MagicMock()
@@ -772,7 +772,7 @@ class TestCLI:
     def test_cli_with_sitemap(self) -> None:
         with (
             patch("src.crawl4ai_bulk_embedder.asyncio.run") as mock_run,
-            patch("src.crawl4ai_bulk_embedder.get_config") as mock_get_config,
+            patch("src.crawl4ai_bulk_embedder.get_settings") as mock_get_config,
             patch("src.crawl4ai_bulk_embedder.configure_logging"),
         ):
             mock_get_config.return_value = MagicMock()
@@ -786,7 +786,7 @@ class TestCLI:
     def test_cli_no_input(self) -> None:
         with (
             patch("src.crawl4ai_bulk_embedder.asyncio.run") as mock_run,
-            patch("src.crawl4ai_bulk_embedder.get_config") as mock_get_config,
+            patch("src.crawl4ai_bulk_embedder.get_settings") as mock_get_config,
             patch("src.crawl4ai_bulk_embedder.configure_logging"),
         ):
             mock_get_config.return_value = MagicMock()
@@ -805,7 +805,7 @@ class TestCLI:
 
         with (
             patch("src.crawl4ai_bulk_embedder.asyncio.run") as mock_run,
-            patch("src.crawl4ai_bulk_embedder.get_config") as mock_get_config,
+            patch("src.crawl4ai_bulk_embedder.get_settings") as mock_get_config,
             patch("src.crawl4ai_bulk_embedder.configure_logging"),
         ):
             mock_get_config.return_value = MagicMock()

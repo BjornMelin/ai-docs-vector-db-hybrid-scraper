@@ -60,22 +60,18 @@ class SearchOrchestrator(BaseService):
 
     def __init__(
         self,
-        vector_store_service: VectorStoreService | None = None,
         *,
+        vector_store_service: VectorStoreService,
         rag_config: ServiceRAGConfig | None = None,
     ) -> None:
         """Initialize the search orchestrator.
 
         Args:
             vector_store_service: Service for vector database operations.
-            expansion_service: Service for query expansion.
-            ranking_service: Service for personalized result ranking.
             rag_config: Configuration for RAG (optional).
         """
         super().__init__(None)
-        self._vector_store_service: VectorStoreService = (
-            vector_store_service or VectorStoreService()
-        )
+        self._vector_store_service: VectorStoreService = vector_store_service
         self._rag_config = rag_config
         self._rag_pipeline: LangGraphRAGPipeline | None = None
 

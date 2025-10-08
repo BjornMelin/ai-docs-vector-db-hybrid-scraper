@@ -9,7 +9,7 @@ from uuid import uuid4
 from fastmcp import Context
 
 from src.chunking import DocumentChunker
-from src.config import ChunkingConfig, ChunkingStrategy
+from src.config.models import ChunkingConfig, ChunkingStrategy
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.models.requests import BatchRequest, DocumentRequest
 from src.mcp_tools.models.responses import AddDocumentResponse, DocumentBatchResponse

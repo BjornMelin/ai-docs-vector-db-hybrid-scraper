@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.config import Config
+from src.config import Settings
 from src.services.embeddings.manager import EmbeddingManager, QualityTier
 from src.services.embeddings.manager.providers import ProviderFactories
 from src.services.errors import EmbeddingServiceError
@@ -14,7 +14,7 @@ from src.services.errors import EmbeddingServiceError
 @pytest.fixture
 def mock_config():
     """Create mock unified config."""
-    config = MagicMock(spec=Config)
+    config = MagicMock(spec=Settings)
     config.openai = MagicMock()
     config.openai.api_key = "test-key"
     config.openai.model = "text-embedding-3-small"

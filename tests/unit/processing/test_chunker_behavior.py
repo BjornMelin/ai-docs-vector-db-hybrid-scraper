@@ -8,7 +8,7 @@ from unittest.mock import patch
 import pytest
 
 from src.chunking import DocumentChunker
-from src.config import ChunkingConfig, ChunkingStrategy
+from src.config.models import ChunkingConfig, ChunkingStrategy
 
 
 @pytest.fixture()

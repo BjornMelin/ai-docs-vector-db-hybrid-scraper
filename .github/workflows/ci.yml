@@ -98,6 +98,9 @@ jobs:
       - name: Pyright
         run: uv run pyright
 
+      - name: Configuration guard
+        run: python scripts/guards/check_settings_usage.py
+
   tests:
     name: Test suite (${{ matrix.profile }})
     runs-on: ubuntu-latest

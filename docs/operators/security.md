@@ -158,6 +158,10 @@ services:
       - db_password
     environment:
       - OPENAI_API_KEY_FILE=/run/secrets/openai_api_key
+      - DB_PASSWORD_FILE=/run/secrets/db_password
+
+# Map secret files to the loader-prefixed variables during container startup, for example:
+# export AI_DOCS__OPENAI__API_KEY="$(cat /run/secrets/openai_api_key)"
 ```
 
 ### Data Encryption

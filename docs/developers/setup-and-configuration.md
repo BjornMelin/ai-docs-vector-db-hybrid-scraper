@@ -49,7 +49,7 @@ AI_DOCS__MODE=enterprise uv run python scripts/dev.py test --profile quick
 
 ## 4. Configuration Loader
 
-`src/config/loader.Config` is a Pydantic `BaseSettings` class that reads
+`src/config/loader.Settings` is a Pydantic `BaseSettings` class that reads
 configuration from environment variables. Key behaviours:
 
 - Nested keys use double underscores (e.g. `AI_DOCS__QDRANT__URL`).
@@ -89,6 +89,22 @@ export AI_DOCS__AGENTIC__MAX_PARALLEL_TOOLS=2
 export AI_DOCS__AGENTIC__RUN_TIMEOUT_SECONDS=45
 ```
 
+### Loading configuration files
+
+The CLI now understands JSON _and_ YAML configuration files via the shared
+`load_settings_from_file` helper. Example:
+
+```bash
+# Validate without mutating ~/.ai-docs config
+uv run python -m src.cli.main config load config/production.json --validate-only
+
+# Load overrides into the current session context
+uv run python -m src.cli.main config load config/staging.yaml
+```
+
+Use `uv run python -m src.cli.main config export --format json` to snapshot the
+current in-memory settings or `--format yaml` when PyYAML is available.
+
 ### Secrets
 
 Keep API keys out of the repository and inject them via environment variables or
@@ -96,10 +112,9 @@ your orchestrator's secret manager. Setting top-level keys such as
 `AI_DOCS__OPENAI__API_KEY` automatically mirrors values into nested config
 sections.
 
-### Hot Reloading
+### Refreshing Settings
 
-`src/config/reloader.py` offers an opt-in watcher for local development. Disable
-it in production to avoid unintended restarts.
+Hot reloading has been removed. When configuration changes are required, refresh settings through the `/config/refresh` API or restart the process to ensure a clean environment.
 
 ## 5. Running Services
 

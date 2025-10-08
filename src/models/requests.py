@@ -17,19 +17,6 @@ class MCPToolRequest(BaseModel):
     model_config = ConfigDict(extra="allow")
 
 
-class SearchRequest(BaseModel):
-    """Search request model."""
-
-    query: str = Field(..., description="Search query text")
-    limit: int = Field(
-        default=10, ge=1, le=100, description="Maximum number of results"
-    )
-    offset: int = Field(default=0, ge=0, description="Search result offset")
-    filters: dict[str, Any] | None = Field(default=None, description="Search filters")
-
-    model_config = ConfigDict(extra="forbid")
-
-
 class DocumentRequest(BaseModel):
     """Document request model."""
 

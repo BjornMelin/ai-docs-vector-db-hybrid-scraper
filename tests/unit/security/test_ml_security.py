@@ -79,7 +79,7 @@ class TestMLSecurityValidator:
         ]
 
         with (
-            patch("src.security.ml_security.get_config", return_value=mock_config),
+            patch("src.security.ml_security.get_settings", return_value=mock_config),
             patch("src.security.ml_security.BaseSecurityValidator.from_unified_config"),
         ):
             return MLSecurityValidator()
@@ -340,13 +340,13 @@ class TestSimpleRateLimiter:
 
     def test_init(self):
         """Test rate limiter initialization."""
-        with patch("src.security.ml_security.get_config"):
+        with patch("src.security.ml_security.get_settings"):
             limiter = SimpleRateLimiter()
             assert limiter.config is not None
 
     def test_is_allowed(self):
         """Test rate limiting check."""
-        with patch("src.security.ml_security.get_config"):
+        with patch("src.security.ml_security.get_settings"):
             limiter = SimpleRateLimiter()
 
             # Should always return True as it's a placeholder
@@ -411,7 +411,7 @@ class TestIntegration:
         ]
 
         with (
-            patch("src.security.ml_security.get_config", return_value=mock_config),
+            patch("src.security.ml_security.get_settings", return_value=mock_config),
             patch("src.security.ml_security.BaseSecurityValidator.from_unified_config"),
         ):
             return MLSecurityValidator()

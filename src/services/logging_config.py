@@ -25,7 +25,7 @@ try:
 except ImportError:  # pragma: no cover - optional dependency
     colorlog = None
 
-from src.config import get_config
+from src.config.loader import Settings, get_settings
 
 
 _DEFAULT_CONSOLE_FORMAT = (
@@ -164,6 +164,7 @@ def with_service_context(service_name: str) -> LogContext:
     return LogContext(service=service_name)
 
 
+# pylint: disable=too-many-arguments,too-many-locals
 def configure_logging(
     level: str | None = None,
     *,
@@ -171,6 +172,7 @@ def configure_logging(
     log_file: str | os.PathLike[str] | None = None,
     json_console: bool = False,
     force: bool = False,
+    settings: Settings | None = None,
 ) -> None:
     """Configure application-wide logging.
 
@@ -184,7 +186,7 @@ def configure_logging(
         force: When ``True`` existing managed handlers are replaced.
     """
 
-    config = get_config()
+    config = settings or get_settings()
 
     resolved_level = (level or config.log_level.value).upper()
     level_value = getattr(logging, resolved_level, logging.INFO)

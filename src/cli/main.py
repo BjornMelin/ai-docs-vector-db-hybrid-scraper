@@ -11,7 +11,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from src.config import Config, get_config
+from src.config.loader import get_settings, load_settings_from_file
 from src.services.health import perform_health_checks, summarize_results
 
 # Import command groups
@@ -102,10 +102,9 @@ def main(ctx: click.Context, config: Path | None, quiet: bool):
     # Load configuration
     try:
         if config:
-            # Load from specific file using Pydantic BaseSettings parse_file method
-            ctx.obj["config"] = Config.parse_file(config)
+            ctx.obj["config"] = load_settings_from_file(config)
         else:
-            ctx.obj["config"] = get_config()
+            ctx.obj["config"] = get_settings()
     except (OSError, ValueError, RuntimeError) as e:
         rich_cli.show_error("Failed to load configuration", details=str(e))
         sys.exit(1)

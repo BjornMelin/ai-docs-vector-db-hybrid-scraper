@@ -9,7 +9,6 @@ from typing import Literal
 from fastmcp import Context
 
 from src.infrastructure.client_manager import ClientManager
-from src.services.dependencies import get_crawl_manager
 from src.services.errors import CrawlServiceError
 
 
@@ -191,7 +190,7 @@ def register_tools(mcp, client_manager: ClientManager):
         validated_formats = _validate_formats(formats)
 
         # Get CrawlManager which uses UnifiedBrowserManager
-        crawl_manager = await get_crawl_manager(client_manager)
+        crawl_manager = await client_manager.get_crawl_manager()
 
         if ctx:
             await ctx.debug("Using UnifiedBrowserManager with lightweight tier")
@@ -204,9 +203,7 @@ def register_tools(mcp, client_manager: ClientManager):
             start_time = time.time()
 
             # Force lightweight tier by specifying preferred_provider
-            result = await crawl_manager.scrape_url(
-                url=url, preferred_provider="lightweight"
-            )
+            result = await crawl_manager.scrape_url(url=url, tier="lightweight")
 
             elapsed_ms = (time.time() - start_time) * 1000
 

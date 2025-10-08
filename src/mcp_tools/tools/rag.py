@@ -10,7 +10,7 @@ from typing import Any
 from fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
-from src.config import Config, get_config
+from src.config.loader import Settings, get_settings
 from src.infrastructure.client_manager import ClientManager
 from src.services.rag.generator import RAGGenerator
 from src.services.rag.models import RAGRequest, RAGResult
@@ -69,7 +69,7 @@ class RAGMetricsResponse(BaseModel):
     )
 
 
-def _ensure_rag_enabled(config: Config) -> None:
+def _ensure_rag_enabled(config: Settings) -> None:
     """Validate that RAG is enabled in the active configuration."""
 
     if not config.rag.enable_rag:
@@ -126,7 +126,7 @@ def register_tools(app: FastMCP, client_manager: ClientManager) -> None:
             RAGAnswerResponse: Generated answer with metadata and sources
         """
 
-        config = get_config()
+        config = get_settings()
 
         _ensure_rag_enabled(config)
 
@@ -156,7 +156,7 @@ def register_tools(app: FastMCP, client_manager: ClientManager) -> None:
         Raises:
             RuntimeError: If metrics retrieval fails
         """
-        config = get_config()
+        config = get_settings()
 
         _ensure_rag_enabled(config)
 
@@ -187,7 +187,7 @@ def register_tools(app: FastMCP, client_manager: ClientManager) -> None:
         Raises:
             RuntimeError: If configuration test fails
         """
-        config = get_config()
+        config = get_settings()
 
         results = {
             "rag_enabled": config.rag.enable_rag,
@@ -225,7 +225,7 @@ def register_tools(app: FastMCP, client_manager: ClientManager) -> None:
         Raises:
             RuntimeError: If cache clearing fails
         """
-        config = get_config()
+        config = get_settings()
 
         if not config.rag.enable_rag:
             msg = "RAG is not enabled in the configuration"

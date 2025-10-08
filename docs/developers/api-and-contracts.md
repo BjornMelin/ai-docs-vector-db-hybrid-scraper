@@ -51,8 +51,8 @@ Example response:
   "service_type": "simple",
   "stats": {
     "collections": ["documents"],
-    "default_collection": "documents",
-    "default_collection_stats": {"vectors_count": 1527}
+    "primary_collection": "documents",
+    "primary_collection_stats": {"vectors_count": 1527}
   }
 }
 ```

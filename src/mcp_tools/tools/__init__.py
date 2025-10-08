@@ -1,37 +1,35 @@
-"""MCP Tools Package.
+"""MCP Tools package with explicit, final exports."""
 
-This package contains all modular tool implementations for the MCP server.
-Each module exports a register_tools function that registers its tools with
-the FastMCP instance.
-"""
+from __future__ import annotations
 
-from . import (
-    agentic_rag,
-    analytics,
-    cache,
-    collection_management,
-    configuration,
-    content_intelligence,
-    cost_estimation,
-    crawling,
-    document_management,
-    documents,
-    embeddings,
-    lightweight_scrape,
-    payload_indexing,
-    projects,
-    query_processing_tools,
-    rag,
-    search,
-    search_tools,
-    system_health,
-    utilities,
-    web_search,
-)
+import importlib
+from typing import TYPE_CHECKING, Any
+
+
+if TYPE_CHECKING:
+    from src.mcp_tools.tools import (
+        analytics,
+        cache,
+        collection_management,
+        configuration,
+        content_intelligence,
+        cost_estimation,
+        crawling,
+        documents,
+        embeddings,
+        lightweight_scrape,
+        payload_indexing,
+        projects,
+        rag,
+        retrieval,
+        system_health,
+        web_search,
+    )
 
 
 __all__ = [
-    "agentic_rag",
+    # final surfaces
+    "retrieval",
     "analytics",
     "cache",
     "collection_management",
@@ -39,17 +37,20 @@ __all__ = [
     "content_intelligence",
     "cost_estimation",
     "crawling",
-    "document_management",
     "documents",
     "embeddings",
     "lightweight_scrape",
     "payload_indexing",
     "projects",
-    "query_processing_tools",
     "rag",
-    "search",
-    "search_tools",
     "system_health",
-    "utilities",
     "web_search",
 ]
+
+
+def __getattr__(name: str) -> Any:  # pragma: no cover
+    if name not in __all__:
+        raise AttributeError(f"{__name__!r} has no attribute {name!r}")
+    module = importlib.import_module(f"{__name__}.{name}")
+    globals()[name] = module
+    return module

@@ -51,6 +51,7 @@ class TestMetadataExtractor:
     def test_content_metadata_model_creation(self):
         """Test ContentMetadata model can be created with basic fields."""
         metadata = ContentMetadata(
+            url="https://example.com/test-metadata",
             title="Test Document",
             description="A test document for validation",
             word_count=50,
@@ -66,7 +67,7 @@ class TestMetadataExtractor:
 
     def test_content_metadata_model_defaults(self):
         """Test ContentMetadata model with default values."""
-        metadata = ContentMetadata()
+        metadata = ContentMetadata(url="https://example.com/default-metadata")
 
         assert metadata.title is None
         assert metadata.description is None

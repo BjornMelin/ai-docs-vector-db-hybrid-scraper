@@ -1,21 +1,29 @@
-"""Intelligent batch processing for optimal throughput and performance.
+"""Batch processing for optimal throughput and performance.
 
-This module provides advanced batch processing capabilities with dynamic batching,
-intelligent timing, and optimized resource utilization for maximum performance.
+This module provides batch processing capabilities with dynamic batching,
+intelligent timing, and optimized resource utilization for performance.
 """
 
 import asyncio
 import logging
 import time
-from collections.abc import Callable
-from dataclasses import dataclass
-from typing import Any, TypeVar
+from collections.abc import Awaitable, Callable, Iterable
+from dataclasses import dataclass, field
+from inspect import iscoroutinefunction
+from typing import Any, cast
 
 
 logger = logging.getLogger(__name__)
+BatchProcessFn = Callable[[list[Any]], Awaitable[list[Any]] | list[Any]]
 
-T = TypeVar("T")
-R = TypeVar("R")
+
+@dataclass(slots=True)
+class _BatchState:
+    """Mutable batch state tracking pending work and timing."""
+
+    pending_items: list[Any] = field(default_factory=list)
+    pending_futures: list[asyncio.Future[Any]] = field(default_factory=list)
+    last_batch_time: float = field(default_factory=time.time)
 
 
 @dataclass
@@ -34,28 +42,25 @@ class BatchProcessor:
 
     def __init__(
         self,
-        process_func: Callable[[list[T]], list[R]],
-        config: BatchConfig | None = None,
+        process_func: BatchProcessFn,
+        config: BatchConfig,
     ):
         """Initialize batch processor with processing function and configuration.
 
         Args:
             process_func: Function to process batches of items
             config: Batch processing configuration
-
         """
         self.process_func = process_func
-        self.config = config or BatchConfig()
-        self.pending_items: list[T] = []
-        self.pending_futures: list[asyncio.Future] = []
-        self.last_batch_time = time.time()
+        self.config = config
+        self.state = _BatchState()
         self.processing_lock = asyncio.Lock()
 
         # Performance tracking for adaptive sizing
         self.batch_performance_history: list[tuple[int, float]] = []
         self.optimal_batch_size = self.config.max_batch_size
 
-    async def process_item(self, item: T) -> R:
+    async def process_item(self, item: Any) -> Any:
         """Add item to batch and return result when processed.
 
         Args:
@@ -63,13 +68,14 @@ class BatchProcessor:
 
         Returns:
             Processing result for the item
-
         """
-        future = asyncio.Future()
+
+        loop = asyncio.get_running_loop()
+        future: asyncio.Future[Any] = loop.create_future()
 
         async with self.processing_lock:
-            self.pending_items.append(item)
-            self.pending_futures.append(future)
+            self.state.pending_items.append(item)
+            self.state.pending_futures.append(future)
 
             # Check if we should process the batch
             should_process = self._should_process_batch()
@@ -94,8 +100,8 @@ class BatchProcessor:
             True if batch should be processed now
 
         """
-        current_size = len(self.pending_items)
-        time_since_last = time.time() - self.last_batch_time
+        current_size = len(self.state.pending_items)
+        time_since_last = time.time() - self.state.last_batch_time
 
         # Use adaptive batch size if enabled
         target_size = (
@@ -111,30 +117,28 @@ class BatchProcessor:
 
     async def _process_batch(self) -> None:
         """Process current batch of items with performance tracking."""
-        if not self.pending_items:
+        if not self.state.pending_items:
             return
 
-        items = self.pending_items.copy()
-        futures = self.pending_futures.copy()
+        items = self.state.pending_items.copy()
+        futures = self.state.pending_futures.copy()
 
         # Clear pending lists
-        self.pending_items.clear()
-        self.pending_futures.clear()
-        self.last_batch_time = time.time()
+        self.state.pending_items.clear()
+        self.state.pending_futures.clear()
+        self.state.last_batch_time = time.time()
 
         batch_size = len(items)
         start_time = time.time()
 
         try:
-            # Process batch
-            if asyncio.iscoroutinefunction(self.process_func):
-                results = await self.process_func(items)
+            loop = asyncio.get_running_loop()
+            if iscoroutinefunction(self.process_func):
+                processed = await self.process_func(items)
             else:
-                results = await asyncio.get_event_loop().run_in_executor(
-                    None,
-                    self.process_func,
-                    items,
-                )
+                processed = await loop.run_in_executor(None, self.process_func, items)
+
+            results: list[Any] = list(cast(Iterable[Any], processed))
 
             # Calculate processing time
             processing_time = (time.time() - start_time) * 1000  # Convert to ms
@@ -148,7 +152,7 @@ class BatchProcessor:
                     future.set_result(result)
 
             logger.debug(
-                f"Processed batch of {batch_size} items in {processing_time:.1f}ms",
+                "Processed batch of %d items in %dms", batch_size, processing_time
             )
 
         except Exception as e:
@@ -168,8 +172,8 @@ class BatchProcessor:
         Args:
             batch_size: Size of the processed batch
             processing_time: Time taken to process the batch in milliseconds
-
         """
+
         # Add to performance history
         self.batch_performance_history.append((batch_size, processing_time))
 
@@ -183,6 +187,7 @@ class BatchProcessor:
 
     def _calculate_optimal_batch_size(self) -> None:
         """Calculate optimal batch size based on performance history."""
+
         if len(self.batch_performance_history) < 5:
             return  # Need more data
 
@@ -218,12 +223,12 @@ class BatchProcessor:
 
     async def _delayed_batch_processing(self) -> None:
         """Process batch after delay if minimum wait time exceeded."""
+
         await asyncio.sleep(self.config.max_wait_time)
 
         async with self.processing_lock:
-            if (
-                self.pending_items
-                and time.time() - self.last_batch_time >= self.config.max_wait_time
+            if self.state.pending_items and (
+                time.time() - self.state.last_batch_time >= self.config.max_wait_time
             ):
                 await self._process_batch()
 
@@ -232,10 +237,13 @@ class BatchProcessor:
 
         Returns:
             dict containing performance metrics
-
         """
+
         if not self.batch_performance_history:
-            return {"status": "no_data"}
+            return {
+                "status": "no_data",
+                "pending_queue_length": len(self.state.pending_items),
+            }
 
         # Calculate statistics
         total_batches = len(self.batch_performance_history)
@@ -253,6 +261,7 @@ class BatchProcessor:
             "avg_processing_time_ms": avg_processing_time,
             "avg_time_per_item_ms": avg_time_per_item,
             "optimal_batch_size": self.optimal_batch_size,
+            "pending_queue_length": len(self.state.pending_items),
             "current_config": {
                 "max_batch_size": self.config.max_batch_size,
                 "max_wait_time_ms": self.config.max_wait_time * 1000,
@@ -262,8 +271,9 @@ class BatchProcessor:
 
     async def flush_pending(self) -> None:
         """Force processing of any pending items."""
+
         async with self.processing_lock:
-            if self.pending_items:
+            if self.state.pending_items:
                 await self._process_batch()
 
 
@@ -291,8 +301,8 @@ class OptimizedEmbeddingService:
 
         Returns:
             Generated embedding vector
-
         """
+
         return await self.batch_processor.process_item(text)
 
     async def _batch_generate_embeddings(self, texts: list[str]) -> list[list[float]]:
@@ -303,10 +313,10 @@ class OptimizedEmbeddingService:
 
         Returns:
             list of embedding vectors
-
         """
-        # This would be replaced with actual embedding service calls
-        # For example, using OpenAI batch API or FastEmbed batch processing
+
+        # TODO: This placeholder simulates actual embedding service calls, such as
+        # integrations with OpenAI batch APIs or FastEmbed batch processing
 
         # Simulate processing time
         await asyncio.sleep(0.01 * len(texts))
@@ -319,6 +329,6 @@ class OptimizedEmbeddingService:
 
         Returns:
             Performance statistics for the embedding service
-
         """
+
         return self.batch_processor.get_performance_stats()

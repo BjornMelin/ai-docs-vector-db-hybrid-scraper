@@ -1,19 +1,20 @@
 """Client coordination layer using function-based dependencies."""
 
+from __future__ import annotations
+
 import asyncio
-import importlib
 import logging
 import threading
 from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
-from datetime import timedelta
-from typing import TYPE_CHECKING, Any, cast
+from importlib import import_module
+from typing import TYPE_CHECKING, Any, Final, Literal, NoReturn, cast
 
 from dependency_injector.wiring import Provide, inject
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_mcp_adapters.sessions import Connection
 
-from src.config import Config, get_config
+from src.config import Settings, get_settings
 from src.config.models import MCPClientConfig, MCPServerConfig, MCPTransport
 from src.infrastructure.clients import (
     FirecrawlClientProvider,
@@ -23,54 +24,134 @@ from src.infrastructure.clients import (
     RedisClientProvider,
 )
 from src.infrastructure.container import ApplicationContainer, get_container
-from src.services.browser.automation_router import AutomationRouter
 from src.services.embeddings.fastembed_provider import FastEmbedProvider
-from src.services.errors import APIError
-from src.services.rag.generator import RAGGenerator
-from src.services.rag.utils import initialise_rag_generator
-from src.services.vector_db.service import VectorStoreService
 
 
-# Import dependencies for health checks
-if TYPE_CHECKING:  # pragma: no cover - import only for type checking
-    HealthStatusCallable = Callable[[], Awaitable[dict[str, dict[str, Any]]]]
-    OverallHealthCallable = Callable[[], Awaitable[dict[str, Any]]]
-else:
-    HealthStatusCallable = Callable[[], Awaitable[dict[str, dict[str, Any]]]]
-    OverallHealthCallable = Callable[[], Awaitable[dict[str, Any]]]
+if TYPE_CHECKING:  # pragma: no cover - imported for typing only
+    from src.services.cache.manager import CacheManager
+    from src.services.content_intelligence.service import ContentIntelligenceService
+    from src.services.core.project_storage import ProjectStorage
+    from src.services.errors import APIError
+    from src.services.managers.crawling_manager import CrawlingManager
+    from src.services.managers.embedding_manager import EmbeddingManager
+    from src.services.rag.generator import RAGGenerator
+    from src.services.vector_db.service import VectorStoreService
+else:  # pragma: no cover - runtime fallback for optional services
+    CacheManager = ContentIntelligenceService = ProjectStorage = EmbeddingManager = (
+        CrawlingManager
+    ) = RAGGenerator = VectorStoreService = APIError = Any
 
-_dependencies_module = None
-try:  # pragma: no cover - optional dependency
-    _dependencies_module = importlib.import_module("src.services.dependencies")
-except ImportError:
-    _dependencies_module = None
 
-if _dependencies_module is not None:
-    _deps_get_health_status = getattr(_dependencies_module, "get_health_status", None)
-    _deps_get_overall_health = getattr(_dependencies_module, "get_overall_health", None)
-else:
-    _deps_get_health_status = None
-    _deps_get_overall_health = None
-
-deps_get_health_status: HealthStatusCallable | None = (
-    cast(HealthStatusCallable, _deps_get_health_status)
-    if _deps_get_health_status is not None
-    else None
-)
-deps_get_overall_health: OverallHealthCallable | None = (
-    cast(OverallHealthCallable, _deps_get_overall_health)
-    if _deps_get_overall_health is not None
-    else None
-)
+HealthStatusCallable = Callable[[], Awaitable[dict[str, dict[str, Any]]]]
+OverallHealthCallable = Callable[[], Awaitable[dict[str, Any]]]
 
 
 logger = logging.getLogger(__name__)
+
+ProviderKey = Literal["firecrawl", "http", "openai", "qdrant", "redis"]
+_PROVIDER_ERROR_MESSAGES: Final[dict[ProviderKey, str]] = {
+    "openai": "OpenAI client provider not available",
+    "qdrant": "Qdrant client provider not available",
+    "redis": "Redis client provider not available",
+    "firecrawl": "Firecrawl client provider not available",
+    "http": "HTTP client provider not available",
+}
+
+
+def _load_automation_router() -> type[Any]:
+    """Dynamically import the automation router implementation."""
+
+    try:
+        module = import_module("src.services.browser.router")
+    except ModuleNotFoundError as exc:  # pragma: no cover - optional dependency
+        msg = "Automation router is unavailable; browser features are disabled"
+        raise RuntimeError(msg) from exc
+    except ImportError as exc:  # pragma: no cover - defensive
+        msg = "Failed to import automation router"
+        raise RuntimeError(msg) from exc
+
+    try:
+        router_cls = module.AutomationRouter
+    except AttributeError as exc:  # pragma: no cover - defensive
+        msg = "Automation router module does not define AutomationRouter"
+        raise RuntimeError(msg) from exc
+
+    return cast(type[Any], router_cls)
+
+
+async def _ensure_service_registry():  # pragma: no cover - thin wrapper
+    registry_module = import_module("src.services.registry")
+    ensure_service_registry = registry_module.ensure_service_registry
+    return await ensure_service_registry()
+
+
+_API_ERROR_TYPE: type[Exception] | None = None
+_HEALTH_FUNCS: (
+    tuple[HealthStatusCallable | None, OverallHealthCallable | None] | None
+) = None
+
+
+def _resolve_api_error_type() -> type[Exception]:
+    """Return the service-layer APIError type without creating import cycles."""
+
+    global _API_ERROR_TYPE  # pylint: disable=global-statement
+    if _API_ERROR_TYPE is None:
+        module = import_module("src.services.errors")
+        _API_ERROR_TYPE = cast(type[Exception], module.APIError)
+    return _API_ERROR_TYPE
+
+
+def _raise_api_error(message: str) -> NoReturn:
+    """Dynamically raise APIError without importing services.errors at module scope."""
+
+    error_type = _resolve_api_error_type()
+    raise error_type(message)
+
+
+def _resolve_health_dependencies() -> tuple[
+    HealthStatusCallable | None, OverallHealthCallable | None
+]:
+    """Dynamically resolve health dependency functions to avoid import cycles."""
+
+    global _HEALTH_FUNCS  # pylint: disable=global-statement
+    if _HEALTH_FUNCS is not None:
+        return _HEALTH_FUNCS
+
+    try:
+        module = import_module("src.services.dependencies")
+    except ModuleNotFoundError:
+        return (None, None)
+    except ImportError:
+        logger.exception(
+            "Failed to import health dependencies from src.services.dependencies"
+        )
+        return (None, None)
+
+    status_func = getattr(module, "get_health_status", None)
+    overall_func = getattr(module, "get_overall_health", None)
+
+    resolved_status = (
+        cast(HealthStatusCallable | None, status_func)
+        if callable(status_func)
+        else None
+    )
+    resolved_overall = (
+        cast(OverallHealthCallable | None, overall_func)
+        if callable(overall_func)
+        else None
+    )
+
+    if resolved_status is None and resolved_overall is None:
+        return (None, None)
+
+    _HEALTH_FUNCS = (resolved_status, resolved_overall)
+    return _HEALTH_FUNCS
 
 
 class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instance-attributes
     """Client coordination layer using function-based dependencies."""
 
-    _instance: "ClientManager | None" = None
+    _instance: ClientManager | None = None
     _lock = asyncio.Lock()
     _init_lock = threading.Lock()
 
@@ -88,19 +169,24 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
             return
 
         # Provider compatibility layer
-        self._providers: dict[str, Any] = {}
+        self._providers: dict[ProviderKey, Any] = {}
         self._parallel_processing_system: Any | None = None
         self._initialized = False
         self._vector_store_service: VectorStoreService | None = None
+        self._cache_manager: CacheManager | None = None
+        self._embedding_manager: EmbeddingManager | None = None
+        self._crawl_manager: CrawlingManager | None = None
+        self._content_intelligence: ContentIntelligenceService | None = None
+        self._project_storage: ProjectStorage | None = None
         self._rag_generator: RAGGenerator | None = None
-        self._rag_generator_lock = asyncio.Lock()
-        self._config = get_config()
-        self._automation_router: AutomationRouter | None = None
+        self._config = get_settings()
+        self._automation_router: Any | None = None
         self._mcp_client: MultiServerMCPClient | None = None
         self._mcp_client_lock = asyncio.Lock()
+        self._service_registry: Any | None = None
 
     @property
-    def config(self) -> Config:
+    def config(self) -> Settings:
         """Return the lazily loaded application configuration."""
 
         return self._config
@@ -151,6 +237,7 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
 
     async def _initialize_parallel_processing_system(self) -> None:
         """Initialize the parallel processing system using dependency injection."""
+
         try:
             container = get_container()
             if container:
@@ -173,37 +260,83 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
 
     async def cleanup(self) -> None:
         """Cleanup resources (function-based dependencies are stateless)."""
+
         if self._vector_store_service:
-            await self._vector_store_service.cleanup()
-            self._vector_store_service = None
+            try:
+                await self._vector_store_service.cleanup()
+            except Exception:  # pragma: no cover - defensive
+                logger.exception("Failed to cleanup vector store service")
+            finally:
+                self._vector_store_service = None
         if self._rag_generator:
-            await self._rag_generator.cleanup()
+            try:
+                await self._rag_generator.cleanup()
+            except Exception:  # pragma: no cover - defensive
+                logger.exception("Failed to cleanup RAG generator")
             self._rag_generator = None
-        self._mcp_client = None
+        if self._automation_router is not None:
+            try:
+                await self._automation_router.cleanup()
+            except Exception:  # pragma: no cover - defensive
+                logger.exception("Failed to cleanup automation router")
+            self._automation_router = None
+        self._cache_manager = None
+        self._embedding_manager = None
+        self._crawl_manager = None
+        self._content_intelligence = None
+        self._project_storage = None
+        await self._close_mcp_client()
         self._providers.clear()
         self._parallel_processing_system = None
+        self._service_registry = None
         self._initialized = False
         logger.info("ClientManager cleaned up")
 
     @classmethod
     def reset_singleton(cls) -> None:
         """Reset singleton instance for testing purposes."""
+
         with cls._init_lock:
             cls._instance = None
+        global _API_ERROR_TYPE, _HEALTH_FUNCS  # pylint: disable=global-statement
+        _API_ERROR_TYPE = None
+        _HEALTH_FUNCS = None
+
+    def _get_provider_client(self, key: ProviderKey) -> Any:
+        provider = self._providers.get(key)
+        if provider is None:
+            _raise_api_error(_PROVIDER_ERROR_MESSAGES[key])
+        return provider.client
+
+    async def _close_mcp_client(self) -> None:
+        """Close the MCP client if it exists."""
+
+        async with self._mcp_client_lock:
+            client = self._mcp_client
+            if client is None:
+                return
+
+            close_async = getattr(client, "aclose", None)
+            if close_async is not None:
+                async_closer = cast(Callable[[], Awaitable[Any]], close_async)
+                await async_closer()
+            else:
+                close_sync = getattr(client, "close", None)
+                if close_sync is not None:
+                    sync_closer = cast(Callable[[], Any], close_sync)
+                    sync_closer()
+
+            self._mcp_client = None
 
     async def get_openai_client(self):
-        provider = self._providers.get("openai")
-        if not provider:
-            msg = "OpenAI client provider not available"
-            raise APIError(msg)
-        return provider.client
+        """Return the OpenAI client."""
+
+        return self._get_provider_client("openai")
 
     async def get_qdrant_client(self):
-        provider = self._providers.get("qdrant")
-        if not provider:
-            msg = "Qdrant client provider not available"
-            raise APIError(msg)
-        return provider.client
+        """Return the Qdrant client."""
+
+        return self._get_provider_client("qdrant")
 
     async def get_mcp_client(self) -> MultiServerMCPClient:
         """Return a cached MultiServerMCPClient built from configuration."""
@@ -215,10 +348,10 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
             config = getattr(self._config, "mcp_client", None)
             if not isinstance(config, MCPClientConfig) or not config.enabled:
                 msg = "MCP client integration is disabled"
-                raise APIError(msg)
+                _raise_api_error(msg)
             if not config.servers:
                 msg = "No MCP servers configured"
-                raise APIError(msg)
+                _raise_api_error(msg)
 
             connections = self._build_mcp_connections(config)
             self._mcp_client = MultiServerMCPClient(connections)
@@ -238,8 +371,12 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
     ) -> Connection:
         """Return serialised configuration for a single MCP server."""
 
-        timeout_ms = server.timeout_ms or config.request_timeout_ms
-        timeout = timedelta(milliseconds=timeout_ms)
+        timeout_ms = (
+            server.timeout_ms
+            if server.timeout_ms is not None
+            else config.request_timeout_ms
+        )
+        timeout_seconds = timeout_ms / 1000.0
 
         if server.transport == MCPTransport.STDIO:
             payload = {
@@ -255,7 +392,7 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
             payload = {
                 "transport": "streamable_http",
                 "url": str(server.url),
-                "timeout": timeout,
+                "timeout": timeout_seconds,
             }
             if server.headers:
                 payload["headers"] = dict(server.headers)
@@ -264,67 +401,139 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         payload = {
             "transport": "sse",
             "url": str(server.url),
-            "timeout": timeout,
-            "sse_read_timeout": timeout,
+            "timeout": timeout_seconds,
+            "sse_read_timeout": timeout_seconds,
         }
         if server.headers:
             payload["headers"] = dict(server.headers)
         return cast(Connection, payload)
 
     async def get_vector_store_service(self) -> VectorStoreService:
+        """Return the vector store service instance."""
+
         if self._vector_store_service:
             return self._vector_store_service
 
         model_name = getattr(self._config.fastembed, "model", "BAAI/bge-small-en-v1.5")
         provider = FastEmbedProvider(model_name=model_name)
-        service = VectorStoreService(self._config, self, provider)
+        vector_module = import_module("src.services.vector_db.service")
+        vector_cls = vector_module.VectorStoreService
+        service = cast(
+            VectorStoreService,
+            vector_cls(
+                config=self._config, client_manager=self, embeddings_provider=provider
+            ),
+        )
         await service.initialize()
         self._vector_store_service = service
         return service
 
-    async def get_rag_generator(self) -> RAGGenerator:
-        """Return an initialized and cached RAG generator instance."""
+    async def get_cache_manager(self) -> CacheManager:
+        cache_manager = self._cache_manager
+        if cache_manager is None:
+            registry = await self._get_service_registry()
+            cache_manager = registry.cache_manager
+            self._cache_manager = cache_manager
+        return cache_manager
 
-        if self._rag_generator is not None:
+    async def get_embedding_manager(self) -> EmbeddingManager:
+        embedding_manager = self._embedding_manager
+        if embedding_manager is None:
+            registry = await self._get_service_registry()
+            embedding_manager = cast(EmbeddingManager, registry.embedding_manager)
+            self._embedding_manager = embedding_manager
+        return embedding_manager
+
+    async def get_crawl_manager(self) -> CrawlingManager:
+        crawling_manager = self._crawl_manager
+        if crawling_manager is None:
+            registry = await self._get_service_registry()
+            crawling_manager = registry.crawl_manager
+            self._crawl_manager = crawling_manager
+        return crawling_manager
+
+    async def get_crawling_manager(self) -> CrawlingManager:
+        """Alias for get_crawl_manager for compatibility with new naming."""
+
+        return await self.get_crawl_manager()
+
+    async def get_content_intelligence_service(
+        self,
+    ) -> ContentIntelligenceService:
+        content_intelligence = self._content_intelligence
+        if content_intelligence is None:
+            registry = await self._get_service_registry()
+            content_intelligence = registry.content_intelligence
+            self._content_intelligence = content_intelligence
+        return content_intelligence
+
+    async def get_project_storage(self) -> ProjectStorage:
+        project_storage = self._project_storage
+        if project_storage is None:
+            registry = await self._get_service_registry()
+            project_storage = registry.project_storage
+            self._project_storage = project_storage
+        return project_storage
+
+    async def get_rag_generator(self) -> RAGGenerator:
+        if self._rag_generator:
             return self._rag_generator
 
-        async with self._rag_generator_lock:
-            if self._rag_generator is None:
-                vector_store = await self.get_vector_store_service()
-                rag_generator, _ = await initialise_rag_generator(
-                    self._config, vector_store
-                )
-                self._rag_generator = rag_generator
-        assert self._rag_generator is not None
-        return self._rag_generator
+        from src.services.rag.generator import (  # pylint: disable=import-outside-toplevel
+            RAGGenerator,
+        )
+        from src.services.rag.models import (  # pylint: disable=import-outside-toplevel
+            RAGConfig as ServiceRAGConfig,
+        )
+        from src.services.rag.retriever import (  # pylint: disable=import-outside-toplevel
+            VectorServiceRetriever,
+        )
+
+        vector_service = await self.get_vector_store_service()
+        rag_config_model = getattr(self._config, "rag", None)
+        rag_config = ServiceRAGConfig.model_validate(
+            rag_config_model.model_dump() if rag_config_model is not None else {}
+        )
+
+        collection_name = getattr(
+            getattr(self._config, "qdrant", None),
+            "collection_name",
+            "documents",
+        )
+
+        retriever = VectorServiceRetriever(
+            vector_service=vector_service,
+            collection=collection_name,
+            k=rag_config.retriever_top_k,
+            rag_config=rag_config,
+        )
+
+        generator = RAGGenerator(rag_config, retriever)
+        await generator.initialize()
+        self._rag_generator = generator
+        return generator
 
     async def get_redis_client(self):
-        provider = self._providers.get("redis")
-        if not provider:
-            msg = "Redis client provider not available"
-            raise APIError(msg)
-        return provider.client
+        return self._get_provider_client("redis")
 
     async def get_firecrawl_client(self):
-        provider = self._providers.get("firecrawl")
-        if not provider:
-            msg = "Firecrawl client provider not available"
-            raise APIError(msg)
-        return provider.client
+        return self._get_provider_client("firecrawl")
 
     async def get_http_client(self):
-        provider = self._providers.get("http")
-        if not provider:
-            msg = "HTTP client provider not available"
-            raise APIError(msg)
-        return provider.client
+        return self._get_provider_client("http")
+
+    async def _get_service_registry(self) -> Any:
+        if self._service_registry is None:
+            self._service_registry = await _ensure_service_registry()
+        return self._service_registry
 
     # Function-based dependency access methods (backward compatibility)
 
     async def get_health_status(self) -> dict[str, dict[str, Any]]:
         """Get health status using function-based dependencies."""
-        if deps_get_health_status:
-            return await deps_get_health_status()
+        status_callable, _ = _resolve_health_dependencies()
+        if status_callable:
+            return await status_callable()
         logger.warning(
             "Health status monitoring not available - function-based dependency "
             "not found"
@@ -333,8 +542,9 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
 
     async def get_overall_health(self) -> dict[str, Any]:
         """Get overall health using function-based dependencies."""
-        if deps_get_overall_health:
-            return await deps_get_overall_health()
+        _, overall_callable = _resolve_health_dependencies()
+        if overall_callable:
+            return await overall_callable()
         return {
             "overall_healthy": False,
             "error": "Health monitoring not available",
@@ -354,17 +564,22 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         """Get parallel processing system instance."""
         return self._parallel_processing_system
 
-    async def get_browser_automation_router(self):
-        """Get browser automation router for intelligent scraping.
-
-        Returns:
-            AutomationRouter instance for intelligent browser automation
-        """
+    async def get_browser_automation_router(self) -> Any:
+        """Get browser automation router for intelligent scraping."""
 
         if self._automation_router is None:
-            self._automation_router = AutomationRouter(self._config)
-            await self._automation_router.initialize()
+            router_cls = _load_automation_router()
+            router = router_cls(self._config)
+            await router.initialize()
+            self._automation_router = router
         return self._automation_router
+
+    def get_browser_automation_metrics(self) -> dict[str, dict[str, int]]:
+        """Return router metrics if the router has been initialized."""
+
+        if self._automation_router is None:
+            return {}
+        return self._automation_router.get_metrics_snapshot()
 
     @asynccontextmanager
     async def managed_client(self, client_type: str):
@@ -381,10 +596,17 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
                 f"Unknown client type: {client_type}. Available: {list(getters.keys())}"
             )
             raise ValueError(msg)
+        api_error = _resolve_api_error_type()
         try:
             yield await getters[client_type]()
-        except (ConnectionError, TimeoutError, APIError, ValueError, RuntimeError):
-            logger.exception("Error using {client_type} client")
+        except (
+            ConnectionError,
+            TimeoutError,
+            api_error,
+            ValueError,
+            RuntimeError,
+        ):
+            logger.exception("Error using %s client", client_type)
             raise
 
     async def __aenter__(self):
@@ -396,7 +618,7 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         return False
 
     @classmethod
-    def from_unified_config(cls) -> "ClientManager":
+    def from_unified_config(cls) -> ClientManager:
         """Create ClientManager instance from unified config.
 
         Used by function-based dependencies for singleton pattern.

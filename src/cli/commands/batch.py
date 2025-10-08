@@ -4,9 +4,13 @@ This module provides batch processing capabilities with
 Rich progress visualization, operation queuing, and interactive confirmations.
 """
 
+# pylint: disable=duplicate-code
+
 import asyncio
-from dataclasses import dataclass
+from collections.abc import Callable
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 import click
 from click.shell_completion import CompletionItem
@@ -23,8 +27,13 @@ from rich.prompt import Confirm
 from rich.table import Table
 from rich.text import Text
 
-from src.infrastructure.client_manager import ClientManager
-from src.manage_vector_db import VectorDBManager
+
+def _init_vector_manager():
+    """Create a VectorDB manager without importing at module load."""
+    # pylint: disable=import-outside-toplevel
+    from src.manage_vector_db import VectorDBManager
+
+    return VectorDBManager()
 
 
 console = Console()
@@ -40,9 +49,8 @@ def complete_collection_name(
         if not config:
             return []
 
-        # Create client manager and get collections
-        client_manager = ClientManager()
-        db_manager = VectorDBManager(client_manager)
+        # Initialize manager and retrieve collections lazily to avoid heavy import
+        db_manager = _init_vector_manager()
 
         # Get collection names (synchronously for completion)
         collections = asyncio.run(db_manager.list_collections())
@@ -69,13 +77,9 @@ class BatchOperation:
 
     name: str
     description: str
-    function: callable
-    args: tuple = ()
-    kwargs: dict = None
-
-    def __post_init__(self):
-        if self.kwargs is None:
-            self.kwargs = {}
+    function: Callable[..., Any]
+    args: tuple[Any, ...] = ()
+    kwargs: dict[str, Any] = field(default_factory=dict)
 
 
 class OperationQueue:
@@ -204,9 +208,6 @@ def index_documents(
         return
 
     try:
-        client_manager = ClientManager()
-        VectorDBManager(client_manager)
-
         with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
@@ -299,7 +300,7 @@ def _show_indexing_preview(
 )
 @click.option("--force", is_flag=True, help="Recreate collections if they exist")
 @click.pass_context
-def create_collections(
+def create_collections(  # pylint: disable=too-many-locals
     ctx: click.Context, collections: tuple, dimension: int, distance: str, _force: bool
 ):
     """Create multiple collections in batch."""
@@ -325,21 +326,24 @@ def create_collections(
 
     # Create operation queue
     queue = OperationQueue()
-    client_manager = ClientManager()
-    db_manager = VectorDBManager(client_manager)
+    db_manager = _init_vector_manager()
 
-    for collection_name in collection_list:
-        operation = BatchOperation(
-            name=f"Create {collection_name}",
-            description=f"Create collection with {dimension}D vectors",
-            function=lambda name=collection_name, size=dimension: asyncio.run(
-                db_manager.create_collection(name, size)
-            ),
-        )
-        queue.add(operation)
+    success = False
+    try:
+        for collection_name in collection_list:
+            operation = BatchOperation(
+                name=f"Create {collection_name}",
+                description=f"Create collection with {dimension}D vectors",
+                function=lambda name=collection_name, size=dimension: asyncio.run(
+                    db_manager.create_collection(name, size)
+                ),
+            )
+            queue.add(operation)
 
-    # Execute operations
-    success = queue.execute(confirm=False)
+        # Execute operations
+        success = queue.execute(confirm=False)
+    finally:
+        asyncio.run(db_manager.cleanup())
 
     if success:
         success_text = Text()
@@ -398,21 +402,24 @@ def delete_collections(ctx: click.Context, collections: tuple, yes: bool):
 
     # Create operation queue
     queue = OperationQueue()
-    client_manager = ClientManager()
-    db_manager = VectorDBManager(client_manager)
+    db_manager = _init_vector_manager()
 
-    for collection_name in collection_list:
-        operation = BatchOperation(
-            name=f"Delete {collection_name}",
-            description="Permanently delete collection and all data",
-            function=lambda name=collection_name: asyncio.run(
-                db_manager.delete_collection(name)
-            ),
-        )
-        queue.add(operation)
+    success = False
+    try:
+        for collection_name in collection_list:
+            operation = BatchOperation(
+                name=f"Delete {collection_name}",
+                description="Permanently delete collection and all data",
+                function=lambda name=collection_name: asyncio.run(
+                    db_manager.delete_collection(name)
+                ),
+            )
+            queue.add(operation)
 
-    # Execute operations
-    success = queue.execute(confirm=False)
+        # Execute operations
+        success = queue.execute(confirm=False)
+    finally:
+        asyncio.run(db_manager.cleanup())
 
     if success:
         rich_cli.console.print(
@@ -445,10 +452,11 @@ def backup_collections(
 
     # If no collections specified, backup all
     if not collections:
-        client_manager = ClientManager()
-        db_manager = VectorDBManager(client_manager)
-        collection_names = asyncio.run(db_manager.list_collections())
-        asyncio.run(db_manager.cleanup())
+        db_manager = _init_vector_manager()
+        try:
+            collection_names = asyncio.run(db_manager.list_collections())
+        finally:
+            asyncio.run(db_manager.cleanup())
     else:
         collection_names = list(collections)
 
@@ -473,9 +481,6 @@ def backup_collections(
     if not Confirm.ask("Proceed with backup?"):
         rich_cli.console.print("[yellow]Backup cancelled.[/yellow]")
         return
-
-    # TODO: Implement actual backup functionality
-    # This would require implementing export functionality in the vector DB service
 
     rich_cli.console.print("[yellow]Backup functionality coming soon![/yellow]")
     rich_cli.console.print("This feature will be implemented in a future update.")

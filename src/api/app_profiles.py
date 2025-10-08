@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-from src.architecture.modes import ApplicationMode, get_current_mode
+from src.architecture.modes import ApplicationMode, resolve_mode
 
 
 class AppProfile(str, Enum):
@@ -28,7 +28,7 @@ class AppProfile(str, Enum):
 def detect_profile() -> AppProfile:
     """Detect the current application profile using architecture mode settings."""
 
-    return AppProfile.from_mode(get_current_mode())
+    return AppProfile.from_mode(resolve_mode())
 
 
 __all__ = ["AppProfile", "detect_profile"]

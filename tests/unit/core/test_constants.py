@@ -6,7 +6,7 @@ configuration settings that have been moved to Pydantic models and enums.
 
 import pytest
 
-from src.config import (
+from src.config.models import (
     CacheConfig,
     CacheType,
     ChunkingConfig,

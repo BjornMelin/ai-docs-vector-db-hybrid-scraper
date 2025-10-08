@@ -1,27 +1,60 @@
 """Browser integration tests using the lightweight scraper."""
 
+# pylint: disable=duplicate-code
+
 from __future__ import annotations
 
-from types import SimpleNamespace
+import sys
+import types
+from pathlib import Path
+from typing import Any
 
 import pytest
 
-from src.config import Config
+
+if "src.services.crawling" not in sys.modules:
+    crawling_module = types.ModuleType("src.services.crawling")
+
+    async def crawl_page(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
+        return {}
+
+    crawling_module.crawl_page = crawl_page  # type: ignore[attr-defined]
+    sys.modules["src.services.crawling"] = crawling_module
+
+if "src.services.crawling.c4a_presets" not in sys.modules:
+    presets_module = types.ModuleType("src.services.crawling.c4a_presets")
+
+    def _noop(*_args: Any, **_kwargs: Any) -> Any:
+        return types.SimpleNamespace(clone=lambda **__: types.SimpleNamespace())
+
+    presets_module.BrowserOptions = object  # type: ignore[attr-defined]
+    presets_module.base_run_config = _noop  # type: ignore[attr-defined]
+    presets_module.memory_dispatcher = _noop  # type: ignore[attr-defined]
+    presets_module.preset_browser_config = _noop  # type: ignore[attr-defined]
+    sys.modules["src.services.crawling.c4a_presets"] = presets_module
+
+from src.config import Settings
+from src.config.models import Environment
 from src.services.browser.lightweight_scraper import LightweightScraper
 
 
 @pytest.mark.asyncio
 @pytest.mark.browser
-async def test_lightweight_scraper_handles_static_page(integration_server: str) -> None:
+async def test_lightweight_scraper_handles_static_page(
+    integration_server: str,
+    tmp_path: Path,
+) -> None:
     """Lightweight scraper should fetch simple HTML from the integration server."""
 
-    config = Config()
-    config_stub = SimpleNamespace(
-        content_threshold=20,
-        lightweight_timeout=5.0,
-        max_retries=0,
+    base = tmp_path / "browser_cfg"
+    config = Settings.model_validate(
+        {
+            "environment": Environment.TESTING,
+            "data_dir": base / "data",
+            "cache_dir": base / "cache",
+            "logs_dir": base / "logs",
+        }
     )
-    object.__setattr__(config, "browser_automation", config_stub)
 
     scraper = LightweightScraper(config)
     await scraper.initialize()
@@ -41,16 +74,19 @@ async def test_lightweight_scraper_handles_static_page(integration_server: str) 
 @pytest.mark.browser
 async def test_lightweight_scraper_escalates_on_forbidden(
     integration_server: str,
+    tmp_path: Path,
 ) -> None:
     """403 responses should trigger escalation to higher tiers."""
 
-    config = Config()
-    config_stub = SimpleNamespace(
-        content_threshold=20,
-        lightweight_timeout=5.0,
-        max_retries=0,
+    base = tmp_path / "browser_cfg_forbidden"
+    config = Settings.model_validate(
+        {
+            "environment": Environment.TESTING,
+            "data_dir": base / "data",
+            "cache_dir": base / "cache",
+            "logs_dir": base / "logs",
+        }
     )
-    object.__setattr__(config, "browser_automation", config_stub)
 
     scraper = LightweightScraper(config)
     await scraper.initialize()

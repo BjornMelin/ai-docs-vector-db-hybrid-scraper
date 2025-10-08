@@ -14,7 +14,8 @@ from typing import Any, Literal, cast
 
 from fastmcp import FastMCP
 
-from src.config import CrawlProvider, EmbeddingProvider, get_config
+from src.config.loader import get_settings
+from src.config.models import CrawlProvider, EmbeddingProvider
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.tool_registry import register_all_tools
 from src.services.dependencies import get_cache_manager
@@ -32,10 +33,11 @@ logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def managed_lifespan(server: FastMCP[Any]) -> AsyncIterator[None]:
+async def managed_lifespan(server: FastMCP[Any]) -> AsyncIterator[None]:  # pylint: disable=too-many-locals
     """Server lifecycle management with lazy initialization."""
 
-    configure_logging()
+    config = get_settings()
+    configure_logging(settings=config)
     monitoring_tasks: list[asyncio.Task[Any]] = []
     client_manager: ClientManager | None = None
     metrics_registry = None
@@ -45,7 +47,6 @@ async def managed_lifespan(server: FastMCP[Any]) -> AsyncIterator[None]:
 
         logger.info("Initializing AI Documentation Vector DB MCP Server...")
 
-        config = get_config()
         client_manager = ClientManager()
         await client_manager.initialize()
 
@@ -223,7 +224,7 @@ def _validate_streaming_config(errors: list, warnings: list) -> None:
 
 def validate_configuration() -> None:
     """Validate configuration at startup."""
-    config = get_config()
+    config = get_settings()
     warnings: list[str] = []
     errors: list[str] = []
 

@@ -6,17 +6,13 @@ and extraction recommendations using the Content Intelligence Service.
 
 import asyncio
 import logging
+from typing import Any
 
 import redis
 from fastmcp import Context
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.infrastructure.client_manager import ClientManager
-from src.mcp_tools.models.requests import (
-    ContentIntelligenceAnalysisRequest,
-    ContentIntelligenceClassificationRequest,
-    ContentIntelligenceMetadataRequest,
-    ContentIntelligenceQualityRequest,
-)
 from src.mcp_tools.models.responses import ContentIntelligenceResult
 from src.services.content_intelligence.models import (
     ContentAnalysisRequest,
@@ -25,10 +21,68 @@ from src.services.content_intelligence.models import (
     ContentType,
     QualityScore,
 )
-from src.services.dependencies import get_content_intelligence_service
 
 
 logger = logging.getLogger(__name__)
+
+
+class ContentAnalysisToolPayload(BaseModel):
+    """Payload for content analysis tool supporting nested service model."""
+
+    analysis: ContentAnalysisRequest = Field(
+        ..., description="Parameters for content intelligence analysis."
+    )
+    existing_content: list[str] | None = Field(
+        default=None,
+        description="Optional existing content corpus for duplicate detection.",
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class ContentClassificationToolPayload(BaseModel):
+    """Payload for content classification tool."""
+
+    content: str = Field(..., description="Content to classify.", min_length=1)
+    url: str = Field(..., description="Source URL for context.", min_length=1)
+    title: str | None = Field(default=None, description="Optional page title.")
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class ContentQualityToolPayload(BaseModel):
+    """Payload for content quality assessment."""
+
+    content: str = Field(..., description="Content to evaluate.", min_length=1)
+    confidence_threshold: float = Field(
+        default=0.8,
+        ge=0.0,
+        le=1.0,
+        description="Minimum acceptable confidence threshold.",
+    )
+    query_context: str | None = Field(
+        default=None, description="Optional query context used for relevance."
+    )
+    extraction_metadata: dict[str, Any] | None = Field(
+        default=None, description="Optional metadata from extraction pipeline."
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class ContentMetadataToolPayload(BaseModel):
+    """Payload for content metadata extraction."""
+
+    content: str = Field(..., description="Content body to analyze.", min_length=1)
+    url: str = Field(..., description="Source URL for metadata enrichment.")
+    raw_html: str | None = Field(
+        default=None, description="Optional raw HTML for structured parsing."
+    )
+    extraction_metadata: dict[str, Any] | None = Field(
+        default=None, description="Optional metadata from crawl."
+    )
+
+    model_config = ConfigDict(extra="forbid")
 
 
 def register_tools(  # pylint: disable=too-many-statements
@@ -38,7 +92,7 @@ def register_tools(  # pylint: disable=too-many-statements
 
     @mcp.tool()
     async def analyze_content_intelligence(
-        request: ContentIntelligenceAnalysisRequest, ctx: Context
+        payload: ContentAnalysisToolPayload, ctx: Context
     ) -> ContentIntelligenceResult:
         """Perform content intelligence analysis.
 
@@ -54,12 +108,14 @@ def register_tools(  # pylint: disable=too-many-statements
         """
 
         try:
+            analysis_request = payload.analysis.model_copy()
             await ctx.info(
-                f"Starting content intelligence analysis for URL: {request.url}"
+                "Starting content intelligence analysis for URL: "
+                f"{analysis_request.url}"
             )
 
             # Get Content Intelligence Service
-            content_service = await get_content_intelligence_service(client_manager)
+            content_service = await client_manager.get_content_intelligence_service()
 
             if not content_service:
                 await ctx.error("Content Intelligence Service not available")
@@ -69,22 +125,10 @@ def register_tools(  # pylint: disable=too-many-statements
                 )
 
             # Create internal analysis request
-            analysis_request = ContentAnalysisRequest(
-                content=request.content,
-                url=request.url,
-                title=request.title,
-                raw_html=request.raw_html,
-                confidence_threshold=request.confidence_threshold,
-                enable_classification=request.enable_classification,
-                enable_quality_assessment=request.enable_quality_assessment,
-                enable_metadata_extraction=request.enable_metadata_extraction,
-                enable_adaptations=request.enable_adaptations,
-            )
-
             # Perform analysis
             result = await content_service.analyze_content(
                 analysis_request,
-                existing_content=request.existing_content,
+                existing_content=payload.existing_content,
             )
 
             await ctx.info(
@@ -110,7 +154,7 @@ def register_tools(  # pylint: disable=too-many-statements
 
     @mcp.tool()
     async def classify_content_type(
-        request: ContentIntelligenceClassificationRequest, ctx: Context
+        payload: ContentClassificationToolPayload, ctx: Context
     ) -> ContentClassification:
         """Classify content type using AI-powered semantic analysis.
 
@@ -130,10 +174,10 @@ def register_tools(  # pylint: disable=too-many-statements
         """
 
         try:
-            await ctx.info(f"Classifying content type for URL: {request.url}")
+            await ctx.info(f"Classifying content type for URL: {payload.url}")
 
             # Get Content Intelligence Service
-            content_service = await get_content_intelligence_service(client_manager)
+            content_service = await client_manager.get_content_intelligence_service()
 
             if not content_service:
                 await ctx.error("Content Intelligence Service not available")
@@ -147,9 +191,9 @@ def register_tools(  # pylint: disable=too-many-statements
 
             # Perform classification
             result = await content_service.classify_content_type(
-                content=request.content,
-                url=request.url,
-                title=request.title,
+                content=payload.content,
+                url=payload.url,
+                title=payload.title,
             )
 
             await ctx.info(
@@ -171,7 +215,7 @@ def register_tools(  # pylint: disable=too-many-statements
 
     @mcp.tool()
     async def assess_content_quality(
-        request: ContentIntelligenceQualityRequest, ctx: Context
+        payload: ContentQualityToolPayload, ctx: Context
     ) -> QualityScore:
         """Assess content quality using multi-metric scoring system.
 
@@ -194,7 +238,7 @@ def register_tools(  # pylint: disable=too-many-statements
             await ctx.info("Assessing content quality")
 
             # Get Content Intelligence Service
-            content_service = await get_content_intelligence_service(client_manager)
+            content_service = await client_manager.get_content_intelligence_service()
 
             if not content_service:
                 await ctx.error("Content Intelligence Service not available")
@@ -209,10 +253,10 @@ def register_tools(  # pylint: disable=too-many-statements
 
             # Perform quality assessment
             result = await content_service.assess_extraction_quality(
-                content=request.content,
-                confidence_threshold=request.confidence_threshold,
-                query_context=request.query_context,
-                extraction_metadata=request.extraction_metadata,
+                content=payload.content,
+                confidence_threshold=payload.confidence_threshold,
+                query_context=payload.query_context,
+                extraction_metadata=payload.extraction_metadata,
             )
 
             await ctx.info(
@@ -235,7 +279,7 @@ def register_tools(  # pylint: disable=too-many-statements
 
     @mcp.tool()
     async def extract_content_metadata(
-        request: ContentIntelligenceMetadataRequest, ctx: Context
+        payload: ContentMetadataToolPayload, ctx: Context
     ) -> ContentMetadata:
         """Extract and enrich metadata from content and HTML.
 
@@ -254,24 +298,25 @@ def register_tools(  # pylint: disable=too-many-statements
         """
 
         try:
-            await ctx.info(f"Extracting metadata for URL: {request.url}")
+            await ctx.info(f"Extracting metadata for URL: {payload.url}")
 
             # Get Content Intelligence Service
-            content_service = await get_content_intelligence_service(client_manager)
+            content_service = await client_manager.get_content_intelligence_service()
 
             if not content_service:
                 await ctx.error("Content Intelligence Service not available")
                 return ContentMetadata(
-                    word_count=len(request.content.split()),
-                    char_count=len(request.content),
+                    url=payload.url,
+                    word_count=len(payload.content.split()),
+                    char_count=len(payload.content),
                 )
 
             # Perform metadata extraction
             result = await content_service.extract_metadata(
-                content=request.content,
-                url=request.url,
-                raw_html=request.raw_html,
-                extraction_metadata=request.extraction_metadata,
+                content=payload.content,
+                url=payload.url,
+                raw_html=payload.raw_html,
+                extraction_metadata=payload.extraction_metadata,
             )
 
             await ctx.info(
@@ -282,8 +327,9 @@ def register_tools(  # pylint: disable=too-many-statements
         except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             await ctx.error(f"Metadata extraction failed: {e}")
             return ContentMetadata(
-                word_count=len(request.content.split()),
-                char_count=len(request.content),
+                url=payload.url,
+                word_count=len(payload.content.split()),
+                char_count=len(payload.content),
             )
         return result
 
@@ -322,7 +368,7 @@ def register_tools(  # pylint: disable=too-many-statements
                 await ctx.info(f"Generating adaptation recommendations for: {url}")
 
             # Get Content Intelligence Service
-            content_service = await get_content_intelligence_service(client_manager)
+            content_service = await client_manager.get_content_intelligence_service()
 
             if not content_service:
                 if ctx:
@@ -372,7 +418,7 @@ def register_tools(  # pylint: disable=too-many-statements
                 await ctx.info("Retrieving Content Intelligence Service metrics")
 
             # Get Content Intelligence Service
-            content_service = await get_content_intelligence_service(client_manager)
+            content_service = await client_manager.get_content_intelligence_service()
 
             if not content_service:
                 if ctx:

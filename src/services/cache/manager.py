@@ -7,7 +7,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
-from src.config import CacheType
+from src.config.models import CacheType
 
 from .dragonfly_cache import DragonflyCache
 from .embedding_cache import EmbeddingCache
@@ -122,13 +122,18 @@ class CacheManager:
         self._embedding_cache = None
         self._search_cache = None
         if enable_specialized_caches and self._distributed_cache:
+            # Default to an hour when no Redis-specific TTL is supplied.
+            redis_ttl = self.distributed_ttl_seconds.get(
+                CacheType.REDIS,
+                3600,
+            )
             self._embedding_cache = EmbeddingCache(
                 cache=self._distributed_cache,
-                default_ttl=self.distributed_ttl_seconds[CacheType.REDIS],
+                default_ttl=redis_ttl,
             )
             self._search_cache = SearchResultCache(
                 cache=self._distributed_cache,
-                default_ttl=self.distributed_ttl_seconds[CacheType.REDIS],
+                default_ttl=redis_ttl,
             )
 
         # Initialize Prometheus monitoring registry
