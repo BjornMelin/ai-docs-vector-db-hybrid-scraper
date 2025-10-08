@@ -6,13 +6,14 @@ from typing import Any
 
 import pytest
 
-import src.services.browser.unified_manager as unified_manager_module
 from src.config import Environment, Settings
 from src.services.browser.unified_manager import (
     UnifiedBrowserManager,
     UnifiedScrapingRequest,
 )
 from src.services.errors import CrawlServiceError
+
+from ._manager_stub_utils import install_manager_stubs
 
 
 @pytest.fixture
@@ -23,55 +24,21 @@ def manager_with_toggleable_stubs(
 
     stubs: dict[str, Any] = {}
 
-    class RouterStub:
-        def __init__(self, *_args: Any, **_kwargs: Any) -> None:
-            stubs["router"] = self
-            self.initialize_calls = 0
-            self.cleanup_calls = 0
-            self.scrape_calls: list[Any] = []
-            self.result: dict[str, Any] = {
-                "success": True,
-                "content": "fresh-content",
-                "metadata": {},
-            }
-            self.side_effect: Exception | None = None
-
-        async def initialize(self) -> None:
-            self.initialize_calls += 1
-
-        async def cleanup(self) -> None:
-            self.cleanup_calls += 1
-
-        async def scrape(self, request: Any) -> dict[str, Any]:
-            self.scrape_calls.append(request)
-            if self.side_effect is not None:
-                raise self.side_effect
-            return dict(self.result)
-
-    class FirecrawlStub:
-        def __init__(self, *_args: Any, **_kwargs: Any) -> None:
-            stubs["firecrawl"] = self
-            self.initialize_calls = 0
-            self.cleanup_calls = 0
-            self.crawl_calls: list[tuple[tuple[Any, ...], dict[str, Any]]] = []
-            self.result: dict[str, Any] = {
-                "success": True,
-                "provider": "firecrawl",
-                "pages": [{"url": "https://example.com", "content": "cached"}],
-            }
-
-        async def initialize(self) -> None:
-            self.initialize_calls += 1
-
-        async def cleanup(self) -> None:
-            self.cleanup_calls += 1
-
-        async def crawl(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
-            self.crawl_calls.append((args, kwargs))
-            return dict(self.result)
-
-    monkeypatch.setattr(unified_manager_module, "AutomationRouter", RouterStub)
-    monkeypatch.setattr(unified_manager_module, "FirecrawlAdapter", FirecrawlStub)
+    install_manager_stubs(
+        monkeypatch,
+        stubs,
+        router_default={
+            "success": True,
+            "content": "fresh-content",
+            "metadata": {},
+        },
+        firecrawl_default={
+            "success": True,
+            "provider": "firecrawl",
+            "pages": [{"url": "https://example.com", "content": "cached"}],
+        },
+        enable_router_side_effects=True,
+    )
 
     settings = Settings(environment=Environment.TESTING)
     manager = UnifiedBrowserManager(settings)
