@@ -23,12 +23,6 @@ spec:
         image: ai-docs-worker:latest  # Replace with your registry URL
         imagePullPolicy: IfNotPresent
         env:
-        - name: AI_DOCS_TASK_QUEUE__REDIS_URL
-          value: "redis://dragonfly:6379"
-        - name: AI_DOCS_TASK_QUEUE__REDIS_DATABASE
-          value: "1"
-        - name: AI_DOCS_TASK_QUEUE__WORKER_POOL_SIZE
-          value: "4"
         - name: AI_DOCS_LOG_LEVEL
           value: "INFO"
         - name: PYTHONPATH

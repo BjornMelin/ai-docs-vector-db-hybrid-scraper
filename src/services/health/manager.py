@@ -353,6 +353,7 @@ class OpenAIHealthCheck(HealthCheck):
 class HTTPHealthCheck(HealthCheck):
     """Generic HTTP health probe."""
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self,
         url: str,
@@ -383,34 +384,35 @@ class HTTPHealthCheck(HealthCheck):
 
         timeout = aiohttp.ClientTimeout(total=self.timeout_seconds)
         try:
-            async with aiohttp.ClientSession(timeout=timeout) as session:
-                async with session.get(self._url, headers=self._headers) as response:
-                    if response.status == self._expected_status:
-                        return HealthCheckResult(
-                            name=self.name,
-                            status=HealthStatus.HEALTHY,
-                            message=(
-                                "HTTP endpoint responding with status "
-                                f"{response.status}"
-                            ),
-                            duration_ms=0.0,
-                            metadata={
-                                "status_code": response.status,
-                                "content_type": response.headers.get(
-                                    "content-type", "unknown"
-                                ),
-                            },
-                        )
+            async with (
+                aiohttp.ClientSession(timeout=timeout) as session,
+                session.get(self._url, headers=self._headers) as response,
+            ):
+                if response.status == self._expected_status:
                     return HealthCheckResult(
                         name=self.name,
-                        status=HealthStatus.UNHEALTHY,
+                        status=HealthStatus.HEALTHY,
                         message=(
-                            f"HTTP endpoint returned status {response.status}, "
-                            f"expected {self._expected_status}"
+                            f"HTTP endpoint responding with status {response.status}"
                         ),
                         duration_ms=0.0,
-                        metadata={"status_code": response.status},
+                        metadata={
+                            "status_code": response.status,
+                            "content_type": response.headers.get(
+                                "content-type", "unknown"
+                            ),
+                        },
                     )
+                return HealthCheckResult(
+                    name=self.name,
+                    status=HealthStatus.UNHEALTHY,
+                    message=(
+                        f"HTTP endpoint returned status {response.status}, "
+                        f"expected {self._expected_status}"
+                    ),
+                    duration_ms=0.0,
+                    metadata={"status_code": response.status},
+                )
         except aiohttp.ClientError as exc:
             return HealthCheckResult(
                 name=self.name,
@@ -466,6 +468,7 @@ class FirecrawlHealthCheck(HTTPHealthCheck):
 class SystemResourceHealthCheck(HealthCheck):
     """Health check for host system resources."""
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self,
         *,
@@ -683,7 +686,7 @@ def build_health_manager(
         client = qdrant_client or AsyncQdrantClient(
             url=config.qdrant_url,
             api_key=getattr(settings.qdrant, "api_key", None),
-            timeout=settings.qdrant.timeout,
+            timeout=int(settings.qdrant.timeout),
         )
         manager.add_health_check(
             QdrantHealthCheck(
