@@ -7,7 +7,8 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
-from src.config import CacheType, Config, get_config
+from src.config import Config, get_config
+from src.config.models import CacheType
 from src.infrastructure.client_manager import ClientManager
 from src.services.cache.manager import CacheManager
 from src.services.circuit_breaker import CircuitBreakerManager

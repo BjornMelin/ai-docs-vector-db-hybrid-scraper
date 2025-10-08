@@ -577,6 +577,47 @@ class PlaywrightConfig(BaseModel):
         return self
 
 
+class AutomationRouterConfig(BaseModel):
+    """Configuration for the multi-tier automation router."""
+
+    rate_limits: dict[str, int] = Field(
+        default_factory=lambda: {
+            "lightweight": 10,
+            "crawl4ai": 5,
+            "playwright": 2,
+            "browser_use": 1,
+            "firecrawl": 5,
+        },
+        description="Per-tier request-per-second limits.",
+    )
+    limiter_period_seconds: float = Field(
+        default=1.0,
+        gt=0,
+        description="Time window applied to rate limit buckets (seconds).",
+    )
+    hard_domains: list[str] = Field(
+        default_factory=lambda: ["linkedin.com", "x.com", "medium.com"],
+        description="Domains that should escalate to resilient tiers first.",
+    )
+    per_attempt_cap_ms: int = Field(
+        default=15000,
+        ge=500,
+        description="Upper bound on a single provider attempt in milliseconds.",
+    )
+    min_attempt_ms: int = Field(
+        default=500,
+        ge=0,
+        description=(
+            "Minimum remaining budget (milliseconds) required before invoking a tier."
+        ),
+    )
+    limiter_acquire_timeout_ms: int = Field(
+        default=1000,
+        ge=0,
+        description="Maximum time to wait when acquiring a rate limiter slot.",
+    )
+
+
 class BrowserUseConfig(BaseModel):
     """Browser-use automation configuration."""
 

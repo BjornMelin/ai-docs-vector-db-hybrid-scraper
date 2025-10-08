@@ -9,7 +9,7 @@ import re
 from typing import Any, ClassVar
 
 # Handle both module and script imports
-from src.config import ChunkingConfig, ChunkingStrategy
+from src.config.models import ChunkingConfig, ChunkingStrategy
 from src.models.document_processing import Chunk, CodeBlock, CodeLanguage
 
 

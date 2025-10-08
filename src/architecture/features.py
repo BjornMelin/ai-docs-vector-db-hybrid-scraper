@@ -10,7 +10,7 @@ from functools import wraps
 from inspect import iscoroutinefunction
 from typing import TYPE_CHECKING, Any
 
-from .modes import ApplicationMode, ModeConfig, get_current_mode, get_mode_config
+from .modes import ApplicationMode, ModeConfig, get_mode_config, resolve_mode
 
 
 logger = logging.getLogger(__name__)
@@ -54,20 +54,18 @@ class FeatureFlag:
     def _current_mode(self) -> ApplicationMode:
         """Resolve the current application mode."""
 
-        if self._config_override is None:
-            return get_current_mode()
-        return get_current_mode(config=self._config_override)
+        return resolve_mode(self._config_override)
 
     def is_enterprise_mode(self) -> bool:
         """Check if running in enterprise mode."""
 
-        # Use get_current_mode() to allow for runtime testing/mocking
+        # Use resolve_mode() to allow for runtime testing/mocking
         return self._current_mode() == ApplicationMode.ENTERPRISE
 
     def is_simple_mode(self) -> bool:
         """Check if running in simple mode."""
 
-        # Use get_current_mode() to allow for runtime testing/mocking
+        # Use resolve_mode() to allow for runtime testing/mocking
         return self._current_mode() == ApplicationMode.SIMPLE
 
     def is_feature_enabled(self, feature_name: str) -> bool:

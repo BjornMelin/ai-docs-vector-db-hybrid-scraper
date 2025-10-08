@@ -15,7 +15,7 @@ from fastapi import Request
 
 from src.services.lifecycle import LifecycleTracker, ServiceLifecycle
 
-from .modes import ApplicationMode, get_current_mode, get_mode_config
+from .modes import ApplicationMode, get_mode_config, resolve_mode
 
 
 logger = logging.getLogger(__name__)
@@ -61,8 +61,9 @@ class ModeAwareServiceFactory:
             mode: Application mode to use. If None, detects from environment.
         """
 
-        self.mode = mode or get_current_mode()
-        self.mode_config = get_mode_config(self.mode)
+        resolved = mode or resolve_mode()
+        self.mode = resolved
+        self.mode_config = get_mode_config(resolved)
         self._service_registry: dict[str, dict[str, type[ServiceProtocol]]] = {}
         self._service_instances: dict[str, ServiceProtocol] = {}
         self._initialization_status: dict[str, bool] = {}

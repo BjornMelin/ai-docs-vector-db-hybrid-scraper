@@ -24,13 +24,7 @@ from src.architecture.modes import (
     ENTERPRISE_MODE_CONFIG,
     SIMPLE_MODE_CONFIG,
     ApplicationMode,
-    get_enabled_services,
-    get_feature_setting,
     get_mode_config,
-    get_resource_limit,
-    is_enterprise_mode,
-    is_service_enabled,
-    is_simple_mode,
     resolve_mode,
 )
 from src.architecture.service_factory import ModeAwareServiceFactory
@@ -165,19 +159,18 @@ class TestModeDetection:
 
     def test_helper_functions_reflect_mode(self) -> None:
         set_config(get_config().model_copy(update={"mode": ApplicationMode.ENTERPRISE}))
-        assert is_enterprise_mode() is True
-        assert is_simple_mode() is False
-        assert "advanced_search" in get_enabled_services()
-        assert is_service_enabled("advanced_search") is True
-        assert get_feature_setting("enable_advanced_monitoring") is True
-        assert get_resource_limit("max_concurrent_requests") == 100
+        assert resolve_mode() is ApplicationMode.ENTERPRISE
+        enterprise = get_mode_config(config=get_config())
+        assert "advanced_search" in enterprise.enabled_services
+        assert enterprise.max_complexity_features["enable_advanced_monitoring"] is True
+        assert enterprise.resource_limits["max_concurrent_requests"] == 100
 
         set_config(get_config().model_copy(update={"mode": ApplicationMode.SIMPLE}))
-        assert is_simple_mode() is True
-        assert is_enterprise_mode() is False
-        assert is_service_enabled("advanced_search") is False
-        assert get_feature_setting("enable_advanced_monitoring") is False
-        assert get_resource_limit("max_concurrent_requests") == 5
+        assert resolve_mode() is ApplicationMode.SIMPLE
+        simple = get_mode_config(config=get_config())
+        assert "advanced_search" not in simple.enabled_services
+        assert simple.max_complexity_features["enable_advanced_monitoring"] is False
+        assert simple.resource_limits["max_concurrent_requests"] == 5
 
 
 class TestFeatureFlag:
@@ -185,8 +178,7 @@ class TestFeatureFlag:
 
     def test_feature_flag_respects_modes(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(
-            "src.architecture.features.get_current_mode",
-            lambda: ApplicationMode.SIMPLE,
+            "src.architecture.features.resolve_mode", lambda *_: ApplicationMode.SIMPLE
         )
         flag = FeatureFlag(SIMPLE_MODE_CONFIG)
         assert flag.is_simple_mode() is True
@@ -194,8 +186,8 @@ class TestFeatureFlag:
         assert flag.is_feature_enabled("enable_advanced_monitoring") is False
 
         monkeypatch.setattr(
-            "src.architecture.features.get_current_mode",
-            lambda: ApplicationMode.ENTERPRISE,
+            "src.architecture.features.resolve_mode",
+            lambda *_: ApplicationMode.ENTERPRISE,
         )
         flag = FeatureFlag(ENTERPRISE_MODE_CONFIG)
         assert flag.is_simple_mode() is False
@@ -273,7 +265,7 @@ class TestServiceFactory:
 
     def test_auto_detect_mode(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(
-            "src.architecture.service_factory.get_current_mode",
+            "src.architecture.service_factory.resolve_mode",
             lambda: ApplicationMode.ENTERPRISE,
         )
         factory = ModeAwareServiceFactory()

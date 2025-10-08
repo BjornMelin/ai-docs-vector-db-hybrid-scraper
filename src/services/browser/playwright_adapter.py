@@ -16,7 +16,7 @@ from urllib.parse import urlparse
 import httpx
 from pydantic import ValidationError
 
-from src.config import (
+from src.config.models import (
     PlaywrightCaptchaSettings,
     PlaywrightConfig,
     PlaywrightTierConfig,

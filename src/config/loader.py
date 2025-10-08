@@ -16,6 +16,7 @@ from src.architecture.modes import ApplicationMode
 
 from .models import (
     AgenticConfig,
+    AutomationRouterConfig,
     BrowserUseConfig,
     CacheConfig,
     ChunkingConfig,
@@ -116,6 +117,10 @@ class Config(BaseSettings):
     )
     playwright: PlaywrightConfig = Field(
         default_factory=PlaywrightConfig, description="Playwright configuration"
+    )
+    automation_router: AutomationRouterConfig = Field(
+        default_factory=AutomationRouterConfig,
+        description="Automation router configuration",
     )
     browser_use: BrowserUseConfig = Field(
         default_factory=BrowserUseConfig, description="browser-use configuration"
