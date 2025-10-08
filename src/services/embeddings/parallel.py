@@ -9,17 +9,14 @@ import asyncio
 import functools
 import logging
 import time
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
-from typing import Any, TypeVar
+from typing import Any, cast
 
 from src.services.errors import EmbeddingServiceError
 
 
 logger = logging.getLogger(__name__)
-
-T = TypeVar("T")
-R = TypeVar("R")
 
 
 @dataclass
@@ -55,7 +52,7 @@ class ParallelProcessor:
 
     def __init__(
         self,
-        process_func: Callable[[list[T]], list[R]],
+        process_func: Callable[[list[Any]], Awaitable[list[Any]] | list[Any]],
         config: ParallelConfig | None = None,
     ):
         """Initialize parallel processor.
@@ -63,10 +60,11 @@ class ParallelProcessor:
         Args:
             process_func: Function to process batches of items
             config: Parallel processing configuration
-
         """
+
         self.process_func = process_func
         self.config = config or ParallelConfig()
+        self._is_coroutine = asyncio.iscoroutinefunction(process_func)
         self._semaphore = asyncio.Semaphore(self.config.max_concurrent_tasks)
         self._worker_pool = None
         self._metrics = ProcessingMetrics()
@@ -74,9 +72,9 @@ class ParallelProcessor:
 
     async def process_batch_parallel(
         self,
-        items: list[T],
+        items: list[Any],
         enable_caching: bool = True,
-    ) -> tuple[list[R], ProcessingMetrics]:
+    ) -> tuple[list[Any], ProcessingMetrics]:
         """Process items in parallel with batching and caching.
 
         Args:
@@ -85,8 +83,8 @@ class ParallelProcessor:
 
         Returns:
             Tuple of (results, metrics)
-
         """
+
         if not items:
             return [], ProcessingMetrics()
 
@@ -110,7 +108,7 @@ class ParallelProcessor:
                 ]
 
             # Collect results from all tasks
-            batch_results = [task.result() for task in batch_tasks]
+            batch_results: list[list[Any]] = [task.result() for task in batch_tasks]
 
         except* Exception as eg:
             # Handle task group exceptions
@@ -119,7 +117,7 @@ class ParallelProcessor:
             raise EmbeddingServiceError(msg) from eg
 
         # Flatten results while preserving order
-        results = []
+        results: list[Any] = []
         for batch_result in batch_results:
             results.extend(batch_result)
 
@@ -138,10 +136,10 @@ class ParallelProcessor:
 
     async def _process_single_batch(
         self,
-        batch: list[T],
+        batch: list[Any],
         batch_idx: int,
         enable_caching: bool,
-    ) -> list[R]:
+    ) -> list[Any]:
         """Process a single batch with semaphore control and error handling.
 
         Args:
@@ -151,8 +149,8 @@ class ParallelProcessor:
 
         Returns:
             List of processing results
-
         """
+
         async with self._semaphore:
             try:
                 # Check cache if enabled
@@ -163,17 +161,31 @@ class ParallelProcessor:
                         return cached_results
 
                 # Process batch
-                if asyncio.iscoroutinefunction(self.process_func):
-                    results = await asyncio.wait_for(
-                        self.process_func(batch), timeout=self.config.timeout_per_batch
+                if self._is_coroutine:
+                    coroutine = cast(Awaitable[list[Any]], self.process_func(batch))
+                    raw_results = await asyncio.wait_for(
+                        coroutine,
+                        timeout=self.config.timeout_per_batch,
                     )
                 else:
                     # Run synchronous function in executor
-                    loop = asyncio.get_event_loop()
-                    results = await asyncio.wait_for(
+                    loop = asyncio.get_running_loop()
+                    raw_results = await asyncio.wait_for(
                         loop.run_in_executor(None, self.process_func, batch),
                         timeout=self.config.timeout_per_batch,
                     )
+
+                if isinstance(raw_results, list):
+                    results = raw_results
+                else:
+                    try:
+                        results = list(cast(Iterable[Any], raw_results))
+                    except TypeError as exc:  # pragma: no cover - defensive guard
+                        msg = (
+                            "Batch processor expected an iterable result but "
+                            f"received {type(raw_results).__name__}"
+                        )
+                        raise EmbeddingServiceError(msg) from exc
 
                 # Cache results if enabled
                 if enable_caching:
@@ -189,8 +201,7 @@ class ParallelProcessor:
                 logger.exception("Batch processing failed: %s", e)
                 msg = f"Batch processing failed: {e}"
                 raise EmbeddingServiceError(msg) from e
-            else:
-                return results
+            return results
 
     def _calculate_optimal_batching(self, total_items: int) -> dict[str, Any]:
         """Calculate optimal batch configuration based on system resources and history.
@@ -200,8 +211,8 @@ class ParallelProcessor:
 
         Returns:
             Optimal batch configuration
-
         """
+
         if not self.config.adaptive_batching:
             return {
                 "batch_size": self.config.batch_size_per_worker,
@@ -250,8 +261,8 @@ class ParallelProcessor:
         }
 
     def _create_batches(
-        self, items: list[T], batch_config: dict[str, Any]
-    ) -> list[list[T]]:
+        self, items: list[Any], batch_config: dict[str, Any]
+    ) -> list[list[Any]]:
         """Create optimally sized batches from items.
 
         Args:
@@ -260,8 +271,8 @@ class ParallelProcessor:
 
         Returns:
             List of batches
-
         """
+
         batch_size = batch_config["batch_size"]
         batches = []
 
@@ -273,8 +284,8 @@ class ParallelProcessor:
 
     def _calculate_metrics(
         self,
-        items: list[T],
-        _results: list[R],
+        items: list[Any],
+        _results: list[Any],
         start_time: float,
         end_time: float,
         batch_config: dict[str, Any],
@@ -290,8 +301,8 @@ class ParallelProcessor:
 
         Returns:
             Performance metrics
-
         """
+
         processing_time_ms = (end_time - start_time) * 1000
         total_items = len(items)
 
@@ -321,7 +332,7 @@ class ParallelProcessor:
             memory_usage_mb=0.0,  # Will be updated by memory monitoring
         )
 
-    async def _check_batch_cache(self, _batch: list[T]) -> list[R] | None:
+    async def _check_batch_cache(self, _batch: list[Any]) -> list[Any] | None:
         """Check if batch results are cached.
 
         Args:
@@ -329,30 +340,30 @@ class ParallelProcessor:
 
         Returns:
             Cached results if available
-
         """
+
         # Implementation depends on caching layer
-        # This is a placeholder for cache integration
+        # TODO: This is a placeholder for cache integration
         return None
 
-    async def _cache_batch_results(self, batch: list[T], results: list[R]) -> None:
+    async def _cache_batch_results(self, batch: list[Any], results: list[Any]) -> None:
         """Cache batch processing results.
 
         Args:
             batch: Original batch items
             results: Processing results
-
         """
+
         # Implementation depends on caching layer
-        # This is a placeholder for cache integration
+        # TODO: This is a placeholder for cache integration
 
     def get_performance_summary(self) -> dict[str, Any]:
-        """Get comprehensive performance summary.
+        """Get performance summary.
 
         Returns:
             Performance summary with historical data
-
         """
+
         if not self._performance_history:
             return {"status": "no_data"}
 
@@ -395,11 +406,12 @@ class ParallelEmbeddingProcessor:
         Args:
             embedding_manager: EmbeddingManager instance
             config: Parallel processing configuration
-
         """
         self.embedding_manager = embedding_manager
         self.config = config or ParallelConfig()
-        self._processor = ParallelProcessor(self._batch_generate_embeddings, config)
+        self._processor = ParallelProcessor(
+            self._batch_generate_embeddings, self.config
+        )
 
     async def generate_embeddings_parallel(
         self,
@@ -414,8 +426,8 @@ class ParallelEmbeddingProcessor:
 
         Returns:
             Dictionary with embeddings and performance metrics
-
         """
+
         if not texts:
             return {
                 "embeddings": [],
@@ -442,8 +454,8 @@ class ParallelEmbeddingProcessor:
 
         Returns:
             List of embedding vectors
-
         """
+
         # Use the existing embedding manager to generate embeddings
         result = await self.embedding_manager.generate_embeddings(
             texts=texts,
@@ -453,12 +465,8 @@ class ParallelEmbeddingProcessor:
         return result["embeddings"]
 
     def get_performance_stats(self) -> dict[str, Any]:
-        """Get performance statistics for parallel embedding processing.
+        """Get performance statistics for parallel embedding processing."""
 
-        Returns:
-            Performance statistics
-
-        """
         return self._processor.get_performance_summary()
 
 
@@ -472,8 +480,9 @@ def cached_text_analysis(text: str) -> dict[str, Any]:
 
     Returns:
         Analysis results
-
     """
+
+    # TODO: Replace with actual analysis logic and remove demo code below
     # Simplified text analysis for caching demonstration
     words = text.split()
     return {
@@ -498,8 +507,8 @@ async def parallel_content_classification(
 
     Returns:
         List of classification results
-
     """
+
     processor = ParallelProcessor(
         lambda batch: [classifier.classify_content(content) for content in batch],
         config or ParallelConfig(),
@@ -523,7 +532,6 @@ async def parallel_metadata_extraction(
 
     Returns:
         List of metadata extraction results
-
     """
 
     async def batch_extract(batch: list[tuple[str, str]]) -> list[Any]:

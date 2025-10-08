@@ -13,9 +13,9 @@ from fastapi import Depends  # type: ignore[attr-defined]
 from pydantic import BaseModel, Field
 
 from src.config import CacheType, Config, get_config
+from src.services.circuit_breaker.provider import get_circuit_breaker_manager
 from src.services.embeddings.manager import QualityTier
 from src.services.errors import (
-    CircuitBreakerRegistry,
     CrawlServiceError,
     EmbeddingServiceError,
     circuit_breaker,
@@ -54,7 +54,9 @@ async def _resolve_client_manager(
     try:
         return get_service_registry().client_manager
     except Exception:  # pragma: no cover - defensive fallback
-        from src.infrastructure.client_manager import ClientManager as _ClientManager
+        from src.infrastructure.client_manager import (  # pylint: disable=import-outside-toplevel
+            ClientManager as _ClientManager,
+        )
 
         manager = _ClientManager.from_unified_config()
         await manager.initialize()
@@ -603,7 +605,8 @@ async def get_circuit_breaker_status() -> dict[str, Any]:
     """Get status of all circuit breakers."""
 
     try:
-        all_status = CircuitBreakerRegistry.get_all_status()
+        manager = await get_circuit_breaker_manager()
+        all_status = await manager.get_all_statuses()
 
         # Calculate aggregate metrics
         total_circuits = len(all_status)
@@ -646,22 +649,30 @@ async def get_circuit_breaker_status() -> dict[str, Any]:
         }
 
 
-async def reset_circuit_breaker(service_name: str) -> dict[str, Any]:
+async def reset_circuit_breaker(
+    service_name: str,
+    *,
+    manager: Any | None = None,
+) -> dict[str, Any]:
     """Reset a specific circuit breaker."""
 
     try:
-        if (breaker := CircuitBreakerRegistry.get(service_name)) is None:
+        if manager is None:
+            manager = await get_circuit_breaker_manager()
+        services = manager.list_services()
+        if service_name not in services:
             return {
                 "success": False,
                 "error": f"Circuit breaker not found for service: {service_name}",
-                "available_services": CircuitBreakerRegistry.get_services(),
+                "available_services": services,
             }
 
-        breaker.reset()
+        success = await manager.reset_breaker(service_name)
+        new_status = await manager.get_breaker_status(service_name) if success else None
         return {
-            "success": True,
+            "success": success,
             "message": f"Circuit breaker for {service_name} has been reset",
-            "new_status": breaker.get_status(),
+            "new_status": new_status,
         }
     except Exception as e:
         logger.exception("Failed to reset circuit breaker for %s", service_name)
@@ -675,11 +686,12 @@ async def reset_all_circuit_breakers() -> dict[str, Any]:
     """Reset all circuit breakers."""
 
     try:
-        services = CircuitBreakerRegistry.get_services()
+        manager = await get_circuit_breaker_manager()
+        services = manager.list_services()
         results = {}
 
         for service_name in services:
-            result = await reset_circuit_breaker(service_name)
+            result = await reset_circuit_breaker(service_name, manager=manager)
             results[service_name] = result
 
         successful_resets = sum(1 for result in results.values() if result["success"])
