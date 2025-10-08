@@ -36,23 +36,6 @@ class QdrantClientProvider:
             return None
         return self._client
 
-    async def health_check(self) -> bool:
-        """Check Qdrant client health."""
-
-        try:
-            if not self._client:
-                return False
-
-            # Simple API call to check connectivity
-            await self._client.get_collections()
-        except (AttributeError, ValueError, ConnectionError, TimeoutError) as e:
-            logger.warning("Qdrant health check failed: %s", e)
-            self._healthy = False
-            return False
-        # If no exceptions, consider healthy
-        self._healthy = True
-        return True
-
     async def get_collections(self) -> list[CollectionInfo]:
         """Get all collections.
 

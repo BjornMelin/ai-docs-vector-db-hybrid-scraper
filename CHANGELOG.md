@@ -65,7 +65,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Chunking defaults route `ChunkingStrategy.BASIC` through the enhanced semantic pipeline, and circuit breaker decorators/configuration have dropped all deprecated parameters.
 - Replaced the bespoke FastAPI `DependencyContainer` and module-level singletons with a new `ServiceRegistry` (`src/services/registry.py`), wiring FastAPI lifespan, CLI tooling, and dependency helpers to the shared registry.
 - MCP embeddings tools now normalise provider metadata directly from `EmbeddingManager`, cache snapshots with fallbacks, and expose the reusable `provider_metadata` helper for other tooling.
-- `/health` now consumes `ServiceHealthChecker` and returns structured JSON/HTTP status codes; async fixtures use `httpx` + `asgi-lifespan`, and vector-db CLI commands reuse the registry rather than instantiating private managers.
+- `/health` now centralises on `HealthCheckManager`, removes auxiliary health endpoints, rewires FastAPI dependencies and CLI status reporting to the shared builder, and documents the consolidated response contract.
 - `pyproject.toml` dev extras now include `asgi-lifespan`; docs refreshed to describe the registry architecture and note the dev-extras requirement.
 - LangGraph GraphRunner now emits structured metrics/errors, enforces optional
   run timeouts, and surfaces discovery/tool telemetry across MCP entry points;

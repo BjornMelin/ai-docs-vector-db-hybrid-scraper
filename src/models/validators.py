@@ -16,7 +16,7 @@ def validate_api_key_common(
     min_length: int = 10,
     max_length: int = 200,
     allowed_chars: str = r"[A-Za-z0-9-]+",
-) -> str | None:
+) -> str | None:  # pylint: disable=too-many-arguments
     """Common API key validation logic for all services.
 
     Args:

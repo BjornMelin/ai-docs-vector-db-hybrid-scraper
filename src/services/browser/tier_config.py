@@ -57,7 +57,7 @@ class PerformanceHistoryEntry:
 
 
 @dataclass
-class TierPerformanceAnalysis:
+class TierPerformanceAnalysis:  # pylint: disable=too-many-instance-attributes
     """Performance analysis for a tier."""
 
     tier_name: str
@@ -80,7 +80,7 @@ class TierPerformanceAnalysis:
 
 
 @dataclass
-class TierConfiguration:
+class TierConfiguration:  # pylint: disable=too-many-instance-attributes
     """Configuration for an automation tier."""
 
     tier_name: str
@@ -107,7 +107,7 @@ class TierConfiguration:
 
 
 @dataclass
-class EnhancedRoutingConfig:
+class EnhancedRoutingConfig:  # pylint: disable=too-many-instance-attributes
     """Enhanced routing configuration."""
 
     tiers: dict[str, TierConfiguration] = field(default_factory=dict)

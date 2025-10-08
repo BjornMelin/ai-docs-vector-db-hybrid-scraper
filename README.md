@@ -31,8 +31,8 @@ applications.
   management, analytics, and content intelligence tools for Claude Desktop /
   Code.
 - Observability built in: Prometheus instrumentation, structured logging,
-  health checks, optional Dragonfly cache + ARQ worker, and configuration-driven
-  monitoring (`src/services/monitoring/`).
+  health checks, optional Dragonfly cache, and configuration-driven monitoring
+  (`src/services/monitoring/`).
 - Developer ergonomics with uv-managed environments, dependency-injector driven
   service wiring, Ruff + pytest quality gates, and a unified developer CLI
   (`scripts/dev.py`).

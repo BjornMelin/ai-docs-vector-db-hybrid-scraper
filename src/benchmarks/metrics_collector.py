@@ -116,7 +116,7 @@ class MetricsCollector:  # pylint: disable=too-many-instance-attributes
         labels: dict[str, str] | None = None,
         source: str = "unknown",
         timestamp: float | None = None,
-    ) -> None:
+    ) -> None:  # pylint: disable=too-many-arguments
         """Record a single metric point.
 
         Args:

@@ -32,23 +32,6 @@ class OpenAIClientProvider:
             return None
         return self._client
 
-    async def health_check(self) -> bool:
-        """Check OpenAI client health."""
-
-        try:
-            if not self._client:
-                return False
-
-            # Simple API call to check connectivity
-            await self._client.models.list()
-        except (AttributeError, ValueError, ConnectionError, TimeoutError) as e:
-            logger.warning("OpenAI health check failed: %s", e)
-            self._healthy = False
-            return False
-        # If no exceptions, consider healthy
-        self._healthy = True
-        return True
-
     async def get_embedding(
         self, text: str, model: str = "text-embedding-3-small"
     ) -> list[float]:

@@ -10,7 +10,7 @@ The deployment consists of:
 - **Qdrant StatefulSet**: Vector database with persistent storage
 - **DragonflyDB Deployment**: Redis-compatible cache
 - **Application Deployment**: FastAPI web service (2 replicas)
-- **Worker Deployment**: ARQ background task workers (2 replicas with HPA)
+- **Worker Deployment**: Background worker deployment template (2 replicas with HPA)
 - **ConfigMap & Secrets**: Configuration and sensitive data management
 
 ## Prerequisites

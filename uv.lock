@@ -39,7 +39,6 @@ dependencies = [
     { name = "aiofiles" },
     { name = "aiohttp" },
     { name = "aiolimiter" },
-    { name = "arq" },
     { name = "asgi-correlation-id" },
     { name = "cachetools" },
     { name = "click" },
@@ -273,7 +272,6 @@ requires-dist = [
     { name = "aiofiles", specifier = ">=24.1.0,<25.0.0" },
     { name = "aiohttp", specifier = ">=3.12.15,<4.0.0" },
     { name = "aiolimiter", specifier = ">=1.2.1" },
-    { name = "arq", specifier = ">=0.26.3,<0.27.0" },
     { name = "asgi-correlation-id", specifier = ">=4.3.4,<5.0.0" },
     { name = "asgi-lifespan", marker = "extra == 'dev'", specifier = ">=2.1.0,<3.0.0" },
     { name = "axe-core-python", marker = "extra == 'accessibility'", specifier = ">=0.1.0,<1.0.0" },
@@ -358,7 +356,7 @@ requires-dist = [
     { name = "questionary", specifier = ">=2.1.1,<3.0.0" },
     { name = "ragas", marker = "extra == 'eval'", specifier = "==0.1.13" },
     { name = "rebrowser-playwright", marker = "extra == 'browser'", specifier = ">=1.47.0,<2.0.0" },
-    { name = "redis", extras = ["hiredis"], specifier = ">=5.3.1,<6.0.0" },
+    { name = "redis", extras = ["hiredis"], specifier = ">=5.3.1,<7.0.0" },
     { name = "responses", marker = "extra == 'contract'", specifier = ">=0.25.8,<0.26.0" },
     { name = "respx", marker = "extra == 'dev'", specifier = ">=0.22.0" },
     { name = "rich", specifier = ">=14.1.0,<15.0.0" },
@@ -579,19 +577,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/4f/34/bc0b3577a818b4b70c6e318d23fe3c81fc3bb25f978ca8a3965cd8ee3af9/argh-0.31.3.tar.gz", hash = "sha256:f30023d8be14ca5ee6b1b3eeab829151d7bbda464ae07dc4dd5347919c5892f9", size = 57570, upload-time = "2024-07-13T17:54:59.729Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d2/52/fcd83710b6f8786df80e5d335882d1b24d1f610f397703e94a6ffb0d6f66/argh-0.31.3-py3-none-any.whl", hash = "sha256:2edac856ff50126f6e47d884751328c9f466bacbbb6cbfdac322053d94705494", size = 44844, upload-time = "2024-07-13T17:54:57.706Z" },
-]
-
-[[package]]
-name = "arq"
-version = "0.26.3"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "click" },
-    { name = "redis", extra = ["hiredis"] },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/4f/65/5add7049297a449d1453e26a8d5924f0d5440b3876edc9e80d5dc621f16d/arq-0.26.3.tar.gz", hash = "sha256:362063ea3c726562fb69c723d5b8ee80827fdefda782a8547da5be3d380ac4b1", size = 291111, upload-time = "2025-01-06T22:44:49.771Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/85/b3/a24a183c628da633b7cafd1759b14aaf47958de82ba6bcae9f1c2898781d/arq-0.26.3-py3-none-any.whl", hash = "sha256:9f4b78149a58c9dc4b88454861a254b7c4e7a159f2c973c89b548288b77e9005", size = 25968, upload-time = "2025-01-06T22:44:45.771Z" },
 ]
 
 [[package]]
