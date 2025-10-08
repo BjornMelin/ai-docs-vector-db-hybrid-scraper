@@ -12,7 +12,7 @@ from rich.panel import Panel
 from rich.syntax import Syntax
 from rich.table import Table
 
-from src.config import Config
+from src.config.loader import Settings, load_settings_from_file
 
 
 try:
@@ -63,7 +63,7 @@ def export(ctx: click.Context, output: str, export_format: str):
 
     try:
         if export_format == "json":
-            with output_path.open("w") as f:
+            with output_path.open("w", encoding="utf-8") as f:
                 json.dump(config_obj.model_dump(), f, indent=2)
         elif export_format == "yaml":
             if yaml is None:
@@ -71,7 +71,7 @@ def export(ctx: click.Context, output: str, export_format: str):
                     "❌ YAML support not available. Please install PyYAML", style="red"
                 )
                 return
-            with output_path.open("w") as f:
+            with output_path.open("w", encoding="utf-8") as f:
                 yaml.dump(config_obj.model_dump(), f, default_flow_style=False)
 
         console.print(f"✅ Configuration exported to {output_path}", style="green")
@@ -80,22 +80,23 @@ def export(ctx: click.Context, output: str, export_format: str):
 
 
 @config.command()
-@click.argument("config_file", type=click.Path(exists=True))
+@click.argument("config_file", type=click.Path(exists=True, path_type=Path))
 @click.option("--validate-only", is_flag=True, help="Only validate, don't load")
-def load(config_file: str, validate_only: bool):
+@click.pass_context
+def load(ctx: click.Context, config_file: Path, validate_only: bool):
     """Load configuration from file."""
     try:
-        config_path = Path(config_file)
-        config_obj = Config.load_from_file(config_path)
+        config_obj = load_settings_from_file(config_file)
 
         if validate_only:
             console.print("✅ Configuration file is valid", style="green")
         else:
-            console.print(f"✅ Configuration loaded from {config_path}", style="green")
+            ctx.obj["config"] = config_obj
+            console.print(f"✅ Configuration loaded from {config_file}", style="green")
             _show_config_table(config_obj)
 
-    except (OSError, ValueError) as e:
-        console.print(f"❌ Failed to load configuration: {e}", style="red")
+    except (OSError, ValueError, ImportError) as exc:
+        console.print(f"❌ Failed to load configuration: {exc}", style="red")
 
 
 @config.command()
@@ -125,7 +126,7 @@ def validate(ctx: click.Context):
         console.print(f"❌ Configuration validation failed: {e}", style="red")
 
 
-def _show_config_table(config_obj: Config):
+def _show_config_table(config_obj: Settings):
     """Display configuration as a formatted table."""
     table = Table(
         title="Configuration Settings", show_header=True, header_style="bold cyan"
@@ -151,25 +152,27 @@ def _show_config_table(config_obj: Config):
     table.add_row("Providers", "\n".join(provider_settings))
 
     # Database settings
+    qdrant = getattr(config_obj, "qdrant", None)
     db_settings = [
-        f"Qdrant URL: {config_obj.qdrant.url}",
-        f"Collection: {config_obj.qdrant.collection_name}",
-        f"Timeout: {config_obj.qdrant.timeout}s",
+        f"Qdrant URL: {getattr(qdrant, 'url', 'n/a')}",
+        f"Collection: {getattr(qdrant, 'collection_name', 'n/a')}",
+        f"Timeout: {getattr(qdrant, 'timeout', 'n/a')}s",
     ]
     table.add_row("Database", "\n".join(db_settings))
 
     # Cache settings
+    cache = getattr(config_obj, "cache", None)
     cache_settings = [
-        f"Enabled: {config_obj.cache.enable_caching}",
-        f"URL: {config_obj.cache.dragonfly_url}",
-        f"Max Size: {config_obj.cache.local_max_size}",
+        f"Local Cache: {getattr(cache, 'enable_local_cache', False)}",
+        f"Redis Cache: {getattr(cache, 'enable_redis_cache', False)}",
+        f"Redis URL: {getattr(cache, 'redis_url', 'n/a')}",
     ]
     table.add_row("Cache", "\n".join(cache_settings))
 
     console.print(table)
 
 
-def _show_config_json(config_obj: Config):
+def _show_config_json(config_obj: Settings):
     """Display configuration as JSON."""
     config_json = json.dumps(config_obj.model_dump(), indent=2)
     syntax = Syntax(config_json, "json", theme="monokai", line_numbers=True)
@@ -182,7 +185,7 @@ def _show_config_json(config_obj: Config):
     console.print(panel)
 
 
-def _show_config_yaml(config_obj: Config):
+def _show_config_yaml(config_obj: Settings):
     """Display configuration as YAML."""
     if yaml is None:
         console.print(

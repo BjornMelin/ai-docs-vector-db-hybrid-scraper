@@ -4,7 +4,7 @@ This module provides a unified import location for all Pydantic models used thro
 the application, organized by domain and purpose.
 
 Usage:
-    from models import Config, SearchRequest, VectorSearchConfig
+    from models import Config
     from models.configuration import QdrantConfig, CacheConfig
     from models.vector_search import SecureSearchParamsModel, PrefetchConfig
 """
@@ -14,7 +14,6 @@ Usage:
 from src.config import (
     CacheConfig,
     ChunkingConfig,
-    Config,
     Crawl4AIConfig,
     DocumentationSite,
     EmbeddingConfig,
@@ -25,9 +24,7 @@ from src.config import (
     PerformanceConfig,
     QdrantConfig,
     SecurityConfig,
-    get_config,
-    reset_config,
-    set_config,
+    get_settings,
 )
 
 from .api_contracts import (
@@ -48,7 +45,6 @@ from .api_contracts import (
     MCPRequest,
     MCPResponse,
     MetricData,
-    SearchRequest,
     SearchResponse as ApiSearchResponse,
     SearchResultItem,
     ValidationRequest,
@@ -68,6 +64,7 @@ from .document_processing import (
     ScrapingStats,
     VectorMetrics,
 )
+from .search import SearchRequest
 
 # Shared validators and utilities
 from .validators import (
@@ -96,56 +93,32 @@ from .validators import (
 # Vector search models
 from .vector_search import (
     # Request models
-    AdvancedFilteredSearchRequest,
-    AdvancedHybridSearchRequest,
-    # Async models
-    AsyncSearchContext,
-    BasicSearchRequest,
-    BatchSearchRequest,
-    BatchSearchResponse,
     DimensionError,
     FilterValidationError,
-    FusionAlgorithm,
-    HyDESearchRequest,
-    MultiStageSearchRequest,
-    SearchAccuracy,
-    SearchConfigurationError,
-    SearchResponse,
+    FusionConfig,
     # Stage models
     SearchStage,
     # Base classes and enums
     SecureBaseModel,
     SecureFilterGroupModel,
     SecureFilterModel,
-    # Security models
-    SecureMetadataModel,
-    SecurePayloadModel,
     SecureSearchParamsModel,
-    # Response models
-    SecureSearchResult,
-    SecureSparseVectorModel,
     # Vector models
+    SecureSparseVectorModel,
     SecureVectorModel,
     SecurityValidationError,
     # Exception classes
     VectorSearchError,
-    VectorType,
 )
 
 
 # Commonly used exports
 __all__ = [  # noqa: RUF022 - organized by category for readability
     # Vector Search - Request models
-    "AdvancedFilteredSearchRequest",
-    "AdvancedHybridSearchRequest",
+    "SearchRequest",
     # API Contracts
     "AnalyticsRequest",
     "AnalyticsResponse",
-    # Vector Search - Async models
-    "AsyncSearchContext",
-    "BasicSearchRequest",
-    "BatchSearchRequest",
-    "BatchSearchResponse",
     "BulkDocumentRequest",
     "BulkDocumentResponse",
     # Configuration
@@ -161,7 +134,6 @@ __all__ = [  # noqa: RUF022 - organized by category for readability
     "CollectionInfo",
     "CollectionRequest",
     "CollectionResponse",
-    "Config",
     "ContentFilter",
     "Crawl4AIConfig",
     "DimensionError",
@@ -175,25 +147,19 @@ __all__ = [  # noqa: RUF022 - organized by category for readability
     "FastEmbedConfig",
     "FilterValidationError",
     "FirecrawlConfig",
-    "FusionAlgorithm",
+    "FusionConfig",
     "HealthCheckResponse",
     "HyDEConfig",
-    "HyDESearchRequest",
     "ListCollectionsResponse",
     "MCPRequest",
     "MCPResponse",
     "MetricData",
-    "MultiStageSearchRequest",
     "OpenAIConfig",
     "PerformanceConfig",
     "ProcessedDocument",
     "QdrantConfig",
     "ScrapingStats",
-    "SearchAccuracy",
-    "SearchConfigurationError",
     # API Contracts
-    "SearchRequest",
-    "SearchResponse",
     "ApiSearchResponse",
     "SearchResultItem",
     # Vector Search - Stage models
@@ -202,14 +168,9 @@ __all__ = [  # noqa: RUF022 - organized by category for readability
     "SecureBaseModel",
     "SecureFilterGroupModel",
     "SecureFilterModel",
-    # Vector Search - Security models
-    "SecureMetadataModel",
-    "SecurePayloadModel",
     "SecureSearchParamsModel",
-    # Vector Search - Response models
-    "SecureSearchResult",
-    "SecureSparseVectorModel",
     # Vector Search - Vector models
+    "SecureSparseVectorModel",
     "SecureVectorModel",
     "SecurityConfig",
     "SecurityValidationError",
@@ -218,18 +179,15 @@ __all__ = [  # noqa: RUF022 - organized by category for readability
     "VectorMetrics",
     # Vector Search - Exception classes
     "VectorSearchError",
-    "VectorType",
     # Validators and Utilities
     "collection_name_field",
     "firecrawl_api_key_validator",
-    "get_config",
+    "get_settings",
     "non_negative_int",
     "openai_api_key_validator",
     "percentage",
     "port_number",
     "positive_int",
-    "reset_config",
-    "set_config",
     "url_validator",
     "validate_api_key_common",
     "validate_cache_ttl",

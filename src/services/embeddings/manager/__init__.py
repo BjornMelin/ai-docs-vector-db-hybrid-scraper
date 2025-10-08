@@ -14,7 +14,8 @@ try:
 except ImportError:
     CacheManager = None  # type: ignore[assignment]
 
-from src.config import Config
+from src.config.loader import Settings
+from src.config.models import EmbeddingConfig as SettingsEmbeddingConfig
 from src.services.errors import EmbeddingServiceError
 
 from ..base import EmbeddingProvider
@@ -49,7 +50,7 @@ class EmbeddingManager:
 
     def __init__(
         self,
-        config: Config,
+        config: Settings,
         client_manager: "ClientManager",
         budget_limit: float | None = None,
         rate_limiter: Any = None,
@@ -435,13 +436,13 @@ class EmbeddingManager:
         with benchmark_path.open("r", encoding="utf-8") as f:
             benchmark_data = json.load(f)
 
-        benchmark_config = Config(**benchmark_data)
+        embedding_config = SettingsEmbeddingConfig.model_validate(
+            benchmark_data.get("embedding", {})
+        )
 
         # Update manager's benchmarks and selection configuration
-        self._benchmarks = getattr(benchmark_config.embedding, "model_benchmarks", {})
-        self._smart_config = getattr(
-            benchmark_config.embedding, "smart_selection", None
-        )
+        self._benchmarks = getattr(embedding_config, "model_benchmarks", {}) or {}
+        self._smart_config = getattr(embedding_config, "smart_selection", None)
         self._selection = SelectionEngine(self._smart_config, self._benchmarks)
         if self._usage is None:
             self._usage = UsageTracker(self._smart_config, self._budget_limit)

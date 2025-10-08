@@ -68,7 +68,7 @@ class MockCircuitBreaker:
 
     async def call(self, func, *args, **_kwargs):
         """Execute function with circuit breaker protection."""
-        self.metrics.total_requests += 1
+        self.metrics._total_requests += 1
 
         # Check if circuit is open
         if self.state == CircuitBreakerState.OPEN:
@@ -80,8 +80,7 @@ class MockCircuitBreaker:
                 self._transition_to_half_open()
             else:
                 # Reject request
-                msg = "Circuit breaker is open - rejecting request"
-                raise TestError(msg)
+                self.metrics.rejection_count += 1
                 msg = "Circuit breaker is open - rejecting request"
                 raise TestError(msg)
 
@@ -200,7 +199,7 @@ class MockRateLimiter:
     async def allow_request(self) -> bool:
         """Check if request should be allowed."""
         current_time = time.time()
-        self.metrics.total_requests += 1
+        self.metrics._total_requests += 1
 
         # Clean old requests outside time window
         cutoff_time = current_time - self.config.time_window
@@ -337,7 +336,7 @@ class TestCircuitBreakers:
             # Analyze results
             circuit_opened = circuit_breaker.metrics.circuit_opened_count > 0
             error_rate = (
-                result.metrics.failed_requests / max(result.metrics.total_requests, 1)
+                result.metrics.failed_requests / max(result.metrics._total_requests, 1)
             ) * 100
 
             scenario_results.append(
@@ -453,9 +452,7 @@ class TestCircuitBreakers:
             return await circuit_breaker.call(service.process_request, **_kwargs)
 
         for phase in phases:
-            logger.info(
-                "Running recovery phase: %s", phase["name"]
-            )  # TODO: Convert f-string to logging format
+            logger.info("Running recovery phase: %s", phase["name"])
 
             # Set service health
             service.set_health(phase["service_healthy"])
@@ -474,7 +471,7 @@ class TestCircuitBreakers:
             # Track circuit breaker state changes during phase
             initial_state = circuit_breaker.state
             initial_metrics = {
-                "_total_requests": circuit_breaker.metrics.total_requests,
+                "_total_requests": circuit_breaker.metrics._total_requests,
                 "rejections": circuit_breaker.metrics.rejection_count,
                 "opened_count": circuit_breaker.metrics.circuit_opened_count,
                 "closed_count": circuit_breaker.metrics.circuit_closed_count,
@@ -488,7 +485,7 @@ class TestCircuitBreakers:
 
             final_state = circuit_breaker.state
             final_metrics = {
-                "_total_requests": circuit_breaker.metrics.total_requests,
+                "_total_requests": circuit_breaker.metrics._total_requests,
                 "rejections": circuit_breaker.metrics.rejection_count,
                 "opened_count": circuit_breaker.metrics.circuit_opened_count,
                 "closed_count": circuit_breaker.metrics.circuit_closed_count,
@@ -507,7 +504,7 @@ class TestCircuitBreakers:
             }
 
             error_rate = (
-                result.metrics.failed_requests / max(result.metrics.total_requests, 1)
+                result.metrics.failed_requests / max(result.metrics._total_requests, 1)
             ) * 100
 
             phase_results.append(
@@ -566,12 +563,8 @@ class TestCircuitBreakers:
         )
 
         logger.info("Circuit breaker recovery completed successfully")
-        logger.info(
-            "Total state changes: %s", _total_state_changes
-        )  # TODO: Convert f-string to logging format
-        logger.info(
-            "Final circuit breaker metrics: %s", circuit_breaker.metrics
-        )  # TODO: Convert f-string to logging format
+        logger.info("Total state changes: %s", _total_state_changes)
+        logger.info("Final circuit breaker metrics: %s", circuit_breaker.metrics)
 
 
 class TestRateLimiters:
@@ -626,9 +619,7 @@ class TestRateLimiters:
         pattern_results = []
 
         for pattern in load_patterns:
-            logger.info(
-                "Testing rate limiter with load pattern: %s", pattern["name"]
-            )  # TODO: Convert f-string to logging format
+            logger.info("Testing rate limiter with load pattern: %s", pattern["name"])
 
             # Reset rate limiter for clean test
             rate_limiter.request_times.clear()
@@ -653,7 +644,7 @@ class TestRateLimiters:
             )
 
             # Analyze rate limiting effectiveness
-            _total_attempted = rate_limiter.metrics.total_requests
+            _total_attempted = rate_limiter.metrics._total_requests
             allowed = rate_limiter.metrics.allowed_requests
             rejected = rate_limiter.metrics.rejected_requests
 
@@ -791,7 +782,7 @@ class TestRateLimiters:
         )
 
         # Analyze protection effectiveness
-        _total_attempted = rate_limiter.metrics.total_requests
+        _total_attempted = rate_limiter.metrics._total_requests
         rejected = rate_limiter.metrics.rejected_requests
 
         rejection_rate = (rejected / max(_total_attempted, 1)) * 100

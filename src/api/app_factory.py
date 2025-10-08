@@ -1,6 +1,7 @@
 """Mode-aware FastAPI application factory with profile-driven composition."""
 
 import logging
+from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from importlib import import_module
@@ -8,14 +9,15 @@ from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from starlette import status
 
 from src.api.app_profiles import AppProfile, detect_profile
-from src.architecture.modes import ApplicationMode, get_mode_config
-from src.architecture.service_factory import (
-    ModeAwareServiceFactory,
-    set_service_factory,
-)
-from src.services.fastapi.middleware.manager import get_middleware_manager
+from src.api.lifespan import client_manager_lifespan
+from src.architecture.modes import ApplicationMode, ModeConfig, get_mode_config
+from src.infrastructure.client_manager import ClientManager
+from src.services.fastapi.dependencies import get_health_checker
+from src.services.fastapi.middleware.manager import apply_defaults, apply_named_stack
 
 
 try:
@@ -25,16 +27,6 @@ except ImportError:
 
 
 logger = logging.getLogger(__name__)
-
-
-def _resolve_optional_class(module_path: str, attribute: str) -> Any | None:
-    """Return attribute from module when available, suppressing import errors."""
-
-    try:
-        module = import_module(module_path)
-    except ImportError:
-        return None
-    return getattr(module, attribute, None)
 
 
 def _coerce_profile(
@@ -90,8 +82,6 @@ def create_app(
     app.state.profile = resolved_profile
     app.state.mode = mode
     app.state.mode_config = mode_config
-    app.state.service_factory = ModeAwareServiceFactory(mode)
-    set_service_factory(app.state.service_factory)
 
     # Register lifespan handler (temporary bridge retains global factory usage)
     app.router.lifespan_context = _build_app_lifespan(app)
@@ -158,8 +148,14 @@ def _configure_cors(app: FastAPI, mode: ApplicationMode) -> None:
 
 def _apply_middleware_stack(app: FastAPI, middleware_stack: list[str]) -> None:
     """Apply mode-specific middleware stack."""
-    middleware_manager = get_middleware_manager()
-    middleware_manager.apply_middleware(app, middleware_stack)
+
+    if not middleware_stack:
+        apply_defaults(app)
+        return
+
+    applied = apply_named_stack(app, middleware_stack)
+    if not applied:
+        apply_defaults(app)
 
 
 def _configure_routes(app: FastAPI, profile: AppProfile, mode: ApplicationMode) -> None:
@@ -256,23 +252,23 @@ def _configure_common_routes(app: FastAPI) -> None:
     async def health_check():
         """Health check endpoint."""
         mode = app.state.mode
-        service_factory: ModeAwareServiceFactory = app.state.service_factory
-        mode_config = app.state.mode_config
+        checker = get_health_checker()
+        health_report = await checker.check_health()
 
-        # Get available services for health check
-        available_services = service_factory.get_available_services()
-        service_status = [
-            service_factory.get_service_status(name)
-            for name in mode_config.enabled_services
-        ]
+        status_code = (
+            status.HTTP_200_OK
+            if health_report.get("status") == "healthy"
+            else status.HTTP_503_SERVICE_UNAVAILABLE
+        )
 
-        return {
-            "status": "healthy",
+        payload = {
+            "status": health_report["status"],
             "mode": mode.value,
-            "available_services": available_services,
-            "service_status": service_status,
-            "timestamp": datetime.now(UTC).isoformat(),
+            "services": health_report.get("services", {}),
+            "timestamp": health_report.get("timestamp", datetime.now(UTC).isoformat()),
         }
+
+        return JSONResponse(payload, status_code=status_code)
 
     @app.get("/info")
     async def info():
@@ -297,9 +293,18 @@ def _configure_common_routes(app: FastAPI) -> None:
     @app.get("/mode")
     async def mode_info():
         """Detailed mode configuration information."""
-        service_factory: ModeAwareServiceFactory = app.state.service_factory
+        mode_config: ModeConfig = app.state.mode_config
+        mode_value = app.state.mode.value
 
-        return service_factory.get_mode_info()
+        return {
+            "mode": mode_value,
+            "enabled_services": mode_config.enabled_services,
+            "resource_limits": mode_config.resource_limits,
+            "middleware_stack": mode_config.middleware_stack,
+            "advanced_monitoring": mode_config.enable_advanced_monitoring,
+            "deployment_features": mode_config.enable_deployment_features,
+            "a_b_testing": mode_config.enable_a_b_testing,
+        }
 
 
 def _get_mode_features(mode: ApplicationMode) -> dict[str, Any]:
@@ -331,56 +336,50 @@ def _build_app_lifespan(app: FastAPI):
     @asynccontextmanager
     async def lifespan(_: FastAPI):
         mode = app.state.mode
-        service_factory: ModeAwareServiceFactory = app.state.service_factory
+        mode_config: ModeConfig = app.state.mode_config
 
         logger.info("Starting application in %s mode", mode.value)
 
-        _register_mode_services(service_factory)
-        await _initialize_critical_services(service_factory)
+        async with client_manager_lifespan(app):
+            client_manager: ClientManager = app.state.client_manager
+            await _initialize_mode_services(client_manager, mode_config)
 
-        logger.info("Application startup complete in %s mode", mode.value)
+            logger.info("Application startup complete in %s mode", mode.value)
 
-        try:
-            yield
-        finally:
-            logger.info("Shutting down application")
-            await service_factory.cleanup_all_services()
-            logger.info("Application shutdown complete")
+            try:
+                yield
+            finally:
+                logger.info("Shutting down application")
+                logger.info("Application shutdown complete")
 
     return lifespan
 
 
-def _register_mode_services(factory: ModeAwareServiceFactory) -> None:
-    """Register services for the specified mode."""
-    embedding_manager_cls = _resolve_optional_class(
-        "src.services.embeddings.manager", "EmbeddingManager"
-    )
-    if embedding_manager_cls:
-        factory.register_universal_service("embedding_service", embedding_manager_cls)
-    else:
-        logger.warning("Embedding manager unavailable; embedding service disabled")
+async def _initialize_mode_services(
+    client_manager: ClientManager, mode_config: ModeConfig
+) -> None:
+    """Initialize services required for the active application mode."""
 
-    vector_store_cls = _resolve_optional_class(
-        "src.services.vector_db.service", "VectorStoreService"
-    )
-    if vector_store_cls:
-        factory.register_universal_service("vector_db_service", vector_store_cls)
-    else:
-        logger.warning("Vector store service unavailable; vector DB service disabled")
+    service_initializers: dict[str, Callable[[], Awaitable[Any]]] = {
+        "embedding_service": client_manager.get_embedding_manager,
+        "vector_db_service": client_manager.get_vector_store_service,
+        "qdrant_client": client_manager.get_qdrant_client,
+        "simple_caching": client_manager.get_cache_manager,
+        "multi_tier_caching": client_manager.get_cache_manager,
+        "advanced_search": client_manager.get_vector_store_service,
+        "basic_search": client_manager.get_vector_store_service,
+        "deployment_services": client_manager.get_database_manager,
+        "advanced_analytics": client_manager.get_content_intelligence_service,
+    }
 
-
-async def _initialize_critical_services(factory: ModeAwareServiceFactory) -> None:
-    """Initialize critical services required for basic operation."""
-    critical_services = list(factory.mode_config.enabled_services)
-
-    for service_name in critical_services:
+    for service_name in mode_config.enabled_services:
+        initializer = service_initializers.get(service_name)
+        if initializer is None:
+            continue
         try:
-            service = await factory.get_service_optional(service_name)
-            if service:
-                logger.info("Initialized critical service: %s", service_name)
-            else:
-                logger.warning("Critical service not available: %s", service_name)
-        except (OSError, AttributeError, ConnectionError, ImportError):
+            await initializer()
+            logger.info("Initialized critical service: %s", service_name)
+        except Exception:  # pragma: no cover - defensive log
             logger.exception("Failed to initialize critical service %s", service_name)
 
 
@@ -389,6 +388,14 @@ def get_app_mode(app: FastAPI) -> ApplicationMode:
     return app.state.mode  # type: ignore[attr-defined]
 
 
-def get_app_service_factory(app: FastAPI) -> ModeAwareServiceFactory:
-    """Get the service factory from a FastAPI application."""
-    return app.state.service_factory  # type: ignore[attr-defined]
+def get_app_client_manager(app: FastAPI) -> ClientManager:
+    """Get the ClientManager from a FastAPI application."""
+
+    manager = getattr(app.state, "client_manager", None)
+    if manager is None:
+        msg = "ClientManager is not attached to application state"
+        raise RuntimeError(msg)
+    if not isinstance(manager, ClientManager):
+        msg = "Application state client_manager is not a ClientManager instance"
+        raise TypeError(msg)
+    return manager

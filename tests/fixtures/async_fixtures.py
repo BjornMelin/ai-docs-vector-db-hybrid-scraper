@@ -5,25 +5,53 @@ async functions and managing async resources properly.
 """
 
 import asyncio
+from collections.abc import AsyncGenerator, AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import httpx
+import pytest
 import pytest_asyncio
+from asgi_lifespan import LifespanManager
+from fastapi import FastAPI
+from httpx import ASGITransport
 
 
-@pytest_asyncio.fixture
-async def async_test_client():
-    """Async HTTP test client with session management."""
+@pytest.fixture
+def async_test_client():
+    """Factory returning an async HTTP client with lifespan management."""
 
-    async with httpx.AsyncClient(
-        timeout=httpx.Timeout(30.0),
-        limits=httpx.Limits(max_keepalive_connections=5, max_connections=10),
-    ) as client:
-        # Add test headers
-        client.headers.update({"User-Agent": "TestClient/1.0", "X-Test-Run": "true"})
-        yield client
+    @asynccontextmanager
+    async def _create_client(
+        app: FastAPI,
+        base_url: str = "http://test",
+        **client_kwargs: Any,
+    ):
+        client_options = {
+            "timeout": httpx.Timeout(30.0),
+            "limits": httpx.Limits(max_keepalive_connections=5, max_connections=10),
+        }
+        client_options.update(client_kwargs)
+
+        @asynccontextmanager
+        async def _lifespan_context() -> AsyncIterator[None]:
+            async with LifespanManager(app):
+                yield
+
+        async with _lifespan_context():
+            transport = ASGITransport(app=app)
+            async with httpx.AsyncClient(
+                transport=transport,
+                base_url=base_url,
+                **client_options,
+            ) as client:
+                client.headers.update(
+                    {"User-Agent": "TestClient/1.0", "X-Test-Run": "true"}
+                )
+                yield client
+
+    return _create_client
 
 
 @pytest_asyncio.fixture
@@ -31,16 +59,19 @@ async def async_connection_pool():
     """Async connection pool for database testing."""
     pool = MagicMock()
 
-    # Connection methods
-    async def acquire_connection():
+    @asynccontextmanager
+    async def acquire_connection() -> AsyncGenerator[MagicMock, None]:
         conn = MagicMock()
         conn.execute = AsyncMock(return_value=MagicMock(rows=[]))
         conn.fetch = AsyncMock(return_value=[])
         conn.fetchone = AsyncMock(return_value=None)
         conn.close = AsyncMock()
-        return conn
+        try:
+            yield conn
+        finally:
+            await conn.close()
 
-    pool.acquire = asynccontextmanager(acquire_connection)
+    pool.acquire = acquire_connection
     pool.close = AsyncMock()
 
     yield pool
@@ -194,13 +225,22 @@ async def async_cache():
 @pytest_asyncio.fixture
 async def async_queue():
     """Async queue for testing producer-consumer patterns."""
-    queue = asyncio.Queue(maxsize=100)
 
-    # Add helper methods
-    queue.drain = async_drain_queue
-    queue.fill = async_fill_queue
+    queue: asyncio.Queue[Any] = asyncio.Queue(maxsize=100)
 
-    yield queue
+    class AsyncQueueTools:
+        def __init__(self, queue: asyncio.Queue[Any]):
+            self.queue = queue
+
+        async def drain(self) -> list[Any]:
+            return await async_drain_queue(self.queue)
+
+        async def fill(self, values: list[Any]) -> None:
+            await async_fill_queue(self.queue, values)
+
+    tools = AsyncQueueTools(queue)
+
+    yield tools
 
     # Ensure queue is empty
     while not queue.empty():
@@ -210,8 +250,9 @@ async def async_queue():
             break
 
 
-async def async_drain_queue(queue):
+async def async_drain_queue(queue: asyncio.Queue[Any]) -> list[Any]:
     """Drain all items from queue."""
+
     items = []
     while not queue.empty():
         try:
@@ -222,7 +263,8 @@ async def async_drain_queue(queue):
     return items
 
 
-async def async_fill_queue(queue, items):
+async def async_fill_queue(queue: asyncio.Queue[Any], items: list[Any]) -> None:
     """Fill queue with items."""
+
     for item in items:
         await queue.put(item)

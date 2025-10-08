@@ -1,6 +1,7 @@
 """Dependency injection container for the application."""
 
 import asyncio
+import importlib
 import logging
 from collections.abc import AsyncGenerator
 from functools import lru_cache
@@ -14,17 +15,6 @@ from dependency_injector.wiring import Provide
 from firecrawl import AsyncFirecrawlApp
 from openai import AsyncOpenAI
 from qdrant_client import AsyncQdrantClient
-
-
-# Import parallel processing components
-try:
-    from src.services.processing.parallel_integration import (
-        OptimizationConfig,
-        ParallelProcessingSystem,
-    )
-except ImportError:
-    OptimizationConfig = None
-    ParallelProcessingSystem = None
 
 
 logger = logging.getLogger(__name__)
@@ -52,20 +42,13 @@ def _create_openai_client(config: Any) -> AsyncOpenAI:
 
 
 def _create_qdrant_client(config: Any) -> AsyncQdrantClient:
-    """Create Qdrant client with configuration.
+    """Create Qdrant client with configuration."""
 
-    Args:
-        config: Configuration object
-
-    Returns:
-        Qdrant client
-
-    """
     try:
         qdrant_config = getattr(config, "qdrant", None)
         url = getattr(qdrant_config, "url", None) or "http://localhost:6333"
         api_key = getattr(qdrant_config, "api_key", None)
-        timeout = float(getattr(qdrant_config, "timeout", None) or 30.0)
+        timeout = int(getattr(qdrant_config, "timeout", None) or 30)
         prefer_grpc = getattr(qdrant_config, "prefer_grpc", None) or False
         return AsyncQdrantClient(
             url=url, api_key=api_key, timeout=timeout, prefer_grpc=prefer_grpc
@@ -76,15 +59,8 @@ def _create_qdrant_client(config: Any) -> AsyncQdrantClient:
 
 
 def _create_redis_client(config: Any) -> redis.Redis:
-    """Create Redis client with configuration.
+    """Create Redis client with configuration."""
 
-    Args:
-        config: Configuration object
-
-    Returns:
-        Redis client
-
-    """
     try:
         cache_config = getattr(config, "cache", None)
         url = getattr(cache_config, "dragonfly_url", None) or "redis://localhost:6379"
@@ -98,15 +74,8 @@ def _create_redis_client(config: Any) -> redis.Redis:
 
 
 def _create_firecrawl_client(config: Any) -> AsyncFirecrawlApp:
-    """Create Firecrawl client with configuration.
+    """Create Firecrawl client with configuration."""
 
-    Args:
-        config: Configuration object
-
-    Returns:
-        Firecrawl client
-
-    """
     try:
         firecrawl_config = getattr(config, "firecrawl", None)
         api_key = getattr(firecrawl_config, "api_key", None) or ""
@@ -117,53 +86,30 @@ def _create_firecrawl_client(config: Any) -> AsyncFirecrawlApp:
 
 
 async def _create_http_client() -> AsyncGenerator[Any]:
-    """Create HTTP client with proper lifecycle management.
+    """Create HTTP client with proper lifecycle management."""
 
-    Yields:
-        HTTP client session
-
-    """
     async with asyncio.timeout(30.0):
         timeout_config = aiohttp.ClientTimeout(total=30.0)
         async with aiohttp.ClientSession(timeout=timeout_config) as session:
             yield session
 
 
-def _create_parallel_processing_system(embedding_manager: Any) -> Any:
-    """Create parallel processing system with optimizations.
+def _create_parallel_processing_system(*, embedding_manager: Any) -> Any:
+    """Construct the parallel processing system if available.
 
-    Args:
-        embedding_manager: EmbeddingManager instance
-
-    Returns:
-        ParallelProcessingSystem instance
-
+    Falls back to a lightweight stub when the optional dependency graph is absent.
     """
-    if OptimizationConfig and ParallelProcessingSystem:
-        # Create optimization configuration
-        config = OptimizationConfig(
-            enable_parallel_processing=True,
-            enable_caching=True,
-            enable_optimized_algorithms=True,
-            performance_monitoring=True,
-            auto_optimization=True,
+
+    try:  # Lazy import to avoid mandatory dependency.
+        module = importlib.import_module(
+            "src.services.processing.parallel_processing_system"
         )
+        factory = module.create_parallel_processing_system
+    except (ModuleNotFoundError, AttributeError):
+        logger.debug("Parallel processing factory unavailable; using embedding manager")
+        return embedding_manager()
 
-        try:
-            return ParallelProcessingSystem(embedding_manager, config)
-        except (AttributeError, TypeError, ValueError) as e:
-            logger.warning("Failed to create parallel processing system: %s", e)
-            # Fall through to mock system
-
-    # Return a minimal mock system if creation fails or components unavailable
-    class MockParallelProcessingSystem:
-        async def get_system_status(self):
-            return {"system_health": {"status": "unavailable"}}
-
-        async def cleanup(self):
-            pass
-
-    return MockParallelProcessingSystem()
+    return factory(embedding_manager=embedding_manager())
 
 
 class ApplicationContainer(containers.DeclarativeContainer):  # pylint: disable=c-extension-no-member
@@ -245,14 +191,7 @@ class ContainerManager:
         self._initialized = False
 
     async def initialize(self, config: Any) -> ApplicationContainer:
-        """Initialize the container with configuration.
-
-        Args:
-            config: Application configuration
-
-        Returns:
-            Initialized container
-        """
+        """Initialize the container with configuration."""
 
         if self._initialized:
             if self.container is None:
@@ -271,6 +210,7 @@ class ContainerManager:
 
     async def shutdown(self) -> None:
         """Shutdown the container and cleanup resources."""
+
         if self._initialized and self.container is not None:
             await self.container.shutdown_resources()  # pyright: ignore[reportGeneralTypeIssues]
             self.container = None
@@ -278,15 +218,8 @@ class ContainerManager:
             logger.info("Dependency injection container shutdown")
 
     def _config_to_dict(self, config: Any) -> dict:
-        """Convert config object to dictionary for dependency-injector.
+        """Convert config object to dictionary for dependency-injector."""
 
-        Args:
-            config: Configuration object
-
-        Returns:
-            Configuration dictionary
-
-        """
         try:
             # Try to convert using model_dump if it's a Pydantic model
             if hasattr(config, "model_dump"):
@@ -305,15 +238,8 @@ class ContainerManager:
             return {}
 
     def _serialize_config_dict(self, data: Any) -> Any:
-        """Recursively serialize configuration data.
+        """Recursively serialize configuration data."""
 
-        Args:
-            data: Data to serialize
-
-        Returns:
-            Serialized data
-
-        """
         if hasattr(data, "model_dump"):
             return data.model_dump()
         if hasattr(data, "__dict__"):
@@ -326,7 +252,7 @@ class ContainerManager:
             return {
                 key: self._serialize_config_dict(value) for key, value in data.items()
             }
-        if isinstance(data, list | tuple):
+        if isinstance(data, (list, tuple)):
             return [self._serialize_config_dict(item) for item in data]
         return data
 
@@ -337,30 +263,20 @@ _container_manager = ContainerManager()
 
 @lru_cache(maxsize=1)
 def get_container() -> ApplicationContainer | None:
-    """Get the global container instance.
+    """Get the global container instance."""
 
-    Returns:
-        Container instance or None if not initialized
-
-    """
     return _container_manager.container
 
 
 async def initialize_container(config: Any) -> ApplicationContainer:
-    """Initialize the global container.
+    """Initialize the global container."""
 
-    Args:
-        config: Application configuration
-
-    Returns:
-        Initialized container
-
-    """
     return await _container_manager.initialize(config)
 
 
 async def shutdown_container() -> None:
     """Shutdown the global container."""
+
     await _container_manager.shutdown()
     get_container.cache_clear()
 
@@ -368,57 +284,68 @@ async def shutdown_container() -> None:
 # Dependency injection decorators and functions for easy access
 def inject_openai_provider():
     """Inject OpenAI client provider dependency."""
+
     return Provide[ApplicationContainer.openai_provider]
 
 
 def inject_qdrant_provider():
     """Inject Qdrant client provider dependency."""
+
     return Provide[ApplicationContainer.qdrant_provider]
 
 
 def inject_redis_provider():
     """Inject Redis client provider dependency."""
+
     return Provide[ApplicationContainer.redis_provider]
 
 
 def inject_firecrawl_provider():
     """Inject Firecrawl client provider dependency."""
+
     return Provide[ApplicationContainer.firecrawl_provider]
 
 
 def inject_http_provider():
     """Inject HTTP client provider dependency."""
+
     return Provide[ApplicationContainer.http_provider]
 
 
 def inject_parallel_processing_system():
     """Inject parallel processing system dependency."""
+
     return Provide[ApplicationContainer.parallel_processing_system]
 
 
 # Legacy raw client injection (for backward compatibility)
 def inject_openai() -> AsyncOpenAI:
     """Inject raw OpenAI client dependency."""
+
     return Provide[ApplicationContainer.openai_client]
 
 
 def inject_qdrant() -> AsyncQdrantClient:
     """Inject raw Qdrant client dependency."""
+
     return Provide[ApplicationContainer.qdrant_client]
 
 
 def inject_redis() -> redis.Redis:
     """Inject raw Redis client dependency."""
+
     return Provide[ApplicationContainer.redis_client]
 
 
 def inject_firecrawl() -> AsyncFirecrawlApp:
     """Inject raw Firecrawl client dependency."""
+
     return Provide[ApplicationContainer.firecrawl_client]
 
 
 def inject_http() -> Any:
     """Inject raw HTTP client dependency."""
+
     return Provide[ApplicationContainer.http_client]
 
 
@@ -432,17 +359,20 @@ class DependencyContext:
 
     async def __aenter__(self) -> ApplicationContainer:
         """Initialize dependencies."""
+
         self.container = await initialize_container(self.config)
         return self.container
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         """Cleanup dependencies."""
+
         await shutdown_container()
 
 
 # Wire modules for automatic dependency injection
 def wire_modules() -> None:
     """Wire modules for dependency injection."""
+
     container = get_container()
     if container:
         # Wire commonly used modules

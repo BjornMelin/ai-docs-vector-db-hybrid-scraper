@@ -1,4 +1,4 @@
-"""Crawl4AI adapter wired to the new functional entry points."""
+"""Crawl4AI adapter providing service-layer entry points."""
 
 from __future__ import annotations
 
@@ -71,7 +71,7 @@ class Metrics:
 
 
 class Crawl4AIAdapter(BaseService):
-    """Thin adapter around the functional Crawl4AI provider."""
+    """Thin adapter around the Crawl4AI provider."""
 
     def __init__(self, config: Crawl4AIConfig):
         super().__init__(None)

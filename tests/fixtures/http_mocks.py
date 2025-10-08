@@ -4,12 +4,20 @@ from __future__ import annotations
 
 import httpx
 import pytest
-import respx
+
+
+try:
+    import respx
+except ImportError:  # pragma: no cover - optional dependency
+    respx = None
 
 
 @pytest.fixture
 def respx_mock():
     """Provide a respx router preloaded with common service mocks."""
+    if respx is None:
+        pytest.skip("respx is not installed")
+
     with respx.mock(assert_all_mocked=False) as mock:
         mock.post("https://api.openai.com/v1/embeddings").mock(
             return_value=httpx.Response(

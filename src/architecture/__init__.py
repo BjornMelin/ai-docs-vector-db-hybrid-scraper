@@ -9,15 +9,12 @@ This module implements the Enterprise Paradox solution by providing:
 
 from .features import FeatureFlag, conditional_feature, enterprise_only
 from .modes import ApplicationMode, ModeConfig, get_mode_config
-from .service_factory import ModeAwareServiceFactory, ServiceProtocol
 
 
 __all__ = [
     "ApplicationMode",
     "FeatureFlag",
-    "ModeAwareServiceFactory",
     "ModeConfig",
-    "ServiceProtocol",
     "conditional_feature",
     "enterprise_only",
     "get_mode_config",

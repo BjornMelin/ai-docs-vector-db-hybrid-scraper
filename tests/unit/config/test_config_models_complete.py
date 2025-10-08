@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from src.config import (
+from src.config.models import (
     BrowserUseConfig,
     Crawl4AIConfig,
     DatabaseConfig,
@@ -20,8 +20,8 @@ from src.config import (
     PerformanceConfig,
     PlaywrightConfig,
     SearchStrategy,
-    SecurityConfig,
 )
+from src.config.security.config import SecurityConfig
 
 
 TEST_REDIS_PASSWORD = "test_redis_secret"  # noqa: S105

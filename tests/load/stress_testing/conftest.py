@@ -12,7 +12,7 @@ import resource
 import tempfile
 import threading
 import time
-from contextlib import contextmanager, suppress
+from contextlib import ExitStack, contextmanager, suppress
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -150,10 +150,11 @@ class FailureInjector:
         )
 
         # Simulate network failure
-        def should_fail():
+        def should_fail() -> bool:
             return time.time() % 1.0 < failure_rate
 
-        # Store original function to patch
+        # Store helper for consumers that inspect active failures
+        self.active_failures[failure_id]["should_fail"] = should_fail
 
         try:
             await asyncio.sleep(duration)
@@ -183,9 +184,7 @@ class FailureInjector:
             "duration": duration,
         }
 
-        logger.warning(
-            "Injecting memory pressure: %sMB for %ss", pressure_mb, duration
-        )  # TODO: Convert f-string to logging format
+        logger.warning("Injecting memory pressure: %sMB for %ss", pressure_mb, duration)
 
         # Allocate memory to create pressure
         memory_hogs = []
@@ -228,7 +227,7 @@ class FailureInjector:
 
         logger.warning(
             "Injecting CPU saturation: %.1f%% load for %ss", cpu_load * 100, duration
-        )  # TODO: Convert f-string to logging format
+        )
 
         # CPU intensive work
         stop_cpu_work = threading.Event()
@@ -471,10 +470,10 @@ class StressTestOrchestrator:
                     )
 
                 # Enter all constraint contexts
-                async with asyncio.gather(
-                    *[self._async_context_manager(ctx) for ctx in constraint_contexts],
-                    return_exceptions=True,
-                ):
+                with ExitStack() as stack:
+                    for ctx in constraint_contexts:
+                        stack.enter_context(ctx)
+
                     # Run chaos scenarios if specified
                     chaos_results = []
                     if "chaos_scenarios" in phase:
@@ -507,17 +506,9 @@ class StressTestOrchestrator:
                 logger.exception("Stress test phase {i + 1} failed")
 
             phase_results.append(phase_result)
-            logger.info(
-                "Completed stress test phase %s", i + 1
-            )  # TODO: Convert f-string to logging format
+            logger.info("Completed stress test phase %s", i + 1)
 
         return phase_results
-
-    async def _async_context_manager(self, context_manager):
-        """Convert sync context manager to async."""
-        # This is a simplified implementation
-        # In a real scenario, you might need more sophisticated handling
-        return context_manager
 
 
 # Predefined stress test profiles

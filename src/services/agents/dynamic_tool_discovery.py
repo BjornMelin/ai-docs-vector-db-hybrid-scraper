@@ -12,9 +12,10 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, cast
+from typing import Any
 
 from langchain_mcp_adapters.client import MultiServerMCPClient
+from opentelemetry import trace
 
 from src.infrastructure.client_manager import ClientManager
 from src.services.errors import APIError
@@ -23,9 +24,14 @@ from src.services.monitoring.telemetry_repository import get_telemetry_repositor
 
 logger = logging.getLogger(__name__)
 telemetry = get_telemetry_repository()
+tracer = trace.get_tracer(__name__)
 
 _METRIC_DISCOVERY_RUNS = "mcp_discovery_runs_total"
 _METRIC_DISCOVERY_ERRORS = "mcp_discovery_errors_total"
+_METRIC_DISCOVERY_CACHE_HITS = "mcp_discovery_cache_hits_total"
+_METRIC_DISCOVERY_CACHE_MISSES = "mcp_discovery_cache_misses_total"
+_METRIC_DISCOVERY_REFRESH_LATENCY = "mcp_discovery_refresh_latency_ms"
+_METRIC_DISCOVERY_CHANGES = "mcp_discovery_changes_total"
 
 
 class ToolCapabilityType(str, Enum):
@@ -94,12 +100,48 @@ class DynamicToolDiscovery:  # pylint: disable=too-many-instance-attributes
 
         now = time.monotonic()
         if not force and self._cache_ttl_seconds and now < self._cache_expires_at:
+            telemetry.increment_counter(_METRIC_DISCOVERY_CACHE_HITS)
             return
         async with self._lock:
             now = time.monotonic()
             if not force and self._cache_ttl_seconds and now < self._cache_expires_at:
+                telemetry.increment_counter(_METRIC_DISCOVERY_CACHE_HITS)
                 return
-            capabilities = await self._discover_capabilities()
+
+            start_time = time.perf_counter()
+            with tracer.start_as_current_span(
+                "mcp.discovery.refresh",
+                attributes={"mcp.discovery.force": force},
+            ):
+                capabilities = await self._discover_capabilities()
+            duration_ms = (time.perf_counter() - start_time) * 1000.0
+
+            telemetry.increment_counter(
+                _METRIC_DISCOVERY_CACHE_MISSES,
+                tags={
+                    "force": str(force).lower(),
+                    "tool_count": str(len(capabilities)),
+                },
+            )
+            telemetry.record_observation(_METRIC_DISCOVERY_REFRESH_LATENCY, duration_ms)
+
+            previous_keys = set(self._capabilities.keys())
+            new_keys = set(capabilities.keys())
+            added_keys = new_keys - previous_keys
+            removed_keys = previous_keys - new_keys
+            for key in added_keys:
+                server, _ = key.split(":", 1)
+                telemetry.increment_counter(
+                    _METRIC_DISCOVERY_CHANGES,
+                    tags={"server": server, "action": "added"},
+                )
+            for key in removed_keys:
+                server, _ = key.split(":", 1)
+                telemetry.increment_counter(
+                    _METRIC_DISCOVERY_CHANGES,
+                    tags={"server": server, "action": "removed"},
+                )
+
             self._capabilities = capabilities
             self._cache_expires_at = now + self._cache_ttl_seconds
             if self._telemetry_hook:
@@ -110,6 +152,9 @@ class DynamicToolDiscovery:  # pylint: disable=too-many-instance-attributes
                             "servers": sorted(
                                 {cap.server for cap in capabilities.values()}
                             ),
+                            "added_tools": sorted(added_keys),
+                            "removed_tools": sorted(removed_keys),
+                            "refresh_duration_ms": duration_ms,
                             "timestamp": datetime.now(tz=UTC).isoformat(),
                         }
                     )
@@ -152,8 +197,7 @@ class DynamicToolDiscovery:  # pylint: disable=too-many-instance-attributes
             APIError: If no MCP connections are configured.
         """
 
-        client_manager_any = cast(Any, self._client_manager)
-        client = cast(MultiServerMCPClient, await client_manager_any.get_mcp_client())
+        client = await self._client_manager.get_mcp_client()
         if not getattr(client, "connections", None):
             msg = "No MCP server connections available for discovery"
             raise APIError(msg)
@@ -170,7 +214,7 @@ class DynamicToolDiscovery:  # pylint: disable=too-many-instance-attributes
             except Exception:  # pragma: no cover - defensive guard
                 telemetry.increment_counter(
                     _METRIC_DISCOVERY_ERRORS,
-                    tags={"server": server_name},
+                    tags={"server": server_name, "reason": "session_error"},
                 )
                 logger.exception(
                     "Tool discovery failed for MCP server '%s'", server_name
@@ -253,6 +297,10 @@ class DynamicToolDiscovery:  # pylint: disable=too-many-instance-attributes
             async with client.session(server_name) as session:
                 yield session
         except ValueError as exc:  # server not configured
+            telemetry.increment_counter(
+                _METRIC_DISCOVERY_ERRORS,
+                tags={"server": server_name, "reason": "not_configured"},
+            )
             msg = f"MCP server '{server_name}' is not configured"
             raise APIError(msg) from exc
 

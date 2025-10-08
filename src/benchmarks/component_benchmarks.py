@@ -8,12 +8,14 @@ import asyncio
 import logging
 import statistics
 import time
+from collections.abc import Sequence
+from typing import Any
 
 from pydantic import BaseModel, Field
 
-from src.config import Config
+from src.benchmarks.performance_profiler import AdvancedHybridSearchService
+from src.config import Settings
 from src.models.vector_search import HybridSearchRequest
-from src.services.vector_db.hybrid_search import AdvancedHybridSearchService
 
 
 logger = logging.getLogger(__name__)
@@ -49,7 +51,7 @@ class ComponentBenchmarkResult(BaseModel):
 class ComponentBenchmarks:
     """Individual component benchmark runner."""
 
-    def __init__(self, config: Config):
+    def __init__(self, config: Settings):
         """Initialize component benchmarks.
 
         Args:
@@ -61,7 +63,7 @@ class ComponentBenchmarks:
     async def run_all_component_benchmarks(
         self,
         search_service: AdvancedHybridSearchService,
-        test_queries: list[HybridSearchRequest],
+        test_queries: Sequence[HybridSearchRequest],
     ) -> dict[str, ComponentBenchmarkResult]:
         """Run benchmarks for all components.
 
@@ -71,20 +73,24 @@ class ComponentBenchmarks:
 
         Returns:
             Dictionary mapping component names to benchmark results
-
         """
-        results = {}
+
+        queries = list(test_queries)
+        results: dict[str, ComponentBenchmarkResult] = {}
 
         # Query Classifier benchmarks
         logger.info("Benchmarking Query Classifier...")
         results["query_classifier"] = await self.benchmark_query_classifier(
-            search_service.query_classifier, test_queries
+            search_service.query_classifier,
+            queries,
         )
 
         # Model Selector benchmarks
         logger.info("Benchmarking Model Selector...")
         results["model_selector"] = await self.benchmark_model_selector(
-            search_service.model_selector, search_service.query_classifier, test_queries
+            search_service.model_selector,
+            search_service.query_classifier,
+            queries,
         )
 
         # Adaptive Fusion Tuner benchmarks
@@ -92,34 +98,38 @@ class ComponentBenchmarks:
         results["adaptive_fusion_tuner"] = await self.benchmark_adaptive_fusion_tuner(
             search_service.adaptive_fusion_tuner,
             search_service.query_classifier,
-            test_queries,
+            queries,
         )
 
         # SPLADE Provider benchmarks
         logger.info("Benchmarking SPLADE Provider...")
         results["splade_provider"] = await self.benchmark_splade_provider(
-            search_service.splade_provider, test_queries
+            search_service.splade_provider,
+            queries,
         )
 
         # End-to-end search benchmarks
         logger.info("Benchmarking End-to-End Search...")
         results["end_to_end_search"] = await self.benchmark_end_to_end_search(
-            search_service, test_queries
+            search_service, queries
         )
 
         return results
 
-    async def benchmark_query_classifier(
-        self, query_classifier, test_queries: list[HybridSearchRequest]
+    async def benchmark_query_classifier(  # pylint: disable=too-many-locals
+        self,
+        query_classifier: Any,
+        test_queries: Sequence[HybridSearchRequest],
     ) -> ComponentBenchmarkResult:
         """Benchmark query classifier performance."""
-        latencies = []
+        queries = list(test_queries)
+        latencies: list[float] = []
         successes = 0
         failures = 0
 
         start_time = time.time()
 
-        for query in test_queries:
+        for query in queries:
             try:
                 start = time.perf_counter()
                 await query_classifier.classify_query(query.query)
@@ -136,9 +146,10 @@ class ComponentBenchmarks:
         end_time = time.time()
         total_time = end_time - start_time
 
+        total_runs = len(queries)
         return ComponentBenchmarkResult(
             component_name="query_classifier",
-            total_executions=len(test_queries),
+            total_executions=total_runs,
             successful_executions=successes,
             failed_executions=failures,
             avg_latency_ms=statistics.mean(latencies) if latencies else 0,
@@ -147,24 +158,28 @@ class ComponentBenchmarks:
             p99_latency_ms=self._percentile(latencies, 99) if latencies else 0,
             min_latency_ms=min(latencies) if latencies else 0,
             max_latency_ms=max(latencies) if latencies else 0,
-            error_rate=failures / len(test_queries) if test_queries else 0,
+            accuracy=0.0,
+            error_rate=failures / total_runs if total_runs else 0,
             throughput_per_second=successes / total_time if total_time > 0 else 0,
+            memory_usage_mb=0.0,
         )
 
-    async def benchmark_model_selector(
+    async def benchmark_model_selector(  # pylint: disable=too-many-locals
         self,
-        model_selector,
-        query_classifier,
-        test_queries: list[HybridSearchRequest],
+        model_selector: Any,
+        query_classifier: Any,
+        test_queries: Sequence[HybridSearchRequest],
     ) -> ComponentBenchmarkResult:
         """Benchmark model selector performance."""
-        latencies = []
+        queries = list(test_queries)
+        latencies: list[float] = []
         successes = 0
         failures = 0
 
         start_time = time.time()
 
-        for query in test_queries[:20]:  # Use subset to avoid quota limits
+        subset = queries[:20]  # Use subset to avoid quota limits
+        for query in subset:
             try:
                 # First classify the query
                 classification = await query_classifier.classify_query(query.query)
@@ -184,9 +199,10 @@ class ComponentBenchmarks:
         end_time = time.time()
         total_time = end_time - start_time
 
+        total_runs = len(subset)
         return ComponentBenchmarkResult(
             component_name="model_selector",
-            total_executions=min(20, len(test_queries)),
+            total_executions=total_runs,
             successful_executions=successes,
             failed_executions=failures,
             avg_latency_ms=statistics.mean(latencies) if latencies else 0,
@@ -195,31 +211,35 @@ class ComponentBenchmarks:
             p99_latency_ms=self._percentile(latencies, 99) if latencies else 0,
             min_latency_ms=min(latencies) if latencies else 0,
             max_latency_ms=max(latencies) if latencies else 0,
-            error_rate=failures / min(20, len(test_queries)) if test_queries else 0,
+            accuracy=0.0,
+            error_rate=failures / total_runs if total_runs else 0,
             throughput_per_second=successes / total_time if total_time > 0 else 0,
+            memory_usage_mb=0.0,
         )
 
-    async def benchmark_adaptive_fusion_tuner(
+    async def benchmark_adaptive_fusion_tuner(  # pylint: disable=too-many-locals
         self,
-        fusion_tuner,
-        query_classifier,
-        test_queries: list[HybridSearchRequest],
+        fusion_tuner: Any,
+        query_classifier: Any,
+        test_queries: Sequence[HybridSearchRequest],
     ) -> ComponentBenchmarkResult:
         """Benchmark adaptive fusion tuner performance."""
-        latencies = []
+        queries = list(test_queries)
+        subset = queries[:15]  # Use smaller subset
+        latencies: list[float] = []
         successes = 0
         failures = 0
 
         start_time = time.time()
 
-        for i, query in enumerate(test_queries[:15]):  # Use smaller subset
+        for idx, query in enumerate(subset):
             try:
                 # First classify the query
                 classification = await query_classifier.classify_query(query.query)
 
                 start = time.perf_counter()
                 await fusion_tuner.compute_adaptive_weights(
-                    classification, f"benchmark_{i}"
+                    classification, f"benchmark_{idx}"
                 )
                 end = time.perf_counter()
 
@@ -234,9 +254,10 @@ class ComponentBenchmarks:
         end_time = time.time()
         total_time = end_time - start_time
 
+        total_runs = len(subset)
         return ComponentBenchmarkResult(
             component_name="adaptive_fusion_tuner",
-            total_executions=min(15, len(test_queries)),
+            total_executions=total_runs,
             successful_executions=successes,
             failed_executions=failures,
             avg_latency_ms=statistics.mean(latencies) if latencies else 0,
@@ -245,21 +266,27 @@ class ComponentBenchmarks:
             p99_latency_ms=self._percentile(latencies, 99) if latencies else 0,
             min_latency_ms=min(latencies) if latencies else 0,
             max_latency_ms=max(latencies) if latencies else 0,
-            error_rate=failures / min(15, len(test_queries)) if test_queries else 0,
+            accuracy=0.0,
+            error_rate=failures / total_runs if total_runs else 0,
             throughput_per_second=successes / total_time if total_time > 0 else 0,
+            memory_usage_mb=0.0,
         )
 
-    async def benchmark_splade_provider(
-        self, splade_provider, test_queries: list[HybridSearchRequest]
+    async def benchmark_splade_provider(  # pylint: disable=too-many-locals
+        self,
+        splade_provider: Any,
+        test_queries: Sequence[HybridSearchRequest],
     ) -> ComponentBenchmarkResult:
         """Benchmark SPLADE provider performance."""
-        latencies = []
+        queries = list(test_queries)
+        subset = queries[:25]  # Use subset for SPLADE
+        latencies: list[float] = []
         successes = 0
         failures = 0
 
         start_time = time.time()
 
-        for query in test_queries[:25]:  # Use subset for SPLADE
+        for query in subset:
             try:
                 start = time.perf_counter()
                 await splade_provider.generate_sparse_vector(query.query)
@@ -276,9 +303,10 @@ class ComponentBenchmarks:
         end_time = time.time()
         total_time = end_time - start_time
 
+        total_runs = len(subset)
         return ComponentBenchmarkResult(
             component_name="splade_provider",
-            total_executions=min(25, len(test_queries)),
+            total_executions=total_runs,
             successful_executions=successes,
             failed_executions=failures,
             avg_latency_ms=statistics.mean(latencies) if latencies else 0,
@@ -287,23 +315,27 @@ class ComponentBenchmarks:
             p99_latency_ms=self._percentile(latencies, 99) if latencies else 0,
             min_latency_ms=min(latencies) if latencies else 0,
             max_latency_ms=max(latencies) if latencies else 0,
-            error_rate=failures / min(25, len(test_queries)) if test_queries else 0,
+            accuracy=0.0,
+            error_rate=failures / total_runs if total_runs else 0,
             throughput_per_second=successes / total_time if total_time > 0 else 0,
+            memory_usage_mb=0.0,
         )
 
-    async def benchmark_end_to_end_search(
+    async def benchmark_end_to_end_search(  # pylint: disable=too-many-locals
         self,
         search_service: AdvancedHybridSearchService,
-        test_queries: list[HybridSearchRequest],
+        test_queries: Sequence[HybridSearchRequest],
     ) -> ComponentBenchmarkResult:
         """Benchmark end-to-end search performance."""
-        latencies = []
+        queries = list(test_queries)
+        subset = queries[:10]  # Use small subset for full end-to-end
+        latencies: list[float] = []
         successes = 0
         failures = 0
 
         start_time = time.time()
 
-        for query in test_queries[:10]:  # Use small subset for full end-to-end
+        for query in subset:
             try:
                 start = time.perf_counter()
                 await search_service.hybrid_search(query)
@@ -320,9 +352,10 @@ class ComponentBenchmarks:
         end_time = time.time()
         total_time = end_time - start_time
 
+        total_runs = len(subset)
         return ComponentBenchmarkResult(
             component_name="end_to_end_search",
-            total_executions=min(10, len(test_queries)),
+            total_executions=total_runs,
             successful_executions=successes,
             failed_executions=failures,
             avg_latency_ms=statistics.mean(latencies) if latencies else 0,
@@ -331,8 +364,10 @@ class ComponentBenchmarks:
             p99_latency_ms=self._percentile(latencies, 99) if latencies else 0,
             min_latency_ms=min(latencies) if latencies else 0,
             max_latency_ms=max(latencies) if latencies else 0,
-            error_rate=failures / min(10, len(test_queries)) if test_queries else 0,
+            accuracy=0.0,
+            error_rate=failures / total_runs if total_runs else 0,
             throughput_per_second=successes / total_time if total_time > 0 else 0,
+            memory_usage_mb=0.0,
         )
 
     def _percentile(self, data: list[float], percentile: float) -> float:
@@ -348,18 +383,19 @@ class ComponentBenchmarks:
     async def benchmark_cache_performance(
         self,
         search_service: AdvancedHybridSearchService,
-        test_queries: list[HybridSearchRequest],
+        test_queries: Sequence[HybridSearchRequest],
     ) -> dict[str, float]:
         """Benchmark cache performance specifically."""
-        cache_metrics = {}
+        cache_metrics: dict[str, float] = {}
+        queries = list(test_queries)
 
         # Clear caches first
         if hasattr(search_service.splade_provider, "clear_cache"):
             search_service.splade_provider.clear_cache()
 
         # First run (cold cache)
-        cold_latencies = []
-        for query in test_queries[:5]:
+        cold_latencies: list[float] = []
+        for query in queries[:5]:
             try:
                 start = time.perf_counter()
                 await search_service.splade_provider.generate_sparse_vector(query.query)
@@ -372,8 +408,8 @@ class ComponentBenchmarks:
                 continue
 
         # Second run (warm cache) - same queries
-        warm_latencies = []
-        for query in test_queries[:5]:
+        warm_latencies: list[float] = []
+        for query in queries[:5]:
             try:
                 start = time.perf_counter()
                 await search_service.splade_provider.generate_sparse_vector(query.query)
@@ -402,16 +438,23 @@ class ComponentBenchmarks:
     async def benchmark_concurrent_component_access(
         self,
         search_service: AdvancedHybridSearchService,
-        test_queries: list[HybridSearchRequest],
+        test_queries: Sequence[HybridSearchRequest],
     ) -> dict[str, ComponentBenchmarkResult]:
         """Benchmark components under concurrent access."""
-        concurrent_results = {}
+        concurrent_results: dict[str, ComponentBenchmarkResult] = {}
+        queries = list(test_queries)
 
         # Test query classifier under concurrency
-        async def concurrent_classify(query_text: str):
+        async def concurrent_classify(query_text: str) -> Any:
             return await search_service.query_classifier.classify_query(query_text)
 
-        tasks = [concurrent_classify(q.query) for q in test_queries[:10]]
+        subset = queries[:10]
+        if not subset:
+            return concurrent_results
+
+        tasks = [concurrent_classify(query.query) for query in subset]
+        if not tasks:
+            return concurrent_results
 
         start_time = time.time()
         results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -421,19 +464,22 @@ class ComponentBenchmarks:
         failures = len(results) - successes
         total_time = end_time - start_time
 
+        avg_latency_ms = (total_time * 1000) / len(tasks) if len(tasks) else 0
         concurrent_results["query_classifier_concurrent"] = ComponentBenchmarkResult(
             component_name="query_classifier_concurrent",
             total_executions=len(tasks),
             successful_executions=successes,
             failed_executions=failures,
-            avg_latency_ms=(total_time * 1000) / len(tasks),
-            p50_latency_ms=(total_time * 1000) / len(tasks),
-            p95_latency_ms=(total_time * 1000) / len(tasks),
-            p99_latency_ms=(total_time * 1000) / len(tasks),
+            avg_latency_ms=avg_latency_ms,
+            p50_latency_ms=avg_latency_ms,
+            p95_latency_ms=avg_latency_ms,
+            p99_latency_ms=avg_latency_ms,
             min_latency_ms=0,
-            max_latency_ms=(total_time * 1000),
-            error_rate=failures / len(tasks),
+            max_latency_ms=total_time * 1000,
+            accuracy=0.0,
+            error_rate=failures / len(tasks) if len(tasks) else 0,
             throughput_per_second=successes / total_time if total_time > 0 else 0,
+            memory_usage_mb=0.0,
         )
 
         return concurrent_results

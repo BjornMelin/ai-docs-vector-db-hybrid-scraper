@@ -9,11 +9,11 @@ import pytest
 
 from src.services.monitoring.metrics import set_metrics_registry
 from src.services.query_processing.models import SearchRequest
-from src.services.rag.generator import RAGGenerator
-from src.services.rag.langgraph_pipeline import LangGraphRAGPipeline
-from src.services.rag.models import (
+from src.services.rag import (
     AnswerMetrics,
+    LangGraphRAGPipeline,
     RAGConfig,
+    RAGGenerator,
     RAGRequest,
     RAGResult,
     RAGServiceMetrics,

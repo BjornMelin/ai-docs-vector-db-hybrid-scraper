@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from src.services.errors import (
+    APIError,
     ExternalServiceError,
     RateLimitError,
     ResourceError,
@@ -154,9 +155,13 @@ class TestCircuitBreaker:
     @pytest.mark.asyncio
     async def test_circuit_breaker_normal_operation(self):
         """Test circuit breaker in normal operation."""
+
         mock_func = AsyncMock(return_value="success")
 
-        @circuit_breaker(failure_threshold=3)
+        @circuit_breaker(
+            service_name="tests.unit.services.test_decorators.closed_success",
+            failure_threshold=3,
+        )
         @pytest.mark.asyncio
         async def test_func():
             return await mock_func()
@@ -169,7 +174,11 @@ class TestCircuitBreaker:
     async def test_circuit_breaker_opens_after_failures(self):
         """Test circuit breaker opens after threshold failures."""
 
-        @circuit_breaker(failure_threshold=2, recovery_timeout=0.1)
+        @circuit_breaker(
+            service_name="tests.unit.services.test_decorators.failure_counting",
+            failure_threshold=2,
+            recovery_timeout=0.1,
+        )
         @pytest.mark.asyncio
         async def test_func():
             msg = "Test error"
@@ -198,7 +207,11 @@ class TestCircuitBreaker:
                 raise ValueError(msg)
             return "recovered"
 
-        @circuit_breaker(failure_threshold=2, recovery_timeout=0.05)
+        @circuit_breaker(
+            service_name="tests.unit.services.test_decorators.recovery",
+            failure_threshold=2,
+            recovery_timeout=0.05,
+        )
         @pytest.mark.asyncio
         async def test_func():
             return await flaky_func()
@@ -224,7 +237,11 @@ class TestCircuitBreaker:
     async def test_circuit_breaker_half_open_failure(self):
         """Test circuit breaker behavior when half-open attempt fails."""
 
-        @circuit_breaker(failure_threshold=1, recovery_timeout=0.05)
+        @circuit_breaker(
+            service_name="tests.unit.services.test_decorators.half_open",
+            failure_threshold=1,
+            recovery_timeout=0.05,
+        )
         @pytest.mark.asyncio
         async def test_func():
             msg = "Still failing"
@@ -360,7 +377,7 @@ class TestValidateInput:
         """Test input validation with valid inputs."""
 
         def validate_number(value):
-            if not isinstance(value, int | float):
+            if not isinstance(value, (int, float)):
                 msg = "Must be a number"
                 raise TypeError(msg)
             return float(value)
@@ -448,96 +465,81 @@ class TestRateLimiter:
     """Test cases for RateLimiter class."""
 
     @pytest.mark.asyncio
-    async def test_rate_limiter_within_limit(self):
-        """Test rate limiter when within limits."""
-        limiter = RateLimiter(max_calls=5, window_seconds=1.0)
+    async def test_rate_limiter_within_capacity(self, monkeypatch: pytest.MonkeyPatch):
+        """Rate limiter should not sleep when tokens remain."""
+        limiter = RateLimiter(max_calls=5, time_window=60, burst_multiplier=1.0)
 
-        # Should allow calls within limit
+        async def unexpected_sleep(_: float) -> None:
+            msg = "Limiter slept despite available tokens"
+            raise AssertionError(msg)
+
+        monkeypatch.setattr(asyncio, "sleep", unexpected_sleep)
+
         for _ in range(5):
             await limiter.acquire()
 
     @pytest.mark.asyncio
-    async def test_rate_limiter_exceeds_limit(self):
-        """Test rate limiter when exceeding limits."""
-        limiter = RateLimiter(max_calls=2, window_seconds=1.0)
+    async def test_rate_limiter_waits_when_tokens_exhausted(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        """Rate limiter should wait when capacity is depleted."""
 
-        # First two calls should succeed
-        await limiter.acquire()
-        await limiter.acquire()
+        limiter = RateLimiter(max_calls=1, time_window=10, burst_multiplier=1.0)
+        await limiter.acquire()  # Consume initial token
 
-        # Third call should raise RateLimitError
-        with pytest.raises(RateLimitError, match="Rate limit exceeded"):
-            await limiter.acquire()
+        sleep_calls: list[float] = []
+
+        async def capture_sleep(delay: float) -> None:
+            sleep_calls.append(delay)
+
+        monkeypatch.setattr(asyncio, "sleep", capture_sleep)
+
+        await limiter.acquire()
+        assert sleep_calls, "Expected limiter to wait when tokens are exhausted"
+        assert sleep_calls[0] > 0.0
 
     @pytest.mark.asyncio
-    async def test_rate_limiter_window_reset(self):
-        """Test rate limiter window reset."""
-        limiter = RateLimiter(max_calls=2, window_seconds=0.1)
+    async def test_rate_limiter_rejects_excess_token_request(self):
+        """Limiter should reject requests exceeding bucket capacity."""
 
-        # Fill up the limit
-        await limiter.acquire()
-        await limiter.acquire()
-
-        # Should be at limit
-        with pytest.raises(RateLimitError):
-            await limiter.acquire()
-
-        # Wait for window to reset
-        await asyncio.sleep(0.15)
-
-        # Should be able to make calls again
-        await limiter.acquire()
-        await limiter.acquire()
+        limiter = RateLimiter(max_calls=2, time_window=60, burst_multiplier=1.0)
+        with pytest.raises(APIError, match="exceeds bucket capacity"):
+            await limiter.acquire(tokens=limiter.max_tokens + 1)
 
     @pytest.mark.asyncio
-    async def test_rate_limiter_retry_after(self):
-        """Test rate limiter retry_after information."""
-        limiter = RateLimiter(max_calls=1, window_seconds=1.0)
+    async def test_rate_limiter_concurrent_access_waits(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        """Concurrent callers should share capacity and trigger waits."""
 
-        # Fill up the limit
-        await limiter.acquire()
+        limiter = RateLimiter(max_calls=2, time_window=10, burst_multiplier=1.0)
+        sleep_calls: list[float] = []
 
-        # Next call should provide retry_after
-        with pytest.raises(RateLimitError) as exc_info:
+        async def capture_sleep(delay: float) -> None:
+            sleep_calls.append(delay)
+
+        monkeypatch.setattr(asyncio, "sleep", capture_sleep)
+
+        async def make_request() -> float:
             await limiter.acquire()
+            return limiter.tokens
 
-        e = exc_info.value
-        assert hasattr(e, "retry_after")
-        assert e.retry_after > 0
-        assert e.retry_after <= 1.0
+        results = await asyncio.gather(
+            *(make_request() for _ in range(5)), return_exceptions=False
+        )
 
-    @pytest.mark.asyncio
-    async def test_rate_limiter_concurrent_access(self):
-        """Test rate limiter with concurrent access."""
-        limiter = RateLimiter(max_calls=3, window_seconds=1.0)
-
-        # Create multiple concurrent tasks
-        async def make_request():
-            await limiter.acquire()
-            return "success"
-
-        tasks = [make_request() for _ in range(5)]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
-        # Should have some successes and some rate limit errors
-        successes = [r for r in results if r == "success"]
-        errors = [r for r in results if isinstance(r, RateLimitError)]
-
-        assert len(successes) == 3
-        assert len(errors) == 2
+        assert len(results) == 5
+        assert sleep_calls, "Expected at least one wait during burst traffic"
+        assert all(tokens >= 0 for tokens in results)
 
     def test_rate_limiter_initialization(self):
-        """Test rate limiter initialization."""
-        limiter = RateLimiter(max_calls=10, window_seconds=60.0)
+        """Verify limiter derives bucket settings from parameters."""
+
+        limiter = RateLimiter(max_calls=10, time_window=20, burst_multiplier=2.0)
 
         assert limiter.max_calls == 10
-        assert limiter.window_seconds == 60.0
-        assert limiter.calls == []
-        assert hasattr(limiter, "_lock")
-
-    def test_rate_limiter_default_values(self):
-        """Test rate limiter with default values."""
-        limiter = RateLimiter()
-
-        assert limiter.max_calls == 10
-        assert limiter.window_seconds == 60.0
+        assert limiter.time_window == 20
+        assert limiter.burst_multiplier == 2.0
+        assert limiter.max_tokens == 20
+        assert limiter.tokens == limiter.max_tokens
+        assert pytest.approx(limiter.refill_rate) == 0.5

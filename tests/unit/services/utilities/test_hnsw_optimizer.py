@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.config import Config
+from src.config import Settings
 from src.services.errors import QdrantServiceError
 from src.services.utilities.hnsw_optimizer import HNSWOptimizer
 
@@ -21,7 +21,7 @@ class TestHNSWOptimizer:
     @pytest.fixture
     def mock_config(self):
         """Create mock unified config."""
-        return MagicMock(spec=Config)
+        return MagicMock(spec=Settings)
 
     @pytest.fixture
     def _mock_qdrant_service(self):

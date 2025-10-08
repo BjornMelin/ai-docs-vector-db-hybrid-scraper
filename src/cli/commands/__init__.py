@@ -7,4 +7,7 @@ This package contains all command group implementations:
 - setup: Interactive configuration wizard
 """
 
+from . import batch, config, database, setup
+
+
 __all__ = ["batch", "config", "database", "setup"]

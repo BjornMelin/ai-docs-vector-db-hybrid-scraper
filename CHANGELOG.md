@@ -34,10 +34,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- MCP tools, fixtures, and tests now consume the unified service payload models
+  (content intelligence, embeddings, retrieval, analytics, collection management,
+  lightweight scrape) with optional dependency guards; CLI batch/setup helpers
+  and docs were refreshed, and the full unit suite passes with the new entrypoints.
+- Replaced the ModeAware service factory and ServiceRegistry layers with a single
+  ClientManager-driven dependency graph, rewiring FastAPI dependencies, CLI
+  utilities, and tests to rely on the new lifecycle helpers.
+- CLI and MCP tooling now load settings via `load_settings_from_file`, supporting JSON/YAML config import/export, refreshing CLI configuration tests and fixtures.
+- Configuration documentation (developer, user, operator guides) updated to reflect the unified settings loader and CLI helpers.
+- CI lint workflow now runs `python scripts/guards/check_settings_usage.py` to prevent legacy `get_config`/`set_config` usage from regressing.
+- Lightweight scraper escalates 4xx/5xx responses without raising, mode helpers resolve from injected settings, Qdrant default collection alias was removed, typed config fixtures were introduced for tests, and docs/env guidance now reference `primary_collection` and `AI_DOCS_CONFIG_PATH`.
+- Clarified the analytics and RAG service package facades with typed `__all__`
+  exports, refreshed coverage, and updated API docs to describe the supported
+  entry points.
 - Configuration reload and file-watching endpoints now validate override paths, surface operator errors as HTTP 400, and wait until the osquery-backed provider reports readiness before returning success.
+- Rebuilt the configuration stack around a single `Settings` provider, removed legacy helpers/aliases, deleted the hot-reload subsystem, and refactored services/tests to consume nested credentials directly.
+- Monitoring initialization and middleware derive health checks from the unified settings provider, gracefully degrade when optional dependencies (flagsmith, purgatory, respx, asgi-lifespan) are absent, and pytest fixtures adopt importorskip-based guards for optional extras.
 - Simplified the security configuration model to the fields actually enforced by the middleware, updated templates/docs, and aligned the middleware implementation with the lean schema.
 - Removed the fail-closed `search_service`/`cache_service` placeholders; mode configs now advertise only supported embedding/vector services and the health endpoint reflects the leaner set.
 - Dependency re-exports for FastAPI helpers now live under `src/services/fastapi/dependencies/__init__.py`, trimming redundant wrapper modules.
+- Collection deletion tooling now requires a native `delete_collection` implementation and removes legacy `drop_collection` shims; CI fails fast on unexpected skips to prevent dead suites from lingering.
+- Chunking defaults route `ChunkingStrategy.BASIC` through the enhanced semantic pipeline, and circuit breaker decorators/configuration have dropped all deprecated parameters.
+- Replaced the bespoke FastAPI `DependencyContainer` and module-level singletons with a new `ServiceRegistry` (`src/services/registry.py`), wiring FastAPI lifespan, CLI tooling, and dependency helpers to the shared registry.
+- MCP embeddings tools now normalise provider metadata directly from `EmbeddingManager`, cache snapshots with fallbacks, and expose the reusable `provider_metadata` helper for other tooling.
+- `/health` now consumes `ServiceHealthChecker` and returns structured JSON/HTTP status codes; async fixtures use `httpx` + `asgi-lifespan`, and vector-db CLI commands reuse the registry rather than instantiating private managers.
+- `pyproject.toml` dev extras now include `asgi-lifespan`; docs refreshed to describe the registry architecture and note the dev-extras requirement.
 - LangGraph GraphRunner now emits structured metrics/errors, enforces optional
   run timeouts, and surfaces discovery/tool telemetry across MCP entry points;
   MCP orchestrator and tests were refreshed to exercise the new pipeline.
@@ -77,7 +99,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   refreshed unit coverage to validate tier escalation and captcha flows.
 - Added focused unit coverage for `SearchRecord` normalization and documentation
   of the new ownership boundaries in
-  `docs/query_processing_response_contract.md`.
+  `docs/developers/queries/response-contract.md`.
 - Consolidated CI into a lean `core-ci.yml` pipeline (lint → tests with coverage → build → dependency audit) and introduced on-demand security and regression workflows while deleting `fast-feedback.yml`, `status-dashboard.yml`, and other scheduled automation.
 - Simplified documentation checks to rely on `scripts/dev.py validate --check-docs --strict` plus strict MkDocs builds with pinned docs extras.
 - Documented manual triggers for the security and regression workflows in `CONTRIBUTING.md` so contributors can opt into deeper validation without slowing default CI.
@@ -110,6 +132,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Centralized the MCP config and tool-module builders in `tests/unit/conftest.py`, parameterized streaming guard checks, and
   added coverage for empty hybrid-search results plus orchestrator partial-initialization guard rails.
 - Pinned the regression workflow `uv` dependency to `0.2.37` to stabilize CI setup.
+- Centralized RAG generator management through the shared ClientManager cache for MCP tooling and FastAPI dependencies, refreshing unit coverage to assert reuse and disabled-mode handling.
 
 ### Removed
 

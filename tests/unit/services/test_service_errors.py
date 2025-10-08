@@ -452,7 +452,9 @@ class TestRetryAsync:
             return "result"
 
         assert documented_func.__name__ == "documented_func"
-        assert "This function has documentation" in documented_func.__doc__
+        doc = documented_func.__doc__
+        assert doc is not None
+        assert "This function has documentation" in doc
 
 
 class TestCircuitBreaker:
@@ -462,7 +464,10 @@ class TestCircuitBreaker:
     async def test_circuit_breaker_closed_state_success(self):
         """Test circuit breaker in closed state with successful calls."""
 
-        @circuit_breaker(failure_threshold=3)
+        @circuit_breaker(
+            service_name="tests.unit.services.test_service_errors.closed_success",
+            failure_threshold=3,
+        )
         async def working_func():
             return "success"
 
@@ -474,7 +479,11 @@ class TestCircuitBreaker:
         """Test circuit breaker counts failures correctly."""
         call_count = 0
 
-        @circuit_breaker(failure_threshold=2, recovery_timeout=0.1)
+        @circuit_breaker(
+            service_name="tests.unit.services.test_service_errors.failure_counting",
+            failure_threshold=2,
+            recovery_timeout=0.1,
+        )
         async def failing_func():
             nonlocal call_count
             call_count += 1
@@ -500,7 +509,11 @@ class TestCircuitBreaker:
         """Test circuit breaker recovery after timeout."""
         call_count = 0
 
-        @circuit_breaker(failure_threshold=1, recovery_timeout=0.01)
+        @circuit_breaker(
+            service_name="tests.unit.services.test_service_errors.recovery",
+            failure_threshold=1,
+            recovery_timeout=0.01,
+        )
         async def recovering_func():
             nonlocal call_count
             call_count += 1
@@ -526,7 +539,11 @@ class TestCircuitBreaker:
         """Test circuit breaker failure in half-open state."""
         call_count = 0
 
-        @circuit_breaker(failure_threshold=1, recovery_timeout=0.01)
+        @circuit_breaker(
+            service_name="tests.unit.services.test_service_errors.half_open",
+            failure_threshold=1,
+            recovery_timeout=0.01,
+        )
         async def still_failing_func():
             nonlocal call_count
             call_count += 1
@@ -552,7 +569,11 @@ class TestCircuitBreaker:
     async def test_circuit_breaker_custom_exception(self):
         """Test circuit breaker with custom exception type."""
 
-        @circuit_breaker(failure_threshold=1, expected_exception=ValueError)
+        @circuit_breaker(
+            service_name="tests.unit.services.test_service_errors.custom_exception",
+            failure_threshold=1,
+            expected_exception=ValueError,
+        )
         async def custom_exception_func(raise_value_error=True):
             if raise_value_error:
                 msg = "Monitored error"

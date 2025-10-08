@@ -1,16 +1,13 @@
-"""Enhanced fixtures for  CLI testing.
+"""Enhanced fixtures for CLI testing."""
 
-This module provides comprehensive fixtures for testing CLI components including
-mocked dependencies, Rich console capturing, questionary mocking, and async
-testing support.
-Now includes  Rich CLI testing patterns and interactive flow simulation.
-"""
-
+import asyncio
 import json
 from io import StringIO
-from unittest.mock import AsyncMock, MagicMock
+from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from click.shell_completion import CompletionItem
 from click.testing import CliRunner
 from rich.console import Console
 
@@ -62,7 +59,7 @@ def mock_config():
 def mock_config_loader(mock_config):
     """Mock the ConfigLoader class."""
     mock_loader = MagicMock()
-    mock_loader.load_config.return_value = mock_config
+    mock_loader.load_settings.return_value = mock_config
     mock_loader.from_file.return_value = mock_config
     return mock_loader
 
@@ -108,18 +105,6 @@ def mock_vector_db_manager():
     mock_manager.cleanup.return_value = None
 
     return mock_manager
-
-
-@pytest.fixture
-def mock_health_checker():
-    """Mock the ServiceHealthChecker class."""
-    mock_checker = MagicMock()
-    mock_checker.perform_all_health_checks.return_value = {
-        "qdrant": {"connected": True, "version": "1.7.0"},
-        "redis": {"connected": True, "version": "7.0.0"},
-        "openai": {"connected": True, "model": "text-embedding-ada-002"},
-    }
-    return mock_checker
 
 
 @pytest.fixture
@@ -215,10 +200,13 @@ def mock_completion_items():
 
 @pytest.fixture
 def event_loop():
-    """Create an event loop for async testing."""
-    loop = event_loop
-    yield loop
-    loop.close()
+    """Provide a dedicated event loop for async tests."""
+
+    loop = asyncio.new_event_loop()
+    try:
+        yield loop
+    finally:
+        loop.close()
 
 
 @pytest.fixture
@@ -245,9 +233,10 @@ def rich_output_capturer():
         def get_plain_output(self) -> str:
             """Get output without ANSI escape codes."""
 
-            plain_console = Console(file=StringIO(), no_color=True, width=80)
-            plain_console.file.write(self.get_output())
-            return plain_console.file.getvalue()
+            buffer = StringIO()
+            plain_console = Console(file=buffer, no_color=True, width=80)
+            plain_console.print(self.get_output(), end="")
+            return buffer.getvalue()
 
         def reset(self):
             """Reset the output buffer."""

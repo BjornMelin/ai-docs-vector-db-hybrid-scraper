@@ -6,17 +6,13 @@ and extraction recommendations using the Content Intelligence Service.
 
 import asyncio
 import logging
+from typing import Any
 
 import redis
 from fastmcp import Context
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.infrastructure.client_manager import ClientManager
-from src.mcp_tools.models.requests import (
-    ContentIntelligenceAnalysisRequest,
-    ContentIntelligenceClassificationRequest,
-    ContentIntelligenceMetadataRequest,
-    ContentIntelligenceQualityRequest,
-)
 from src.mcp_tools.models.responses import ContentIntelligenceResult
 from src.services.content_intelligence.models import (
     ContentAnalysisRequest,
@@ -30,12 +26,73 @@ from src.services.content_intelligence.models import (
 logger = logging.getLogger(__name__)
 
 
-def register_tools(mcp, client_manager: ClientManager):
+class ContentAnalysisToolPayload(BaseModel):
+    """Payload for content analysis tool supporting nested service model."""
+
+    analysis: ContentAnalysisRequest = Field(
+        ..., description="Parameters for content intelligence analysis."
+    )
+    existing_content: list[str] | None = Field(
+        default=None,
+        description="Optional existing content corpus for duplicate detection.",
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class ContentClassificationToolPayload(BaseModel):
+    """Payload for content classification tool."""
+
+    content: str = Field(..., description="Content to classify.", min_length=1)
+    url: str = Field(..., description="Source URL for context.", min_length=1)
+    title: str | None = Field(default=None, description="Optional page title.")
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class ContentQualityToolPayload(BaseModel):
+    """Payload for content quality assessment."""
+
+    content: str = Field(..., description="Content to evaluate.", min_length=1)
+    confidence_threshold: float = Field(
+        default=0.8,
+        ge=0.0,
+        le=1.0,
+        description="Minimum acceptable confidence threshold.",
+    )
+    query_context: str | None = Field(
+        default=None, description="Optional query context used for relevance."
+    )
+    extraction_metadata: dict[str, Any] | None = Field(
+        default=None, description="Optional metadata from extraction pipeline."
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class ContentMetadataToolPayload(BaseModel):
+    """Payload for content metadata extraction."""
+
+    content: str = Field(..., description="Content body to analyze.", min_length=1)
+    url: str = Field(..., description="Source URL for metadata enrichment.")
+    raw_html: str | None = Field(
+        default=None, description="Optional raw HTML for structured parsing."
+    )
+    extraction_metadata: dict[str, Any] | None = Field(
+        default=None, description="Optional metadata from crawl."
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+
+def register_tools(  # pylint: disable=too-many-statements
+    mcp, client_manager: ClientManager
+):
     """Register content intelligence tools with the MCP server."""
 
     @mcp.tool()
     async def analyze_content_intelligence(
-        request: ContentIntelligenceAnalysisRequest, ctx: Context
+        payload: ContentAnalysisToolPayload, ctx: Context
     ) -> ContentIntelligenceResult:
         """Perform content intelligence analysis.
 
@@ -49,9 +106,12 @@ def register_tools(mcp, client_manager: ClientManager):
         - Optimization recommendations
         - Duplicate content detection
         """
+
         try:
+            analysis_request = payload.analysis.model_copy()
             await ctx.info(
-                f"Starting content intelligence analysis for URL: {request.url}"
+                "Starting content intelligence analysis for URL: "
+                f"{analysis_request.url}"
             )
 
             # Get Content Intelligence Service
@@ -65,22 +125,10 @@ def register_tools(mcp, client_manager: ClientManager):
                 )
 
             # Create internal analysis request
-            analysis_request = ContentAnalysisRequest(
-                content=request.content,
-                url=request.url,
-                title=request.title,
-                raw_html=request.raw_html,
-                confidence_threshold=request.confidence_threshold,
-                enable_classification=request.enable_classification,
-                enable_quality_assessment=request.enable_quality_assessment,
-                enable_metadata_extraction=request.enable_metadata_extraction,
-                enable_adaptations=request.enable_adaptations,
-            )
-
             # Perform analysis
             result = await content_service.analyze_content(
                 analysis_request,
-                existing_content=request.existing_content,
+                existing_content=payload.existing_content,
             )
 
             await ctx.info(
@@ -106,7 +154,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
     @mcp.tool()
     async def classify_content_type(
-        request: ContentIntelligenceClassificationRequest, ctx: Context
+        payload: ContentClassificationToolPayload, ctx: Context
     ) -> ContentClassification:
         """Classify content type using AI-powered semantic analysis.
 
@@ -124,8 +172,9 @@ def register_tools(mcp, client_manager: ClientManager):
         - News: News articles, announcements
         - Forum: Discussion threads, community posts
         """
+
         try:
-            await ctx.info(f"Classifying content type for URL: {request.url}")
+            await ctx.info(f"Classifying content type for URL: {payload.url}")
 
             # Get Content Intelligence Service
             content_service = await client_manager.get_content_intelligence_service()
@@ -142,9 +191,9 @@ def register_tools(mcp, client_manager: ClientManager):
 
             # Perform classification
             result = await content_service.classify_content_type(
-                content=request.content,
-                url=request.url,
-                title=request.title,
+                content=payload.content,
+                url=payload.url,
+                title=payload.title,
             )
 
             await ctx.info(
@@ -162,12 +211,11 @@ def register_tools(mcp, client_manager: ClientManager):
                 confidence_scores={},
                 classification_reasoning=f"Classification failed: {e!s}",
             )
-        else:
-            return result
+        return result
 
     @mcp.tool()
     async def assess_content_quality(
-        request: ContentIntelligenceQualityRequest, ctx: Context
+        payload: ContentQualityToolPayload, ctx: Context
     ) -> QualityScore:
         """Assess content quality using multi-metric scoring system.
 
@@ -185,6 +233,7 @@ def register_tools(mcp, client_manager: ClientManager):
         - Readability: Sentence complexity and vocabulary assessment
         - Duplicate Similarity: Similarity to existing content
         """
+
         try:
             await ctx.info("Assessing content quality")
 
@@ -204,10 +253,10 @@ def register_tools(mcp, client_manager: ClientManager):
 
             # Perform quality assessment
             result = await content_service.assess_extraction_quality(
-                content=request.content,
-                confidence_threshold=request.confidence_threshold,
-                query_context=request.query_context,
-                extraction_metadata=request.extraction_metadata,
+                content=payload.content,
+                confidence_threshold=payload.confidence_threshold,
+                query_context=payload.query_context,
+                extraction_metadata=payload.extraction_metadata,
             )
 
             await ctx.info(
@@ -226,12 +275,11 @@ def register_tools(mcp, client_manager: ClientManager):
                 quality_issues=[f"Assessment failed: {e!s}"],
                 improvement_suggestions=["Retry content extraction"],
             )
-        else:
-            return result
+        return result
 
     @mcp.tool()
     async def extract_content_metadata(
-        request: ContentIntelligenceMetadataRequest, ctx: Context
+        payload: ContentMetadataToolPayload, ctx: Context
     ) -> ContentMetadata:
         """Extract and enrich metadata from content and HTML.
 
@@ -248,8 +296,9 @@ def register_tools(mcp, client_manager: ClientManager):
         - Hierarchy: Breadcrumbs, parent/related URLs
         - Structured: Schema.org types, JSON-LD data
         """
+
         try:
-            await ctx.info(f"Extracting metadata for URL: {request.url}")
+            await ctx.info(f"Extracting metadata for URL: {payload.url}")
 
             # Get Content Intelligence Service
             content_service = await client_manager.get_content_intelligence_service()
@@ -257,16 +306,17 @@ def register_tools(mcp, client_manager: ClientManager):
             if not content_service:
                 await ctx.error("Content Intelligence Service not available")
                 return ContentMetadata(
-                    word_count=len(request.content.split()),
-                    char_count=len(request.content),
+                    url=payload.url,
+                    word_count=len(payload.content.split()),
+                    char_count=len(payload.content),
                 )
 
             # Perform metadata extraction
             result = await content_service.extract_metadata(
-                content=request.content,
-                url=request.url,
-                raw_html=request.raw_html,
-                extraction_metadata=request.extraction_metadata,
+                content=payload.content,
+                url=payload.url,
+                raw_html=payload.raw_html,
+                extraction_metadata=payload.extraction_metadata,
             )
 
             await ctx.info(
@@ -277,11 +327,11 @@ def register_tools(mcp, client_manager: ClientManager):
         except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             await ctx.error(f"Metadata extraction failed: {e}")
             return ContentMetadata(
-                word_count=len(request.content.split()),
-                char_count=len(request.content),
+                url=payload.url,
+                word_count=len(payload.content.split()),
+                char_count=len(payload.content),
             )
-        else:
-            return result
+        return result
 
     @mcp.tool()
     async def get_adaptation_recommendations(
@@ -312,14 +362,17 @@ def register_tools(mcp, client_manager: ClientManager):
         - Reddit: Handle infinite scroll comments
         - Documentation sites: Extract main content
         """
+
         try:
-            await ctx.info(f"Generating adaptation recommendations for: {url}")
+            if ctx:
+                await ctx.info(f"Generating adaptation recommendations for: {url}")
 
             # Get Content Intelligence Service
             content_service = await client_manager.get_content_intelligence_service()
 
             if not content_service:
-                await ctx.error("Content Intelligence Service not available")
+                if ctx:
+                    await ctx.error("Content Intelligence Service not available")
                 return []
 
             # Generate recommendations
@@ -329,20 +382,23 @@ def register_tools(mcp, client_manager: ClientManager):
                 quality_score=None,  # Could be enhanced to accept quality score
             )
 
-            await ctx.info(
-                f"Generated {len(recommendations)} adaptation recommendations"
-            )
+            if ctx:
+                await ctx.info(
+                    f"Generated {len(recommendations)} adaptation recommendations"
+                )
 
             # Convert to serializable format
 
         except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
-            await ctx.error(f"Adaptation recommendation failed: {e}")
+            if ctx:
+                await ctx.error(f"Adaptation recommendation failed: {e}")
             return []
-        else:
-            return [rec.model_dump() for rec in recommendations]
+        return [rec.model_dump() for rec in recommendations]
 
     @mcp.tool()
-    async def get_content_intelligence_metrics(ctx: Context = None) -> dict:
+    async def get_content_intelligence_metrics(
+        ctx: Context | None = None,
+    ) -> dict:
         """Get performance metrics for Content Intelligence Service.
 
         Returns comprehensive performance statistics including total analyses,
@@ -356,14 +412,17 @@ def register_tools(mcp, client_manager: ClientManager):
         - Service initialization status
         - Component availability status
         """
+
         try:
-            await ctx.info("Retrieving Content Intelligence Service metrics")
+            if ctx:
+                await ctx.info("Retrieving Content Intelligence Service metrics")
 
             # Get Content Intelligence Service
             content_service = await client_manager.get_content_intelligence_service()
 
             if not content_service:
-                await ctx.warning("Content Intelligence Service not available")
+                if ctx:
+                    await ctx.warning("Content Intelligence Service not available")
                 return {
                     "service_available": False,
                     "error": "Service not initialized",
@@ -373,17 +432,18 @@ def register_tools(mcp, client_manager: ClientManager):
             metrics = content_service.get_performance_metrics()
             metrics["service_available"] = True
 
-            await ctx.info(
-                f"Metrics retrieved: {metrics['total_analyses']} analyses, "
-                f"{metrics['average_processing_time_ms']:.1f}ms avg time, "
-                f"{metrics['cache_hit_rate']:.1%} cache hit rate"
-            )
+            if ctx:
+                await ctx.info(
+                    f"Metrics retrieved: {metrics['total_analyses']} analyses, "
+                    f"{metrics['average_processing_time_ms']:.1f}ms avg time, "
+                    f"{metrics['cache_hit_rate']:.1%} cache hit rate"
+                )
 
         except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
-            await ctx.error(f"Failed to retrieve metrics: {e}")
+            if ctx:
+                await ctx.error(f"Failed to retrieve metrics: {e}")
             return {
                 "service_available": False,
                 "error": f"Metrics retrieval failed: {e!s}",
             }
-        else:
-            return metrics
+        return metrics

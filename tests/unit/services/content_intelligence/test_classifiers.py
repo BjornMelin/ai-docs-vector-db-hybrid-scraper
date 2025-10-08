@@ -1,513 +1,293 @@
-"""Tests for content intelligence classifiers."""
+"""Unit tests for the content classifier service."""
 
+from __future__ import annotations
+
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock
 
 import pytest
 
-from src.services.content_intelligence.classifiers import ContentClassifier
-from src.services.content_intelligence.models import ContentClassification, ContentType
+from ._dependency_stubs import load_content_intelligence_module
+
+
+if TYPE_CHECKING:  # pragma: no cover
+    from src.services.content_intelligence.classifiers import ContentClassifier
+    from src.services.content_intelligence.models import (
+        ContentClassification,
+        ContentType,
+    )
+
+
+@pytest.fixture(scope="module")
+def classifier_types() -> dict[str, Any]:
+    """Import classifier types with external dependencies stubbed.
+
+    Returns:
+        dict[str, Any]: Mapping of classifier support types for the test suite.
+    """
+
+    classifier_module = load_content_intelligence_module("classifiers")
+    models_module = load_content_intelligence_module("models")
+    return {
+        "classifier_cls": classifier_module.ContentClassifier,
+        "classification_cls": models_module.ContentClassification,
+        "content_type_enum": models_module.ContentType,
+    }
+
+
+@pytest.fixture(scope="module")
+def content_type_enum(classifier_types: dict[str, Any]) -> ContentType:
+    """Expose ContentType enum for type-aware assertions.
+
+    Args:
+        classifier_types: Mapping containing classifier-related types.
+
+    Returns:
+        ContentType: Enumeration representing classified content categories.
+    """
+
+    return classifier_types["content_type_enum"]
+
+
+@pytest.fixture(scope="module")
+def classification_cls(
+    classifier_types: dict[str, Any],
+) -> type[ContentClassification]:
+    """Expose ContentClassification dataclass for assertions.
+
+    Args:
+        classifier_types: Mapping containing classifier-related types.
+
+    Returns:
+        type[ContentClassification]: Dataclass type used for result validation.
+    """
+
+    return classifier_types["classification_cls"]
+
+
+def _one_hot(index: int, size: int) -> list[float]:
+    """Create a one-hot vector for deterministic embedding fixtures.
+
+    Args:
+        index: Position that should be assigned the ``1.0`` value.
+        size: Total number of positions within the vector.
+
+    Returns:
+        list[float]: One-hot encoded vector with a deterministic pattern.
+    """
+
+    return [1.0 if position == index else 0.0 for position in range(size)]
 
 
 @pytest.fixture
-def mock_embedding_manager():
-    """Create mock embedding manager."""
+def deterministic_embedding_manager() -> AsyncMock:
+    """Create an embedding manager that returns deterministic embeddings.
+
+    Returns:
+        AsyncMock: Stubbed embedding manager with deterministic responses.
+    """
+
+    reference_order = [
+        "This is documentation that explains how to use a software system or API.",
+        "This is source code with functions, classes, and programming logic.",
+        "This is a frequently asked questions section with questions and answers.",
+        "This is a step-by-step tutorial that teaches how to accomplish a task.",
+        "This is an API reference with technical specifications and parameters.",
+        "This is a blog post or article written by an author on a specific topic.",
+        "This is a news article reporting on recent events or announcements.",
+        "This is a forum discussion with posts, replies, and community interaction.",
+    ]
+
+    embeddings_by_reference = {
+        text: _one_hot(index, len(reference_order))
+        for index, text in enumerate(reference_order)
+    }
+
+    async def _generate_embeddings(**kwargs: Any) -> dict[str, Any]:
+        texts: list[str] = list(kwargs.get("texts", []))
+        vectors: list[list[float]] = []
+        for text in texts:
+            lowered = text.lower()
+            if "def " in lowered or "class " in lowered:
+                vectors.append(_one_hot(1, len(reference_order)))
+                continue
+            if "documentation" in lowered or "api" in lowered:
+                vectors.append(_one_hot(0, len(reference_order)))
+                continue
+            if "tutorial" in lowered or "step-by-step" in lowered:
+                vectors.append(_one_hot(3, len(reference_order)))
+                continue
+            if text in embeddings_by_reference:
+                vectors.append(embeddings_by_reference[text])
+                continue
+            vectors.append(_one_hot(5, len(reference_order)))
+        return {"success": True, "embeddings": vectors}
+
     manager = AsyncMock()
-
-    # Create a mock embeddings result with proper structure for classifier
-    def mock_generate_embeddings(*args, **_kwargs):
-        # Return different embeddings for different text types
-        texts = _kwargs.get("texts", args[0] if args else [])
-        len(texts)
-
-        # Generate mock embeddings based on content
-        embeddings = []
-        for i, text in enumerate(texts):
-            if i == 0:  # Content embedding - analyze content to determine type
-                content = text.lower()
-                if "def " in content and "return" in content:
-                    # Code content
-                    embeddings.append([0.9, 0.1, 0.1])
-                elif (
-                    "documentation" in content
-                    or "api" in content
-                    or "getting started" in content
-                ):
-                    # Documentation content
-                    embeddings.append([0.1, 0.9, 0.1])
-                elif "tutorial" in content or "step" in content or "guide" in content:
-                    # Tutorial content
-                    embeddings.append([0.1, 0.1, 0.9])
-                else:
-                    # Default embedding
-                    embeddings.append([0.5, 0.5, 0.5])
-            else:  # Reference embeddings
-                ref_text = text.lower()
-                if "code" in ref_text:
-                    embeddings.append([0.95, 0.05, 0.05])  # Code reference
-                elif "documentation" in ref_text:
-                    embeddings.append([0.05, 0.95, 0.05])  # Documentation reference
-                elif "tutorial" in ref_text:
-                    embeddings.append([0.05, 0.05, 0.95])  # Tutorial reference
-                else:
-                    embeddings.append([0.1, 0.1, 0.1])  # Other reference
-
-        return {"success": True, "embeddings": embeddings}
-
-    manager.generate_embeddings = AsyncMock(side_effect=mock_generate_embeddings)
+    manager.generate_embeddings = AsyncMock(side_effect=_generate_embeddings)
     return manager
 
 
 @pytest.fixture
-def classifier(mock_embedding_manager):
-    """Create ContentClassifier instance with mocked dependencies."""
-    return ContentClassifier(embedding_manager=mock_embedding_manager)
+def failing_classifier_factory(
+    classifier_types: dict[str, Any],
+) -> Callable[[], ContentClassifier]:
+    """Create classifiers whose embedding managers always fail.
+
+    Args:
+        classifier_types: Mapping containing classifier-related types.
+
+    Returns:
+        Callable[[], ContentClassifier]: Factory producing classifiers with
+            failing embedding managers.
+    """
+
+    classifier_cls = classifier_types["classifier_cls"]
+
+    async def _generate_embeddings(**_kwargs: Any) -> dict[str, Any]:
+        return {"success": False, "embeddings": []}
+
+    def _factory() -> ContentClassifier:
+        manager = AsyncMock()
+        manager.generate_embeddings = AsyncMock(side_effect=_generate_embeddings)
+        return classifier_cls(embedding_manager=manager)
+
+    return _factory
+
+
+@pytest.fixture
+async def classifier(
+    classifier_types: dict[str, Any],
+    deterministic_embedding_manager: AsyncMock,
+) -> ContentClassifier:
+    """Provide an initialized classifier with deterministic embeddings.
+
+    Args:
+        classifier_types: Mapping containing classifier-related types.
+        deterministic_embedding_manager: Stubbed embedding manager fixture.
+
+    Returns:
+        ContentClassifier: Initialized classifier instance for tests.
+    """
+
+    classifier_cls = classifier_types["classifier_cls"]
+    instance = classifier_cls(embedding_manager=deterministic_embedding_manager)
+    await instance.initialize()
+    return instance
 
 
 class TestContentClassifier:
-    """Test ContentClassifier functionality."""
+    """Validate ContentClassifier behaviour and reasoning outputs."""
 
     @pytest.mark.asyncio
-    async def test_initialize(self, classifier):
-        """Test classifier initialization."""
-        await classifier.initialize()
-        assert classifier._initialized is True
+    async def test_classify_content_detects_code_blocks(
+        self,
+        classifier: ContentClassifier,
+        classification_cls: type[ContentClassification],
+        content_type_enum: ContentType,
+    ) -> None:
+        """Ensure code snippets are flagged correctly and typed as code.
 
-    @pytest.mark.asyncio
-    async def test_classify_documentation_content(self, classifier):
-        """Test classification of documentation content."""
+        Args:
+            classifier: Initialized classifier under test.
+            classification_cls: Dataclass type for classification results.
+            content_type_enum: Enumeration representing content types.
+        """
+
         content = """
-        # API Documentation
 
-        ## Getting Started
+        def calculate_sum(numbers: list[int]) -> int:
+            total = 0
+            for value in numbers:
+                total += value
+            return total
+        """.strip()
 
-        This guide will help you get started with our API.
-
-        ### Authentication
-
-        To authenticate, include your API key in the header:
-
-        ```
-        Authorization: Bearer your-api-key
-        ```
-
-        ### Making Requests
-
-        All requests should be made to the base URL: https://api.example.com
-        """
-        url = "https://docs.example.com/api"
-
-        await classifier.initialize()
-        result = await classifier.classify_content(content, url)
-
-        assert isinstance(result, ContentClassification)
-        assert result.primary_type == ContentType.DOCUMENTATION
-        assert ContentType.DOCUMENTATION in result.confidence_scores
-        assert result.confidence_scores[ContentType.DOCUMENTATION] > 0.5
-
-    @pytest.mark.asyncio
-    async def test_classify_code_content(self, classifier):
-        """Test classification of code content."""
-        content = """
-        def calculate_fibonacci(n):
-            '''Calculate the nth Fibonacci number.'''
-            if n <= 1:
-                return n
-            return calculate_fibonacci(n-1) + calculate_fibonacci(n-2)
-
-        class DataProcessor:
-            def __init__(self, config):
-                self.config = config
-                self.data = []
-
-            def process(self, input_data):
-                # Process the input data
-                for item in input_data:
-                    self.data.append(self.transform(item))
-                return self.data
-        """
-        url = "https://github.com/user/repo/blob/main/utils.py"
-
-        await classifier.initialize()
-        result = await classifier.classify_content(content, url)
-
-        assert result.primary_type == ContentType.CODE
-        assert ContentType.CODE in result.confidence_scores
-        assert result.confidence_scores[ContentType.CODE] > 0.5
-
-    @pytest.mark.asyncio
-    async def test_classify_faq_content(self, classifier):
-        """Test classification of FAQ content."""
-        content = """
-        # Frequently Asked Questions
-
-        ## Q: How do I reset my password?
-        A: Click on "Forgot Password" on the login page and follow the instructions.
-
-        ## Q: What payment methods do you accept?
-        A: We accept credit cards, PayPal, and bank transfers.
-
-        ## Q: How can I contact support?
-        A: You can reach our support team at support@example.com or through
-        the chat widget.
-
-        ## Q: Is there a mobile app available?
-        A: Yes, our mobile app is available on both iOS and Android.
-        """
-        url = "https://example.com/faq"
-
-        await classifier.initialize()
-        result = await classifier.classify_content(content, url)
-
-        assert result.primary_type == ContentType.FAQ
-        assert ContentType.FAQ in result.confidence_scores
-
-    @pytest.mark.asyncio
-    async def test_classify_tutorial_content(self, classifier):
-        """Test classification of tutorial content."""
-        content = """
-        # Step-by-Step Guide: Building Your First React App
-
-        In this tutorial, we'll walk through creating a simple React application.
-
-        ## Step 1: Set up your development environment
-
-        First, make sure you have Node.js installed on your computer.
-
-        ## Step 2: Create a  React project
-
-        Run the following command in your terminal:
-        ```
-        npx create-react-app my-first-app
-        ```
-
-        ## Step 3: Navigate to your project directory
-
-        Change into the project directory:
-        ```
-        cd my-first-app
-        ```
-
-        ## Step 4: Start the development server
-
-        Run the development server:
-        ```
-        npm start
-        ```
-
-        Congratulations! You've created your first React app.
-        """
-        url = "https://blog.example.com/react-tutorial"
-
-        await classifier.initialize()
-        result = await classifier.classify_content(content, url)
-
-        assert result.primary_type == ContentType.TUTORIAL
-        assert ContentType.TUTORIAL in result.confidence_scores
-
-    @pytest.mark.asyncio
-    async def test_classify_blog_content(self, classifier):
-        """Test classification of blog content."""
-        content = """
-        # The Future of Artificial Intelligence in Healthcare
-
-        Published on March 15, 2024 by Dr. Jane Smith
-
-        Artificial Intelligence is revolutionizing the healthcare industry in ways
-        we never imagined.
-        From diagnostic imaging to drug discovery, AI is making healthcare more
-        precise, efficient, and accessible.
-
-        In this post, I'll explore the  developments and share my thoughts on
-        what lies ahead.
-
-        ## Current Applications
-
-        AI is already being used in several areas of healthcare:
-        - Medical imaging analysis
-        - Drug discovery and development
-        - Personalized treatment plans
-        - Predictive analytics for patient outcomes
-
-        What do you think about these developments? Share your thoughts in the
-        comments below.
-        """
-        url = "https://healthblog.example.com/ai-in-healthcare"
-
-        await classifier.initialize()
-        result = await classifier.classify_content(content, url)
-
-        assert result.primary_type == ContentType.BLOG
-        assert ContentType.BLOG in result.confidence_scores
-
-    @pytest.mark.asyncio
-    async def test_classify_forum_content(self, classifier):
-        """Test classification of forum content."""
-        content = """
-        **Topic: Need help with Python error - TypeError: 'NoneType' object is not
-        subscriptable**
-
-        Posted by user123 - 2 hours ago
-
-        Hi everyone, I'm getting this error in my Python code and can't figure out
-        what's wrong:
-
-        ```
-        TypeError: 'NoneType' object is not subscriptable
-        ```
-
-        Here's my code:
-        ```python
-        def get_data():
-            # some code here
-            return result[0]
-        ```
-
-        ---
-
-        **Reply by expert_dev - 1 hour ago**
-
-        This error occurs when you're trying to access an element of a variable
-        that is None.
-        Check if your `result` variable is actually returning data.
-
-        ---
-
-        **Reply by user123 - 30 minutes ago**
-
-        @expert_dev Thanks! That was exactly the issue. I was not handling the case
-        where the function returns None.
-        """
-        url = "https://forum.example.com/thread/12345"
-
-        await classifier.initialize()
-        result = await classifier.classify_content(content, url)
-
-        assert result.primary_type == ContentType.FORUM
-        assert ContentType.FORUM in result.confidence_scores
-
-    @pytest.mark.asyncio
-    async def test_classify_news_content(self, classifier):
-        """Test classification of news content."""
-        content = """
-        # Tech Giant Announces Breakthrough in Quantum Computing
-
-        NEW YORK, March 15, 2024 - A major technology company announced today that
-        it has achieved a significant breakthrough in quantum computing, potentially
-        bringing quantum computers closer to mainstream adoption.
-
-        The announcement was made during the company's annual developer conference,
-        where CEO John Doe revealed that their new quantum processor can perform
-        certain calculations 1000 times faster than traditional computers.
-
-        "This represents a major milestone in our quantum computing research," said
-        Doe during his keynote speech.
-
-        Industry experts are calling this development a game-changer for fields
-        including cryptography,
-        drug discovery, and financial modeling.
-
-        The company's stock price rose 5% following the announcement.
-        """
-        url = "https://news.example.com/tech-breakthrough"
-
-        await classifier.initialize()
-        result = await classifier.classify_content(content, url)
-
-        assert result.primary_type == ContentType.NEWS
-        assert ContentType.NEWS in result.confidence_scores
-
-    @pytest.mark.asyncio
-    async def test_classify_with_url_hints(self, classifier):
-        """Test that URL patterns influence classification."""
-        content = "Some generic content that could be anything."
-
-        await classifier.initialize()
-
-        # Test documentation URL
-        doc_result = await classifier.classify_content(
-            content, "https://docs.example.com/guide"
-        )
-        # Should lean towards documentation due to URL
-
-        # Test GitHub URL
-        code_result = await classifier.classify_content(
-            content, "https://github.com/user/repo/blob/main/file.py"
-        )
-        # Should lean towards code due to URL
-
-        # Test blog URL
-        blog_result = await classifier.classify_content(
-            content, "https://blog.example.com/post"
-        )
-        # Should lean towards blog due to URL
-
-        assert isinstance(doc_result, ContentClassification)
-        assert isinstance(code_result, ContentClassification)
-        assert isinstance(blog_result, ContentClassification)
-
-    @pytest.mark.asyncio
-    async def test_classify_mixed_content(self, classifier):
-        """Test classification of content with mixed characteristics."""
-        content = """
-        # How to Implement Authentication in Your API
-
-        This tutorial will show you how to add authentication to your REST API.
-
-        ## Step 1: Install the required packages
-
-        ```bash
-        npm install jsonwebtoken bcryptjs
-        ```
-
-        ## Step 2: Create the authentication middleware
-
-        ```javascript
-        const jwt = require('jsonwebtoken');
-
-        function authenticateToken(req, res, next) {
-            const authHeader = req.headers['authorization'];
-            const token = authHeader && authHeader.split(' ')[1];
-
-            if (token == null) return res.sendStatus(401);
-
-            jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
-                if (err) return res.sendStatus(403);
-                req.user = user;
-                next();
-            });
-        }
-        ```
-
-        This middleware checks for a valid JWT token in the Authorization header.
-        """
-        url = "https://tutorial.example.com/api-auth"
-
-        await classifier.initialize()
-        result = await classifier.classify_content(content, url)
-
-        # Should classify as tutorial (primary) with code as secondary
-        assert result.primary_type == ContentType.TUTORIAL
-        assert (
-            ContentType.CODE in result.secondary_types
-            or ContentType.CODE in result.confidence_scores
-        )
-
-    @pytest.mark.asyncio
-    async def test_classify_programming_language_detection(self, classifier):
-        """Test programming language detection in code content."""
-        python_content = """
-        class Calculator:
-            def add(self, a, b):
-                return a + b
-
-            def multiply(self, a, b):
-                return a * b
-
-        if __name__ == "__main__":
-            calc = Calculator()
-            print(calc.add(2, 3))
-        """
-
-        javascript_content = """
-        class Calculator {
-            add(a, b) {
-                return a + b;
-            }
-
-            multiply(a, b) {
-                return a * b;
-            }
-        }
-
-        const calc =  Calculator();
-        console.log(calc.add(2, 3));
-        """
-
-        await classifier.initialize()
-
-        python_result = await classifier.classify_content(
-            python_content, "https://example.com/code.py"
-        )
-        javascript_result = await classifier.classify_content(
-            javascript_content, "https://example.com/code.js"
-        )
-
-        assert python_result.primary_type == ContentType.CODE
-        assert javascript_result.primary_type == ContentType.CODE
-
-        # Both should be classified as code but may have different
-        # language-specific metadata
-
-    @pytest.mark.asyncio
-    async def test_classify_unknown_content(self, classifier):
-        """Test classification of content that doesn't fit clear categories."""
-        content = """
-        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor
-        incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis
-        nostrud
-        exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-        """
-        url = "https://example.com/random"
-
-        await classifier.initialize()
-        result = await classifier.classify_content(content, url)
-
-        # Should either classify as UNKNOWN or have low confidence scores
-        assert (
-            result.primary_type == ContentType.UNKNOWN
-            or max(result.confidence_scores.values()) < 0.6
-        )
-
-    @pytest.mark.asyncio
-    async def test_classify_empty_content(self, classifier):
-        """Test classification with empty or minimal content."""
-        await classifier.initialize()
-
-        result = await classifier.classify_content("", "https://example.com")
-        assert result.primary_type == ContentType.UNKNOWN
-
-        result = await classifier.classify_content("   ", "https://example.com")
-        assert result.primary_type == ContentType.UNKNOWN
-
-    @pytest.mark.asyncio
-    async def test_classify_with_title(self, classifier):
-        """Test classification when title is provided."""
-        content = "Some content here."
-        url = "https://example.com/page"
-        title = "API Reference Documentation"
-
-        await classifier.initialize()
-        result = await classifier.classify_content(content, url, title)
-
-        # Title should influence classification towards REFERENCE/DOCUMENTATION
-        assert result.primary_type in [ContentType.REFERENCE, ContentType.DOCUMENTATION]
-        assert result.classification_reasoning is not None
-
-    @pytest.mark.asyncio
-    async def test_classifier_not_initialized(self, classifier):
-        """Test that classifier raises error when not initialized."""
-        with pytest.raises(RuntimeError, match="ContentClassifier not initialized"):
-            await classifier.classify_content("test content", "https://example.com")
-
-    @pytest.mark.asyncio
-    async def test_embedding_generation_error(self, classifier, mock_embedding_manager):
-        """Test handling of embedding generation errors."""
-        mock_embedding_manager.generate_embeddings.side_effect = Exception(
-            "Embedding error"
-        )
-
-        await classifier.initialize()
         result = await classifier.classify_content(
-            "test content", "https://example.com"
+            content=content, url="https://example.com/src/module.py"
         )
 
-        # Should fall back to heuristic classification
-        assert isinstance(result, ContentClassification)
-        assert result.primary_type is not None
+        assert isinstance(result, classification_cls)
+        assert result.primary_type == content_type_enum.CODE
+        assert result.has_code_blocks is True
+        assert "python" in result.programming_languages
 
     @pytest.mark.asyncio
-    async def test_cleanup(self, classifier):
-        """Test classifier cleanup."""
-        await classifier.initialize()
-        await classifier.cleanup()
-        assert classifier._initialized is False
+    async def test_semantic_classification_scores_documentation(
+        self,
+        classifier: ContentClassifier,
+        deterministic_embedding_manager: AsyncMock,
+        content_type_enum: ContentType,
+    ) -> None:
+        """Verify semantic similarity contributes documentation confidence.
+
+        Args:
+            classifier: Initialized classifier under test.
+            deterministic_embedding_manager: Embedding manager stub used for assertions.
+            content_type_enum: Enumeration representing content types.
+        """
+
+        content = (
+            "Comprehensive documentation guide describing API authentication flows."
+        )
+
+        result = await classifier.classify_content(
+            content=content, url="https://example.com/docs/overview"
+        )
+
+        assert deterministic_embedding_manager.generate_embeddings.await_count == 1
+        documentation_score = result.confidence_scores[content_type_enum.DOCUMENTATION]
+        assert documentation_score >= 0.5
+        assert (
+            documentation_score >= result.confidence_scores[content_type_enum.REFERENCE]
+        )
+        assert result.primary_type == content_type_enum.DOCUMENTATION
+
+    @pytest.mark.asyncio
+    async def test_semantic_classification_handles_embedding_failure(
+        self,
+        failing_classifier_factory: Callable[[], ContentClassifier],
+        classification_cls: type[ContentClassification],
+    ) -> None:
+        """Gracefully handle embedding failures by returning neutral scores.
+
+        Args:
+            failing_classifier_factory: Factory producing classifiers without
+                embeddings.
+            classification_cls: Dataclass type for classification results.
+        """
+
+        classifier_instance = failing_classifier_factory()
+        await classifier_instance.initialize()
+
+        result = await classifier_instance.classify_content(
+            content="Unstructured text without clear indicators.", url=""
+        )
+
+        assert isinstance(result, classification_cls)
+        assert (
+            classifier_instance.embedding_manager.generate_embeddings.await_count == 1
+        )
+        assert result.confidence_scores
+        assert all(0.0 <= score <= 1.0 for score in result.confidence_scores.values())
+
+    @pytest.mark.asyncio
+    async def test_semantic_classification_direct_call(
+        self,
+        classifier: ContentClassifier,
+        content_type_enum: ContentType,
+    ) -> None:
+        """Call semantic classification helper directly for coverage.
+
+        Args:
+            classifier: Initialized classifier under test.
+            content_type_enum: Enumeration representing content types.
+        """
+
+        scores = await classifier._semantic_classification(  # pylint: disable=protected-access
+            "API reference documentation"
+        )
+
+        assert scores[content_type_enum.DOCUMENTATION] == pytest.approx(1.0)
+        assert all(score >= 0.0 for score in scores.values())

@@ -33,7 +33,6 @@ class TestCollectionsTools:
             }
 
         mock_vector.collection_stats.side_effect = mock_stats
-        mock_vector.drop_collection = AsyncMock()
         mock_vector.delete_collection = AsyncMock()
 
         # Mock cache manager
@@ -41,6 +40,7 @@ class TestCollectionsTools:
         mock_cache.clear.return_value = 10  # cleared items
         mock_manager.get_vector_store_service = AsyncMock(return_value=mock_vector)
         mock_manager.get_cache_manager = AsyncMock(return_value=mock_cache)
+        mock_manager.cache_mock = mock_cache
 
         return mock_manager
 
@@ -135,35 +135,10 @@ class TestCollectionsTools:
 
         mock_context.info.assert_called()
         mock_vector.delete_collection.assert_awaited_once_with("old_collection")
-        mock_vector.drop_collection.assert_not_awaited()
-
-    @pytest.mark.asyncio
-    async def test_delete_collection_falls_back_to_drop(
-        self, mock_client_manager, mock_context
-    ):
-        """Test fallback to drop_collection when delete alias missing."""
-
-        mock_vector = await mock_client_manager.get_vector_store_service()
-        mock_vector.delete_collection = None
-
-        mock_mcp = MagicMock()
-        registered_tools = {}
-
-        def capture_tool(func):
-            registered_tools[func.__name__] = func
-            return func
-
-        mock_mcp.tool.return_value = capture_tool
-        register_tools(mock_mcp, mock_client_manager)
-
-        delete_collection = registered_tools["delete_collection"]
-
-        result = await delete_collection(
-            collection_name="legacy_collection", ctx=mock_context
+        mock_client_manager.get_cache_manager.assert_awaited_once()
+        mock_client_manager.cache_mock.clear_pattern.assert_awaited_once_with(
+            "*:old_collection:*"
         )
-
-        assert result.status == "deleted"
-        mock_vector.drop_collection.assert_awaited_once_with("legacy_collection")
 
     @pytest.mark.asyncio
     async def test_delete_collection_missing_methods(
@@ -173,7 +148,6 @@ class TestCollectionsTools:
 
         mock_vector = await mock_client_manager.get_vector_store_service()
         mock_vector.delete_collection = None
-        mock_vector.drop_collection = None
 
         mock_mcp = MagicMock()
         registered_tools = {}
@@ -192,7 +166,8 @@ class TestCollectionsTools:
         )
 
         assert result.status == "error"
-        assert "Vector service does not expose" in (result.message or "")
+        assert result.message
+        assert "Vector service does not expose" in result.message
 
     @pytest.mark.asyncio
     async def test_collections_error_handling(self, mock_client_manager, mock_context):

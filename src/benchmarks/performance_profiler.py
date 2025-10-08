@@ -9,20 +9,51 @@ import logging
 import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Protocol
 
 import psutil
 from pydantic import BaseModel, Field
 
 from src.models.vector_search import HybridSearchRequest
-from src.services.vector_db.hybrid_search import AdvancedHybridSearchService
 
 
 logger = logging.getLogger(__name__)
 
 
+class QueryClassifierProtocol(Protocol):
+    async def classify_query(self, query: str) -> Any: ...
+
+
+class ModelSelectorProtocol(Protocol):
+    async def select_optimal_model(self, classification: Any) -> Any: ...
+
+
+class AdaptiveFusionTunerProtocol(Protocol):
+    async def compute_adaptive_weights(
+        self, classification: Any, session_id: str
+    ) -> Any: ...
+
+
+class SpladeProviderProtocol(Protocol):
+    async def generate_sparse_vector(self, query: str) -> Any: ...
+    def clear_cache(self) -> None: ...
+    def get_cache_stats(self) -> dict[str, Any]: ...
+
+
+class AdvancedHybridSearchService(Protocol):
+    """Protocol capturing the hybrid search surface used for profiling."""
+
+    query_classifier: QueryClassifierProtocol
+    model_selector: ModelSelectorProtocol
+    adaptive_fusion_tuner: AdaptiveFusionTunerProtocol
+    splade_provider: SpladeProviderProtocol
+
+    async def hybrid_search(self, request: HybridSearchRequest) -> Any:
+        """Execute a hybrid search request."""
+
+
 @dataclass
-class ResourceSnapshot:
+class ResourceSnapshot:  # pylint: disable=too-many-instance-attributes
     """Single point-in-time resource measurement."""
 
     timestamp: float
@@ -36,7 +67,7 @@ class ResourceSnapshot:
     active_threads: int
 
 
-class ProfilingResults(BaseModel):
+class ProfilingResults(BaseModel):  # pylint: disable=too-many-instance-attributes
     """Results from performance profiling session."""
 
     duration_seconds: float = Field(..., description="Total profiling duration")
@@ -80,7 +111,7 @@ class ProfilingResults(BaseModel):
     )
 
 
-class PerformanceProfiler:
+class PerformanceProfiler:  # pylint: disable=too-many-instance-attributes
     """Advanced performance profiler for search service monitoring."""
 
     def __init__(self, sampling_interval: float = 0.5):
@@ -110,9 +141,9 @@ class PerformanceProfiler:
             test_queries: Test queries to execute during profiling
 
         Returns:
-            Comprehensive profiling results
-
+            Profiling results
         """
+
         logger.info("Starting performance profiling session")
 
         # Start resource monitoring
@@ -140,8 +171,9 @@ class PerformanceProfiler:
         )
 
         logger.info(
-            f"Profiling completed. Duration: {duration:.2f}s, "
-            f"Peak memory: {results.peak_memory_mb:.1f}MB"
+            "Profiling completed. Duration: %.2fs, Peak memory: %.1fMB",
+            duration,
+            results.peak_memory_mb,
         )
 
         return {
@@ -161,6 +193,7 @@ class PerformanceProfiler:
         test_queries: list[HybridSearchRequest],
     ) -> None:
         """Execute queries while profiling is active."""
+
         # Execute a subset of queries for profiling
         profiling_queries = test_queries[: min(20, len(test_queries))]
 
@@ -178,13 +211,12 @@ class PerformanceProfiler:
                 # Small delay between queries
                 await asyncio.sleep(0.1)
 
-            except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
-                logger.debug(
-                    f"Query execution failed during profiling: {e}"
-                )  # TODO: Convert f-string to logging format
+            except (asyncio.CancelledError, TimeoutError, RuntimeError) as exc:
+                logger.debug("Query execution failed during profiling: %s", exc)
 
-    async def _monitor_resources(self) -> None:
+    async def _monitor_resources(self) -> None:  # pylint: disable=too-many-locals
         """Monitor system resources continuously."""
+
         self.profiling_active = True
         self.resource_snapshots = []
 
@@ -207,18 +239,25 @@ class PerformanceProfiler:
                 current_io = psutil.disk_io_counters()
                 current_net = psutil.net_io_counters()
 
-                disk_read_mb = (
-                    (current_io.read_bytes - initial_io.read_bytes) / 1024 / 1024
-                )
-                disk_write_mb = (
-                    (current_io.write_bytes - initial_io.write_bytes) / 1024 / 1024
-                )
-                net_sent_mb = (
-                    (current_net.bytes_sent - initial_net.bytes_sent) / 1024 / 1024
-                )
-                net_recv_mb = (
-                    (current_net.bytes_recv - initial_net.bytes_recv) / 1024 / 1024
-                )
+                disk_read_mb = 0.0
+                disk_write_mb = 0.0
+                if current_io is not None and initial_io is not None:
+                    disk_read_mb = (
+                        (current_io.read_bytes - initial_io.read_bytes) / 1024 / 1024
+                    )
+                    disk_write_mb = (
+                        (current_io.write_bytes - initial_io.write_bytes) / 1024 / 1024
+                    )
+
+                net_sent_mb = 0.0
+                net_recv_mb = 0.0
+                if current_net is not None and initial_net is not None:
+                    net_sent_mb = (
+                        (current_net.bytes_sent - initial_net.bytes_sent) / 1024 / 1024
+                    )
+                    net_recv_mb = (
+                        (current_net.bytes_recv - initial_net.bytes_recv) / 1024 / 1024
+                    )
 
                 # Thread count
                 thread_count = self.process.num_threads()
@@ -237,34 +276,38 @@ class PerformanceProfiler:
 
                 self.resource_snapshots.append(snapshot)
 
-            except (ConnectionError, OSError, TimeoutError) as e:
-                logger.warning(
-                    f"Error collecting resource snapshot: {e}"
-                )  # TODO: Convert f-string to logging format
+            except (ConnectionError, OSError, TimeoutError) as exc:
+                logger.warning("Error collecting resource snapshot: %s", exc)
 
             await asyncio.sleep(self.sampling_interval)
 
+    # pylint: disable=too-many-locals
     def _analyze_profiling_results(
         self, duration: float, start_time: datetime, end_time: datetime
     ) -> ProfilingResults:
         """Analyze collected resource snapshots."""
+
         if not self.resource_snapshots:
             return ProfilingResults(
                 duration_seconds=duration,
                 start_time=start_time,
                 end_time=end_time,
-                avg_cpu_percent=0,
-                max_cpu_percent=0,
-                cpu_over_80_percent=0,
+                avg_cpu_percent=0.0,
+                max_cpu_percent=0.0,
+                cpu_over_80_percent=0.0,
                 avg_memory_mb=self.baseline_memory,
                 peak_memory_mb=self.baseline_memory,
-                memory_growth_mb=0,
-                total_disk_read_mb=0,
-                total_disk_write_mb=0,
-                total_network_sent_mb=0,
-                total_network_recv_mb=0,
-                avg_thread_count=1,
+                memory_growth_mb=0.0,
+                memory_leak_detected=False,
+                total_disk_read_mb=0.0,
+                total_disk_write_mb=0.0,
+                total_network_sent_mb=0.0,
+                total_network_recv_mb=0.0,
+                avg_thread_count=1.0,
                 max_thread_count=1,
+                bottleneck_periods=[],
+                resource_warnings=[],
+                optimization_suggestions=[],
             )
 
         # Calculate metrics
@@ -328,6 +371,7 @@ class PerformanceProfiler:
 
     def _detect_memory_leak(self, memory_values: list[float]) -> bool:
         """Detect potential memory leaks based on memory growth pattern."""
+
         if len(memory_values) < 10:
             return False
 
@@ -341,6 +385,7 @@ class PerformanceProfiler:
 
     def _identify_bottlenecks(self) -> list[dict[str, Any]]:
         """Identify performance bottleneck periods."""
+
         bottlenecks = []
 
         if len(self.resource_snapshots) < 5:
@@ -394,6 +439,7 @@ class PerformanceProfiler:
         self, avg_cpu: float, peak_memory: float, memory_growth: float
     ) -> list[str]:
         """Generate resource usage warnings."""
+
         warnings = []
 
         if avg_cpu > 70:
@@ -416,6 +462,7 @@ class PerformanceProfiler:
         self, avg_cpu: float, peak_memory: float, bottlenecks: list[dict[str, Any]]
     ) -> list[str]:
         """Generate performance optimization suggestions."""
+
         suggestions = []
 
         if avg_cpu > 60:
@@ -452,6 +499,7 @@ class PerformanceProfiler:
 
     def get_resource_timeline(self) -> list[dict[str, Any]]:
         """Get detailed resource usage timeline."""
+
         return [
             {
                 "timestamp": snapshot.timestamp,
@@ -467,4 +515,5 @@ class PerformanceProfiler:
 
     def clear_snapshots(self) -> None:
         """Clear collected resource snapshots."""
+
         self.resource_snapshots = []

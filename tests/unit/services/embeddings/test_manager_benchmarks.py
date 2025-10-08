@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.config import Config
+from src.config import Settings
 from src.services.embeddings.manager import EmbeddingManager, TextAnalysis
 
 
@@ -15,7 +15,8 @@ class TestEmbeddingManagerBenchmarks:
     @pytest.fixture
     def mock_config(self):
         """Create a mock configuration."""
-        config = MagicMock(spec=Config)
+
+        config = MagicMock(spec=Settings)
 
         # Mock cache config
         mock_cache = MagicMock()
@@ -73,6 +74,7 @@ class TestEmbeddingManagerBenchmarks:
 
         # Verify initial benchmarks
         assert "default-model" in manager._benchmarks
+        assert manager._smart_config is not None
         assert manager._smart_config.quality_weight == 0.4
 
         # Create custom benchmark file
@@ -126,6 +128,7 @@ class TestEmbeddingManagerBenchmarks:
         assert len(manager._benchmarks) == 2
 
         # Verify smart selection config was updated
+        assert manager._smart_config is not None
         assert manager._smart_config.quality_weight == 0.5
         assert manager._smart_config.speed_weight == 0.2
         assert manager._smart_config.cost_weight == 0.3
@@ -133,9 +136,9 @@ class TestEmbeddingManagerBenchmarks:
 
         # Verify specific model details
         model1 = manager._benchmarks["custom-model-1"]
-        assert model1.model_name == "custom-model-1"
-        assert model1.quality_score == 95
-        assert model1.avg_latency_ms == 25
+        assert model1["model_name"] == "custom-model-1"
+        assert model1["quality_score"] == 95
+        assert model1["avg_latency_ms"] == 25
 
     def test_load_custom_benchmarks_file_not_found(
         self, mock_config, mock_client_manager
@@ -177,6 +180,7 @@ class TestEmbeddingManagerBenchmarks:
 
         # Store original benchmarks
         original_benchmarks = manager._benchmarks.copy()
+        assert manager._smart_config is not None
         original_smart_config = manager._smart_config
 
         # Create file with invalid schema
@@ -304,7 +308,7 @@ class TestEmbeddingManagerBenchmarks:
         # Create mock text analysis
 
         text_analysis = TextAnalysis(
-            _total_length=500,
+            total_length=500,
             avg_length=100,
             complexity_score=0.5,
             estimated_tokens=125,

@@ -115,6 +115,7 @@ coverage.json
 
 # AI/ML specific
 models/
+!src/models/
 checkpoints/
 experiments/
 artifacts/

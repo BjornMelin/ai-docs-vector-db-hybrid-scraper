@@ -1,16 +1,13 @@
 """FastAPI production service package.
 
-This package provides production-ready FastAPI enhancements for the
-unified MCP server, including middleware, dependency injection,
-and background task management.
+This package provides FastAPI middleware, dependency injection, and background
+task management for the unified MCP Server.
 """
 
 from .dependencies import (
     cleanup_dependencies,
-    get_cache_manager,
-    get_config_dependency as get_config,
-    get_embedding_manager,
-    get_fastapi_config,
+    get_client_manager,
+    get_config_dependency as get_settings,
     get_health_checker,
     get_vector_service,
     initialize_dependencies,
@@ -23,7 +20,7 @@ from .middleware import (
     TracingMiddleware,
     get_correlation_id,
 )
-from .middleware.manager import MiddlewareManager, create_middleware_manager
+from .middleware.manager import apply_defaults, apply_named_stack
 from .production_server import (
     ProductionMCPServer,
     create_production_server,
@@ -36,7 +33,8 @@ __all__ = [
     # Middleware components
     "CompressionMiddleware",
     # Middleware management
-    "MiddlewareManager",
+    "apply_defaults",
+    "apply_named_stack",
     "PerformanceMiddleware",
     # Production server
     "ProductionMCPServer",
@@ -44,13 +42,10 @@ __all__ = [
     "TimeoutMiddleware",
     "TracingMiddleware",
     "cleanup_dependencies",
-    "create_middleware_manager",
     "create_production_server",
-    "get_cache_manager",
-    "get_config",
+    "get_client_manager",
+    "get_settings",
     "get_correlation_id",
-    "get_embedding_manager",
-    "get_fastapi_config",
     "get_health_checker",
     "get_vector_service",
     # Dependency injection

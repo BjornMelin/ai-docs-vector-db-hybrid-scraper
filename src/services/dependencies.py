@@ -1,29 +1,39 @@
-"""FastAPI dependency injection functions."""
+"""Service access helpers and dependency wrappers shared across entry points."""
 
-# pylint: disable=too-many-lines,no-else-return,no-else-raise,duplicate-code,cyclic-import
+# pylint: disable=too-many-lines,no-else-return,no-else-raise,duplicate-code,cyclic-import,global-statement
 
 import asyncio
+import inspect
 import logging
-import time
 from collections.abc import AsyncGenerator, Callable
 from datetime import UTC, datetime
-from functools import lru_cache
+from time import perf_counter
 from typing import Annotated, Any
 
 from fastapi import Depends  # type: ignore[attr-defined]
 from pydantic import BaseModel, Field
 
-from src.config import CacheType, Config, get_config
-from src.infrastructure.client_manager import ClientManager
-from src.services.embeddings.manager import QualityTier
-from src.services.errors import (
-    CircuitBreakerRegistry,
-    CrawlServiceError,
-    EmbeddingServiceError,
+from src.config.loader import Settings, get_settings
+from src.config.models import CacheType
+from src.infrastructure.client_manager import (
+    ClientManager,
+    ensure_client_manager as ensure_global_client_manager,
+    get_client_manager as get_global_client_manager,
+    shutdown_client_manager as shutdown_global_client_manager,
+)
+from src.services.circuit_breaker.decorators import (
     circuit_breaker,
     tenacity_circuit_breaker,
 )
-from src.services.rag.generator import RAGGenerator
+from src.services.circuit_breaker.provider import get_circuit_breaker_manager
+from src.services.embeddings.manager import QualityTier
+from src.services.errors import (
+    CrawlServiceError,
+    EmbeddingServiceError,
+    ExternalServiceError,
+    NetworkError,
+    RateLimitError,
+)
 from src.services.rag.models import RAGRequest as InternalRAGRequest
 from src.services.vector_db.service import VectorStoreService
 
@@ -34,40 +44,36 @@ logger = logging.getLogger(__name__)
 #### HELPER FUNCTIONS & DECORATORS ####
 
 
-def create_service_error_handler(
-    service_name: str,
-    error_class: type[Exception] = RuntimeError,
-) -> Callable:
-    """Create error handler decorator for service operations."""
+async def _resolve_client_manager(
+    client_manager: "ClientManager | None",
+) -> "ClientManager":
+    """Return an initialized ClientManager instance."""
 
-    def decorator(func: Callable) -> Callable:
-        async def wrapper(*args: Any, **kwargs: Any) -> Any:
-            try:
-                return await func(*args, **kwargs)
-            except Exception as e:
-                logger.exception("%s operation failed", service_name)
-                msg = f"Failed {service_name} operation: {e}"
-                raise error_class(msg) from e
+    if client_manager is not None:
+        return client_manager
 
-        return wrapper
-
-    return decorator
+    return await ensure_global_client_manager()
 
 
 #### CONFIGURATION DEPENDENCIES ####
 
 # Embedding Service Dependencies
-ConfigDep = Annotated[Config, Depends(get_config)]
+ConfigDep = Annotated[Settings, Depends(get_settings)]
 
 
-@lru_cache
 def get_client_manager() -> ClientManager:
-    """Get singleton ClientManager instance."""
+    """Return the initialized global ClientManager instance."""
 
-    return ClientManager.from_unified_config()
+    return get_global_client_manager()
 
 
 ClientManagerDep = Annotated[ClientManager, Depends(get_client_manager)]
+
+
+async def get_ready_client_manager() -> ClientManager:
+    """Return an initialized ClientManager instance."""
+
+    return await ensure_global_client_manager()
 
 
 class EmbeddingRequest(BaseModel):
@@ -101,13 +107,14 @@ class EmbeddingResponse(BaseModel):
     service_name="embedding_manager",
     failure_threshold=3,
     recovery_timeout=30.0,
-    enable_adaptive_timeout=True,
 )
 async def get_embedding_manager(
-    client_manager: ClientManagerDep,
+    client_manager: ClientManager | None = None,
 ) -> Any:
     """Get initialized EmbeddingManager service."""
-    return await client_manager.get_embedding_manager()
+
+    manager = await _resolve_client_manager(client_manager)
+    return await manager.get_embedding_manager()
 
 
 EmbeddingManagerDep = Annotated[Any, Depends(get_embedding_manager)]
@@ -123,15 +130,20 @@ EmbeddingManagerDep = Annotated[Any, Depends(get_embedding_manager)]
 )
 async def generate_embeddings(
     request: EmbeddingRequest,
-    embedding_manager: EmbeddingManagerDep,
+    embedding_manager: EmbeddingManagerDep | None = None,
 ) -> EmbeddingResponse:
     """Generate embeddings with smart provider selection."""
+
     try:
+        manager = embedding_manager
+        if manager is None:
+            manager = await get_embedding_manager()
+
         quality_tier = (
             QualityTier(request.quality_tier) if request.quality_tier else None
         )
 
-        result = await embedding_manager.generate_embeddings(
+        result = await manager.generate_embeddings(
             texts=request.texts,
             quality_tier=quality_tier,
             provider_name=request.provider_name,
@@ -142,6 +154,13 @@ async def generate_embeddings(
         )
 
         return EmbeddingResponse(**result)
+    except (
+        ExternalServiceError,
+        NetworkError,
+        RateLimitError,
+        EmbeddingServiceError,
+    ):
+        raise
     except Exception as e:
         logger.exception("Embedding generation failed")
         msg = f"Failed to generate embeddings: {e}"
@@ -162,13 +181,14 @@ class CacheRequest(BaseModel):
     service_name="cache_manager",
     failure_threshold=2,
     recovery_timeout=10.0,
-    enable_adaptive_timeout=True,
 )
 async def get_cache_manager(
-    client_manager: ClientManagerDep,
+    client_manager: ClientManager | None = None,
 ) -> Any:
     """Get initialized CacheManager service."""
-    return await client_manager.get_cache_manager()
+
+    manager = await _resolve_client_manager(client_manager)
+    return await manager.get_cache_manager()
 
 
 CacheManagerDep = Annotated[Any, Depends(get_cache_manager)]
@@ -177,13 +197,20 @@ CacheManagerDep = Annotated[Any, Depends(get_cache_manager)]
 async def cache_get(
     key: str,
     cache_type: str = "crawl",
-    cache_manager: CacheManagerDep = None,
+    cache_manager: Any | None = None,
 ) -> Any:
     """Get value from cache."""
+    manager = cache_manager or await get_cache_manager()
     try:
-        return await cache_manager.get(key, CacheType(cache_type))
-    except (OSError, ConnectionError, ImportError, ModuleNotFoundError):
-        logger.exception("Cache get failed for key")
+        return await manager.get(key, CacheType(cache_type))
+    except (
+        OSError,
+        ConnectionError,
+        ImportError,
+        ModuleNotFoundError,
+        ValueError,
+    ):
+        logger.exception("Cache get failed for key %s", key)
         return None
 
 
@@ -192,26 +219,40 @@ async def cache_set(
     value: Any,
     cache_type: str = "crawl",
     ttl: int | None = None,
-    cache_manager: CacheManagerDep = None,
+    cache_manager: Any | None = None,
 ) -> bool:
     """Set value in cache."""
+    manager = cache_manager or await get_cache_manager()
     try:
-        return await cache_manager.set(key, value, CacheType(cache_type), ttl)
-    except (OSError, ConnectionError, ImportError, ModuleNotFoundError):
-        logger.exception("Cache set failed for key")
+        return await manager.set(key, value, CacheType(cache_type), ttl)
+    except (
+        OSError,
+        ConnectionError,
+        ImportError,
+        ModuleNotFoundError,
+        ValueError,
+    ):
+        logger.exception("Cache set failed for key %s", key)
         return False
 
 
 async def cache_delete(
     key: str,
     cache_type: str = "crawl",
-    cache_manager: CacheManagerDep = None,
+    cache_manager: Any | None = None,
 ) -> bool:
     """Delete value from cache."""
+    manager = cache_manager or await get_cache_manager()
     try:
-        return await cache_manager.delete(key, CacheType(cache_type))
-    except (OSError, ConnectionError, ImportError, ModuleNotFoundError):
-        logger.exception("Cache delete failed for key")
+        return await manager.delete(key, CacheType(cache_type))
+    except (
+        OSError,
+        ConnectionError,
+        ImportError,
+        ModuleNotFoundError,
+        ValueError,
+    ):
+        logger.exception("Cache delete failed for key %s", key)
         return False
 
 
@@ -245,13 +286,13 @@ class CrawlResponse(BaseModel):
     service_name="crawl_manager",
     failure_threshold=5,
     recovery_timeout=60.0,
-    enable_adaptive_timeout=True,
 )
 async def get_crawl_manager(
-    client_manager: ClientManagerDep,
+    client_manager: ClientManager | None = None,
 ) -> Any:
     """Get initialized CrawlManager service."""
-    return await client_manager.get_crawl_manager()
+    manager = await _resolve_client_manager(client_manager)
+    return await manager.get_crawl_manager()
 
 
 CrawlManagerDep = Annotated[Any, Depends(get_crawl_manager)]
@@ -267,13 +308,25 @@ CrawlManagerDep = Annotated[Any, Depends(get_crawl_manager)]
 )
 async def scrape_url(
     request: CrawlRequest,
-    crawl_manager: CrawlManagerDep,
+    crawl_manager: CrawlManagerDep | None = None,
 ) -> CrawlResponse:
     """Scrape URL with provider selection."""
+
     try:
-        result = await crawl_manager.scrape_url(
+        manager = crawl_manager
+        if manager is None:
+            manager = await get_crawl_manager()
+
+        result = await manager.scrape_url(
             url=request.url, preferred_provider=request.preferred_provider
         )
+    except (
+        ExternalServiceError,
+        NetworkError,
+        RateLimitError,
+        CrawlServiceError,
+    ):
+        raise
     except Exception as e:
         logger.exception("URL scraping failed for %s", request.url)
         msg = f"Failed to scrape URL: {e}"
@@ -284,11 +337,16 @@ async def scrape_url(
 
 async def crawl_site(
     request: CrawlRequest,
-    crawl_manager: CrawlManagerDep,
+    crawl_manager: CrawlManagerDep | None = None,
 ) -> dict[str, Any]:
     """Crawl entire website from starting URL."""
+
     try:
-        result = await crawl_manager.crawl_site(
+        manager = crawl_manager
+        if manager is None:
+            manager = await get_crawl_manager()
+
+        result = await manager.crawl_site(
             url=request.url,
             max_pages=request.max_pages,
             preferred_provider=request.preferred_provider,
@@ -302,11 +360,11 @@ async def crawl_site(
 
 
 # Database Dependencies
-async def get_database_manager(
-    client_manager: ClientManagerDep,
-) -> Any:
+async def get_database_manager() -> Any:
     """Get initialized DatabaseManager service."""
-    return await client_manager.get_database_manager()
+
+    manager = await ensure_global_client_manager()
+    return await manager.get_database_manager()
 
 
 DatabaseManagerDep = Annotated[Any, Depends(get_database_manager)]
@@ -316,6 +374,7 @@ async def get_database_session(
     db_manager: DatabaseManagerDep,
 ) -> AsyncGenerator[Any]:
     """Get database session with automatic cleanup."""
+
     async with db_manager.get_session() as session:
         yield session
 
@@ -328,36 +387,25 @@ DatabaseSessionDep = Annotated[Any, Depends(get_database_session)]
     service_name="vector_store_service",
     failure_threshold=3,
     recovery_timeout=15.0,
-    enable_adaptive_timeout=True,
 )
 async def get_vector_store_service(
-    client_manager: ClientManagerDep,
+    client_manager: ClientManager | None = None,
 ) -> VectorStoreService:
     """Get initialized vector store service."""
-
-    return await client_manager.get_vector_store_service()
+    manager = await _resolve_client_manager(client_manager)
+    return await manager.get_vector_store_service()
 
 
 VectorStoreServiceDep = Annotated[VectorStoreService, Depends(get_vector_store_service)]
 
 
-# HyDE Engine Dependencies
-async def get_hyde_engine(
-    client_manager: ClientManagerDep,
-) -> Any:
-    """Get initialized HyDEEngine service."""
-    return await client_manager.get_hyde_engine()  # type: ignore[attr-defined]
-
-
-HyDEEngineDep = Annotated[Any, Depends(get_hyde_engine)]
-
-
 # Content Intelligence Dependencies
 async def get_content_intelligence_service(
-    client_manager: ClientManagerDep,
+    client_manager: ClientManager | None = None,
 ) -> Any:
     """Get initialized ContentIntelligenceService."""
-    return await client_manager.get_content_intelligence_service()  # type: ignore[attr-defined]
+    manager = await _resolve_client_manager(client_manager)
+    return await manager.get_content_intelligence_service()
 
 
 ContentIntelligenceServiceDep = Annotated[
@@ -398,17 +446,16 @@ class RAGResponse(BaseModel):
     service_name="rag_generator",
     failure_threshold=3,
     recovery_timeout=30.0,
-    enable_adaptive_timeout=True,
 )
 async def get_rag_generator(
     config: ConfigDep,
     client_manager: ClientManagerDep,
 ) -> Any:
     """Get initialized RAGGenerator service."""
-    # RAGGenerator imported at top-level
 
-    generator = RAGGenerator(config.rag, client_manager)  # type: ignore[arg-type]
-    await generator.initialize()
+    del config
+
+    generator = await client_manager.get_rag_generator()
     return generator
 
 
@@ -417,6 +464,7 @@ RAGGeneratorDep = Annotated[Any, Depends(get_rag_generator)]
 
 def _convert_to_internal_rag_request(request: RAGRequest) -> InternalRAGRequest:
     """Convert external RAG request to internal format."""
+
     # Extract top_k from search_results length as a reasonable default
     if request.search_results:
         top_k = request.max_context_results or len(request.search_results)
@@ -442,6 +490,7 @@ def _format_rag_sources(
     request: RAGRequest, result: Any
 ) -> list[dict[str, Any]] | None:
     """Format RAG sources for response."""
+
     if not (request.include_sources and result.sources):
         return None
 
@@ -459,6 +508,7 @@ def _format_rag_sources(
 
 def _format_rag_metrics(result: Any) -> dict[str, Any] | None:
     """Format RAG metrics for response."""
+
     if not result.metrics:
         return None
 
@@ -480,20 +530,27 @@ def _format_rag_metrics(result: Any) -> dict[str, Any] | None:
 )
 async def generate_rag_answer(
     request: RAGRequest,
-    rag_generator: RAGGeneratorDep,
+    rag_generator: RAGGeneratorDep | None = None,
 ) -> RAGResponse:
     """Generate contextual answer from search results using RAG."""
-    try:
-        internal_request = _convert_to_internal_rag_request(request)
-        result = await rag_generator.generate_answer(internal_request)
 
+    try:
+        generator = rag_generator
+        if generator is None:
+            manager_instance = await _resolve_client_manager(None)
+            generator = await get_rag_generator(get_settings(), manager_instance)
+
+        internal_request = _convert_to_internal_rag_request(request)
+        result = await generator.generate_answer(internal_request)
+
+        raw_sources = list(getattr(result, "sources", []) or [])
         sources = _format_rag_sources(request, result)
         metrics = _format_rag_metrics(result)
 
         return RAGResponse(
             answer=result.answer,
             confidence_score=result.confidence_score or 0.0,
-            sources_used=len(result.sources),
+            sources_used=len(raw_sources),
             generation_time_ms=result.generation_time_ms,
             sources=sources,
             metrics=metrics,
@@ -501,18 +558,26 @@ async def generate_rag_answer(
             cached=False,
             reasoning_trace=None,
         )
+    except (ExternalServiceError, NetworkError, RateLimitError):
+        raise
     except Exception as e:
         logger.exception("RAG answer generation failed")
         msg = f"Failed to generate RAG answer: {e}"
-        raise EmbeddingServiceError(msg) from e
+        raise ExternalServiceError(msg) from e
 
 
 async def get_rag_metrics(
-    rag_generator: RAGGeneratorDep,
+    rag_generator: RAGGeneratorDep | None = None,
 ) -> dict[str, Any]:
     """Get RAG service performance metrics."""
+
     try:
-        metrics = rag_generator.get_metrics()
+        generator = rag_generator
+        if generator is None:
+            manager_instance = await _resolve_client_manager(None)
+            generator = await get_rag_generator(get_settings(), manager_instance)
+
+        metrics = generator.get_metrics()
         # Convert RAGServiceMetrics to dict if it's a Pydantic model
         if hasattr(metrics, "model_dump"):
             return metrics.model_dump()
@@ -523,11 +588,17 @@ async def get_rag_metrics(
 
 
 async def clear_rag_cache(
-    rag_generator: RAGGeneratorDep,
+    rag_generator: RAGGeneratorDep | None = None,
 ) -> dict[str, str]:
     """Clear RAG answer cache."""
+
     try:
-        rag_generator.clear_cache()
+        generator = rag_generator
+        if generator is None:
+            manager_instance = await _resolve_client_manager(None)
+            generator = await get_rag_generator(get_settings(), manager_instance)
+
+        generator.clear_cache()
         # RAGGenerator.clear_cache is a no-op (no cache to purge)
         return {
             "status": "noop",
@@ -543,6 +614,7 @@ async def get_browser_automation_router(
     client_manager: ClientManagerDep,
 ) -> Any:
     """Get initialized BrowserAutomationRouter service."""
+
     return await client_manager.get_browser_automation_router()
 
 
@@ -554,7 +626,7 @@ async def get_project_storage(
     client_manager: ClientManagerDep,
 ) -> Any:
     """Get initialized ProjectStorage service."""
-    return await client_manager.get_project_storage()  # type: ignore[attr-defined]
+    return await client_manager.get_project_storage()
 
 
 ProjectStorageDep = Annotated[Any, Depends(get_project_storage)]
@@ -563,8 +635,10 @@ ProjectStorageDep = Annotated[Any, Depends(get_project_storage)]
 # Circuit Breaker Monitoring Functions
 async def get_circuit_breaker_status() -> dict[str, Any]:
     """Get status of all circuit breakers."""
+
     try:
-        all_status = CircuitBreakerRegistry.get_all_status()
+        manager = await get_circuit_breaker_manager()
+        all_status = await manager.get_all_statuses()
 
         # Calculate aggregate metrics
         total_circuits = len(all_status)
@@ -583,7 +657,9 @@ async def get_circuit_breaker_status() -> dict[str, Any]:
                 "half_open_circuits": half_open_circuits,
                 "closed_circuits": total_circuits - open_circuits - half_open_circuits,
                 "health_percentage": (
-                    (total_circuits - open_circuits) / total_circuits * 100
+                    (total_circuits - open_circuits - half_open_circuits)
+                    / total_circuits
+                    * 100
                 )
                 if total_circuits > 0
                 else 100.0,
@@ -605,25 +681,38 @@ async def get_circuit_breaker_status() -> dict[str, Any]:
         }
 
 
-async def reset_circuit_breaker(service_name: str) -> dict[str, Any]:
+async def reset_circuit_breaker(
+    service_name: str,
+    *,
+    manager: Any | None = None,
+) -> dict[str, Any]:
     """Reset a specific circuit breaker."""
 
     try:
-        if (breaker := CircuitBreakerRegistry.get(service_name)) is None:
+        if manager is None:
+            manager = await get_circuit_breaker_manager()
+        services_result = manager.list_services()
+        services = (
+            await services_result
+            if inspect.isawaitable(services_result)
+            else services_result
+        )
+        if service_name not in services:
             return {
                 "success": False,
                 "error": f"Circuit breaker not found for service: {service_name}",
-                "available_services": CircuitBreakerRegistry.get_services(),
+                "available_services": services,
             }
 
-        breaker.reset()
+        success = await manager.reset_breaker(service_name)
+        new_status = await manager.get_breaker_status(service_name) if success else None
         return {
-            "success": True,
+            "success": success,
             "message": f"Circuit breaker for {service_name} has been reset",
-            "new_status": breaker.get_status(),
+            "new_status": new_status,
         }
     except Exception as e:
-        logger.exception("Failed to reset circuit breaker for")
+        logger.exception("Failed to reset circuit breaker for %s", service_name)
         return {
             "success": False,
             "error": str(e),
@@ -634,11 +723,17 @@ async def reset_all_circuit_breakers() -> dict[str, Any]:
     """Reset all circuit breakers."""
 
     try:
-        services = CircuitBreakerRegistry.get_services()
+        manager = await get_circuit_breaker_manager()
+        services_result = manager.list_services()
+        services = (
+            await services_result
+            if inspect.isawaitable(services_result)
+            else services_result
+        )
         results = {}
 
         for service_name in services:
-            result = await reset_circuit_breaker(service_name)
+            result = await reset_circuit_breaker(service_name, manager=manager)
             results[service_name] = result
 
         successful_resets = sum(1 for result in results.values() if result["success"])
@@ -690,6 +785,7 @@ async def get_service_health() -> dict[str, Any]:
 # Service Performance Metrics
 async def get_service_metrics() -> dict[str, Any]:
     """Get performance metrics for all services."""
+
     try:
         client_manager = get_client_manager()
 
@@ -702,7 +798,7 @@ async def get_service_metrics() -> dict[str, Any]:
 
         # Get cache metrics if available
         try:
-            cache_manager = await client_manager.get_cache_manager()
+            cache_manager = await get_cache_manager(client_manager)
             cache_stats = await cache_manager.get_performance_stats()
             metrics["cache_service"] = cache_stats
         except (ConnectionError, TimeoutError, ValueError) as e:
@@ -710,7 +806,7 @@ async def get_service_metrics() -> dict[str, Any]:
 
         # Get crawl metrics if available
         try:
-            crawl_manager = await client_manager.get_crawl_manager()
+            crawl_manager = await get_crawl_manager(client_manager)
             if crawl_manager:
                 crawl_metrics = crawl_manager.get_tier_metrics()  # type: ignore[attr-defined]
                 metrics["crawl_service"] = crawl_metrics
@@ -728,8 +824,7 @@ async def get_service_metrics() -> dict[str, Any]:
 async def cleanup_services() -> None:
     """Cleanup all services and release resources."""
     try:
-        client_manager = get_client_manager()
-        await client_manager.cleanup()
+        await shutdown_global_client_manager()
         logger.info("All services cleaned up successfully")
     except (ConnectionError, OSError, PermissionError):
         logger.exception("Service cleanup failed")
@@ -739,7 +834,6 @@ async def cleanup_services() -> None:
 # ============================================================================
 # CRAWLING OPERATIONS
 # ============================================================================
-# Note: Redis operations removed - use cache_manager functions instead
 class BulkCrawlRequest(BaseModel):
     """Pydantic model for bulk crawling requests."""
 
@@ -753,6 +847,7 @@ async def bulk_scrape_urls(
     crawl_manager: CrawlManagerDep,
 ) -> list[dict[str, Any]]:
     """Scrape multiple URLs concurrently (consolidated implementation)."""
+
     try:
         # Try built-in bulk_scrape if available
         if hasattr(crawl_manager, "bulk_scrape"):
@@ -801,6 +896,7 @@ async def get_crawl_recommended_tool(
     crawl_manager: CrawlManagerDep,
 ) -> str:
     """Get recommended tool for a URL based on performance metrics."""
+
     try:
         return await crawl_manager.get_recommended_tool(url)
     except (ConnectionError, TimeoutError, ValueError) as e:
@@ -811,11 +907,13 @@ async def get_crawl_recommended_tool(
 async def map_website_urls(
     url: str,
     include_subdomains: bool = False,
-    crawl_manager: CrawlManagerDep = None,
+    crawl_manager: Any | None = None,
 ) -> dict[str, Any]:
     """Map a website to get list of URLs."""
+
+    manager = crawl_manager or await get_crawl_manager()
     try:
-        return await crawl_manager.map_url(url, include_subdomains)
+        return await manager.map_url(url, include_subdomains)
     except (ConnectionError, TimeoutError, ValueError) as e:
         logger.warning("URL mapping failed for %s: %s", url, e)
         return {
@@ -827,143 +925,16 @@ async def map_website_urls(
 
 
 async def get_crawl_tier_metrics(
-    crawl_manager: CrawlManagerDep,
+    crawl_manager: Any | None = None,
 ) -> dict[str, dict]:
     """Get performance metrics for all crawling tiers."""
+
+    manager = crawl_manager or await get_crawl_manager()
     try:
-        return crawl_manager.get_tier_metrics()
+        return manager.get_tier_metrics()
     except (ConnectionError, TimeoutError, ValueError) as e:
         logger.warning("Failed to get tier metrics: %s", e)
         return {}
-
-
-# Direct Monitoring Operations (replacing MonitoringManager)
-class HealthCheckRequest(BaseModel):
-    """Pydantic model for health check registration."""
-
-    service_name: str
-    check_interval: int = 30
-
-
-class MetricRequest(BaseModel):
-    """Pydantic model for metric recording."""
-
-    metric_name: str
-    value: float
-    labels: dict[str, str] | None = None
-
-
-# Simple health check tracking without complex Manager state
-_health_checks: dict[str, dict[str, Any]] = {}
-
-
-async def register_health_check_function(
-    request: HealthCheckRequest,
-    check_function: Callable[[], Any],
-) -> dict[str, str]:
-    """Register a health check for a service."""
-    try:
-        _health_checks[request.service_name] = {
-            "check_function": check_function,
-            "check_interval": request.check_interval,
-            "last_check": time.time(),
-            "consecutive_failures": 0,
-            "last_error": None,
-            "state": "healthy",
-        }
-        logger.info("Registered health check for %s", request.service_name)
-    except Exception as e:
-        logger.exception("Failed to register health check for %s", request.service_name)
-        return {
-            "status": "error",
-            "message": str(e),
-        }
-    else:
-        return {
-            "status": "success",
-            "message": f"Health check registered for {request.service_name}",
-        }
-
-
-def _update_health_success(health: dict[str, Any]) -> None:
-    """Update health check state for successful check."""
-    health["last_check"] = time.time()
-    health["state"] = "healthy"
-    health["consecutive_failures"] = 0
-    health["last_error"] = None
-
-
-def _update_health_failure(health: dict[str, Any], error_msg: str) -> None:
-    """Update health check state for failed check."""
-    health["last_check"] = time.time()
-    health["last_error"] = error_msg
-    health["consecutive_failures"] = health.get("consecutive_failures", 0) + 1
-    health["state"] = "degraded" if health["consecutive_failures"] < 3 else "failed"
-
-
-async def check_service_health_function(service_name: str) -> bool:
-    """Check health of a specific service."""
-    if service_name not in _health_checks:
-        logger.warning("No health check registered for %s", service_name)
-        return False
-
-    health = _health_checks[service_name]
-
-    if not health.get("check_function"):
-        return False
-
-    try:
-        is_healthy = await health["check_function"]()
-    except Exception as e:
-        logger.exception("Health check failed for %s", service_name)
-        _update_health_failure(health, str(e))
-        return False
-    else:
-        if is_healthy:
-            _update_health_success(health)
-            return is_healthy
-        _update_health_failure(health, "Health check returned false")
-        return is_healthy
-
-
-async def get_all_health_status() -> dict[str, dict[str, Any]]:
-    """Get health status of all monitored services."""
-    status = {}
-
-    for service_name, health in _health_checks.items():
-        status[service_name] = {
-            "state": health.get("state", "unknown"),
-            "last_check": health.get("last_check", 0),
-            "last_error": health.get("last_error"),
-            "consecutive_failures": health.get("consecutive_failures", 0),
-            "is_healthy": health.get("state") == "healthy",
-        }
-
-    return status
-
-
-async def get_overall_health_summary() -> dict[str, Any]:
-    """Get overall system health summary."""
-    health_status = await get_all_health_status()
-
-    total_services = len(health_status)
-    healthy_services = sum(
-        1 for status in health_status.values() if status["is_healthy"]
-    )
-    failed_services = sum(
-        1 for status in health_status.values() if status["state"] == "failed"
-    )
-
-    overall_healthy = failed_services == 0 and healthy_services == total_services
-
-    return {
-        "overall_healthy": overall_healthy,
-        "total_services": total_services,
-        "healthy_services": healthy_services,
-        "failed_services": failed_services,
-        "health_percentage": (healthy_services / max(total_services, 1)) * 100,
-        "services": health_status,
-    }
 
 
 # Performance tracking without complex Manager state
@@ -974,16 +945,21 @@ async def track_operation_performance(
     **kwargs: Any,
 ) -> Any:
     """Track performance of an operation."""
-    start_time = time.time()
+
+    start_time = perf_counter()
 
     try:
-        result = await operation_func(*args, **kwargs)
+        result_or_awaitable = operation_func(*args, **kwargs)
+        if inspect.isawaitable(result_or_awaitable):
+            result = await result_or_awaitable
+        else:
+            result = result_or_awaitable
         # Record success metrics (could integrate with metrics system)
-        duration_ms = (time.time() - start_time) * 1000
+        duration_ms = (perf_counter() - start_time) * 1000
         logger.debug("Operation %s completed in %.2fms", operation_name, duration_ms)
     except Exception:
         # Record failure metrics
-        duration_ms = (time.time() - start_time) * 1000
+        duration_ms = (perf_counter() - start_time) * 1000
         logger.exception("Operation %s failed in %.2fms", operation_name, duration_ms)
         raise
     else:
@@ -1003,10 +979,11 @@ async def rerank_search_results(
     embedding_manager: EmbeddingManagerDep,
 ) -> list[dict[str, Any]]:
     """Rerank search results using BGE reranker."""
+
     try:
         return await embedding_manager.rerank_results(request.query, request.results)
-    except Exception:
-        logger.exception("Result reranking failed: %s")
+    except Exception as exc:
+        logger.exception("Result reranking failed: %s", exc)
         # Return original results on failure
         return request.results
 
@@ -1014,22 +991,26 @@ async def rerank_search_results(
 async def estimate_embedding_cost(
     texts: list[str],
     provider_name: str | None = None,
-    embedding_manager: EmbeddingManagerDep = None,
+    embedding_manager: Any | None = None,
 ) -> dict[str, dict[str, float]] | dict[str, dict[str, str | float]]:
     """Estimate embedding generation cost."""
+
+    manager = embedding_manager or await get_embedding_manager()
     try:
-        return embedding_manager.estimate_cost(texts, provider_name)
+        return manager.estimate_cost(texts, provider_name)
     except Exception as e:
         logger.exception("Cost estimation failed")
         return {"error": {"message": str(e), "cost": 0.0}}
 
 
 async def get_embedding_provider_info(
-    embedding_manager: EmbeddingManagerDep,
+    embedding_manager: Any | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Get information about available embedding providers."""
+
+    manager = embedding_manager or await get_embedding_manager()
     try:
-        return embedding_manager.get_provider_info()
+        return manager.get_provider_info()
     except Exception as e:
         logger.exception("Provider info retrieval failed")
         return {"error": {"message": str(e)}}
@@ -1039,11 +1020,13 @@ async def get_optimal_embedding_provider(
     text_length: int,
     quality_required: bool = False,
     budget_limit: float | None = None,
-    embedding_manager: EmbeddingManagerDep = None,
+    embedding_manager: Any | None = None,
 ) -> str:
     """Select optimal provider based on constraints."""
+
+    manager = embedding_manager or await get_embedding_manager()
     try:
-        return await embedding_manager.get_optimal_provider(
+        return await manager.get_optimal_provider(
             text_length, quality_required, budget_limit
         )
     except Exception:
@@ -1060,11 +1043,13 @@ class TextAnalysisRequest(BaseModel):
 
 async def analyze_text_characteristics(
     request: TextAnalysisRequest,
-    embedding_manager: EmbeddingManagerDep,
+    embedding_manager: Any | None = None,
 ) -> dict[str, Any]:
     """Analyze text characteristics for smart model selection."""
+
+    manager = embedding_manager or await get_embedding_manager()
     try:
-        analysis = embedding_manager.analyze_text_characteristics(request.texts)
+        analysis = manager.analyze_text_characteristics(request.texts)
         # Convert TextAnalysis to dict for service boundary
         analysis_result = {
             "total_length": analysis.total_length,
@@ -1090,11 +1075,13 @@ async def analyze_text_characteristics(
 
 
 async def get_embedding_usage_report(
-    embedding_manager: EmbeddingManagerDep,
+    embedding_manager: Any | None = None,
 ) -> dict[str, Any]:
     """Get comprehensive embedding usage report."""
+
+    manager = embedding_manager or await get_embedding_manager()
     try:
-        return embedding_manager.get_usage_report()
+        return manager.get_usage_report()
     except Exception as e:
         logger.exception("Usage report generation failed")
         return {"error": str(e)}

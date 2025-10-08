@@ -11,6 +11,7 @@ from langchain_core.callbacks.base import BaseCallbackHandler
 from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.retrievers import BaseRetriever
+from langchain_core.runnables import RunnableConfig
 from langchain_openai import ChatOpenAI
 
 from src.services.base import BaseService
@@ -156,9 +157,9 @@ class RAGGenerator(BaseService):
 
         chain = self._DEFAULT_PROMPT | llm
         try:
-            config_kwargs: dict[str, Any] | None = None
+            config_kwargs: RunnableConfig | None = None
             if self._callbacks:
-                config_kwargs = {"callbacks": self._callbacks}
+                config_kwargs = cast(RunnableConfig, {"callbacks": self._callbacks})
             message = await chain.ainvoke(
                 {"context": context_block, "question": request.query},
                 config=config_kwargs,

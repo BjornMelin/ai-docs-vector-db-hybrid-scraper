@@ -96,7 +96,7 @@ def _make_enriched_content() -> SimpleNamespace:
 
 
 @pytest.fixture()
-def documents_env(monkeypatch) -> SimpleNamespace:
+def documents_env(monkeypatch) -> SimpleNamespace:  # pylint: disable=too-many-locals
     """Provide registered document tools with mocked dependencies."""
 
     vector_service = VectorServiceStub()
@@ -124,19 +124,19 @@ def documents_env(monkeypatch) -> SimpleNamespace:
 
     validator = DummyValidator()
     monkeypatch.setattr(
-        documents.SecurityValidator,
+        documents.MLSecurityValidator,
         "from_unified_config",
         classmethod(lambda cls: validator),
     )
     monkeypatch.setattr(documents, "DocumentChunker", DummyChunker)
 
     client_manager = Mock()
+    client_manager.get_vector_store_service = AsyncMock(return_value=vector_service)
     client_manager.get_cache_manager = AsyncMock(return_value=cache_manager)
     client_manager.get_crawl_manager = AsyncMock(return_value=crawl_manager)
     client_manager.get_content_intelligence_service = AsyncMock(
         return_value=content_intelligence
     )
-    client_manager.get_vector_store_service = AsyncMock(return_value=vector_service)
 
     mock_mcp = MagicMock()
     registered: dict[str, Callable] = {}
@@ -160,6 +160,9 @@ def documents_env(monkeypatch) -> SimpleNamespace:
         cache_manager=cache_manager,
         crawl_manager=crawl_manager,
         content_intelligence=content_intelligence,
+        cache_dependency=client_manager.get_cache_manager,
+        crawl_dependency=client_manager.get_crawl_manager,
+        content_dependency=client_manager.get_content_intelligence_service,
         client_manager=client_manager,
         context=ctx,
         validator=validator,
@@ -223,7 +226,7 @@ async def test_add_document_returns_cached_result(
 async def test_add_document_without_content_intelligence(
     documents_env: SimpleNamespace,
 ) -> None:
-    documents_env.client_manager.get_content_intelligence_service.return_value = None
+    documents_env.content_dependency.return_value = None
 
     request = DocumentRequest(url="https://example.com/doc")
     result = await documents_env.tools["add_document"](request, documents_env.context)

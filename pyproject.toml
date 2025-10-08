@@ -34,25 +34,24 @@ classifiers = [
 ]
 
 dependencies = [
-    "fastapi[standard]>=0.117.1,<0.118.0",
+    "fastapi[standard]>=0.118.1,<0.119.0",
     "starlette>=0.48.0,<0.49.0",
-    "uvicorn[standard]>=0.36.0,<1.0.0",
+    "uvicorn[standard]>=0.37.0,<0.38.0",
     "python-multipart>=0.0.20,<0.1.0",
-    "pydantic>=2.11.9,<3.0.0",
-    "pydantic-settings>=2.10.1,<3.0.0",
+    "pydantic>=2.12.0,<3.0.0",
+    "pydantic-settings>=2.11.0,<3.0.0",
     "python-dotenv>=1.1.1,<2.0.0",
     "pyyaml>=6.0.2,<7.0.0",
     "crawl4ai[all]>=0.7.4,<0.8.0",
     "firecrawl-py>=4.3.6,<5.0.0",
-    "qdrant-client[fastembed]>=1.15.1,<1.15.2",
-    "openai>=1.108.1,<2.0.0",
+    "qdrant-client[fastembed]>=1.15.1,<2.0",
+    "openai>=1.108.1,<3.0.0",
     "fastembed>=0.7.3,<0.7.4",
     "FlagEmbedding>=1.3.5,<2.0.0",
     "numpy>=1.24,<2.4",
     "scipy>=1.16.2,<2.0.0",
     "defusedxml>=0.7.1,<0.8.0",
     "aiohttp>=3.12.15,<4.0.0",
-    "asyncio-throttle>=1.0.2,<2.0.0",
     "aiofiles>=24.1.0,<25.0.0",
     "tenacity>=9.1.2,<10.0.0",
     "mcp>=1.14.1,<2.0.0",
@@ -61,8 +60,7 @@ dependencies = [
     "arq>=0.26.3,<0.27.0",
     "cachetools>=5.5.2,<6.0.0",
     "slowapi>=0.1.9,<0.2.0",
-    "purgatory-circuitbreaker>=0.7.2,<0.8.0",
-    "aiocache>=0.12.3,<0.13.0",
+    "platformdirs>=4.3.8,<5.0.0",
     "click>=8.2.1,<8.2.2",
     "rich>=14.1.0,<15.0.0",
     "colorlog>=6.9.0,<7.0.0",
@@ -70,41 +68,43 @@ dependencies = [
     "questionary>=2.1.1,<3.0.0",
     "prometheus-client>=0.23.1,<0.24.0",
     "prometheus-fastapi-instrumentator>=7.1.0,<8.0.0",
-    "psutil>=6.1.1,<7.0.0",
     "sqlalchemy>=2.0.43,<3.0.0",
+    "sqlmodel>=0.0.25,<0.0.26",
     "tomli-w>=1.2.0,<2.0.0",
     "jsonschema2md>=1.7.0,<2.0.0",
-    "opentelemetry-api>=1.37.0,<2.0.0",
-    "opentelemetry-sdk>=1.37.0,<2.0.0",
-    "respx>=0.22.0,<0.23.0",
     "watchdog>=6.0.0,<7.0.0",
     "tool>=0.8.0",
     "httpx>=0.28.1,<0.29.0",
-    "opentelemetry-instrumentation-fastapi>=0.58b0,<0.59.0",
+    # dependency-injector wires core clients (OpenAI, Qdrant, Dragonfly, Firecrawl) via ApplicationContainer.
     "dependency-injector>=4.48.2",
     "pydeps>=3.0.1",
-    "pydantic-ai>=0.2.20,<0.3.0",
     "scikit-learn>=1.7.2,<2.0.0",
-    "langchain>=0.3.12,<0.4.0",
-    "langchain-core>=0.3.76",
-    "langchain-community>=0.3.12,<0.4.0",
-    "langchain-qdrant>=0.2.0,<0.4.0",
+    "langchain>=0.3.27,<0.4.0",
+    "langchain-core>=0.3.78",
+    "langchain-community>=0.3.31,<0.4.0",
+    "langchain-qdrant>=0.2.1,<0.4.0",
     "langchain-mcp-adapters>=0.1.10,<0.2.0",
-    "langgraph>=0.6.0,<0.7.0",
+    "langgraph>=0.6.9,<0.7.0",
+    "asgi-correlation-id>=4.3.4,<5.0.0",
+    "purgatory>=3.0.1,<4.0.0",
+    "aiolimiter>=1.2.1",
+    "trafilatura>=2.0.0",
+    "selectolax>=0.4.0",
 ]
 
 
 [project.optional-dependencies]
 eval = [
     "ragas==0.1.13",
-    "langchain-openai>=0.3.33,<1.0.0",
-    "datasets>=2.18.0,<3.0.0",
+    "langchain-openai>=0.3.35,<1.0.0",
+    "datasets>=2.18.0,<5.0.0",
 ]
 
 # Development dependencies
 dev = [
     "pytest>=8.4.2,<9.0.0",
     "pytest-asyncio>=1.2.0,<2.0.0",
+    "asgi-lifespan>=2.1.0,<3.0.0",
     "pytest-cov>=7.0.0,<8.0.0",
     "pytest-mock>=3.15.1,<4.0.0",
     "pytest-timeout>=2.4.0,<3.0.0",
@@ -115,20 +115,21 @@ dev = [
     "testcontainers>=4.8.1,<5.0.0",
     "fakeredis>=2.31.3,<3.0.0",
     "coverage>=7.6.0,<8.0.0",
-    "ruff>=0.13.1,<0.14.0",
+    "ruff>=0.13.1,<0.15.0",
     "pylint>=3.3.8,<4.0.0",
     "pyright>=1.1.379,<2.0.0",
     "taskipy>=1.14.1,<2.0.0",
     "locust>=2.37.10,<3.0.0",
     "pyjwt>=2.10.1,<3.0.0",
+    "respx>=0.22.0",
 ]
 
 # Documentation
 docs = [
-    "mkdocs>=1.6.1,<2.0.0",
-    "mkdocs-material>=9.6.20,<10.0.0",
-    "mkdocstrings>=0.30.1,<1.0.0",
-    "mkdocstrings-python>=1.18.2,<2.0.0",
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.6.20",
+    "mkdocstrings>=0.30.1",
+    "mkdocstrings-python>=1.18.2"
 ]
 
 # Contract testing tools
@@ -137,7 +138,6 @@ contract = [
     "openapi-spec-validator>=0.7.2,<0.9.0",
     "jsonschema>=4.25.1,<5.0.0",
     "responses>=0.25.8,<0.26.0",
-    "httpx>=0.28.1,<0.29.0",
     "factory-boy>=3.3.3,<4.0.0",
     "faker>=37.8.0,<38.0.0",
 ]
@@ -162,6 +162,7 @@ browser = [
 llm = [
     "langchain-anthropic>=0.3.20,<1.0.0",
     "langchain-google-genai>=2.1.12,<3.0.0",
+    "sentence-transformers>=3,<4",
 ]
 
 # Observability and monitoring
@@ -171,6 +172,7 @@ observability = [
     "opentelemetry-instrumentation-fastapi>=0.58b0,<0.59.0",
     "opentelemetry-exporter-prometheus>=0.58b0,<0.59.0",
     "opentelemetry-instrumentation-starlette>=0.58b0,<0.59.0",
+    "psutil>=6.1.1",
 ]
 
 # Code parsing tools
@@ -202,9 +204,20 @@ gpu = [
     "deepspeed>=0.14.0,<1.0.0",
 ]
 
+server = [
+    "brotli-asgi>=1.4.0,<2.0.0",
+    "flagsmith>=4.0.1",
+    "purgatory[redis]>=3.0.1,<4.0.0",
+    "uvloop>=0.21.0,<1.0.0; platform_system != 'Windows'",
+]
+
+web = [
+    "tavily-python>=0.7.12",
+]
+
 # All optional dependencies
 all = [
-    "ai-docs-vector-db-hybrid-scraper[dev,contract,accessibility,browser,llm,observability,parsing,dataframe,docs,gpu,eval]",
+    "ai-docs-vector-db-hybrid-scraper[dev,contract,accessibility,browser,llm,observability,parsing,dataframe,docs,gpu,eval,server,web]",
 ]
 
 [project.urls]
@@ -355,7 +368,6 @@ addopts = [
     "--strict-markers",              # Treat unknown markers as errors
     "--strict-config",               # Error on unknown config keys
     "--tb=short",                    # Shorter traceback format
-    "--verbose",                     # Verbose output for debugging
     "--durations=10",                # Show 10 slowest tests
     "--maxfail=5",                   # Stop after 5 failures
     "--import-mode=prepend",         # Prepend mode for src imports
@@ -363,7 +375,8 @@ addopts = [
     "--doctest-modules",             # Run doctests in modules
     "--doctest-continue-on-failure", # Continue after doctest failures
     "--disable-warnings",            # Clean output
-    "-ra",                           # Show summary for all except passed
+    "--randomly-seed=42",            # Deterministic pytest-randomly seed
+    "-q",                            # Quiet baseline output
 ]
 
 # Warning filters for clean test output
@@ -455,7 +468,6 @@ extra-build-dependencies = { flash-attn = [{ requirement = "torch", match-runtim
 extra-build-variables = { flash-attn = { FLASH_ATTENTION_SKIP_CUDA_BUILD = "TRUE" } }
 
 # ===== Dependency Groups =====
-
 [tool.pylint]
 [tool.pylint.main]
 # Basic configuration

@@ -1,32 +1,31 @@
-"""FastAPI production middleware package.
-
-This package provides a comprehensive set of production-ready middleware
-components for the FastMCP server environment.
+"""
+Production middleware package, consolidated and library-first.
 """
 
-from .compression import CompressionMiddleware
-from .correlation import get_correlation_id
-from .performance import EndpointStats, PerformanceMiddleware, RequestMetrics
-from .security import CSRFProtectionMiddleware, SecurityMiddleware
-from .timeout import BulkheadMiddleware, CircuitState, TimeoutMiddleware
+from .compression import BrotliCompressionMiddleware, CompressionMiddleware
+from .correlation import generate_correlation_id, get_correlation_id, set_correlation_id
+from .manager import MiddlewareSpec, apply_defaults
+from .performance import PerformanceMiddleware, setup_prometheus
+from .security import SecurityMiddleware, enable_global_rate_limit
+from .timeout import BulkheadMiddleware, CircuitState, TimeoutConfig, TimeoutMiddleware
 from .tracing import TracingMiddleware
 
 
 __all__ = [
-    "BulkheadMiddleware",
-    "CSRFProtectionMiddleware",
-    "CircuitState",
-    # Compression
+    "apply_defaults",
+    "MiddlewareSpec",
     "CompressionMiddleware",
-    "EndpointStats",
-    # Performance monitoring
-    "PerformanceMiddleware",
-    "RequestMetrics",
-    # Security
+    "BrotliCompressionMiddleware",
     "SecurityMiddleware",
-    # Timeout and resilience
+    "enable_global_rate_limit",
     "TimeoutMiddleware",
-    # Tracing
+    "BulkheadMiddleware",
+    "TimeoutConfig",
+    "CircuitState",
+    "PerformanceMiddleware",
+    "setup_prometheus",
     "TracingMiddleware",
     "get_correlation_id",
+    "set_correlation_id",
+    "generate_correlation_id",
 ]

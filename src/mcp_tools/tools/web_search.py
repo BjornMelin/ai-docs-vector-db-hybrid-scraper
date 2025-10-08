@@ -2,7 +2,7 @@
 
 import logging
 import os
-from typing import Any
+from typing import Any, Literal
 
 from fastmcp import Context
 
@@ -28,7 +28,7 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
     async def web_search(  # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
         query: str,
         max_results: int = 5,
-        search_depth: str = "basic",
+        search_depth: Literal["basic", "advanced"] = "basic",
         include_answer: bool = False,
         include_images: bool = False,
         include_domains: list[str] | None = None,

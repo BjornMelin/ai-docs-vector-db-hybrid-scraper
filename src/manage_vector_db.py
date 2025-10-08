@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """Vector Database Management Utility
-Modern Python 3.13 implementation with async patterns for Qdrant operations.
 
-Provides comprehensive database management, search, and maintenance utilities
+Provides database management, search, and maintenance utilities with async
+patterns for Qdrant operations.
 """
 
-import inspect
 import logging
 from collections.abc import Mapping
 from typing import Any
@@ -16,9 +15,12 @@ from rich.console import Console
 from rich.table import Table
 
 # Import unified configuration and service layer
-from src.config import get_config
+from src.config import get_settings, refresh_settings
 from src.contracts.retrieval import SearchRecord
-from src.infrastructure.client_manager import ClientManager
+from src.infrastructure.client_manager import (
+    ensure_client_manager,
+    shutdown_client_manager,
+)
 from src.services.vector_db import CollectionSchema
 from src.services.vector_db.service import VectorStoreService
 from src.utils import async_command
@@ -62,39 +64,30 @@ def setup_logging(level: str = "INFO") -> logging.Logger:
 
 
 class VectorDBManager:
-    """Comprehensive vector database management using ClientManager."""
+    """Comprehensive vector database management using the ClientManager."""
 
-    def __init__(
-        self,
-        client_manager: ClientManager,
-        qdrant_url: str | None = None,
-    ) -> None:
-        """Initialize with ClientManager.
+    def __init__(self, qdrant_url: str | None = None) -> None:
+        """Initialize with optional Qdrant override."""
 
-        Args:
-            client_manager: ClientManager instance for all services
-            qdrant_url: Optional Qdrant URL override
-
-        """
-        self.client_manager = client_manager
         self.qdrant_url = qdrant_url
-        self._initialized = False
+        self._vector_service: VectorStoreService | None = None
 
     async def initialize(self) -> None:
-        """Initialize services using ClientManager."""
-        if self._initialized:
-            return
+        """Ensure the ClientManager is ready and apply overrides when required."""
 
-        # Override Qdrant URL if provided
+        force_reload = False
         if self.qdrant_url:
-            config = get_config()
-            config.qdrant.url = self.qdrant_url
+            config = get_settings()
+            updated_config = config.model_copy(
+                update={
+                    "qdrant": config.qdrant.model_copy(update={"url": self.qdrant_url})
+                }
+            )
+            refresh_settings(settings=updated_config)
+            force_reload = True
 
-        # Ensure ClientManager is initialized
-        if not self.client_manager.is_initialized:
-            await self.client_manager.initialize()
-
-        self._initialized = True
+        client_manager = await ensure_client_manager(force=force_reload)
+        self._vector_service = await client_manager.get_vector_store_service()
 
     @staticmethod
     def _build_search_results(matches: list[Any]) -> list[SearchResult]:
@@ -116,40 +109,19 @@ class VectorDBManager:
         return results
 
     async def get_vector_store_service(self) -> VectorStoreService:
-        """Get vector store service from ClientManager."""
-        if not self._initialized:
+        """Return the shared vector store service."""
+
+        if self._vector_service is None:
             await self.initialize()
-        return await self.client_manager.get_vector_store_service()
-
-    async def get_embedding_manager(self) -> Any:
-        """Expose embedding manager for backward compatibility paths."""
-
-        if not self._initialized:
-            await self.initialize()
-
-        vector_service = await self.get_vector_store_service()
-        if hasattr(vector_service, "get_embedding_manager"):
-            embedding_manager = vector_service.get_embedding_manager()
-            if inspect.isawaitable(embedding_manager):
-                embedding_manager = await embedding_manager
-            return embedding_manager
-
-        legacy_fetch = getattr(self.client_manager, "get_embedding_manager", None)
-        if callable(legacy_fetch):
-            embedding_manager = legacy_fetch()
-            if inspect.isawaitable(embedding_manager):
-                embedding_manager = await embedding_manager
-            if embedding_manager is not None:
-                return embedding_manager
-
-        msg = "Embedding manager access is not available in this configuration."
-        raise NotImplementedError(msg)
+        if self._vector_service is None:  # pragma: no cover - defensive
+            raise RuntimeError("Vector service not available")
+        return self._vector_service
 
     async def cleanup(self) -> None:
-        """Cleanup services (delegated to ClientManager)."""
-        if self.client_manager:
-            await self.client_manager.cleanup()
-        self._initialized = False
+        """Release registry-managed services."""
+
+        self._vector_service = None
+        await shutdown_client_manager()
 
     async def list_collections(self) -> list[str]:
         """List all collections."""
@@ -252,7 +224,7 @@ class VectorDBManager:
         try:
             await self.initialize()
             vector_service = await self.get_vector_store_service()
-            matches = await vector_service.search_vectors(
+            matches = await vector_service.search_vector(
                 collection_name,
                 query_vector,
                 limit=limit,
@@ -337,19 +309,12 @@ class VectorDBManager:
             return False
         return True
 
-    async def get_stats(self) -> DatabaseStats | None:
-        """Alias for get_database_stats for backward compatibility."""
-        return await self.get_database_stats()
-
 
 def _create_manager_from_context(ctx) -> VectorDBManager:
-    """Create VectorDBManager with ClientManager from CLI context."""
-    config = get_config()
-    if ctx.obj.get("url"):
-        config.qdrant.url = ctx.obj.get("url")
+    """Create VectorDBManager using the shared service registry."""
 
-    client_manager = ClientManager()
-    return VectorDBManager(client_manager=client_manager)
+    override_url = ctx.obj.get("url")
+    return VectorDBManager(qdrant_url=override_url)
 
 
 # CLI Commands
@@ -360,7 +325,7 @@ def _create_manager_from_context(ctx) -> VectorDBManager:
 def cli(ctx, url, log_level):
     """Vector Database Management CLI."""
     # Get configuration from unified config
-    unified_config = get_config()
+    unified_config = get_settings()
 
     # Use URL from command line or config
     if not url:

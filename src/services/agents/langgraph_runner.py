@@ -159,6 +159,7 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
         retrieval_helper: RetrievalHelper | None = None,
         max_parallel_tools: int = 3,
         run_timeout_seconds: float | None = None,
+        retrieval_limit: int = 8,
     ) -> None:
         self._client_manager = client_manager
         self._discovery = discovery
@@ -166,7 +167,37 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
         self._retrieval_helper = retrieval_helper or RetrievalHelper(client_manager)
         self._max_parallel_tools = max(1, max_parallel_tools)
         self._run_timeout_seconds = run_timeout_seconds
+        self._default_retrieval_limit = max(1, retrieval_limit)
         self._graph = self._build_graph()
+
+    @classmethod
+    def build_components(
+        cls, client_manager: ClientManager
+    ) -> tuple[
+        DynamicToolDiscovery,
+        ToolExecutionService,
+        RetrievalHelper,
+        GraphRunner,
+    ]:
+        """Construct discovery, execution service, retrieval helper, and runner."""
+
+        discovery = DynamicToolDiscovery(client_manager)
+        tool_service = ToolExecutionService(client_manager)
+        retrieval_helper = RetrievalHelper(client_manager)
+        agentic_cfg = getattr(client_manager.config, "agentic", None)
+        max_parallel = getattr(agentic_cfg, "max_parallel_tools", 3)
+        run_timeout = getattr(agentic_cfg, "run_timeout_seconds", 30.0)
+        retrieval_limit = getattr(agentic_cfg, "retrieval_limit", 8)
+        runner = cls(
+            client_manager=client_manager,
+            discovery=discovery,
+            tool_service=tool_service,
+            retrieval_helper=retrieval_helper,
+            max_parallel_tools=max_parallel,
+            run_timeout_seconds=run_timeout,
+            retrieval_limit=retrieval_limit,
+        )
+        return discovery, tool_service, retrieval_helper, runner
 
     async def run_search(
         self,
@@ -174,7 +205,7 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
         query: str,
         collection: str,
         session_id: str | None = None,
-        top_k: int = 8,
+        top_k: int | None = None,
         filters: Mapping[str, Any] | None = None,
         user_context: Mapping[str, Any] | None = None,
     ) -> GraphSearchOutcome:
@@ -194,6 +225,9 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
         """
 
         session_identifier = session_id or str(uuid4())
+        effective_top_k = (
+            self._default_retrieval_limit if top_k is None else max(1, top_k)
+        )
         state: AgenticGraphState = {
             "mode": "search",
             "query": query,
@@ -201,7 +235,7 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
             "filters": filters or {},
             "session_id": session_identifier,
             "user_context": user_context or {},
-            "retrieval_limit": max(1, top_k),
+            "retrieval_limit": effective_top_k,
             "agent_notes": [],
             "errors": [],
             "start_time": time.perf_counter(),

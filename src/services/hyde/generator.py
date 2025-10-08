@@ -2,6 +2,7 @@
 
 import asyncio
 import hashlib
+import itertools
 import logging
 import time
 from typing import Any, Protocol
@@ -217,8 +218,7 @@ class HypotheticalDocumentGenerator(BaseService):
             msg = f"Document generation failed: {e}"
             raise EmbeddingServiceError(msg) from e
 
-        else:
-            return result
+        return result
 
     def _build_diverse_prompts(
         self,
@@ -433,17 +433,16 @@ class HypotheticalDocumentGenerator(BaseService):
         total_similarity = 0.0
         comparisons = 0
 
-        for i in range(len(documents)):
-            for j in range(i + 1, len(documents)):
-                doc1_words = set(documents[i].lower().split())
-                doc2_words = set(documents[j].lower().split())
+        for doc1, doc2 in itertools.combinations(documents, 2):
+            doc1_words = set(doc1.lower().split())
+            doc2_words = set(doc2.lower().split())
 
-                if doc1_words and doc2_words:
-                    overlap = len(doc1_words & doc2_words)
-                    union = len(doc1_words | doc2_words)
-                    similarity = overlap / union if union > 0 else 0
-                    total_similarity += similarity
-                    comparisons += 1
+            if doc1_words and doc2_words:
+                overlap = len(doc1_words & doc2_words)
+                union = len(doc1_words | doc2_words)
+                similarity = overlap / union if union > 0 else 0
+                total_similarity += similarity
+                comparisons += 1
 
         if comparisons == 0:
             return 0.0

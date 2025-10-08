@@ -2,7 +2,7 @@
 
 ## Highlights
 
-- Configuration reload API now validates source paths and surfaces user errors as HTTP 400 responses.
+- Configuration router is now read-only; use `/config/refresh` or process restarts instead of hot reload hooks.
 - File watching requires an explicit configuration source and verifies osquery readiness before enabling.
 - Security middleware trims unused configuration fields and now has dedicated header + rate limiting tests.
 - Legacy enterprise service scaffolding has been removed; optional services fail closed until replacements land.

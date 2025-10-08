@@ -26,7 +26,7 @@ SRC_ROOT = Path(__file__).parent.parent / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-from src.config import Config, get_config
+from src.config import Settings, get_settings
 from src.infrastructure.client_manager import ClientManager
 from src.services.dependencies import (
     RAGResponse,
@@ -48,7 +48,7 @@ def _print_banner() -> None:
     print("=" * 50)
 
 
-def _print_configuration(config: Config) -> None:
+def _print_configuration(config: Settings) -> None:
     """Print the active RAG configuration."""
 
     print(f"✅ RAG enabled with model: {config.rag.model}")
@@ -60,7 +60,7 @@ def _print_configuration(config: Config) -> None:
 
 
 async def _initialise_generator(
-    client_manager: ClientManager, config: Config
+    client_manager: ClientManager, config: Settings
 ) -> tuple[RAGGenerator, ServiceRAGConfig]:
     """Initialise the vector-backed RAG generator."""
 
@@ -174,7 +174,7 @@ async def demonstrate_rag_patterns() -> None:
     """Demonstrate the updated LangChain-enabled RAG workflow."""
 
     _print_banner()
-    config = get_config()
+    config = get_settings()
     if not config.rag.enable_rag:
         print("❌ RAG is not enabled in configuration")
         print("💡 To enable RAG, set AI_DOCS_RAG__ENABLE_RAG=true in your .env file")

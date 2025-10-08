@@ -114,7 +114,6 @@ class TestServices:
 - **core/**: Core service infrastructure
 - **crawling/**: Web crawling and content extraction
 - **embeddings/**: Text embedding generation
-- **functional/**: Functional service components
 - **hyde/**: HyDE (Hypothetical Document Embeddings) implementation
 - **monitoring/**: System monitoring and health checks
 - **observability/**: Observability and tracking

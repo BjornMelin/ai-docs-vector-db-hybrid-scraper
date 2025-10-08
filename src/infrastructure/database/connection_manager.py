@@ -8,18 +8,19 @@ Clean 2025 implementation of enterprise features:
 """
 
 import logging
-from contextlib import asynccontextmanager
+from collections.abc import AsyncGenerator
+from contextlib import AsyncExitStack, asynccontextmanager
 from typing import Any
 
-from sqlalchemy.ext.asyncio import (
+from sqlalchemy.ext.asyncio import (  # type: ignore[import]
     AsyncEngine,
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
 
-from src.config import Config
-from src.infrastructure.shared import CircuitBreaker, ClientState
+from src.config import Settings
+from src.services.circuit_breaker import CircuitBreakerManager
 
 from .monitoring import LoadMonitor, QueryMonitor
 
@@ -41,10 +42,11 @@ class DatabaseManager:
 
     def __init__(
         self,
-        config: Config,
+        config: Settings,
         load_monitor: LoadMonitor | None = None,
         query_monitor: QueryMonitor | None = None,
-        circuit_breaker: CircuitBreaker | None = None,
+        circuit_breaker_manager: CircuitBreakerManager | None = None,
+        breaker_service_name: str = "infrastructure.database",
     ):
         """Initialize enterprise database manager.
 
@@ -62,7 +64,8 @@ class DatabaseManager:
         # Enterprise monitoring components
         self.load_monitor = load_monitor or LoadMonitor()
         self.query_monitor = query_monitor or QueryMonitor()
-        self.circuit_breaker = circuit_breaker or CircuitBreaker()
+        self._circuit_breaker_manager = circuit_breaker_manager
+        self._breaker_service_name = breaker_service_name
 
         # Performance tracking for enterprise features
         self._connection_count = 0
@@ -135,7 +138,7 @@ class DatabaseManager:
             logger.exception("Error during database cleanup")
 
     @asynccontextmanager
-    async def session(self) -> Any:
+    async def session(self) -> AsyncGenerator[Any, None]:
         """Get enterprise database session with monitoring.
 
         This context manager provides:
@@ -146,39 +149,32 @@ class DatabaseManager:
 
         Yields:
             AsyncSession: Monitored database session
-
         """
+
         if not self._session_factory:
             msg = "Database manager not initialized"
             raise RuntimeError(msg)
 
-        # Circuit breaker protection
-        if self.circuit_breaker.state == ClientState.FAILED:
-            msg = "Database circuit breaker is open"
-            raise RuntimeError(msg)
-
-        # Start query monitoring
         query_start = self.query_monitor.start_query()
 
-        async with self._session_factory() as session:
+        async with AsyncExitStack() as stack:
+            if self._circuit_breaker_manager is not None:
+                breaker = await self._circuit_breaker_manager.get_breaker(
+                    self._breaker_service_name
+                )
+                await stack.enter_async_context(breaker)
+
+            session = await stack.enter_async_context(self._session_factory())
             try:
-                # Track connection for affinity optimization
                 self._connection_count += 1
 
                 yield session
                 await session.commit()
-
-                # Record successful query
                 self.query_monitor.record_success(query_start)
-                # Circuit breaker success is handled automatically in the call method
 
-            except Exception as e:
+            except Exception as exc:
                 await session.rollback()
-
-                # Record failure for monitoring
-                self.query_monitor.record_failure(query_start, str(e))
-                # Circuit breaker failure is handled automatically in the call method
-
+                self.query_monitor.record_failure(query_start, str(exc))
                 raise
 
     async def get_performance_metrics(self) -> dict[str, Any]:
@@ -196,9 +192,9 @@ class DatabaseManager:
             "avg_latency_ms": self._total_latency / max(1, self._query_count),
             "load_metrics": await self.load_monitor.get_current_metrics(),
             "query_metrics": await self.query_monitor.get_performance_summary(),
-            "circuit_breaker_status": self.circuit_breaker.state.value,
-            "pool_size": self._engine.pool.size() if self._engine else 0,
-            "pool_checked_out": self._engine.pool.checkedout() if self._engine else 0,
+            "circuit_breaker_status": await self._get_circuit_breaker_state(),
+            "pool_size": self._engine.pool.size() if self._engine else 0,  # type: ignore[attr-defined]
+            "pool_checked_out": self._engine.pool.checked_out() if self._engine else 0,  # type: ignore[attr-defined]
         }
 
     @property
@@ -213,3 +209,14 @@ class DatabaseManager:
             msg = "Database manager not initialized"
             raise RuntimeError(msg)
         return self._engine
+
+    async def _get_circuit_breaker_state(self) -> str:
+        """Return current circuit breaker state or fallback when unavailable."""
+
+        if self._circuit_breaker_manager is None:
+            return "unconfigured"
+
+        status = await self._circuit_breaker_manager.get_breaker_status(
+            self._breaker_service_name
+        )
+        return str(status.get("state", "unknown"))

@@ -11,13 +11,6 @@ from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
 #### Enumerations ####
 
 
-class ApplicationMode(str, Enum):
-    """High-level execution modes."""
-
-    SIMPLE = "simple"
-    ENTERPRISE = "enterprise"
-
-
 class Environment(str, Enum):
     """Deployment environments supported by the platform."""
 
@@ -168,45 +161,6 @@ class FusionAlgorithm(str, Enum):
     NORMALIZED = "normalized"
 
 
-class ABTestVariant(str, Enum):
-    """A/B testing variants."""
-
-    CONTROL = "control"
-    VARIANT_A = "variant_a"
-    VARIANT_B = "variant_b"
-
-
-class OptimizationStrategy(str, Enum):
-    """Performance optimisation strategies."""
-
-    THROUGHPUT = "throughput"
-    LATENCY = "latency"
-    BALANCED = "balanced"
-    QUALITY_OPTIMIZED = "quality_optimized"
-    SPEED_OPTIMIZED = "speed_optimized"
-    COST_OPTIMIZED = "cost_optimized"
-
-
-class SearchMode(str, Enum):
-    """Composite search modes used by the API."""
-
-    BASIC = "basic"
-    SIMPLE = "simple"
-    ENHANCED = "enhanced"
-    INTELLIGENT = "intelligent"
-    PERSONALIZED = "personalized"
-    FULL = "full"
-
-
-class SearchPipeline(str, Enum):
-    """Predefined search pipelines."""
-
-    FAST = "fast"
-    BALANCED = "balanced"
-    COMPREHENSIVE = "comprehensive"
-    PRECISION = "precision"
-
-
 class DeploymentTier(str, Enum):
     """Deployment tiers available to the platform."""
 
@@ -342,11 +296,7 @@ class QdrantConfig(BaseModel):
     api_key: str | None = Field(default=None, description="Qdrant API key")
     timeout: float = Field(default=30.0, gt=0, description="Request timeout seconds")
     collection_name: str = Field(
-        default="documents", description="Default collection name"
-    )
-    default_collection: str = Field(
-        default="documentation",
-        description="Legacy collection name retained for migration support",
+        default="documents", description="Primary collection name used for queries"
     )
     batch_size: int = Field(
         default=100, gt=0, le=1000, description="Batch size for operations"
@@ -627,6 +577,47 @@ class PlaywrightConfig(BaseModel):
         return self
 
 
+class AutomationRouterConfig(BaseModel):
+    """Configuration for the multi-tier automation router."""
+
+    rate_limits: dict[str, int] = Field(
+        default_factory=lambda: {
+            "lightweight": 10,
+            "crawl4ai": 5,
+            "playwright": 2,
+            "browser_use": 1,
+            "firecrawl": 5,
+        },
+        description="Per-tier request-per-second limits.",
+    )
+    limiter_period_seconds: float = Field(
+        default=1.0,
+        gt=0,
+        description="Time window applied to rate limit buckets (seconds).",
+    )
+    hard_domains: list[str] = Field(
+        default_factory=lambda: ["linkedin.com", "x.com", "medium.com"],
+        description="Domains that should escalate to resilient tiers first.",
+    )
+    per_attempt_cap_ms: int = Field(
+        default=15000,
+        ge=500,
+        description="Upper bound on a single provider attempt in milliseconds.",
+    )
+    min_attempt_ms: int = Field(
+        default=500,
+        ge=0,
+        description=(
+            "Minimum remaining budget (milliseconds) required before invoking a tier."
+        ),
+    )
+    limiter_acquire_timeout_ms: int = Field(
+        default=1000,
+        ge=0,
+        description="Maximum time to wait when acquiring a rate limiter slot.",
+    )
+
+
 class BrowserUseConfig(BaseModel):
     """Browser-use automation configuration."""
 
@@ -768,18 +759,6 @@ class CircuitBreakerConfig(BaseModel):
     recovery_timeout: float = Field(
         default=60.0, gt=0, description="Recovery timeout seconds"
     )
-    half_open_max_calls: int = Field(
-        default=3, gt=0, le=10, description="Max calls allowed in half-open"
-    )
-    enable_adaptive_timeout: bool = Field(
-        default=True, description="Enable adaptive timeouts"
-    )
-    enable_bulkhead_isolation: bool = Field(
-        default=True, description="Enable bulkhead isolation"
-    )
-    enable_metrics_collection: bool = Field(
-        default=True, description="Collect circuit breaker metrics"
-    )
     service_overrides: dict[str, dict[str, Any]] = Field(
         default_factory=lambda: {
             "openai": {"failure_threshold": 3, "recovery_timeout": 30.0},
@@ -825,6 +804,13 @@ class MonitoringConfig(BaseModel):
     health_check_timeout: float = Field(
         default=10.0, gt=0, description="Health check timeout seconds"
     )
+    namespace: str = Field(default="ml_app", description="Metrics namespace prefix")
+    cpu_threshold: float = Field(default=90.0, description="CPU usage threshold %")
+    memory_threshold: float = Field(default=90.0, description="Memory threshold %")
+    disk_threshold: float = Field(default=90.0, description="Disk usage threshold %")
+    external_services: dict[str, str] = Field(
+        default_factory=dict, description="External services to monitor"
+    )
 
 
 class ObservabilityConfig(BaseModel):
@@ -856,6 +842,20 @@ class ObservabilityConfig(BaseModel):
     )
     console_exporter: bool = Field(
         default=False, description="Enable console span exporter"
+    )
+
+
+class AgenticConfig(BaseModel):
+    """Configuration for agentic orchestration defaults."""
+
+    run_timeout_seconds: float = Field(
+        default=30.0, gt=0, description="Maximum end-to-end agent run timeout"
+    )
+    max_parallel_tools: int = Field(
+        default=3, ge=1, le=16, description="Maximum concurrently executed tools"
+    )
+    retrieval_limit: int = Field(
+        default=8, ge=1, le=50, description="Default document retrieval limit"
     )
 
 
@@ -983,8 +983,6 @@ class DocumentationSite(BaseModel):
 
 
 __all__ = [
-    "ABTestVariant",
-    "ApplicationMode",
     "BrowserUseConfig",
     "CacheConfig",
     "CacheType",
@@ -1002,16 +1000,19 @@ __all__ = [
     "EmbeddingModel",
     "EmbeddingProvider",
     "Environment",
+    "AgenticConfig",
     "FastEmbedConfig",
     "FirecrawlConfig",
     "FusionAlgorithm",
     "HyDEConfig",
     "LogLevel",
+    "MCPClientConfig",
+    "MCPServerConfig",
+    "MCPTransport",
     "ModelType",
     "MonitoringConfig",
     "ObservabilityConfig",
     "OpenAIConfig",
-    "OptimizationStrategy",
     "PerformanceConfig",
     "PlaywrightConfig",
     "QdrantConfig",
@@ -1020,8 +1021,6 @@ __all__ = [
     "RAGConfig",
     "ReRankingConfig",
     "SearchAccuracy",
-    "SearchMode",
-    "SearchPipeline",
     "SearchStrategy",
     "VectorType",
 ]

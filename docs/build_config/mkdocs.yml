@@ -48,16 +48,13 @@ nav:
       - Troubleshooting: users/troubleshooting.md
   - Architecture & API:
       - Developer Hub: developers/index.md
-      - Developer Setup: developers/getting-started.md
-      - System Architecture: developers/architecture.md
-      - Configuration Reference: developers/configuration.md
-      - Service Adapters: developers/service_adapters.md
-      - API Reference: developers/api-reference.md
-      - App Profiles: developers/app-profiles.md
-      - CI/CD Workflows: developers/ci-cd.md
-      - Deployment Guide: developers/deployment.md
+      - Setup & Configuration: developers/setup-and-configuration.md
+      - Architecture & Orchestration: developers/architecture-and-orchestration.md
+      - Agentic Orchestration: developers/agentic-orchestration.md
+      - Cache & Performance: developers/cache-and-performance.md
+      - API & Contracts: developers/api-and-contracts.md
+      - Platform Operations: developers/platform-operations.md
       - GPU Acceleration: developers/gpu-acceleration.md
-      - GitHub Actions: developers/github-actions.md
   - Operations:
       - Operator Hub: operators/index.md
       - Deployment: operators/deployment.md
@@ -78,7 +75,7 @@ nav:
       - Evaluation Harness Playbook: testing/evaluation-harness.md
   - Governance:
       - Community Guidelines: contributing/community-guidelines.md
-      - Contributor Guide: developers/contributing.md
+      - Contributing & Testing: developers/contributing-and-testing.md
       - Documentation Metadata: developers/document-metadata.md
       - Technical Debt Log: TECH_DEBT.md
 

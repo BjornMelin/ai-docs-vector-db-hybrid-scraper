@@ -4,12 +4,14 @@ Implements research-backed chunking strategies for optimal RAG performance.
 Supports semantic boundary detection, code-aware chunking, and Tree-sitter AST parsing.
 """
 
+# pylint: disable=too-many-lines
+
 import logging
 import re
 from typing import Any, ClassVar
 
 # Handle both module and script imports
-from src.config import ChunkingConfig, ChunkingStrategy
+from src.config.models import ChunkingConfig, ChunkingStrategy
 from src.models.document_processing import Chunk, CodeBlock, CodeLanguage
 
 
@@ -167,6 +169,14 @@ class DocumentChunker:
                 lang_func = parser_module.language
             else:
                 lang_func = parser_module.language
+            if Language is None or Parser is None:
+                self.logger.warning(
+                    "Tree-sitter bindings not available for '%s'; "
+                    "semantic chunking will be used instead.",
+                    lang,
+                )
+                continue
+
             try:
                 language = Language(lang_func())
             except (ImportError, ModuleNotFoundError, AttributeError) as e:
@@ -210,10 +220,8 @@ class DocumentChunker:
             and language in self.parsers
         ):
             chunks = self._ast_based_chunking(content, language)
-        elif self.config.strategy == ChunkingStrategy.ENHANCED:
-            chunks = self._semantic_chunking(content, language)
         else:
-            chunks = self._basic_chunking(content)
+            chunks = self._semantic_chunking(content, language)
 
         # Convert to dict format and add metadata
         return self._format_chunks(chunks, title, url)
@@ -521,7 +529,7 @@ class DocumentChunker:
 
         return best_pos
 
-    def _chunk_large_code_block(
+    def _chunk_large_code_block(  # pylint: disable=too-many-locals
         self, code_content: str, global_start: int, language: str
     ) -> list[Chunk]:
         """Chunk large code blocks while preserving structure."""
@@ -631,7 +639,9 @@ class DocumentChunker:
 
         return chunks
 
-    def _ast_based_chunking(self, content: str, language: str) -> list[Chunk]:
+    def _ast_based_chunking(  # pylint: disable=too-many-locals
+        self, content: str, language: str
+    ) -> list[Chunk]:
         """AST-based chunking using Tree-sitter for superior code understanding.
 
         This method uses Tree-sitter parsers to create chunks based on the Abstract
@@ -870,7 +880,7 @@ class DocumentChunker:
                 }
             )
 
-    def _split_large_code_unit(
+    def _split_large_code_unit(  # pylint: disable=too-many-return-statements
         self, content: str, global_start: int, unit_type: str, language: str
     ) -> list[Chunk]:
         """Split large code units using AST-specific logic.
@@ -1081,7 +1091,7 @@ class DocumentChunker:
         traverse(node)
         return methods
 
-    def _extract_function_blocks(
+    def _extract_function_blocks(  # pylint: disable=too-many-branches
         self, node: Any, _content: str, language: str
     ) -> list[dict[str, Any]]:
         """Extract logical blocks from a function AST node.
@@ -1251,52 +1261,6 @@ class DocumentChunker:
             if child.type in ["property_identifier", "identifier"]:
                 return content[child.start_byte : child.end_byte]
         return ""
-
-    def _basic_chunking(self, content: str) -> list[Chunk]:
-        """Basic character-based chunking (legacy)."""
-        chunks = []
-        pos = 0
-
-        while pos < len(content):
-            # Basic boundary detection
-            if (chunk_end := min(pos + self.config.chunk_size, len(content))) < len(
-                content
-            ):
-                # Look for sentence endings
-                for boundary in (".\n", "\n\n", ". ", "!\n", "?\n"):
-                    boundary_idx = content.rfind(
-                        boundary,
-                        pos + self.config.chunk_size - 200,
-                        chunk_end,
-                    )
-                    if boundary_idx > pos:
-                        chunk_end = boundary_idx + len(boundary)
-                        break
-
-            if chunk_content := content[pos:chunk_end].strip():
-                chunks.append(
-                    Chunk(
-                        content=chunk_content,
-                        start_pos=pos,
-                        end_pos=chunk_end,
-                        chunk_index=len(chunks),
-                        chunk_type="text",
-                    )
-                )
-
-            # Move with overlap
-            pos = max(
-                pos + self.config.chunk_size - self.config.chunk_overlap,
-                chunk_end,
-            )
-
-        # Update metadata
-        for chunk in chunks:
-            chunk.total_chunks = len(chunks)
-            chunk.char_count = len(chunk.content)
-            chunk.token_estimate = chunk.char_count // 4
-
-        return chunks
 
     def _format_chunks(
         self, chunks: list[Chunk], title: str, url: str

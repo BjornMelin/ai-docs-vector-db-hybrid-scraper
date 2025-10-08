@@ -6,25 +6,27 @@ models, ensuring robust validation and edge case coverage.
 
 import tempfile
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from hypothesis import assume, example, given, note, strategies as st
-from pydantic import ValidationError
+from pydantic import HttpUrl, ValidationError
 
-from src.config import (
+from src.config import Settings
+from src.config.models import (
     CacheConfig,
     ChunkingConfig,
     CircuitBreakerConfig,
-    Config,
     CrawlProvider,
     DeploymentConfig,
+    DeploymentTier,
     DocumentationSite,
     EmbeddingProvider,
     Environment,
     FirecrawlConfig,
     LogLevel,
     OpenAIConfig,
+    PerformanceConfig,
     QdrantConfig,
     RAGConfig,
 )
@@ -59,24 +61,30 @@ class TestCacheConfigProperties:
         """Test that valid cache configurations always create valid
         CacheConfig objects."""
         config = CacheConfig(**config_data)
+        cache_data = config.model_dump()
 
         # Verify basic constraints
-        assert isinstance(config.enable_caching, bool)
-        assert isinstance(config.enable_local_cache, bool)
-        assert isinstance(config.enable_dragonfly_cache, bool)
-        assert config.local_max_size > 0
-        assert config.local_max_memory_mb > 0
-        assert config.ttl_seconds > 0
+        assert isinstance(cache_data["enable_caching"], bool)
+        assert isinstance(cache_data["enable_local_cache"], bool)
+        assert isinstance(cache_data["enable_redis_cache"], bool)
+        assert cache_data["local_max_size"] > 0
+        assert cache_data["local_max_memory_mb"] > 0
+        assert cache_data["ttl_embeddings"] > 0
+        assert cache_data["ttl_crawl"] > 0
+        assert cache_data["ttl_queries"] > 0
+        assert cache_data["ttl_search_results"] > 0
 
-        # Verify dragonfly URL format
-        assert config.dragonfly_url.startswith("redis://")
+        # Verify Redis URL format
+        assert cache_data["redis_url"].startswith("redis://")
 
         # Verify cache TTL structure
-        assert isinstance(config.cache_ttl_seconds, dict)
-        for key, value in config.cache_ttl_seconds.items():
+        ttl_map = cache_data["cache_ttl_seconds"]
+        assert isinstance(ttl_map, dict)
+        for key, value in ttl_map.items():
             assert isinstance(key, str)
             assert isinstance(value, int)
             assert value > 0
+        assert all(value > 0 for value in ttl_map.values())
 
     @given(st.integers(max_value=0))
     def test_cache_config_negative_values_rejected(self, negative_value: int):
@@ -88,7 +96,10 @@ class TestCacheConfigProperties:
             CacheConfig(local_max_memory_mb=negative_value)
 
         with pytest.raises(ValidationError):
-            CacheConfig(ttl_seconds=negative_value)
+            CacheConfig(ttl_embeddings=negative_value)
+
+        with pytest.raises(ValidationError):
+            CacheConfig(ttl_crawl=negative_value)
 
     @given(
         st.dictionaries(
@@ -107,7 +118,7 @@ class TestCacheConfigProperties:
         {
             "enable_caching": False,
             "enable_local_cache": False,
-            "enable_dragonfly_cache": False,
+            "enable_redis_cache": False,
         }
     )
     @given(cache_configurations())
@@ -129,18 +140,18 @@ class TestQdrantConfigProperties:
     def test_qdrant_config_valid_properties(self, config_data: dict[str, Any]):
         """Test that valid Qdrant configurations create valid objects."""
         config = QdrantConfig(**config_data)
+        qdrant_data = config.model_dump()
 
         # Verify constraints
-        assert config.timeout > 0
-        assert config.batch_size > 0
-        assert config.batch_size <= 1000
-        assert 1 <= config.grpc_port <= 65535
+        assert qdrant_data["timeout"] > 0
+        assert 0 < qdrant_data["batch_size"] <= 1000
+        assert 1 <= qdrant_data["grpc_port"] <= 65535
 
         # Verify URL format
-        assert config.url.startswith(("http://", "https://"))
+        assert qdrant_data["url"].startswith(("http://", "https://"))
 
         # Verify collection name is valid
-        assert len(config.collection_name) > 0
+        assert len(qdrant_data["collection_name"]) > 0
 
     @given(st.integers(max_value=0))
     def test_qdrant_config_invalid_timeout_rejected(self, invalid_timeout: float):
@@ -174,14 +185,13 @@ class TestOpenAIConfigProperties:
     def test_openai_config_valid_properties(self, config_data: dict[str, Any]):
         """Test that valid OpenAI configurations create valid objects."""
         config = OpenAIConfig(**config_data)
+        openai_data = config.model_dump()
 
         # Verify constraints
-        assert config.dimensions > 0
-        assert config.dimensions <= 3072
-        assert config.batch_size > 0
-        assert config.batch_size <= 2048
-        assert config.max_requests_per_minute > 0
-        assert config.cost_per_million_tokens > 0
+        assert 0 < openai_data["dimensions"] <= 3072
+        assert 0 < openai_data["batch_size"] <= 2048
+        assert openai_data["max_requests_per_minute"] > 0
+        assert openai_data["cost_per_million_tokens"] > 0
 
     @given(openai_api_keys())
     def test_openai_api_key_validation_success(self, valid_key: str):
@@ -239,7 +249,7 @@ class TestFirecrawlConfigProperties:
     def test_firecrawl_api_url_validation(self, valid_url: str):
         """Test that valid URLs are accepted."""
         config = FirecrawlConfig(api_url=valid_url)
-        assert config.api_url == valid_url
+        assert config.model_dump()["api_url"] == valid_url
 
     @given(positive_floats(min_value=0.1, max_value=3600.0))
     def test_firecrawl_timeout_validation(self, valid_timeout: float):
@@ -255,22 +265,24 @@ class TestChunkingConfigProperties:
     def test_chunking_config_valid_properties(self, config_data: dict[str, Any]):
         """Test that valid chunking configurations create valid objects."""
         config = ChunkingConfig(**config_data)
+        chunk_data = config.model_dump()
 
         # Verify constraint relationships
-        assert config.chunk_overlap < config.chunk_size
-        assert config.min_chunk_size <= config.chunk_size
-        assert config.max_chunk_size >= config.chunk_size
-        assert config.max_function_chunk_size >= config.chunk_size
+        assert chunk_data["chunk_overlap"] < chunk_data["chunk_size"]
+        assert chunk_data["min_chunk_size"] <= chunk_data["chunk_size"]
+        assert chunk_data["max_chunk_size"] >= chunk_data["chunk_size"]
+        assert chunk_data["max_function_chunk_size"] >= chunk_data["chunk_size"]
 
         # Verify positive values
-        assert config.chunk_size > 0
-        assert config.chunk_overlap >= 0
-        assert config.min_chunk_size > 0
-        assert config.max_chunk_size > 0
+        assert chunk_data["chunk_size"] > 0
+        assert chunk_data["chunk_overlap"] >= 0
+        assert chunk_data["min_chunk_size"] > 0
+        assert chunk_data["max_chunk_size"] > 0
 
         # Verify supported languages
-        assert len(config.supported_languages) > 0
-        for lang in config.supported_languages:
+        languages = chunk_data["supported_languages"]
+        assert len(languages) > 0
+        for lang in languages:
             assert isinstance(lang, str)
             assert len(lang) > 0
 
@@ -336,19 +348,14 @@ class TestCircuitBreakerConfigProperties:
     def test_circuit_breaker_config_valid_properties(self, config_data: dict[str, Any]):
         """Test that valid circuit breaker configurations create valid objects."""
         config = CircuitBreakerConfig(**config_data)
+        breaker_data = config.model_dump()
 
         # Verify basic constraints
-        assert 1 <= config.failure_threshold <= 20
-        assert config.recovery_timeout > 0
-        assert 1 <= config.half_open_max_calls <= 10
-
-        # Verify boolean flags
-        assert isinstance(config.enable_adaptive_timeout, bool)
-        assert isinstance(config.enable_bulkhead_isolation, bool)
-        assert isinstance(config.enable_metrics_collection, bool)
+        assert 1 <= breaker_data["failure_threshold"] <= 20
+        assert breaker_data["recovery_timeout"] > 0
 
         # Verify service overrides structure
-        for service, overrides in config.service_overrides.items():
+        for service, overrides in breaker_data["service_overrides"].items():
             assert service in ["openai", "firecrawl", "qdrant", "redis"]
             assert isinstance(overrides, dict)
 
@@ -358,12 +365,6 @@ class TestCircuitBreakerConfigProperties:
         with pytest.raises(ValidationError):
             CircuitBreakerConfig(failure_threshold=invalid_threshold)
 
-    @given(st.integers().filter(lambda x: x <= 0 or x > 10))
-    def test_circuit_breaker_half_open_calls_bounds(self, invalid_calls: int):
-        """Test that half-open max calls bounds are enforced."""
-        with pytest.raises(ValidationError):
-            CircuitBreakerConfig(half_open_max_calls=invalid_calls)
-
 
 class TestDeploymentConfigProperties:
     """Property-based tests for DeploymentConfig."""
@@ -372,18 +373,23 @@ class TestDeploymentConfigProperties:
     def test_deployment_config_valid_properties(self, config_data: dict[str, Any]):
         """Test that valid deployment configurations create valid objects."""
         config = DeploymentConfig(**config_data)
+        deployment_data = config.model_dump()
 
         # Verify tier validation
-        assert config.tier in ["personal", "professional", "enterprise"]
-        assert config.deployment_tier == config.tier  # Legacy field matches
+        assert isinstance(config.tier, DeploymentTier)
+        assert config.tier in {
+            DeploymentTier.PERSONAL,
+            DeploymentTier.PROFESSIONAL,
+            DeploymentTier.ENTERPRISE,
+        }
 
         # Verify boolean flags
-        assert isinstance(config.enable_feature_flags, bool)
-        assert isinstance(config.enable_deployment_services, bool)
-        assert isinstance(config.enable_ab_testing, bool)
-        assert isinstance(config.enable_blue_green, bool)
-        assert isinstance(config.enable_canary, bool)
-        assert isinstance(config.enable_monitoring, bool)
+        assert isinstance(deployment_data["enable_feature_flags"], bool)
+        assert isinstance(deployment_data["enable_deployment_services"], bool)
+        assert isinstance(deployment_data["enable_ab_testing"], bool)
+        assert isinstance(deployment_data["enable_blue_green"], bool)
+        assert isinstance(deployment_data["enable_canary"], bool)
+        assert isinstance(deployment_data["enable_monitoring"], bool)
 
     @given(
         st.text().filter(
@@ -395,7 +401,7 @@ class TestDeploymentConfigProperties:
         assume(len(invalid_tier) > 0)  # Non-empty strings only
 
         with pytest.raises(ValidationError):
-            DeploymentConfig(tier=invalid_tier)
+            DeploymentConfig(tier=cast(Any, invalid_tier))
 
     @given(flagsmith_api_keys())
     def test_flagsmith_api_key_validation_success(self, valid_key: str):
@@ -423,25 +429,26 @@ class TestRAGConfigProperties:
     def test_rag_config_valid_properties(self, config_data: dict[str, Any]):
         """Test that valid RAG configurations create valid objects."""
         config = RAGConfig(**config_data)
+        rag_data = config.model_dump()
 
         # Verify temperature bounds
-        assert 0.0 <= config.temperature <= 2.0
+        assert 0.0 <= rag_data["temperature"] <= 2.0
 
         # Verify token limits
-        assert 100 <= config.max_tokens <= 4000
-        assert 1000 <= config.max_context_length <= 8000
+        assert 100 <= rag_data["max_tokens"] <= 4000
+        assert 1000 <= rag_data["max_context_length"] <= 8000
 
         # Verify result limits
-        assert 1 <= config.max_results_for_context <= 20
+        assert 1 <= rag_data["max_results_for_context"] <= 20
 
         # Verify confidence threshold
-        assert 0.0 <= config.min_confidence_threshold <= 1.0
+        assert 0.0 <= rag_data["min_confidence_threshold"] <= 1.0
 
         # Verify timeout
-        assert config.timeout_seconds > 0
+        assert rag_data["timeout_seconds"] > 0
 
         # Verify cache TTL
-        assert config.cache_ttl_seconds > 0
+        assert rag_data["cache_ttl_seconds"] > 0
 
     @given(
         st.one_of(
@@ -487,30 +494,34 @@ class TestDocumentationSiteProperties:
     def test_documentation_site_invalid_url_rejected(self, invalid_url: str):
         """Test that invalid URLs are rejected."""
         with pytest.raises(ValidationError):
-            DocumentationSite(name="Test", url=invalid_url)
+            DocumentationSite(name="Test", url=cast(Any, invalid_url))
 
     @given(st.text(max_size=0))
     def test_documentation_site_empty_name_rejected(self, empty_name: str):
         """Test that empty names are rejected."""
         with pytest.raises(ValidationError):
-            DocumentationSite(name=empty_name, url="https://example.com")
+            DocumentationSite(name=empty_name, url=cast(HttpUrl, "https://example.com"))
 
     @given(invalid_positive_integers())
     def test_documentation_site_invalid_limits_rejected(self, invalid_limit: int):
         """Test that invalid page/depth limits are rejected."""
         with pytest.raises(ValidationError):
             DocumentationSite(
-                name="Test", url="https://example.com", max_pages=invalid_limit
+                name="Test",
+                url=cast(HttpUrl, "https://example.com"),
+                max_pages=invalid_limit,
             )
 
         with pytest.raises(ValidationError):
             DocumentationSite(
-                name="Test", url="https://example.com", max_depth=invalid_limit
+                name="Test",
+                url=cast(HttpUrl, "https://example.com"),
+                max_depth=invalid_limit,
             )
 
 
 class TestCompleteConfigProperties:
-    """Property-based tests for the complete Config class."""
+    """Property-based tests for the complete Settings class."""
 
     @given(complete_configurations())
     def test_complete_config_valid_properties(self, config_data: dict[str, Any]):
@@ -530,7 +541,7 @@ class TestCompleteConfigProperties:
                 config_data["firecrawl"] = {}
             config_data["firecrawl"]["api_key"] = "fc-test-key-for-property-testing"
 
-        config = Config(**config_data)
+        config = Settings(**config_data)
 
         # Verify basic properties
         assert isinstance(config.environment, Environment)
@@ -548,8 +559,8 @@ class TestCompleteConfigProperties:
         assert isinstance(config.qdrant, QdrantConfig)
         assert isinstance(config.openai, OpenAIConfig)
         assert isinstance(config.chunking, ChunkingConfig)
-        assert isinstance(config.circuit_breaker, CircuitBreakerConfig)
         assert isinstance(config.deployment, DeploymentConfig)
+        assert isinstance(config.performance, PerformanceConfig)
         assert isinstance(config.rag, RAGConfig)
 
         # Verify documentation sites
@@ -565,16 +576,17 @@ class TestCompleteConfigProperties:
         if provider == EmbeddingProvider.OPENAI:
             # Should fail without API key
             with pytest.raises(ValidationError, match="OpenAI API key required"):
-                Config(embedding_provider=provider, openai=OpenAIConfig(api_key=None))
+                Settings(embedding_provider=provider, openai=OpenAIConfig(api_key=None))
 
             # Should succeed with API key
-            config = Config(
+            config = Settings(
                 embedding_provider=provider, openai=OpenAIConfig(api_key="sk-test-key")
             )
             assert config.embedding_provider == provider
+            assert config.model_dump()["openai"]["api_key"] == "sk-test-key"
         else:
             # Other providers should work without special keys
-            config = Config(embedding_provider=provider)
+            config = Settings(embedding_provider=provider)
             assert config.embedding_provider == provider
 
     @given(st.sampled_from(list(CrawlProvider)))
@@ -583,17 +595,20 @@ class TestCompleteConfigProperties:
         if provider == CrawlProvider.FIRECRAWL:
             # Should fail without API key
             with pytest.raises(ValidationError, match="Firecrawl API key required"):
-                Config(crawl_provider=provider, firecrawl=FirecrawlConfig(api_key=None))
+                Settings(
+                    crawl_provider=provider, firecrawl=FirecrawlConfig(api_key=None)
+                )
 
             # Should succeed with API key
-            config = Config(
+            config = Settings(
                 crawl_provider=provider,
                 firecrawl=FirecrawlConfig(api_key="fc-test-key"),
             )
             assert config.crawl_provider == provider
+            assert config.model_dump()["firecrawl"]["api_key"] == "fc-test-key"
         else:
             # Other providers should work without special keys
-            config = Config(crawl_provider=provider)
+            config = Settings(crawl_provider=provider)
             assert config.crawl_provider == provider
 
     @given(complete_configurations())
@@ -608,11 +623,11 @@ class TestCompleteConfigProperties:
                 config_data["firecrawl"] = {}
             config_data["firecrawl"]["api_key"] = "fc-test-key"
 
-        original_config = Config(**config_data)
+        original_config = Settings(**config_data)
 
         # Serialize to dict and back
         serialized = original_config.model_dump()
-        deserialized = Config(**serialized)
+        deserialized = Settings(**serialized)
 
         # Verify critical properties match
         assert deserialized.environment == original_config.environment
@@ -628,14 +643,14 @@ class TestCompleteConfigProperties:
             cache_dir = temp_path / "test_cache"
             logs_dir = temp_path / "test_logs"
 
-            config = Config(data_dir=data_dir, cache_dir=cache_dir, logs_dir=logs_dir)
+            config = Settings(data_dir=data_dir, cache_dir=cache_dir, logs_dir=logs_dir)
 
             # Directories should be created
             assert data_dir.exists()
             assert cache_dir.exists()
             assert logs_dir.exists()
 
-            # Config should store correct paths
+            # Settings should store correct paths
             assert config.data_dir == data_dir
             assert config.cache_dir == cache_dir
             assert config.logs_dir == logs_dir
@@ -655,27 +670,31 @@ class TestConfigPropertyInvariants:
                 config_data["firecrawl"] = {}
             config_data["firecrawl"]["api_key"] = "fc-test-key"
 
-        config = Config(**config_data)
+        config = Settings(**config_data)
+        settings_data = config.model_dump()
 
-        # Cache values
-        assert config.cache.local_max_size > 0
-        assert config.cache.local_max_memory_mb > 0
-        assert config.cache.ttl_seconds > 0
+        cache_data = settings_data["cache"]
+        assert cache_data["local_max_size"] > 0
+        assert cache_data["local_max_memory_mb"] > 0
+        assert cache_data["ttl_embeddings"] > 0
+        assert cache_data["ttl_crawl"] > 0
+        assert cache_data["ttl_queries"] > 0
+        assert cache_data["ttl_search_results"] > 0
 
-        # Qdrant values
-        assert config.qdrant.timeout > 0
-        assert config.qdrant.batch_size > 0
+        qdrant_data = settings_data["qdrant"]
+        assert qdrant_data["timeout"] > 0
+        assert qdrant_data["batch_size"] > 0
 
-        # OpenAI values
-        assert config.openai.dimensions > 0
-        assert config.openai.batch_size > 0
-        assert config.openai.max_requests_per_minute > 0
-        assert config.openai.cost_per_million_tokens > 0
+        openai_data = settings_data["openai"]
+        assert openai_data["dimensions"] > 0
+        assert openai_data["batch_size"] > 0
+        assert openai_data["max_requests_per_minute"] > 0
+        assert openai_data["cost_per_million_tokens"] > 0
 
-        # Chunking values
-        assert config.chunking.chunk_size > 0
-        assert config.chunking.min_chunk_size > 0
-        assert config.chunking.max_chunk_size > 0
+        chunk_data = settings_data["chunking"]
+        assert chunk_data["chunk_size"] > 0
+        assert chunk_data["min_chunk_size"] > 0
+        assert chunk_data["max_chunk_size"] > 0
 
     @given(complete_configurations())
     def test_config_invariant_chunk_relationships(self, config_data: dict[str, Any]):
@@ -688,12 +707,13 @@ class TestConfigPropertyInvariants:
                 config_data["firecrawl"] = {}
             config_data["firecrawl"]["api_key"] = "fc-test-key"
 
-        config = Config(**config_data)
+        config = Settings(**config_data)
+        chunk_data = config.model_dump()["chunking"]
 
         # Chunk size relationships
-        assert config.chunking.chunk_overlap < config.chunking.chunk_size
-        assert config.chunking.min_chunk_size <= config.chunking.chunk_size
-        assert config.chunking.max_chunk_size >= config.chunking.chunk_size
+        assert chunk_data["chunk_overlap"] < chunk_data["chunk_size"]
+        assert chunk_data["min_chunk_size"] <= chunk_data["chunk_size"]
+        assert chunk_data["max_chunk_size"] >= chunk_data["chunk_size"]
 
     @given(complete_configurations())
     def test_config_invariant_url_formats(self, config_data: dict[str, Any]):
@@ -706,11 +726,12 @@ class TestConfigPropertyInvariants:
                 config_data["firecrawl"] = {}
             config_data["firecrawl"]["api_key"] = "fc-test-key"
 
-        config = Config(**config_data)
+        config = Settings(**config_data)
+        settings_data = config.model_dump()
 
         # URL formats
-        assert config.qdrant.url.startswith(("http://", "https://"))
-        assert config.cache.dragonfly_url.startswith("redis://")
+        assert settings_data["qdrant"]["url"].startswith(("http://", "https://"))
+        assert settings_data["cache"]["redis_url"].startswith("redis://")
 
         # Documentation site URLs
         for site in config.documentation_sites:
@@ -727,17 +748,23 @@ class TestConfigPropertyInvariants:
                 config_data["firecrawl"] = {}
             config_data["firecrawl"]["api_key"] = "fc-test-key"
 
-        config = Config(**config_data)
+        config = Settings(**config_data)
 
         # API key formats
-        if config.openai.api_key:
-            assert config.openai.api_key.startswith("sk-")
+        settings_data = config.model_dump()
 
-        if hasattr(config, "firecrawl") and config.firecrawl.api_key:
-            assert config.firecrawl.api_key.startswith("fc-")
+        openai_key = settings_data["openai"].get("api_key")
+        if openai_key:
+            assert openai_key.startswith("sk-")
 
-        if config.deployment.flagsmith_api_key:
-            assert config.deployment.flagsmith_api_key.startswith(("fs_", "env_"))
+        firecrawl_data = settings_data.get("firecrawl", {})
+        firecrawl_key = firecrawl_data.get("api_key")
+        if firecrawl_key:
+            assert firecrawl_key.startswith("fc-")
+
+        flagsmith_key = settings_data["deployment"].get("flagsmith_api_key")
+        if flagsmith_key:
+            assert flagsmith_key.startswith(("fs_", "env_"))
 
 
 # Mutation testing specific tests
@@ -754,8 +781,14 @@ class TestConfigMutationTesting:
             "openai": {"api_key": None},
             "cache": {
                 "enable_caching": True,
+                "enable_local_cache": True,
+                "enable_redis_cache": True,
                 "local_max_size": 1000,
-                "ttl_seconds": 3600,
+                "ttl_embeddings": 3600,
+                "ttl_crawl": 1200,
+                "ttl_queries": 1800,
+                "ttl_search_results": 900,
+                "redis_url": "redis://localhost:6379",
             },
             "chunking": {
                 "chunk_size": 1600,
@@ -780,7 +813,7 @@ class TestConfigMutationTesting:
         if mutation_type == "negative_cache_size":
             base_config["cache"]["local_max_size"] = data.draw(st.integers(max_value=0))
             with pytest.raises(ValidationError):
-                Config(**base_config)
+                Settings(**base_config)
 
         elif mutation_type == "invalid_chunk_overlap":
             chunk_size = base_config["chunking"]["chunk_size"]
@@ -788,18 +821,18 @@ class TestConfigMutationTesting:
                 st.integers(min_value=chunk_size)
             )
             with pytest.raises(ValidationError):
-                Config(**base_config)
+                Settings(**base_config)
 
         elif mutation_type == "invalid_api_key_format":
             base_config["embedding_provider"] = EmbeddingProvider.OPENAI
             base_config["openai"]["api_key"] = data.draw(invalid_api_keys())
             assume(not base_config["openai"]["api_key"].startswith("sk-"))
             with pytest.raises(ValidationError):
-                Config(**base_config)
+                Settings(**base_config)
 
         elif mutation_type == "invalid_provider_combination":
             # Use provider that requires API key without providing it
             base_config["embedding_provider"] = EmbeddingProvider.OPENAI
             base_config["openai"]["api_key"] = None
             with pytest.raises(ValidationError):
-                Config(**base_config)
+                Settings(**base_config)

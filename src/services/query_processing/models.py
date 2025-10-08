@@ -1,4 +1,4 @@
-"""Query processing data models for the final retrieval pipeline.
+"""Query processing data models for the retrieval pipeline.
 
 This module defines the core data models used throughout the query processing
 pipeline, including request and response structures for search operations.
@@ -6,137 +6,12 @@ pipeline, including request and response structures for search operations.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 from src.contracts.retrieval import SearchRecord
-
-
-class SearchRequest(BaseModel):
-    """Parameters controlling a search invocation.
-
-    This model encapsulates all parameters that can be used to customize
-    search behavior, including query processing options, result limits,
-    filtering, and features like RAG and personalization.
-
-    Attributes:
-        query: Search query text (minimum 1 character).
-        collection: Target collection identifier (optional).
-        limit: Maximum number of results to return (1-1000).
-        filters: Structured payload filters (optional).
-        enable_expansion: Whether to apply synonym-based expansion.
-        enable_personalization: Whether to enable preference-based ranking.
-        user_id: User identifier for personalization (optional).
-        user_preferences: Preference boosts keyed by category (optional).
-        normalize_scores: Whether to normalize result scores per request.
-        enable_rag: Whether to generate retrieval-augmented response.
-        rag_top_k: Number of documents to fetch for RAG context (optional).
-        rag_max_tokens: Maximum tokens for generated answer (optional).
-        group_by: Payload field used for server-side grouping.
-        group_size: Maximum hits per group (1-10).
-        overfetch_multiplier: Server-side overfetch multiplier for grouping.
-    """
-
-    query: str = Field(..., min_length=1, description="Search query text")
-    collection: str | None = Field(
-        default=None,
-        min_length=1,
-        description="Target collection identifier",
-    )
-    limit: int = Field(10, ge=1, le=1000, description="Result cap")
-    filters: dict[str, Any] | None = Field(
-        default=None, description="Structured payload filters"
-    )
-    enable_expansion: bool = Field(
-        default=True, description="Apply synonym-based expansion"
-    )
-    enable_personalization: bool = Field(
-        default=False, description="Enable preference-based ranking"
-    )
-    user_id: str | None = Field(
-        default=None, description="User identifier for personalization"
-    )
-    user_preferences: dict[str, float] | None = Field(
-        default=None, description="Preference boosts keyed by category"
-    )
-    normalize_scores: bool = Field(
-        default=True, description="Normalize result scores per request"
-    )
-    enable_rag: bool = Field(
-        default=False, description="Generate retrieval-augmented response"
-    )
-    rag_top_k: int | None = Field(
-        default=None, ge=1, description="Documents to fetch for RAG context"
-    )
-    rag_max_tokens: int | None = Field(
-        default=None, ge=1, description="Maximum tokens for generated answer"
-    )
-    group_by: str = Field(
-        default="doc_id",
-        description="Payload field used for server-side grouping",
-    )
-    group_size: int = Field(
-        default=1, ge=1, le=10, description="Maximum hits per group"
-    )
-    overfetch_multiplier: float = Field(
-        default=2.0,
-        ge=1.0,
-        description="Server-side overfetch multiplier for grouping",
-    )
-
-    @classmethod
-    def from_input(
-        cls,
-        request: SearchRequest | str | Mapping[str, Any],
-        *,
-        collection: str | None = None,
-        limit: int | None = None,
-        **overrides: Any,
-    ) -> SearchRequest:
-        """Coerce raw input into a ``SearchRequest`` instance.
-
-        Args:
-            request: Existing ``SearchRequest`` instance, raw query string, or
-                mapping payload describing the request.
-            collection: Optional collection override applied when present.
-            limit: Optional result limit override applied when present.
-            **overrides: Additional keyword arguments merged into the request.
-
-        Returns:
-            A normalised ``SearchRequest`` instance.
-
-        Raises:
-            TypeError: If the ``request`` type is unsupported.
-        """
-
-        update: dict[str, Any] = {}
-        if collection is not None:
-            update["collection"] = collection
-        if limit is not None:
-            update["limit"] = limit
-        if overrides:
-            update.update(overrides)
-
-        if isinstance(request, cls):
-            if not update:
-                return request
-            return request.model_copy(update=update)
-
-        if isinstance(request, str):
-            payload: dict[str, Any] = {"query": request}
-            payload.update(update)
-            return cls(**payload)
-
-        if isinstance(request, Mapping):
-            payload = dict(request)
-            for key, value in update.items():
-                payload.setdefault(key, value)
-            return cls(**payload)
-
-        msg = f"Unsupported request type: {type(request)!r}"
-        raise TypeError(msg)
+from src.models import SearchRequest
 
 
 class SearchResponse(BaseModel):

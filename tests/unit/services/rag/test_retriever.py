@@ -11,8 +11,7 @@ from langchain_core.callbacks.manager import AsyncCallbackManagerForRetrieverRun
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 
-from src.services.rag.models import RAGConfig
-from src.services.rag.retriever import VectorServiceRetriever
+from src.services.rag import RAGConfig, VectorServiceRetriever
 
 
 def _make_vector_store_mock(initialized: bool = True) -> MagicMock:

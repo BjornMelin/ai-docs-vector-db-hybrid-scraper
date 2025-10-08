@@ -5,7 +5,7 @@ import logging
 import time
 from typing import TypeVar
 
-from src.config import Config
+from src.config.loader import Settings
 from src.services.errors import APIError
 
 
@@ -97,15 +97,15 @@ class RateLimitManager:
     with configurable limits per provider and endpoint.
     """
 
-    def __init__(self, config: Config):
+    def __init__(self, config: Settings):
         """Initialize rate limit manager.
 
         Args:
-            config: Config instance with rate limiting configuration.
+            config: Settings instance with rate limiting configuration.
 
         """
         self.limiters: dict[str, RateLimiter] = {}
-        self.default_limits = config.performance.default_rate_limits.copy()
+        self.default_limits = config.performance.default_rate_limits.copy()  # type: ignore[attr-defined]
 
     def get_limiter(self, provider: str, endpoint: str | None = None) -> RateLimiter:
         """Get or create rate limiter for provider/endpoint.

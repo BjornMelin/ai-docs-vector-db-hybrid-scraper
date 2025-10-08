@@ -1,5 +1,7 @@
 """Comprehensive test suite for MCP embeddings tools."""
 
+# pylint: disable=duplicate-code
+
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -20,17 +22,62 @@ class TestEmbeddingsTools:
         # Mock embedding manager
         mock_embedding = AsyncMock()
 
+        mock_embedding.estimate_cost = MagicMock(
+            return_value={
+                "fastembed": {
+                    "estimated_tokens": 20,
+                    "cost_per_token": 0.0,
+                    "total_cost": 0.0,
+                }
+            }
+        )
+        mock_embedding.get_provider_info = MagicMock(
+            return_value={
+                "fastembed": {
+                    "model": "BAAI/bge-small-en-v1.5",
+                    "dimensions": 384,
+                    "max_tokens": 512,
+                    "cost_per_token": 0.0,
+                }
+            }
+        )
+
         # Create a smart mock that returns different results based on inputs
+        class _EmbeddingResult(dict):
+            """Dictionary-like container mirroring embedding service response."""
+
+            def __init__(
+                self,
+                embeddings: list[list[float]],
+                *,
+                sparse: list[list[float]] | None,
+                metadata: dict[str, float | str | None],
+            ) -> None:
+                payload = {
+                    "embeddings": embeddings,
+                    "sparse_embeddings": sparse,
+                    **metadata,
+                }
+                super().__init__(payload)
+
+            # Exclude token counters from items so downstream **kwargs stay unique
+            def items(self):  # pylint: disable=invalid-name
+                data = dict(self)
+                data.pop("tokens", None)
+                return data.items()
+
         async def mock_generate_embeddings(
-            texts, model=None, _batch_size=32, generate_sparse=False
+            texts,
+            options=None,
+            **_kwargs,
         ):
-            mock_result = MagicMock()
-            # Generate embeddings based on number of input texts
-            mock_result.embeddings = [
+            embeddings = [
                 [0.1 + i * 0.1, 0.2 + i * 0.1, 0.3 + i * 0.1, 0.4 + i * 0.1]
                 for i in range(len(texts))
             ]
-            mock_result.sparse_embeddings = (
+            provider_name = getattr(options, "provider_name", None)
+            generate_sparse = getattr(options, "generate_sparse", False)
+            sparse = (
                 [
                     [0.8 - i * 0.1, 0.0, 0.6 - i * 0.1, 0.0, 0.4 - i * 0.1]
                     for i in range(len(texts))
@@ -38,9 +85,15 @@ class TestEmbeddingsTools:
                 if generate_sparse
                 else None
             )
-            mock_result.model = model or "BAAI/bge-small-en-v1.5"
-            mock_result._total_tokens = len(texts) * 10  # 10 tokens per text
-            return mock_result
+            return _EmbeddingResult(
+                embeddings,
+                sparse=sparse,
+                metadata={
+                    "model": provider_name or "BAAI/bge-small-en-v1.5",
+                    "provider": provider_name or "fastembed",
+                    "tokens": len(texts) * 10,
+                },
+            )
 
         mock_embedding.generate_embeddings.side_effect = mock_generate_embeddings
 
@@ -53,7 +106,9 @@ class TestEmbeddingsTools:
             }
 
         mock_embedding.get_current_provider_info = mock_provider_info
+
         mock_manager.get_embedding_manager = AsyncMock(return_value=mock_embedding)
+        mock_manager.embedding_mock = mock_embedding
 
         return mock_manager
 
@@ -98,6 +153,8 @@ class TestEmbeddingsTools:
         assert len(result.embeddings[1]) == 4
         assert result.model == "BAAI/bge-small-en-v1.5"
         assert result.sparse_embeddings is None
+        assert result.cost_estimate == 0.0
+        assert result.total_tokens == 20
 
         # Verify context logging
         mock_context.info.assert_called()
@@ -135,12 +192,15 @@ class TestEmbeddingsTools:
         assert len(result.sparse_embeddings) == 2
         assert len(result.sparse_embeddings[0]) == 5
         assert len(result.sparse_embeddings[1]) == 5
+        assert result.cost_estimate == 0.0
 
         # Verify context logging
         mock_context.info.assert_called()
 
     @pytest.mark.asyncio
-    async def test_list_embedding_providers(self, mock_client_manager, mock_context):
+    async def test_list_embedding_providers(
+        self, mock_client_manager, mock_context, monkeypatch
+    ):
         """Test getting available embedding providers."""
 
         mock_mcp = MagicMock()
@@ -151,6 +211,17 @@ class TestEmbeddingsTools:
             return func
 
         mock_mcp.tool.return_value = capture_tool
+        # Reset provider cache
+        monkeypatch.setattr(
+            "src.mcp_tools.tools.embeddings._provider_cache",
+            None,
+            raising=False,
+        )
+        monkeypatch.setattr(
+            "src.mcp_tools.tools.embeddings._provider_cache_expiry",
+            None,
+            raising=False,
+        )
         register_tools(mock_mcp, mock_client_manager)
 
         list_embedding_providers = registered_tools["list_embedding_providers"]
@@ -158,7 +229,8 @@ class TestEmbeddingsTools:
         result = await list_embedding_providers(ctx=mock_context)
 
         assert isinstance(result, list)
-        # The implementation returns a list of provider info
+        assert result[0].name == "fastembed"
+        assert result[0].models[0]["name"] == "BAAI/bge-small-en-v1.5"
 
         # Verify context logging
         mock_context.info.assert_called()
@@ -172,9 +244,7 @@ class TestEmbeddingsTools:
         mock_embedding.generate_embeddings.side_effect = Exception(
             "Embedding service unavailable"
         )
-        mock_client_manager.get_embedding_manager = AsyncMock(
-            return_value=mock_embedding
-        )
+        mock_client_manager.get_embedding_manager.return_value = mock_embedding
 
         mock_mcp = MagicMock()
         registered_tools = {}
@@ -223,7 +293,7 @@ class TestEmbeddingsTools:
 
         assert isinstance(result, EmbeddingGenerationResponse)
         assert result.embeddings == []  # Empty list for empty input
-        assert result._total_tokens == 0  # No tokens for empty input
+        assert result.total_tokens == 0  # No tokens for empty input
 
         # No specific warning required - just handle gracefully
 
@@ -320,6 +390,7 @@ class TestEmbeddingsTools:
         request = EmbeddingRequest(texts=["test"])
         await generate_embeddings(request, mock_context)
         mock_client_manager.get_embedding_manager.assert_called()
+        mock_client_manager.embedding_mock.generate_embeddings.assert_called()
 
         # Test providers call
         await list_embedding_providers(ctx=mock_context)
@@ -379,5 +450,12 @@ class TestEmbeddingsTools:
         assert len(result.embeddings) == 1
 
         # Verify embedding manager was called with custom model details
-        embedding_manager = await mock_client_manager.get_embedding_manager()
-        embedding_manager.generate_embeddings.assert_called()
+        mock_client_manager.embedding_mock.generate_embeddings.assert_called()
+        _call_args, call_kwargs = (
+            mock_client_manager.embedding_mock.generate_embeddings.call_args
+        )
+        assert call_kwargs.get("texts") == ["test text"]
+        options = call_kwargs.get("options")
+        assert options is not None
+        assert options.provider_name == "sentence-transformers/all-MiniLM-L6-v2"
+        assert options.generate_sparse is False

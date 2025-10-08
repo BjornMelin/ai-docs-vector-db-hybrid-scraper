@@ -56,9 +56,14 @@ graph LR
 === "Developers"
 
     - [Developer Hub](developers/index.md)
-    - [System Architecture](developers/architecture.md)
-    - [API Reference](developers/api-reference.md)
-    - [Contributing](developers/contributing.md)
+    - [Setup & Configuration](developers/setup-and-configuration.md)
+    - [Architecture & Orchestration](developers/architecture-and-orchestration.md)
+    - [Agentic Orchestration](developers/agentic-orchestration.md)
+    - [Cache & Performance](developers/cache-and-performance.md)
+    - [GPU Acceleration](developers/gpu-acceleration.md)
+    - [Platform Operations](developers/platform-operations.md)
+    - [API & Contracts](developers/api-and-contracts.md)
+    - [Contributing & Testing](developers/contributing-and-testing.md)
 
 === "Operators"
 

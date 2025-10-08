@@ -1,8 +1,4 @@
-"""Simplified production FastMCP server with essential middleware only.
-
-This module provides a basic production wrapper around FastMCP server,
-following KISS principles with only essential middleware for V1.
-"""
+"""Simplified production FastMCP server with essential middleware only."""
 
 import asyncio
 import logging
@@ -10,22 +6,21 @@ import os
 import signal
 import sys
 from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING
 
 from starlette.applications import Starlette
+from starlette.responses import JSONResponse
+from starlette.routing import Route
+
+from src.config.loader import get_settings
+from src.services.fastapi.middleware.manager import apply_defaults, apply_named_stack
+from src.services.logging_config import configure_logging
 
 
 try:
     import uvicorn
 except ImportError:
     uvicorn = None
-from typing import TYPE_CHECKING
-
-from starlette.responses import JSONResponse
-from starlette.routing import Route
-
-from src.config import get_config
-from src.services.fastapi.middleware.manager import get_middleware_manager
-from src.services.logging_config import configure_logging
 
 
 if TYPE_CHECKING:
@@ -44,8 +39,8 @@ class ProductionMCPServer:
 
     def __init__(self, config=None):
         """Initialize production MCP server."""
-        self.config = config or get_config()
-        self.middleware_manager = None
+        self.config = config or get_settings()
+        self._middleware_names: list[str] = ["rate_limiting"]
         self._mcp_server: FastMCP | None = None
         self._app: Starlette | None = None
         self._shutdown_event = asyncio.Event()
@@ -83,10 +78,17 @@ class ProductionMCPServer:
     async def startup(self) -> None:
         """Initialize server components."""
         # Configure logging
-        configure_logging(self.config.log_level.value, self.config.debug)
+        configure_logging(
+            level=self.config.log_level.value,
+            enable_color=self.config.debug,
+            settings=self.config,
+        )
 
-        # Initialize middleware manager
-        self.middleware_manager = get_middleware_manager(self.config)
+        stack = getattr(self.config, "middleware_stack", None)
+        if isinstance(stack, list) and stack:
+            self._middleware_names = list(stack)
+        else:
+            self._middleware_names = ["rate_limiting"]
 
         logger.info("Production MCP server startup complete")
 
@@ -127,9 +129,10 @@ class ProductionMCPServer:
             lifespan=self.lifespan,
         )
 
-        # Apply middleware
-        if self.middleware_manager:
-            self.middleware_manager.apply_middleware(app)
+        if self._middleware_names:
+            apply_named_stack(app, self._middleware_names)
+        else:
+            apply_defaults(app)
 
         self._app = app
         return app
@@ -167,7 +170,7 @@ class ProductionMCPServer:
 
 def create_production_server(config=None) -> ProductionMCPServer:
     """Create a production-enhanced MCP server."""
-    return ProductionMCPServer(config or get_config())
+    return ProductionMCPServer(config or get_settings())
 
 
 async def run_production_server_async(
@@ -183,7 +186,7 @@ async def run_production_server_async(
 def main() -> None:
     """Main entry point for production server."""
     # Load configuration
-    config = get_config()
+    config = get_settings()
 
     # Get server configuration from environment
     host = os.getenv("HOST", "127.0.0.1")

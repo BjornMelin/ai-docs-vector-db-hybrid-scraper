@@ -8,16 +8,14 @@ import asyncio
 import logging
 import time
 
-from src.config import Config, MonitoringConfig
+from fastapi.responses import JSONResponse
+from qdrant_client import AsyncQdrantClient
+
+from src.config.loader import Settings
+from src.config.models import MonitoringConfig
 
 from .health import HealthCheckConfig, HealthCheckManager, HealthStatus
 from .metrics import MetricsConfig, MetricsRegistry, initialize_metrics
-
-
-try:
-    from fastapi.responses import JSONResponse
-except ImportError:
-    JSONResponse = None  # type: ignore[assignment]
 
 
 logger = logging.getLogger(__name__)
@@ -33,8 +31,8 @@ async def initialize_monitoring(
 
     Returns:
         Tuple of (MetricsRegistry, HealthCheckManager) or (None, None) if disabled
-
     """
+
     if not config.enabled:
         logger.info("Monitoring disabled by configuration")
         return None, None
@@ -55,7 +53,9 @@ async def initialize_monitoring(
 
     # Create health check config from monitoring config
     health_config = HealthCheckConfig(
-        enabled=config.enabled, timeout=config.health_check_timeout
+        enabled=config.enabled,
+        interval=config.system_metrics_interval,
+        timeout=config.health_check_timeout,
     )
 
     # Initialize health check manager
@@ -73,8 +73,8 @@ async def cleanup_monitoring(
     Args:
         metrics_registry: Metrics registry to clean up
         health_manager: Health manager to clean up
-
     """
+
     if metrics_registry:
         logger.info("Cleaning up metrics registry...")
         # Any cleanup needed for metrics
@@ -97,8 +97,8 @@ async def start_background_monitoring_tasks(
 
     Returns:
         List of started tasks
-
     """
+
     tasks = []
 
     # Start system metrics collection if enabled
@@ -131,8 +131,8 @@ async def stop_background_monitoring_tasks(tasks: list[asyncio.Task]) -> None:
 
     Args:
         tasks: List of tasks to stop
-
     """
+
     if not tasks:
         return
 
@@ -148,8 +148,8 @@ async def stop_background_monitoring_tasks(tasks: list[asyncio.Task]) -> None:
 
 
 def initialize_monitoring_system(
-    config: Config, qdrant_client=None, redis_url: str | None = None
-) -> tuple[MetricsRegistry, HealthCheckManager]:
+    config: Settings, qdrant_client=None, redis_url: str | None = None
+) -> tuple[MetricsRegistry | None, HealthCheckManager | None]:
     """Initialize the complete monitoring system.
 
     Args:
@@ -159,8 +159,8 @@ def initialize_monitoring_system(
 
     Returns:
         Tuple of (MetricsRegistry, HealthCheckManager)
-
     """
+
     if not config.monitoring.enabled:
         logger.info("Monitoring disabled by configuration")
         return None, None
@@ -181,10 +181,7 @@ def initialize_monitoring_system(
 
     # Create health check manager
 
-    health_config = HealthCheckConfig(
-        enabled=config.monitoring.enabled,
-        timeout=config.monitoring.health_check_timeout,
-    )
+    health_config = HealthCheckConfig.from_unified_config(config)
     health_manager = HealthCheckManager(health_config, metrics_registry)
 
     # Add system resource checks
@@ -195,20 +192,21 @@ def initialize_monitoring_system(
         timeout_seconds=config.monitoring.health_check_timeout,
     )
 
-    # Add Qdrant health check if client provided
-    if qdrant_client:
+    # Add Qdrant health check if configured
+    if health_config.qdrant_url:
+        client = qdrant_client or AsyncQdrantClient(url=health_config.qdrant_url)
         health_manager.add_qdrant_check(
-            qdrant_client, timeout_seconds=config.monitoring.health_check_timeout
+            client, timeout_seconds=config.monitoring.health_check_timeout
         )
         logger.info("Added Qdrant health check")
 
-    # Add Redis health check if cache is enabled
-    if config.cache.enable_dragonfly_cache:
-        redis_url = redis_url or config.cache.dragonfly_url
+    # Add Redis/Dragonfly health check if configured
+    if health_config.redis_url:
+        redis_url = redis_url or health_config.redis_url
         health_manager.add_redis_check(
             redis_url, timeout_seconds=config.monitoring.health_check_timeout
         )
-        logger.info("Added Redis/DragonflyDB health check")
+        logger.info("Added Redis health check")
 
     # Add external service health checks
     for service_name, service_url in config.monitoring.external_services.items():
@@ -224,8 +222,8 @@ def initialize_monitoring_system(
         try:
             metrics_registry.start_metrics_server()
             logger.info(
-                f"Prometheus metrics server started on port "
-                f"{metrics_config.export_port}"
+                "Prometheus metrics server started on port %d",
+                metrics_config.export_port,
             )
         except (OSError, PermissionError):
             logger.exception("Failed to start metrics server")
@@ -236,7 +234,7 @@ def initialize_monitoring_system(
 
 def setup_fastmcp_monitoring(
     mcp_app,
-    config: Config,
+    config: Settings,
     metrics_registry: MetricsRegistry,
     health_manager: HealthCheckManager,
 ) -> None:
@@ -247,8 +245,8 @@ def setup_fastmcp_monitoring(
         config: Application configuration
         metrics_registry: Initialized metrics registry
         health_manager: Initialized health check manager
-
     """
+
     if not config.monitoring.enabled or not metrics_registry or not health_manager:
         logger.info("Monitoring not enabled or not initialized")
         return
@@ -268,6 +266,7 @@ def setup_fastmcp_monitoring(
             )
             async def health_endpoint():
                 """Health check endpoint for FastMCP."""
+
                 if not health_manager:
                     return JSONResponse(
                         content={
@@ -302,6 +301,7 @@ def setup_fastmcp_monitoring(
             )
             async def liveness_endpoint():
                 """Kubernetes liveness probe endpoint."""
+
                 return JSONResponse(
                     content={"status": "alive", "timestamp": time.time()},
                     status_code=200,
@@ -368,8 +368,8 @@ async def run_periodic_health_checks(
     Args:
         health_manager: Health check manager
         interval_seconds: Interval between health checks
-
     """
+
     if not health_manager:
         return
 
@@ -393,13 +393,13 @@ async def update_system_metrics_periodically(
     Args:
         metrics_registry: Metrics registry
         interval_seconds: Interval between updates
-
     """
+
     if not metrics_registry or not metrics_registry.config.include_system_metrics:
         return
 
     logger.info(
-        f"Starting periodic system metrics updates (interval: {interval_seconds}s)"
+        "Starting periodic system metrics updates (interval: %ds)", interval_seconds
     )
 
     while True:
@@ -421,13 +421,13 @@ async def update_cache_metrics_periodically(
         metrics_registry: Metrics registry
         cache_manager: Cache manager instance to collect stats from
         interval_seconds: Interval between updates
-
     """
+
     if not metrics_registry or not cache_manager:
         return
 
     logger.info(
-        f"Starting periodic cache metrics updates (interval: {interval_seconds}s)"
+        "Starting periodic cache metrics updates (interval: %ds)", interval_seconds
     )
 
     while True:

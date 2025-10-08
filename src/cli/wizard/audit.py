@@ -172,10 +172,19 @@ class ConfigAuditor:
         total_sessions = len(
             [r for r in recent_activity if r.get("action") == "wizard_completion"]
         )
-        profiles_used = {r.get("profile") for r in recent_activity if r.get("profile")}
+        profiles_used = sorted(
+            [
+                profile
+                for record in recent_activity
+                if (profile := record.get("profile")) is not None and profile != ""
+            ]
+        )
 
         console.print(f"• Total wizard sessions: {total_sessions}")
-        console.print(f"• Profiles used: {', '.join(sorted(profiles_used))}")
+        if profiles_used:
+            console.print(f"• Profiles used: {', '.join(profiles_used)}")
+        else:
+            console.print("• Profiles used: None")
         last_activity = (
             recent_activity[-1].get("timestamp", "Unknown")
             if recent_activity

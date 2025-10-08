@@ -10,9 +10,25 @@ import logging
 from collections.abc import Awaitable, Callable
 from typing import Any, TypeVar
 
-from purgatory import AsyncCircuitBreakerFactory, AsyncRedisUnitOfWork
 
-from src.config import Config
+try:
+    from purgatory import (
+        AsyncCircuitBreakerFactory,
+        AsyncRedisUnitOfWork,
+    )
+    from purgatory.domain.model import ClosedState
+except ModuleNotFoundError:
+    AsyncCircuitBreakerFactory = None  # type: ignore[assignment]
+    AsyncRedisUnitOfWork = None  # type: ignore[assignment]
+    ClosedState = type(
+        "ClosedState",
+        (Exception,),
+        {
+            "__doc__": "Fallback ClosedState when purgatory is unavailable.",
+        },
+    )
+
+from src.config.loader import Settings
 
 
 logger = logging.getLogger(__name__)
@@ -27,7 +43,12 @@ class CircuitBreakerManager:
     for state persistence across multiple instances.
     """
 
-    def __init__(self, redis_url: str, config: Config | None = None):
+    def __init__(
+        self,
+        redis_url: str,
+        config: Settings | None = None,
+        unit_of_work: Any | None = None,
+    ):
         """Initialize circuit breaker manager.
 
         Args:
@@ -39,7 +60,11 @@ class CircuitBreakerManager:
         self.config = config
 
         # Create Redis unit of work for distributed state
-        self.redis_storage = AsyncRedisUnitOfWork(redis_url)
+        if AsyncRedisUnitOfWork is None:
+            raise RuntimeError(
+                "purgatory-circuitbreaker library is required but not installed"
+            )
+        self.redis_storage = unit_of_work or AsyncRedisUnitOfWork(redis_url)
 
         # Get circuit breaker settings from config or use defaults
         if config and hasattr(config, "performance"):
@@ -54,6 +79,10 @@ class CircuitBreakerManager:
             default_ttl = 60
 
         # Create circuit breaker factory with distributed storage
+        if AsyncCircuitBreakerFactory is None:
+            raise RuntimeError(
+                "purgatory-circuitbreaker library is required but not installed"
+            )
         self.factory = AsyncCircuitBreakerFactory(
             default_threshold=default_threshold,
             default_ttl=default_ttl,
@@ -156,33 +185,25 @@ class CircuitBreakerManager:
             Dictionary with circuit breaker status information
         """
 
-        if service_name not in self._breakers:
-            return {"status": "not_initialized"}
+        breaker = self._breakers.get(service_name)
+        if breaker is None:
+            return {"service_name": service_name, "state": "not_initialized"}
 
-        breaker = self._breakers[service_name]
-
-        # Get status information from the circuit breaker
         try:
-            return self._extract_breaker_status(service_name, breaker)
-        except (OSError, PermissionError, ValueError) as e:
+            context = breaker.context
+            return {
+                "service_name": service_name,
+                "state": context.state,
+                "failure_count": context.failure_count or 0,
+                "opened_at": context.opened_at,
+                "threshold": context.threshold,
+                "ttl": context.ttl,
+            }
+        except (OSError, PermissionError, ValueError) as exc:
             logger.warning(
-                "Failed to get status for circuit breaker %s: %s", service_name, e
+                "Failed to get status for circuit breaker %s: %s", service_name, exc
             )
-            return {"status": "error", "error": str(e)}
-
-    def _extract_breaker_status(
-        self, service_name: str, breaker: Any
-    ) -> dict[str, Any]:
-        """Extract status information from circuit breaker."""
-
-        return {
-            "service_name": service_name,
-            "state": str(breaker.state),
-            "failure_count": getattr(breaker, "failure_count", 0),
-            "last_failure_time": getattr(breaker, "last_failure_time", None),
-            "is_open": getattr(breaker, "is_open", False),
-            "is_half_open": getattr(breaker, "is_half_open", False),
-        }
+            return {"service_name": service_name, "state": "error", "error": str(exc)}
 
     async def reset_breaker(self, service_name: str) -> bool:
         """Reset a circuit breaker to closed state.
@@ -195,24 +216,16 @@ class CircuitBreakerManager:
         """
 
         try:
-            return await self._attempt_breaker_reset(service_name)
+            breaker = await self.get_breaker(service_name)
+            context = breaker.context
+            context.set_state(ClosedState())
+            context.recover_failure()
+            await self._flush_messages(breaker)
+            logger.info("Reset circuit breaker for service: %s", service_name)
+            return True
         except Exception:
-            logger.exception("Failed to reset circuit breaker for {service_name}")
+            logger.exception("Failed to reset circuit breaker for %s", service_name)
             return False
-
-    async def _attempt_breaker_reset(self, service_name: str) -> bool:
-        """Attempt to reset circuit breaker for service."""
-
-        breaker = await self.get_breaker(service_name)
-        if not hasattr(breaker, "reset"):
-            logger.warning(
-                "Circuit breaker for %s does not support reset", service_name
-            )
-            return False
-
-        await breaker.reset()
-        logger.info("Reset circuit breaker for service: %s", service_name)
-        return True
 
     async def get_all_statuses(self) -> dict[str, dict[str, Any]]:
         """Get status of all circuit breakers.
@@ -221,10 +234,15 @@ class CircuitBreakerManager:
             Dictionary mapping service names to their circuit breaker status
         """
 
-        statuses = {}
-        for service_name in self._breakers:
-            statuses[service_name] = await self.get_breaker_status(service_name)
-        return statuses
+        return {
+            service_name: await self.get_breaker_status(service_name)
+            for service_name in self._breakers
+        }
+
+    def list_services(self) -> list[str]:
+        """Return the list of service names with initialized breakers."""
+
+        return sorted(self._breakers.keys())
 
     async def close(self) -> None:
         """Clean up resources.
@@ -242,10 +260,19 @@ class CircuitBreakerManager:
         self._breakers.clear()
         logger.info("CircuitBreakerManager closed successfully")
 
+    async def _flush_messages(self, breaker: Any) -> None:
+        """Persist pending domain events emitted by the breaker context."""
+
+        while breaker.context.messages:
+            await breaker.messagebus.handle(
+                breaker.context.messages.pop(0),
+                breaker.uow,
+            )
+
 
 # Convenience function for creating circuit breaker manager
 def create_circuit_breaker_manager(
-    redis_url: str, config: Config | None = None
+    redis_url: str, config: Settings | None = None
 ) -> CircuitBreakerManager:
     """Create a circuit breaker manager instance.
 

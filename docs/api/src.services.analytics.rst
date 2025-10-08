@@ -27,3 +27,12 @@ Module contents
    :members:
    :show-inheritance:
    :undoc-members:
+
+Public package exports
+----------------------
+
+The package facade surfaces the most common analytics entry points for
+downstream consumers:
+
+* ``SearchAnalyticsDashboard`` - orchestrates search insights and reporting.
+* ``VectorVisualizationEngine`` - renders embeddings distribution visualisations.

@@ -4,34 +4,19 @@ Provide structured endpoints that build answers from vector search output using 
 configured language model stack.
 """
 
-# pylint: disable=duplicate-code
-
 import logging
 from typing import Any
 
 from fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
-from src.config import Config, get_config
+from src.config.loader import Settings, get_settings
+from src.infrastructure.client_manager import ClientManager
 from src.services.rag.generator import RAGGenerator
-from src.services.rag.models import RAGRequest
-from src.services.rag.utils import initialise_rag_generator
-from src.services.vector_db.service import VectorStoreService
+from src.services.rag.models import RAGRequest, RAGResult
 
 
 logger = logging.getLogger(__name__)
-
-
-async def _create_rag_generator(
-    config: Config,
-) -> tuple[RAGGenerator, VectorStoreService]:
-    """Initialise a RAG generator with an attached vector store."""
-
-    vector_store = VectorStoreService(config=config)
-    await vector_store.initialize()
-
-    rag_generator, _ = await initialise_rag_generator(config, vector_store)
-    return rag_generator, vector_store
 
 
 class RAGAnswerRequest(BaseModel):
@@ -84,7 +69,47 @@ class RAGMetricsResponse(BaseModel):
     )
 
 
-def register_tools(app: FastMCP) -> None:  # pylint: disable=too-many-statements
+def _ensure_rag_enabled(config: Settings) -> None:
+    """Validate that RAG is enabled in the active configuration."""
+
+    if not config.rag.enable_rag:
+        msg = "RAG is not enabled in the configuration"
+        raise RuntimeError(msg)
+
+
+def _build_rag_service_request(request: RAGAnswerRequest) -> RAGRequest:
+    """Translate the MCP request model to the service-layer request."""
+
+    return RAGRequest(
+        query=request.query,
+        top_k=request.top_k,
+        filters=request.filters,
+        max_tokens=request.max_tokens,
+        temperature=request.temperature,
+        include_sources=request.include_sources,
+    )
+
+
+def _build_rag_answer_response(result: RAGResult) -> RAGAnswerResponse:
+    """Convert a RAG generator result into the MCP response schema."""
+
+    sources = None
+    if result.sources:
+        sources = [source.model_dump() for source in result.sources]
+
+    metrics = result.metrics.model_dump() if result.metrics else None
+
+    return RAGAnswerResponse(
+        answer=result.answer,
+        confidence_score=result.confidence_score,
+        sources_used=len(result.sources),
+        generation_time_ms=result.generation_time_ms,
+        sources=sources,
+        metrics=metrics,
+    )
+
+
+def register_tools(app: FastMCP, client_manager: ClientManager) -> None:
     """Register RAG tools with FastMCP app."""
 
     @app.tool()
@@ -101,52 +126,22 @@ def register_tools(app: FastMCP) -> None:  # pylint: disable=too-many-statements
             RAGAnswerResponse: Generated answer with metadata and sources
         """
 
-        config = get_config()
+        config = get_settings()
 
-        # Check if RAG is enabled
-        if not config.rag.enable_rag:
-            msg = "RAG is not enabled in the configuration"
-            raise RuntimeError(msg)
+        _ensure_rag_enabled(config)
 
-        rag_generator = vector_store = None
         try:
-            rag_generator, vector_store = await _create_rag_generator(config)
+            rag_generator: RAGGenerator = await client_manager.get_rag_generator()
 
-            rag_request = RAGRequest(
-                query=request.query,
-                top_k=request.top_k,
-                filters=request.filters,
-                max_tokens=request.max_tokens,
-                temperature=request.temperature,
-                include_sources=request.include_sources,
-            )
-
+            rag_request = _build_rag_service_request(request)
             result = await rag_generator.generate_answer(rag_request)
 
-            sources = None
-            if result.sources:
-                sources = [source.model_dump() for source in result.sources]
-
-            metrics = result.metrics.model_dump() if result.metrics else None
-
-            return RAGAnswerResponse(
-                answer=result.answer,
-                confidence_score=result.confidence_score,
-                sources_used=len(result.sources),
-                generation_time_ms=result.generation_time_ms,
-                sources=sources,
-                metrics=metrics,
-            )
+            return _build_rag_answer_response(result)
 
         except Exception as e:  # pragma: no cover - runtime safety
             logger.exception("RAG answer generation failed")
             msg = "Failed to generate RAG answer"
             raise RuntimeError(msg) from e
-        finally:
-            if rag_generator and rag_generator.llm_client_available:
-                await rag_generator.cleanup()
-            if vector_store and vector_store.is_initialized():
-                await vector_store.cleanup()
 
     @app.tool()
     async def get_rag_metrics() -> RAGMetricsResponse:
@@ -161,15 +156,12 @@ def register_tools(app: FastMCP) -> None:  # pylint: disable=too-many-statements
         Raises:
             RuntimeError: If metrics retrieval fails
         """
-        config = get_config()
+        config = get_settings()
 
-        if not config.rag.enable_rag:
-            msg = "RAG is not enabled in the configuration"
-            raise RuntimeError(msg)
+        _ensure_rag_enabled(config)
 
-        rag_generator = vector_store = None
         try:
-            rag_generator, vector_store = await _create_rag_generator(config)
+            rag_generator: RAGGenerator = await client_manager.get_rag_generator()
             service_metrics = rag_generator.get_metrics()
             return RAGMetricsResponse(
                 generation_count=service_metrics.generation_count,
@@ -181,11 +173,6 @@ def register_tools(app: FastMCP) -> None:  # pylint: disable=too-many-statements
             logger.exception("Failed to get RAG metrics")
             msg = "Failed to get RAG metrics"
             raise RuntimeError(msg) from e
-        finally:
-            if rag_generator and rag_generator.llm_client_available:
-                await rag_generator.cleanup()
-            if vector_store and vector_store.is_initialized():
-                await vector_store.cleanup()
 
     @app.tool()
     async def test_rag_configuration() -> dict[str, Any]:
@@ -200,7 +187,7 @@ def register_tools(app: FastMCP) -> None:  # pylint: disable=too-many-statements
         Raises:
             RuntimeError: If configuration test fails
         """
-        config = get_config()
+        config = get_settings()
 
         results = {
             "rag_enabled": config.rag.enable_rag,
@@ -216,18 +203,12 @@ def register_tools(app: FastMCP) -> None:  # pylint: disable=too-many-statements
             results["error"] = "RAG is not enabled in configuration"
             return results
 
-        rag_generator = vector_store = None
         try:
-            rag_generator, vector_store = await _create_rag_generator(config)
+            await client_manager.get_rag_generator()
             results["connectivity_test"] = True
         except Exception as e:  # pragma: no cover - runtime safety
             results["error"] = str(e)
             logger.exception("RAG configuration test failed")
-        finally:
-            if rag_generator and rag_generator.llm_client_available:
-                await rag_generator.cleanup()
-            if vector_store and vector_store.is_initialized():
-                await vector_store.cleanup()
 
         return results
 
@@ -244,7 +225,7 @@ def register_tools(app: FastMCP) -> None:  # pylint: disable=too-many-statements
         Raises:
             RuntimeError: If cache clearing fails
         """
-        config = get_config()
+        config = get_settings()
 
         if not config.rag.enable_rag:
             msg = "RAG is not enabled in the configuration"

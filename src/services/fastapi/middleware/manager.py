@@ -1,86 +1,146 @@
-"""Simplified middleware manager for FastAPI with essential middleware only.
+"""
+Middleware manager.
 
-This module provides basic middleware management following KISS principles.
-Only includes essential middleware for V1 release.
+Order:
+1) Trusted host / CORS (configure in app factory if needed)
+2) Correlation ID (asgi-correlation-id)
+3) Compression (GZip / optional Brotli)
+4) Security headers
+5) Timeout + circuit breaker
+6) Rate limit (slowapi)
+7) Performance header
+8) OTel + Prometheus instrumentation via helpers
+
+This keeps the public surface tiny and library-focused.
 """
 
-import logging
+from __future__ import annotations
 
+from collections.abc import Callable, Iterable
+from dataclasses import dataclass, field
+from typing import Any
+
+
+try:  # Optional dependency
+    from asgi_correlation_id import CorrelationIdMiddleware  # type: ignore
+except ImportError:  # pragma: no cover - optional middleware
+    CorrelationIdMiddleware = None  # type: ignore[assignment]
 from starlette.applications import Starlette
-from starlette.middleware import Middleware
 
-from src.config import get_config
-
-from .performance import PerformanceMiddleware
-from .security import SecurityMiddleware
-from .timeout import TimeoutMiddleware
-
-
-logger = logging.getLogger(__name__)
+from .compression import BrotliCompressionMiddleware, CompressionMiddleware
+from .correlation import get_correlation_id
+from .performance import PerformanceMiddleware, setup_prometheus
+from .security import SecurityMiddleware, enable_global_rate_limit
+from .timeout import TimeoutConfig, TimeoutMiddleware
 
 
-class MiddlewareManager:
-    """Simple middleware manager for essential middleware only.
+@dataclass(slots=True)
+class MiddlewareSpec:
+    """Simple spec mirroring Starlette's add_middleware signature."""
 
-    Handles basic middleware configuration for V1 release.
+    cls: type
+    kwargs: dict[str, Any] = field(default_factory=dict)
+
+
+_CLASS_REGISTRY: dict[str, MiddlewareSpec] = {}
+
+if CorrelationIdMiddleware is not None:
+    _CLASS_REGISTRY["correlation"] = MiddlewareSpec(
+        CorrelationIdMiddleware, {"header_name": "X-Request-ID"}
+    )
+
+_CLASS_REGISTRY["compression"] = MiddlewareSpec(
+    CompressionMiddleware, {"minimum_size": 500}
+)
+
+if BrotliCompressionMiddleware is not CompressionMiddleware:
+    _CLASS_REGISTRY["brotli"] = MiddlewareSpec(
+        BrotliCompressionMiddleware, {"quality": 4}
+    )
+
+_CLASS_REGISTRY["security"] = MiddlewareSpec(SecurityMiddleware)
+_CLASS_REGISTRY["timeout"] = MiddlewareSpec(
+    TimeoutMiddleware, {"config": TimeoutConfig()}
+)
+_CLASS_REGISTRY["performance"] = MiddlewareSpec(PerformanceMiddleware)
+
+_FUNCTION_REGISTRY: dict[str, Callable[..., Any]] = {
+    "rate_limiting": enable_global_rate_limit,
+    "prometheus": setup_prometheus,
+}
+
+
+def _default_stack_names() -> tuple[str, ...]:
+    """Return the canonical middleware ordering for the defaults alias."""
+
+    names: list[str] = []
+    if "correlation" in _CLASS_REGISTRY:
+        names.append("correlation")
+
+    compression_key = "brotli" if "brotli" in _CLASS_REGISTRY else "compression"
+    names.append(compression_key)
+
+    names.extend(
+        name
+        for name in (
+            "security",
+            "timeout",
+            "rate_limiting",
+            "performance",
+            "prometheus",
+        )
+        if name in _CLASS_REGISTRY or name in _FUNCTION_REGISTRY
+    )
+    return tuple(names)
+
+
+def apply_named_stack(app: Starlette, middleware_names: Iterable[str]) -> list[str]:
+    """Apply middleware/components by registry name.
+
+    Args:
+        app: Target Starlette/FastAPI application.
+        middleware_names: Iterable of registry keys. The special name
+            ``"defaults"`` expands to the curated production sequence.
+
+    Returns:
+        List of successfully applied middleware identifiers.
     """
 
-    def __init__(self, config=None):
-        """Initialize middleware manager."""
-        self.config = config or get_config()
+    applied: list[str] = []
+    for name in middleware_names:
+        if name == "defaults":
+            applied.extend(apply_named_stack(app, _default_stack_names()))
+            continue
 
-    def get_middleware_stack(self) -> list[Middleware]:
-        """Get essential middleware stack in correct order.
+        spec = _CLASS_REGISTRY.get(name)
+        if spec:
+            app.add_middleware(spec.cls, **spec.kwargs)
+            applied.append(name)
+            continue
 
-        Simplified order:
-        1. Security (basic protection)
-        2. Timeout (request timeout)
-        3. Performance (basic monitoring)
-        """
-        middleware_stack = []
-
-        # 1. Security - Basic protection
-        if self.config.security.enable_rate_limiting:
-            middleware_stack.append(
-                Middleware(SecurityMiddleware, config=self.config.security)
-            )
-
-        # 2. Timeout - Request timeout
-        middleware_stack.append(
-            Middleware(TimeoutMiddleware, config=self.config.performance)
-        )
-
-        # 3. Performance - Basic monitoring
-        middleware_stack.append(
-            Middleware(PerformanceMiddleware, config=self.config.performance)
-        )
-
-        return middleware_stack
-
-    def apply_middleware(self, app: Starlette, middleware_names: list[str]) -> None:
-        """Apply specified middleware to FastAPI app."""
-        available_middleware = {
-            "security": Middleware(SecurityMiddleware, config=self.config.security),
-            "timeout": Middleware(TimeoutMiddleware, config=self.config.performance),
-            "performance": Middleware(
-                PerformanceMiddleware, config=self.config.performance
-            ),
-        }
-
-        for name in middleware_names:
-            if name in available_middleware:
-                middleware = available_middleware[name]
-                app.add_middleware(middleware.cls, **middleware.kwargs)
-                logger.info("Applied middleware: %s", name)
-            else:
-                logger.warning("Unknown middleware: %s", name)
+        func = _FUNCTION_REGISTRY.get(name)
+        if func:
+            func(app)
+            applied.append(name)
+    return applied
 
 
-def get_middleware_manager(config=None) -> MiddlewareManager:
-    """Get configured middleware manager instance."""
-    return MiddlewareManager(config or get_config())
+def apply_defaults(app: Starlette) -> None:
+    """Apply a sensible production stack with minimal knobs."""
+
+    apply_named_stack(app, _default_stack_names())
 
 
-def create_middleware_manager(config=None) -> MiddlewareManager:
-    """Alias for get_middleware_manager for backward compatibility."""
-    return get_middleware_manager(config)
+__all__ = [
+    "MiddlewareSpec",
+    "apply_defaults",
+    "apply_named_stack",
+    "get_correlation_id",
+    "PerformanceMiddleware",
+    "TimeoutMiddleware",
+    "SecurityMiddleware",
+    "CompressionMiddleware",
+]
+
+if "brotli" in _CLASS_REGISTRY:
+    __all__.append("BrotliCompressionMiddleware")

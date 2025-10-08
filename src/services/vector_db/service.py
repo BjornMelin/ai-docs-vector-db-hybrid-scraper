@@ -16,7 +16,7 @@ from langchain_core.documents import Document
 from langchain_qdrant import QdrantVectorStore, RetrievalMode
 from qdrant_client import AsyncQdrantClient, QdrantClient, models
 
-from src.config import get_config
+from src.config.loader import Settings
 from src.config.models import QueryProcessingConfig, ScoreNormalizationStrategy
 from src.services.base import BaseService
 from src.services.embeddings.base import EmbeddingProvider
@@ -44,24 +44,20 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
 
     def __init__(
         self,
-        config=None,
-        client_manager: ClientManager | None = None,
+        *,
+        config: Settings,
+        client_manager: ClientManager,
         embeddings_provider: EmbeddingProvider | None = None,
     ) -> None:
-        config = config or get_config()
-        if client_manager is None:
-            from src.infrastructure.client_manager import (  # pylint: disable=import-outside-toplevel
-                ClientManager as _ClientManager,
-            )
-
-            client_manager = _ClientManager()
-        if embeddings_provider is None:
-            model_name = getattr(config.fastembed, "model", "BAAI/bge-small-en-v1.5")
-            embeddings_provider = FastEmbedProvider(model_name=model_name)
-
         super().__init__(config)
         self._client_manager = client_manager
-        self._embeddings = embeddings_provider
+        self._embeddings = (
+            embeddings_provider
+            if embeddings_provider is not None
+            else FastEmbedProvider(
+                model_name=getattr(config.fastembed, "model", "BAAI/bge-small-en-v1.5")
+            )
+        )
         self._async_client: AsyncQdrantClient | None = None
         self._sync_client: QdrantClient | None = None
         self._vector_store: QdrantVectorStore | None = None
@@ -130,11 +126,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
 
         client = self._require_async_client()
         await client.delete_collection(name)
-
-    async def delete_collection(self, name: str) -> None:
-        """Backward-compatible alias for drop_collection."""
-
-        await self.drop_collection(name)
 
     async def list_collections(self) -> list[str]:
         """Return the identifiers for all collections."""

@@ -20,7 +20,7 @@ from src.services.monitoring.performance_monitor import RealTimePerformanceMonit
 
 
 if TYPE_CHECKING:
-    from src.config import Config
+    from src.config.loader import Settings
 
 
 @dataclass
@@ -49,12 +49,12 @@ class MonitoringManager:
         self._performance_monitor: Any | None = None
         self._health_check_task: asyncio.Task | None = None
         self._initialized = False
-        self._config: Config | None = None
+        self._config: Settings | None = None
 
     @inject
     async def initialize(
         self,
-        config: Config = Provide[ApplicationContainer.config],
+        config: Settings = Provide[ApplicationContainer.config],
     ) -> None:
         """Initialize monitoring manager using dependency injection.
 

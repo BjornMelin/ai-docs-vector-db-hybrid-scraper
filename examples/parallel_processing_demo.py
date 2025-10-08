@@ -21,7 +21,7 @@ import logging
 import time
 from typing import Any
 
-from src.config import load_config
+from src.config import load_settings
 from src.infrastructure.client_manager import ClientManager
 from src.infrastructure.container import DependencyContext
 
@@ -38,7 +38,7 @@ async def demonstrate_system_integration():
     logger.info("🚀 Starting Unified Parallel Processing System Demo")
 
     # Load configuration
-    config = load_config()
+    config = load_settings()
 
     # Test 1: DI Container Integration
     logger.info("\n🔧 Testing DI Container Integration")

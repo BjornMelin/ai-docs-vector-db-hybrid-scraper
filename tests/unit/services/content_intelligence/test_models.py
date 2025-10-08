@@ -50,6 +50,7 @@ class TestContentIntelligenceModels:
     def test_content_metadata_simple_creation(self):
         """Test ContentMetadata model can be created with basic fields."""
         metadata = ContentMetadata(
+            url="https://example.com/content-metadata-basic",
             title="Test Document",
             description="A test document",
             word_count=100,
@@ -63,7 +64,7 @@ class TestContentIntelligenceModels:
 
     def test_content_metadata_with_defaults(self):
         """Test ContentMetadata model with default values."""
-        metadata = ContentMetadata()
+        metadata = ContentMetadata(url="https://example.com/content-metadata-default")
 
         assert metadata.title is None
         assert metadata.description is None
@@ -86,7 +87,10 @@ class TestContentIntelligenceModels:
         """Test ContentMetadata with temporal fields."""
         now = datetime.now(tz=UTC)
         metadata = ContentMetadata(
-            published_date=now, last_modified=now, crawled_at=now
+            url="https://example.com/content-metadata-temporal",
+            published_date=now,
+            last_modified=now,
+            crawled_at=now,
         )
 
         assert metadata.published_date == now

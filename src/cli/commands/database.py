@@ -4,9 +4,11 @@ This module provides advanced database operations with Rich progress
 indicators, beautiful table displays, and interactive features.
 """
 
+# pylint: disable=duplicate-code
+
 import asyncio
 import json
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import click
 from click.shell_completion import CompletionItem
@@ -18,8 +20,11 @@ from rich.syntax import Syntax
 from rich.table import Table
 from rich.text import Text
 
-from src.infrastructure.client_manager import ClientManager
 from src.manage_vector_db import VectorDBManager
+
+
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    pass
 
 
 class CollectionCreationError(Exception):
@@ -43,11 +48,8 @@ def complete_collection_name(
         if not config:
             return []
 
-        # Create client manager and get collections
-        client_manager = ClientManager()
-        db_manager = VectorDBManager(client_manager)
-
-        # Get collection names (synchronously for completion)
+        # Initialize manager and retrieve collections
+        db_manager = VectorDBManager()
         collections = asyncio.run(db_manager.list_collections())
         asyncio.run(db_manager.cleanup())
 
@@ -96,16 +98,12 @@ def list_collections(ctx: click.Context, output_format: str):
     ) as progress:
         progress.add_task("Loading collections...", total=None)
 
-        try:
-            # Use the existing VectorDBManager pattern
-            client_manager = ClientManager()
-            db_manager = VectorDBManager(client_manager)
+        db_manager = VectorDBManager()
+        collections: list[dict[str, Any]] = []
 
-            # Use asyncio to run the async operation
+        try:
             collections_names = asyncio.run(db_manager.list_collections())
 
-            # Convert to the expected format for display
-            collections = []
             for name in collections_names:
                 info = asyncio.run(db_manager.get_collection_info(name))
                 if info:
@@ -121,11 +119,11 @@ def list_collections(ctx: click.Context, output_format: str):
                         }
                     )
 
-            asyncio.run(db_manager.cleanup())
-
         except (ValueError, RuntimeError, OSError) as e:
             rich_cli.show_error("Failed to list collections", str(e))
             raise click.Abort from e
+        finally:
+            asyncio.run(db_manager.cleanup())
 
     if output_format == "table":
         _display_collections_table(collections, rich_cli)
@@ -255,22 +253,18 @@ def create_collection(
             f"Creating collection '{collection_name}'...", total=None
         )
 
-        try:
-            client_manager = ClientManager()
-            db_manager = VectorDBManager(client_manager)
+        db_manager = VectorDBManager()
 
-            # Check if collection exists (if not force)
+        try:
             if not force:
                 existing_collections = asyncio.run(db_manager.list_collections())
                 if collection_name in existing_collections:
                     _abort_collection_exists(collection_name, rich_cli)
 
-            # Delete existing if force
             if force and collection_name in asyncio.run(db_manager.list_collections()):
                 progress.update(task, description="Deleting existing collection...")
                 asyncio.run(db_manager.delete_collection(collection_name))
 
-            # Create collection
             progress.update(
                 task, description=f"Creating collection with {dimension}D vectors..."
             )
@@ -280,14 +274,14 @@ def create_collection(
                 )
             )
 
-            asyncio.run(db_manager.cleanup())
-
             if not success:
                 _abort_collection_creation_failed()
 
         except (ValueError, RuntimeError, OSError) as e:
             rich_cli.show_error("Failed to create collection", str(e))
             raise click.Abort from e
+        finally:
+            asyncio.run(db_manager.cleanup())
 
     # Success message
     success_text = Text()
@@ -328,12 +322,10 @@ def delete_collection(ctx: click.Context, collection_name: str, yes: bool):
     ) as progress:
         progress.add_task(f"Deleting collection '{collection_name}'...", total=None)
 
-        try:
-            client_manager = ClientManager()
-            db_manager = VectorDBManager(client_manager)
+        db_manager = VectorDBManager()
 
+        try:
             success = asyncio.run(db_manager.delete_collection(collection_name))
-            asyncio.run(db_manager.cleanup())
 
             if not success:
                 _abort_collection_deletion_failed()
@@ -341,6 +333,8 @@ def delete_collection(ctx: click.Context, collection_name: str, yes: bool):
         except (ValueError, RuntimeError, OSError) as e:
             rich_cli.show_error("Failed to delete collection", str(e))
             raise click.Abort from e
+        finally:
+            asyncio.run(db_manager.cleanup())
 
     rich_cli.console.print(f"✅ Collection '{collection_name}' deleted successfully.")
 
@@ -360,15 +354,14 @@ def collection_info(ctx: click.Context, collection_name: str):
     ) as progress:
         progress.add_task("Loading collection info...", total=None)
 
+        db_manager = VectorDBManager()
+
         try:
-            client_manager = ClientManager()
-            db_manager = VectorDBManager(client_manager)
-
             info = asyncio.run(db_manager.get_collection_info(collection_name))
-            asyncio.run(db_manager.cleanup())
 
-            if not info:
+            if info is None:
                 _abort_collection_not_found(collection_name, rich_cli)
+                return
 
             # Convert to expected format
             info_dict = {
@@ -385,6 +378,8 @@ def collection_info(ctx: click.Context, collection_name: str):
         except (ValueError, RuntimeError, OSError) as e:
             rich_cli.show_error("Failed to get collection info", str(e))
             raise click.Abort from e
+        finally:
+            asyncio.run(db_manager.cleanup())
 
     # Display collection information
     info_table = Table(title=f"Collection: {collection_name}", show_header=True)
@@ -424,66 +419,10 @@ def search_collection(
 ):
     """Search a vector database collection."""
     rich_cli = ctx.obj["rich_cli"]
-
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        console=console,
-        transient=True,
-    ) as progress:
-        task = progress.add_task("Searching collection...", total=None)
-
-        try:
-            client_manager = ClientManager()
-            db_manager = VectorDBManager(client_manager)
-            embedding_manager = asyncio.run(db_manager.get_embedding_manager())
-
-            progress.update(task, description="Generating embeddings...")
-            # Generate query embedding
-            query_vector = asyncio.run(embedding_manager.generate_embedding(query))
-
-            progress.update(task, description="Searching collection...")
-            # Perform search
-            results = asyncio.run(
-                db_manager.search_documents(
-                    collection_name=collection_name,
-                    query_vector=query_vector,
-                    limit=limit,
-                    score_threshold=score_threshold or 0.0,
-                )
-            )
-
-            asyncio.run(db_manager.cleanup())
-
-        except (ValueError, RuntimeError, OSError) as e:
-            rich_cli.show_error("Search failed", str(e))
-            raise click.Abort from e
-
-    # Display search results
-    if not results:
-        rich_cli.console.print(f"[yellow]No results found for: '{query}'[/yellow]")
-        return
-
-    results_table = Table(title=f"Search Results: '{query}'", show_header=True)
-    results_table.add_column("Rank", style="dim", width=6, justify="right")
-    results_table.add_column("Score", style="green", width=8, justify="right")
-    results_table.add_column("Content", style="")
-
-    for i, result in enumerate(results, 1):
-        score = result.score
-        content = result.payload.get("content", "No content")[:100] + "..."
-
-        # Color code scores
-        if score >= 0.8:
-            score_style = "bold green"
-        elif score >= 0.6:
-            score_style = "yellow"
-        else:
-            score_style = "red"
-
-        results_table.add_row(str(i), Text(f"{score:.3f}", style=score_style), content)
-
-    rich_cli.console.print(results_table)
+    rich_cli.console.print(
+        "[yellow]Vector search via CLI is not yet implemented. "
+        "Use the API or management UI for query execution.[/yellow]"
+    )
 
 
 @database.command("stats")
@@ -501,10 +440,9 @@ def database_stats(ctx: click.Context):
     ) as progress:
         progress.add_task("Gathering database statistics...", total=None)
 
-        try:
-            client_manager = ClientManager()
-            db_manager = VectorDBManager(client_manager)
+        db_manager = VectorDBManager()
 
+        try:
             collections_names = asyncio.run(db_manager.list_collections())
 
             # Get info for each collection
@@ -526,14 +464,14 @@ def database_stats(ctx: click.Context):
                     )
                     total_vectors += info.vector_count
 
-            asyncio.run(db_manager.cleanup())
-
             # Calculate totals
             total_collections = len(collections)
 
         except (ValueError, RuntimeError, OSError) as e:
             rich_cli.show_error("Failed to get database stats", str(e))
             raise click.Abort from e
+        finally:
+            asyncio.run(db_manager.cleanup())
 
     # Database overview
     stats_table = Table(title="Database Statistics", show_header=True)

@@ -1,625 +1,216 @@
-"""Lightweight HTTP scraper for static content using httpx + BeautifulSoup.
+"""Lightweight scraping utilities for tier-0 retrieval."""
 
-This module implements Tier 0 of the 5-tier browser automation system,
-providing 5-10x performance improvement for static content by avoiding
-browser overhead for simple HTML pages.
-"""
+from __future__ import annotations
 
-import asyncio
 import logging
-import re
 import time
 from typing import Any
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin
 
 import httpx
-from bs4 import BeautifulSoup
 from pydantic import BaseModel, Field
-
-from src.config import Config
-from src.services.base import BaseService
 
 
 logger = logging.getLogger(__name__)
 
+try:
+    import trafilatura
+except ImportError as exc:  # pragma: no cover - optional dependency guard
+    raise ImportError("Install trafilatura to use LightweightScraper.") from exc
 
-class ContentAnalysis(BaseModel):
-    """Analysis of content to determine if lightweight scraping is viable."""
-
-    can_handle: bool = Field(
-        description="Whether content can be handled by lightweight scraper"
-    )
-    confidence: float = Field(ge=0.0, le=1.0, description="Confidence score (0-1)")
-    reasons: list[str] = Field(default_factory=list, description="Reasons for decision")
-    content_type: str | None = Field(default=None, description="Detected content type")
-    size_estimate: int | None = Field(default=None, description="Content size in bytes")
+try:
+    from selectolax.parser import HTMLParser
+except ImportError as exc:  # pragma: no cover - optional dependency guard
+    raise ImportError("Install selectolax to use LightweightScraper.") from exc
 
 
 class ScrapedContent(BaseModel):
-    """Structured content extracted by lightweight scraper."""
+    """Normalized content structure returned by the lightweight scraper."""
 
-    url: str = Field(description="Source URL")
-    title: str = Field(default="", description="Page title")
-    text: str = Field(description="Extracted text content")
-    headings: list[dict[str, Any]] = Field(
-        default_factory=list, description="Heading structure"
-    )
-    links: list[dict[str, str]] = Field(
-        default_factory=list, description="Extracted links"
-    )
-    metadata: dict[str, Any] = Field(
-        default_factory=dict, description="Additional metadata"
-    )
-    extraction_time_ms: float = Field(
-        description="Time taken for extraction in milliseconds"
-    )
-    tier: int = Field(default=0, description="Scraping tier used")
-    success: bool = Field(default=True, description="Whether extraction was successful")
+    url: str
+    title: str = ""
+    text: str
+    links: list[dict[str, str]] = Field(default_factory=list)
+    headings: list[dict[str, str]] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    extraction_time_ms: float = 0.0
+    tier: int = 0
+    success: bool = True
 
 
-class LightweightScraper(BaseService):
-    """High-performance HTTP scraper for static content.
+class ContentAnalysis(BaseModel):
+    """Result describing whether the lightweight tier can process a URL."""
 
-    Uses httpx for async HTTP requests and BeautifulSoup with lxml parser
-    for fast HTML processing. Designed for 5-10x performance improvement
-    over browser-based scraping for static documentation and simple pages.
-    """
+    can_handle: bool
+    size_estimate: int = 0
+    reasons: list[str] = Field(default_factory=list)
 
-    def __init__(self, config: Config):
-        """Initialize lightweight scraper.
 
-        Args:
-            config: Unified configuration instance
+class LightweightScraper:
+    """Tier-0 scraper leveraging httpx and selectolax."""
 
-        """
-        super().__init__(config)
-        self._client: httpx.AsyncClient | None = None
-        self._content_threshold = getattr(
-            config.browser_automation, "content_threshold", 100
+    def __init__(self, config: Any) -> None:
+        browser_config = getattr(config, "browser_use", None)
+        default_timeout = getattr(browser_config, "timeout", 15000)
+        timeout_seconds = (
+            default_timeout / 1000 if isinstance(default_timeout, (int, float)) else 15
         )
-        self._timeout = getattr(config.browser_automation, "lightweight_timeout", 10.0)
-        self._max_retries = getattr(config.browser_automation, "max_retries", 2)
-
-        # URL patterns for static content detection
-        self._static_patterns = [
-            r".*\.md$",
-            r".*\.txt$",
-            r".*\.json$",
-            r".*\.xml$",
-            r".*\.csv$",
-            r".*/raw/.*",  # GitHub raw files
-            r".*\.github\.io/.*",  # GitHub Pages
-            r".*readthedocs\.io/.*",  # ReadTheDocs
-            r".*gitbook\.io/.*",  # GitBook
-        ]
-
-        # Known simple site selectors
-        self._site_selectors = {
-            "docs.python.org": {"content": ".document", "title": "h1"},
-            "golang.org": {"content": "#page", "title": "h1"},
-            "developer.mozilla.org": {"content": "main", "title": "h1"},
-            "stackoverflow.com": {"content": ".post-text", "title": "h1"},
-            "github.com": {"content": ".markdown-body", "title": "h1"},
-        }
+        self._timeout = max(timeout_seconds, 1)
+        self._max_retries = getattr(browser_config, "max_retries", 3)
+        self._content_threshold = getattr(browser_config, "min_content_length", 20)
 
     async def initialize(self) -> None:
-        """Initialize the lightweight scraper."""
-        if self._client is None:
-            # Configure httpx client for optimal performance
-            limits = httpx.Limits(
-                max_keepalive_connections=20, max_connections=100, keepalive_expiry=30.0
-            )
-
-            timeout = httpx.Timeout(
-                connect=5.0, read=self._timeout, write=5.0, pool=2.0
-            )
-
-            self._client = httpx.AsyncClient(
-                limits=limits,
-                timeout=timeout,
-                headers={
-                    "User-Agent": (
-                        "Mozilla/5.0 (compatible; LightweightScraper/1.0; "
-                        "+https://github.com/ai-docs-vector-db)"
-                    ),
-                    "Accept": (
-                        "text/html,application/xhtml+xml,application/xml;q=0.9,"
-                        "text/plain;q=0.8,*/*;q=0.7"
-                    ),
-                    "Accept-Encoding": "gzip, deflate",
-                    "Accept-Language": "en-US,en;q=0.9",
-                    "Cache-Control": "no-cache",
-                    "Connection": "keep-alive",
-                },
-                http2=True,
-                follow_redirects=True,
-            )
-
-        logger.info("LightweightScraper initialized")
+        """Placeholder initialization to mirror richer scrapers."""
 
     async def cleanup(self) -> None:
-        """Cleanup resources."""
-        if self._client:
-            await self._client.aclose()
-            self._client = None
+        """Placeholder cleanup hook."""
 
     async def can_handle(self, url: str) -> ContentAnalysis:
-        """Determine if URL can be handled by lightweight scraper.
+        """Perform a cheap HEAD request to see if lightweight scraping applies."""
 
-        Uses HEAD request and pattern analysis to quickly assess
-        whether the content is suitable for lightweight scraping.
-
-        Args:
-            url: URL to analyze
-
-        Returns:
-            ContentAnalysis with decision and confidence score
-
-        """
-        start_time = time.time()
-        analysis = ContentAnalysis(can_handle=False, confidence=0.0)
-
+        reasons: list[str] = []
+        size_estimate = 0
         try:
-            # Pattern-based pre-filtering
-            url_confidence = self._analyze_url_patterns(url)
-            if url_confidence > 0.7:
-                analysis.can_handle = True
-                analysis.confidence = url_confidence
-                analysis.reasons.append(
-                    "URL pattern indicates static content "
-                    f"(confidence: {url_confidence:.2f})"
-                )
-                return analysis
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                response = await client.head(url, follow_redirects=True)
+                response.raise_for_status()
+        except httpx.HTTPError as exc:  # pragma: no cover - network failure
+            reasons.append(f"HEAD request failed ({exc})")
+            return ContentAnalysis(can_handle=False, reasons=reasons)
 
-            # HEAD request analysis for more detailed assessment
-            head_analysis = await self._analyze_head_request(url)
-            if head_analysis:
-                analysis.can_handle = head_analysis["can_handle"]
-                analysis.confidence = head_analysis["confidence"]
-                analysis.reasons.extend(head_analysis["reasons"])
-                analysis.content_type = head_analysis.get("content_type")
-                analysis.size_estimate = head_analysis.get("size_estimate")
-
-        except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
-            logger.warning("Error analyzing URL %s: %s", url, e)
-            analysis.reasons.append(f"Analysis error: {e!s}")
-
-        elapsed_ms = (time.time() - start_time) * 1000
-        logger.debug(
-            "Content analysis for %s completed in %.1fms: %s",
-            url,
-            elapsed_ms,
-            analysis.can_handle,
-        )
-
-        return analysis
-
-    def _analyze_url_patterns(self, url: str) -> float:
-        """Analyze URL patterns to estimate static content probability.
-
-        Args:
-            url: URL to analyze
-
-        Returns:
-            Confidence score (0.0 to 1.0)
-
-        """
-        parsed = urlparse(url)
-        path = parsed.path.lower()
-        domain = parsed.netloc.lower()
-
-        # Check static file extensions
-        for pattern in self._static_patterns:
-            if re.match(pattern, url, re.IGNORECASE):
-                return 0.9
-
-        # Check known documentation domains
-        doc_domains = [
-            "docs.python.org",
-            "golang.org/doc",
-            "developer.mozilla.org",
-            "readthedocs.io",
-            "gitbook.io",
-            "github.io",
-            "sphinx-doc.org",
-        ]
-
-        for doc_domain in doc_domains:
-            if doc_domain in domain:
-                return 0.8
-
-        # Check path patterns that indicate documentation
-        if any(
-            path.startswith(prefix)
-            for prefix in ["/docs/", "/doc/", "/documentation/", "/api/"]
-        ):
-            return 0.7
-
-        # Check for common static indicators
-        if any(
-            indicator in path
-            for indicator in [".html", ".htm", "/readme", "/changelog"]
-        ):
-            return 0.6
-
-        return 0.3  # Default low confidence
-
-    async def _analyze_head_request(self, url: str) -> dict[str, Any] | None:
-        """Perform HEAD request analysis for content assessment.
-
-        Args:
-            url: URL to analyze
-
-        Returns:
-            Dictionary with analysis results or None if failed
-
-        """
-        if not self._client:
-            await self.initialize()
-
-        try:
-            response = await self._client.head(url, timeout=5.0)
-            response.raise_for_status()
-
-            content_type = response.headers.get("content-type", "").lower()
-            content_length = response.headers.get("content-length")
-
-            analysis = {
-                "can_handle": False,
-                "confidence": 0.0,
-                "reasons": [],
-                "content_type": content_type,
-                "size_estimate": int(content_length) if content_length else None,
-            }
-
-            # Content type analysis
-            if "text/html" in content_type:
-                analysis["confidence"] += 0.4
-                analysis["reasons"].append("HTML content type detected")
-            elif "text/plain" in content_type:
-                analysis["confidence"] += 0.6
-                analysis["reasons"].append("Plain text content")
-            elif "application/json" in content_type:
-                analysis["confidence"] += 0.5
-                analysis["reasons"].append("JSON content")
-            elif "application/xml" in content_type or "text/xml" in content_type:
-                analysis["confidence"] += 0.5
-                analysis["reasons"].append("XML content")
-            else:
-                analysis["reasons"].append(f"Unknown content type: {content_type}")
-                return analysis
-
-            # Size analysis
-            if content_length:
-                size = int(content_length)
-                if size < 100_000:  # 100KB
-                    analysis["confidence"] += 0.3
-                    analysis["reasons"].append(f"Small content size: {size} bytes")
-                elif size < 1_000_000:  # 1MB
-                    analysis["confidence"] += 0.1
-                    analysis["reasons"].append(f"Medium content size: {size} bytes")
-                else:
-                    analysis["confidence"] -= 0.2
-                    analysis["reasons"].append(f"Large content size: {size} bytes")
-
-            # Server header analysis
-            server = response.headers.get("server", "").lower()
-            if "nginx" in server or "apache" in server:
-                analysis["confidence"] += 0.1
-                analysis["reasons"].append(f"Static server detected: {server}")
-
-            # Check for SPA indicators
-            if any(
-                header in response.headers for header in ["x-powered-by", "x-framework"]
-            ):
-                analysis["confidence"] -= 0.3
-                analysis["reasons"].append("Framework headers suggest dynamic content")
-
-            analysis["can_handle"] = analysis["confidence"] > 0.5
-
-        except (ValueError, TypeError, UnicodeDecodeError) as e:
-            logger.debug("HEAD request failed for %s: %s", url, e)
-            return None
-
+        content_type = response.headers.get("content-type", "").lower()
+        if "text/html" in content_type:
+            reasons.append("HTML content type detected")
         else:
-            return analysis
+            reasons.append(f"Unsupported content type: {content_type or 'unknown'}")
 
-    async def scrape(self, url: str) -> ScrapedContent | None:
-        """Scrape content using lightweight HTTP + BeautifulSoup approach.
+        content_length = response.headers.get("content-length")
+        if content_length and content_length.isdigit():
+            size_estimate = int(content_length)
+            if size_estimate > 1_000_000:
+                reasons.append("Large content size may require heavier automation")
+        else:
+            reasons.append("Content length unavailable; assuming lightweight tier")
 
-        Args:
-            url: URL to scrape
-
-        Returns:
-            ScrapedContent if successful, None if content should escalate to higher tier
-
-        """
-        start_time = time.time()
-
-        if not self._client:
-            await self.initialize()
-
-        try:
-            # Attempt lightweight scraping
-            response = await self._client.get(url)
-            response.raise_for_status()
-
-            # Parse content with BeautifulSoup
-            content = self._extract_content(response.text, url)
-
-            # Validate content quality
-            if not self._is_sufficient_content(content):
-                logger.debug(
-                    "Insufficient content quality for %s, escalating to higher tier",
-                    url,
-                )
-                return None
-
-            extraction_time = (time.time() - start_time) * 1000
-
-            return ScrapedContent(
-                url=url,
-                title=content["title"],
-                text=content["text"],
-                headings=content["headings"],
-                links=content["links"],
-                metadata=content["metadata"],
-                extraction_time_ms=extraction_time,
-                tier=0,
-                success=True,
-            )
-
-        except httpx.TimeoutException:
-            logger.debug("Timeout for %s, may need browser automation", url)
-            return None
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code in [403, 429, 503]:
-                logger.debug("Anti-bot protection detected for %s, escalating", url)
-                return None
-            raise
-        except (httpx.HTTPError, ConnectionError) as e:
-            logger.warning("Error scraping %s: %s", url, e)
-            return None
-
-    def _extract_content(self, html: str, url: str) -> dict[str, Any]:
-        """Extract structured content from HTML.
-
-        Args:
-            html: Raw HTML content
-            url: Source URL for context
-
-        Returns:
-            Dictionary with extracted content
-
-        """
-        # Use lxml parser for maximum performance
-        soup = BeautifulSoup(html, "lxml")
-
-        # Get domain for site-specific extraction
-        domain = urlparse(url).netloc.lower()
-
-        # Extract title
-        title = ""
-        if soup.title:
-            title = soup.title.string.strip() if soup.title.string else ""
-
-        # Try site-specific selectors first
-        main_content = None
-        if domain in self._site_selectors:
-            selector = self._site_selectors[domain]["content"]
-            main_content = soup.select_one(selector)
-
-        # Fallback to intelligent content detection
-        if not main_content:
-            main_content = self._find_main_content(soup)
-
-        # Extract structured data
-        headings = self._extract_headings(main_content)
-        links = self._extract_links(main_content, url)
-        text = self._extract_clean_text(main_content)
-
-        # Extract metadata
-        metadata = self._extract_metadata(soup)
-
-        return {
-            "title": title,
-            "text": text,
-            "headings": headings,
-            "links": links,
-            "metadata": metadata,
-        }
-
-    def _find_main_content(self, soup: BeautifulSoup) -> BeautifulSoup:
-        """Find main content area using content heuristics.
-
-        Args:
-            soup: BeautifulSoup object
-
-        Returns:
-            BeautifulSoup object with main content
-
-        """
-        # Try common content selectors in order of specificity
-        selectors = [
-            "main",
-            '[role="main"]',
-            "article",
-            ".content",
-            ".main-content",
-            ".documentation",
-            ".docs-content",
-            ".markdown-body",
-            "#content",
-            ".post-content",
-            ".entry-content",
-        ]
-
-        for selector in selectors:
-            content = soup.select_one(selector)
-            if content:
-                return content
-
-        # Fallback: remove navigation/footer and return body
-        unwanted = soup.find_all(
-            ["nav", "header", "footer", "aside", "script", "style"]
+        can_handle = "text/html" in content_type and size_estimate <= 1_000_000
+        return ContentAnalysis(
+            can_handle=can_handle,
+            size_estimate=size_estimate,
+            reasons=reasons,
         )
-        for element in unwanted:
-            element.decompose()
 
-        return soup.body or soup
+    async def scrape(
+        self, url: str, *, timeout_ms: int = 10_000
+    ) -> ScrapedContent | None:
+        """Fetch and extract content from static pages."""
 
-    def _extract_headings(self, content: BeautifulSoup) -> list[dict[str, Any]]:
-        """Extract heading structure from content.
+        start = time.perf_counter()
+        try:
+            async with httpx.AsyncClient(
+                timeout=min(timeout_ms / 1000, self._timeout)
+            ) as client:
+                response = await client.get(url, follow_redirects=True)
+        except httpx.TimeoutException:
+            logger.debug("Timeout fetching %s", url)
+            return None
+        except httpx.HTTPError:  # pragma: no cover - network failure
+            logger.debug("HTTP error fetching %s", url, exc_info=True)
+            return None
 
-        Args:
-            content: BeautifulSoup content object
-
-        Returns:
-            List of heading dictionaries
-
-        """
-        headings = []
-        for heading in content.find_all(["h1", "h2", "h3", "h4", "h5", "h6"]):
-            level = int(heading.name[1])
-            text = heading.get_text(strip=True)
-            if text:  # Only include non-empty headings
-                headings.append(
-                    {
-                        "level": level,
-                        "text": text,
-                        "id": heading.get("id"),
-                        "tag": heading.name,
-                    }
-                )
-        return headings
-
-    def _extract_links(
-        self, content: BeautifulSoup, base_url: str
-    ) -> list[dict[str, str]]:
-        """Extract and categorize links from content.
-
-        Args:
-            content: BeautifulSoup content object
-            base_url: Base URL for resolving relative links
-
-        Returns:
-            List of link dictionaries
-
-        """
-        links = []
-        for link in content.find_all("a", href=True):
-            href = link["href"].strip()
-            text = link.get_text(strip=True)
-
-            if not href or href.startswith("#"):
-                continue  # Skip empty links and anchors
-
-            # Resolve relative URLs
-            if not href.startswith(("http://", "https://", "mailto:")):
-                href = urljoin(base_url, href)
-
-            # Categorize link type
-            link_type = "external"
-            if href.startswith("mailto:"):
-                link_type = "email"
-            elif urlparse(href).netloc == urlparse(base_url).netloc:
-                link_type = "internal"
-
-            links.append(
-                {
-                    "url": href,
-                    "text": text,
-                    "type": link_type,
-                    "title": link.get("title", ""),
-                }
+        status_code = response.status_code
+        if status_code >= 500:
+            logger.warning(
+                "Received HTTP %s while lightweight scraping %s; "
+                "escalating to higher tier",
+                status_code,
+                url,
             )
+            return None
+        if status_code >= 400:
+            logger.info(
+                "Received HTTP %s while lightweight scraping %s; "
+                "escalating to higher tier",
+                status_code,
+                url,
+            )
+            return None
 
+        html = response.text
+
+        text = self._extract_text(html, url)
+        if len(text.strip()) < self._content_threshold:
+            return None
+
+        title = self._extract_title(html)
+        links = self._extract_links(url, html)
+        headings = self._extract_headings(html)
+        elapsed = (time.perf_counter() - start) * 1000
+
+        return ScrapedContent(
+            success=True,
+            url=str(response.url),
+            title=title,
+            text=text,
+            links=links,
+            headings=headings,
+            metadata={"links": links, "status": response.status_code},
+            extraction_time_ms=elapsed,
+        )
+
+    @staticmethod
+    def _extract_title(html: str) -> str:
+        parser = HTMLParser(html)
+        node = parser.css_first("title")
+        return node.text(strip=True) if node else ""
+
+    @staticmethod
+    def _extract_links(base_url: str, html: str) -> list[dict[str, str]]:
+        parser = HTMLParser(html)
+        links: list[dict[str, str]] = []
+        for anchor in parser.css("a"):
+            href = anchor.attributes.get("href")
+            if not href:
+                continue
+            href = href.strip()
+            if href.startswith("#") or href.startswith("javascript:"):
+                continue
+            abs_url = urljoin(base_url, href)
+            text = (anchor.text() or "").strip()
+            links.append({"url": abs_url, "text": text})
         return links
 
-    def _extract_clean_text(self, content: BeautifulSoup) -> str:
-        """Extract clean text content.
+    @staticmethod
+    def _extract_headings(html: str) -> list[dict[str, str]]:
+        parser = HTMLParser(html)
+        headings: list[dict[str, str]] = []
+        for level in ("h1", "h2", "h3"):
+            for heading in parser.css(level):
+                text = heading.text(deep=True).strip()
+                if text:
+                    headings.append({"level": level, "text": text})
+        return headings
 
-        Args:
-            content: BeautifulSoup content object
+    def _extract_text(self, html: str, url: str) -> str:
+        """Extract readable text with a fallback when trafilatura fails."""
 
-        Returns:
-            Cleaned text string
-
-        """
-        # Remove script and style elements
-        for script in content(["script", "style", "noscript"]):
-            script.decompose()
-
-        # Get text with space separation
-        text = content.get_text(separator=" ", strip=True)
-
-        # Clean and normalize whitespace
-        text = re.sub(r"\s+", " ", text)
-        text = re.sub(
-            r"[\u00a0\u2000-\u200f\u2028-\u202f]", " ", text
-        )  # Unicode spaces
-
-        return text.strip()
-
-    def _extract_metadata(self, soup: BeautifulSoup) -> dict[str, Any]:
-        """Extract metadata from page.
-
-        Args:
-            soup: BeautifulSoup object
-
-        Returns:
-            Dictionary with metadata
-
-        """
-        metadata = {}
-
-        # Meta tags
-        for meta in soup.find_all("meta"):
-            name = meta.get("name") or meta.get("property")
-            content = meta.get("content")
-            if name and content:
-                metadata[name] = content
-
-        # Language
-        html_tag = soup.find("html")
-        if html_tag and html_tag.get("lang"):
-            metadata["language"] = html_tag["lang"]
-
-        return metadata
-
-    def _is_sufficient_content(self, content: dict[str, Any]) -> bool:
-        """Check if extracted content meets quality thresholds.
-
-        Args:
-            content: Extracted content dictionary
-
-        Returns:
-            True if content is sufficient, False to escalate
-
-        """
-        text_length = len(content["text"])
-
-        # Minimum content length check
-        if text_length < self._content_threshold:
-            logger.debug(
-                "Content too short: %d < %d", text_length, self._content_threshold
+        try:
+            text = trafilatura.extract(html, include_comments=False) or ""
+        except Exception as exc:  # pragma: no cover - library quirks
+            logger.warning(
+                "Trafilatura extraction failed for %s: %s", url, exc, exc_info=True
             )
-            return False
+            return self._fallback_text(html)
 
-        # Check for meaningful structure
-        if not content["headings"] and text_length < 500:
-            logger.debug("No headings and short content, may need browser rendering")
-            return False
+        if text.strip():
+            return text
 
-        # Check for JavaScript-heavy indicators
-        text = content["text"].lower()
-        js_indicators = [
-            "please enable javascript",
-            "loading...",
-            "javascript required",
-        ]
-        if any(indicator in text for indicator in js_indicators):
-            logger.debug("JavaScript requirement detected in content")
-            return False
+        logger.debug("Trafilatura returned empty text for %s; using fallback", url)
+        return self._fallback_text(html)
 
-        return True
+    @staticmethod
+    def _fallback_text(html: str) -> str:
+        parser = HTMLParser(html)
+        body = parser.body
+        if body is None:
+            return ""
+        return body.text(separator=" ", strip=True)

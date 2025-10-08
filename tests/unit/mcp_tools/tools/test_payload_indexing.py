@@ -99,6 +99,8 @@ def mock_context():
 
 @pytest.mark.asyncio
 async def test_tool_registration(mock_client_manager):
+    """Verify the payload indexing tools register correctly."""
+
     mock_mcp = MagicMock()
     registered = {}
 
@@ -122,6 +124,8 @@ async def test_tool_registration(mock_client_manager):
 async def test_create_payload_indexes(
     mock_client_manager, mock_vector_service, mock_context
 ):
+    """Ensure create_payload_indexes provisions indexes and returns metadata."""
+
     mock_mcp = MagicMock()
     registered = {}
     mock_mcp.tool.return_value = lambda func: registered.setdefault(func.__name__, func)
@@ -143,12 +147,15 @@ async def test_create_payload_indexes(
         "crawl_timestamp",
     ]
     assert response.total_points == 1000
+    assert "_total_points" not in response.model_dump()
 
 
 @pytest.mark.asyncio
 async def test_create_payload_indexes_missing_collection(
     mock_client_manager, mock_vector_service, mock_context
 ):
+    """Raise ValueError when the requested collection cannot be found."""
+
     mock_vector_service.list_collections.return_value = []
 
     mock_mcp = MagicMock()
@@ -166,6 +173,8 @@ async def test_create_payload_indexes_missing_collection(
 
 @pytest.mark.asyncio
 async def test_list_payload_indexes(mock_client_manager, mock_context):
+    """Return summary metadata for existing payload indexes."""
+
     mock_mcp = MagicMock()
     registered = {}
     mock_mcp.tool.return_value = lambda func: registered.setdefault(func.__name__, func)
@@ -179,12 +188,15 @@ async def test_list_payload_indexes(mock_client_manager, mock_context):
     assert response.indexes_created == 5
     assert response.indexed_fields_count == 5
     assert response.total_points == 1000
+    assert "_total_points" not in response.model_dump()
 
 
 @pytest.mark.asyncio
 async def test_reindex_collection(
     mock_client_manager, mock_vector_service, mock_context
 ):
+    """Drop and recreate indexes while reporting post-state summary."""
+
     mock_mcp = MagicMock()
     registered = {}
     mock_mcp.tool.return_value = lambda func: registered.setdefault(func.__name__, func)
@@ -199,10 +211,13 @@ async def test_reindex_collection(
     mock_vector_service.ensure_payload_indexes.assert_awaited()
     assert response.reindexed_count == 5
     assert response.details["indexes_after"] == 5
+    assert "_total_points" not in response.details
 
 
 @pytest.mark.asyncio
 async def test_benchmark_filtered_search(mock_client_manager, mock_context):
+    """Benchmark filtered search and return performance metrics."""
+
     mock_mcp = MagicMock()
     registered = {}
     mock_mcp.tool.return_value = lambda func: registered.setdefault(func.__name__, func)
@@ -218,6 +233,7 @@ async def test_benchmark_filtered_search(mock_client_manager, mock_context):
 
     mock_client_manager.get_vector_store_service.assert_awaited()
     assert response.results_found == 2
+    assert "_total_points" not in response.model_dump()
     assert response.performance_estimate == "10-100x faster than unindexed"
     assert response.total_points == 5000
     assert response.indexed_fields == [

@@ -1,5 +1,7 @@
 """Tests for MCP configuration management tools."""
 
+# pylint: disable=duplicate-code
+
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -16,17 +18,16 @@ class DummyConfig:
 
     def __init__(self) -> None:
         self.embedding_provider = SimpleNamespace(name="OPENAI")
-        self.openai_api_key = None
         self.openai = SimpleNamespace(api_key=None)
-        self.firecrawl_api_key = None
+        self.firecrawl = SimpleNamespace(api_key=None)
         self.crawl_provider = SimpleNamespace(name="FIRECRAWL")
         self.qdrant = SimpleNamespace(url="", enable_grouping=True)
         self.misc_setting = "value"
 
     def model_dump(self) -> dict[str, Any]:
         return {
-            "openai_api_key": "secret-openai",
-            "qdrant_api_key": "secret-qdrant",
+            "openai": {"api_key": "secret-openai"},
+            "qdrant": {"api_key": "secret-qdrant"},
             "misc_setting": self.misc_setting,
         }
 
@@ -56,7 +57,7 @@ def dummy_config():
 
 @pytest.fixture
 def patched_get_config(monkeypatch: pytest.MonkeyPatch, dummy_config: DummyConfig):
-    """Patch ``get_config`` to return the dummy configuration."""
+    """Patch ``get_settings`` to return the dummy configuration."""
 
     monkeypatch.setattr(
         configuration_module, "load_unified_config", lambda: dummy_config
@@ -85,13 +86,13 @@ class TestConfigurationTools:
         """Global configuration export should mask sensitive keys."""
 
         configuration_module.register_tools(mock_mcp, MagicMock())
-        get_config_tool = mock_mcp._registered["get_config"]
+        get_config_tool = mock_mcp._registered["get_settings"]
 
         result = await get_config_tool(ctx=None)
 
         config_payload = result["config"]
-        assert config_payload["openai_api_key"] == "<redacted>"
-        assert config_payload["qdrant_api_key"] == "<redacted>"
+        assert config_payload["openai"]["api_key"] == "<redacted>"
+        assert config_payload["qdrant"]["api_key"] == "<redacted>"
         assert config_payload["misc_setting"] == "value"
 
     @pytest.mark.asyncio
@@ -104,7 +105,7 @@ class TestConfigurationTools:
         """Requesting an explicit key should return sanitized data."""
 
         configuration_module.register_tools(mock_mcp, MagicMock())
-        get_config_tool = mock_mcp._registered["get_config"]
+        get_config_tool = mock_mcp._registered["get_settings"]
 
         response = await get_config_tool(key="misc_setting", ctx=None)
 
@@ -140,4 +141,4 @@ class TestConfigurationTools:
         """Registering configuration tools should expose two MCP endpoints."""
 
         configuration_module.register_tools(mock_mcp, MagicMock())
-        assert set(mock_mcp._registered.keys()) == {"get_config", "validate_config"}
+        assert set(mock_mcp._registered.keys()) == {"get_settings", "validate_config"}

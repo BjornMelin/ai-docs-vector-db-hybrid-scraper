@@ -97,7 +97,7 @@ class MinimalEmbeddingTestUtils:
 
         # Check for valid numbers
         if not all(
-            isinstance(x, int | float) and not math.isnan(x) and not math.isinf(x)
+            isinstance(x, (int, float)) and not math.isnan(x) and not math.isinf(x)
             for x in embedding
         ):
             errors.append("Contains invalid numbers (NaN or Inf)")
@@ -221,7 +221,7 @@ class MinimalVectorDatabaseTestUtils:
             results = []
             for i in range(min(limit, 5)):  # Return up to 5 results
                 result = MockSearchResult(
-                    id=f"result_{i}",
+                    search_id=f"result_{i}",
                     score=0.9 - (i * 0.1),  # Decreasing scores
                     payload={"content": f"Mock result {i}", "category": "test"},
                 )

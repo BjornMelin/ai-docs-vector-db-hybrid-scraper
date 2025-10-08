@@ -1,14 +1,16 @@
 ---
 title: Documentation Metadata
-status: draft
+audience: developers
+status: active
 owner: documentation
-last_reviewed: 2025-03-13
+last_reviewed: 2025-06-30
 ---
 
 ## Documentation Metadata Guidelines
 
-All Markdown files should include YAML front matter so that we can track ownership, intended
-audience, and review cadence. Use the fields below unless a document has specific needs.
+Every Markdown page should include YAML front matter so we can track ownership,
+audience, and review cadence. Use the fields below unless a page has specific
+requirements:
 
 ```yaml
 ---
@@ -22,20 +24,24 @@ last_reviewed: <YYYY-MM-DD>
 
 ## Field Reference
 
-- **title** – Human-friendly page title; used by MkDocs if set.
-- **audience** – Primary readership, one of `users`, `developers`, `operators`, or `general` for
-  cross-audience material.
-- **status** – Lifecycle indicator. Use `draft` while a page is under revision, `active` for
-  published content, and `deprecated` when the page is kept for historical reference only.
-- **owner** – Team or role responsible for keeping the page current.
-- **last_reviewed** – Date of the most recent content review; update when making significant changes.
+- **title** – Human-friendly page title; MkDocs will reuse it for navigation when set.
+- **audience** – Primary readership (`users`, `developers`, `operators`, or
+  `general`). Note other audiences in the introduction if needed.
+- **status** – Lifecycle indicator (`draft`, `active`, or `deprecated`). Deprecated
+  pages should reference their replacements.
+- **owner** – Team or role responsible for keeping the content current.
+- **last_reviewed** – Date of the most recent content review. Update it when
+  shipping meaningful changes or as part of release checklists.
 
 ## Tips
 
-- Place the front matter at the top of the file, followed by a blank line and the first heading.
-- Archived content should set `status: deprecated` and include a banner pointing readers to the
-  canonical replacement.
-- When a page serves multiple audiences, note the primary audience in `audience` and reference other
-  audiences in the introduction.
-- Update `last_reviewed` as part of routine maintenance or release checklists so stale pages are easy
-  to spot.
+- Place the front matter at the top of the file, followed by a blank line and the
+  first heading.
+- Archived content should set `status: deprecated` and include a banner pointing to
+  the canonical replacement.
+- Keep review dates fresh to make stale pages easy to identify during audits.
+- Templates that require different metadata (e.g., ADRs) may define their own
+  schema; make sure their guidance is captured alongside the template.
+
+For reusable skeletons and additional examples, see
+`docs/developers/templates/document-metadata.md`.

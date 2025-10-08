@@ -82,6 +82,7 @@ class BreakingPointAnalyzer:
         sorted_points = sorted(self.performance_points, key=lambda p: p.users)
 
         breaking_point_users = None
+        breaking_point_rps = None
         degradation_start_users = None
         max_stable_users = None
 
@@ -313,9 +314,7 @@ class TestBreakingPoints:
 
                 # Stop if we've clearly hit the breaking point
                 if error_rate > 25 and avg_response_time > 5000:
-                    logger.warning(
-                        "Breaking point reached at step %s", i + 1
-                    )  # TODO: Convert f-string to logging format
+                    logger.warning("Breaking point reached at step %s", i + 1)
                     break
 
             except Exception:
@@ -356,9 +355,7 @@ class TestBreakingPoints:
         logger.info(
             "Breaking point identified: %s users", breaking_point.breaking_point_users
         )
-        logger.info(
-            "Maximum stable load: %s users", breaking_point.max_stable_users
-        )  # TODO: Convert f-string to logging format
+        logger.info("Maximum stable load: %s users", breaking_point.max_stable_users)
         logger.info("Graceful degradation")
 
     @pytest.mark.stress
@@ -385,6 +382,8 @@ class TestBreakingPoints:
                 self.users_history.append(current_users)
 
                 # Detect spike (rapid increase in users)
+                recent_max = 0
+                recent_min = 0
                 if len(self.users_history) > 5:
                     recent_max = max(self.users_history[-5:])
                     recent_min = (
@@ -539,9 +538,7 @@ class TestBreakingPoints:
 
         assert spike_success_rate > 0.3, "System handled too few spikes"
 
-        logger.info(
-            "Maximum handled spike: %s users", max_handled_spike
-        )  # TODO: Convert f-string to logging format
+        logger.info("Maximum handled spike: %s users", max_handled_spike)
         logger.info("Spike success rate")
 
     @pytest.mark.stress

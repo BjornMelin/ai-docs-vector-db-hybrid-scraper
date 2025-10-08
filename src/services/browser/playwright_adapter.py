@@ -7,14 +7,16 @@ import builtins
 import json
 import logging
 import time
+import warnings
 from contextlib import suppress
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
+from urllib.parse import urlparse
 
 import httpx
 from pydantic import ValidationError
 
-from src.config import (
+from src.config.models import (
     PlaywrightCaptchaSettings,
     PlaywrightConfig,
     PlaywrightTierConfig,
@@ -23,6 +25,19 @@ from src.services.base import BaseService
 from src.services.errors import CrawlServiceError
 
 from .action_schemas import validate_actions
+from .anti_detection import (
+    BrowserStealthConfig,
+    EnhancedAntiDetection,
+    ViewportProfile,
+)
+
+
+warnings.filterwarnings(
+    "ignore", category=DeprecationWarning, module="fake_http_header"
+)
+warnings.filterwarnings(
+    "ignore", category=DeprecationWarning, module="importlib.resources._legacy"
+)
 
 
 logger = logging.getLogger(__name__)
@@ -54,21 +69,22 @@ except ImportError:  # pragma: no cover - executed when dependency missing
     undetected_playwright = None
     REBROWSER_AVAILABLE = False
 
-try:  # pragma: no cover - import guard
-    import warnings
-
-    warnings.filterwarnings(
-        "ignore", category=DeprecationWarning, module="fake_http_header"
+try:  # pragma: no cover - prefer maintained stealth implementation
+    from tf_playwright_stealth import (  # type: ignore[reportMissingImports]
+        stealth_async as _stealth_async,
     )
-    warnings.filterwarnings(
-        "ignore", category=DeprecationWarning, module="importlib.resources._legacy"
-    )
-    from playwright_stealth import stealth_async
 
-    STEALTH_AVAILABLE = True
-except ImportError:  # pragma: no cover - executed when dependency missing
-    stealth_async = None
-    STEALTH_AVAILABLE = False
+    STEALTH_PROVIDER = "tf_playwright_stealth"
+except ImportError:  # pragma: no cover - fallback for compatibility
+    try:
+        from playwright_stealth import stealth_async as _stealth_async
+
+        STEALTH_PROVIDER = "playwright_stealth"
+    except ImportError:  # pragma: no cover - executed when dependency missing
+        _stealth_async = None
+        STEALTH_PROVIDER = None
+
+STEALTH_AVAILABLE = _stealth_async is not None
 
 
 @dataclass
@@ -156,13 +172,15 @@ class PlaywrightAdapter(BaseService):
 
         Args:
             config: Playwright configuration values.
-            enable_stealth: Optional override for applying tf_playwright_stealth.
+            enable_stealth: Optional override for enabling stealth at runtime.
         """
         super().__init__(None)
         self.config = config
         self.enable_stealth = (
             config.enable_stealth if enable_stealth is None else enable_stealth
         )
+        self.stealth_provider = STEALTH_PROVIDER if self.enable_stealth else None
+        self.anti_detection = EnhancedAntiDetection() if self.enable_stealth else None
         self._available = PLAYWRIGHT_AVAILABLE
         self._initialized = False
         self._stealth_warned = False
@@ -255,18 +273,21 @@ class PlaywrightAdapter(BaseService):
         # pylint: disable=too-many-locals
         start_time = time.perf_counter()
         attempt_errors: list[str] = []
+        stealth_config: BrowserStealthConfig | None = None
+        if self._should_apply_stealth() and self.anti_detection:
+            stealth_config = self._determine_stealth_config(url)
 
         for attempt in range(1, tier.max_attempts + 1):
             context: BrowserContext | None = None
             page: Page | None = None
             try:
                 context = await runtime.browser.new_context(
-                    **self._build_context_options(tier)
+                    **self._build_context_options(tier, stealth_config)
                 )
                 page = await context.new_page()
 
                 if tier.enable_stealth and self._should_apply_stealth():
-                    await self._apply_stealth(page)
+                    await self._apply_stealth(page, stealth_config)
 
                 response: Response | None = await page.goto(
                     url, wait_until="networkidle", timeout=timeout
@@ -274,22 +295,20 @@ class PlaywrightAdapter(BaseService):
                 status = int(response.status) if response is not None else None
 
                 challenge_detected = await self._detect_challenge(page, tier, status)
-                challenge_outcome = "none"
-                if challenge_detected:
-                    challenge_outcome = "detected"
-                    if tier.captcha:
-                        solved = await self._attempt_captcha(page, url, tier)
-                        if solved:
-                            challenge_detected = False
-                            challenge_outcome = "solved"
+                challenge_detected, challenge_outcome = await self._evaluate_challenge(
+                    page=page,
+                    url=url,
+                    tier=tier,
+                    challenge_detected=challenge_detected,
+                )
 
                 action_results = await self._execute_actions(page, actions)
                 text, html = await self._extract_content(page)
                 metadata = await self._build_metadata(
                     page,
-                    len(actions),
-                    sum(1 for result in action_results if result.get("success")),
+                    action_results,
                     time.perf_counter() - start_time,
+                    stealth_config,
                 )
                 metadata.update(
                     {
@@ -343,7 +362,6 @@ class PlaywrightAdapter(BaseService):
 
     async def _ensure_runtime(self, use_undetected: bool) -> _RuntimeBundle:
         """Return a runtime bundle, launching one if required."""
-        """Return a runtime bundle, launching one if required."""
         key = "undetected" if use_undetected else "baseline"
         if key in self._runtimes:
             return self._runtimes[key]
@@ -364,7 +382,13 @@ class PlaywrightAdapter(BaseService):
             msg = f"Unsupported browser type: {self.config.browser}"
             raise CrawlServiceError(msg)
 
-        browser = await launcher.launch(headless=self.config.headless)
+        launch_kwargs: dict[str, Any] = {"headless": self.config.headless}
+        if self._should_apply_stealth() and self.anti_detection:
+            args = self.anti_detection.get_stealth_config().extra_args
+            if args:
+                launch_kwargs["args"] = args
+
+        browser = await launcher.launch(**launch_kwargs)
         self._playwright_handles.append(playwright_handle)
         runtime = _RuntimeBundle(
             name="undetected" if use_undetected else "baseline",
@@ -379,57 +403,91 @@ class PlaywrightAdapter(BaseService):
         )
         return runtime
 
-    def _build_context_options(self, tier: PlaywrightTierConfig) -> dict[str, Any]:
+    def _build_context_options(
+        self,
+        tier: PlaywrightTierConfig,
+        stealth_config: BrowserStealthConfig | None,
+    ) -> dict[str, Any]:
         """Translate configuration into Playwright context options."""
-        viewport_cfg = self.config.viewport or {}
-        viewport: dict[str, Any] = {}
-        if "width" in viewport_cfg and "height" in viewport_cfg:
-            viewport = {
-                "width": int(viewport_cfg["width"]),
-                "height": int(viewport_cfg["height"]),
-            }
-            if "device_scale_factor" in viewport_cfg:
-                viewport["device_scale_factor"] = float(
-                    viewport_cfg["device_scale_factor"]
-                )
-            if viewport_cfg.get("is_mobile"):
-                viewport["is_mobile"] = bool(viewport_cfg.get("is_mobile"))
 
         context_options: dict[str, Any] = {
             "ignore_https_errors": True,
             "extra_http_headers": {"Accept-Language": "en-US,en;q=0.9"},
         }
 
-        if viewport:
-            context_options["viewport"] = viewport
+        viewport_cfg = self.config.viewport or {}
+        if "width" in viewport_cfg and "height" in viewport_cfg:
+            viewport_base: dict[str, Any] = {
+                "width": int(viewport_cfg["width"]),
+                "height": int(viewport_cfg["height"]),
+            }
+            if "device_scale_factor" in viewport_cfg:
+                viewport_base["device_scale_factor"] = float(
+                    viewport_cfg["device_scale_factor"]
+                )
+            if viewport_cfg.get("is_mobile"):
+                viewport_base["is_mobile"] = bool(viewport_cfg.get("is_mobile"))
+            context_options["viewport"] = viewport_base
 
         if self.config.user_agent:
             context_options["user_agent"] = self.config.user_agent
+
+        if stealth_config:
+            # Pydantic provides runtime models; cast for static analysis.
+            viewport_model = cast(ViewportProfile, stealth_config.viewport)
+            viewport: dict[str, Any] = {
+                "width": viewport_model.width,
+                "height": viewport_model.height,
+            }
+            if viewport_model.device_scale_factor != 1.0:
+                viewport["device_scale_factor"] = viewport_model.device_scale_factor
+            if viewport_model.is_mobile:
+                viewport["is_mobile"] = True
+            context_options["viewport"] = viewport
+            context_options["user_agent"] = stealth_config.user_agent
+            headers = dict(stealth_config.headers)
+            headers.setdefault("Accept-Language", "en-US,en;q=0.9")
+            context_options["extra_http_headers"] = headers
 
         if tier.proxy:
             context_options["proxy"] = tier.proxy.to_playwright_dict()
 
         return context_options
 
+    def _determine_stealth_config(self, url: str) -> BrowserStealthConfig | None:
+        """Return a stealth configuration for the supplied URL."""
+
+        if not self.anti_detection:
+            return None
+
+        hostname = urlparse(url).hostname
+        profile_name = self.anti_detection.resolve_profile_for_domain(hostname)
+        return self.anti_detection.get_stealth_config(profile_name)
+
     def _should_apply_stealth(self) -> bool:
         return self.enable_stealth
 
-    async def _apply_stealth(self, page: Page) -> None:
+    async def _apply_stealth(
+        self, page: Page, stealth_config: BrowserStealthConfig | None
+    ) -> None:
         """Apply stealth transformations if enabled."""
         if not self._should_apply_stealth():
             return
         if not STEALTH_AVAILABLE:
             if not self._stealth_warned:
                 logger.warning(
-                    "playwright_stealth not installed; proceeding without stealth"
+                    "Stealth plugin not available; proceeding without stealth"
                 )
                 self._stealth_warned = True
             return
 
         try:
-            await stealth_async(page)  # type: ignore[misc]
+            await _stealth_async(page)  # type: ignore[misc]
         except Exception:  # noqa: BLE001 - plugin failures should not abort execution
             logger.warning("Failed to apply stealth plugin", exc_info=True)
+
+        if stealth_config:
+            await self._apply_stealth_overrides(page, stealth_config)
 
     async def _detect_challenge(
         self, page: Page, tier: PlaywrightTierConfig, status: int | None
@@ -443,6 +501,84 @@ class PlaywrightAdapter(BaseService):
             text = await page.inner_text("body")
             lowered = text.lower()
         return any(keyword.lower() in lowered for keyword in tier.challenge_keywords)
+
+    async def _evaluate_challenge(
+        self,
+        *,
+        page: Page,
+        url: str,
+        tier: PlaywrightTierConfig,
+        challenge_detected: bool,
+    ) -> tuple[bool, str]:
+        """Evaluate challenge outcome and attempt captcha resolution if allowed."""
+
+        if not challenge_detected:
+            return False, "none"
+        if not tier.captcha:
+            return True, "detected"
+
+        solved = await self._attempt_captcha(page, url, tier)
+        if solved:
+            return False, "solved"
+        return True, "detected"
+
+    async def _apply_stealth_overrides(
+        self, page: Page, stealth_config: BrowserStealthConfig
+    ) -> None:
+        """Apply fine-grained stealth overrides derived from configuration.
+
+        Args:
+            page: Active Playwright page to mutate.
+            stealth_config: Resolved anti-detection configuration for the request.
+        """
+
+        languages = json.dumps(stealth_config.languages)
+        primary_language = json.dumps(stealth_config.locale)
+        timezone = stealth_config.timezone
+        platform = stealth_config.platform
+        vendor = stealth_config.webgl_vendor or ""
+        renderer = stealth_config.webgl_renderer or ""
+
+        script = f"""
+        (() => {{
+          try {{
+            const languageList = {languages};
+            Object.defineProperty(Navigator.prototype, 'languages', {{
+              get: () => languageList,
+            }});
+            Object.defineProperty(Navigator.prototype, 'language', {{
+              get: () => {primary_language},
+            }});
+            Object.defineProperty(Navigator.prototype, 'platform', {{
+              get: () => '{platform}',
+            }});
+            const originalResolved = Intl.DateTimeFormat().resolvedOptions;
+            Object.defineProperty(originalResolved, 'timeZone', {{
+              value: '{timezone}'
+            }});
+            const applyWebGlPatch = (proto) => {{
+              if (!proto) return;
+              const original = proto.getParameter;
+              if (!original) return;
+              proto.getParameter = function(parameter) {{
+                if (parameter === 37445 && '{vendor}') return '{vendor}';
+                if (parameter === 37446 && '{renderer}') return '{renderer}';
+                return original.call(this, parameter);
+              }};
+            }};
+            applyWebGlPatch(
+              window.WebGLRenderingContext && window.WebGLRenderingContext.prototype
+            );
+            applyWebGlPatch(
+              window.WebGL2RenderingContext && window.WebGL2RenderingContext.prototype
+            );
+          }} catch (error) {{
+            console.warn('Stealth override failed', error);
+          }}
+        }})();
+        """
+
+        await page.add_init_script(script)
 
     async def _attempt_captcha(
         self, page: Page, url: str, tier: PlaywrightTierConfig
@@ -617,15 +753,18 @@ class PlaywrightAdapter(BaseService):
     async def _build_metadata(
         self,
         page: Page,
-        action_count: int,
-        success_count: int,
+        action_results: list[dict[str, Any]],
         duration_seconds: float,
+        stealth_config: BrowserStealthConfig | None,
     ) -> dict[str, Any]:
         """Compose metadata describing the scraping session."""
         try:
             title = await page.title()
         except Exception:  # noqa: BLE001 - best effort only
             title = ""
+
+        action_count = len(action_results)
+        success_count = sum(1 for result in action_results if result.get("success"))
 
         metadata: dict[str, Any] = {
             "title": title,
@@ -637,7 +776,23 @@ class PlaywrightAdapter(BaseService):
             "viewport": self.config.viewport,
             "user_agent": self.config.user_agent,
             "stealth_enabled": self._should_apply_stealth() and STEALTH_AVAILABLE,
+            "stealth_provider": self.stealth_provider,
         }
+
+        if stealth_config:
+            # Pydantic provides runtime models; cast for static analysis.
+            viewport_model = cast(ViewportProfile, stealth_config.viewport)
+            metadata["viewport"] = {
+                "width": viewport_model.width,
+                "height": viewport_model.height,
+                "device_scale_factor": viewport_model.device_scale_factor,
+                "is_mobile": viewport_model.is_mobile,
+            }
+            metadata["user_agent"] = stealth_config.user_agent
+            metadata["languages"] = stealth_config.languages
+            metadata["timezone"] = stealth_config.timezone
+            metadata["platform"] = stealth_config.platform
+            metadata["client_hints_platform"] = stealth_config.client_hints_platform
 
         return metadata
 

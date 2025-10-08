@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.config import BrowserUseConfig
+from src.config.models import BrowserUseConfig
 from src.services.browser.browser_use_adapter import BrowserUseAdapter
 from src.services.errors import CrawlServiceError
 

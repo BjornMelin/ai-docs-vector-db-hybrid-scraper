@@ -20,14 +20,6 @@ src.config.loader module
    :show-inheritance:
    :undoc-members:
 
-src.config.reloader module
---------------------------
-
-.. automodule:: src.config.reloader
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 src.config.models module
 ------------------------
 

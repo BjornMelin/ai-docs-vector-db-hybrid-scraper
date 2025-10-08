@@ -47,6 +47,18 @@ uv run python -m src.cli.main config template apply production -o config.json
 uv run python -m src.cli.main config validate config.json --health-check
 ```
 
+### Import an existing configuration
+
+Already have a JSON or YAML file? Load it directly:
+
+```bash
+# Validate without saving to disk
+uv run python -m src.cli.main config load config/production.json --validate-only
+
+# Load into the current CLI session (subsequent commands use it)
+uv run python -m src.cli.main config load config/staging.yaml
+```
+
 ## 🧙‍♂️ Configuration Wizard
 
 ### Setup Modes
@@ -681,7 +693,7 @@ uv run python -m src.cli.main config validate config.json --comprehensive
 
 ## 📚 Related Resources
 
-- **[Configuration API Reference](../developers/configuration.md)**: Complete API documentation
+- **[Setup & Configuration Guide](../developers/setup-and-configuration.md)**: Complete API documentation
 - **[Operations Guide](../operators/operations.md)**: Production deployment and operations patterns
 - **[Security Guide](../operators/security.md)**: Security configuration best practices
 - **[Troubleshooting Guide](./troubleshooting.md)**: Common issues and solutions

@@ -13,7 +13,7 @@ from src.services.query_processing.orchestrator import (
     SearchOrchestrator,
     ServiceRAGConfig,
 )
-from src.services.rag.langgraph_pipeline import LangGraphRAGPipeline
+from src.services.rag import LangGraphRAGPipeline
 from src.services.vector_db.service import VectorStoreService
 from src.services.vector_db.types import VectorMatch
 

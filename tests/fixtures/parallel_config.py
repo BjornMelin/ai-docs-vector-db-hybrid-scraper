@@ -21,19 +21,22 @@ except ImportError:  # pragma: no cover - fcntl not available on Windows
     fcntl = None  # type: ignore[assignment]
 
 
-def pytest_configure_node(node):
-    """Configure pytest-xdist worker nodes."""
-    # Set worker-specific temporary directories
-    worker_id = getattr(node, "workerinput", {}).get("workerid", "master")
+def pytest_configure(config):  # pragma: no cover - exercised with xdist
+    """Configure per-worker environment when pytest-xdist is active."""
 
-    if worker_id != "master":
-        # Create worker-specific temp directory
-        temp_base = Path(tempfile.gettempdir()) / f"pytest_worker_{worker_id}"
-        temp_base.mkdir(exist_ok=True)
+    workerinput = getattr(config, "workerinput", None)
+    if workerinput is None:
+        return
 
-        # Set environment variables for worker isolation
-        os.environ[f"PYTEST_WORKER_TEMP_{worker_id}"] = str(temp_base)
-        os.environ["PYTEST_CURRENT_WORKER"] = worker_id
+    worker_id = workerinput.get("workerid", "master")
+    if worker_id == "master":
+        return
+
+    temp_base = Path(tempfile.gettempdir()) / f"pytest_worker_{worker_id}"
+    temp_base.mkdir(exist_ok=True)
+
+    os.environ[f"PYTEST_WORKER_TEMP_{worker_id}"] = str(temp_base)
+    os.environ["PYTEST_CURRENT_WORKER"] = worker_id
 
 
 @pytest.fixture(scope="session")

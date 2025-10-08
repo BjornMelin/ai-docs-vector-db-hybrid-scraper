@@ -1,8 +1,6 @@
-"""Document Service - Domain-specific MCP server for document operations.
+"""Document Service — ingestion and management."""
 
-This service handles document-related functionality including document
-management, processing, and crawling.
-"""
+from __future__ import annotations
 
 import logging
 from typing import Any
@@ -14,7 +12,7 @@ from src.mcp_tools.tools import (
     collection_management,
     content_intelligence,
     crawling,
-    document_management,
+    documents,
     projects,
 )
 
@@ -23,88 +21,44 @@ logger = logging.getLogger(__name__)
 
 
 class DocumentService:
-    """FastMCP 2.0+ document service for document processing.
-
-    Provides document management, processing, and 5-tier crawling capabilities.
-    """
+    """Document ingestion and management."""
 
     def __init__(self, name: str = "document-service"):
-        """Initialize the document service.
-
-        Args:
-            name: Service name for MCP registration
-        """
-
         self.mcp = FastMCP(
             name,
-            instructions="""
-            Document service for document processing and management.
-
-            Provides tools for:
-            - Document management and organization
-            - Web crawling and content extraction
-            - Project-based document organization
-            - Collection management
-            - Content processing and analysis
-            """,
+            instructions=(
+                "Document ingestion and management. Provides crawling, analysis, "
+                "collections, and project tools."
+            ),
         )
         self.client_manager: ClientManager | None = None
 
     async def initialize(self, client_manager: ClientManager) -> None:
-        """Initialize the document service with client manager.
-
-        Args:
-            client_manager: Shared client manager instance
-        """
-
         self.client_manager = client_manager
-
-        # Register document tools
-        await self._register_document_tools()
-
+        await self._register_tools()
         logger.info("DocumentService initialized")
 
-    async def _register_document_tools(self) -> None:
-        """Register all document-related MCP tools."""
-
+    async def _register_tools(self) -> None:
         if not self.client_manager:
-            msg = "DocumentService not initialized"
-            raise RuntimeError(msg)
+            raise RuntimeError("DocumentService not initialized")
 
-        # Register core document tools
-        document_management.register_tools(self.mcp, self.client_manager)
+        documents.register_tools(self.mcp, self.client_manager)
         collection_management.register_tools(self.mcp, self.client_manager)
         projects.register_tools(self.mcp, self.client_manager)
-
-        # Register crawling tools
         crawling.register_tools(self.mcp, self.client_manager)
-
-        # Register content processing tools
         content_intelligence.register_tools(self.mcp, self.client_manager)
 
         logger.info("Registered document tools")
 
     def get_mcp_server(self) -> FastMCP:
-        """Get the FastMCP server instance.
-
-        Returns:
-            Configured FastMCP server for this service
-        """
-
         return self.mcp
 
     async def get_service_info(self) -> dict[str, Any]:
-        """Get service information and capabilities.
-
-        Returns:
-            Service metadata and capability information
-        """
-
         return {
             "service": "document",
-            "version": "2.0",
+            "version": "3.0",
             "capabilities": [
-                "document_management",
+                "ingestion",
                 "web_crawling",
                 "collection_management",
                 "project_organization",

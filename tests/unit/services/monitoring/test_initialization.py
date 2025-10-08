@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from prometheus_client.registry import CollectorRegistry
 
-from src.config import MonitoringConfig
+from src.config.models import MonitoringConfig
 from src.services.monitoring.initialization import (
     cleanup_monitoring,
     initialize_monitoring_system,
@@ -35,9 +35,15 @@ class TestMonitoringInitialization:
             enabled=True,
             include_system_metrics=True,
             system_metrics_interval=60.0,
+            health_check_timeout=15.0,
         )
         config.cache = MagicMock()
         config.cache.enable_dragonfly_cache = False
+        config.cache.enable_redis_cache = True
+        config.cache.redis_url = "redis://localhost:6379"
+        config.cache.dragonfly_url = "redis://dragonfly:6379"
+        config.qdrant = MagicMock()
+        config.qdrant.url = "http://localhost:6333"
         return config
 
     @pytest.fixture
@@ -101,6 +107,11 @@ class TestMonitoringInitialization:
         config.monitoring = MonitoringConfig(enabled=True)
         config.cache = MagicMock()
         config.cache.enable_dragonfly_cache = False
+        config.cache.enable_redis_cache = True
+        config.cache.redis_url = "redis://localhost:6379"
+        config.cache.dragonfly_url = "redis://dragonfly:6379"
+        config.qdrant = MagicMock()
+        config.qdrant.url = "http://localhost:6333"
 
         with (
             patch(
@@ -323,6 +334,11 @@ class TestMonitoringIntegration:
         )
         config.cache = MagicMock()
         config.cache.enable_dragonfly_cache = False
+        config.cache.enable_redis_cache = True
+        config.cache.redis_url = "redis://localhost:6379"
+        config.cache.dragonfly_url = "redis://dragonfly:6379"
+        config.qdrant = MagicMock()
+        config.qdrant.url = "http://localhost:6333"
 
         mock_qdrant = AsyncMock()
         mock_qdrant.get_collections.return_value = MagicMock(collections=[])
@@ -401,6 +417,11 @@ class TestMonitoringIntegration:
         )
         config.cache = MagicMock()
         config.cache.enable_dragonfly_cache = False
+        config.cache.enable_redis_cache = True
+        config.cache.redis_url = "redis://localhost:6379"
+        config.cache.dragonfly_url = "redis://dragonfly:6379"
+        config.qdrant = MagicMock()
+        config.qdrant.url = "http://localhost:6333"
 
         with patch(
             "src.services.monitoring.initialization.HealthCheckManager"

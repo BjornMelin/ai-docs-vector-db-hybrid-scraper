@@ -1,14 +1,19 @@
 """Cache management tools for MCP server."""
 
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 
 from fastmcp import Context
 
-from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.models.responses import CacheClearResponse, CacheStatsResponse
 
 
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from src.infrastructure.client_manager import ClientManager
 
 
 def register_tools(mcp, client_manager: ClientManager):
@@ -66,14 +71,43 @@ def register_tools(mcp, client_manager: ClientManager):
             cache_manager = await client_manager.get_cache_manager()
             stats = await cache_manager.get_stats()
 
+            hit_rate_value = stats.get("hit_rate")
+            hit_rate = (
+                float(hit_rate_value)
+                if isinstance(hit_rate_value, (int, float))
+                else None
+            )
+
+            size_value = stats.get("size")
+            size = int(size_value) if isinstance(size_value, int) else None
+
+            total_requests_value = stats.get("total_requests")
+            total_requests = (
+                int(total_requests_value)
+                if isinstance(total_requests_value, int)
+                else None
+            )
+
             if ctx:
+                hit_rate_display = hit_rate if hit_rate is not None else "n/a"
+                size_display = size if size is not None else "n/a"
                 await ctx.info(
-                    f"Cache statistics retrieved: hit_rate={stats.get('hit_rate', 0)}, "
-                    f"size={stats.get('size', 0)}"
+                    f"Cache statistics retrieved: hit_rate={hit_rate_display}, "
+                    f"size={size_display}"
                 )
 
-            # Cache manager may return additional fields; allow them via **stats
-            return CacheStatsResponse(**stats)
+            extra_payload = {
+                key: value
+                for key, value in stats.items()
+                if key not in {"hit_rate", "size", "total_requests"}
+            }
+
+            return CacheStatsResponse(
+                hit_rate=hit_rate,
+                size=size,
+                total_requests=total_requests,
+                **extra_payload,
+            )
 
         except Exception as e:
             if ctx:

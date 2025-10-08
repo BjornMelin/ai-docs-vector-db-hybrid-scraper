@@ -12,7 +12,7 @@ def test_validate_configuration_requires_openai_key(build_unified_mcp_config):
     config = build_unified_mcp_config(openai_key=None)
 
     with (
-        patch("src.unified_mcp_server.get_config", return_value=config),
+        patch("src.unified_mcp_server.get_settings", return_value=config),
         patch("src.unified_mcp_server._validate_streaming_config"),
         pytest.raises(ValueError, match="OpenAI API key is required"),
     ):
@@ -26,7 +26,7 @@ def test_validate_configuration_requires_qdrant_url(build_unified_mcp_config):
     )
 
     with (
-        patch("src.unified_mcp_server.get_config", return_value=config),
+        patch("src.unified_mcp_server.get_settings", return_value=config),
         patch("src.unified_mcp_server._validate_streaming_config"),
         pytest.raises(ValueError, match="Qdrant URL is required"),
     ):
@@ -42,7 +42,7 @@ def test_validate_configuration_warns_on_missing_firecrawl(
     )
 
     with (
-        patch("src.unified_mcp_server.get_config", return_value=config),
+        patch("src.unified_mcp_server.get_settings", return_value=config),
         patch("src.unified_mcp_server._validate_streaming_config"),
     ):
         unified_mcp_server.validate_configuration()
@@ -57,7 +57,7 @@ def test_validate_configuration_passes_for_valid_config(build_unified_mcp_config
     )
 
     with (
-        patch("src.unified_mcp_server.get_config", return_value=config),
+        patch("src.unified_mcp_server.get_settings", return_value=config),
         patch("src.unified_mcp_server._validate_streaming_config") as mock_validate,
     ):
         unified_mcp_server.validate_configuration()
