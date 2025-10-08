@@ -45,7 +45,7 @@ class MetricSummary(BaseModel):
     last_timestamp: float = Field(..., description="Last measurement timestamp")
 
 
-class MetricsCollector:
+class MetricsCollector:  # pylint: disable=too-many-instance-attributes
     """Advanced metrics collection and aggregation system."""
 
     def __init__(self, config: Settings, max_points: int = 10000):
@@ -54,8 +54,8 @@ class MetricsCollector:
         Args:
             config: Unified configuration
             max_points: Maximum metric points to keep in memory
-
         """
+
         self.config = config
         self.max_points = max_points
 
@@ -79,6 +79,7 @@ class MetricsCollector:
 
     async def start_collection(self) -> None:
         """Start metrics collection."""
+
         self.collection_active = True
         self.collection_start_time = time.time()
         self.metric_points = []
@@ -90,8 +91,8 @@ class MetricsCollector:
 
         Returns:
             Collection summary with aggregated metrics
-
         """
+
         self.collection_active = False
         collection_duration = time.time() - (self.collection_start_time or time.time())
 
@@ -124,8 +125,8 @@ class MetricsCollector:
             labels: Optional labels for the metric
             source: Source component that generated the metric
             timestamp: Optional timestamp (uses current time if not provided)
-
         """
+
         if not self.collection_active:
             return
 
@@ -164,8 +165,8 @@ class MetricsCollector:
             latency_ms: Latency in milliseconds
             labels: Optional labels
             source: Source component
-
         """
+
         metric_name = f"{operation}_latency_ms"
         self.record_metric(metric_name, latency_ms, labels, source)
 
@@ -183,8 +184,8 @@ class MetricsCollector:
             requests_per_second: Throughput in requests per second
             labels: Optional labels
             source: Source component
-
         """
+
         metric_name = f"{operation}_throughput_qps"
         self.record_metric(metric_name, requests_per_second, labels, source)
 
@@ -202,12 +203,12 @@ class MetricsCollector:
             error_rate: Error rate (0.0 - 1.0)
             labels: Optional labels
             source: Source component
-
         """
+
         metric_name = f"{operation}_error_rate"
         self.record_metric(metric_name, error_rate, labels, source)
 
-    def record_resource_usage(
+    def record_resource_usage(  # pylint: disable=too-many-arguments
         self,
         resource_type: str,
         usage_value: float,
@@ -223,12 +224,12 @@ class MetricsCollector:
             unit: Unit of measurement
             labels: Optional labels
             source: Source component
-
         """
+
         metric_name = f"{resource_type}_usage_{unit}"
         self.record_metric(metric_name, usage_value, labels, source)
 
-    def record_custom_metric(
+    def record_custom_metric(  # pylint: disable=too-many-arguments, too-many-positional-arguments
         self,
         metric_name: str,
         value: float,
@@ -244,8 +245,8 @@ class MetricsCollector:
             metric_type: Type of metric (gauge, counter, histogram)
             labels: Optional labels
             source: Source component
-
         """
+
         # Add metric type to labels
         if labels is None:
             labels = {}
@@ -261,8 +262,8 @@ class MetricsCollector:
 
         Returns:
             Metric summary or None if metric not found
-
         """
+
         points = [p for p in self.metric_points if p.metric_name == metric_name]
 
         if not points:
@@ -289,8 +290,8 @@ class MetricsCollector:
 
         Returns:
             Dictionary mapping metric names to summaries
-
         """
+
         metric_names = {p.metric_name for p in self.metric_points}
         summaries = {}
 
@@ -306,8 +307,8 @@ class MetricsCollector:
 
         Returns:
             Summary of collected metrics and analysis
-
         """
+
         summaries = await self.get_all_metric_summaries()
 
         # Categorize metrics
@@ -349,8 +350,8 @@ class MetricsCollector:
 
         Returns:
             Real-time metrics for the window
-
         """
+
         if window not in self.real_time_windows:
             return {}
 
@@ -382,8 +383,8 @@ class MetricsCollector:
 
         Returns:
             Prometheus-formatted metrics string
-
         """
+
         prometheus_lines = []
 
         # Get latest metrics grouped by name
@@ -418,8 +419,8 @@ class MetricsCollector:
 
         Returns:
             JSON-formatted metrics string
-
         """
+
         export_data = {
             "timestamp": time.time(),
             "collection_start": self.collection_start_time,
@@ -431,6 +432,7 @@ class MetricsCollector:
 
     def _update_real_time_windows(self, point: MetricPoint) -> None:
         """Update real-time metric windows."""
+
         current_time = time.time()
 
         # Add to all windows
@@ -447,6 +449,7 @@ class MetricsCollector:
 
     def _calculate_overall_statistics(self) -> dict[str, Any]:
         """Calculate overall collection statistics."""
+
         if not self.metric_points:
             return {}
 
@@ -474,6 +477,7 @@ class MetricsCollector:
 
     def _detect_anomalies(self) -> list[dict[str, Any]]:
         """Detect anomalies in collected metrics."""
+
         anomalies = []
 
         # Group metrics by name
@@ -523,6 +527,7 @@ class MetricsCollector:
 
     def _percentile(self, data: list[float], percentile: float) -> float:
         """Calculate percentile of a list of values."""
+
         if not data:
             return 0.0
         sorted_data = sorted(data)
@@ -544,8 +549,8 @@ class MetricsCollector:
 
         Returns:
             Current status information
-
         """
+
         return {
             "collection_active": self.collection_active,
             "collection_start_time": self.collection_start_time,
