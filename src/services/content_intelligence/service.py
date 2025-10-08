@@ -323,6 +323,7 @@ class ContentIntelligenceService(BaseService):  # pylint: disable=too-many-insta
             logger.exception("Metadata extraction failed")
             # Return minimal metadata on failure
             return ContentMetadata(
+                url=url,
                 word_count=len(content.split()),
                 char_count=len(content),
             )
@@ -419,7 +420,7 @@ class ContentIntelligenceService(BaseService):  # pylint: disable=too-many-insta
                 relevance=0.5,
                 confidence=0.5,
             ),
-            enriched_metadata=ContentMetadata(),
+            enriched_metadata=ContentMetadata(url=request.url),
             adaptation_recommendations=[],
         )
 

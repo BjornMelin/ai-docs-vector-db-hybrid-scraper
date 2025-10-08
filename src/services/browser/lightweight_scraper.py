@@ -137,7 +137,7 @@ class LightweightScraper:
 
         html = response.text
 
-        text = trafilatura.extract(html, include_comments=False) or ""
+        text = self._extract_text(html, url)
         if len(text.strip()) < self._content_threshold:
             return None
 
@@ -189,3 +189,28 @@ class LightweightScraper:
                 if text:
                     headings.append({"level": level, "text": text})
         return headings
+
+    def _extract_text(self, html: str, url: str) -> str:
+        """Extract readable text with a fallback when trafilatura fails."""
+
+        try:
+            text = trafilatura.extract(html, include_comments=False) or ""
+        except Exception as exc:  # pragma: no cover - library quirks
+            logger.warning(
+                "Trafilatura extraction failed for %s: %s", url, exc, exc_info=True
+            )
+            return self._fallback_text(html)
+
+        if text.strip():
+            return text
+
+        logger.debug("Trafilatura returned empty text for %s; using fallback", url)
+        return self._fallback_text(html)
+
+    @staticmethod
+    def _fallback_text(html: str) -> str:
+        parser = HTMLParser(html)
+        body = parser.body
+        if body is None:
+            return ""
+        return body.text(separator=" ", strip=True)

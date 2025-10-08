@@ -13,6 +13,24 @@ from src.mcp_tools.models.responses import CollectionInfo, CollectionOperationRe
 logger = logging.getLogger(__name__)
 
 
+def _resolve_delete_callable(
+    vector_service: object,
+) -> tuple[Callable[[str], Awaitable[None]], bool]:
+    """Return the deletion callable and whether a legacy fallback was required."""
+
+    delete_method = getattr(vector_service, "delete_collection", None)
+    drop_method = getattr(vector_service, "drop_collection", None)
+
+    if callable(delete_method):
+        return cast(Callable[[str], Awaitable[None]], delete_method), False
+
+    if callable(drop_method):
+        return cast(Callable[[str], Awaitable[None]], drop_method), True
+
+    msg = "Vector service does not expose a collection deletion method"
+    raise AttributeError(msg)
+
+
 def register_tools(mcp, client_manager: ClientManager):  # pylint: disable=too-many-statements
     """Register collection management tools with the MCP server."""
 
@@ -111,35 +129,29 @@ def register_tools(mcp, client_manager: ClientManager):  # pylint: disable=too-m
             vector_service = await client_manager.get_vector_store_service()
             cache_manager = await client_manager.get_cache_manager()
 
-            instance_dict = getattr(vector_service, "__dict__", {})
-            delete_method = instance_dict.get("delete_collection")
-            drop_method = instance_dict.get("drop_collection")
-
-            if delete_method is None:
-                attr = getattr(type(vector_service), "delete_collection", None)
-                if attr is not None:
-                    delete_method = attr.__get__(vector_service, type(vector_service))
-
-            if drop_method is None:
-                attr = getattr(type(vector_service), "drop_collection", None)
-                if attr is not None:
-                    drop_method = attr.__get__(vector_service, type(vector_service))
-            delete_callable: Callable[[str], Awaitable[None]] | None = None
-
-            if callable(delete_method):
-                delete_callable = cast(Callable[[str], Awaitable[None]], delete_method)
-            elif callable(drop_method):
-                delete_callable = cast(Callable[[str], Awaitable[None]], drop_method)
-
-            if delete_callable is None:  # pragma: no cover - defensive guard
-                msg = "Vector service does not expose a collection deletion method"
-                raise AttributeError(msg)
-
+            delete_callable, used_drop_fallback = _resolve_delete_callable(
+                vector_service
+            )
             await delete_callable(collection_name)
             if ctx:
                 await ctx.debug(
                     "Collection %s deleted from vector store", collection_name
                 )
+
+            if used_drop_fallback:
+                telemetry_payload = {
+                    "collection": collection_name,
+                    "vector_service": type(vector_service).__name__,
+                }
+                logger.warning(
+                    "collections.delete.fallback",
+                    extra={"telemetry": telemetry_payload},
+                )
+                if ctx:
+                    await ctx.warning(
+                        "Used drop_collection fallback for collection "
+                        f"{collection_name}"
+                    )
 
             # Clear cache entries for this collection
             await cache_manager.clear_pattern(f"*:{collection_name}:*")

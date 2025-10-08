@@ -26,7 +26,7 @@ from pydantic import (
     model_validator,
 )
 
-from src.config.models import FusionAlgorithm
+from src.config.models import FusionAlgorithm, VectorType
 
 
 if TYPE_CHECKING:
@@ -401,7 +401,9 @@ class PrefetchConfig(SecureBaseModel):
     hyde_multiplier: float = Field(default=2.5, ge=1.0, le=5.0)
     max_prefetch_limit: int = Field(default=1000, ge=10, le=5000)
 
-    def calculate_prefetch_limit(self, vector_type: str, final_limit: int) -> int:
+    def calculate_prefetch_limit(
+        self, vector_type: VectorType | str, final_limit: int
+    ) -> int:
         """Calculate optimal prefetch limit based on vector type and final limit.
 
         Args:
@@ -412,14 +414,29 @@ class PrefetchConfig(SecureBaseModel):
             Optimal prefetch limit for the given vector type
         """
 
-        if vector_type == "dense":
-            multiplier = self.dense_multiplier
-        elif vector_type == "sparse":
-            multiplier = self.sparse_multiplier
-        elif vector_type == "hyde":
-            multiplier = self.hyde_multiplier
-        else:
-            multiplier = self.dense_multiplier  # Default fallback
+        try:
+            vector_kind = (
+                vector_type
+                if isinstance(vector_type, VectorType)
+                else VectorType(vector_type)
+            )
+        except ValueError as exc:
+            raise ValueError(
+                f"Unsupported vector_type '{vector_type}' for prefetch calculation"
+            ) from exc
+
+        multiplier_map = {
+            VectorType.DENSE: self.dense_multiplier,
+            VectorType.SPARSE: self.sparse_multiplier,
+            VectorType.HYDE: self.hyde_multiplier,
+            VectorType.HYBRID: max(self.dense_multiplier, self.sparse_multiplier),
+        }
+
+        multiplier = multiplier_map.get(vector_kind)
+        if multiplier is None:
+            raise ValueError(
+                f"No multiplier configured for vector type {vector_kind.value}"
+            )
 
         prefetch_limit = int(final_limit * multiplier)
         return min(prefetch_limit, self.max_prefetch_limit)

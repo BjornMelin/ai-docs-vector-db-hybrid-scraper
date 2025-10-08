@@ -81,6 +81,7 @@ def mock_content_intelligence_service():
             improvement_suggestions=["Add more headings"],
         ),
         enriched_metadata=ContentMetadata(
+            url="https://example.com/docs/auth",
             title="Authentication Documentation",
             description="Comprehensive authentication guide",
             word_count=500,
@@ -123,6 +124,7 @@ def mock_content_intelligence_service():
 
     # Mock extract_metadata method
     metadata_result = ContentMetadata(
+        url="https://example.com/docs/api",
         title="API Documentation",
         description="Comprehensive API documentation",
         word_count=1500,
