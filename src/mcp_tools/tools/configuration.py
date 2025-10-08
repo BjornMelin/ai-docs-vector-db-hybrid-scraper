@@ -256,5 +256,3 @@ def register_tools(mcp, client_manager: ClientManager):
             if ctx:
                 await ctx.error(f"Validation error: {exc}")
             return {"valid": False, "error": str(exc)}
-
-    # Retain legacy endpoint names for existing clients

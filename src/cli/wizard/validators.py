@@ -37,8 +37,8 @@ class WizardValidator:
 
         Returns:
             Tuple of (is_valid, error_message)
-
         """
+
         if not api_key:
             return False, "API key cannot be empty"
 
@@ -86,8 +86,8 @@ class WizardValidator:
 
         Returns:
             Tuple of (is_valid, error_message)
-
         """
+
         if not url:
             return False, "URL cannot be empty"
 
@@ -110,8 +110,8 @@ class WizardValidator:
 
         Returns:
             Tuple of (is_valid, error_message)
-
         """
+
         try:
             port_int = int(port)
         except (ValueError, TypeError):
@@ -137,8 +137,8 @@ class WizardValidator:
 
         Returns:
             Tuple of (is_valid, error_message)
-
         """
+
         if not path:
             return False, "Path cannot be empty"
 
@@ -172,8 +172,8 @@ class WizardValidator:
 
         Returns:
             Tuple of (is_valid, error_messages)
-
         """
+
         errors = []
 
         is_valid, validation_errors, _ = validate_config_payload(config_data)
@@ -194,8 +194,8 @@ class WizardValidator:
 
         Returns:
             True if valid, False otherwise
-
         """
+
         is_valid, errors = self.validate_config_partial(config_data)
 
         if not is_valid:
@@ -205,6 +205,7 @@ class WizardValidator:
 
     def _show_validation_errors(self, errors: list[str]) -> None:
         """Display validation errors in a user-friendly format."""
+
         if not errors:
             return
 
@@ -235,8 +236,8 @@ class WizardValidator:
 
         Returns:
             Dictionary of field -> suggested_fix
-
         """
+
         suggestions = {}
 
         for error in errors:
@@ -244,9 +245,7 @@ class WizardValidator:
                 if "openai" in error.lower():
                     suggestions["openai.api_key"] = "Format: sk-your_actual_key_here"
                 elif "firecrawl" in error.lower():
-                    suggestions["firecrawl.api_key"] = (
-                        "Format: fc-your_actual_key_here"
-                    )
+                    suggestions["firecrawl.api_key"] = "Format: fc-your_actual_key_here"
 
             elif "url" in error.lower():
                 if "qdrant" in error.lower():
@@ -280,8 +279,8 @@ class WizardValidator:
 
         Returns:
             Tuple of (is_valid, error_message)
-
         """
+
         return self.validate_path(path, must_exist=must_exist, must_be_dir=False)
 
     def validate_directory_path(
@@ -295,8 +294,8 @@ class WizardValidator:
 
         Returns:
             Tuple of (is_valid, error_message)
-
         """
+
         return self.validate_path(path, must_exist=must_exist, must_be_dir=True)
 
     def validate_json_string(
@@ -309,8 +308,8 @@ class WizardValidator:
 
         Returns:
             Tuple of (is_valid, error_message, parsed_data)
-
         """
+
         if not json_str:
             return False, "JSON string cannot be empty", None
 
@@ -326,25 +325,19 @@ class WizardValidator:
 
         Args:
             config: Validated configuration object
-
         """
+
         summary_text = Text()
         summary_text.append("✅ Configuration is valid!\n\n", style="bold green")
 
         summary_text.append("Configuration Summary:\n", style="bold")
 
         # Show key configuration points
-        if hasattr(config, "qdrant"):
-            if hasattr(config.qdrant, "host"):
-                summary_text.append(
-                    f"• Database: Qdrant at {config.qdrant.host}:"
-                    f"{config.qdrant.port}\n",
-                    style="cyan",
-                )
-            elif hasattr(config.qdrant, "url"):
-                summary_text.append(
-                    f"• Database: Qdrant Cloud at {config.qdrant.url}\n", style="cyan"
-                )
+        if hasattr(config, "qdrant") and hasattr(config.qdrant, "url"):
+            summary_text.append(
+                f"• Database: Qdrant at {config.qdrant.url}\n",
+                style="cyan",
+            )
 
         if hasattr(config, "openai") and hasattr(config.openai, "model"):
             summary_text.append(
@@ -378,8 +371,8 @@ class WizardValidator:
 
         Returns:
             Tuple of (is_valid, error_messages)
-
         """
+
         # Merge template with customizations
         merged_data = {**template_data, **customizations}
 
