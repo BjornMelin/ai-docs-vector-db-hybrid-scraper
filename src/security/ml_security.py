@@ -233,7 +233,7 @@ class MLSecurityValidator:
                     severity="info",
                 )
             )
-        except Exception:  # noqa: BLE001 - capture unexpected subprocess errors
+        except Exception as exc:  # noqa: BLE001 - capture unexpected subprocess errors
             logger.exception("Unexpected dependency check error")
             return self._record_result(
                 SecurityCheckResult(
@@ -241,6 +241,10 @@ class MLSecurityValidator:
                     passed=True,
                     message="Dependency scan failed",
                     severity="info",
+                    details={
+                        "error": exc.__class__.__name__,
+                        "context": str(exc),
+                    },
                 )
             )
 
