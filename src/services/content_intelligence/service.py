@@ -18,7 +18,7 @@ try:
 except ImportError:
     redis = None
 
-from src.config import Settings
+from src.config.loader import Settings
 from src.services.base import BaseService
 from src.services.errors import APIError
 
@@ -41,7 +41,7 @@ from .quality_assessor import QualityAssessor
 logger = logging.getLogger(__name__)
 
 
-class ContentIntelligenceService(BaseService):
+class ContentIntelligenceService(BaseService):  # pylint: disable=too-many-instance-attributes
     """Content Intelligence Service for adaptive extraction.
 
     Provides lightweight semantic analysis, quality assessment, and automatic
@@ -307,8 +307,8 @@ class ContentIntelligenceService(BaseService):
 
         Returns:
             ContentMetadata: Enriched metadata
-
         """
+
         self._validate_initialized()
 
         try:
@@ -323,7 +323,6 @@ class ContentIntelligenceService(BaseService):
             logger.exception("Metadata extraction failed")
             # Return minimal metadata on failure
             return ContentMetadata(
-                url=url,
                 word_count=len(content.split()),
                 char_count=len(content),
             )
@@ -343,8 +342,8 @@ class ContentIntelligenceService(BaseService):
 
         Returns:
             list[AdaptationRecommendation]: List of adaptation recommendations
-
         """
+
         self._validate_initialized()
 
         try:
@@ -397,8 +396,8 @@ class ContentIntelligenceService(BaseService):
 
         Returns:
             EnrichedContent: Complete analysis results
-
         """
+
         analysis_start = time.time()
 
         # Initialize result with basic data
@@ -420,7 +419,7 @@ class ContentIntelligenceService(BaseService):
                 relevance=0.5,
                 confidence=0.5,
             ),
-            enriched_metadata=ContentMetadata(url=request.url),
+            enriched_metadata=ContentMetadata(),
             adaptation_recommendations=[],
         )
 
@@ -513,8 +512,8 @@ class ContentIntelligenceService(BaseService):
 
         Returns:
             list[AdaptationRecommendation]: Quality-based recommendations
-
         """
+
         recommendations = []
 
         # Low completeness
@@ -587,8 +586,8 @@ class ContentIntelligenceService(BaseService):
 
         Returns:
             list[AdaptationRecommendation]: Pattern-based recommendations
-
         """
+
         recommendations = []
 
         # Check for common patterns
@@ -627,8 +626,8 @@ class ContentIntelligenceService(BaseService):
 
         Returns:
             str: Cache key for the request
-
         """
+
         # Create hash from content and key parameters
         content_hash = hashlib.sha256(request.content.encode()).hexdigest()
         options_hash = hashlib.sha256(
@@ -649,8 +648,8 @@ class ContentIntelligenceService(BaseService):
 
         Returns:
             EnrichedContent | None: Cached result if found
-
         """
+
         if not self.cache_manager:
             return None
 
@@ -674,8 +673,8 @@ class ContentIntelligenceService(BaseService):
         Args:
             cache_key: Cache key
             result: Analysis result to cache
-
         """
+
         if not self.cache_manager:
             return
 
@@ -699,8 +698,8 @@ class ContentIntelligenceService(BaseService):
 
         Returns:
             dict[str, Any]: Performance metrics
-
         """
+
         return {
             "total_analyses": self._analysis_count,
             "total_processing_time_ms": self._total_processing_time,
