@@ -1,7 +1,7 @@
 """Main unified CLI entry point for AI Documentation Scraper."""
 
-import asyncio
 import sys
+from collections.abc import Iterable
 from pathlib import Path
 
 import click
@@ -13,6 +13,7 @@ from rich.text import Text
 
 from src.config.loader import get_settings, load_settings_from_file
 from src.services.health import perform_health_checks, summarize_results
+from src.utils.async_utils import async_command
 
 # Import command groups
 from .commands import (
@@ -20,10 +21,38 @@ from .commands import (
     config as config_commands,
     database as db_commands,
     setup as setup_commands,
+    task_runner as task_runner_commands,
 )
 
 
-console = Console()
+COMMAND_SUMMARIES: tuple[tuple[str, str], ...] = (
+    ("setup", "🧙 Interactive configuration wizard"),
+    ("config", "⚙️  Configuration management"),
+    ("database", "🗄️  Vector database operations"),
+    ("batch", "📦 Batch operations"),
+    ("dev", "💻 Start FastAPI development server"),
+    ("test", "🧪 Run pytest task profiles"),
+    ("quality", "✅ Project quality gate"),
+    ("docs", "📚 Serve MkDocs documentation"),
+    ("services", "🛠️ Manage docker-compose services"),
+    ("benchmark", "⚡ Run performance benchmarks"),
+    ("eval", "🎯 Execute RAG evaluation harness"),
+    ("validate", "🔍 Validate configuration and docs"),
+    ("--help", "❓ Show this help message"),
+)
+
+
+def _render_command_overview(command_rows: Iterable[tuple[str, str]]) -> None:
+    """Render the default command overview using Rich-friendly formatting.
+
+    Args:
+        command_rows: Sequence of command labels and descriptions to display.
+    """
+
+    click.echo("\nAvailable commands:")
+    for command, description in command_rows:
+        click.echo(f"  {command:<9} {description}")
+    click.echo("\nUse 'ai-docs COMMAND --help' for command-specific help.")
 
 
 class RichCLI:
@@ -117,14 +146,7 @@ def main(ctx: click.Context, config: Path | None, quiet: bool):
         if not quiet:
             rich_cli.show_welcome()
 
-        # Show available commands
-        click.echo("\nAvailable commands:")
-        click.echo("  setup    🧙 Interactive configuration wizard")
-        click.echo("  config   ⚙️  Configuration management")
-        click.echo("  database 🗄️  Vector database operations")
-        click.echo("  batch    📦 Batch operations")
-        click.echo("  --help   ❓ Show this help message")
-        click.echo("\nUse 'ai-docs COMMAND --help' for command-specific help.")
+        _render_command_overview(COMMAND_SUMMARIES)
 
 
 # Add command groups
@@ -132,6 +154,14 @@ main.add_command(setup_commands.setup, "setup")
 main.add_command(config_commands.config, "config")
 main.add_command(db_commands.database, "database")
 main.add_command(batch_commands.batch, "batch")
+main.add_command(task_runner_commands.dev, "dev")
+main.add_command(task_runner_commands.test, "test")
+main.add_command(task_runner_commands.quality, "quality")
+main.add_command(task_runner_commands.docs, "docs")
+main.add_command(task_runner_commands.services, "services")
+main.add_command(task_runner_commands.benchmark, "benchmark")
+main.add_command(task_runner_commands.run_eval, "eval")
+main.add_command(task_runner_commands.validate, "validate")
 
 
 @main.command()
@@ -204,15 +234,17 @@ def completion(shell: str):
 
 
 @main.command()
+@async_command
 @click.pass_context
-def status(ctx: click.Context):
+async def status(ctx: click.Context) -> None:
     """Show system status and health check."""
+
     rich_cli = ctx.obj["rich_cli"]
     config = ctx.obj["config"]
 
     try:
         with rich_cli.console.status("[bold green]Checking system status..."):
-            results = asyncio.run(perform_health_checks(config))
+            results = await perform_health_checks(config)
     except Exception as exc:  # noqa: BLE001 - surfaced as CLI error message
         rich_cli.show_error("Health checks failed", str(exc))
         return

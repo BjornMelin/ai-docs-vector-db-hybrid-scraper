@@ -34,8 +34,8 @@ applications.
   health checks, optional Dragonfly cache + ARQ worker, and configuration-driven
   monitoring (`src/services/monitoring/`).
 - Developer ergonomics with uv-managed environments, dependency-injector driven
-  service wiring, Ruff + pytest quality gates, and a unified developer CLI
-  (`scripts/dev.py`).
+  service wiring, Ruff + pytest quality gates, and a Rich-powered developer CLI
+  (`src/cli/main.py` exposed via the `ai-docs` command).
 
 ## Table of Contents
 

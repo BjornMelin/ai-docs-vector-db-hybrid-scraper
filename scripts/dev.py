@@ -346,7 +346,7 @@ def cmd_validate(args: argparse.Namespace) -> int:  # pylint: disable=too-many-b
 
     recommended_paths = [
         PROJECT_ROOT / "src/api/main.py",
-        PROJECT_ROOT / "src/cli/unified.py",
+        PROJECT_ROOT / "src/cli/main.py",
     ]
     for path in recommended_paths:
         if path.exists():

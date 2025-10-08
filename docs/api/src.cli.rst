@@ -21,14 +21,6 @@ src.cli.main module
    :show-inheritance:
    :undoc-members:
 
-src.cli.unified module
-----------------------
-
-.. automodule:: src.cli.unified
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 Module contents
 ---------------
 

@@ -9,7 +9,7 @@ processing (batch pipelines), query_processing (intent models + orchestrator), r
 
 ## Build, Test, and Development Commands
 
-Install deps via `uv sync --dev`. Drive daily flows with `uv run python -m src.cli.unified …` (`dev --mode simple`, `docs`, `services --action start --stack vector|monitoring`). Use `python scripts/dev.py` for profiles: `test --profile quick`, `eval --dataset tests/data/rag/golden_set.jsonl`,
+Install deps via `uv sync --dev`. Drive daily flows with `uv run ai-docs …` (`dev --mode simple`, `docs`, `services --action start --stack vector|monitoring`). Use `python scripts/dev.py` for profiles: `test --profile quick`, `eval --dataset tests/data/rag/golden_set.jsonl`,
 `benchmark --suite performance`, `validate --check-docs --check-services`, `quality --fix-lint`. Targeted gates: `uv run ruff format/check <paths>`, `uv run pyright <paths>`, `uv run pylint <modules>` (score ≥9.5). Start local services
 with `docker compose --profile simple up -d`; `make quality-unit` yields a lint/type/test gate.
 

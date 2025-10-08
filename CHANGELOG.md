@@ -34,6 +34,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Consolidated the CLI onto `src.cli.main`, deleting the legacy unified entry
+  point, porting task-runner commands as Rich subcommands, and updating docs,
+  tests, and automation hooks to reflect the single interface.
 - MCP tools, fixtures, and tests now consume the unified service payload models
   (content intelligence, embeddings, retrieval, analytics, collection management,
   lightweight scrape) with optional dependency guards; CLI batch/setup helpers

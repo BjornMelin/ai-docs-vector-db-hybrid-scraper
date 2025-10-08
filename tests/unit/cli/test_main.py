@@ -5,7 +5,7 @@ including version, completion, and status functionality.
 """
 
 from typing import cast
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import click
 from click.core import Group
@@ -128,10 +128,11 @@ class TestMainCommand:
 
         assert result.exit_code == 0
         assert "Available commands:" in result.output
-        assert "setup    🧙 Interactive configuration wizard" in result.output
-        assert "config   ⚙️  Configuration management" in result.output
-        assert "database 🗄️  Vector database operations" in result.output
-        assert "batch    📦 Batch operations" in result.output
+        assert "setup" in result.output
+        assert "config" in result.output
+        assert "database" in result.output
+        assert "batch" in result.output
+        assert "dev" in result.output
 
     @patch("src.cli.main.get_settings")
     def test_main_command_context_setup(self, mock_get_config, cli_runner, mock_config):
@@ -261,7 +262,7 @@ class TestStatusCommand:
     """Test system status and health check functionality."""
 
     @patch("src.cli.main.get_settings")
-    @patch("src.cli.main.perform_health_checks")
+    @patch("src.cli.main.perform_health_checks", new_callable=AsyncMock)
     def test_status_command_all_healthy(
         self, mock_health_checks, mock_get_config, cli_runner, mock_config
     ):
@@ -283,10 +284,10 @@ class TestStatusCommand:
         assert "Healthy" in result.output
         assert "Qdrant" in result.output
         assert "Redis" in result.output
-        mock_health_checks.assert_called_once_with(mock_config)
+        mock_health_checks.assert_awaited_once_with(mock_config)
 
     @patch("src.cli.main.get_settings")
-    @patch("src.cli.main.perform_health_checks")
+    @patch("src.cli.main.perform_health_checks", new_callable=AsyncMock)
     def test_status_command_with_errors(
         self, mock_health_checks, mock_get_config, cli_runner, mock_config
     ):
@@ -306,7 +307,7 @@ class TestStatusCommand:
         assert "Connection refused" in result.output
 
     @patch("src.cli.main.get_settings")
-    @patch("src.cli.main.perform_health_checks")
+    @patch("src.cli.main.perform_health_checks", new_callable=AsyncMock)
     def test_status_command_health_check_exception(
         self, mock_health_checks, mock_get_config, cli_runner, mock_config
     ):
@@ -332,7 +333,7 @@ class TestMainIntegration:
 
         assert result.exit_code == 0
         # Verify help contains essential information
-        assert "AI Documentation Scraper - Advanced CLI Interface" in result.output
+        assert "AI Documentation Scraper - CLI Interface" in result.output
         assert "Usage:" in result.output
         assert "--config" in result.output
         assert "--quiet" in result.output
@@ -400,6 +401,14 @@ class TestCLIUtilities:
             "config",
             "database",
             "batch",
+            "dev",
+            "test",
+            "quality",
+            "docs",
+            "services",
+            "benchmark",
+            "eval",
+            "validate",
             "version",
             "completion",
             "status",

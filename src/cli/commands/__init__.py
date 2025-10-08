@@ -5,9 +5,10 @@ This package contains all command group implementations:
 - database: Vector database operations
 - batch: Batch processing operations
 - setup: Interactive configuration wizard
+- task_runner: Developer automation commands ported from the legacy CLI
 """
 
-from . import batch, config, database, setup
+from . import batch, config, database, setup, task_runner
 
 
-__all__ = ["batch", "config", "database", "setup"]
+__all__ = ["batch", "config", "database", "setup", "task_runner"]

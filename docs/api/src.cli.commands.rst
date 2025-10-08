@@ -36,6 +36,14 @@ src.cli.commands.setup module
    :show-inheritance:
    :undoc-members:
 
+src.cli.commands.task_runner module
+-----------------------------------
+
+.. automodule:: src.cli.commands.task_runner
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 Module contents
 ---------------
 
