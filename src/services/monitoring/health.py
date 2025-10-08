@@ -22,7 +22,7 @@ from .metrics import MetricsRegistry
 
 
 if TYPE_CHECKING:
-    from src.config import Config
+    from src.config import Settings
 
 
 # Optional dependencies
@@ -52,7 +52,7 @@ class HealthCheckConfig(BaseModel):
     )
 
     @classmethod
-    def from_unified_config(cls, settings: "Config") -> "HealthCheckConfig":
+    def from_unified_config(cls, settings: "Settings") -> "HealthCheckConfig":
         """Build health-check configuration from the unified settings model."""
 
         redis_enabled = getattr(settings.cache, "enable_redis_cache", False) or getattr(  # type: ignore[attr-defined]

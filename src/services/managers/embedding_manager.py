@@ -25,7 +25,7 @@ class EmbeddingOptions:
 
 
 if TYPE_CHECKING:
-    from src.config import Config
+    from src.config import Settings
     from src.infrastructure.client_manager import ClientManager
     from src.services.embeddings.manager import (
         EmbeddingManager as CoreEmbeddingManager,
@@ -77,7 +77,7 @@ class EmbeddingManager:
     @inject
     async def initialize(
         self,
-        config: Config = Provide[ApplicationContainer.config],
+        config: Settings = Provide[ApplicationContainer.config],
         client_manager: ClientManager = Provide["client_manager"],
     ) -> None:
         """Initialize embedding manager using dependency injection.

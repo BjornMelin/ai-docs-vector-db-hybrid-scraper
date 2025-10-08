@@ -11,7 +11,7 @@ import time
 from fastapi.responses import JSONResponse
 from qdrant_client import AsyncQdrantClient
 
-from src.config import Config
+from src.config import Settings
 from src.config.models import MonitoringConfig
 
 from .health import HealthCheckConfig, HealthCheckManager, HealthStatus
@@ -148,7 +148,7 @@ async def stop_background_monitoring_tasks(tasks: list[asyncio.Task]) -> None:
 
 
 def initialize_monitoring_system(
-    config: Config, qdrant_client=None, redis_url: str | None = None
+    config: Settings, qdrant_client=None, redis_url: str | None = None
 ) -> tuple[MetricsRegistry | None, HealthCheckManager | None]:
     """Initialize the complete monitoring system.
 
@@ -234,7 +234,7 @@ def initialize_monitoring_system(
 
 def setup_fastmcp_monitoring(
     mcp_app,
-    config: Config,
+    config: Settings,
     metrics_registry: MetricsRegistry,
     health_manager: HealthCheckManager,
 ) -> None:

@@ -7,7 +7,7 @@ from typing import Any
 import numpy as np
 from qdrant_client import models
 
-from src.config import Config
+from src.config import Settings
 from src.services.base import BaseService
 from src.services.errors import QdrantServiceError
 
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class HNSWOptimizer(BaseService):
     """Intelligent HNSW parameter optimization for Qdrant collections."""
 
-    def __init__(self, config: Config, qdrant_service: Any):
+    def __init__(self, config: Settings, qdrant_service: Any):
         """Initialize HNSW optimizer.
 
         Args:

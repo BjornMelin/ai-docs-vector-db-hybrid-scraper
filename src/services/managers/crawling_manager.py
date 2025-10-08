@@ -7,7 +7,7 @@ from typing import Any, Literal
 
 from dependency_injector.wiring import Provide, inject
 
-from src.config import Config
+from src.config import Settings
 from src.infrastructure.container import ApplicationContainer
 from src.services.browser.unified_manager import (
     UnifiedBrowserManager,
@@ -28,7 +28,7 @@ class CrawlingManager:
 
     @inject
     async def initialize(
-        self, config: Config = Provide[ApplicationContainer.config]
+        self, config: Settings = Provide[ApplicationContainer.config]
     ) -> None:
         if self._initialized:
             return

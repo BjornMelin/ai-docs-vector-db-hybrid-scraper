@@ -14,7 +14,7 @@ try:
 except ImportError:
     CacheManager = None  # type: ignore[assignment]
 
-from src.config import Config
+from src.config import Settings
 from src.config.models import EmbeddingConfig as SettingsEmbeddingConfig
 from src.services.errors import EmbeddingServiceError
 
@@ -50,7 +50,7 @@ class EmbeddingManager:
 
     def __init__(
         self,
-        config: Config,
+        config: Settings,
         client_manager: "ClientManager",
         budget_limit: float | None = None,
         rate_limiter: Any = None,

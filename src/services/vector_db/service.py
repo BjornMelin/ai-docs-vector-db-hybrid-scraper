@@ -16,7 +16,7 @@ from langchain_core.documents import Document
 from langchain_qdrant import QdrantVectorStore, RetrievalMode
 from qdrant_client import AsyncQdrantClient, QdrantClient, models
 
-from src.config import get_config
+from src.config import get_settings
 from src.config.models import QueryProcessingConfig, ScoreNormalizationStrategy
 from src.services.base import BaseService
 from src.services.embeddings.base import EmbeddingProvider
@@ -48,7 +48,7 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         client_manager: ClientManager | None = None,
         embeddings_provider: EmbeddingProvider | None = None,
     ) -> None:
-        config = config or get_config()
+        config = config or get_settings()
         if client_manager is None:
             from src.infrastructure.client_manager import (  # pylint: disable=import-outside-toplevel
                 ClientManager as _ClientManager,

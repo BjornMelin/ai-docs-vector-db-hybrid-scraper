@@ -13,7 +13,7 @@ from qdrant_client import AsyncQdrantClient
 from qdrant_client.http.exceptions import UnexpectedResponse
 from redis import asyncio as redis_async
 
-from src.config import Config
+from src.config import Settings
 from src.config.models import CrawlProvider, EmbeddingProvider
 
 
@@ -40,7 +40,7 @@ class HealthCheckResult:
         return self.status == "healthy"
 
 
-async def _check_qdrant(config: Config) -> HealthCheckResult:
+async def _check_qdrant(config: Settings) -> HealthCheckResult:
     """Perform health check for Qdrant vector database."""
 
     start = perf_counter()
@@ -75,7 +75,7 @@ async def _check_qdrant(config: Config) -> HealthCheckResult:
     )
 
 
-async def _check_redis(config: Config) -> HealthCheckResult:
+async def _check_redis(config: Settings) -> HealthCheckResult:
     """Perform health check for Redis cache service."""
 
     if not config.cache.enable_redis_cache:
@@ -105,7 +105,7 @@ async def _check_redis(config: Config) -> HealthCheckResult:
     )
 
 
-async def _check_openai(config: Config) -> HealthCheckResult:
+async def _check_openai(config: Settings) -> HealthCheckResult:
     """Perform health check for OpenAI API service."""
 
     if config.embedding_provider != EmbeddingProvider.OPENAI:
@@ -146,7 +146,7 @@ async def _check_openai(config: Config) -> HealthCheckResult:
     )
 
 
-async def _check_firecrawl(config: Config) -> HealthCheckResult:
+async def _check_firecrawl(config: Settings) -> HealthCheckResult:
     """Perform health check for Firecrawl API service."""
 
     if config.crawl_provider != CrawlProvider.FIRECRAWL:
@@ -185,7 +185,7 @@ async def _check_firecrawl(config: Config) -> HealthCheckResult:
     )
 
 
-async def perform_health_checks(config: Config) -> list[HealthCheckResult]:
+async def perform_health_checks(config: Settings) -> list[HealthCheckResult]:
     """Run all configured health checks concurrently."""
 
     results = await asyncio.gather(

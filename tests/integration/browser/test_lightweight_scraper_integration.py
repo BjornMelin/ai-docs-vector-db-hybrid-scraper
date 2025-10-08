@@ -33,7 +33,7 @@ if "src.services.crawling.c4a_presets" not in sys.modules:
     presets_module.preset_browser_config = _noop  # type: ignore[attr-defined]
     sys.modules["src.services.crawling.c4a_presets"] = presets_module
 
-from src.config import Config
+from src.config import Settings
 from src.config.models import Environment
 from src.services.browser.lightweight_scraper import LightweightScraper
 
@@ -47,7 +47,7 @@ async def test_lightweight_scraper_handles_static_page(
     """Lightweight scraper should fetch simple HTML from the integration server."""
 
     base = tmp_path / "browser_cfg"
-    config = Config.model_validate(
+    config = Settings.model_validate(
         {
             "environment": Environment.TESTING,
             "data_dir": base / "data",
@@ -79,7 +79,7 @@ async def test_lightweight_scraper_escalates_on_forbidden(
     """403 responses should trigger escalation to higher tiers."""
 
     base = tmp_path / "browser_cfg_forbidden"
-    config = Config.model_validate(
+    config = Settings.model_validate(
         {
             "environment": Environment.TESTING,
             "data_dir": base / "data",

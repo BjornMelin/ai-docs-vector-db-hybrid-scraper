@@ -19,7 +19,7 @@ if _TEST_ENV_PATH.exists():  # pragma: no cover - depends on developer machine
 
 
 if TYPE_CHECKING:
-    from src.config import Config
+    from src.config import Settings
 
 
 def _is_ci_environment() -> bool:
@@ -161,12 +161,12 @@ def performance_monitor() -> Generator[_PerformanceMonitor, None, None]:
 @pytest.fixture
 def config_factory(
     tmp_path_factory: pytest.TempPathFactory,
-) -> Callable[..., Config]:
-    """Build typed Config instances with deterministic directories."""
+) -> Callable[..., Settings]:
+    """Build typed Settings instances with deterministic directories."""
 
     def _create_config(**overrides: Any):
         # pylint: disable=import-outside-toplevel
-        from src.config import Config
+        from src.config import Settings
         from src.config.models import Environment  # Local import to avoid cycles
 
         base_dir = tmp_path_factory.mktemp("config_factory")
@@ -177,7 +177,7 @@ def config_factory(
             "logs_dir": base_dir / "logs",
         }
         payload.update(overrides)
-        return Config.model_validate(payload)
+        return Settings.model_validate(payload)
 
     return _create_config
 

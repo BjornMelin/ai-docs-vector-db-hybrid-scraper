@@ -59,7 +59,7 @@ def mock_config():
 def mock_config_loader(mock_config):
     """Mock the ConfigLoader class."""
     mock_loader = MagicMock()
-    mock_loader.load_config.return_value = mock_config
+    mock_loader.load_settings.return_value = mock_config
     mock_loader.from_file.return_value = mock_config
     return mock_loader
 

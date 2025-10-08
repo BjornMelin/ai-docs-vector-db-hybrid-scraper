@@ -9,7 +9,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from src.config import Config
+from src.config import Settings
 from src.services.base import BaseService
 from src.services.errors import CrawlServiceError
 
@@ -35,7 +35,7 @@ class UnifiedScrapingRequest(BaseModel):
 class UnifiedBrowserManager(BaseService):
     """Single orchestration manager for scraping and crawling."""
 
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: Settings) -> None:
         super().__init__()
         self._config = config
         self._router = AutomationRouter(config)

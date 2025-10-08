@@ -8,7 +8,7 @@ import httpx
 import pytest
 import respx
 
-from src.config import Config
+from src.config import Settings
 from src.config.models import Environment
 from src.services.browser.lightweight_scraper import LightweightScraper
 
@@ -20,7 +20,7 @@ async def test_lightweight_scraper_returns_none_on_client_error(
     """Ensure client errors escalate to higher tiers without raising."""
 
     base = tmp_path / "lightweight_scraper_client_error"
-    config = Config.model_validate(
+    config = Settings.model_validate(
         {
             "environment": Environment.TESTING,
             "data_dir": base / "data",

@@ -12,7 +12,7 @@ from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
-from src.config import get_config
+from src.config import get_settings
 from src.services.fastapi.middleware.manager import apply_defaults, apply_named_stack
 from src.services.logging_config import configure_logging
 
@@ -39,7 +39,7 @@ class ProductionMCPServer:
 
     def __init__(self, config=None):
         """Initialize production MCP server."""
-        self.config = config or get_config()
+        self.config = config or get_settings()
         self._middleware_names: list[str] = ["rate_limiting"]
         self._mcp_server: FastMCP | None = None
         self._app: Starlette | None = None
@@ -169,7 +169,7 @@ class ProductionMCPServer:
 
 def create_production_server(config=None) -> ProductionMCPServer:
     """Create a production-enhanced MCP server."""
-    return ProductionMCPServer(config or get_config())
+    return ProductionMCPServer(config or get_settings())
 
 
 async def run_production_server_async(
@@ -185,7 +185,7 @@ async def run_production_server_async(
 def main() -> None:
     """Main entry point for production server."""
     # Load configuration
-    config = get_config()
+    config = get_settings()
 
     # Get server configuration from environment
     host = os.getenv("HOST", "127.0.0.1")

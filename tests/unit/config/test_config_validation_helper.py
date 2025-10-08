@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import pytest
 
-from src.config import validate_config_payload
+from src.config import validate_settings_payload
 from src.config.models import Environment
 
 
 def test_validate_config_payload_success():
-    ok, errors, settings = validate_config_payload({"app_name": "Test App"})
+    ok, errors, settings = validate_settings_payload({"app_name": "Test App"})
 
     assert ok is True
     assert errors == []
@@ -18,7 +18,7 @@ def test_validate_config_payload_success():
 
 
 def test_validate_config_payload_failure_when_required_keys_missing():
-    ok, errors, settings = validate_config_payload(
+    ok, errors, settings = validate_settings_payload(
         {
             "embedding_provider": "openai",
             "openai": {"api_key": ""},
@@ -35,7 +35,7 @@ def test_validate_config_payload_failure_when_required_keys_missing():
     [Environment.TESTING, Environment.DEVELOPMENT],
 )
 def test_validate_config_payload_respects_base_overrides(base_env: Environment):
-    ok, errors, settings = validate_config_payload({}, base={"environment": base_env})
+    ok, errors, settings = validate_settings_payload({}, base={"environment": base_env})
 
     assert ok is True
     assert errors == []

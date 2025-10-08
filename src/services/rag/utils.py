@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from src.config import Config
+from src.config import Settings
 from src.services.vector_db.service import VectorStoreService
 
 from .generator import RAGGenerator
@@ -10,7 +10,7 @@ from .models import RAGConfig
 from .retriever import VectorServiceRetriever
 
 
-def build_default_rag_config(config: Config) -> RAGConfig:
+def build_default_rag_config(config: Settings) -> RAGConfig:
     """Construct RAG configuration values from the global application config."""
 
     return RAGConfig(
@@ -24,7 +24,7 @@ def build_default_rag_config(config: Config) -> RAGConfig:
 
 
 async def initialise_rag_generator(
-    config: Config, vector_store: VectorStoreService
+    config: Settings, vector_store: VectorStoreService
 ) -> tuple[RAGGenerator, RAGConfig]:
     """Create and initialise a LangChain-backed RAG generator."""
 

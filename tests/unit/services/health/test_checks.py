@@ -5,13 +5,13 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from src.config import Config
+from src.config import Settings
 from src.config.models import CrawlProvider, EmbeddingProvider
 from src.services.health import HealthCheckResult, checks
 
 
 @pytest.fixture()
-def config(config_factory) -> Config:
+def config(config_factory) -> Settings:
     """Return a configuration object with defaults."""
 
     return config_factory(

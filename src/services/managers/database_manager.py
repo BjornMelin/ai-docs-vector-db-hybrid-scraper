@@ -22,11 +22,11 @@ if TYPE_CHECKING:
 
 # Imports to avoid circular dependencies
 try:
-    from src.config import get_config
+    from src.config import get_settings
     from src.services.cache.manager import CacheManager as _CacheManager
     from src.services.vector_db.service import VectorStoreService as _VectorStoreService
 except ImportError:
-    get_config = None
+    get_settings = None
     _VectorStoreService = None
     _CacheManager = None
 
@@ -95,11 +95,11 @@ class DatabaseManager:
         )
 
         # Initialize vector store service
-        if get_config is None or _VectorStoreService is None:
+        if get_settings is None or _VectorStoreService is None:
             _raise_required_services_not_available()
         else:
             try:
-                config = get_config()
+                config = get_settings()
                 self._vector_service = _VectorStoreService(config)
                 await self._vector_service.initialize()
             except Exception as exc:
