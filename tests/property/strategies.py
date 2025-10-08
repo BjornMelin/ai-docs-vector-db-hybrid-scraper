@@ -344,10 +344,6 @@ def circuit_breaker_configurations(draw) -> dict[str, Any]:
     return {
         "failure_threshold": draw(st.integers(min_value=1, max_value=20)),
         "recovery_timeout": draw(positive_floats(min_value=5.0, max_value=300.0)),
-        "half_open_max_calls": draw(st.integers(min_value=1, max_value=10)),
-        "enable_adaptive_timeout": draw(st.booleans()),
-        "enable_bulkhead_isolation": draw(st.booleans()),
-        "enable_metrics_collection": draw(st.booleans()),
         "service_overrides": draw(
             st.dictionaries(
                 keys=st.sampled_from(["openai", "firecrawl", "qdrant", "redis"]),
