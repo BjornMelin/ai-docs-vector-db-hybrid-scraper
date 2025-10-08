@@ -94,7 +94,7 @@ Key collaborators:
 | `DynamicToolDiscovery` | Enumerates MCP tools, classifies capabilities, filters by intent. |
 | `ToolExecutionService` | Executes tools via `langchain_mcp_adapters`, normalises errors/timeouts. |
 | `RetrievalHelper` | Performs dense+sparse retrieval through LangChain abstractions. |
-| `ClientManager` | Provides shared transports and configuration handles. |
+| `ClientManager` | Provides shared transports, configuration handles, and caches the shared RAG generator for FastAPI dependencies and MCP tooling. |
 
 `RunnableConfig` carries telemetry callbacks, correlation IDs, and per-request
 timeouts. Metrics (`agentic_graph_runs_total`, `agentic_graph_latency_ms`, etc.)

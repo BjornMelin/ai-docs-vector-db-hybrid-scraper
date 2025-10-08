@@ -18,13 +18,16 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanE
 
 from src.contracts.retrieval import SearchRecord
 from src.services.query_processing.models import SearchRequest
-from src.services.rag.generator import RAGGenerator
-from src.services.rag.langgraph_pipeline import (
+from src.services.rag import (
     LangGraphRAGPipeline,
+    RAGConfig,
+    RAGGenerator,
+    RAGRequest,
+    RAGResult,
     RagTracingCallback,
-    _StaticDocumentRetriever,
+    SourceAttribution,
 )
-from src.services.rag.models import RAGConfig, RAGRequest, RAGResult, SourceAttribution
+from src.services.rag.langgraph_pipeline import _StaticDocumentRetriever
 from src.services.vector_db.service import VectorStoreService
 from src.services.vector_db.types import VectorMatch
 

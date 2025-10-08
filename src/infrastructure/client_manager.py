@@ -25,6 +25,7 @@ from src.infrastructure.clients import (
 from src.infrastructure.container import ApplicationContainer, get_container
 from src.services.embeddings.fastembed_provider import FastEmbedProvider
 from src.services.errors import APIError
+from src.services.rag.generator import RAGGenerator
 from src.services.vector_db.service import VectorStoreService
 
 
@@ -91,6 +92,7 @@ logger = logging.getLogger(__name__)
 
 
 async def _ensure_service_registry():  # pragma: no cover - thin wrapper
+    # pylint: disable=import-outside-toplevel
     from src.services.registry import (
         ensure_service_registry as _ensure_service_registry,
     )

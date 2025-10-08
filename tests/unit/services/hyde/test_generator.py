@@ -1,10 +1,9 @@
 """Tests for HyDE hypothetical document generator."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from src.infrastructure.client_manager import ClientManager
 from src.services.errors import APIError, EmbeddingServiceError
 from src.services.hyde.config import HyDEConfig, HyDEPromptConfig
 from src.services.hyde.generator import GenerationResult, HypotheticalDocumentGenerator
@@ -83,20 +82,25 @@ class TestGenerationResult:
 class TestHypotheticalDocumentGenerator:
     """Tests for HypotheticalDocumentGenerator class."""
 
+    # pylint: disable=too-many-public-methods
+
     @pytest.fixture
-    def mock_client_manager(self):
-        """Create mock client manager."""
-        manager = MagicMock(spec=ClientManager)
-        manager.initialize = AsyncMock()
-        manager.cleanup = AsyncMock()
+    def mock_openai_client(self):
+        """Create a mock OpenAI client."""
+        mock_models = MagicMock()
+        mock_models.list = AsyncMock()
 
-        # Mock OpenAI client
-        mock_openai_client = MagicMock()
-        mock_openai_client.models.list = AsyncMock()
-        mock_openai_client.chat.completions.create = AsyncMock()
-        manager.get_openai_client = AsyncMock(return_value=mock_openai_client)
+        mock_completions = MagicMock()
+        mock_completions.create = AsyncMock()
 
-        return manager
+        mock_chat = MagicMock()
+        mock_chat.completions = mock_completions
+
+        client = MagicMock()
+        client.models = mock_models
+        client.chat = mock_chat
+
+        return client
 
     @pytest.fixture
     def hyde_config(self):
@@ -121,106 +125,82 @@ class TestHypotheticalDocumentGenerator:
         return HyDEPromptConfig()
 
     @pytest.fixture
-    def generator(self, hyde_config, prompt_config, mock_client_manager):
+    def generator(self, hyde_config, prompt_config, mock_openai_client):
         """Create generator instance."""
         return HypotheticalDocumentGenerator(
             config=hyde_config,
             prompt_config=prompt_config,
-            client_manager=mock_client_manager,
+            openai_client=mock_openai_client,
         )
 
-    def test_init(self, hyde_config, prompt_config, mock_client_manager):
+    def test_init(self, hyde_config, prompt_config, mock_openai_client):
         """Test generator initialization."""
         generator = HypotheticalDocumentGenerator(
             config=hyde_config,
             prompt_config=prompt_config,
-            client_manager=mock_client_manager,
+            openai_client=mock_openai_client,
         )
 
         assert generator.config == hyde_config
         assert generator.prompt_config == prompt_config
-        assert generator.client_manager == mock_client_manager
-        assert generator._llm_client is None
-        assert generator._initialized is False
-
-        # Check metrics tracking initialization
+        assert generator.is_initialized() is False
         assert generator.generation_count == 0
-        assert generator._total_generation_time == 0.0
-        assert generator._total_tokens_used == 0
-        assert generator._total_cost == 0.0
-
-    def test_init_without_client_manager(self, hyde_config, prompt_config):
-        """Test generator initialization without client manager."""
-        with patch(
-            "src.services.hyde.generator.ClientManager.from_unified_config"
-        ) as mock_from_config:
-            mock_manager = MagicMock(spec=ClientManager)
-            mock_from_config.return_value = mock_manager
-
-            generator = HypotheticalDocumentGenerator(
-                config=hyde_config,
-                prompt_config=prompt_config,
-                client_manager=None,
-            )
-
-            # The generator should have created a client manager
-            assert generator.client_manager is not None
-            # Verify that from_unified_config was called
-            mock_from_config.assert_called_once()
+        assert generator.total_generation_time == 0.0
+        assert generator.total_tokens_used == 0
+        assert generator.total_cost == 0.0
 
     @pytest.mark.asyncio
-    async def test_initialize_success(self, generator, mock_client_manager):
+    async def test_initialize_success(self, generator, mock_openai_client):
         """Test successful initialization."""
         await generator.initialize()
 
-        assert generator._initialized is True
-        mock_client_manager.initialize.assert_called_once()
-        mock_client_manager.get_openai_client.assert_called_once()
+        assert generator.is_initialized() is True
+        mock_openai_client.models.list.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_initialize_no_openai_client(self, generator, mock_client_manager):
+    async def test_initialize_no_openai_client(self, hyde_config, prompt_config):
         """Test initialization failure when OpenAI client not available."""
-        mock_client_manager.get_openai_client.return_value = None
+        generator = HypotheticalDocumentGenerator(
+            config=hyde_config,
+            prompt_config=prompt_config,
+        )
 
         with pytest.raises(EmbeddingServiceError) as exc_info:
             await generator.initialize()
 
         assert "OpenAI client not available" in str(exc_info.value)
-        assert generator._initialized is False
+        assert generator.is_initialized() is False
 
     @pytest.mark.asyncio
-    async def test_initialize_client_error(self, generator, mock_client_manager):
-        """Test initialization failure when client manager fails."""
-        mock_client_manager.initialize.side_effect = Exception("Client error")
+    async def test_initialize_client_error(self, generator, mock_openai_client):
+        """Test initialization failure when client setup fails."""
+        mock_openai_client.models.list.side_effect = Exception("Client error")
 
         with pytest.raises(EmbeddingServiceError) as exc_info:
             await generator.initialize()
 
         assert "Failed to initialize HyDE generator" in str(exc_info.value)
-        assert generator._initialized is False
+        assert generator.is_initialized() is False
 
     @pytest.mark.asyncio
-    async def test_initialize_already_initialized(self, generator, mock_client_manager):
+    async def test_initialize_already_initialized(self, generator, mock_openai_client):
         """Test initialization when already initialized."""
-        generator._initialized = True
+        await generator.initialize()
+        mock_openai_client.models.list.assert_called_once()
+        mock_openai_client.models.list.reset_mock()
 
         await generator.initialize()
 
-        # Should not call client manager methods again
-        mock_client_manager.initialize.assert_not_called()
-        mock_client_manager.get_openai_client.assert_not_called()
+        mock_openai_client.models.list.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_cleanup(self, generator, mock_client_manager):
+    async def test_cleanup(self, generator):
         """Test cleanup."""
-        generator._initialized = True
-        generator._llm_client = MagicMock()
-
+        await generator.initialize()
         await generator.cleanup()
 
         assert generator._llm_client is None
-        assert generator._initialized is False
-        mock_client_manager.cleanup.assert_called_once()
+        assert generator.is_initialized() is False
 
     def test_classify_query_technical(self, generator):
         """Test query classification for technical queries."""
@@ -346,12 +326,8 @@ class TestHypotheticalDocumentGenerator:
             assert "test query" in variation
 
     @pytest.mark.asyncio
-    async def test_generate_single_document_success(
-        self, generator, _mock_client_manager
-    ):
+    async def test_generate_single_document_success(self, generator):
         """Test successful single document generation."""
-        generator._initialized = True
-
         # Mock LLM response
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
@@ -368,12 +344,8 @@ class TestHypotheticalDocumentGenerator:
         mock_llm_client.chat.completions.create.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_generate_single_document_timeout(
-        self, generator, _mock_client_manager
-    ):
+    async def test_generate_single_document_timeout(self, generator):
         """Test document generation timeout."""
-        generator._initialized = True
-
         mock_llm_client = MagicMock()
         mock_llm_client.chat.completions.create = AsyncMock(side_effect=TimeoutError())
         generator._llm_client = mock_llm_client
@@ -384,12 +356,8 @@ class TestHypotheticalDocumentGenerator:
         assert result == ""  # Returns empty string on timeout
 
     @pytest.mark.asyncio
-    async def test_generate_single_document_error(
-        self, generator, _mock_client_manager
-    ):
+    async def test_generate_single_document_error(self, generator):
         """Test document generation error handling."""
-        generator._initialized = True
-
         mock_llm_client = MagicMock()
         mock_llm_client.chat.completions.create = AsyncMock(
             side_effect=Exception("LLM error")
@@ -402,9 +370,8 @@ class TestHypotheticalDocumentGenerator:
         assert result == ""  # Returns empty string on error
 
     @pytest.mark.asyncio
-    async def test_generate_parallel(self, generator, _mock_client_manager):
+    async def test_generate_parallel(self, generator):
         """Test parallel document generation."""
-        generator._initialized = True
         generator.config.max_concurrent_generations = 2
 
         # Mock successful generation
@@ -422,9 +389,8 @@ class TestHypotheticalDocumentGenerator:
         assert all("Document for:" in doc for doc in documents)
 
     @pytest.mark.asyncio
-    async def test_generate_parallel_with_errors(self, generator, _mock_client_manager):
+    async def test_generate_parallel_with_errors(self, generator):
         """Test parallel generation with some errors."""
-        generator._initialized = True
         generator.config.min_generation_length = 5
 
         async def mock_generate_single(prompt):
@@ -452,9 +418,8 @@ class TestHypotheticalDocumentGenerator:
         assert all("Valid document content" in doc for doc in documents)
 
     @pytest.mark.asyncio
-    async def test_generate_sequential(self, generator, _mock_client_manager):
+    async def test_generate_sequential(self, generator):
         """Test sequential document generation."""
-        generator._initialized = True
         generator.config.min_generation_length = 5
 
         async def mock_generate_single(prompt):
@@ -567,9 +532,9 @@ class TestHypotheticalDocumentGenerator:
         assert generator._calculate_diversity_score(identical) == 0.0
 
     @pytest.mark.asyncio
-    async def test_generate_documents_success(self, generator, _mock_client_manager):
+    async def test_generate_documents_success(self, generator):
         """Test successful document generation."""
-        generator._initialized = True
+        await generator.initialize()
 
         # Mock the generation pipeline
         mock_prompts = ["prompt1", "prompt2", "prompt3"]
@@ -589,11 +554,9 @@ class TestHypotheticalDocumentGenerator:
         assert result.diversity_score >= 0
 
     @pytest.mark.asyncio
-    async def test_generate_documents_sequential_mode(
-        self, generator, _mock_client_manager
-    ):
+    async def test_generate_documents_sequential_mode(self, generator):
         """Test document generation in sequential mode."""
-        generator._initialized = True
+        await generator.initialize()
         generator.config.parallel_generation = False
 
         mock_prompts = ["prompt1", "prompt2"]
@@ -618,9 +581,9 @@ class TestHypotheticalDocumentGenerator:
         assert "not initialized" in str(exc_info.value).lower()
 
     @pytest.mark.asyncio
-    async def test_generate_documents_failure(self, generator, _mock_client_manager):
+    async def test_generate_documents_failure(self, generator):
         """Test document generation failure handling."""
-        generator._initialized = True
+        await generator.initialize()
 
         generator._build_diverse_prompts = MagicMock(
             side_effect=Exception("Prompt error")
@@ -635,17 +598,17 @@ class TestHypotheticalDocumentGenerator:
         """Test metrics retrieval."""
         # Set some test values
         generator.generation_count = 5
-        generator._total_generation_time = 10.0
-        generator._total_tokens_used = 500
-        generator._total_cost = 0.05
+        generator.total_generation_time = 10.0
+        generator.total_tokens_used = 500
+        generator.total_cost = 0.05
 
         metrics = generator.get_metrics()
 
         assert metrics["generation_count"] == 5
-        assert metrics["_total_generation_time"] == 10.0
+        assert metrics["total_generation_time"] == 10.0
         assert metrics["avg_generation_time"] == 2.0
-        assert metrics["_total_tokens_used"] == 500
-        assert metrics["_total_cost"] == 0.05
+        assert metrics["total_tokens_used"] == 500
+        assert metrics["total_cost"] == 0.05
         assert metrics["avg_cost_per_generation"] == 0.01
 
     def test_get_metrics_zero_generations(self, generator):
@@ -653,10 +616,10 @@ class TestHypotheticalDocumentGenerator:
         metrics = generator.get_metrics()
 
         assert metrics["generation_count"] == 0
-        assert metrics["_total_generation_time"] == 0.0
+        assert metrics["total_generation_time"] == 0.0
         assert metrics["avg_generation_time"] == 0.0
-        assert metrics["_total_tokens_used"] == 0
-        assert metrics["_total_cost"] == 0.0
+        assert metrics["total_tokens_used"] == 0
+        assert metrics["total_cost"] == 0.0
         assert metrics["avg_cost_per_generation"] == 0.0
 
     def test_model_pricing_coverage(self, generator):

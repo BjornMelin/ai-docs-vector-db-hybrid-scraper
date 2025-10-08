@@ -377,7 +377,7 @@ class TestValidateInput:
         """Test input validation with valid inputs."""
 
         def validate_number(value):
-            if not isinstance(value, int | float):
+            if not isinstance(value, (int, float)):
                 msg = "Must be a number"
                 raise TypeError(msg)
             return float(value)

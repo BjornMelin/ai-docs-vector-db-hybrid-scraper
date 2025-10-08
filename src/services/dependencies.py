@@ -21,7 +21,6 @@ from src.services.errors import (
     circuit_breaker,
     tenacity_circuit_breaker,
 )
-from src.services.rag.generator import RAGGenerator
 from src.services.rag.models import RAGRequest as InternalRAGRequest
 from src.services.registry import (
     ensure_service_registry,
@@ -142,6 +141,7 @@ async def generate_embeddings(
     embedding_manager: EmbeddingManagerDep,
 ) -> EmbeddingResponse:
     """Generate embeddings with smart provider selection."""
+
     try:
         quality_tier = (
             QualityTier(request.quality_tier) if request.quality_tier else None
@@ -439,8 +439,9 @@ async def get_rag_generator(
 ) -> Any:
     """Get initialized RAGGenerator service."""
 
-    generator = RAGGenerator(config.rag, client_manager)  # type: ignore[arg-type]
-    await generator.initialize()
+    del config
+
+    generator = await client_manager.get_rag_generator()
     return generator
 
 
@@ -743,6 +744,7 @@ async def get_service_health() -> dict[str, Any]:
 # Service Performance Metrics
 async def get_service_metrics() -> dict[str, Any]:
     """Get performance metrics for all services."""
+
     try:
         client_manager = get_client_manager()
 
