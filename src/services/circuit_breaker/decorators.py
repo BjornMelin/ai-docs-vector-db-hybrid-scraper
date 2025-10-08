@@ -41,7 +41,7 @@ def _build_breaker_kwargs(
     failure_threshold: int,
     recovery_timeout: float,
 ) -> dict[str, object]:
-    """Translate legacy decorator arguments into purgatory parameters."""
+    """Translate circuit breaker configuration into purgatory parameters."""
 
     return {
         "threshold": failure_threshold,
