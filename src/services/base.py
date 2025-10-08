@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from contextlib import asynccontextmanager
 from typing import Any
 
-from src.config import Settings
+from src.config.loader import Settings
 
 from .errors import APIError
 from .lifecycle import LifecycleTracker, ServiceLifecycle
@@ -48,6 +48,7 @@ class BaseService(ABC, LifecycleTracker, ServiceLifecycle):
     @asynccontextmanager
     async def context(self):
         """Context manager for service lifecycle."""
+
         try:
             await self.initialize()
             yield self
@@ -56,6 +57,7 @@ class BaseService(ABC, LifecycleTracker, ServiceLifecycle):
 
     def _validate_initialized(self) -> None:
         """Ensure service is initialized."""
+
         if not self.is_initialized():
             msg = (
                 f"{self.__class__.__name__} not initialized. "

@@ -96,11 +96,13 @@ class ServiceRegistry:  # pylint: disable=too-many-instance-attributes
             raise RuntimeError("Failed to initialize embedding manager") from exc
 
         try:
-            database_manager = DatabaseManager()
-            await database_manager.initialize(
-                qdrant_client=await client_manager.get_qdrant_client(),
-                redis_client=await client_manager.get_redis_client(),
+            redis_client = await client_manager.get_redis_client()
+            database_manager = DatabaseManager(
+                redis_client=redis_client,
+                cache_manager=cache_manager,
+                vector_service=vector_service,
             )
+            await database_manager.initialize()
         except Exception as exc:  # pragma: no cover - defensive
             raise RuntimeError("Failed to initialize database manager") from exc
 

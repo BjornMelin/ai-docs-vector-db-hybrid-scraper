@@ -36,7 +36,8 @@ logger = logging.getLogger(__name__)
 async def managed_lifespan(server: FastMCP[Any]) -> AsyncIterator[None]:
     """Server lifecycle management with lazy initialization."""
 
-    configure_logging()
+    config = get_settings()
+    configure_logging(settings=config)
     monitoring_tasks: list[asyncio.Task[Any]] = []
     client_manager: ClientManager | None = None
     metrics_registry = None
@@ -46,7 +47,6 @@ async def managed_lifespan(server: FastMCP[Any]) -> AsyncIterator[None]:
 
         logger.info("Initializing AI Documentation Vector DB MCP Server...")
 
-        config = get_settings()
         client_manager = ClientManager()
         await client_manager.initialize()
 

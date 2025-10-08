@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import functools
 import logging
+import threading
 from collections.abc import Callable
 from typing import Any, TypeVar
 
 from tenacity import (
     AsyncRetrying,
-    retry_if_exception_type,
+    retry_if_exception,
     stop_after_attempt,
     wait_exponential,
 )
@@ -32,6 +33,11 @@ except ModuleNotFoundError:  # pragma: no cover
 logger = logging.getLogger(__name__)
 F = TypeVar("F", bound=Callable[..., Any])
 _LEGACY_ARGS_NOTICE_EMITTED = False
+_LEGACY_ARGS_NOTICE_LOCK = threading.Lock()
+
+
+class CircuitOpenError(ExternalServiceError):
+    """Raised when the circuit breaker is open; used to skip retries."""
 
 
 def _build_breaker_kwargs(
@@ -62,7 +68,7 @@ async def _call_with_circuit_breaker(
             return await func(*args, **kwargs)
     except OpenedState as exc:
         msg = f"Circuit breaker is open for {service_name}"
-        raise ExternalServiceError(
+        raise CircuitOpenError(
             msg,
             context={"service": service_name, "state": "open"},
         ) from exc
@@ -144,6 +150,11 @@ def tenacity_circuit_breaker(  # pylint: disable=too-many-arguments,too-many-pos
     def decorator(func: F) -> F:
         breaker_name = service_name or f"{func.__module__}.{func.__name__}"
 
+        def _is_retryable(exc: BaseException) -> bool:
+            return isinstance(exc, expected_exceptions) and not isinstance(
+                exc, CircuitOpenError
+            )
+
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
             async def _invoke(*inner_args, **inner_kwargs):
@@ -152,7 +163,7 @@ def tenacity_circuit_breaker(  # pylint: disable=too-many-arguments,too-many-pos
             async for attempt in AsyncRetrying(
                 stop=stop_after_attempt(max_attempts),
                 wait=wait_exponential(multiplier=wait_multiplier, max=wait_max),
-                retry=retry_if_exception_type(expected_exceptions),
+                retry=retry_if_exception(_is_retryable),
                 reraise=True,
             ):
                 with attempt:
@@ -217,12 +228,16 @@ def _emit_legacy_args_notice() -> None:
     global _LEGACY_ARGS_NOTICE_EMITTED  # pylint: disable=global-statement
     if _LEGACY_ARGS_NOTICE_EMITTED:
         return
-    logger.warning(
-        "Legacy circuit_breaker parameters (half_open_max_calls, expected_exceptions, "
-        "expected_exception, enable_adaptive_timeout, enable_metrics) are ignored. "
-        "Please update call sites to the new configuration semantics."
-    )
-    _LEGACY_ARGS_NOTICE_EMITTED = True
+    with _LEGACY_ARGS_NOTICE_LOCK:
+        if _LEGACY_ARGS_NOTICE_EMITTED:
+            return
+        logger.warning(
+            "Legacy circuit_breaker parameters "
+            "(half_open_max_calls, expected_exceptions, expected_exception, "
+            "enable_adaptive_timeout, enable_metrics) are ignored. "
+            "Please update call sites to the new configuration semantics."
+        )
+        _LEGACY_ARGS_NOTICE_EMITTED = True
 
 
 __all__ = [

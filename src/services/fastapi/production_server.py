@@ -81,6 +81,7 @@ class ProductionMCPServer:
         configure_logging(
             level=self.config.log_level.value,
             enable_color=self.config.debug,
+            settings=self.config,
         )
 
         stack = getattr(self.config, "middleware_stack", None)

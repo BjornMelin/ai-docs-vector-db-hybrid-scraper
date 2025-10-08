@@ -1,9 +1,10 @@
 """Security configuration primitives."""
 
-from pydantic import BaseModel, Field
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class SecurityConfig(BaseModel):
+class SecurityConfig(BaseSettings):
     """Application security settings consumed by FastAPI middleware."""
 
     enabled: bool = Field(
@@ -65,11 +66,7 @@ class SecurityConfig(BaseModel):
         description="List of API keys considered valid for configuration access.",
     )
 
-    class Config:
-        """Pydantic configuration options."""
-
-        env_prefix = "SECURITY_"
-        case_sensitive = False
+    model_config = SettingsConfigDict(env_prefix="SECURITY_", case_sensitive=False)
 
 
 __all__ = ["SecurityConfig"]

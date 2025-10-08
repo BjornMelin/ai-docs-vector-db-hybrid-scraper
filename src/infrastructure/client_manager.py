@@ -7,7 +7,6 @@ import logging
 import threading
 from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
-from datetime import timedelta
 from importlib import import_module
 from typing import TYPE_CHECKING, Any, Final, Literal, NoReturn, cast
 
@@ -120,7 +119,12 @@ def _resolve_health_dependencies() -> tuple[
 
     try:
         module = import_module("src.services.dependencies")
+    except ModuleNotFoundError:
+        return (None, None)
     except ImportError:
+        logger.exception(
+            "Failed to import health dependencies from src.services.dependencies"
+        )
         return (None, None)
 
     status_func = getattr(module, "get_health_status", None)
@@ -233,6 +237,7 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
 
     async def _initialize_parallel_processing_system(self) -> None:
         """Initialize the parallel processing system using dependency injection."""
+
         try:
             container = get_container()
             if container:
@@ -255,9 +260,14 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
 
     async def cleanup(self) -> None:
         """Cleanup resources (function-based dependencies are stateless)."""
+
         if self._vector_store_service:
-            await self._vector_store_service.cleanup()
-            self._vector_store_service = None
+            try:
+                await self._vector_store_service.cleanup()
+            except Exception:  # pragma: no cover - defensive
+                logger.exception("Failed to cleanup vector store service")
+            finally:
+                self._vector_store_service = None
         if self._rag_generator:
             try:
                 await self._rag_generator.cleanup()
@@ -285,8 +295,12 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
     @classmethod
     def reset_singleton(cls) -> None:
         """Reset singleton instance for testing purposes."""
+
         with cls._init_lock:
             cls._instance = None
+        global _API_ERROR_TYPE, _HEALTH_FUNCS  # pylint: disable=global-statement
+        _API_ERROR_TYPE = None
+        _HEALTH_FUNCS = None
 
     def _get_provider_client(self, key: ProviderKey) -> Any:
         provider = self._providers.get(key)
@@ -295,6 +309,8 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         return provider.client
 
     async def _close_mcp_client(self) -> None:
+        """Close the MCP client if it exists."""
+
         async with self._mcp_client_lock:
             client = self._mcp_client
             if client is None:
@@ -313,9 +329,13 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
             self._mcp_client = None
 
     async def get_openai_client(self):
+        """Return the OpenAI client."""
+
         return self._get_provider_client("openai")
 
     async def get_qdrant_client(self):
+        """Return the Qdrant client."""
+
         return self._get_provider_client("qdrant")
 
     async def get_mcp_client(self) -> MultiServerMCPClient:
@@ -351,8 +371,12 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
     ) -> Connection:
         """Return serialised configuration for a single MCP server."""
 
-        timeout_ms = server.timeout_ms or config.request_timeout_ms
-        timeout = timedelta(milliseconds=timeout_ms)
+        timeout_ms = (
+            server.timeout_ms
+            if server.timeout_ms is not None
+            else config.request_timeout_ms
+        )
+        timeout_seconds = timeout_ms / 1000.0
 
         if server.transport == MCPTransport.STDIO:
             payload = {
@@ -368,7 +392,7 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
             payload = {
                 "transport": "streamable_http",
                 "url": str(server.url),
-                "timeout": timeout,
+                "timeout": timeout_seconds,
             }
             if server.headers:
                 payload["headers"] = dict(server.headers)
@@ -377,14 +401,16 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         payload = {
             "transport": "sse",
             "url": str(server.url),
-            "timeout": timeout,
-            "sse_read_timeout": timeout,
+            "timeout": timeout_seconds,
+            "sse_read_timeout": timeout_seconds,
         }
         if server.headers:
             payload["headers"] = dict(server.headers)
         return cast(Connection, payload)
 
     async def get_vector_store_service(self) -> VectorStoreService:
+        """Return the vector store service instance."""
+
         if self._vector_store_service:
             return self._vector_store_service
 
@@ -392,7 +418,12 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         provider = FastEmbedProvider(model_name=model_name)
         vector_module = import_module("src.services.vector_db.service")
         vector_cls = vector_module.VectorStoreService
-        service = cast(VectorStoreService, vector_cls(self._config, self, provider))
+        service = cast(
+            VectorStoreService,
+            vector_cls(
+                config=self._config, client_manager=self, embeddings_provider=provider
+            ),
+        )
         await service.initialize()
         self._vector_store_service = service
         return service

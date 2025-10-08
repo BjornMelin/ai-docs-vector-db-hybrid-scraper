@@ -25,6 +25,7 @@ import asyncio
 import functools
 import inspect
 import logging
+import re
 import time
 from collections.abc import Callable
 from typing import Any, LiteralString, TypeVar
@@ -224,11 +225,9 @@ def safe_response(success: bool, **kwargs) -> dict[str, Any]:
         error = str(raw_error)
 
         # Don't expose internal paths or sensitive info
-        error = error.replace("/home/", "/****/")
-        error = error.replace("api_key", "***")
-        error = error.replace("token", "***")
-        error = error.replace("password", "***")
-        error = error.replace("secret", "***")
+        error = re.sub(r"([A-Za-z]:)?[/\\][^\s]+", "/****/", error)
+        for pattern in (r"api[_-]?key", r"token", r"password", r"secret"):
+            error = re.sub(pattern, "***", error, flags=re.IGNORECASE)
 
         response["error"] = error
         response["error_type"] = kwargs.get("error_type", "general")
@@ -257,13 +256,21 @@ def retry_async(
     """
 
     def decorator(func: F) -> F:
+        """Decorator for async retry logic."""
+
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
+            """Wrapper function for async retry logic."""
+
             last_exception = None
 
             for attempt in range(max_attempts):
                 try:
                     return await func(*args, **kwargs)
+                except (TimeoutError, OSError, PermissionError):
+                    # Non-retryable error
+                    logger.exception("Non-retryable error in %s", func.__name__)
+                    raise
                 except exceptions as e:
                     last_exception = e
 
@@ -283,10 +290,6 @@ def retry_async(
                     )
 
                     await asyncio.sleep(delay)
-                except (TimeoutError, OSError, PermissionError):
-                    # Non-retryable error
-                    logger.exception("Non-retryable error in %s", func.__name__)
-                    raise
 
             raise last_exception or Exception("All retry attempts failed")
 
