@@ -3,6 +3,7 @@
 # pylint: disable=too-many-lines,no-else-return,no-else-raise,duplicate-code,cyclic-import,global-statement
 
 import asyncio
+import inspect
 import logging
 from collections.abc import AsyncGenerator, Callable
 from datetime import UTC, datetime
@@ -144,16 +145,20 @@ EmbeddingManagerDep = Annotated[Any, Depends(get_embedding_manager)]
 )
 async def generate_embeddings(
     request: EmbeddingRequest,
-    embedding_manager: EmbeddingManagerDep,
+    embedding_manager: EmbeddingManagerDep | None = None,
 ) -> EmbeddingResponse:
     """Generate embeddings with smart provider selection."""
 
     try:
+        manager = embedding_manager
+        if manager is None:
+            manager = await get_embedding_manager()
+
         quality_tier = (
             QualityTier(request.quality_tier) if request.quality_tier else None
         )
 
-        result = await embedding_manager.generate_embeddings(
+        result = await manager.generate_embeddings(
             texts=request.texts,
             quality_tier=quality_tier,
             provider_name=request.provider_name,
@@ -320,12 +325,16 @@ CrawlManagerDep = Annotated[Any, Depends(get_crawl_manager)]
 )
 async def scrape_url(
     request: CrawlRequest,
-    crawl_manager: CrawlManagerDep,
+    crawl_manager: CrawlManagerDep | None = None,
 ) -> CrawlResponse:
     """Scrape URL with provider selection."""
 
     try:
-        result = await crawl_manager.scrape_url(
+        manager = crawl_manager
+        if manager is None:
+            manager = await get_crawl_manager()
+
+        result = await manager.scrape_url(
             url=request.url, preferred_provider=request.preferred_provider
         )
     except (
@@ -345,12 +354,16 @@ async def scrape_url(
 
 async def crawl_site(
     request: CrawlRequest,
-    crawl_manager: CrawlManagerDep,
+    crawl_manager: CrawlManagerDep | None = None,
 ) -> dict[str, Any]:
     """Crawl entire website from starting URL."""
 
     try:
-        result = await crawl_manager.crawl_site(
+        manager = crawl_manager
+        if manager is None:
+            manager = await get_crawl_manager()
+
+        result = await manager.crawl_site(
             url=request.url,
             max_pages=request.max_pages,
             preferred_provider=request.preferred_provider,
@@ -536,13 +549,18 @@ def _format_rag_metrics(result: Any) -> dict[str, Any] | None:
 )
 async def generate_rag_answer(
     request: RAGRequest,
-    rag_generator: RAGGeneratorDep,
+    rag_generator: RAGGeneratorDep | None = None,
 ) -> RAGResponse:
     """Generate contextual answer from search results using RAG."""
 
     try:
+        generator = rag_generator
+        if generator is None:
+            manager_instance = await _resolve_client_manager(None)
+            generator = await get_rag_generator(get_settings(), manager_instance)
+
         internal_request = _convert_to_internal_rag_request(request)
-        result = await rag_generator.generate_answer(internal_request)
+        result = await generator.generate_answer(internal_request)
 
         raw_sources = list(getattr(result, "sources", []) or [])
         sources = _format_rag_sources(request, result)
@@ -559,19 +577,26 @@ async def generate_rag_answer(
             cached=False,
             reasoning_trace=None,
         )
+    except (ExternalServiceError, NetworkError, RateLimitError):
+        raise
     except Exception as e:
         logger.exception("RAG answer generation failed")
         msg = f"Failed to generate RAG answer: {e}"
-        raise RuntimeError(msg) from e
+        raise ExternalServiceError(msg) from e
 
 
 async def get_rag_metrics(
-    rag_generator: RAGGeneratorDep,
+    rag_generator: RAGGeneratorDep | None = None,
 ) -> dict[str, Any]:
     """Get RAG service performance metrics."""
 
     try:
-        metrics = rag_generator.get_metrics()
+        generator = rag_generator
+        if generator is None:
+            manager_instance = await _resolve_client_manager(None)
+            generator = await get_rag_generator(get_settings(), manager_instance)
+
+        metrics = generator.get_metrics()
         # Convert RAGServiceMetrics to dict if it's a Pydantic model
         if hasattr(metrics, "model_dump"):
             return metrics.model_dump()
@@ -582,12 +607,17 @@ async def get_rag_metrics(
 
 
 async def clear_rag_cache(
-    rag_generator: RAGGeneratorDep,
+    rag_generator: RAGGeneratorDep | None = None,
 ) -> dict[str, str]:
     """Clear RAG answer cache."""
 
     try:
-        rag_generator.clear_cache()
+        generator = rag_generator
+        if generator is None:
+            manager_instance = await _resolve_client_manager(None)
+            generator = await get_rag_generator(get_settings(), manager_instance)
+
+        generator.clear_cache()
         # RAGGenerator.clear_cache is a no-op (no cache to purge)
         return {
             "status": "noop",
@@ -680,7 +710,12 @@ async def reset_circuit_breaker(
     try:
         if manager is None:
             manager = await get_circuit_breaker_manager()
-        services = manager.list_services()
+        services_result = manager.list_services()
+        services = (
+            await services_result
+            if inspect.isawaitable(services_result)
+            else services_result
+        )
         if service_name not in services:
             return {
                 "success": False,
@@ -708,7 +743,12 @@ async def reset_all_circuit_breakers() -> dict[str, Any]:
 
     try:
         manager = await get_circuit_breaker_manager()
-        services = manager.list_services()
+        services_result = manager.list_services()
+        services = (
+            await services_result
+            if inspect.isawaitable(services_result)
+            else services_result
+        )
         results = {}
 
         for service_name in services:
@@ -928,7 +968,11 @@ async def track_operation_performance(
     start_time = perf_counter()
 
     try:
-        result = await operation_func(*args, **kwargs)
+        result_or_awaitable = operation_func(*args, **kwargs)
+        if inspect.isawaitable(result_or_awaitable):
+            result = await result_or_awaitable
+        else:
+            result = result_or_awaitable
         # Record success metrics (could integrate with metrics system)
         duration_ms = (perf_counter() - start_time) * 1000
         logger.debug("Operation %s completed in %.2fms", operation_name, duration_ms)
