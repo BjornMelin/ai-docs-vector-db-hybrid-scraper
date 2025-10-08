@@ -25,19 +25,25 @@ from src.infrastructure.clients import (
     RedisClientProvider,
 )
 from src.infrastructure.container import ApplicationContainer, get_container
-from src.services.cache.manager import CacheManager
 from src.services.circuit_breaker import CircuitBreakerManager
-from src.services.content_intelligence.service import ContentIntelligenceService
 from src.services.core.project_storage import ProjectStorage
 from src.services.embeddings.fastembed_provider import FastEmbedProvider
-from src.services.managers.crawling_manager import CrawlingManager
-from src.services.managers.database_manager import DatabaseManager
-from src.services.managers.embedding_manager import EmbeddingManager
 
 
 if TYPE_CHECKING:  # pragma: no cover - imported for typing only
+    from src.services.cache.manager import CacheManager
+    from src.services.content_intelligence.service import ContentIntelligenceService
+    from src.services.managers.crawling_manager import CrawlingManager
+    from src.services.managers.database_manager import DatabaseManager
+    from src.services.managers.embedding_manager import EmbeddingManager
     from src.services.rag.generator import RAGGenerator
     from src.services.vector_db.service import VectorStoreService
+else:  # pragma: no cover - runtime fallbacks keep optional extras optional
+    CacheManager = Any  # type: ignore[assignment]
+    ContentIntelligenceService = Any  # type: ignore[assignment]
+    CrawlingManager = Any  # type: ignore[assignment]
+    DatabaseManager = Any  # type: ignore[assignment]
+    EmbeddingManager = Any  # type: ignore[assignment]
 
 
 HealthStatusCallable = Callable[[], Awaitable[dict[str, dict[str, Any]]]]
@@ -81,6 +87,82 @@ _API_ERROR_TYPE: type[Exception] | None = None
 _HEALTH_FUNCS: (
     tuple[HealthStatusCallable | None, OverallHealthCallable | None] | None
 ) = None
+
+_OPTIONAL_IMPORT_CACHE: dict[str, type[Any]] = {}
+
+
+def _import_optional_class(
+    module_path: str, attribute: str, feature_name: str
+) -> type[Any]:
+    """Import an optional service class lazily with helpful error messages."""
+
+    cache_key = f"{module_path}:{attribute}"
+    cached = _OPTIONAL_IMPORT_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+
+    try:
+        module = import_module(module_path)
+    except ModuleNotFoundError as exc:  # pragma: no cover - optional dependency
+        msg = (
+            f"{feature_name} requires optional dependency '{module_path}'. "
+            "Install the corresponding extras or disable the feature."
+        )
+        raise RuntimeError(msg) from exc
+    except ImportError as exc:  # pragma: no cover - defensive
+        logger.exception(
+            "Unexpected import error when loading %s from %s", attribute, module_path
+        )
+        msg = f"Failed to import {feature_name}; see logs for details."
+        raise RuntimeError(msg) from exc
+
+    try:
+        resolved = getattr(module, attribute)
+    except AttributeError as exc:  # pragma: no cover - defensive
+        msg = f"{feature_name} module '{module_path}' does not define '{attribute}'."
+        raise RuntimeError(msg) from exc
+
+    resolved_cls = cast(type[Any], resolved)
+    _OPTIONAL_IMPORT_CACHE[cache_key] = resolved_cls
+    return resolved_cls
+
+
+def _resolve_cache_manager_class() -> type[Any]:
+    return _import_optional_class(
+        "src.services.cache.manager", "CacheManager", "Cache manager"
+    )
+
+
+def _resolve_embedding_manager_class() -> type[Any]:
+    return _import_optional_class(
+        "src.services.managers.embedding_manager",
+        "EmbeddingManager",
+        "Embedding manager",
+    )
+
+
+def _resolve_crawling_manager_class() -> type[Any]:
+    return _import_optional_class(
+        "src.services.managers.crawling_manager",
+        "CrawlingManager",
+        "Crawling manager",
+    )
+
+
+def _resolve_content_intelligence_service_class() -> type[Any]:
+    return _import_optional_class(
+        "src.services.content_intelligence.service",
+        "ContentIntelligenceService",
+        "Content intelligence service",
+    )
+
+
+def _resolve_database_manager_class() -> type[Any]:
+    return _import_optional_class(
+        "src.services.managers.database_manager",
+        "DatabaseManager",
+        "Database manager",
+    )
 
 
 def _resolve_api_error_type() -> type[Exception]:
@@ -479,15 +561,19 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
             ),
         }
 
-        cache_manager = CacheManager(
-            dragonfly_url=cache_config.redis_url,
-            enable_local_cache=cache_config.enable_local_cache,
-            enable_distributed_cache=cache_config.enable_redis_cache,
-            local_max_size=cache_config.local_max_size,
-            local_max_memory_mb=float(cache_config.local_max_memory_mb),
-            distributed_ttl_seconds=distributed_ttl_seconds,
-            local_cache_path=self._config.cache_dir / "services",
-            memory_pressure_threshold=cache_config.memory_pressure_threshold,
+        cache_manager_cls = _resolve_cache_manager_class()
+        cache_manager = cast(
+            CacheManager,
+            cache_manager_cls(
+                dragonfly_url=cache_config.redis_url,
+                enable_local_cache=cache_config.enable_local_cache,
+                enable_distributed_cache=cache_config.enable_redis_cache,
+                local_max_size=cache_config.local_max_size,
+                local_max_memory_mb=float(cache_config.local_max_memory_mb),
+                distributed_ttl_seconds=distributed_ttl_seconds,
+                local_cache_path=self._config.cache_dir / "services",
+                memory_pressure_threshold=cache_config.memory_pressure_threshold,
+            ),
         )
         self._cache_manager = cache_manager
         return cache_manager
@@ -499,7 +585,8 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         if embedding_manager is not None:
             return embedding_manager
 
-        manager = EmbeddingManager()
+        manager_cls = _resolve_embedding_manager_class()
+        manager = cast(EmbeddingManager, manager_cls())
         await manager.initialize(config=self._config, client_manager=self)
         self._embedding_manager = manager
         return manager
@@ -511,7 +598,8 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         if crawling_manager is not None:
             return crawling_manager
 
-        manager = CrawlingManager()
+        manager_cls = _resolve_crawling_manager_class()
+        manager = cast(CrawlingManager, manager_cls())
         await manager.initialize(config=self._config)
         self._crawl_manager = manager
         return manager
@@ -532,10 +620,14 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
 
         embedding_manager = await self.get_embedding_manager()
         cache_manager = await self.get_cache_manager()
-        service = ContentIntelligenceService(
-            config=self._config,
-            embedding_manager=embedding_manager,
-            cache_manager=cache_manager,
+        service_cls = _resolve_content_intelligence_service_class()
+        service = cast(
+            ContentIntelligenceService,
+            service_cls(
+                config=self._config,
+                embedding_manager=embedding_manager,
+                cache_manager=cache_manager,
+            ),
         )
         await service.initialize()
         self._content_intelligence = service
@@ -568,10 +660,14 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         redis_client = await self.get_redis_client()
         cache_manager = await self.get_cache_manager()
         vector_service = await self.get_vector_store_service()
-        manager = DatabaseManager(
-            redis_client=redis_client,
-            cache_manager=cache_manager,
-            vector_service=vector_service,
+        manager_cls = _resolve_database_manager_class()
+        manager = cast(
+            DatabaseManager,
+            manager_cls(
+                redis_client=redis_client,
+                cache_manager=cache_manager,
+                vector_service=vector_service,
+            ),
         )
         await manager.initialize()
         self._database_manager = manager
