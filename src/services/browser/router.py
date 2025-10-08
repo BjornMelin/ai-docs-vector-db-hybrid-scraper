@@ -110,7 +110,7 @@ class _AttemptResult:
     elapsed_ms: int
 
 
-class AutomationRouter:
+class AutomationRouter:  # pylint: disable=too-many-instance-attributes
     """Route scraping requests to the appropriate tier with fallback.
 
     The router enforces a global deadline per request and per-tier rate limits.
