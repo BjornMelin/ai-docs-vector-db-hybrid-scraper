@@ -17,7 +17,10 @@ from rich.table import Table
 # Import unified configuration and service layer
 from src.config import get_settings, refresh_settings
 from src.contracts.retrieval import SearchRecord
-from src.services.registry import ensure_service_registry, shutdown_service_registry
+from src.infrastructure.client_manager import (
+    ensure_client_manager,
+    shutdown_client_manager,
+)
 from src.services.vector_db import CollectionSchema
 from src.services.vector_db.service import VectorStoreService
 from src.utils import async_command
@@ -61,7 +64,7 @@ def setup_logging(level: str = "INFO") -> logging.Logger:
 
 
 class VectorDBManager:
-    """Comprehensive vector database management using ServiceRegistry."""
+    """Comprehensive vector database management using the ClientManager."""
 
     def __init__(self, qdrant_url: str | None = None) -> None:
         """Initialize with optional Qdrant override."""
@@ -70,7 +73,9 @@ class VectorDBManager:
         self._vector_service: VectorStoreService | None = None
 
     async def initialize(self) -> None:
-        """Ensure the service registry is ready and apply overrides."""
+        """Ensure the ClientManager is ready and apply overrides when required."""
+
+        force_reload = False
         if self.qdrant_url:
             config = get_settings()
             updated_config = config.model_copy(
@@ -79,11 +84,10 @@ class VectorDBManager:
                 }
             )
             refresh_settings(settings=updated_config)
-            registry = await ensure_service_registry(force=True)
-        else:
-            registry = await ensure_service_registry()
+            force_reload = True
 
-        self._vector_service = registry.vector_service
+        client_manager = await ensure_client_manager(force=force_reload)
+        self._vector_service = await client_manager.get_vector_store_service()
 
     @staticmethod
     def _build_search_results(matches: list[Any]) -> list[SearchResult]:
@@ -117,7 +121,7 @@ class VectorDBManager:
         """Release registry-managed services."""
 
         self._vector_service = None
-        await shutdown_service_registry()
+        await shutdown_client_manager()
 
     async def list_collections(self) -> list[str]:
         """List all collections."""

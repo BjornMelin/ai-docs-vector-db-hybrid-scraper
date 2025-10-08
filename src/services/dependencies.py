@@ -8,13 +8,19 @@ import logging
 from collections.abc import AsyncGenerator, Callable
 from datetime import UTC, datetime
 from time import perf_counter
-from typing import TYPE_CHECKING, Annotated, Any
+from typing import Annotated, Any
 
 from fastapi import Depends  # type: ignore[attr-defined]
 from pydantic import BaseModel, Field
 
 from src.config.loader import Settings, get_settings
 from src.config.models import CacheType
+from src.infrastructure.client_manager import (
+    ClientManager,
+    ensure_client_manager as ensure_global_client_manager,
+    get_client_manager as get_global_client_manager,
+    shutdown_client_manager as shutdown_global_client_manager,
+)
 from src.services.circuit_breaker.decorators import (
     circuit_breaker,
     tenacity_circuit_breaker,
@@ -29,18 +35,7 @@ from src.services.errors import (
     RateLimitError,
 )
 from src.services.rag.models import RAGRequest as InternalRAGRequest
-from src.services.registry import (
-    ensure_service_registry,
-    get_service_registry,
-    shutdown_service_registry,
-)
 from src.services.vector_db.service import VectorStoreService
-
-
-if TYPE_CHECKING:
-    from src.infrastructure.client_manager import ClientManager
-else:  # pragma: no cover - runtime import happens lazily where required
-    ClientManager = Any  # type: ignore[assignment]
 
 
 logger = logging.getLogger(__name__)
@@ -57,16 +52,7 @@ async def _resolve_client_manager(
     if client_manager is not None:
         return client_manager
 
-    try:
-        return get_service_registry().client_manager
-    except Exception:  # pragma: no cover - defensive fallback
-        from src.infrastructure.client_manager import (  # pylint: disable=import-outside-toplevel
-            ClientManager as _ClientManager,
-        )
-
-        manager = _ClientManager.from_unified_config()
-        await manager.initialize()
-        return manager
+    return await ensure_global_client_manager()
 
 
 #### CONFIGURATION DEPENDENCIES ####
@@ -75,19 +61,19 @@ async def _resolve_client_manager(
 ConfigDep = Annotated[Settings, Depends(get_settings)]
 
 
-def get_client_manager() -> "ClientManager":
-    """Return the shared ClientManager from the service registry."""
-    return get_service_registry().client_manager
+def get_client_manager() -> ClientManager:
+    """Return the initialized global ClientManager instance."""
+
+    return get_global_client_manager()
 
 
-ClientManagerDep = Annotated["ClientManager", Depends(get_client_manager)]
+ClientManagerDep = Annotated[ClientManager, Depends(get_client_manager)]
 
 
-async def get_ready_client_manager() -> "ClientManager":
+async def get_ready_client_manager() -> ClientManager:
     """Return an initialized ClientManager instance."""
 
-    registry = await ensure_service_registry()
-    return registry.client_manager
+    return await ensure_global_client_manager()
 
 
 class EmbeddingRequest(BaseModel):
@@ -377,8 +363,8 @@ async def crawl_site(
 async def get_database_manager() -> Any:
     """Get initialized DatabaseManager service."""
 
-    registry = await ensure_service_registry()
-    return registry.database_manager
+    manager = await ensure_global_client_manager()
+    return await manager.get_database_manager()
 
 
 DatabaseManagerDep = Annotated[Any, Depends(get_database_manager)]
@@ -838,7 +824,7 @@ async def get_service_metrics() -> dict[str, Any]:
 async def cleanup_services() -> None:
     """Cleanup all services and release resources."""
     try:
-        await shutdown_service_registry()
+        await shutdown_global_client_manager()
         logger.info("All services cleaned up successfully")
     except (ConnectionError, OSError, PermissionError):
         logger.exception("Service cleanup failed")

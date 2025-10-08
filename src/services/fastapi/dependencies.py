@@ -16,9 +16,12 @@ from fastapi.requests import Request  # type: ignore
 from starlette.status import HTTP_503_SERVICE_UNAVAILABLE
 
 from src.config.loader import Settings, get_settings
-from src.infrastructure.client_manager import ClientManager
+from src.infrastructure.client_manager import (
+    ClientManager,
+    ensure_client_manager,
+    shutdown_client_manager,
+)
 from src.services.fastapi.middleware.correlation import get_correlation_id
-from src.services.registry import ensure_service_registry, shutdown_service_registry
 from src.services.vector_db.service import VectorStoreService
 
 
@@ -36,13 +39,13 @@ MIN_HEALTH_PROBE_TIMEOUT = 0.05
 async def initialize_dependencies() -> None:
     """Prime long-lived services used by the FastAPI application."""
 
-    await ensure_service_registry()
+    await ensure_client_manager()
 
 
 async def cleanup_dependencies() -> None:
     """Release shared services created for FastAPI usage."""
 
-    await shutdown_service_registry()
+    await shutdown_client_manager()
 
 
 def get_config_dependency() -> Settings:
@@ -69,8 +72,7 @@ async def get_client_manager() -> ClientManager:
     """Return the initialized ClientManager singleton."""
 
     try:
-        registry = await ensure_service_registry()
-        return registry.client_manager
+        return await ensure_client_manager()
     except Exception as exc:  # pragma: no cover - defensive
         logger.exception("Failed to obtain client manager")
         raise HTTPException(
@@ -83,8 +85,8 @@ async def get_embedding_manager() -> EmbeddingManager:
     """Expose the shared embedding manager instance."""
 
     try:
-        registry = await ensure_service_registry()
-        return registry.embedding_manager
+        client_manager = await ensure_client_manager()
+        return await client_manager.get_embedding_manager()
     except Exception as exc:  # pragma: no cover - defensive
         logger.exception("Failed to obtain embedding manager")
         raise HTTPException(
@@ -97,8 +99,8 @@ async def get_cache_manager() -> CacheManager:
     """Expose the cache manager maintained by the registry."""
 
     try:
-        registry = await ensure_service_registry()
-        return registry.cache_manager
+        client_manager = await ensure_client_manager()
+        return await client_manager.get_cache_manager()
     except Exception as exc:  # pragma: no cover - defensive
         logger.exception("Failed to obtain cache manager")
         raise HTTPException(
@@ -123,8 +125,9 @@ def get_correlation_id_dependency(request: Request) -> str:
 async def database_session() -> AsyncGenerator[Any]:
     """Provide a database session with automatic cleanup."""
 
-    registry = await ensure_service_registry()
-    async with registry.database_manager.get_session() as session:
+    client_manager = await ensure_client_manager()
+    database_manager = await client_manager.get_database_manager()
+    async with database_manager.get_session() as session:
         yield session
 
 

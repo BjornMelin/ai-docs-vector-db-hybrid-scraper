@@ -309,7 +309,7 @@ async def test_get_embedding_manager_maps_failure_to_503(monkeypatch: Any) -> No
 
     monkeypatch.setattr(
         fastapi_dependencies,
-        "ensure_service_registry",
+        "ensure_client_manager",
         _ensure_failure,
         raising=True,
     )
@@ -330,7 +330,7 @@ async def test_get_cache_manager_maps_failure_to_503(monkeypatch: Any) -> None:
 
     monkeypatch.setattr(
         fastapi_dependencies,
-        "ensure_service_registry",
+        "ensure_client_manager",
         _ensure_failure,
         raising=True,
     )
@@ -351,7 +351,7 @@ async def test_get_client_manager_maps_failure_to_503(monkeypatch: Any) -> None:
 
     monkeypatch.setattr(
         fastapi_dependencies,
-        "ensure_service_registry",
+        "ensure_client_manager",
         _ensure_failure,
         raising=True,
     )
