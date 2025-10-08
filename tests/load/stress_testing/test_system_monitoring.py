@@ -12,6 +12,7 @@ import gc
 import logging
 import os
 import random
+import socket
 import statistics
 import tempfile
 import threading
@@ -160,9 +161,7 @@ class SystemMonitor:
                 ]
 
             except (ConnectionError, RuntimeError, OSError) as e:
-                logger.warning(
-                    "Error during monitoring: %s", e
-                )
+                logger.warning("Error during monitoring: %s", e)
 
             time.sleep(self.collection_interval)
 
@@ -202,7 +201,11 @@ class SystemMonitor:
 
         try:
             tcp_connections = len(
-                [c for c in self.process.connections() if c.type == psutil.SOCK_STREAM]
+                [
+                    c
+                    for c in self.process.net_connections()
+                    if c.type == socket.SOCK_STREAM
+                ]
             )
         except (psutil.AccessDenied, psutil.NoSuchProcess):
             tcp_connections = 0
@@ -320,9 +323,7 @@ class SystemMonitor:
                 timestamp=timestamp,
             )
             self.performance_alerts.append(alert)
-            logger.warning(
-                "Performance alert: %s", message
-            )
+            logger.warning("Performance alert: %s", message)
 
     def get_metrics_summary(self) -> dict[str, Any]:
         """Get summary of collected metrics."""
@@ -489,90 +490,83 @@ class TestSystemMonitoring:
         monitor.start_monitoring()
         metrics_collector.start_collection()
 
+        # Mock service that generates various system load patterns
+        class SystemStressingService:
+            def __init__(self):
+                self.call_count = 0
+                self.memory_hogs = []
+                self.cpu_intensive_tasks = []
+
+            async def stress_system(self, stress_type: str = "mixed", **__kwargs):
+                """Generate different types of system stress."""
+                self.call_count += 1
+                start_time = time.perf_counter()
+
+                try:
+                    if stress_type == "memory":
+                        # Memory stress
+                        memory_chunk = bytearray(5 * 1024 * 1024)  # 5MB
+                        self.memory_hogs.append(memory_chunk)
+                        await asyncio.sleep(0.1)
+
+                    elif stress_type == "cpu":
+                        # CPU stress
+                        def cpu_intensive_work():
+                            return sum(i**2 for i in range(100000))
+
+                        # Run CPU work in thread pool
+                        with concurrent.futures.ThreadPoolExecutor(
+                            max_workers=2
+                        ) as executor:
+                            future = executor.submit(cpu_intensive_work)
+                            future.result(timeout=1.0)
+                        await asyncio.sleep(0.05)
+
+                    elif stress_type == "io":
+                        # I/O stress (file operations)
+                        with tempfile.NamedTemporaryFile(delete=True) as tmp:
+                            data = b"x" * (1024 * 1024)  # 1MB
+                            tmp.write(data)
+                            tmp.flush()
+                            tmp.seek(0)
+                            _ = tmp.read()
+                        await asyncio.sleep(0.1)
+
+                    else:  # mixed
+                        # Mixed stress
+                        small_memory = bytearray(1024 * 1024)  # 1MB
+                        self.memory_hogs.append(small_memory)
+
+                        # Light CPU work
+                        _ = sum(i for i in range(10000))
+                        await asyncio.sleep(0.2)
+
+                    response_time = time.perf_counter() - start_time
+                    metrics_collector.record_response_time(response_time)
+
+                    # Record custom metrics
+                    metrics_collector.record_custom_metric(
+                        "memory_allocations", len(self.memory_hogs)
+                    )
+                    metrics_collector.record_custom_metric(
+                        "cpu_tasks", len(self.cpu_intensive_tasks)
+                    )
+
+                except Exception as e:
+                    # Handle stress operation errors
+                    logger.warning("Stress operation failed: %s", e)
+                    raise
+
+                return {
+                    "status": "stress_applied",
+                    "stress_type": stress_type,
+                    "response_time": response_time,
+                    "call_count": self.call_count,
+                }
+
+        stressing_service = SystemStressingService()
+
         try:
-            # Mock service that generates various system load patterns
-            class SystemStressingService:
-                def __init__(self):
-                    self.call_count = 0
-                    self.memory_hogs = []
-                    self.cpu_intensive_tasks = []
-
-                async def stress_system(self, stress_type: str = "mixed", **__kwargs):
-                    """Generate different types of system stress."""
-                    self.call_count += 1
-                    start_time = time.perf_counter()
-
-                    try:
-                        if stress_type == "memory":
-                            # Memory stress
-                            memory_chunk = bytearray(5 * 1024 * 1024)  # 5MB
-                            self.memory_hogs.append(memory_chunk)
-                            await asyncio.sleep(0.1)
-
-                        elif stress_type == "cpu":
-                            # CPU stress
-                            def cpu_intensive_work():
-                                return sum(i**2 for i in range(100000))
-
-                            # Run CPU work in thread pool
-                            with concurrent.futures.ThreadPoolExecutor(
-                                max_workers=2
-                            ) as executor:
-                                future = executor.submit(cpu_intensive_work)
-                                future.result(timeout=1.0)
-                            await asyncio.sleep(0.05)
-
-                        elif stress_type == "io":
-                            # I/O stress (file operations)
-                            with tempfile.NamedTemporaryFile(delete=True) as tmp:
-                                data = b"x" * (1024 * 1024)  # 1MB
-                                tmp.write(data)
-                                tmp.flush()
-                                tmp.seek(0)
-                                _ = tmp.read()
-                            await asyncio.sleep(0.1)
-
-                        else:  # mixed
-                            # Mixed stress
-                            small_memory = bytearray(1024 * 1024)  # 1MB
-                            self.memory_hogs.append(small_memory)
-
-                            # Light CPU work
-                            _ = sum(i for i in range(10000))
-                            await asyncio.sleep(0.2)
-
-                        response_time = time.perf_counter() - start_time
-                        metrics_collector.record_response_time(response_time)
-
-                        # Record custom metrics
-                        metrics_collector.record_custom_metric(
-                            "memory_allocations", len(self.memory_hogs)
-                        )
-                        metrics_collector.record_custom_metric(
-                            "cpu_tasks", len(self.cpu_intensive_tasks)
-                        )
-
-                    except Exception as e:
-                        # Handle stress operation errors
-                        logger.warning(
-                            "Stress operation failed: %s", e
-                        )
-                        raise
-                    else:
-                        return {
-                            "status": "stress_applied",
-                            "stress_type": stress_type,
-                            "response_time": response_time,
-                            "call_count": self.call_count,
-                        }
-                        response_time = time.perf_counter() - start_time
-                        metrics_collector.record_response_time(response_time)
-                        metrics_collector.record_error("StressError")
-                        msg = "Stress operation failed"
-                        raise TestError(msg) from None
-
-            stressing_service = SystemStressingService()
-
             # Test different stress patterns
             stress_patterns = [
                 {
@@ -599,9 +593,7 @@ class TestSystemMonitoring:
             pattern_results = []
 
             for pattern in stress_patterns:
-                logger.info(
-                    "Running stress pattern: %s", pattern["name"]
-                )
+                logger.info("Running stress pattern: %s", pattern["name"])
 
                 # Configure stress test
                 config = LoadTestConfig(
@@ -638,9 +630,7 @@ class TestSystemMonitoring:
                     }
                 )
 
-                logger.info(
-                    "Completed stress pattern: %s", pattern["name"]
-                )
+                logger.info("Completed stress pattern: %s", pattern["name"])
 
                 # Brief pause between patterns
                 await asyncio.sleep(5)
@@ -692,9 +682,7 @@ class TestSystemMonitoring:
             logger.info(
                 "  - Total metrics collected: %s", final_metrics["_total_data_points"]
             )
-            logger.info(
-                "  - Performance alerts: %s", final_metrics["_total_alerts"]
-            )
+            logger.info("  - Performance alerts: %s", final_metrics["_total_alerts"])
             logger.info(
                 "  - Peak CPU: %.2f%%", final_metrics["system_metrics"]["cpu"]["max"]
             )
@@ -765,8 +753,6 @@ class TestSystemMonitoring:
                     if random.random() < error_probability:  # noqa: S311
                         msg = "Service degraded - operation failed"
                         raise TestError(msg)
-                        msg = "Service degraded - operation failed"
-                        raise TestError(msg)
 
                     return {
                         "status": "success",
@@ -810,9 +796,12 @@ class TestSystemMonitoring:
                             avg_response_time = (
                                 statistics.mean(recent_times) * 1000
                             )  # Convert to ms
-                            p95_response_time = metrics_collector._percentile(
-                                [rt * 1000 for rt in recent_times], 95
-                            )
+                            recent_times_ms = [rt * 1000 for rt in recent_times]
+                            sorted_times = sorted(recent_times_ms)
+                            p95_index = int(len(sorted_times) * 95 / 100)
+                            p95_response_time = sorted_times[
+                                min(p95_index, len(sorted_times) - 1)
+                            ]
 
                             degradation_samples.append(
                                 {
