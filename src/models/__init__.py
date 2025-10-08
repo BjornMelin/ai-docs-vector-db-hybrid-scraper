@@ -14,7 +14,6 @@ Usage:
 from src.config import (
     CacheConfig,
     ChunkingConfig,
-    Config,
     Crawl4AIConfig,
     DocumentationSite,
     EmbeddingConfig,
@@ -25,9 +24,7 @@ from src.config import (
     PerformanceConfig,
     QdrantConfig,
     SecurityConfig,
-    get_config,
-    reset_config,
-    set_config,
+    get_settings,
 )
 
 from .api_contracts import (
@@ -161,7 +158,6 @@ __all__ = [  # noqa: RUF022 - organized by category for readability
     "CollectionInfo",
     "CollectionRequest",
     "CollectionResponse",
-    "Config",
     "ContentFilter",
     "Crawl4AIConfig",
     "DimensionError",
@@ -222,14 +218,12 @@ __all__ = [  # noqa: RUF022 - organized by category for readability
     # Validators and Utilities
     "collection_name_field",
     "firecrawl_api_key_validator",
-    "get_config",
+    "get_settings",
     "non_negative_int",
     "openai_api_key_validator",
     "percentage",
     "port_number",
     "positive_int",
-    "reset_config",
-    "set_config",
     "url_validator",
     "validate_api_key_common",
     "validate_cache_ttl",

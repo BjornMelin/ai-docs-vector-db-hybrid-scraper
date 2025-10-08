@@ -16,7 +16,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-# get_config import removed (unused)
+# get_settings import removed (unused)
 from src.services.base import BaseService
 
 

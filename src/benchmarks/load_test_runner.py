@@ -15,7 +15,7 @@ from typing import Any, Protocol
 import httpx
 from pydantic import BaseModel, Field
 
-from src.config import Config
+from src.config import Settings
 from src.models.vector_search import HybridSearchRequest
 
 
@@ -279,7 +279,7 @@ class LoadTestUser:  # pylint: disable=too-many-instance-attributes
 class LoadTestRunner:
     """Main load testing orchestrator."""
 
-    def __init__(self, config: Config):
+    def __init__(self, config: Settings):
         """Initialize load test runner.
 
         Args:
@@ -292,14 +292,14 @@ class LoadTestRunner:
         self,
         search_service: HybridSearchService,
         test_queries: list[HybridSearchRequest],
-        load_config: LoadTestConfig,
+        load_settings: LoadTestConfig,
     ) -> LoadTestMetrics:
         """Run comprehensive load test.
 
         Args:
             search_service: Search service to test
             test_queries: Pool of test queries
-            load_config: Load test configuration
+            load_settings: Load test configuration
 
         Returns:
             Comprehensive load test metrics
@@ -307,26 +307,28 @@ class LoadTestRunner:
         """
         logger.info(
             "Starting load test: %s users, %s requests",
-            load_config.concurrent_users,
-            load_config.total_requests,
+            load_settings.concurrent_users,
+            load_settings.total_requests,
         )
 
         # Initialize users
         users = [
-            LoadTestUser(i, search_service, test_queries, load_config)
-            for i in range(load_config.concurrent_users)
+            LoadTestUser(i, search_service, test_queries, load_settings)
+            for i in range(load_settings.concurrent_users)
         ]
 
         # Calculate ramp-up delays
-        ramp_up_delay = load_config.ramp_up_seconds / load_config.concurrent_users
-        start_delays = [i * ramp_up_delay for i in range(load_config.concurrent_users)]
+        ramp_up_delay = load_settings.ramp_up_seconds / load_settings.concurrent_users
+        start_delays = [
+            i * ramp_up_delay for i in range(load_settings.concurrent_users)
+        ]
 
         # Start load test
         start_time = time.time()
 
         # Track metrics over time
         metrics_tracker = asyncio.create_task(
-            self._track_metrics_over_time(users, load_config.duration_seconds)
+            self._track_metrics_over_time(users, load_settings.duration_seconds)
         )
 
         # Run user sessions
@@ -339,7 +341,9 @@ class LoadTestRunner:
         try:
             await asyncio.wait_for(
                 asyncio.gather(*user_tasks),
-                timeout=load_config.duration_seconds + load_config.ramp_up_seconds + 30,
+                timeout=load_settings.duration_seconds
+                + load_settings.ramp_up_seconds
+                + 30,
             )
         except TimeoutError:
             logger.warning("Load test timed out, stopping users")
@@ -358,7 +362,7 @@ class LoadTestRunner:
 
         # Calculate aggregate metrics
         return self._calculate_load_test_metrics(
-            user_results, total_duration, load_config
+            user_results, total_duration, load_settings
         )
 
     async def _track_metrics_over_time(
@@ -402,7 +406,7 @@ class LoadTestRunner:
         self,
         user_results: list[dict[str, Any]],
         total_duration: float,
-        load_config: LoadTestConfig,
+        load_settings: LoadTestConfig,
     ) -> LoadTestMetrics:
         """Calculate aggregate load test metrics."""
         if not user_results:
@@ -419,7 +423,7 @@ class LoadTestRunner:
                 max_response_time_ms=0.0,
                 requests_per_second=0.0,
                 peak_rps=0.0,
-                concurrent_users=load_config.concurrent_users,
+                concurrent_users=load_settings.concurrent_users,
                 avg_concurrent_requests=0.0,
                 error_types={},
                 timeout_count=0,
@@ -446,7 +450,7 @@ class LoadTestRunner:
             max_response_time_ms=latency_stats["max_ms"],
             requests_per_second=requests_per_second,
             peak_rps=requests_per_second,
-            concurrent_users=load_config.concurrent_users,
+            concurrent_users=load_settings.concurrent_users,
             avg_concurrent_requests=avg_concurrency,
             error_types=aggregated.error_counts,
             timeout_count=aggregated.timeout_count,
@@ -541,7 +545,7 @@ class LoadTestRunner:
         for user_count in range(step_size, max_users + 1, step_size):
             logger.info("Stress test step: %s users", user_count)
 
-            load_config = LoadTestConfig(
+            load_settings = LoadTestConfig(
                 concurrent_users=user_count,
                 total_requests=user_count * 10,
                 duration_seconds=step_duration,
@@ -557,7 +561,7 @@ class LoadTestRunner:
 
             try:
                 metrics = await self.run_load_test(
-                    search_service, test_queries, load_config
+                    search_service, test_queries, load_settings
                 )
                 stress_results[f"{user_count}_users"] = metrics
 
@@ -595,7 +599,7 @@ class LoadTestRunner:
         """
         duration_seconds = int(duration_hours * 3600)
 
-        load_config = LoadTestConfig(
+        load_settings = LoadTestConfig(
             concurrent_users=concurrent_users,
             total_requests=concurrent_users
             * duration_seconds
@@ -617,4 +621,4 @@ class LoadTestRunner:
             concurrent_users,
         )
 
-        return await self.run_load_test(search_service, test_queries, load_config)
+        return await self.run_load_test(search_service, test_queries, load_settings)

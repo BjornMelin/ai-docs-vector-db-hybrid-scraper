@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import ClassVar
 from urllib.parse import urlparse
 
-from src.config import get_config
+from src.config import get_settings
 from src.config.security.config import SecurityConfig
 
 
@@ -47,7 +47,7 @@ class SecurityValidator:
             security_config: Security configuration. If None, loads from unified config.
         """
 
-        self.config = security_config or get_config().security
+        self.config = security_config or get_settings().security
         allowed = getattr(self.config, "allowed_domains", [])
         logger.info(
             "SecurityValidator initialized with %d allowed domains",
@@ -57,7 +57,7 @@ class SecurityValidator:
     @classmethod
     def from_unified_config(cls) -> "SecurityValidator":
         """Create SecurityValidator from unified configuration."""
-        return cls(get_config().security)
+        return cls(get_settings().security)
 
     def validate_url(self, url: str) -> str:
         """Validate and sanitize URL input using unified configuration."""

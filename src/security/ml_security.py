@@ -23,7 +23,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from src.config import get_config
+from src.config import get_settings
 
 
 # Import SecurityValidator from the file module
@@ -66,7 +66,7 @@ class MLSecurityValidator:
     def __init__(self):
         """Initialize with existing security config."""
 
-        self.config = get_config()
+        self.config = get_settings()
         self.base_validator = BaseSecurityValidator.from_unified_config()
         self.checks_performed: list[SecurityCheckResult] = []
 
@@ -452,7 +452,7 @@ class SimpleRateLimiter:
 
     def __init__(self):
         """Initialize using existing config."""
-        self.config = get_config()
+        self.config = get_settings()
 
     def is_allowed(self, _identifier: str) -> bool:
         """Check if request is allowed.

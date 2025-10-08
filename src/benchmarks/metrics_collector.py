@@ -13,7 +13,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from src.config import Config
+from src.config import Settings
 
 
 logger = logging.getLogger(__name__)
@@ -48,7 +48,7 @@ class MetricSummary(BaseModel):
 class MetricsCollector:
     """Advanced metrics collection and aggregation system."""
 
-    def __init__(self, config: Config, max_points: int = 10000):
+    def __init__(self, config: Settings, max_points: int = 10000):
         """Initialize metrics collector.
 
         Args:
@@ -101,8 +101,9 @@ class MetricsCollector:
         summary["total_metric_points"] = len(self.metric_points)
 
         logger.info(
-            f"Stopped metrics collection. Duration: "
-            f"{collection_duration:.2f}s, Points: {len(self.metric_points)}"
+            "Stopped metrics collection. Duration: %ss, Points: %d",
+            collection_duration,
+            len(self.metric_points),
         )
 
         return summary

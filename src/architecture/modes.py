@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 
 
 if TYPE_CHECKING:
-    from src.config import Config
+    from src.config import Settings
 
 
 class ApplicationMode(Enum):
@@ -137,26 +137,26 @@ ENTERPRISE_MODE_CONFIG = ModeConfig(
 )
 
 
-def _resolve_settings(config: "Config | None" = None) -> Any:
+def _resolve_settings(config: "Settings | None" = None) -> Any:
     """Return the active settings object, defaulting to the shared provider."""
 
     if config is not None:
         return config
 
     try:
-        from src.config import get_config  # Local import to avoid circular dependency
+        from src.config import get_settings  # Local import to avoid circular dependency
     except ImportError:
         return SimpleNamespace(mode=ApplicationMode.SIMPLE)
 
     try:
-        return get_config()
+        return get_settings()
     except Exception:  # pragma: no cover - configuration not yet initialized
         # During module import the global configuration provider may still be wiring
         # dependencies. Default to simple mode to avoid circular imports.
         return SimpleNamespace(mode=ApplicationMode.SIMPLE)
 
 
-def resolve_mode(config: "Config | None" = None) -> ApplicationMode:
+def resolve_mode(config: "Settings | None" = None) -> ApplicationMode:
     """Resolve the current application mode from configuration settings."""
 
     settings = _resolve_settings(config)
@@ -164,7 +164,7 @@ def resolve_mode(config: "Config | None" = None) -> ApplicationMode:
 
 
 def get_mode_config(
-    mode: ApplicationMode | None = None, *, config: "Config | None" = None
+    mode: ApplicationMode | None = None, *, config: "Settings | None" = None
 ) -> ModeConfig:
     """Get configuration for the specified mode.
 

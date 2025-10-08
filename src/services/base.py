@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from contextlib import asynccontextmanager
 from typing import Any
 
-from src.config import Config
+from src.config import Settings
 
 from .errors import APIError
 from .lifecycle import LifecycleTracker, ServiceLifecycle
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class BaseService(ABC, LifecycleTracker, ServiceLifecycle):
     """Abstract base class for all services."""
 
-    def __init__(self, config: Config | None = None):
+    def __init__(self, config: Settings | None = None):
         """Initialize base service.
 
         Args:

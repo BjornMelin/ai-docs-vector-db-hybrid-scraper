@@ -7,7 +7,7 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
-from src.config import Config, get_config
+from src.config import Settings, get_settings
 from src.config.models import CacheType
 from src.infrastructure.client_manager import ClientManager
 from src.services.cache.manager import CacheManager
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 class ServiceRegistry:  # pylint: disable=too-many-instance-attributes
     """Collects initialized infrastructure services for reuse."""
 
-    config: Config
+    config: Settings
     client_manager: ClientManager
     circuit_breaker_manager: CircuitBreakerManager
     cache_manager: CacheManager
@@ -42,7 +42,7 @@ class ServiceRegistry:  # pylint: disable=too-many-instance-attributes
     async def build(cls) -> ServiceRegistry:
         """Create and initialize the service registry."""
 
-        config = get_config()
+        config = get_settings()
 
         client_manager = ClientManager.from_unified_config()
         await client_manager.initialize()

@@ -15,7 +15,7 @@ from dependency_injector.wiring import Provide, inject
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_mcp_adapters.sessions import Connection
 
-from src.config import Config, get_config
+from src.config import Settings, get_settings
 from src.config.models import MCPClientConfig, MCPServerConfig, MCPTransport
 from src.infrastructure.clients import (
     FirecrawlClientProvider,
@@ -149,14 +149,14 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         self._content_intelligence: ContentIntelligenceService | None = None
         self._project_storage: ProjectStorage | None = None
         self._rag_generator: RAGGenerator | None = None
-        self._config = get_config()
+        self._config = get_settings()
         self._automation_router: Any | None = None
         self._mcp_client: MultiServerMCPClient | None = None
         self._mcp_client_lock = asyncio.Lock()
         self._service_registry: Any | None = None
 
     @property
-    def config(self) -> Config:
+    def config(self) -> Settings:
         """Return the lazily loaded application configuration."""
 
         return self._config

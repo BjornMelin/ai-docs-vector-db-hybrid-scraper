@@ -14,7 +14,7 @@ from typing import Any, Literal, cast
 
 from fastmcp import FastMCP
 
-from src.config import get_config
+from src.config import get_settings
 from src.config.models import CrawlProvider, EmbeddingProvider
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.tool_registry import register_all_tools
@@ -46,7 +46,7 @@ async def managed_lifespan(server: FastMCP[Any]) -> AsyncIterator[None]:
 
         logger.info("Initializing AI Documentation Vector DB MCP Server...")
 
-        config = get_config()
+        config = get_settings()
         client_manager = ClientManager()
         await client_manager.initialize()
 
@@ -224,7 +224,7 @@ def _validate_streaming_config(errors: list, warnings: list) -> None:
 
 def validate_configuration() -> None:
     """Validate configuration at startup."""
-    config = get_config()
+    config = get_settings()
     warnings: list[str] = []
     errors: list[str] = []
 

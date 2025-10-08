@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Annotated, Any
 from fastapi import Depends  # type: ignore[attr-defined]
 from pydantic import BaseModel, Field
 
-from src.config import Config, get_config
+from src.config import Settings, get_settings
 from src.config.models import CacheType
 from src.services.circuit_breaker.provider import get_circuit_breaker_manager
 from src.services.embeddings.manager import QualityTier
@@ -66,7 +66,7 @@ async def _resolve_client_manager(
 #### CONFIGURATION DEPENDENCIES ####
 
 # Embedding Service Dependencies
-ConfigDep = Annotated[Config, Depends(get_config)]
+ConfigDep = Annotated[Settings, Depends(get_settings)]
 
 
 def get_client_manager() -> "ClientManager":

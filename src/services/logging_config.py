@@ -25,7 +25,7 @@ try:
 except ImportError:  # pragma: no cover - optional dependency
     colorlog = None
 
-from src.config import get_config
+from src.config import get_settings
 
 
 _DEFAULT_CONSOLE_FORMAT = (
@@ -184,7 +184,7 @@ def configure_logging(
         force: When ``True`` existing managed handlers are replaced.
     """
 
-    config = get_config()
+    config = get_settings()
 
     resolved_level = (level or config.log_level.value).upper()
     level_value = getattr(logging, resolved_level, logging.INFO)
