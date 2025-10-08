@@ -157,6 +157,7 @@ all = [
     { name = "selenium" },
     { name = "sentence-transformers" },
     { name = "taskipy" },
+    { name = "tavily-python" },
     { name = "testcontainers" },
     { name = "tf-playwright-stealth" },
     { name = "torch" },
@@ -267,7 +268,7 @@ web = [
 [package.metadata]
 requires-dist = [
     { name = "accelerate", marker = "extra == 'gpu'", specifier = ">=0.34.0,<2.0.0" },
-    { name = "ai-docs-vector-db-hybrid-scraper", extras = ["dev", "contract", "accessibility", "browser", "llm", "observability", "parsing", "dataframe", "docs", "gpu", "eval", "server"], marker = "extra == 'all'" },
+    { name = "ai-docs-vector-db-hybrid-scraper", extras = ["dev", "contract", "accessibility", "browser", "llm", "observability", "parsing", "dataframe", "docs", "gpu", "eval", "server", "web"], marker = "extra == 'all'" },
     { name = "aiofiles", specifier = ">=24.1.0,<25.0.0" },
     { name = "aiohttp", specifier = ">=3.12.15,<4.0.0" },
     { name = "aiolimiter", specifier = ">=1.2.1" },
@@ -394,7 +395,7 @@ requires-dist = [
     { name = "watchdog", specifier = ">=6.0.0,<7.0.0" },
     { name = "xformers", marker = "extra == 'gpu'", specifier = ">=0.0.28,<1.0.0" },
 ]
-provides-extras = ["eval", "dev", "docs", "contract", "accessibility", "browser", "llm", "observability", "parsing", "dataframe", "gpu", "server", "all", "web"]
+provides-extras = ["eval", "dev", "docs", "contract", "accessibility", "browser", "llm", "observability", "parsing", "dataframe", "gpu", "server", "web", "all"]
 
 [[package]]
 name = "aiofiles"

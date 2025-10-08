@@ -210,12 +210,13 @@ server = [
     "uvloop>=0.21.0,<1.0.0; platform_system != 'Windows'",
 ]
 
-# All optional dependencies
-all = [
-    "ai-docs-vector-db-hybrid-scraper[dev,contract,accessibility,browser,llm,observability,parsing,dataframe,docs,gpu,eval,server]",
-]
 web = [
     "tavily-python>=0.7.12",
+]
+
+# All optional dependencies
+all = [
+    "ai-docs-vector-db-hybrid-scraper[dev,contract,accessibility,browser,llm,observability,parsing,dataframe,docs,gpu,eval,server,web]",
 ]
 
 [project.urls]
