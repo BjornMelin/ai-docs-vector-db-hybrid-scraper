@@ -16,6 +16,7 @@ from src.mcp_tools.models.responses import (
     EmbeddingProviderInfo,
 )
 from src.mcp_tools.utils.provider_metadata import normalize_provider_catalog
+from src.services.managers.embedding_manager import EmbeddingOptions
 
 
 if TYPE_CHECKING:
@@ -65,11 +66,15 @@ def register_tools(mcp, client_manager: ClientManager):
                     f"sparse embeddings: {request.generate_sparse}"
                 )
 
+            options = EmbeddingOptions(
+                provider_name=request.model,
+                generate_sparse=request.generate_sparse,
+            )
+
             # Generate embeddings
             result = await embedding_manager.generate_embeddings(
                 texts=request.texts,
-                provider_name=request.model,
-                generate_sparse=request.generate_sparse,
+                options=options,
             )
 
             provider_name = str(result.get("provider", "unknown"))

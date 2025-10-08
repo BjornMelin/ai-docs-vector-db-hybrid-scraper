@@ -68,15 +68,15 @@ class TestEmbeddingsTools:
 
         async def mock_generate_embeddings(
             texts,
-            model=None,
-            batch_size=32,
-            generate_sparse=False,
-            **kwargs,
+            options=None,
+            **_kwargs,
         ):
             embeddings = [
                 [0.1 + i * 0.1, 0.2 + i * 0.1, 0.3 + i * 0.1, 0.4 + i * 0.1]
                 for i in range(len(texts))
             ]
+            provider_name = getattr(options, "provider_name", None)
+            generate_sparse = getattr(options, "generate_sparse", False)
             sparse = (
                 [
                     [0.8 - i * 0.1, 0.0, 0.6 - i * 0.1, 0.0, 0.4 - i * 0.1]
@@ -89,8 +89,8 @@ class TestEmbeddingsTools:
                 embeddings,
                 sparse=sparse,
                 metadata={
-                    "model": model or "BAAI/bge-small-en-v1.5",
-                    "provider": "fastembed",
+                    "model": provider_name or "BAAI/bge-small-en-v1.5",
+                    "provider": provider_name or "fastembed",
                     "tokens": len(texts) * 10,
                 },
             )
@@ -450,8 +450,12 @@ class TestEmbeddingsTools:
         assert len(result.embeddings) == 1
 
         # Verify embedding manager was called with custom model details
-        mock_client_manager.embedding_mock.generate_embeddings.assert_called_with(
-            texts=["test text"],
-            provider_name="sentence-transformers/all-MiniLM-L6-v2",
-            generate_sparse=False,
+        mock_client_manager.embedding_mock.generate_embeddings.assert_called()
+        call_args, call_kwargs = (
+            mock_client_manager.embedding_mock.generate_embeddings.call_args
         )
+        assert call_args == (["test text"],)
+        options = call_kwargs.get("options")
+        assert options is not None
+        assert options.provider_name == "sentence-transformers/all-MiniLM-L6-v2"
+        assert options.generate_sparse is False

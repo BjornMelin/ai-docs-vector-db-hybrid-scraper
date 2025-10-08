@@ -6,6 +6,7 @@ import pytest
 import pytest_asyncio
 
 from src.mcp_tools.tools import retrieval
+from src.models.search import SearchRequest
 
 
 class _Ctx:
@@ -31,18 +32,12 @@ async def test_search_documents_basic(registered):
 
     fn = registered["search_documents"]
     res = await fn(
-        request=type(
-            "Req",
-            (),
-            {
-                "collection": "documentation",
-                "query": "hello",
-                "limit": 3,
-                "filters": None,
-                "include_metadata": True,
-                "strategy": type("S", (), {"value": "hybrid"})(),
-            },
-        )(),
+        request=SearchRequest(
+            query="hello",
+            collection="documentation",
+            limit=3,
+            include_metadata=True,
+        ),
         ctx=_Ctx(),
     )
     assert len(res) == 3
@@ -56,17 +51,13 @@ async def test_filtered_search_forwards_filters(registered):
 
     fn = registered["filtered_search"]
     res = await fn(
-        request=type(
-            "Req",
-            (),
-            {
-                "collection": "documentation",
-                "query": "q",
-                "limit": 2,
-                "filters": {"site_name": {"value": "docs"}},
-                "include_metadata": True,
-            },
-        )(),
+        request=SearchRequest(
+            query="q",
+            collection="documentation",
+            limit=2,
+            filters={"site_name": {"value": "docs"}},
+            include_metadata=True,
+        ),
         ctx=_Ctx(),
     )
     assert res and res[0].metadata and res[0].metadata["q"] == "q"
@@ -77,17 +68,13 @@ async def test_multi_stage_merges_and_dedupes(registered):
     """Multi-stage returns unique items by id."""
 
     fn = registered["multi_stage_search"]
-    req = type(
-        "Req",
-        (),
-        {
-            "collection": "documentation",
-            "query": "x",
-            "limit": 5,
-            "stages": [{"limit": 5}, {"limit": 5, "filters": {"k": 1}}],
-            "include_metadata": False,
-        },
-    )()
+    req = retrieval.MultiStageSearchPayload(
+        collection="documentation",
+        query="x",
+        limit=5,
+        stages=[{"limit": 5}, {"limit": 5, "filters": {"k": 1}}],
+        include_metadata=False,
+    )
     res = await fn(request=req, ctx=_Ctx())
     ids = [r.id for r in res]
     assert len(ids) == len(set(ids))
@@ -130,18 +117,12 @@ async def test_reranked_search_returns_limit(registered):
     """Reranked search trims to requested limit."""
 
     fn = registered["reranked_search"]
-    req = type(
-        "Req",
-        (),
-        {
-            "collection": "documentation",
-            "query": "y",
-            "limit": 7,
-            "filters": None,
-            "include_metadata": False,
-            "strategy": type("S", (), {"value": "hybrid"})(),
-        },
-    )()
+    req = SearchRequest(
+        collection="documentation",
+        query="y",
+        limit=7,
+        include_metadata=False,
+    )
     res = await fn(request=req, ctx=_Ctx())
     assert len(res) == 7
 
