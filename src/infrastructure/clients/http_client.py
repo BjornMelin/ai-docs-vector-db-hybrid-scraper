@@ -29,26 +29,6 @@ class HTTPClientProvider:
             return None
         return self._client
 
-    async def health_check(self) -> bool:
-        """Check HTTP client health."""
-        try:
-            if not self._client:
-                return False
-
-            # Check if session is not closed
-            if self._client.closed:
-                self._healthy = False
-                return False
-
-        except (AttributeError, RuntimeError, ValueError) as e:
-            logger.warning("HTTP client health check failed: %s", e)
-            self._healthy = False
-            return False
-
-        # If no exceptions, consider healthy
-        self._healthy = True
-        return True
-
     async def get(
         self, url: str, headers: dict[str, str] | None = None, **kwargs
     ) -> aiohttp.ClientResponse:

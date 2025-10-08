@@ -41,22 +41,6 @@ Response (`SimpleSearchResponse`):
 Accepts the same parameters as the POST variant (`query`, `collection`, `limit`).
 Returns a `SimpleSearchResponse` and serves as a convenient manual test endpoint.
 
-### GET /search/health
-
-Example response:
-
-```json
-{
-  "status": "healthy",
-  "service_type": "simple",
-  "stats": {
-    "collections": ["documents"],
-    "primary_collection": "documents",
-    "primary_collection_stats": {"vectors_count": 1527}
-  }
-}
-```
-
 ### Document Endpoints
 
 - `POST /documents` – Adds a document using `VectorStoreService.add_document`.
@@ -64,6 +48,32 @@ Example response:
 - `DELETE /documents/{id}` – Removes a document and returns a success payload.
 - `GET /documents` – Lists documents with pagination (`limit`, `offset`).
 - `GET /collections` – Lists available collections.
+
+### GET /health
+
+Centralised readiness endpoint powered by `HealthCheckManager`. Example response:
+
+```json
+{
+  "status": "healthy",
+  "mode": "simple",
+  "services": {
+    "qdrant": {
+      "status": "healthy",
+      "message": "Qdrant service is operational",
+      "metadata": {"collection_count": 3}
+    },
+    "redis": {
+      "status": "healthy",
+      "message": "Redis server is responding",
+      "metadata": {"connected_clients": 12}
+    }
+  },
+  "healthy_count": 2,
+  "total_count": 2,
+  "timestamp": 1728501123.123
+}
+```
 
 ## 2. Query Processing Response Contract
 
