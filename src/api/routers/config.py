@@ -8,13 +8,12 @@ from typing import Any, cast
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 
-from src.config import (
+from src.config import get_config, get_config_reloader
+from src.config.reloader import (
     ConfigError,
     ConfigLoadError,
     ReloadOperation,
     ReloadTrigger,
-    get_config,
-    get_config_reloader,
 )
 from src.services.monitoring.file_integrity import (
     FileIntegrityProvider,

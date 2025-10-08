@@ -34,7 +34,8 @@ from src.architecture.modes import (
     resolve_mode,
 )
 from src.architecture.service_factory import ModeAwareServiceFactory
-from src.config import Environment, get_config, reset_config, set_config
+from src.config import get_config, reset_config, set_config
+from src.config.models import Environment
 
 
 EXPECTED_SIMPLE_SERVICES = {

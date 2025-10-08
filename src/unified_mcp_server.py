@@ -14,7 +14,8 @@ from typing import Any, Literal, cast
 
 from fastmcp import FastMCP
 
-from src.config import CrawlProvider, EmbeddingProvider, get_config
+from src.config import get_config
+from src.config.models import CrawlProvider, EmbeddingProvider
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.tool_registry import register_all_tools
 from src.services.dependencies import get_cache_manager

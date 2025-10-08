@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from src.config import PlaywrightConfig
+from src.config.models import PlaywrightConfig
 from src.services.browser.anti_detection import (
     BrowserStealthConfig,
     EnhancedAntiDetection,

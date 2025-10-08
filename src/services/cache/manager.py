@@ -7,7 +7,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
-from src.config import CacheType
+from src.config.models import CacheType
 
 from .dragonfly_cache import DragonflyCache
 from .embedding_cache import EmbeddingCache

@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, Optional
 import redis
 from dependency_injector.wiring import Provide, inject
 
-from src.config import CacheType
+from src.config.models import CacheType
 from src.infrastructure.container import ApplicationContainer
 from src.services.errors import APIError
 from src.services.vector_db.types import VectorRecord

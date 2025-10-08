@@ -7,7 +7,8 @@ from pathlib import Path
 from typing import ClassVar
 from urllib.parse import urlparse
 
-from src.config import SecurityConfig, get_config
+from src.config import get_config
+from src.config.security.config import SecurityConfig
 
 
 logger = logging.getLogger(__name__)

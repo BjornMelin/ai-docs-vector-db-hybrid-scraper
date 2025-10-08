@@ -8,8 +8,9 @@ from pathlib import Path
 
 import pytest
 
-from src.config import Config, Environment
+from src.config import Config
 from src.config.loader import get_config, reset_config, set_config
+from src.config.models import Environment
 from src.config.reloader import (
     ConfigError,
     ConfigLoadError,

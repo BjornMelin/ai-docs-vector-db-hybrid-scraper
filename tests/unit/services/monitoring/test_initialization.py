@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from prometheus_client.registry import CollectorRegistry
 
-from src.config import MonitoringConfig
+from src.config.models import MonitoringConfig
 from src.services.monitoring.initialization import (
     cleanup_monitoring,
     initialize_monitoring_system,

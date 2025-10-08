@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from src.config import (
+from src.config.models import (
     ChunkingStrategy,
     FusionAlgorithm,
     SearchAccuracy,

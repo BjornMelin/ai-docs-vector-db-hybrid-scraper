@@ -12,7 +12,8 @@ from typing import TYPE_CHECKING, Annotated, Any
 from fastapi import Depends  # type: ignore[attr-defined]
 from pydantic import BaseModel, Field
 
-from src.config import CacheType, Config, get_config
+from src.config import Config, get_config
+from src.config.models import CacheType
 from src.services.circuit_breaker.provider import get_circuit_breaker_manager
 from src.services.embeddings.manager import QualityTier
 from src.services.errors import (

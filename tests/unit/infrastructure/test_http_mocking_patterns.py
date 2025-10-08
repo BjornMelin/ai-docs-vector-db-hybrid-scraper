@@ -9,7 +9,8 @@ import httpx
 import pytest
 import respx
 
-from src.config import Config, Environment
+from src.config import Config
+from src.config.models import Environment
 from src.services.browser.lightweight_scraper import (
     ContentAnalysis,
     LightweightScraper,

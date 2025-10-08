@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 
-from src.config import SearchStrategy
+from src.config.models import SearchStrategy
 from src.mcp_tools.models.requests import MultiStageSearchRequest, SearchRequest
 from src.mcp_tools.models.responses import SearchResult
 from src.mcp_tools.tools import retrieval

@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from src.config import PlaywrightConfig, PlaywrightTierConfig
+from src.config.models import PlaywrightConfig, PlaywrightTierConfig
 from src.services.browser.playwright_adapter import PlaywrightAdapter
 from src.services.errors import CrawlServiceError
 

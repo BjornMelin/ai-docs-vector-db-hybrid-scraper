@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Any
 
 from fastmcp import Context
 
-from src.config import SearchStrategy
+from src.config.models import SearchStrategy
 from src.mcp_tools.models.requests import (  # type: ignore[import]
     FilteredSearchRequest,
     MultiStageSearchRequest,

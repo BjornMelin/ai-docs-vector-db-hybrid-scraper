@@ -6,7 +6,8 @@ from typing import cast
 
 import pytest
 
-from src.config import Config, Environment, ObservabilityConfig
+from src.config import Config
+from src.config.models import Environment, ObservabilityConfig
 
 
 @pytest.fixture(name="default_config")

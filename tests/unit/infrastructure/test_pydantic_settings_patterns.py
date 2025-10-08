@@ -14,16 +14,13 @@ import pytest
 from pydantic import ValidationError
 
 from src.architecture.modes import ApplicationMode
-from src.config import (
+from src.config import Config, get_config, reset_config, set_config
+from src.config.models import (
     ChunkingStrategy,
-    Config,
     CrawlProvider,
     EmbeddingProvider,
     Environment,
     SearchStrategy,
-    get_config,
-    reset_config,
-    set_config,
 )
 
 

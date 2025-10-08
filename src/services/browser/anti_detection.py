@@ -17,7 +17,7 @@ from typing import Any, cast
 
 from pydantic import BaseModel, Field
 
-from src.config import PlaywrightConfig
+from src.config.models import PlaywrightConfig
 
 
 logger = logging.getLogger(__name__)

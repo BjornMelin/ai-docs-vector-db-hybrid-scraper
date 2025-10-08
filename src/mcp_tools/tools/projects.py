@@ -11,7 +11,7 @@ from uuid import uuid4
 
 from fastmcp import Context
 
-from src.config import SearchStrategy
+from src.config.models import SearchStrategy
 from src.mcp_tools.models.requests import ProjectRequest
 from src.mcp_tools.models.responses import OperationStatus, ProjectInfo, SearchResult
 from src.mcp_tools.tools._shared import ensure_vector_service, match_to_result
