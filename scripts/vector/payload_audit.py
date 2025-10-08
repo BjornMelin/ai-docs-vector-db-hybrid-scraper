@@ -9,7 +9,7 @@ import typer
 from qdrant_client import AsyncQdrantClient, models
 from qdrant_client.conversions.common_types import PointId
 
-from src.config import get_config
+from src.config import get_settings
 from src.services.vector_db.payload_schema import (
     PayloadValidationError,
     ensure_canonical_payload,
@@ -58,7 +58,7 @@ async def _audit_collection(
 ) -> None:
     """Audit payload metadata and optionally persist canonical fields."""
 
-    config = get_config()
+    config = get_settings()
     client = AsyncQdrantClient(url=config.qdrant.url, api_key=config.qdrant.api_key)
     try:
         records = await _collect_records(client, collection, limit, batch_size)

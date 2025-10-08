@@ -16,7 +16,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 
-from src.config import validate_config_payload
+from src.config import validate_settings_payload
 
 
 console = Console()
@@ -174,7 +174,7 @@ class WizardValidator:
 
         errors = []
 
-        is_valid, validation_errors, _ = validate_config_payload(config_data)
+        is_valid, validation_errors, _ = validate_settings_payload(config_data)
 
         if is_valid:
             return True, []

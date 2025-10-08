@@ -19,7 +19,7 @@ from pathlib import Path
 # Add src to path for importing
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from src.config import Config
+from src.config import Settings
 from src.infrastructure.container import DependencyContext
 
 
@@ -42,7 +42,7 @@ async def main():
 
     try:
         # Create configuration
-        config = Config()
+        config = Settings()
 
         # Test DI Container Integration
         async with DependencyContext(config) as container:

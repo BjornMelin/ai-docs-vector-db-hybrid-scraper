@@ -16,7 +16,7 @@ from langchain.retrievers.document_compressors import (
 )
 from langchain_core.documents import Document
 
-from src.config import get_config
+from src.config import get_settings
 from src.services.vector_db.service import VectorStoreService
 
 
@@ -46,7 +46,7 @@ def _parse_args() -> argparse.Namespace:
 
 
 async def _load_vector_service(collection_override: str | None) -> VectorStoreService:
-    config = get_config()
+    config = get_settings()
     if collection_override:
         config.qdrant.collection_name = collection_override
     service = VectorStoreService(config=config)
@@ -75,7 +75,7 @@ async def _evaluate(  # pylint: disable=too-many-locals
     dataset_path: Path, collection_override: str | None
 ) -> None:
     vector_service = await _load_vector_service(collection_override)
-    config = get_config().rag
+    config = get_settings().rag
     if not config.compression_enabled:
         print(
             "Compression is disabled in the active configuration; nothing to evaluate."
