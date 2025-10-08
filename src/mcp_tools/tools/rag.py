@@ -10,7 +10,7 @@ from typing import Any
 from fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
-from src.config import Settings, get_settings
+from src.config.loader import Settings, get_settings
 from src.infrastructure.client_manager import ClientManager
 from src.services.rag.generator import RAGGenerator
 from src.services.rag.models import RAGRequest, RAGResult

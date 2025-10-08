@@ -11,7 +11,7 @@ from typing import Any, cast
 
 from fastmcp import Context
 
-from src.config import Settings, get_settings as load_unified_config
+from src.config.loader import Settings, get_settings as load_unified_config
 from src.infrastructure.client_manager import ClientManager
 
 

@@ -33,7 +33,7 @@ class TestRichCLI:
 
         # Verify welcome content
         rich_output_capturer.assert_contains("🚀 AI Documentation Scraper")
-        rich_output_capturer.assert_contains("Advanced CLI Interface v1.0.0")
+        rich_output_capturer.assert_contains("CLI Interface v1.0.0")
         rich_output_capturer.assert_contains("Hybrid AI documentation scraping system")
         rich_output_capturer.assert_contains("Welcome")
 
@@ -80,18 +80,18 @@ class TestMainCommand:
         assert "Available commands:" in result.output
         mock_get_config.assert_called_once()
 
-    @patch("src.cli.main.Config.parse_file")
+    @patch("src.cli.main.load_settings_from_file")
     def test_main_command_with_config_file(
-        self, mock_parse_file, cli_runner, mock_config, temp_config_file
+        self, mock_load_file, cli_runner, mock_config, temp_config_file
     ):
         """Test main command with explicit configuration file."""
-        mock_parse_file.return_value = mock_config
+        mock_load_file.return_value = mock_config
 
         # Use command that loads config
         result = cli_runner.invoke(main, ["--config", str(temp_config_file)])
 
         assert result.exit_code == 0
-        mock_parse_file.assert_called_once_with(temp_config_file)
+        mock_load_file.assert_called_once_with(temp_config_file)
 
     @patch("src.cli.main.get_settings")
     def test_main_command_config_error(self, mock_get_config, cli_runner):

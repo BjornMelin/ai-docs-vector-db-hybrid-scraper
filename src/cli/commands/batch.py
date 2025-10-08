@@ -10,7 +10,7 @@ import asyncio
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import click
 from click.shell_completion import CompletionItem
@@ -27,7 +27,9 @@ from rich.prompt import Confirm
 from rich.table import Table
 from rich.text import Text
 
-from src.manage_vector_db import VectorDBManager
+
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    pass
 
 
 console = Console()
@@ -44,6 +46,8 @@ def complete_collection_name(
             return []
 
         # Initialize manager and retrieve collections
+        from src.manage_vector_db import VectorDBManager
+
         db_manager = VectorDBManager()
 
         # Get collection names (synchronously for completion)
@@ -320,6 +324,8 @@ def create_collections(
 
     # Create operation queue
     queue = OperationQueue()
+    from src.manage_vector_db import VectorDBManager
+
     db_manager = VectorDBManager()
 
     success = False
@@ -396,6 +402,8 @@ def delete_collections(ctx: click.Context, collections: tuple, yes: bool):
 
     # Create operation queue
     queue = OperationQueue()
+    from src.manage_vector_db import VectorDBManager
+
     db_manager = VectorDBManager()
 
     success = False
@@ -446,6 +454,8 @@ def backup_collections(
 
     # If no collections specified, backup all
     if not collections:
+        from src.manage_vector_db import VectorDBManager
+
         db_manager = VectorDBManager()
         try:
             collection_names = asyncio.run(db_manager.list_collections())

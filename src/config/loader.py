@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -320,6 +321,41 @@ def validate_settings_payload(
     return True, [], settings
 
 
+def load_settings_from_file(path: Path) -> Settings:
+    """Load settings overrides from a JSON or YAML file."""
+
+    if not path.exists():
+        msg = f"Configuration file not found: {path}"
+        raise FileNotFoundError(msg)
+
+    text = path.read_text(encoding="utf-8")
+    suffix = path.suffix.lower()
+
+    try:
+        if suffix in {".json"}:
+            payload = json.loads(text)
+        elif suffix in {".yaml", ".yml"}:
+            try:
+                import yaml  # type: ignore import  # pylint: disable=import-outside-toplevel
+            except ModuleNotFoundError as exc:  # pragma: no cover - optional dep
+                raise ImportError(
+                    "Loading YAML configurations requires PyYAML. "
+                    "Install with `pip install pyyaml`."
+                ) from exc
+            payload = yaml.safe_load(text)
+        else:
+            msg = f"Unsupported configuration file format: {path.suffix}"
+            raise ValueError(msg)
+    except (json.JSONDecodeError, ValueError) as exc:
+        raise ValueError(f"Invalid configuration file: {exc}") from exc
+
+    if not isinstance(payload, dict):
+        msg = "Configuration file must define a JSON/YAML object"
+        raise ValueError(msg)
+
+    return load_settings(**payload)
+
+
 __all__ = [
     "Settings",
     "apply_mode_overrides",
@@ -328,5 +364,6 @@ __all__ = [
     "load_settings",
     "refresh_settings",
     "resolve_mode",
+    "load_settings_from_file",
     "validate_settings_payload",
 ]

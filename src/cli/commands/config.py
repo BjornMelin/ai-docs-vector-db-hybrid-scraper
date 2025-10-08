@@ -12,7 +12,7 @@ from rich.panel import Panel
 from rich.syntax import Syntax
 from rich.table import Table
 
-from src.config import Settings
+from src.config.loader import Settings, load_settings_from_file
 
 
 try:
@@ -86,7 +86,7 @@ def load(config_file: str, validate_only: bool):
     """Load configuration from file."""
     try:
         config_path = Path(config_file)
-        config_obj = Settings.load_from_file(config_path)  # type: ignore[attr-defined]
+        config_obj = load_settings_from_file(config_path)
 
         if validate_only:
             console.print("✅ Configuration file is valid", style="green")
