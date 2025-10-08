@@ -6,11 +6,11 @@ models, ensuring robust validation and edge case coverage.
 
 import tempfile
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from hypothesis import assume, example, given, note, strategies as st
-from pydantic import ValidationError
+from pydantic import HttpUrl, ValidationError
 
 from src.config import Settings
 from src.config.models import (
@@ -19,12 +19,14 @@ from src.config.models import (
     CircuitBreakerConfig,
     CrawlProvider,
     DeploymentConfig,
+    DeploymentTier,
     DocumentationSite,
     EmbeddingProvider,
     Environment,
     FirecrawlConfig,
     LogLevel,
     OpenAIConfig,
+    PerformanceConfig,
     QdrantConfig,
     RAGConfig,
 )
@@ -63,13 +65,16 @@ class TestCacheConfigProperties:
         # Verify basic constraints
         assert isinstance(config.enable_caching, bool)
         assert isinstance(config.enable_local_cache, bool)
-        assert isinstance(config.enable_dragonfly_cache, bool)
+        assert isinstance(config.enable_redis_cache, bool)
         assert config.local_max_size > 0
         assert config.local_max_memory_mb > 0
-        assert config.ttl_seconds > 0
+        assert config.ttl_embeddings > 0
+        assert config.ttl_crawl > 0
+        assert config.ttl_queries > 0
+        assert config.ttl_search_results > 0
 
-        # Verify dragonfly URL format
-        assert config.dragonfly_url.startswith("redis://")
+        # Verify Redis URL format
+        assert config.redis_url.startswith("redis://")
 
         # Verify cache TTL structure
         assert isinstance(config.cache_ttl_seconds, dict)
@@ -88,7 +93,10 @@ class TestCacheConfigProperties:
             CacheConfig(local_max_memory_mb=negative_value)
 
         with pytest.raises(ValidationError):
-            CacheConfig(ttl_seconds=negative_value)
+            CacheConfig(ttl_embeddings=negative_value)
+
+        with pytest.raises(ValidationError):
+            CacheConfig(ttl_crawl=negative_value)
 
     @given(
         st.dictionaries(
@@ -107,7 +115,7 @@ class TestCacheConfigProperties:
         {
             "enable_caching": False,
             "enable_local_cache": False,
-            "enable_dragonfly_cache": False,
+            "enable_redis_cache": False,
         }
     )
     @given(cache_configurations())
@@ -340,12 +348,6 @@ class TestCircuitBreakerConfigProperties:
         # Verify basic constraints
         assert 1 <= config.failure_threshold <= 20
         assert config.recovery_timeout > 0
-        assert 1 <= config.half_open_max_calls <= 10
-
-        # Verify boolean flags
-        assert isinstance(config.enable_adaptive_timeout, bool)
-        assert isinstance(config.enable_bulkhead_isolation, bool)
-        assert isinstance(config.enable_metrics_collection, bool)
 
         # Verify service overrides structure
         for service, overrides in config.service_overrides.items():
@@ -358,12 +360,6 @@ class TestCircuitBreakerConfigProperties:
         with pytest.raises(ValidationError):
             CircuitBreakerConfig(failure_threshold=invalid_threshold)
 
-    @given(st.integers().filter(lambda x: x <= 0 or x > 10))
-    def test_circuit_breaker_half_open_calls_bounds(self, invalid_calls: int):
-        """Test that half-open max calls bounds are enforced."""
-        with pytest.raises(ValidationError):
-            CircuitBreakerConfig(half_open_max_calls=invalid_calls)
-
 
 class TestDeploymentConfigProperties:
     """Property-based tests for DeploymentConfig."""
@@ -374,8 +370,12 @@ class TestDeploymentConfigProperties:
         config = DeploymentConfig(**config_data)
 
         # Verify tier validation
-        assert config.tier in ["personal", "professional", "enterprise"]
-        assert config.deployment_tier == config.tier  # Legacy field matches
+        assert isinstance(config.tier, DeploymentTier)
+        assert config.tier in {
+            DeploymentTier.PERSONAL,
+            DeploymentTier.PROFESSIONAL,
+            DeploymentTier.ENTERPRISE,
+        }
 
         # Verify boolean flags
         assert isinstance(config.enable_feature_flags, bool)
@@ -395,7 +395,7 @@ class TestDeploymentConfigProperties:
         assume(len(invalid_tier) > 0)  # Non-empty strings only
 
         with pytest.raises(ValidationError):
-            DeploymentConfig(tier=invalid_tier)
+            DeploymentConfig(tier=cast(Any, invalid_tier))
 
     @given(flagsmith_api_keys())
     def test_flagsmith_api_key_validation_success(self, valid_key: str):
@@ -487,25 +487,31 @@ class TestDocumentationSiteProperties:
     def test_documentation_site_invalid_url_rejected(self, invalid_url: str):
         """Test that invalid URLs are rejected."""
         with pytest.raises(ValidationError):
-            DocumentationSite(name="Test", url=invalid_url)
+            DocumentationSite(name="Test", url=cast(Any, invalid_url))
 
     @given(st.text(max_size=0))
     def test_documentation_site_empty_name_rejected(self, empty_name: str):
         """Test that empty names are rejected."""
         with pytest.raises(ValidationError):
-            DocumentationSite(name=empty_name, url="https://example.com")
+            DocumentationSite(
+                name=empty_name, url=cast(HttpUrl, "https://example.com")
+            )
 
     @given(invalid_positive_integers())
     def test_documentation_site_invalid_limits_rejected(self, invalid_limit: int):
         """Test that invalid page/depth limits are rejected."""
         with pytest.raises(ValidationError):
             DocumentationSite(
-                name="Test", url="https://example.com", max_pages=invalid_limit
+                name="Test",
+                url=cast(HttpUrl, "https://example.com"),
+                max_pages=invalid_limit,
             )
 
         with pytest.raises(ValidationError):
             DocumentationSite(
-                name="Test", url="https://example.com", max_depth=invalid_limit
+                name="Test",
+                url=cast(HttpUrl, "https://example.com"),
+                max_depth=invalid_limit,
             )
 
 
@@ -548,8 +554,8 @@ class TestCompleteConfigProperties:
         assert isinstance(config.qdrant, QdrantConfig)
         assert isinstance(config.openai, OpenAIConfig)
         assert isinstance(config.chunking, ChunkingConfig)
-        assert isinstance(config.circuit_breaker, CircuitBreakerConfig)
         assert isinstance(config.deployment, DeploymentConfig)
+        assert isinstance(config.performance, PerformanceConfig)
         assert isinstance(config.rag, RAGConfig)
 
         # Verify documentation sites
@@ -662,7 +668,15 @@ class TestConfigPropertyInvariants:
         # Cache values
         assert config.cache.local_max_size > 0
         assert config.cache.local_max_memory_mb > 0
-        assert config.cache.ttl_seconds > 0
+        assert all(
+            value > 0
+            for value in (
+                config.cache.ttl_embeddings,
+                config.cache.ttl_crawl,
+                config.cache.ttl_queries,
+                config.cache.ttl_search_results,
+            )
+        )
 
         # Qdrant values
         assert config.qdrant.timeout > 0
@@ -712,7 +726,7 @@ class TestConfigPropertyInvariants:
 
         # URL formats
         assert config.qdrant.url.startswith(("http://", "https://"))
-        assert config.cache.dragonfly_url.startswith("redis://")
+        assert config.cache.redis_url.startswith("redis://")
 
         # Documentation site URLs
         for site in config.documentation_sites:
@@ -756,8 +770,14 @@ class TestConfigMutationTesting:
             "openai": {"api_key": None},
             "cache": {
                 "enable_caching": True,
+                "enable_local_cache": True,
+                "enable_redis_cache": True,
                 "local_max_size": 1000,
-                "ttl_seconds": 3600,
+                "ttl_embeddings": 3600,
+                "ttl_crawl": 1200,
+                "ttl_queries": 1800,
+                "ttl_search_results": 900,
+                "redis_url": "redis://localhost:6379",
             },
             "chunking": {
                 "chunk_size": 1600,
