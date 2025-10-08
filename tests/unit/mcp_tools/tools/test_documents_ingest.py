@@ -124,7 +124,7 @@ def documents_env(monkeypatch) -> SimpleNamespace:  # pylint: disable=too-many-l
 
     validator = DummyValidator()
     monkeypatch.setattr(
-        documents.SecurityValidator,
+        documents.MLSecurityValidator,
         "from_unified_config",
         classmethod(lambda cls: validator),
     )

@@ -34,7 +34,6 @@ class TestCollectionsTools:
 
         mock_vector.collection_stats.side_effect = mock_stats
         mock_vector.drop_collection = AsyncMock()
-        mock_vector.delete_collection = AsyncMock()
 
         # Mock cache manager
         mock_cache = AsyncMock()
@@ -140,36 +139,7 @@ class TestCollectionsTools:
         assert result.collection == "old_collection"
 
         mock_context.info.assert_called()
-        mock_vector.delete_collection.assert_awaited_once_with("old_collection")
-        mock_vector.drop_collection.assert_not_awaited()
-
-    @pytest.mark.asyncio
-    async def test_delete_collection_falls_back_to_drop(
-        self, mock_client_manager, mock_context
-    ):
-        """Test fallback to drop_collection when delete alias missing."""
-
-        mock_vector = await mock_client_manager.get_vector_store_service()
-        mock_vector.delete_collection = None
-
-        mock_mcp = MagicMock()
-        registered_tools = {}
-
-        def capture_tool(func):
-            registered_tools[func.__name__] = func
-            return func
-
-        mock_mcp.tool.return_value = capture_tool
-        register_tools(mock_mcp, mock_client_manager)
-
-        delete_collection = registered_tools["delete_collection"]
-
-        result = await delete_collection(
-            collection_name="legacy_collection", ctx=mock_context
-        )
-
-        assert result.status == "deleted"
-        mock_vector.drop_collection.assert_awaited_once_with("legacy_collection")
+        mock_vector.drop_collection.assert_awaited_once_with("old_collection")
 
     @pytest.mark.asyncio
     async def test_delete_collection_missing_methods(
@@ -178,7 +148,6 @@ class TestCollectionsTools:
         """Ensure an explicit error surfaces when delete/drop are unavailable."""
 
         mock_vector = await mock_client_manager.get_vector_store_service()
-        mock_vector.delete_collection = None
         mock_vector.drop_collection = None
 
         mock_mcp = MagicMock()
