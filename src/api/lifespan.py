@@ -7,17 +7,20 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from src.services.registry import ensure_service_registry, shutdown_service_registry
+from src.infrastructure.client_manager import (
+    ensure_client_manager,
+    shutdown_client_manager,
+)
 
 
 @asynccontextmanager
-async def service_registry_lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Manage the application service registry lifecycle."""
+async def client_manager_lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Manage the global ClientManager lifecycle for FastAPI."""
 
-    service_registry = await ensure_service_registry()
-    app.state.service_registry = service_registry
+    client_manager = await ensure_client_manager()
+    app.state.client_manager = client_manager
     try:
         yield
     finally:
-        await shutdown_service_registry()
-        app.state.service_registry = None
+        await shutdown_client_manager()
+        app.state.client_manager = None

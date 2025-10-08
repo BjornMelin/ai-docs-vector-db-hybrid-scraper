@@ -38,6 +38,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (content intelligence, embeddings, retrieval, analytics, collection management,
   lightweight scrape) with optional dependency guards; CLI batch/setup helpers
   and docs were refreshed, and the full unit suite passes with the new entrypoints.
+- Replaced the ModeAware service factory and ServiceRegistry layers with a single
+  ClientManager-driven dependency graph, rewiring FastAPI dependencies, CLI
+  utilities, and tests to rely on the new lifecycle helpers.
 - CLI and MCP tooling now load settings via `load_settings_from_file`, supporting JSON/YAML config import/export, refreshing CLI configuration tests and fixtures.
 - Configuration documentation (developer, user, operator guides) updated to reflect the unified settings loader and CLI helpers.
 - CI lint workflow now runs `python scripts/guards/check_settings_usage.py` to prevent legacy `get_config`/`set_config` usage from regressing.

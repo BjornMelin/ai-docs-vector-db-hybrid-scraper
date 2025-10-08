@@ -6,8 +6,8 @@ import asyncio
 
 from purgatory import AsyncInMemoryUnitOfWork
 
+from src.infrastructure.client_manager import ensure_client_manager
 from src.services.circuit_breaker import CircuitBreakerManager
-from src.services.registry import ensure_service_registry, get_service_registry
 
 
 _manager: CircuitBreakerManager | None = None
@@ -15,7 +15,7 @@ _manager_lock = asyncio.Lock()
 
 
 async def get_circuit_breaker_manager() -> CircuitBreakerManager:
-    """Return the shared CircuitBreakerManager instance from the registry."""
+    """Return the shared CircuitBreakerManager instance from the ClientManager."""
 
     global _manager  # pylint: disable=global-statement
     if _manager is not None:
@@ -24,18 +24,12 @@ async def get_circuit_breaker_manager() -> CircuitBreakerManager:
     async with _manager_lock:
         if _manager is None:
             try:
-                registry = get_service_registry()
-            except RuntimeError:
-                try:
-                    registry = await ensure_service_registry()
-                except Exception:
-                    _manager = CircuitBreakerManager(
-                        redis_url="memory://local",
-                        config=None,
-                        unit_of_work=AsyncInMemoryUnitOfWork(),
-                    )
-                else:
-                    _manager = registry.circuit_breaker_manager
-            else:
-                _manager = registry.circuit_breaker_manager
+                client_manager = await ensure_client_manager()
+                _manager = await client_manager.get_circuit_breaker_manager()
+            except Exception:
+                _manager = CircuitBreakerManager(
+                    redis_url="memory://local",
+                    config=None,
+                    unit_of_work=AsyncInMemoryUnitOfWork(),
+                )
     return _manager
