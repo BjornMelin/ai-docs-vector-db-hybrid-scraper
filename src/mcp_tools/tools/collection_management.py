@@ -15,20 +15,14 @@ logger = logging.getLogger(__name__)
 
 def _resolve_delete_callable(
     vector_service: object,
-) -> tuple[Callable[[str], Awaitable[None]], bool]:
-    """Return the deletion callable and whether a legacy fallback was required."""
+) -> Callable[[str], Awaitable[None]]:
+    """Return the deletion callable exposed by the vector service."""
 
     delete_method = getattr(vector_service, "delete_collection", None)
-    drop_method = getattr(vector_service, "drop_collection", None)
-
-    if callable(delete_method):
-        return cast(Callable[[str], Awaitable[None]], delete_method), False
-
-    if callable(drop_method):
-        return cast(Callable[[str], Awaitable[None]], drop_method), True
-
-    msg = "Vector service does not expose a collection deletion method"
-    raise AttributeError(msg)
+    if not callable(delete_method):
+        msg = "Vector service does not expose a collection deletion method"
+        raise AttributeError(msg)
+    return cast(Callable[[str], Awaitable[None]], delete_method)
 
 
 def register_tools(mcp, client_manager: ClientManager):  # pylint: disable=too-many-statements
@@ -129,29 +123,12 @@ def register_tools(mcp, client_manager: ClientManager):  # pylint: disable=too-m
             vector_service = await client_manager.get_vector_store_service()
             cache_manager = await client_manager.get_cache_manager()
 
-            delete_callable, used_drop_fallback = _resolve_delete_callable(
-                vector_service
-            )
+            delete_callable = _resolve_delete_callable(vector_service)
             await delete_callable(collection_name)
             if ctx:
                 await ctx.debug(
                     "Collection %s deleted from vector store", collection_name
                 )
-
-            if used_drop_fallback:
-                telemetry_payload = {
-                    "collection": collection_name,
-                    "vector_service": type(vector_service).__name__,
-                }
-                logger.warning(
-                    "collections.delete.fallback",
-                    extra={"telemetry": telemetry_payload},
-                )
-                if ctx:
-                    await ctx.warning(
-                        "Used drop_collection fallback for collection "
-                        f"{collection_name}"
-                    )
 
             # Clear cache entries for this collection
             await cache_manager.clear_pattern(f"*:{collection_name}:*")
