@@ -12,11 +12,11 @@ import pytest
 from hypothesis import assume, example, given, note, strategies as st
 from pydantic import ValidationError
 
-from src.config import (
+from src.config import Config
+from src.config.models import (
     CacheConfig,
     ChunkingConfig,
     CircuitBreakerConfig,
-    Config,
     CrawlProvider,
     DeploymentConfig,
     DocumentationSite,

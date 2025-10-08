@@ -255,6 +255,23 @@ class TestClientManagerServiceIntegration:
             assert router2 is router1
             mock_router.initialize.assert_awaited_once()
 
+    def test_get_browser_automation_metrics(self, client_manager_with_mocks):
+        """Ensure browser automation metrics accessor proxies router snapshot."""
+
+        assert client_manager_with_mocks.get_browser_automation_metrics() == {}
+
+        mock_router = MagicMock()
+        mock_router.get_metrics_snapshot.return_value = {
+            "lightweight": {"success": 2, "failure": 1, "rate_limited": 0}
+        }
+        client_manager_with_mocks._automation_router = mock_router
+
+        metrics = client_manager_with_mocks.get_browser_automation_metrics()
+        assert metrics == {
+            "lightweight": {"success": 2, "failure": 1, "rate_limited": 0}
+        }
+        mock_router.get_metrics_snapshot.assert_called_once()
+
 
 class TestClientManagerAccessors:
     """Test typed service accessors added for DI consolidation."""

@@ -165,7 +165,9 @@ def config_factory(
     """Build typed Config instances with deterministic directories."""
 
     def _create_config(**overrides: Any):
-        from src.config import Config, Environment  # Local import to avoid cycles
+        # pylint: disable=import-outside-toplevel
+        from src.config import Config
+        from src.config.models import Environment  # Local import to avoid cycles
 
         base_dir = tmp_path_factory.mktemp("config_factory")
         payload: dict[str, Any] = {
