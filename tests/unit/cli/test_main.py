@@ -12,7 +12,6 @@ from click.core import Group
 from rich.console import Console
 
 from src.cli.main import RichCLI, main
-from src.services.health.checks import HealthCheckResult
 
 
 class TestRichCLI:
@@ -261,20 +260,27 @@ class TestStatusCommand:
     """Test system status and health check functionality."""
 
     @patch("src.cli.main.get_settings")
-    @patch("src.cli.main.perform_health_checks")
+    @patch("src.cli.main._collect_health_summary")
     def test_status_command_all_healthy(
-        self, mock_health_checks, mock_get_config, cli_runner, mock_config
+        self, mock_collect_summary, mock_get_config, cli_runner, mock_config
     ):
         """Test status command with all services healthy."""
         mock_get_config.return_value = mock_config
-        mock_health_checks.return_value = [
-            HealthCheckResult(
-                service="qdrant", status="healthy", details={"version": "1.7.0"}
-            ),
-            HealthCheckResult(
-                service="redis", status="healthy", details={"version": "7.0.0"}
-            ),
-        ]
+        mock_collect_summary.return_value = {
+            "overall_status": "healthy",
+            "checks": {
+                "qdrant": {
+                    "status": "healthy",
+                    "message": "ok",
+                    "metadata": {"version": "1.7.0"},
+                },
+                "redis": {
+                    "status": "healthy",
+                    "message": "ok",
+                    "metadata": {"version": "7.0.0"},
+                },
+            },
+        }
 
         result = cli_runner.invoke(main, ["status"])
 
@@ -283,21 +289,26 @@ class TestStatusCommand:
         assert "Healthy" in result.output
         assert "Qdrant" in result.output
         assert "Redis" in result.output
-        mock_health_checks.assert_called_once_with(mock_config)
+        mock_collect_summary.assert_called_once_with(mock_config)
 
     @patch("src.cli.main.get_settings")
-    @patch("src.cli.main.perform_health_checks")
+    @patch("src.cli.main._collect_health_summary")
     def test_status_command_with_errors(
-        self, mock_health_checks, mock_get_config, cli_runner, mock_config
+        self, mock_collect_summary, mock_get_config, cli_runner, mock_config
     ):
         """Test status command with some service errors."""
         mock_get_config.return_value = mock_config
-        mock_health_checks.return_value = [
-            HealthCheckResult(service="qdrant", status="healthy", details={}),
-            HealthCheckResult(
-                service="redis", status="unhealthy", error="Connection refused"
-            ),
-        ]
+        mock_collect_summary.return_value = {
+            "overall_status": "unhealthy",
+            "checks": {
+                "qdrant": {"status": "healthy", "message": "ok", "metadata": {}},
+                "redis": {
+                    "status": "unhealthy",
+                    "message": "Connection refused",
+                    "metadata": {},
+                },
+            },
+        }
 
         result = cli_runner.invoke(main, ["status"])
 
@@ -306,13 +317,13 @@ class TestStatusCommand:
         assert "Connection refused" in result.output
 
     @patch("src.cli.main.get_settings")
-    @patch("src.cli.main.perform_health_checks")
+    @patch("src.cli.main._collect_health_summary")
     def test_status_command_health_check_exception(
-        self, mock_health_checks, mock_get_config, cli_runner, mock_config
+        self, mock_collect_summary, mock_get_config, cli_runner, mock_config
     ):
         """Test status command when health check raises exception."""
         mock_get_config.return_value = mock_config
-        mock_health_checks.side_effect = Exception("Health check failed")
+        mock_collect_summary.side_effect = Exception("Health check failed")
 
         result = cli_runner.invoke(main, ["status"])
 

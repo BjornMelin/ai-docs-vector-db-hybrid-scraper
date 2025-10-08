@@ -3,6 +3,7 @@
 import asyncio
 import sys
 from pathlib import Path
+from typing import Any
 
 import click
 from click.shell_completion import get_completion_class
@@ -11,8 +12,8 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from src.config.loader import get_settings, load_settings_from_file
-from src.services.health import perform_health_checks, summarize_results
+from src.config.loader import Settings, get_settings, load_settings_from_file
+from src.services.health.manager import build_health_manager
 
 # Import command groups
 from .commands import (
@@ -212,39 +213,41 @@ def status(ctx: click.Context):
 
     try:
         with rich_cli.console.status("[bold green]Checking system status..."):
-            results = asyncio.run(perform_health_checks(config))
+            summary = asyncio.run(_collect_health_summary(config))
     except Exception as exc:  # noqa: BLE001 - surfaced as CLI error message
         rich_cli.show_error("Health checks failed", str(exc))
         return
-
-    summary = summarize_results(results)
 
     table = Table(title="System Status", show_header=True, header_style="bold cyan")
     table.add_column("Component", style="dim", width=20)
     table.add_column("Status", width=10)
     table.add_column("Details", width=40)
 
-    for result in results:
-        status_style = "green" if result.connected else "red"
-        status_label = "Healthy" if result.connected else "Error"
-        details = (
-            result.error
-            or ", ".join(f"{key}={value}" for key, value in result.details.items())
-            or "Connected"
+    for name, payload in summary.get("checks", {}).items():
+        status_value = payload.get("status", "unknown")
+        status_style = "green" if status_value == "healthy" else "red"
+        status_label = "Healthy" if status_value == "healthy" else status_value.title()
+        metadata = payload.get("metadata") or {}
+        details = payload.get("message") or ", ".join(
+            f"{key}={value}" for key, value in metadata.items()
         )
+        details = details or "No details"
 
-        table.add_row(
-            result.service.title(),
-            status_label,
-            details,
-            style=status_style,
-        )
+        table.add_row(name.title(), status_label, details, style=status_style)
 
     rich_cli.console.print(table)
 
-    overall = summary["overall_status"].title()
+    overall = summary.get("overall_status", "unknown").title()
     rich_cli.console.print(f"Overall status: {overall}")
 
 
 if __name__ == "__main__":
     main()  # pylint: disable=no-value-for-parameter
+
+
+async def _collect_health_summary(config: Settings) -> dict[str, Any]:
+    """Run configured health checks and return the aggregated summary."""
+
+    manager = build_health_manager(config)
+    await manager.check_all()
+    return manager.get_health_summary()

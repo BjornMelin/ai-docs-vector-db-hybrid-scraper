@@ -1,9 +1,9 @@
-"""Unit tests for FastAPI dependency helpers."""
+"""Tests for FastAPI dependency helpers."""
 
 from __future__ import annotations
 
-import asyncio
 from typing import Any
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import HTTPException
@@ -11,34 +11,7 @@ from fastapi import HTTPException
 from src.services import dependencies as service_dependencies
 from src.services.dependencies import EmbeddingRequest, EmbeddingServiceError
 from src.services.fastapi import dependencies as fastapi_dependencies
-from src.services.fastapi.dependencies import ServiceHealthChecker
-
-
-class _StubVectorService:
-    """Provide a healthy vector service stub."""
-
-    async def list_collections(self) -> list[str]:
-        """Return the default collection for health checks."""
-
-        return ["default"]
-
-
-class _FailingVectorService:
-    """Simulate a vector service failure."""
-
-    async def list_collections(self) -> list[str]:
-        """Raise to mimic an unavailable vector service."""
-
-        raise RuntimeError("vector unavailable")
-
-
-class _StubEmbeddingManager:
-    """Provide embedding manager stubs."""
-
-    def get_provider_info(self) -> dict[str, object]:
-        """Return provider information for the embedding service."""
-
-        return {"fastembed": {"status": "available"}}
+from src.services.fastapi.dependencies import HealthCheckManager
 
 
 class _RecordingEmbeddingManager:
@@ -68,205 +41,7 @@ class _RecordingEmbeddingManager:
         }
 
 
-class _StubCacheManager:
-    """Provide cache manager statistics stubs."""
-
-    async def get_stats(self) -> dict[str, object]:
-        """Return a perfect cache hit rate to indicate health."""
-
-        return {"hit_rate": 1.0}
-
-
-class _FailingCacheManager:
-    """Simulate cache manager failure surfaced via HTTPException."""
-
-    async def get_stats(self) -> dict[str, object]:
-        """Raise HTTPException to mimic degraded cache behaviour."""
-
-        raise HTTPException(status_code=503, detail="cache unavailable")
-
-
-class _TimeoutCacheManager:
-    """Simulate cache stats timing out."""
-
-    async def get_stats(self) -> dict[str, object]:
-        """Raise asyncio timeout to exercise timeout handling."""
-
-        raise TimeoutError("cache stats timed out")
-
-
-class _SlowAsyncCacheManager:
-    """Simulate an async cache stats call that exceeds the timeout budget."""
-
-    async def get_stats(self) -> dict[str, object]:
-        """Sleep long enough to trigger asyncio timeout."""
-
-        await asyncio.sleep(0.2)
-        return {"hit_rate": 0.5}
-
-
-class _StubClientManager:
-    """Return preconfigured service stubs for dependency helpers."""
-
-    def __init__(
-        self,
-        *,
-        vector_service: Any,
-        cache_manager: Any,
-        embedding_manager: Any,
-    ) -> None:
-        self._vector_service = vector_service
-        self._cache_manager = cache_manager
-        self._embedding_manager = embedding_manager
-
-    async def get_vector_store_service(self) -> Any:
-        """Return the injected vector service stub."""
-
-        return self._vector_service
-
-    async def get_cache_manager(self) -> Any:
-        """Return the injected cache manager stub."""
-
-        return self._cache_manager
-
-    async def get_embedding_manager(self) -> Any:
-        """Return the injected embedding manager stub."""
-
-        return self._embedding_manager
-
-
-async def _patch_client_manager(
-    monkeypatch: Any,
-    *,
-    vector_service: Any,
-    cache_manager: Any,
-    embedding_manager: Any,
-) -> None:
-    """Patch FastAPI dependency to use a stubbed client manager."""
-
-    async def _client_manager() -> _StubClientManager:
-        return _StubClientManager(
-            vector_service=vector_service,
-            cache_manager=cache_manager,
-            embedding_manager=embedding_manager,
-        )
-
-    monkeypatch.setattr(
-        fastapi_dependencies,
-        "get_client_manager",
-        _client_manager,
-        raising=True,
-    )
-
-
-@pytest.mark.asyncio
-async def test_service_health_checker_reports_healthy(monkeypatch: Any) -> None:
-    """Verify health checker reports a healthy status when all services respond."""
-
-    await _patch_client_manager(
-        monkeypatch,
-        vector_service=_StubVectorService(),
-        cache_manager=_StubCacheManager(),
-        embedding_manager=_StubEmbeddingManager(),
-    )
-
-    checker = ServiceHealthChecker()
-    result = await checker.check_health()
-
-    assert result["status"] == "healthy"
-    assert result["services"]["vector_db"]["status"] == "healthy"
-    assert result["services"]["embeddings"]["status"] == "healthy"
-    assert result["services"]["cache"]["status"] == "healthy"
-
-
-@pytest.mark.asyncio
-async def test_service_health_checker_degrades_on_vector_failure(monkeypatch: Any):
-    """Verify health checker degrades when the vector service fails."""
-
-    await _patch_client_manager(
-        monkeypatch,
-        vector_service=_FailingVectorService(),
-        cache_manager=_StubCacheManager(),
-        embedding_manager=_StubEmbeddingManager(),
-    )
-
-    checker = ServiceHealthChecker()
-    result = await checker.check_health()
-
-    assert result["status"] == "degraded"
-    assert result["services"]["vector_db"]["status"] == "unhealthy"
-
-
-@pytest.mark.asyncio
-async def test_service_health_checker_degrades_on_cache_http_exception(
-    monkeypatch: Any,
-) -> None:
-    """Verify cache HTTPExceptions degrade health instead of bubbling up."""
-
-    await _patch_client_manager(
-        monkeypatch,
-        vector_service=_StubVectorService(),
-        cache_manager=_FailingCacheManager(),
-        embedding_manager=_StubEmbeddingManager(),
-    )
-
-    checker = ServiceHealthChecker()
-    result = await checker.check_health()
-
-    assert result["status"] == "degraded"
-    assert result["services"]["cache"]["status"] == "unhealthy"
-    assert result["services"]["cache"]["error_type"] == "HTTPException"
-
-
-@pytest.mark.asyncio
-async def test_service_health_checker_degrades_on_cache_timeout(
-    monkeypatch: Any,
-) -> None:
-    """Ensure cache timeouts degrade health with timeout metadata."""
-
-    await _patch_client_manager(
-        monkeypatch,
-        vector_service=_StubVectorService(),
-        cache_manager=_TimeoutCacheManager(),
-        embedding_manager=_StubEmbeddingManager(),
-    )
-
-    checker = ServiceHealthChecker()
-    result = await checker.check_health()
-
-    assert result["status"] == "degraded"
-    assert result["services"]["cache"]["status"] == "unhealthy"
-    assert result["services"]["cache"]["error_type"] == "TimeoutError"
-
-
-@pytest.mark.asyncio
-async def test_service_health_checker_degrades_on_asyncio_timeout(
-    monkeypatch: Any,
-) -> None:
-    """Ensure async cache stats exceeding the budget degrade health."""
-
-    await _patch_client_manager(
-        monkeypatch,
-        vector_service=_StubVectorService(),
-        cache_manager=_SlowAsyncCacheManager(),
-        embedding_manager=_StubEmbeddingManager(),
-    )
-
-    checker = ServiceHealthChecker()
-    monkeypatch.setattr(
-        ServiceHealthChecker,
-        "HEALTH_TIMEOUT_SECONDS",
-        0.05,
-        raising=False,
-    )
-    result = await checker.check_health()
-
-    assert result["status"] == "degraded"
-    assert result["services"]["cache"]["status"] == "unhealthy"
-    assert result["services"]["cache"]["error_type"] == "TimeoutError"
-
-
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_generate_embeddings_dependency_success() -> None:
     """Ensure the embedding dependency returns a serialisable response."""
 
@@ -289,7 +64,7 @@ async def test_generate_embeddings_dependency_success() -> None:
     assert manager.calls[0]["quality_tier"].value == "balanced"
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_generate_embeddings_dependency_failure() -> None:
     """Verify the dependency wraps underlying failures with service errors."""
 
@@ -300,7 +75,7 @@ async def test_generate_embeddings_dependency_failure() -> None:
         await service_dependencies.generate_embeddings(request, manager)
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_get_embedding_manager_maps_failure_to_503(monkeypatch: Any) -> None:
     """Ensure embedding manager failures convert to HTTP 503."""
 
@@ -321,7 +96,7 @@ async def test_get_embedding_manager_maps_failure_to_503(monkeypatch: Any) -> No
     assert "Embedding manager not available" in err.value.detail
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_get_cache_manager_maps_failure_to_503(monkeypatch: Any) -> None:
     """Ensure cache manager failures convert to HTTP 503."""
 
@@ -342,7 +117,7 @@ async def test_get_cache_manager_maps_failure_to_503(monkeypatch: Any) -> None:
     assert "Cache manager not available" in err.value.detail
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_get_client_manager_maps_failure_to_503(monkeypatch: Any) -> None:
     """Ensure client manager failures convert to HTTP 503."""
 
@@ -363,7 +138,7 @@ async def test_get_client_manager_maps_failure_to_503(monkeypatch: Any) -> None:
     assert "Client manager not available" in err.value.detail
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_get_vector_service_maps_failure_to_503(monkeypatch: Any) -> None:
     """Ensure vector service dependencies map failures to HTTP 503."""
 
@@ -382,3 +157,74 @@ async def test_get_vector_service_maps_failure_to_503(monkeypatch: Any) -> None:
 
     assert err.value.status_code == 503
     assert "Vector service not available" in err.value.detail
+
+
+@pytest.mark.asyncio()
+async def test_get_health_checker_returns_singleton(monkeypatch: Any) -> None:
+    """`get_health_checker` should memoise the constructed manager."""
+
+    manager = MagicMock(spec=HealthCheckManager)
+    build_mock = MagicMock(return_value=manager)
+    fake_client_manager = MagicMock()
+    fake_client_manager.get_qdrant_client = AsyncMock(return_value=None)
+
+    monkeypatch.setattr(
+        fastapi_dependencies,
+        "build_health_manager",
+        build_mock,
+        raising=True,
+    )
+    monkeypatch.setattr(
+        fastapi_dependencies,
+        "get_settings",
+        lambda: object(),
+        raising=True,
+    )
+    monkeypatch.setattr(
+        fastapi_dependencies,
+        "ensure_client_manager",
+        AsyncMock(return_value=fake_client_manager),
+        raising=True,
+    )
+    monkeypatch.setattr(fastapi_dependencies, "_health_manager", None, raising=False)
+
+    first = await fastapi_dependencies.get_health_checker()
+    second = await fastapi_dependencies.get_health_checker()
+
+    assert first is manager
+    assert second is manager
+    build_mock.assert_called_once()
+
+
+@pytest.mark.asyncio()
+async def test_get_health_checker_handles_client_errors(monkeypatch: Any) -> None:
+    """The health checker should still be constructed when client lookup fails."""
+
+    manager = MagicMock(spec=HealthCheckManager)
+
+    async def _failing_client_manager() -> Any:
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(
+        fastapi_dependencies,
+        "ensure_client_manager",
+        _failing_client_manager,
+        raising=True,
+    )
+    monkeypatch.setattr(
+        fastapi_dependencies,
+        "build_health_manager",
+        lambda *_args, **_kwargs: manager,
+        raising=True,
+    )
+    monkeypatch.setattr(
+        fastapi_dependencies,
+        "get_settings",
+        lambda: object(),
+        raising=True,
+    )
+    monkeypatch.setattr(fastapi_dependencies, "_health_manager", None, raising=False)
+
+    result = await fastapi_dependencies.get_health_checker()
+
+    assert result is manager

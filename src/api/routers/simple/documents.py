@@ -200,33 +200,6 @@ async def _list_collections_from_service(
     }
 
 
-@router.get("/documents/health")
-async def documents_health(
-    client_manager: ClientManagerDependency,
-) -> dict[str, Any]:
-    """Get documents service health status."""
-    try:
-        return await _check_documents_health(client_manager)
-    except Exception as e:
-        logger.exception("Documents health check failed")
-        return {
-            "status": "unhealthy",
-            "error": str(e),
-        }
-
-
-async def _check_documents_health(client_manager: ClientManager) -> dict[str, Any]:
-    """Check documents service health."""
-    vector_db_service = await _get_vector_store_service(client_manager)
-    collections = await vector_db_service.list_collections()
-
-    return {
-        "status": "healthy",
-        "service_type": "simple",
-        "collections_count": len(collections),
-    }
-
-
 async def _get_vector_store_service(
     client_manager: ClientManager,
 ) -> VectorStoreService:

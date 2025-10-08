@@ -16,8 +16,9 @@ from src.api.app_profiles import AppProfile, detect_profile
 from src.api.lifespan import client_manager_lifespan
 from src.architecture.modes import ApplicationMode, ModeConfig, get_mode_config
 from src.infrastructure.client_manager import ClientManager
-from src.services.fastapi.dependencies import get_health_checker
+from src.services.fastapi.dependencies import HealthCheckerDep
 from src.services.fastapi.middleware.manager import apply_defaults, apply_named_stack
+from src.services.health.manager import HealthStatus
 
 
 try:
@@ -249,23 +250,25 @@ def _configure_common_routes(app: FastAPI) -> None:
         }
 
     @app.get("/health")
-    async def health_check():
+    async def health_check(checker: HealthCheckerDep):
         """Health check endpoint."""
-        mode = app.state.mode
-        checker = get_health_checker()
-        health_report = await checker.check_health()
 
-        status_code = (
-            status.HTTP_200_OK
-            if health_report.get("status") == "healthy"
-            else status.HTTP_503_SERVICE_UNAVAILABLE
-        )
+        mode = app.state.mode
+        await checker.check_all()
+        summary = checker.get_health_summary()
+        overall_status = summary.get("overall_status", HealthStatus.UNKNOWN.value)
+
+        status_code = status.HTTP_200_OK
+        if overall_status == HealthStatus.UNHEALTHY.value:
+            status_code = status.HTTP_503_SERVICE_UNAVAILABLE
 
         payload = {
-            "status": health_report["status"],
+            "status": overall_status,
             "mode": mode.value,
-            "services": health_report.get("services", {}),
-            "timestamp": health_report.get("timestamp", datetime.now(UTC).isoformat()),
+            "services": summary.get("checks", {}),
+            "healthy_count": summary.get("healthy_count", 0),
+            "total_count": summary.get("total_count", 0),
+            "timestamp": summary.get("timestamp", datetime.now(UTC).isoformat()),
         }
 
         return JSONResponse(payload, status_code=status_code)
