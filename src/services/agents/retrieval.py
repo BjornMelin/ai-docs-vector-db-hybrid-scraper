@@ -28,18 +28,11 @@ class RetrievalQuery:
 
 @dataclass(slots=True)
 class RetrievedDocument:
-    """Normalised representation of a retrieved document.
-
-    Attributes:
-        id: Identifier of the retrieved vector record.
-        score: Similarity score provided by the vector service.
-        payload: Optional metadata payload stored alongside the vector.
-        raw: Original match object returned by the vector service.
-    """
+    """Normalised representation of a retrieved document."""
 
     id: str
     score: float
-    payload: Mapping[str, object] | None
+    metadata: Mapping[str, object] | None
     raw: SearchRecord | None
 
 
@@ -71,7 +64,7 @@ class RetrievalHelper:
             RetrievedDocument(
                 id=record.id,
                 score=record.score,
-                payload=record.metadata or {},
+                metadata=record.metadata or {},
                 raw=record,
             )
             for record in records

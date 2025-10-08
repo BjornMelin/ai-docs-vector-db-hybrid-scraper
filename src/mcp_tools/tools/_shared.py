@@ -27,7 +27,6 @@ def search_record_to_dict(
     record: SearchRecord,
     *,
     include_metadata: bool = True,
-    alias_payload: bool = False,
 ) -> dict[str, Any]:
     """Serialize a :class:`SearchRecord` into a plain dictionary."""
 
@@ -58,9 +57,6 @@ def search_record_to_dict(
         payload["content_type"] = record.content_type
 
     if include_metadata:
-        metadata = dict(record.metadata or {})
-        payload["metadata"] = metadata
-        if alias_payload:
-            payload["payload"] = metadata
+        payload["metadata"] = dict(record.metadata or {})
 
     return payload
