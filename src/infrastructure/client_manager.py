@@ -9,7 +9,7 @@ from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
 from datetime import timedelta
 from importlib import import_module
-from typing import TYPE_CHECKING, Any, Final, Literal, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, NoReturn, cast
 
 from dependency_injector.wiring import Provide, inject
 from langchain_mcp_adapters.client import MultiServerMCPClient
@@ -26,8 +26,6 @@ from src.infrastructure.clients import (
 )
 from src.infrastructure.container import ApplicationContainer, get_container
 from src.services.embeddings.fastembed_provider import FastEmbedProvider
-from src.services.errors import APIError
-from src.services.vector_db.service import VectorStoreService
 
 
 if TYPE_CHECKING:  # pragma: no cover - imported for typing only
@@ -35,12 +33,14 @@ if TYPE_CHECKING:  # pragma: no cover - imported for typing only
     from src.services.content_intelligence.service import ContentIntelligenceService
     from src.services.core.project_storage import ProjectStorage
     from src.services.embeddings.manager import EmbeddingManager
+    from src.services.errors import APIError
     from src.services.managers.crawling_manager import CrawlingManager
     from src.services.rag.generator import RAGGenerator
+    from src.services.vector_db.service import VectorStoreService
 else:  # pragma: no cover - runtime fallback for optional services
     CacheManager = ContentIntelligenceService = ProjectStorage = EmbeddingManager = (
         CrawlingManager
-    ) = RAGGenerator = Any
+    ) = RAGGenerator = VectorStoreService = APIError = Any
 
 
 # Import dependencies for health checks
@@ -110,12 +110,29 @@ def _load_automation_router() -> type[Any]:
 
 
 async def _ensure_service_registry():  # pragma: no cover - thin wrapper
-    # pylint: disable=import-outside-toplevel
-    from src.services.registry import (
-        ensure_service_registry as _ensure_service_registry,
-    )
+    registry_module = import_module("src.services.registry")
+    ensure_service_registry = registry_module.ensure_service_registry
+    return await ensure_service_registry()
 
-    return await _ensure_service_registry()
+
+_API_ERROR_TYPE: type[Exception] | None = None
+
+
+def _resolve_api_error_type() -> type[Exception]:
+    """Return the service-layer APIError type without creating import cycles."""
+
+    global _API_ERROR_TYPE  # pylint: disable=global-statement
+    if _API_ERROR_TYPE is None:
+        module = import_module("src.services.errors")
+        _API_ERROR_TYPE = cast(type[Exception], module.APIError)
+    return _API_ERROR_TYPE
+
+
+def _raise_api_error(message: str) -> NoReturn:
+    """Dynamically raise APIError without importing services.errors at module scope."""
+
+    error_type = _resolve_api_error_type()
+    raise error_type(message)
 
 
 class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instance-attributes
@@ -265,7 +282,7 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
     def _get_provider_client(self, key: ProviderKey) -> Any:
         provider = self._providers.get(key)
         if provider is None:
-            raise APIError(_PROVIDER_ERROR_MESSAGES[key])
+            _raise_api_error(_PROVIDER_ERROR_MESSAGES[key])
         return provider.client
 
     async def _close_mcp_client(self) -> None:
@@ -302,10 +319,10 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
             config = getattr(self._config, "mcp_client", None)
             if not isinstance(config, MCPClientConfig) or not config.enabled:
                 msg = "MCP client integration is disabled"
-                raise APIError(msg)
+                _raise_api_error(msg)
             if not config.servers:
                 msg = "No MCP servers configured"
-                raise APIError(msg)
+                _raise_api_error(msg)
 
             connections = self._build_mcp_connections(config)
             self._mcp_client = MultiServerMCPClient(connections)
@@ -364,7 +381,9 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
 
         model_name = getattr(self._config.fastembed, "model", "BAAI/bge-small-en-v1.5")
         provider = FastEmbedProvider(model_name=model_name)
-        service = VectorStoreService(self._config, self, provider)
+        vector_module = import_module("src.services.vector_db.service")
+        vector_cls = vector_module.VectorStoreService
+        service = cast(VectorStoreService, vector_cls(self._config, self, provider))
         await service.initialize()
         self._vector_store_service = service
         return service
@@ -535,9 +554,16 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
                 f"Unknown client type: {client_type}. Available: {list(getters.keys())}"
             )
             raise ValueError(msg)
+        api_error = _resolve_api_error_type()
         try:
             yield await getters[client_type]()
-        except (ConnectionError, TimeoutError, APIError, ValueError, RuntimeError):
+        except (
+            ConnectionError,
+            TimeoutError,
+            api_error,
+            ValueError,
+            RuntimeError,
+        ):
             logger.exception("Error using %s client", client_type)
             raise
 

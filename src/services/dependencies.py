@@ -14,14 +14,13 @@ from pydantic import BaseModel, Field
 
 from src.config import Settings, get_settings
 from src.config.models import CacheType
-from src.services.circuit_breaker.provider import get_circuit_breaker_manager
-from src.services.embeddings.manager import QualityTier
-from src.services.errors import (
-    CrawlServiceError,
-    EmbeddingServiceError,
+from src.services.circuit_breaker.decorators import (
     circuit_breaker,
     tenacity_circuit_breaker,
 )
+from src.services.circuit_breaker.provider import get_circuit_breaker_manager
+from src.services.embeddings.manager import QualityTier
+from src.services.errors import CrawlServiceError, EmbeddingServiceError
 from src.services.rag.models import RAGRequest as InternalRAGRequest
 from src.services.registry import (
     ensure_service_registry,

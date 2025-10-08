@@ -6,6 +6,7 @@ import asyncio
 import logging
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from src.config import Settings, get_settings
 from src.config.models import CacheType
@@ -17,7 +18,10 @@ from src.services.core.project_storage import ProjectStorage
 from src.services.managers.crawling_manager import CrawlingManager
 from src.services.managers.database_manager import DatabaseManager
 from src.services.managers.embedding_manager import EmbeddingManager
-from src.services.vector_db.service import VectorStoreService
+
+
+if TYPE_CHECKING:
+    from src.services.vector_db.service import VectorStoreService
 
 
 logger = logging.getLogger(__name__)
