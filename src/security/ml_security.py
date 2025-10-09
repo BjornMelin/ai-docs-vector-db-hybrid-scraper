@@ -554,32 +554,6 @@ class MLSecurityValidator:
         }
 
 
-# Simple rate limiter using existing infrastructure
-class SimpleRateLimiter:
-    """Simple rate limiter that integrates with existing middleware."""
-
-    def __init__(self):
-        """Initialize using existing config."""
-        self.config = get_settings()
-
-    def is_allowed(self, _identifier: str) -> bool:
-        """Check if request is allowed.
-
-        This is a placeholder - actual rate limiting should be done
-        by nginx/CloudFlare/API Gateway or existing middleware.
-
-        Args:
-            identifier: Client identifier
-
-        Returns:
-            Whether request is allowed
-
-        """
-        # In production, use existing rate limiting infrastructure
-        # This is just for local development
-        return True
-
-
 # Minimal security configuration extension
 class MinimalMLSecurityConfig(BaseModel):
     """Minimal ML-specific security configuration."""

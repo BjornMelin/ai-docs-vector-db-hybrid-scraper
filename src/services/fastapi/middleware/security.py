@@ -133,8 +133,16 @@ def _resolve_storage_uri(config: SecurityConfig) -> str | None:
     host = parsed.hostname or ""
     port = f":{parsed.port}" if parsed.port else ""
     netloc = f"{credentials}@{host}{port}"
-    rebuilt = parsed._replace(netloc=netloc)
-    return urlunparse(rebuilt)
+    return urlunparse(
+        (
+            parsed.scheme,
+            netloc,
+            parsed.path,
+            parsed.params,
+            parsed.query,
+            parsed.fragment,
+        )
+    )
 
 
 async def _rate_limited(_: Request, exc: RateLimitExceeded) -> JSONResponse:

@@ -7,7 +7,7 @@ import pytest
 
 from src.services.errors import (
     ExternalServiceError,
-    RateLimitError,
+    NetworkError,
     ResourceError,
     ToolError,
     ValidationError,
@@ -323,19 +323,19 @@ class TestHandleMCPErrors:
         assert result["error_type"] == "validation"
 
     @pytest.mark.asyncio
-    async def test_handle_mcp_errors_rate_limit_error(self):
-        """Test MCP error handler with RateLimitError."""
+    async def test_handle_mcp_errors_network_error(self):
+        """Test MCP error handler with NetworkError."""
 
         @handle_mcp_errors
         @pytest.mark.asyncio
         async def test_func():
-            msg = "Rate limit exceeded"
-            raise RateLimitError(msg, retry_after=60.0)
+            msg = "Network connection lost"
+            raise NetworkError(msg)
 
         result = await test_func()
         assert result["success"] is False
-        assert result["error"] == "Rate limit exceeded"
-        assert result["error_type"] == "rate_limit"
+        assert result["error"] == "Network connection lost"
+        assert result["error_type"] == "network"
 
     @pytest.mark.asyncio
     async def test_handle_mcp_errors_generic_exception(self):

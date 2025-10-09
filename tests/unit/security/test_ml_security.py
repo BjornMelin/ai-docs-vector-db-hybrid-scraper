@@ -16,7 +16,6 @@ from src.security.ml_security import (
     MLSecurityValidator,
     SecurityCheckResult,
     SecurityError,
-    SimpleRateLimiter,
 )
 from src.services.errors import ValidationError as ServiceValidationError
 
@@ -408,25 +407,6 @@ class TestMLSecurityValidator:  # pylint: disable=too-many-public-methods
 
         sanitized = validator.sanitize_filename("../../etc/passwd")
         assert sanitized == "passwd"
-
-
-class TestSimpleRateLimiter:
-    """Test SimpleRateLimiter."""
-
-    def test_init(self):
-        """Test rate limiter initialization."""
-        with patch("src.security.ml_security.get_settings"):
-            limiter = SimpleRateLimiter()
-            assert limiter.config is not None
-
-    def test_is_allowed(self):
-        """Test rate limiting check."""
-        with patch("src.security.ml_security.get_settings"):
-            limiter = SimpleRateLimiter()
-
-            # Should always return True as it's a placeholder
-            assert limiter.is_allowed("user123") is True
-            assert limiter.is_allowed("user456") is True
 
 
 class TestMinimalMLSecurityConfig:

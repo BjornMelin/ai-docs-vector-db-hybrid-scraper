@@ -84,14 +84,6 @@ src.services.browser.tier\_config module
    :show-inheritance:
    :undoc-members:
 
-src.services.browser.tier\_rate\_limiter module
------------------------------------------------
-
-.. automodule:: src.services.browser.tier_rate_limiter
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 src.services.browser.unified\_manager module
 --------------------------------------------
 

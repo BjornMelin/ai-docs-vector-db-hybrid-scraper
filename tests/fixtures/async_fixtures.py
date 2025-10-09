@@ -80,42 +80,6 @@ async def async_connection_pool():
 
 
 @pytest_asyncio.fixture
-async def async_rate_limiter():
-    """Async rate limiter for testing rate-limited operations."""
-
-    class AsyncRateLimiter:
-        def __init__(self, rate: int = 10, period: float = 1.0):
-            self.rate = rate
-            self.period = period
-            self.calls = []
-            self._lock = asyncio.Lock()
-
-        async def acquire(self):
-            async with self._lock:
-                loop = asyncio.get_running_loop()
-                now = loop.time()
-                # Remove old calls
-                self.calls = [t for t in self.calls if now - t < self.period]
-
-                if len(self.calls) >= self.rate:
-                    sleep_time = self.period - (now - self.calls[0])
-                    await asyncio.sleep(sleep_time)
-                    return await self.acquire()
-
-                self.calls.append(now)
-                return None
-
-        async def __aenter__(self):
-            await self.acquire()
-            return self
-
-        async def __aexit__(self, *args):
-            pass
-
-    return AsyncRateLimiter()
-
-
-@pytest_asyncio.fixture
 async def async_task_manager():
     """Manage async tasks with proper cleanup."""
     tasks = []
