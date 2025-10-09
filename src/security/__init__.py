@@ -13,7 +13,6 @@ from .ml_security import (
     MLSecurityValidator,
     SecurityCheckResult,
     SecurityError,
-    SimpleRateLimiter,
 )
 
 
@@ -22,5 +21,4 @@ __all__ = [
     "MinimalMLSecurityConfig",
     "SecurityError",
     "SecurityCheckResult",
-    "SimpleRateLimiter",
 ]

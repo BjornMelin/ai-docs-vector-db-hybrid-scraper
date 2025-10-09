@@ -30,9 +30,11 @@ applications.
   FastMCP server (`src/unified_mcp_server.py`) that registers search, document
   management, analytics, and content intelligence tools for Claude Desktop /
   Code.
+- Built-in API hardening with SlowAPI-powered global rate limiting configured
+  through the `SecurityConfig` model and middleware stack.
 - Observability built in: OpenTelemetry tracing, structured logging, health
   checks, optional Dragonfly cache, and `/metrics` exposure via
-  `prometheus-fastapi-instrumentator` (`src/services/monitoring/`).
+  `prometheus-fastapi-instrumentator` (`src/services/observability/`).
 - Developer ergonomics with uv-managed environments, dependency-injector driven
   service wiring, Ruff + pytest quality gates, and a unified developer CLI
   (`scripts/dev.py`).

@@ -226,7 +226,6 @@ def _register_crawl4ai_stubs() -> None:
             "MemoryAdaptiveDispatcher": type("MemoryAdaptiveDispatcher", (), {}),
             "DefaultMarkdownGenerator": type("DefaultMarkdownGenerator", (), {}),
             "LinkPreviewConfig": type("LinkPreviewConfig", (), {}),
-            "RateLimiter": type("RateLimiter", (), {}),
             "RunConfig": type("RunConfig", (), {"clone": lambda self, **_: self}),
             "CrawlerMonitor": type("CrawlerMonitor", (), {}),
         },

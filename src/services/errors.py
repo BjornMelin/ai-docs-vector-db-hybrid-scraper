@@ -15,7 +15,6 @@ Error Hierarchy:
     │   ├── ToolError: MCP tool execution errors
     │   └── ResourceError: MCP resource access errors
     ├── APIError: External API integration errors
-    │   ├── RateLimitError: Rate limiting errors
     │   ├── NetworkError: Network connectivity errors
     │   └── ExternalServiceError: General external service errors
     └── ConfigurationError: Configuration and environment errors
@@ -161,31 +160,6 @@ class ExternalServiceError(APIError):
     """General external service error."""
 
 
-class RateLimitError(ExternalServiceError):
-    """Rate limiting error with retry information."""
-
-    def __init__(
-        self,
-        message: str,
-        retry_after: float | None = None,
-        error_code: str | None = None,
-        context: dict[str, Any] | None = None,
-    ):
-        """Initialize rate limit error.
-
-        Args:
-            message: Error message
-            retry_after: Seconds to wait before retry
-            error_code: Error code
-            context: Additional context
-        """
-
-        super().__init__(message, 429, error_code, context)
-        self.retry_after = retry_after
-        if retry_after:
-            self.context["retry_after"] = retry_after
-
-
 class NetworkError(ExternalServiceError):
     """Network connectivity error."""
 
@@ -326,14 +300,12 @@ def handle_mcp_errors(func: Callable[..., Any]) -> Callable[..., Any]:
             )
         except (
             ValidationError,
-            RateLimitError,
             NetworkError,
             ExternalServiceError,
             ConfigurationError,
         ) as e:
             error_type_map = {
                 ValidationError: "validation",
-                RateLimitError: "rate_limit",
                 NetworkError: "network",
                 ExternalServiceError: "external_service",
                 ConfigurationError: "configuration",

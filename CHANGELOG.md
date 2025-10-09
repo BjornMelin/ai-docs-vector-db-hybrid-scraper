@@ -35,6 +35,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Refactor
 
+- **[Core]:** Removed custom rate-limiting implementation in favor of the
+  `slowapi` library, centralizing all rate-limiting logic at the middleware
+  layer.
 - **[Architecture]:** Standardized all custom exceptions to inherit from the
   canonical error hierarchy defined in `src/services/errors.py`, unifying error
   handling across the application.

@@ -14,7 +14,7 @@ from tenacity import (
     wait_exponential,
 )
 
-from src.services.errors import ExternalServiceError, NetworkError, RateLimitError
+from src.services.errors import ExternalServiceError, NetworkError
 
 
 try:  # pragma: no cover - optional purgatory integration
@@ -122,7 +122,6 @@ def tenacity_circuit_breaker(  # pylint: disable=too-many-arguments,too-many-pos
     expected_exceptions: tuple[type[Exception], ...] = (
         ExternalServiceError,
         NetworkError,
-        RateLimitError,
     ),
 ) -> Callable[[F], F]:
     """Combine Tenacity retries with the shared purgatory circuit breaker."""
