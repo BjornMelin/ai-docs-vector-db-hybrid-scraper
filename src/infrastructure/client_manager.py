@@ -45,8 +45,8 @@ from src.services.health.manager import (
     build_health_manager,
 )
 from src.services.observability.performance import (
-    get_performance_monitor,
     get_operation_statistics,
+    get_performance_monitor,
     get_system_performance_summary,
     monitor_operation,
 )
