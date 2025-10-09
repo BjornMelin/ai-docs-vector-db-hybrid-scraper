@@ -1008,22 +1008,21 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
     ) -> Any:
         """Track performance of an asynchronous operation."""
 
-        start_time = time.time()
+        start_time = time.perf_counter()
         with monitor_operation(operation_name, metadata={"source": "client_manager"}):
             try:
                 result = await operation_func(*args, **kwargs)
             except Exception:
-                duration_ms = (time.time() - start_time) * 1000
+                duration_ms = (time.perf_counter() - start_time) * 1000
                 self.record_histogram(f"{operation_name}_duration_ms", duration_ms)
                 self.increment_counter(f"{operation_name}_total", {"status": "error"})
                 self.increment_counter(f"{operation_name}_errors")
                 logger.exception("Operation %s failed", operation_name)
                 raise
-
-        duration_ms = (time.time() - start_time) * 1000
-        self.record_histogram(f"{operation_name}_duration_ms", duration_ms)
-        self.increment_counter(f"{operation_name}_total", {"status": "success"})
-        return result
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            self.record_histogram(f"{operation_name}_duration_ms", duration_ms)
+            self.increment_counter(f"{operation_name}_total", {"status": "success"})
+            return result
 
     def get_performance_metrics(self) -> dict[str, Any]:
         """Return captured performance metrics."""
