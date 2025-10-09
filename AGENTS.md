@@ -22,6 +22,7 @@ and run `uv run ruff format .`, `uv run ruff check . --fix`, `uv run pylint --fa
 
 Pytest modules follow `test_*.py`; fixtures and corpora live in `tests/fixtures/` and `tests/data_quality/`. Run `python scripts/dev.py test --profile unit` (or other profiles) or `uv run pytest -q tests/integration/rag/test_pipeline.py` when iterating.
 Tag flows with `pytest.ini` markers such as `@pytest.mark.integration`, `@pytest.mark.performance`, `@pytest.mark.rag`, and keep runs deterministic via stubs and cached embeddings.
+When exercising optional integrations, prefer `pytest.importorskip`, focused mocks (e.g., `MockerFixture`), and shared fixtures over ad-hoc `sys.modules` shims. Required dependencies (those under `[project]`) must be imported directly so tests validate real APIs.
 
 ## Commit & Pull Request Guidelines
 
