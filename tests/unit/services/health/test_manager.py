@@ -8,6 +8,8 @@ import pytest
 
 from src.config.models import CrawlProvider, EmbeddingProvider
 from src.services.health.manager import (
+    HAS_QDRANT_CLIENT,
+    HAS_REDIS,
     HealthCheck,
     HealthCheckConfig,
     HealthCheckManager,
@@ -90,7 +92,13 @@ def test_build_health_manager_includes_expected_checks(configured_settings) -> N
     manager = build_health_manager(configured_settings)
     check_names = {check.name for check in manager._health_checks}
 
-    assert {"qdrant", "redis", "openai", "firecrawl"}.issubset(check_names)
+    expected_checks = {"openai", "firecrawl"}
+    if HAS_QDRANT_CLIENT:
+        expected_checks.add("qdrant")
+    if HAS_REDIS:
+        expected_checks.add("redis")
+
+    assert expected_checks.issubset(check_names)
 
 
 def test_build_health_manager_skips_openai_when_disabled(config_factory) -> None:

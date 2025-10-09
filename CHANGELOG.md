@@ -41,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Dead Code Elimination:** Removed several unused and legacy modules, including `services/middleware/rate_limiting.py`, `services/processing/algorithms.py`, and the top-level `security.py`, significantly reducing codebase size.
 - **API Modernization:** Updated all calls to the `@circuit_breaker` decorator to use the modern `purgatory` API, removing deprecated arguments and silencing warnings.
 - **Test Suite Overhaul:** Deleted test suites corresponding to removed modules and modernized remaining tests to align with the refactored implementation, ensuring full test coverage and correctness.
+- **[Health]:** Centralized all system health checking logic into the `HealthCheckManager`, and refactored the `system_health` MCP tool to use this central service.
 
 ### Changed
 

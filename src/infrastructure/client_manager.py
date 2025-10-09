@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import logging
 import threading
 import time
@@ -30,10 +29,15 @@ from src.infrastructure.clients import (
     RedisClientProvider,
 )
 from src.infrastructure.container import ApplicationContainer, get_container
-from src.infrastructure.shared import ClientHealth, ClientState
 from src.services.circuit_breaker import CircuitBreakerManager
 from src.services.core.project_storage import ProjectStorage
 from src.services.embeddings.fastembed_provider import FastEmbedProvider
+from src.services.health.manager import (
+    HealthCheck,
+    HealthCheckManager,
+    HealthStatus,
+    build_health_manager,
+)
 from src.services.vector_db.types import VectorRecord
 
 
@@ -52,10 +56,6 @@ else:  # pragma: no cover - runtime fallbacks keep optional extras optional
     CoreEmbeddingManager = Any  # type: ignore[assignment]
     UnifiedBrowserManager = Any  # type: ignore[assignment]
     Redis = Any  # type: ignore[assignment]
-
-
-HealthStatusCallable = Callable[[], Awaitable[dict[str, dict[str, Any]]]]
-OverallHealthCallable = Callable[[], Awaitable[dict[str, Any]]]
 
 
 logger = logging.getLogger(__name__)
@@ -171,15 +171,6 @@ class DatabaseSessionContext:
     vector_service: VectorStoreService | None
 
 
-@dataclass(slots=True)
-class HealthCheckRegistration:
-    """Registered health check with state tracking."""
-
-    health: ClientHealth
-    check_function: Callable[[], Awaitable[bool]]
-    check_interval: int
-
-
 class _BasicSpan:
     """Simple span used when OpenTelemetry is unavailable."""
 
@@ -240,10 +231,9 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         self._mcp_client: MultiServerMCPClient | None = None
         self._mcp_client_lock = asyncio.Lock()
         self._monitoring_initialized = False
-        self._health_checks: dict[str, HealthCheckRegistration] = {}
+        self._health_manager: HealthCheckManager | None = None
         self._metrics_registry: Any | None = None
         self._performance_monitor: Any | None = None
-        self._health_check_task: asyncio.Task[None] | None = None
 
     @property
     def config(self) -> Settings:
@@ -822,58 +812,32 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
             self._performance_monitor = RealTimePerformanceMonitor()
 
         try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            logger.warning(
-                "Monitoring requires a running event loop; background health checks"
-                " are disabled"
+            self._health_manager = build_health_manager(
+                self._config,
+                metrics_registry=self._metrics_registry,
             )
-            self._health_check_task = None
-        else:
-            self._health_check_task = loop.create_task(self._health_check_loop())
+        except Exception:  # pragma: no cover - defensive
+            logger.exception("Failed to initialize health manager")
+            self._health_manager = None
 
         self._monitoring_initialized = True
 
-    def _health_check_interval(self) -> int:
-        """Resolve the configured health check interval."""
+    def _get_health_manager(self) -> HealthCheckManager:
+        """Return the lazily initialised health manager."""
 
-        performance_config = getattr(self._config, "performance", None)
-        if performance_config is None:
-            return 30
-        return int(getattr(performance_config, "health_check_interval", 30))
+        self._ensure_monitoring_ready()
+        if self._health_manager is None:
+            msg = "Health monitoring is disabled"
+            raise RuntimeError(msg)
+        return self._health_manager
 
-    async def _health_check_loop(self) -> None:
-        """Background task executing registered health checks periodically."""
+    def get_health_manager(self) -> HealthCheckManager:
+        """Expose the configured health manager instance."""
 
-        while True:
-            try:
-                await asyncio.sleep(self._health_check_interval())
-                if not self._health_checks:
-                    continue
-                tasks = [
-                    asyncio.create_task(
-                        self.check_service_health(name),
-                        name=f"health_check_{name}",
-                    )
-                    for name in list(self._health_checks.keys())
-                ]
-                if tasks:
-                    await asyncio.gather(*tasks, return_exceptions=True)
-            except asyncio.CancelledError:
-                logger.info("Health check loop cancelled")
-                break
-            except Exception:  # pragma: no cover - defensive
-                logger.exception("Error in health check loop")
-                await asyncio.sleep(10)
+        return self._get_health_manager()
 
     async def _shutdown_monitoring(self) -> None:
         """Cleanup monitoring resources."""
-
-        task = self._health_check_task
-        if task is not None and not task.done():
-            task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await task
 
         if self._performance_monitor is not None:
             cleanup_method = getattr(self._performance_monitor, "cleanup", None)
@@ -883,70 +847,17 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
                 else:
                     cleanup_method()
 
-        self._health_checks.clear()
         self._metrics_registry = None
         self._performance_monitor = None
-        self._health_check_task = None
+        self._health_manager = None
         self._monitoring_initialized = False
 
-    async def register_health_check(
-        self,
-        service_name: str,
-        check_function: Callable[[], Awaitable[bool]],
-        *,
-        check_interval: int = 30,
-    ) -> None:
-        """Register a health check for a service."""
+    def register_health_check(self, health_check: HealthCheck) -> None:
+        """Register an additional health check with the central manager."""
 
-        self._ensure_monitoring_ready()
-        health = ClientHealth(state=ClientState.HEALTHY, last_check=time.time())
-        self._health_checks[service_name] = HealthCheckRegistration(
-            health=health,
-            check_function=check_function,
-            check_interval=check_interval,
-        )
-        logger.info("Registered health check for %s", service_name)
-
-    def unregister_health_check(self, service_name: str) -> None:
-        """Unregister a health check for a service."""
-
-        if service_name in self._health_checks:
-            del self._health_checks[service_name]
-            logger.info("Unregistered health check for %s", service_name)
-
-    async def check_service_health(self, service_name: str) -> bool:
-        """Execute a registered health check and update its status."""
-
-        registration = self._health_checks.get(service_name)
-        if registration is None:
-            logger.warning("No health check registered for %s", service_name)
-            return False
-
-        health = registration.health
-        try:
-            is_healthy = await registration.check_function()
-        except Exception as exc:  # pragma: no cover - defensive
-            logger.exception("Health check failed for %s", service_name)
-            health.last_check = time.time()
-            health.last_error = str(exc)
-            health.consecutive_failures += 1
-            health.state = ClientState.FAILED
-            return False
-
-        health.last_check = time.time()
-        if is_healthy:
-            health.state = ClientState.HEALTHY
-            health.consecutive_failures = 0
-            health.last_error = None
-        else:
-            health.consecutive_failures += 1
-            health.state = (
-                ClientState.DEGRADED
-                if health.consecutive_failures < 3
-                else ClientState.FAILED
-            )
-            health.last_error = "Health check returned false"
-        return is_healthy
+        manager = self._get_health_manager()
+        manager.add_health_check(health_check)
+        logger.info("Registered health check for %s", health_check.name)
 
     async def get_circuit_breaker_manager(self) -> CircuitBreakerManager:
         """Return the circuit breaker manager instance."""
@@ -1012,48 +923,25 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
     async def get_health_status(self) -> dict[str, dict[str, Any]]:
         """Return health status for all registered services."""
 
-        self._ensure_monitoring_ready()
-        service_names = list(self._health_checks.keys())
-        if service_names:
-            await asyncio.gather(
-                *[self.check_service_health(name) for name in service_names],
-                return_exceptions=True,
-            )
-
+        manager = self._get_health_manager()
+        results = await manager.check_all()
         status: dict[str, dict[str, Any]] = {}
-        for service_name, registration in self._health_checks.items():
-            health = registration.health
-            status[service_name] = {
-                "state": health.state.value,
-                "last_check": health.last_check,
-                "last_error": health.last_error,
-                "consecutive_failures": health.consecutive_failures,
-                "is_healthy": health.state == ClientState.HEALTHY,
+        for name, result in results.items():
+            status[name] = {
+                "status": result.status.value,
+                "message": result.message,
+                "timestamp": result.timestamp,
+                "duration_ms": result.duration_ms,
+                "metadata": result.metadata,
+                "is_healthy": result.status == HealthStatus.HEALTHY,
             }
         return status
 
     async def get_overall_health(self) -> dict[str, Any]:
         """Aggregate health summary across registered services."""
 
-        health_status = await self.get_health_status()
-        total_services = len(health_status)
-        healthy_services = sum(
-            1 for status in health_status.values() if status["is_healthy"]
-        )
-        failed_services = sum(
-            1 for status in health_status.values() if status["state"] == "failed"
-        )
-        overall_healthy = failed_services == 0 and (
-            total_services in {0, healthy_services}
-        )
-        return {
-            "overall_healthy": overall_healthy,
-            "total_services": total_services,
-            "healthy_services": healthy_services,
-            "failed_services": failed_services,
-            "health_percentage": (healthy_services / max(total_services, 1)) * 100,
-            "services": health_status,
-        }
+        manager = self._get_health_manager()
+        return await manager.get_overall_health()
 
     async def get_service_status(self) -> dict[str, Any]:
         """Summarize the client manager service state."""
@@ -1179,12 +1067,27 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
     async def get_monitoring_status(self) -> dict[str, Any]:
         """Return monitoring subsystem status details."""
 
-        overall_health = await self.get_overall_health()
+        try:
+            manager = self._get_health_manager()
+        except RuntimeError:
+            manager = None
+            overall_health: dict[str, Any] = {
+                "overall_status": HealthStatus.UNKNOWN.value,
+                "timestamp": time.time(),
+                "checks": {},
+                "healthy_count": 0,
+                "total_count": 0,
+            }
+        else:
+            overall_health = await manager.get_overall_health()
+
+        check_names = list(manager.list_checks()) if manager is not None else []
+
         return {
             "initialized": self._monitoring_initialized,
             "health_checks": {
-                "registered": len(self._health_checks),
-                "services": list(self._health_checks.keys()),
+                "registered": len(check_names),
+                "services": check_names,
             },
             "metrics_registry": {"available": self._metrics_registry is not None},
             "performance_monitor": {"available": self._performance_monitor is not None},
