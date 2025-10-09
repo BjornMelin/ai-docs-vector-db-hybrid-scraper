@@ -38,7 +38,7 @@ async def test_initialize_mode_services_enterprise_mode(mocker) -> None:
     client_manager.get_vector_store_service = mocker.AsyncMock()
     client_manager.get_qdrant_client = mocker.AsyncMock()
     client_manager.get_cache_manager = mocker.AsyncMock()
-    client_manager.get_database_manager = mocker.AsyncMock()
+    client_manager.ensure_database_ready = mocker.AsyncMock()
     client_manager.get_content_intelligence_service = mocker.AsyncMock()
 
     await app_factory._initialize_mode_services(client_manager, mode_config)
@@ -47,7 +47,7 @@ async def test_initialize_mode_services_enterprise_mode(mocker) -> None:
     client_manager.get_vector_store_service.assert_awaited()
     client_manager.get_qdrant_client.assert_awaited()
     client_manager.get_cache_manager.assert_awaited()
-    client_manager.get_database_manager.assert_awaited()
+    client_manager.ensure_database_ready.assert_awaited()
     client_manager.get_content_intelligence_service.assert_awaited()
 
 

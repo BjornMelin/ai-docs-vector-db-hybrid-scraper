@@ -1,13 +1,18 @@
+# pylint: disable=too-many-lines
 """Client coordination layer using function-based dependencies."""
 
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import threading
-from collections.abc import Awaitable, Callable
+import time
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from importlib import import_module
+from inspect import iscoroutinefunction
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, Literal, NoReturn, cast
 
@@ -25,25 +30,28 @@ from src.infrastructure.clients import (
     RedisClientProvider,
 )
 from src.infrastructure.container import ApplicationContainer, get_container
+from src.infrastructure.shared import ClientHealth, ClientState
 from src.services.circuit_breaker import CircuitBreakerManager
 from src.services.core.project_storage import ProjectStorage
 from src.services.embeddings.fastembed_provider import FastEmbedProvider
+from src.services.vector_db.types import VectorRecord
 
 
 if TYPE_CHECKING:  # pragma: no cover - imported for typing only
+    from redis.asyncio import Redis
+
+    from src.services.browser.unified_manager import UnifiedBrowserManager
     from src.services.cache.manager import CacheManager
     from src.services.content_intelligence.service import ContentIntelligenceService
-    from src.services.managers.crawling_manager import CrawlingManager
-    from src.services.managers.database_manager import DatabaseManager
-    from src.services.managers.embedding_manager import EmbeddingManager
+    from src.services.embeddings.manager import EmbeddingManager as CoreEmbeddingManager
     from src.services.rag.generator import RAGGenerator
     from src.services.vector_db.service import VectorStoreService
 else:  # pragma: no cover - runtime fallbacks keep optional extras optional
     CacheManager = Any  # type: ignore[assignment]
     ContentIntelligenceService = Any  # type: ignore[assignment]
-    CrawlingManager = Any  # type: ignore[assignment]
-    DatabaseManager = Any  # type: ignore[assignment]
-    EmbeddingManager = Any  # type: ignore[assignment]
+    CoreEmbeddingManager = Any  # type: ignore[assignment]
+    UnifiedBrowserManager = Any  # type: ignore[assignment]
+    Redis = Any  # type: ignore[assignment]
 
 
 HealthStatusCallable = Callable[[], Awaitable[dict[str, dict[str, Any]]]]
@@ -84,10 +92,6 @@ def _load_automation_router() -> type[Any]:
 
 
 _API_ERROR_TYPE: type[Exception] | None = None
-_HEALTH_FUNCS: (
-    tuple[HealthStatusCallable | None, OverallHealthCallable | None] | None
-) = None
-
 _OPTIONAL_IMPORT_CACHE: dict[str, type[Any]] = {}
 
 
@@ -133,35 +137,11 @@ def _resolve_cache_manager_class() -> type[Any]:
     )
 
 
-def _resolve_embedding_manager_class() -> type[Any]:
-    return _import_optional_class(
-        "src.services.managers.embedding_manager",
-        "EmbeddingManager",
-        "Embedding manager",
-    )
-
-
-def _resolve_crawling_manager_class() -> type[Any]:
-    return _import_optional_class(
-        "src.services.managers.crawling_manager",
-        "CrawlingManager",
-        "Crawling manager",
-    )
-
-
 def _resolve_content_intelligence_service_class() -> type[Any]:
     return _import_optional_class(
         "src.services.content_intelligence.service",
         "ContentIntelligenceService",
         "Content intelligence service",
-    )
-
-
-def _resolve_database_manager_class() -> type[Any]:
-    return _import_optional_class(
-        "src.services.managers.database_manager",
-        "DatabaseManager",
-        "Database manager",
     )
 
 
@@ -182,44 +162,45 @@ def _raise_api_error(message: str) -> NoReturn:
     raise error_type(message)
 
 
-def _resolve_health_dependencies() -> tuple[
-    HealthStatusCallable | None, OverallHealthCallable | None
-]:
-    """Dynamically resolve health dependency functions to avoid import cycles."""
+@dataclass(slots=True)
+class DatabaseSessionContext:
+    """Lightweight view of database resources exposed to callers."""
 
-    global _HEALTH_FUNCS  # pylint: disable=global-statement
-    if _HEALTH_FUNCS is not None:
-        return _HEALTH_FUNCS
+    redis: Redis | None
+    cache_manager: CacheManager | None
+    vector_service: VectorStoreService | None
 
-    try:
-        module = import_module("src.services.dependencies")
-    except ModuleNotFoundError:
-        return (None, None)
-    except ImportError:
-        logger.exception(
-            "Failed to import health dependencies from src.services.dependencies"
-        )
-        return (None, None)
 
-    status_func = getattr(module, "get_health_status", None)
-    overall_func = getattr(module, "get_overall_health", None)
+@dataclass(slots=True)
+class HealthCheckRegistration:
+    """Registered health check with state tracking."""
 
-    resolved_status = (
-        cast(HealthStatusCallable | None, status_func)
-        if callable(status_func)
-        else None
-    )
-    resolved_overall = (
-        cast(OverallHealthCallable | None, overall_func)
-        if callable(overall_func)
-        else None
-    )
+    health: ClientHealth
+    check_function: Callable[[], Awaitable[bool]]
+    check_interval: int
 
-    if resolved_status is None and resolved_overall is None:
-        return (None, None)
 
-    _HEALTH_FUNCS = (resolved_status, resolved_overall)
-    return _HEALTH_FUNCS
+class _BasicSpan:
+    """Simple span used when OpenTelemetry is unavailable."""
+
+    def __init__(self, name: str) -> None:
+        self._name = name
+        self._start_time = time.time()
+
+    def __enter__(self) -> _BasicSpan:
+        logger.debug("Starting span: %s", self._name)
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: Any,
+    ) -> None:
+        duration_ms = (time.time() - self._start_time) * 1000
+        logger.debug("Completed span: %s in %.2fms", self._name, duration_ms)
+        if exc_type is not None:
+            logger.error("Span %s failed: %s", self._name, exc_val)
 
 
 class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instance-attributes
@@ -248,23 +229,67 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         self._initialized = False
         self._vector_store_service: VectorStoreService | None = None
         self._cache_manager: CacheManager | None = None
-        self._embedding_manager: EmbeddingManager | None = None
-        self._crawl_manager: CrawlingManager | None = None
+        self._embedding_manager: CoreEmbeddingManager | None = None
+        self._crawl_manager: UnifiedBrowserManager | None = None
         self._content_intelligence: ContentIntelligenceService | None = None
         self._project_storage: ProjectStorage | None = None
         self._rag_generator: RAGGenerator | None = None
-        self._database_manager: DatabaseManager | None = None
         self._circuit_breaker_manager: CircuitBreakerManager | None = None
         self._config = get_settings()
         self._automation_router: Any | None = None
         self._mcp_client: MultiServerMCPClient | None = None
         self._mcp_client_lock = asyncio.Lock()
+        self._monitoring_initialized = False
+        self._health_checks: dict[str, HealthCheckRegistration] = {}
+        self._metrics_registry: Any | None = None
+        self._performance_monitor: Any | None = None
+        self._health_check_task: asyncio.Task[None] | None = None
 
     @property
     def config(self) -> Settings:
         """Return the lazily loaded application configuration."""
 
         return self._config
+
+    @property
+    def _cleanup_plan(self) -> tuple[tuple[str, str, str], ...]:
+        """Return the ordered list of resources to cleanup."""
+
+        return (
+            (
+                "_vector_store_service",
+                "cleanup",
+                "Failed to cleanup vector store service",
+            ),
+            ("_rag_generator", "cleanup", "Failed to cleanup RAG generator"),
+            (
+                "_automation_router",
+                "cleanup",
+                "Failed to cleanup automation router",
+            ),
+            (
+                "_embedding_manager",
+                "cleanup",
+                "Failed to cleanup embedding manager",
+            ),
+            ("_cache_manager", "close", "Failed to close cache manager"),
+            ("_crawl_manager", "cleanup", "Failed to cleanup crawl manager"),
+            (
+                "_content_intelligence",
+                "cleanup",
+                "Failed to cleanup content intelligence service",
+            ),
+            (
+                "_project_storage",
+                "cleanup",
+                "Failed to cleanup project storage",
+            ),
+            (
+                "_circuit_breaker_manager",
+                "close",
+                "Failed to close circuit breaker manager",
+            ),
+        )
 
     @inject
     def initialize_providers(  # pylint: disable=too-many-arguments,too-many-positional-arguments
@@ -336,72 +361,46 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
     async def cleanup(self) -> None:
         """Cleanup resources (function-based dependencies are stateless)."""
 
-        if self._vector_store_service:
-            try:
-                await self._vector_store_service.cleanup()
-            except Exception:  # pragma: no cover - defensive
-                logger.exception("Failed to cleanup vector store service")
-            finally:
-                self._vector_store_service = None
-        if self._rag_generator:
-            try:
-                await self._rag_generator.cleanup()
-            except Exception:  # pragma: no cover - defensive
-                logger.exception("Failed to cleanup RAG generator")
-            self._rag_generator = None
-        if self._automation_router is not None:
-            try:
-                await self._automation_router.cleanup()
-            except Exception:  # pragma: no cover - defensive
-                logger.exception("Failed to cleanup automation router")
-            self._automation_router = None
-        if self._database_manager is not None:
-            try:
-                await self._database_manager.cleanup()
-            except Exception:  # pragma: no cover - defensive
-                logger.exception("Failed to cleanup database manager")
-            self._database_manager = None
-        if self._embedding_manager is not None:
-            try:
-                await self._embedding_manager.cleanup()
-            except Exception:  # pragma: no cover - defensive
-                logger.exception("Failed to cleanup embedding manager")
-            self._embedding_manager = None
-        if self._cache_manager is not None:
-            try:
-                await self._cache_manager.close()
-            except Exception:  # pragma: no cover - defensive
-                logger.exception("Failed to close cache manager")
-            self._cache_manager = None
-        if self._crawl_manager is not None:
-            try:
-                await self._crawl_manager.cleanup()
-            except Exception:  # pragma: no cover - defensive
-                logger.exception("Failed to cleanup crawl manager")
-            self._crawl_manager = None
-        if self._content_intelligence is not None:
-            try:
-                await self._content_intelligence.cleanup()
-            except Exception:  # pragma: no cover - defensive
-                logger.exception("Failed to cleanup content intelligence service")
-            self._content_intelligence = None
-        if self._project_storage is not None:
-            try:
-                await self._project_storage.cleanup()
-            except Exception:  # pragma: no cover - defensive
-                logger.exception("Failed to cleanup project storage")
-            self._project_storage = None
-        if self._circuit_breaker_manager is not None:
-            try:
-                await self._circuit_breaker_manager.close()
-            except Exception:  # pragma: no cover - defensive
-                logger.exception("Failed to close circuit breaker manager")
-            self._circuit_breaker_manager = None
+        for attr_name, method_name, message in self._cleanup_plan:
+            await self._cleanup_resource(attr_name, method_name, message)
+        await self._shutdown_monitoring()
         await self._close_mcp_client()
         self._providers.clear()
         self._parallel_processing_system = None
         self._initialized = False
         logger.info("ClientManager cleaned up")
+
+    async def _cleanup_resource(
+        self, attr_name: str, method_name: str, error_message: str
+    ) -> None:
+        """Safely cleanup a lazily cached resource.
+
+        Args:
+            attr_name: Name of the attribute storing the resource.
+            method_name: Cleanup or close method to invoke when available.
+            error_message: Message used if cleanup raises.
+        """
+
+        resource = getattr(self, attr_name, None)
+        if resource is None:
+            return
+
+        cleanup_callable = getattr(resource, method_name, None)
+        if cleanup_callable is None:
+            logger.debug(
+                "Resource %s has no %s method; skipping cleanup", attr_name, method_name
+            )
+            setattr(self, attr_name, None)
+            return
+
+        try:
+            result = cleanup_callable()
+            if asyncio.iscoroutine(result) or isinstance(result, Awaitable):
+                await result
+        except Exception:  # pragma: no cover - defensive
+            logger.exception(error_message)
+        finally:
+            setattr(self, attr_name, None)
 
     @classmethod
     def reset_singleton(cls) -> None:
@@ -409,9 +408,8 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
 
         with cls._init_lock:
             cls._instance = None
-        global _API_ERROR_TYPE, _HEALTH_FUNCS  # pylint: disable=global-statement
+        global _API_ERROR_TYPE  # pylint: disable=global-statement
         _API_ERROR_TYPE = None
-        _HEALTH_FUNCS = None
 
     def _get_provider_client(self, key: ProviderKey) -> Any:
         provider = self._providers.get(key)
@@ -578,33 +576,39 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         self._cache_manager = cache_manager
         return cache_manager
 
-    async def get_embedding_manager(self) -> EmbeddingManager:
+    async def get_embedding_manager(self) -> CoreEmbeddingManager:
         """Return the embedding manager, initializing it on first use."""
 
         embedding_manager = self._embedding_manager
         if embedding_manager is not None:
             return embedding_manager
 
-        manager_cls = _resolve_embedding_manager_class()
-        manager = cast(EmbeddingManager, manager_cls())
-        await manager.initialize(config=self._config, client_manager=self)
+        from src.services.embeddings.manager import (  # pylint: disable=import-outside-toplevel
+            EmbeddingManager as CoreEmbeddingManager,
+        )
+
+        manager = CoreEmbeddingManager(config=self._config, client_manager=self)
+        await manager.initialize()
         self._embedding_manager = manager
         return manager
 
-    async def get_crawl_manager(self) -> CrawlingManager:
+    async def get_crawl_manager(self) -> UnifiedBrowserManager:
         """Return the crawling manager, creating it as needed."""
 
         crawling_manager = self._crawl_manager
         if crawling_manager is not None:
             return crawling_manager
 
-        manager_cls = _resolve_crawling_manager_class()
-        manager = cast(CrawlingManager, manager_cls())
-        await manager.initialize(config=self._config)
+        from src.services.browser.unified_manager import (  # pylint: disable=import-outside-toplevel
+            UnifiedBrowserManager,
+        )
+
+        manager = UnifiedBrowserManager(self._config)
+        await manager.initialize()
         self._crawl_manager = manager
         return manager
 
-    async def get_crawling_manager(self) -> CrawlingManager:
+    async def get_crawling_manager(self) -> UnifiedBrowserManager:
         """Alias for get_crawl_manager for compatibility with new naming."""
 
         return await self.get_crawl_manager()
@@ -650,28 +654,299 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         self._project_storage = storage
         return storage
 
-    async def get_database_manager(self) -> DatabaseManager:
-        """Return the database manager composed from shared services."""
+    async def ensure_database_ready(self) -> None:
+        """Ensure shared database services are initialized."""
 
-        database_manager = self._database_manager
-        if database_manager is not None:
-            return database_manager
+        await self.get_vector_store_service()
+        await self.get_cache_manager()
+        await self.get_redis_client()
 
-        redis_client = await self.get_redis_client()
+    @asynccontextmanager
+    async def database_session(self) -> AsyncIterator[DatabaseSessionContext]:
+        """Expose a lightweight context with database-related resources."""
+
+        redis_client = cast("Redis | None", await self.get_redis_client())
         cache_manager = await self.get_cache_manager()
         vector_service = await self.get_vector_store_service()
-        manager_cls = _resolve_database_manager_class()
-        manager = cast(
-            DatabaseManager,
-            manager_cls(
-                redis_client=redis_client,
-                cache_manager=cache_manager,
-                vector_service=vector_service,
-            ),
+        context = DatabaseSessionContext(
+            redis=redis_client,
+            cache_manager=cache_manager,
+            vector_service=vector_service,
         )
-        await manager.initialize()
-        self._database_manager = manager
-        return manager
+        yield context
+
+    async def list_vector_collections(self) -> list[str]:
+        """Return the available vector store collections."""
+
+        vector_service = await self.get_vector_store_service()
+        try:
+            return await vector_service.list_collections()
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.exception("Failed to list vector collections")
+            _raise_api_error(f"Failed to get collections: {exc}")
+
+    async def upsert_vector_records(
+        self, collection_name: str, points: list[dict[str, Any]]
+    ) -> bool:
+        """Store embeddings in the specified vector collection."""
+
+        vector_service = await self.get_vector_store_service()
+        try:
+            records = [
+                VectorRecord(
+                    id=str(point.get("id")),
+                    vector=list(point["vector"]),
+                    payload=point.get("payload"),
+                    sparse_vector=point.get("sparse_vector"),
+                )
+                for point in points
+                if "vector" in point
+            ]
+        except KeyError as exc:
+            msg = "Each point must include a dense vector"
+            raise ValueError(msg) from exc
+
+        try:
+            await vector_service.upsert_vectors(collection_name, records)
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.exception("Failed to upsert vector records")
+            _raise_api_error(f"Failed to store embeddings: {exc}")
+        return True
+
+    async def search_vector_records(
+        self,
+        collection_name: str,
+        query_vector: list[float],
+        *,
+        limit: int = 10,
+        filter_conditions: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Search for similar vectors using the shared vector service."""
+
+        vector_service = await self.get_vector_store_service()
+        try:
+            matches = await vector_service.search_vector(
+                collection_name,
+                query_vector,
+                limit=limit,
+                filters=filter_conditions,
+            )
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.exception("Failed to search vector records")
+            _raise_api_error(f"Failed to search vectors: {exc}")
+
+        return [
+            {
+                "id": match.id,
+                "score": match.score,
+                "metadata": dict(match.metadata or {}),
+            }
+            for match in matches
+        ]
+
+    async def get_database_status(self) -> dict[str, Any]:
+        """Return status information for shared database components."""
+
+        status = {
+            "vector_store": {"available": False, "collections": []},
+            "redis": {"available": False, "connected": False},
+            "cache": {"available": False},
+        }
+
+        try:
+            vector_service = await self.get_vector_store_service()
+        except Exception:  # pragma: no cover - defensive
+            logger.exception("Vector store service unavailable")
+        else:
+            status["vector_store"]["available"] = True
+            try:
+                status["vector_store"][
+                    "collections"
+                ] = await vector_service.list_collections()
+            except Exception:  # pragma: no cover - defensive
+                logger.exception("Failed to enumerate vector collections")
+
+        try:
+            cache_manager = await self.get_cache_manager()
+        except Exception:  # pragma: no cover - defensive
+            logger.exception("Cache manager unavailable")
+        else:
+            status["cache"]["available"] = cache_manager is not None
+            if cache_manager is not None:
+                try:
+                    status["cache"]["stats"] = await cache_manager.get_stats()
+                except Exception:  # pragma: no cover - defensive
+                    logger.exception("Failed to collect cache statistics")
+
+        try:
+            redis_client = await self.get_redis_client()
+        except Exception:  # pragma: no cover - defensive
+            logger.exception("Redis client unavailable")
+            redis_client = None
+
+        status["redis"]["available"] = redis_client is not None
+        if redis_client is not None:
+            try:
+                await redis_client.ping()
+            except Exception:  # pragma: no cover - defensive
+                logger.exception("Redis ping failed")
+            else:
+                status["redis"]["connected"] = True
+
+        return status
+
+    def _ensure_monitoring_ready(self) -> None:
+        """Initialize monitoring helpers lazily."""
+
+        if self._monitoring_initialized:
+            return
+
+        try:
+            from src.services.monitoring.metrics import (  # pylint: disable=import-outside-toplevel
+                get_metrics_registry,
+            )
+        except ImportError:
+            logger.warning("Monitoring metrics registry not available")
+            self._metrics_registry = None
+        else:
+            self._metrics_registry = get_metrics_registry()
+
+        try:
+            from src.services.monitoring.performance_monitor import (  # pylint: disable=import-outside-toplevel
+                RealTimePerformanceMonitor,
+            )
+        except ImportError:
+            logger.warning("Performance monitor not available")
+            self._performance_monitor = None
+        else:
+            self._performance_monitor = RealTimePerformanceMonitor()
+
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            logger.warning(
+                "Monitoring requires a running event loop; background health checks"
+                " are disabled"
+            )
+            self._health_check_task = None
+        else:
+            self._health_check_task = loop.create_task(self._health_check_loop())
+
+        self._monitoring_initialized = True
+
+    def _health_check_interval(self) -> int:
+        """Resolve the configured health check interval."""
+
+        performance_config = getattr(self._config, "performance", None)
+        if performance_config is None:
+            return 30
+        return int(getattr(performance_config, "health_check_interval", 30))
+
+    async def _health_check_loop(self) -> None:
+        """Background task executing registered health checks periodically."""
+
+        while True:
+            try:
+                await asyncio.sleep(self._health_check_interval())
+                if not self._health_checks:
+                    continue
+                tasks = [
+                    asyncio.create_task(
+                        self.check_service_health(name),
+                        name=f"health_check_{name}",
+                    )
+                    for name in list(self._health_checks.keys())
+                ]
+                if tasks:
+                    await asyncio.gather(*tasks, return_exceptions=True)
+            except asyncio.CancelledError:
+                logger.info("Health check loop cancelled")
+                break
+            except Exception:  # pragma: no cover - defensive
+                logger.exception("Error in health check loop")
+                await asyncio.sleep(10)
+
+    async def _shutdown_monitoring(self) -> None:
+        """Cleanup monitoring resources."""
+
+        task = self._health_check_task
+        if task is not None and not task.done():
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
+
+        if self._performance_monitor is not None:
+            cleanup_method = getattr(self._performance_monitor, "cleanup", None)
+            if callable(cleanup_method):
+                if iscoroutinefunction(cleanup_method):
+                    await cleanup_method()
+                else:
+                    cleanup_method()
+
+        self._health_checks.clear()
+        self._metrics_registry = None
+        self._performance_monitor = None
+        self._health_check_task = None
+        self._monitoring_initialized = False
+
+    async def register_health_check(
+        self,
+        service_name: str,
+        check_function: Callable[[], Awaitable[bool]],
+        *,
+        check_interval: int = 30,
+    ) -> None:
+        """Register a health check for a service."""
+
+        self._ensure_monitoring_ready()
+        health = ClientHealth(state=ClientState.HEALTHY, last_check=time.time())
+        self._health_checks[service_name] = HealthCheckRegistration(
+            health=health,
+            check_function=check_function,
+            check_interval=check_interval,
+        )
+        logger.info("Registered health check for %s", service_name)
+
+    def unregister_health_check(self, service_name: str) -> None:
+        """Unregister a health check for a service."""
+
+        if service_name in self._health_checks:
+            del self._health_checks[service_name]
+            logger.info("Unregistered health check for %s", service_name)
+
+    async def check_service_health(self, service_name: str) -> bool:
+        """Execute a registered health check and update its status."""
+
+        registration = self._health_checks.get(service_name)
+        if registration is None:
+            logger.warning("No health check registered for %s", service_name)
+            return False
+
+        health = registration.health
+        try:
+            is_healthy = await registration.check_function()
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.exception("Health check failed for %s", service_name)
+            health.last_check = time.time()
+            health.last_error = str(exc)
+            health.consecutive_failures += 1
+            health.state = ClientState.FAILED
+            return False
+
+        health.last_check = time.time()
+        if is_healthy:
+            health.state = ClientState.HEALTHY
+            health.consecutive_failures = 0
+            health.last_error = None
+        else:
+            health.consecutive_failures += 1
+            health.state = (
+                ClientState.DEGRADED
+                if health.consecutive_failures < 3
+                else ClientState.FAILED
+            )
+            health.last_error = "Health check returned false"
+        return is_healthy
 
     async def get_circuit_breaker_manager(self) -> CircuitBreakerManager:
         """Return the circuit breaker manager instance."""
@@ -734,37 +1009,187 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
     async def get_http_client(self):
         return self._get_provider_client("http")
 
-    # Function-based dependency access methods (backward compatibility)
-
     async def get_health_status(self) -> dict[str, dict[str, Any]]:
-        """Get health status using function-based dependencies."""
-        status_callable, _ = _resolve_health_dependencies()
-        if status_callable:
-            return await status_callable()
-        logger.warning(
-            "Health status monitoring not available - function-based dependency "
-            "not found"
-        )
-        return {}
+        """Return health status for all registered services."""
+
+        self._ensure_monitoring_ready()
+        service_names = list(self._health_checks.keys())
+        if service_names:
+            await asyncio.gather(
+                *[self.check_service_health(name) for name in service_names],
+                return_exceptions=True,
+            )
+
+        status: dict[str, dict[str, Any]] = {}
+        for service_name, registration in self._health_checks.items():
+            health = registration.health
+            status[service_name] = {
+                "state": health.state.value,
+                "last_check": health.last_check,
+                "last_error": health.last_error,
+                "consecutive_failures": health.consecutive_failures,
+                "is_healthy": health.state == ClientState.HEALTHY,
+            }
+        return status
 
     async def get_overall_health(self) -> dict[str, Any]:
-        """Get overall health using function-based dependencies."""
-        _, overall_callable = _resolve_health_dependencies()
-        if overall_callable:
-            return await overall_callable()
+        """Aggregate health summary across registered services."""
+
+        health_status = await self.get_health_status()
+        total_services = len(health_status)
+        healthy_services = sum(
+            1 for status in health_status.values() if status["is_healthy"]
+        )
+        failed_services = sum(
+            1 for status in health_status.values() if status["state"] == "failed"
+        )
+        overall_healthy = failed_services == 0 and (
+            total_services in {0, healthy_services}
+        )
         return {
-            "overall_healthy": False,
-            "error": "Health monitoring not available",
+            "overall_healthy": overall_healthy,
+            "total_services": total_services,
+            "healthy_services": healthy_services,
+            "failed_services": failed_services,
+            "health_percentage": (healthy_services / max(total_services, 1)) * 100,
+            "services": health_status,
         }
 
     async def get_service_status(self) -> dict[str, Any]:
-        """Get service status using function-based dependencies."""
+        """Summarize the client manager service state."""
+
         return {
             "initialized": self._initialized,
-            "mode": "function_based_dependencies",
             "providers": list(self._providers.keys()),
             "parallel_processing": self._parallel_processing_system is not None,
-            "note": "Using function-based dependencies instead of Manager classes",
+            "monitoring_initialized": self._monitoring_initialized,
+        }
+
+    def record_metric(
+        self, metric_name: str, value: float, labels: dict[str, str] | None = None
+    ) -> None:
+        """Record a metric value via the monitoring registry."""
+
+        self._ensure_monitoring_ready()
+        if self._metrics_registry is None:
+            return
+        try:
+            if hasattr(self._metrics_registry, "record_metric"):
+                self._metrics_registry.record_metric(metric_name, value, labels or {})
+        except Exception:  # pragma: no cover - defensive
+            logger.warning("Failed to record metric %s", metric_name, exc_info=True)
+
+    def increment_counter(
+        self, counter_name: str, labels: dict[str, str] | None = None
+    ) -> None:
+        """Increment a counter metric."""
+
+        self._ensure_monitoring_ready()
+        if self._metrics_registry is None:
+            return
+        try:
+            if hasattr(self._metrics_registry, "increment_counter"):
+                self._metrics_registry.increment_counter(counter_name, labels or {})
+        except Exception:  # pragma: no cover - defensive
+            logger.warning(
+                "Failed to increment counter %s", counter_name, exc_info=True
+            )
+
+    def record_histogram(
+        self, histogram_name: str, value: float, labels: dict[str, str] | None = None
+    ) -> None:
+        """Record a histogram value."""
+
+        self._ensure_monitoring_ready()
+        if self._metrics_registry is None:
+            return
+        try:
+            if hasattr(self._metrics_registry, "record_histogram"):
+                self._metrics_registry.record_histogram(
+                    histogram_name, value, labels or {}
+                )
+        except Exception:  # pragma: no cover - defensive
+            logger.warning(
+                "Failed to record histogram %s", histogram_name, exc_info=True
+            )
+
+    async def track_performance(
+        self,
+        operation_name: str,
+        operation_func: Callable[..., Awaitable[Any]],
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
+        """Track performance of an asynchronous operation."""
+
+        start_time = time.time()
+        try:
+            result = await operation_func(*args, **kwargs)
+        except Exception:
+            duration_ms = (time.time() - start_time) * 1000
+            self.record_histogram(f"{operation_name}_duration_ms", duration_ms)
+            self.increment_counter(f"{operation_name}_total", {"status": "error"})
+            self.increment_counter(f"{operation_name}_errors")
+            logger.exception("Operation %s failed", operation_name)
+            raise
+        duration_ms = (time.time() - start_time) * 1000
+        self.record_histogram(f"{operation_name}_duration_ms", duration_ms)
+        self.increment_counter(f"{operation_name}_total", {"status": "success"})
+        return result
+
+    def get_performance_metrics(self) -> dict[str, Any]:
+        """Return captured performance metrics."""
+
+        self._ensure_monitoring_ready()
+        if self._performance_monitor is None:
+            return {}
+        try:
+            if hasattr(self._performance_monitor, "get_metrics"):
+                return self._performance_monitor.get_metrics()
+        except Exception:  # pragma: no cover - defensive
+            logger.warning("Failed to get performance metrics", exc_info=True)
+        return {}
+
+    async def log_operation(
+        self,
+        operation: str,
+        details: dict[str, Any],
+        *,
+        level: str = "info",
+    ) -> None:
+        """Log an operation with structured details."""
+
+        log_data = {"operation": operation, "timestamp": time.time(), **details}
+        if level == "debug":
+            logger.debug("Operation: %s", operation, extra=log_data)
+        elif level == "info":
+            logger.info("Operation: %s", operation, extra=log_data)
+        elif level == "warning":
+            logger.warning("Operation: %s", operation, extra=log_data)
+        elif level == "error":
+            logger.error("Operation: %s", operation, extra=log_data)
+        else:
+            logger.info("Operation: %s", operation, extra=log_data)
+
+    def create_span(self, span_name: str) -> _BasicSpan:
+        """Create a lightweight tracing span context manager."""
+
+        return _BasicSpan(span_name)
+
+    async def get_monitoring_status(self) -> dict[str, Any]:
+        """Return monitoring subsystem status details."""
+
+        overall_health = await self.get_overall_health()
+        return {
+            "initialized": self._monitoring_initialized,
+            "health_checks": {
+                "registered": len(self._health_checks),
+                "services": list(self._health_checks.keys()),
+            },
+            "metrics_registry": {"available": self._metrics_registry is not None},
+            "performance_monitor": {"available": self._performance_monitor is not None},
+            "overall_health": overall_health,
+            "performance_metrics": self.get_performance_metrics(),
         }
 
     async def get_parallel_processing_system(self):

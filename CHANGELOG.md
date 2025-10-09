@@ -34,6 +34,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Refactor
 
+- **[Architecture]:** Unified all service access patterns by consolidating logic
+  from `src/services/managers` into the central `ClientManager`, establishing it
+  as the single service locator for the application.
 - **Architectural Unification:** Consolidated the `monitoring` and `observability` packages into a single, OpenTelemetry-based `observability` service. This centralizes all metrics, tracing, and health check logic.
 - **Dead Code Elimination:** Removed several unused and legacy modules, including `services/middleware/rate_limiting.py`, `services/processing/algorithms.py`, and the top-level `security.py`, significantly reducing codebase size.
 - **API Modernization:** Updated all calls to the `@circuit_breaker` decorator to use the modern `purgatory` API, removing deprecated arguments and silencing warnings.

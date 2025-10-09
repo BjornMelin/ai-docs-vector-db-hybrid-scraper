@@ -111,6 +111,18 @@ flowchart LR
 
 ## Core Components
 
+### Infrastructure Orchestration
+
+- `ClientManager` (`src/infrastructure/client_manager.py`) is the central service
+  locator. It lazily wires clients (OpenAI, Qdrant, Redis, Firecrawl), caches,
+  vector storage, crawling, embeddings, monitoring, and RAG helpers with
+  configuration-aware constructors. All dependencies retrieve shared services by
+  calling `get_client_manager()` rather than instantiating bespoke manager
+  classes.
+- Service initialization is idempotent and thread-safe, with cleanup routines
+  that close caches, vector stores, MCP sessions, and background monitoring
+  tasks.
+
 ### Crawling & Ingestion
 
 - UnifiedBrowserManager selects the right automation tier and tracks quality metrics.

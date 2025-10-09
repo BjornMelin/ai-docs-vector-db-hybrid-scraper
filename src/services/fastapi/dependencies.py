@@ -26,7 +26,7 @@ from src.services.vector_db.service import VectorStoreService
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from src.services.cache.manager import CacheManager
-    from src.services.managers.embedding_manager import EmbeddingManager
+    from src.services.embeddings.manager import EmbeddingManager
 
 
 logger = logging.getLogger(__name__)
@@ -122,8 +122,7 @@ async def database_session() -> AsyncGenerator[Any]:
     """Provide a database session with automatic cleanup."""
 
     client_manager = await ensure_client_manager()
-    database_manager = await client_manager.get_database_manager()
-    async with database_manager.get_session() as session:
+    async with client_manager.database_session() as session:
         yield session
 
 
