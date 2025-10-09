@@ -1,44 +1,12 @@
 """Tests for system health MCP tools."""
 
-# ruff: noqa: E402
-# pylint: disable=wrong-import-position
-
 from __future__ import annotations
 
-import sys
-import types
 from collections.abc import Callable
-
-
-def _stub_fastmcp() -> None:
-    """Provide a minimal fastmcp module stub for tests."""
-
-    if "fastmcp" in sys.modules:  # pragma: no cover - already available
-        return
-
-    module = types.ModuleType("fastmcp")
-
-    class _DummyContext:  # pragma: no cover - used only for typing
-        async def info(self, *_args, **_kwargs) -> None:
-            return None
-
-        async def error(self, *_args, **_kwargs) -> None:
-            return None
-
-    def tool():  # type: ignore
-        def decorator(func):
-            return func
-
-        return decorator
-
-    module.Context = _DummyContext  # type: ignore[attr-defined]
-    module.tool = tool  # type: ignore[attr-defined]
-    sys.modules["fastmcp"] = module
-
-
-_stub_fastmcp()
+from typing import Any, cast
 
 import pytest
+from pytest_mock import MockerFixture
 
 from src.mcp_tools.tools.system_health import register_tools
 from src.services.health.manager import (
@@ -49,13 +17,15 @@ from src.services.health.manager import (
 
 
 @pytest.fixture()
-def registered_tools(mocker: pytest.MockFixture) -> dict[str, Callable]:
+def registered_tools(
+    mocker: MockerFixture,
+) -> tuple[dict[str, Callable[..., Any]], HealthCheckManager]:
     """Register the system health tools with mocked dependencies."""
 
     mock_mcp = mocker.MagicMock()
-    tools: dict[str, Callable] = {}
+    tools: dict[str, Callable[..., Any]] = {}
 
-    def capture(func: Callable) -> Callable:
+    def capture(func: Callable[..., Any]) -> Callable[..., Any]:
         tools[func.__name__] = func
         return func
 
@@ -66,12 +36,11 @@ def registered_tools(mocker: pytest.MockFixture) -> dict[str, Callable]:
     client_manager.get_health_manager.return_value = health_manager
 
     register_tools(mock_mcp, client_manager)
-    tools["_health_manager"] = health_manager
-    return tools
+    return tools, cast(HealthCheckManager, health_manager)
 
 
 @pytest.fixture()
-def mock_context(mocker: pytest.MockFixture):
+def mock_context(mocker: MockerFixture):
     """Provide a stub MCP context."""
 
     ctx = mocker.MagicMock()
@@ -82,18 +51,18 @@ def mock_context(mocker: pytest.MockFixture):
 
 @pytest.mark.asyncio()
 async def test_get_system_health_uses_manager(
-    registered_tools: dict[str, Callable],
+    registered_tools: tuple[dict[str, Callable[..., Any]], HealthCheckManager],
     mock_context,
-    mocker: pytest.MockFixture,
+    mocker: MockerFixture,
 ) -> None:
     """Overall health should be retrieved from the health manager."""
 
-    health_manager: HealthCheckManager = registered_tools.pop("_health_manager")
+    tools, health_manager = registered_tools
     health_manager.get_overall_health = mocker.AsyncMock(
         return_value={"overall_status": "healthy"}
     )
 
-    result = await registered_tools["get_system_health"](mock_context)
+    result = await tools["get_system_health"](mock_context)
 
     assert result == {"overall_status": "healthy"}
     health_manager.get_overall_health.assert_awaited_once()
@@ -102,13 +71,13 @@ async def test_get_system_health_uses_manager(
 
 @pytest.mark.asyncio()
 async def test_get_process_info_returns_check_metadata(
-    registered_tools: dict[str, Callable],
+    registered_tools: tuple[dict[str, Callable[..., Any]], HealthCheckManager],
     mock_context,
-    mocker: pytest.MockFixture,
+    mocker: MockerFixture,
 ) -> None:
     """Process info should surface system resource metadata."""
 
-    health_manager: HealthCheckManager = registered_tools.pop("_health_manager")
+    tools, health_manager = registered_tools
     health_manager.check_single = mocker.AsyncMock(
         return_value=HealthCheckResult(
             name="system_resources",
@@ -119,9 +88,38 @@ async def test_get_process_info_returns_check_metadata(
         )
     )
 
-    response = await registered_tools["get_process_info"](mock_context)
+    response = await tools["get_process_info"](mock_context)
 
     assert response["status"] == HealthStatus.DEGRADED.value
     assert response["metrics"]["cpu_percent"] == 92.0
     health_manager.check_single.assert_awaited_once_with("system_resources")
     mock_context.info.assert_awaited()
+
+
+@pytest.mark.asyncio()
+async def test_get_system_health_reports_manager_failure(
+    mocker: MockerFixture,
+    mock_context,
+) -> None:
+    """Errors retrieving the health manager should surface through the context."""
+
+    mock_mcp = mocker.MagicMock()
+    tools: dict[str, Callable[..., Any]] = {}
+
+    def capture(func: Callable[..., Any]) -> Callable[..., Any]:
+        tools[func.__name__] = func
+        return func
+
+    mock_mcp.tool.return_value = capture
+
+    client_manager = mocker.MagicMock()
+    client_manager.get_health_manager.side_effect = RuntimeError("not configured")
+
+    register_tools(mock_mcp, client_manager)
+
+    result = await tools["get_system_health"](mock_context)
+
+    assert result["status"] == HealthStatus.UNKNOWN.value
+    mock_context.error.assert_awaited_once_with(
+        "Health manager unavailable: not configured"
+    )

@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Callable
 from contextlib import AsyncExitStack, asynccontextmanager
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from src.config import Settings
 from src.services.circuit_breaker import CircuitBreakerManager
@@ -19,6 +19,12 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
+    SessionFactory = Callable[[], AsyncSession]
+else:  # pragma: no cover - runtime typing fallbacks
+    AsyncEngine = Any  # type: ignore[assignment]
+    AsyncSession = Any  # type: ignore[assignment]
+    SessionFactory = Callable[[], Any]
+
 try:  # pragma: no cover - optional dependency import
     from sqlalchemy.ext.asyncio import (  # type: ignore[import]
         AsyncEngine,
@@ -27,8 +33,6 @@ try:  # pragma: no cover - optional dependency import
         create_async_engine,
     )
 except ImportError:  # pragma: no cover - runtime fallback when SQLAlchemy unavailable
-    AsyncEngine = Any  # type: ignore[assignment]
-    AsyncSession = Any  # type: ignore[assignment]
 
     def _missing_sqlalchemy(*_args: Any, **_kwargs: Any) -> Any:
         msg = "SQLAlchemy async dependencies are required for DatabaseManager"
@@ -59,7 +63,7 @@ class DatabaseManager:
 
         self.config = config
         self._engine: AsyncEngine | None = None
-        self._session_factory: async_sessionmaker[AsyncSession] | None = None
+        self._session_factory: SessionFactory | None = None
         self.query_monitor = query_monitor or QueryMonitor()
         self._circuit_breaker_manager = circuit_breaker_manager
         self._breaker_service_name = breaker_service_name
@@ -83,12 +87,13 @@ class DatabaseManager:
                 echo_pool="debug" if self.config.database.echo_queries else False,
             )
 
-            self._session_factory = async_sessionmaker(
+            session_factory = async_sessionmaker(
                 bind=self._engine,
                 class_=AsyncSession,
                 expire_on_commit=False,
                 autoflush=True,
             )
+            self._session_factory = cast(SessionFactory, session_factory)
 
             await self.query_monitor.initialize()
 
@@ -121,7 +126,8 @@ class DatabaseManager:
     async def session(self) -> AsyncGenerator[Any, None]:
         """Yield a monitored database session."""
 
-        if not self._session_factory:
+        session_factory = self._session_factory
+        if session_factory is None:
             msg = "Database manager not initialized"
             raise RuntimeError(msg)
 
@@ -134,18 +140,16 @@ class DatabaseManager:
                 )
                 await stack.enter_async_context(breaker)
 
-            session = await stack.enter_async_context(self._session_factory())
+            session = await stack.enter_async_context(session_factory())
             try:
                 self._connection_count += 1
 
                 yield session
                 await session.commit()
                 self.query_monitor.record_success(query_start)
-
             except Exception as exc:
                 await session.rollback()
                 self.query_monitor.record_failure(query_start, str(exc))
-
                 raise
 
     async def get_performance_metrics(self) -> dict[str, Any]:
@@ -158,9 +162,11 @@ class DatabaseManager:
                 size_fn = getattr(pool, "size", None)
                 checked_out_fn = getattr(pool, "checked_out", None)
                 if callable(size_fn):
-                    pool_snapshot["size"] = int(size_fn())
+                    size_value = cast(int, size_fn())
+                    pool_snapshot["size"] = int(size_value)
                 if callable(checked_out_fn):
-                    pool_snapshot["checked_out"] = int(checked_out_fn())
+                    checked_out_value = cast(int, checked_out_fn())
+                    pool_snapshot["checked_out"] = int(checked_out_value)
 
         return {
             "connection_count": self._connection_count,
