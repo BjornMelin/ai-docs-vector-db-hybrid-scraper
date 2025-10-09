@@ -34,6 +34,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Refactor
 
+- **[Architecture]:** Unified circuit breaker implementation by refactoring
+  `TimeoutMiddleware` to use the shared `CircuitBreakerManager`, ensuring a
+  global state for all breakers.
 - **[Architecture]:** Unified all service access patterns by consolidating logic
   from `src/services/managers` into the central `ClientManager`, establishing it
   as the single service locator for the application.
