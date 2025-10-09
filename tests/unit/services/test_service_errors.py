@@ -21,7 +21,6 @@ from src.services.errors import (
     MCPError,  # MCP errors
     NetworkError,
     QdrantServiceError,  # Service-specific errors
-    RateLimitError,
     ResourceError,
     ServiceError,
     ToolError,
@@ -239,25 +238,6 @@ class TestAPIErrors:
         )
         assert isinstance(error, APIError)
         assert error.status_code == 503
-
-    def test_rate_limit_error_basic(self):
-        """Test RateLimitError without retry_after."""
-        error = RateLimitError("Rate limit exceeded")
-        assert isinstance(error, ExternalServiceError)
-        assert error.status_code == 429
-        assert error.retry_after is None
-
-    def test_rate_limit_error_with_retry_after(self):
-        """Test RateLimitError with retry_after."""
-        error = RateLimitError(
-            "Too many requests",
-            retry_after=60.0,
-            error_code="RATE_LIMIT",
-            context={"service": "openai"},
-        )
-        assert error.retry_after == 60.0
-        assert error.context["retry_after"] == 60.0
-        assert error.status_code == 429
 
     def test_network_error(self):
         """Test NetworkError."""
@@ -661,18 +641,18 @@ class TestHandleMCPErrors:
         assert result["error_type"] == "validation"
 
     @pytest.mark.asyncio
-    async def test_handle_mcp_errors_rate_limit_error(self):
-        """Test handle_mcp_errors with RateLimitError."""
+    async def test_handle_mcp_errors_network_error(self):
+        """Test handle_mcp_errors with NetworkError."""
 
         @handle_mcp_errors
-        async def rate_limit_func():
-            msg = "Rate limit exceeded"
-            raise RateLimitError(msg, retry_after=60)
+        async def network_error_func():
+            msg = "Network connectivity failed"
+            raise NetworkError(msg)
 
-        result = await rate_limit_func()
+        result = await network_error_func()
         assert result["success"] is False
-        assert result["error"] == "Rate limit exceeded"
-        assert result["error_type"] == "rate_limit"
+        assert result["error"] == "Network connectivity failed"
+        assert result["error_type"] == "network"
 
     @pytest.mark.asyncio
     async def test_handle_mcp_errors_unexpected_error(self):
@@ -768,10 +748,9 @@ class TestValidateInput:
         assert result == "Processing 3 items for Alice"
 
 
-# NOTE: RateLimiter and global rate limiter tests have been removed.
-# Rate limiting functionality has been consolidated to use the advanced
-# RateLimitManager from src.services.utilities.rate_limiter.py.
-# See test_rate_limiter.py for comprehensive rate limiting tests.
+# NOTE: Rate limiting behavior is validated via SlowAPI middleware tests.
+# Legacy token bucket utilities have been removed in favor of the
+# centralized middleware configuration.
 
 
 class TestCreateValidationError:

@@ -48,12 +48,10 @@ class ProviderRegistry:
         self,
         config: Any,
         client_manager: Any,
-        rate_limiter: Any,
         factories: ProviderFactories | None = None,
     ) -> None:
         self._config = config
         self._client_manager = client_manager
-        self._rate_limiter = rate_limiter
         self._providers: dict[str, EmbeddingProvider] = {}
         self._reranker = None
         self._reranker_model = self._DEFAULT_RERANKER_MODEL
@@ -187,7 +185,6 @@ class ProviderRegistry:
                 api_key=self._config.openai.api_key,
                 model_name=self._config.openai.model,
                 dimensions=self._config.openai.dimensions,
-                rate_limiter=self._rate_limiter,
                 client_manager=self._client_manager,
             )
             await provider.initialize()

@@ -32,7 +32,6 @@ from src.services.errors import (
     EmbeddingServiceError,
     ExternalServiceError,
     NetworkError,
-    RateLimitError,
 )
 from src.services.rag.models import RAGRequest as InternalRAGRequest
 from src.services.vector_db.service import VectorStoreService
@@ -157,7 +156,6 @@ async def generate_embeddings(
     except (
         ExternalServiceError,
         NetworkError,
-        RateLimitError,
         EmbeddingServiceError,
     ):
         raise
@@ -323,7 +321,6 @@ async def scrape_url(
     except (
         ExternalServiceError,
         NetworkError,
-        RateLimitError,
         CrawlServiceError,
     ):
         raise
@@ -549,7 +546,7 @@ async def generate_rag_answer(
             cached=False,
             reasoning_trace=None,
         )
-    except (ExternalServiceError, NetworkError, RateLimitError):
+    except (ExternalServiceError, NetworkError):
         raise
     except Exception as e:
         logger.exception("RAG answer generation failed")

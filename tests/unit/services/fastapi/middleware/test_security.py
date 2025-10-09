@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
+from src.config.security import SecurityConfig
 from src.services.fastapi.middleware.security import (
     SecurityMiddleware,
     enable_global_rate_limit,
@@ -51,7 +52,10 @@ def test_enable_global_rate_limit_enforces_limits() -> None:
     """Test that rate limiting is enforced."""
 
     app = FastAPI()
-    limiter = enable_global_rate_limit(app, default_limit="1/minute")
+    limiter = enable_global_rate_limit(
+        app,
+        config=SecurityConfig(default_rate_limit=1, rate_limit_window=60),
+    )
 
     @app.get("/limited")
     @limiter.limit("1/minute")
@@ -65,3 +69,16 @@ def test_enable_global_rate_limit_enforces_limits() -> None:
     limited_response = client.get("/limited")
     assert limited_response.status_code == 429
     assert limited_response.json()["error"] == "Rate limit exceeded"
+
+
+def test_enable_global_rate_limit_respects_disabled_flag() -> None:
+    """Rate limiting is skipped when disabled in configuration."""
+
+    app = FastAPI()
+    limiter = enable_global_rate_limit(
+        app,
+        config=SecurityConfig(enable_rate_limiting=False),
+    )
+
+    assert limiter is None
+    assert getattr(app.state, "limiter", None) is None
