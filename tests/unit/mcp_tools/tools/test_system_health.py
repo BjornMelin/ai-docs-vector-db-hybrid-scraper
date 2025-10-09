@@ -138,3 +138,30 @@ async def test_get_system_health_reports_manager_failure(
     mock_context.error.assert_awaited_once_with(
         "Health manager unavailable: not configured"
     )
+
+
+@pytest.mark.asyncio()
+async def test_get_process_info_handles_missing_psutil(
+    registered_tools: tuple[dict[str, Callable[..., Any]], HealthCheckManager],
+    mock_context,
+    mocker: MockerFixture,
+) -> None:
+    """Process info should degrade gracefully when psutil is unavailable."""
+
+    tools, health_manager = registered_tools
+    mocker.patch("src.mcp_tools.tools.system_health.psutil", None)
+    health_manager.check_single = mocker.AsyncMock(
+        return_value=HealthCheckResult(
+            name="system_resources",
+            status=HealthStatus.HEALTHY,
+            message="ok",
+            duration_ms=5.0,
+            metadata={"cpu_percent": 12.0},
+        )
+    )
+
+    response = await tools["get_process_info"](mock_context)
+
+    assert response["resource_snapshot"] == {"psutil_available": False}
+    assert response["metrics"]["cpu_percent"] == 12.0
+    mock_context.info.assert_awaited()
