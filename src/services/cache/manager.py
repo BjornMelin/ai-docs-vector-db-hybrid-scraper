@@ -3,6 +3,7 @@
 import asyncio
 import hashlib
 import logging
+from collections.abc import Awaitable
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
@@ -90,51 +91,28 @@ class CacheManager:
             CacheType.HYBRID: 3600,  # 1 hour for hybrid cache
         }
 
-        # Initialize local cache (L1)
-        self._local_cache: PersistentCacheManager | None = None
-        self._local_default_ttl = local_ttl_seconds
-        if enable_local_cache:
-            base_path = (
-                Path(local_cache_path)
-                if local_cache_path is not None
-                else Path("cache") / "local"
-            )
-            bytes_limit = int(local_max_memory_mb * 1024 * 1024)
-            self._local_cache = PersistentCacheManager(
-                base_path=base_path,
-                max_entries=local_max_size,
-                max_memory_bytes=bytes_limit,
-                memory_pressure_threshold=memory_pressure_threshold,
-            )
+        (
+            self._local_cache,
+            self._local_default_ttl,
+        ) = self._build_local_cache(
+            enable_local_cache=enable_local_cache,
+            local_cache_path=local_cache_path,
+            local_max_size=local_max_size,
+            local_max_memory_mb=local_max_memory_mb,
+            memory_pressure_threshold=memory_pressure_threshold,
+            local_ttl_seconds=local_ttl_seconds,
+        )
 
-        # Initialize DragonflyDB cache (L2)
-        self._distributed_cache = None
-        if enable_distributed_cache:
-            self._distributed_cache = DragonflyCache(
-                redis_url=dragonfly_url,
-                key_prefix=key_prefix,
-                max_connections=50,  # Optimized for DragonflyDB
-                enable_compression=True,
-                compression_threshold=1024,
-            )
-
-        # Initialize specialized caches
-        self._embedding_cache = None
-        self._search_cache = None
-        if enable_specialized_caches and self._distributed_cache:
-            # Default to an hour when no Redis-specific TTL is supplied.
-            redis_ttl = self.distributed_ttl_seconds.get(
-                CacheType.REDIS,
-                3600,
-            )
-            self._embedding_cache = EmbeddingCache(
-                cache=self._distributed_cache,
-                default_ttl=redis_ttl,
-            )
-            self._search_cache = SearchResultCache(
-                cache=self._distributed_cache,
-                default_ttl=redis_ttl,
-            )
+        (
+            self._distributed_cache,
+            self._embedding_cache,
+            self._search_cache,
+        ) = self._build_distributed_cache_layers(
+            enable_distributed_cache=enable_distributed_cache,
+            enable_specialized_caches=enable_specialized_caches,
+            dragonfly_url=dragonfly_url,
+            key_prefix=key_prefix,
+        )
 
         # Initialize Prometheus monitoring registry
         self.metrics_registry = self._initialize_metrics_registry(enable_metrics)
@@ -159,6 +137,99 @@ class CacheManager:
             self.enable_local_cache,
             self.enable_specialized_caches,
         )
+
+    def _build_local_cache(
+        self,
+        *,
+        enable_local_cache: bool,
+        local_cache_path: Path | None,
+        local_max_size: int,
+        local_max_memory_mb: float,
+        memory_pressure_threshold: float | None,
+        local_ttl_seconds: int,
+    ) -> tuple[PersistentCacheManager | None, int]:
+        """Construct the local cache layer if enabled."""
+
+        if not enable_local_cache:
+            return None, local_ttl_seconds
+
+        base_path = (
+            Path(local_cache_path)
+            if local_cache_path is not None
+            else Path("cache") / "local"
+        )
+        bytes_limit = int(local_max_memory_mb * 1024 * 1024)
+        manager = PersistentCacheManager(
+            base_path=base_path,
+            max_entries=local_max_size,
+            max_memory_bytes=bytes_limit,
+            memory_pressure_threshold=memory_pressure_threshold,
+        )
+        return manager, local_ttl_seconds
+
+    def _build_distributed_cache_layers(
+        self,
+        *,
+        enable_distributed_cache: bool,
+        enable_specialized_caches: bool,
+        dragonfly_url: str,
+        key_prefix: str,
+    ) -> tuple[
+        DragonflyCache | None,
+        EmbeddingCache | None,
+        SearchResultCache | None,
+    ]:
+        """Construct distributed cache and specialized helpers."""
+
+        distributed_cache: DragonflyCache | None = None
+        embedding_cache: EmbeddingCache | None = None
+        search_cache: SearchResultCache | None = None
+
+        if enable_distributed_cache:
+            distributed_cache = DragonflyCache(
+                redis_url=dragonfly_url,
+                key_prefix=key_prefix,
+                max_connections=50,
+                enable_compression=True,
+                compression_threshold=1024,
+            )
+
+            if enable_specialized_caches:
+                redis_ttl = self.distributed_ttl_seconds.get(CacheType.REDIS, 3600)
+                embedding_cache = EmbeddingCache(
+                    cache=distributed_cache,
+                    default_ttl=redis_ttl,
+                )
+                search_cache = SearchResultCache(
+                    cache=distributed_cache,
+                    default_ttl=redis_ttl,
+                )
+
+        return distributed_cache, embedding_cache, search_cache
+
+    async def initialize(self) -> None:
+        """Initialize underlying cache resources."""
+
+        tasks: list[Awaitable[None]] = []
+        if self._local_cache is not None:
+            tasks.append(self._local_cache.initialize())
+        if self._distributed_cache is not None:
+            tasks.append(self._distributed_cache.initialize())
+
+        if tasks:
+            await asyncio.gather(*tasks)
+
+    async def cleanup(self) -> None:
+        """Release cache resources and close connections."""
+
+        tasks: list[Awaitable[None]] = []
+        if self._local_cache is not None:
+            tasks.append(self._local_cache.cleanup())
+        if self._distributed_cache is not None:
+            tasks.append(self._distributed_cache.close())
+
+        if tasks:
+            await asyncio.gather(*tasks)
 
     @property
     def local_cache(self) -> PersistentCacheManager | None:
