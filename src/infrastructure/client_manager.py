@@ -14,7 +14,10 @@ from importlib import import_module
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, Literal, NoReturn, cast
 
-from dependency_injector.wiring import Provide, inject  # type: ignore[reportMissingImports]
+from dependency_injector.wiring import (  # type: ignore[reportMissingImports]
+    Provide,
+    inject,
+)
 from langchain_mcp_adapters.client import (  # type: ignore[reportMissingImports]
     MultiServerMCPClient,
 )
