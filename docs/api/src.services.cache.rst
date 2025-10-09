@@ -68,14 +68,6 @@ src.services.cache.patterns module
    :show-inheritance:
    :undoc-members:
 
-src.services.cache.performance\_cache module
---------------------------------------------
-
-.. automodule:: src.services.cache.performance_cache
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 src.services.cache.search\_cache module
 ---------------------------------------
 

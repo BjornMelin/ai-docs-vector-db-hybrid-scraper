@@ -34,6 +34,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Refactor
 
+- **[Architecture]:** Unified circuit breaker implementation by refactoring
+  `TimeoutMiddleware` to use the shared `CircuitBreakerManager`, ensuring a
+  global state for all breakers.
 - **[Architecture]:** Unified all service access patterns by consolidating logic
   from `src/services/managers` into the central `ClientManager`, establishing it
   as the single service locator for the application.
@@ -42,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **API Modernization:** Updated all calls to the `@circuit_breaker` decorator to use the modern `purgatory` API, removing deprecated arguments and silencing warnings.
 - **Test Suite Overhaul:** Deleted test suites corresponding to removed modules and modernized remaining tests to align with the refactored implementation, ensuring full test coverage and correctness.
 - **[Health]:** Centralized all system health checking logic into the `HealthCheckManager`, and refactored the `system_health` MCP tool to use this central service.
+- **[Cache]:** Consolidated all caching logic to use the central `CacheManager`. Removed the redundant `PerformanceCache` and refactored `HyDECache` to be a client of the main cache service.
 
 ### Changed
 

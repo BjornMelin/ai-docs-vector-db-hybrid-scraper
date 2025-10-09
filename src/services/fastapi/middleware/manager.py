@@ -1,5 +1,4 @@
-"""
-Middleware manager.
+"""Middleware manager.
 
 Order:
 1) Trusted host / CORS (configure in app factory if needed)
@@ -26,6 +25,8 @@ try:  # Optional dependency
 except ImportError:  # pragma: no cover - optional middleware
     CorrelationIdMiddleware = None  # type: ignore[assignment]
 from starlette.applications import Starlette
+
+from src.services.circuit_breaker.provider import get_circuit_breaker_manager
 
 from .compression import BrotliCompressionMiddleware, CompressionMiddleware
 from .correlation import get_correlation_id
@@ -60,7 +61,11 @@ if BrotliCompressionMiddleware is not CompressionMiddleware:
 
 _CLASS_REGISTRY["security"] = MiddlewareSpec(SecurityMiddleware)
 _CLASS_REGISTRY["timeout"] = MiddlewareSpec(
-    TimeoutMiddleware, {"config": TimeoutConfig()}
+    TimeoutMiddleware,
+    {
+        "config": TimeoutConfig(),
+        "manager_resolver": get_circuit_breaker_manager,
+    },
 )
 _CLASS_REGISTRY["performance"] = MiddlewareSpec(PerformanceMiddleware)
 

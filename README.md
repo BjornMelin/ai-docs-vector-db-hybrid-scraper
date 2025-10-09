@@ -137,6 +137,12 @@ flowchart LR
 - HyDE augmentation and caching live under `src/services/hyde/`, enabling query expansion for RAG pipelines.
 - Search responses return timing, scoring metadata, and diagnostics suitable for observability dashboards.
 
+### Caching
+
+- The unified `CacheManager` (`src/services/cache/manager.py`) fronts all L1/L2 storage, hashing keys and enforcing TTL policies for Dragonfly/Redis and the local persistent tier.
+- Specialized helpers such as the HyDE cache now depend on `CacheManager`, ensuring a single entry point for embeddings, search results, and warm-up flows.
+- Configure cache URLs, prefixes, and TTLs via the cache models in `src/config/models.py`; the manager automatically wires Prometheus metrics when enabled.
+
 ### Interfaces & Tooling
 
 - FastAPI routes (`/api/v1/search`, `/api/v1/documents`, `/api/v1/collections`) expose the core ingestion and retrieval capabilities.
