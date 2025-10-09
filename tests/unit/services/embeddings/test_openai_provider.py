@@ -321,25 +321,6 @@ class TestOpenAIProviderEmbeddingGeneration:
         assert "dimensions" not in call_args[1]
 
     @pytest.mark.asyncio
-    async def test_generate_embeddings_with_rate_limiter(
-        self, mock_client_manager, mock_openai_client
-    ):
-        """Test embedding generation with rate limiting."""
-        mock_rate_limiter = AsyncMock()
-        mock_client_manager.get_openai_client.return_value = mock_openai_client
-
-        provider = OpenAIEmbeddingProvider(
-            api_key="test-key",
-            rate_limiter=mock_rate_limiter,
-            client_manager=mock_client_manager,
-        )
-        await provider.initialize()
-
-        await provider.generate_embeddings(["test"])
-
-        mock_rate_limiter.acquire.assert_called_once_with("openai")
-
-    @pytest.mark.asyncio
     async def test_generate_embeddings_api_error_rate_limit(
         self, mock_client_manager, mock_openai_client
     ):
@@ -572,30 +553,3 @@ class TestOpenAIProviderBatchAPI:
 
         with pytest.raises(EmbeddingServiceError, match="Failed to create batch job"):
             await provider.generate_embeddings_batch_api(["test"])
-
-    @pytest.mark.asyncio
-    async def test_generate_embeddings_batch_api_with_rate_limiter(
-        self, mock_client_manager, mock_openai_client
-    ):
-        """Test batch API with rate limiting."""
-        mock_rate_limiter = AsyncMock()
-        mock_file_response = MagicMock()
-        mock_file_response.id = "file-123"
-        mock_batch_response = MagicMock()
-        mock_batch_response.id = "batch-456"
-
-        mock_openai_client.files.create = AsyncMock(return_value=mock_file_response)
-        mock_openai_client.batches.create = AsyncMock(return_value=mock_batch_response)
-        mock_client_manager.get_openai_client.return_value = mock_openai_client
-
-        provider = OpenAIEmbeddingProvider(
-            api_key="test-key",
-            rate_limiter=mock_rate_limiter,
-            client_manager=mock_client_manager,
-        )
-        await provider.initialize()
-
-        await provider.generate_embeddings_batch_api(["test"])
-
-        # Should acquire rate limit twice (file upload + batch creation)
-        assert mock_rate_limiter.acquire.call_count == 2

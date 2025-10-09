@@ -53,7 +53,6 @@ class EmbeddingManager:
         config: Settings,
         client_manager: "ClientManager",
         budget_limit: float | None = None,
-        rate_limiter: Any = None,
     ):
         """Initializes the embedding manager.
 
@@ -61,12 +60,10 @@ class EmbeddingManager:
             config: Configuration object with provider settings and selection rules.
             client_manager: Manages shared HTTP clients.
             budget_limit: Daily budget limit in USD, if set.
-            rate_limiter: Optional rate limiter for API calls.
         """
 
         self.config = config
         self._initialized = False
-        self.rate_limiter = rate_limiter
         self._client_manager = client_manager
         self._usage: UsageTracker | None = None
         self._budget_limit = budget_limit
@@ -111,7 +108,6 @@ class EmbeddingManager:
         self._provider_registry = ProviderRegistry(
             config=config,
             client_manager=client_manager,
-            rate_limiter=rate_limiter,
             factories=None,
         )
         pipeline_context = PipelineContext(

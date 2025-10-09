@@ -768,10 +768,9 @@ class TestValidateInput:
         assert result == "Processing 3 items for Alice"
 
 
-# NOTE: RateLimiter and global rate limiter tests have been removed.
-# Rate limiting functionality has been consolidated to use the advanced
-# RateLimitManager from src.services.utilities.rate_limiter.py.
-# See test_rate_limiter.py for comprehensive rate limiting tests.
+# NOTE: Rate limiting behavior is validated via SlowAPI middleware tests.
+# Legacy token bucket utilities have been removed in favor of the
+# centralized middleware configuration.
 
 
 class TestCreateValidationError:

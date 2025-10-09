@@ -6,7 +6,6 @@ from unittest.mock import AsyncMock
 import pytest
 
 from src.services.errors import (
-    APIError,
     ExternalServiceError,
     RateLimitError,
     ResourceError,
@@ -17,7 +16,6 @@ from src.services.errors import (
     retry_async,
     validate_input,
 )
-from src.services.utilities.rate_limiter import RateLimiter
 
 
 class TestRetryAsync:
@@ -459,87 +457,3 @@ class TestValidateInput:
         # Should not raise error if validated parameter is not present
         result = await test_func("test")
         assert result == "test"
-
-
-class TestRateLimiter:
-    """Test cases for RateLimiter class."""
-
-    @pytest.mark.asyncio
-    async def test_rate_limiter_within_capacity(self, monkeypatch: pytest.MonkeyPatch):
-        """Rate limiter should not sleep when tokens remain."""
-        limiter = RateLimiter(max_calls=5, time_window=60, burst_multiplier=1.0)
-
-        async def unexpected_sleep(_: float) -> None:
-            msg = "Limiter slept despite available tokens"
-            raise AssertionError(msg)
-
-        monkeypatch.setattr(asyncio, "sleep", unexpected_sleep)
-
-        for _ in range(5):
-            await limiter.acquire()
-
-    @pytest.mark.asyncio
-    async def test_rate_limiter_waits_when_tokens_exhausted(
-        self, monkeypatch: pytest.MonkeyPatch
-    ):
-        """Rate limiter should wait when capacity is depleted."""
-
-        limiter = RateLimiter(max_calls=1, time_window=10, burst_multiplier=1.0)
-        await limiter.acquire()  # Consume initial token
-
-        sleep_calls: list[float] = []
-
-        async def capture_sleep(delay: float) -> None:
-            sleep_calls.append(delay)
-
-        monkeypatch.setattr(asyncio, "sleep", capture_sleep)
-
-        await limiter.acquire()
-        assert sleep_calls, "Expected limiter to wait when tokens are exhausted"
-        assert sleep_calls[0] > 0.0
-
-    @pytest.mark.asyncio
-    async def test_rate_limiter_rejects_excess_token_request(self):
-        """Limiter should reject requests exceeding bucket capacity."""
-
-        limiter = RateLimiter(max_calls=2, time_window=60, burst_multiplier=1.0)
-        with pytest.raises(APIError, match="exceeds bucket capacity"):
-            await limiter.acquire(tokens=limiter.max_tokens + 1)
-
-    @pytest.mark.asyncio
-    async def test_rate_limiter_concurrent_access_waits(
-        self, monkeypatch: pytest.MonkeyPatch
-    ):
-        """Concurrent callers should share capacity and trigger waits."""
-
-        limiter = RateLimiter(max_calls=2, time_window=10, burst_multiplier=1.0)
-        sleep_calls: list[float] = []
-
-        async def capture_sleep(delay: float) -> None:
-            sleep_calls.append(delay)
-
-        monkeypatch.setattr(asyncio, "sleep", capture_sleep)
-
-        async def make_request() -> float:
-            await limiter.acquire()
-            return limiter.tokens
-
-        results = await asyncio.gather(
-            *(make_request() for _ in range(5)), return_exceptions=False
-        )
-
-        assert len(results) == 5
-        assert sleep_calls, "Expected at least one wait during burst traffic"
-        assert all(tokens >= 0 for tokens in results)
-
-    def test_rate_limiter_initialization(self):
-        """Verify limiter derives bucket settings from parameters."""
-
-        limiter = RateLimiter(max_calls=10, time_window=20, burst_multiplier=2.0)
-
-        assert limiter.max_calls == 10
-        assert limiter.time_window == 20
-        assert limiter.burst_multiplier == 2.0
-        assert limiter.max_tokens == 20
-        assert limiter.tokens == limiter.max_tokens
-        assert pytest.approx(limiter.refill_rate) == 0.5

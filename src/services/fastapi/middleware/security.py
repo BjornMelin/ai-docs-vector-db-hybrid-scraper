@@ -11,14 +11,19 @@ References:
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
+from urllib.parse import urlparse, urlunparse
 
 from slowapi import Limiter  # type: ignore
 from slowapi.errors import RateLimitExceeded  # type: ignore
 from slowapi.middleware import SlowAPIMiddleware  # type: ignore
 from slowapi.util import get_remote_address  # type: ignore
+from starlette.applications import Starlette
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
+
+from src.config.loader import get_settings
+from src.config.security import SecurityConfig
 
 
 _DEFAULT_HEADERS: Mapping[str, str] = {
@@ -54,31 +59,82 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
 
 def enable_global_rate_limit(
-    app,
+    app: Starlette,
     *,
-    default_limit: str = "100/minute",
-    key_func=get_remote_address,
+    config: SecurityConfig | None = None,
+    key_func: Callable[[Request], str] = get_remote_address,
     storage_uri: str | None = None,
-) -> Limiter:
+) -> Limiter | None:
     """Enable SlowAPI global rate limit and attach handlers.
 
     Args:
-        app: FastAPI app.
-        default_limit: E.g. "100/minute", "10/second".
+        app: Target FastAPI or Starlette application.
+        config: Optional :class:`SecurityConfig` override. When ``None`` the
+            configuration is loaded from the global settings cache.
         key_func: Key extraction function (client identifier).
-        storage_uri: Optional Redis URI for distributed limits.
+        storage_uri: Optional Redis URI override for distributed limits.
 
     Returns:
-        Initialized Limiter instance.
+        Initialized :class:`Limiter` instance when rate limiting is enabled.
+        ``None`` when rate limiting is disabled in the configuration.
     """
 
+    security_config = config or get_settings().security
+    if not security_config.enable_rate_limiting:
+        app.state.limiter = None
+        return None
+
     limiter = Limiter(
-        key_func=key_func, default_limits=[default_limit], storage_uri=storage_uri
+        key_func=key_func,
+        default_limits=[_format_default_limit(security_config)],
+        storage_uri=storage_uri or _resolve_storage_uri(security_config),
     )
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limited)
     app.add_middleware(SlowAPIMiddleware)
     return limiter
+
+
+def _format_default_limit(config: SecurityConfig) -> str:
+    """Convert :class:`SecurityConfig` limits to SlowAPI notation."""
+
+    window = config.rate_limit_window
+    granularity_map: dict[int, str] = {
+        1: "second",
+        60: "minute",
+        3600: "hour",
+        86400: "day",
+    }
+    granularity = granularity_map.get(window)
+    if granularity:
+        return f"{config.default_rate_limit}/{granularity}"
+    return f"{config.default_rate_limit}/{window} second"
+
+
+def _resolve_storage_uri(config: SecurityConfig) -> str | None:
+    """Build the SlowAPI storage URI from security configuration."""
+
+    if not config.redis_url:
+        return None
+
+    if not config.redis_password:
+        return config.redis_url
+
+    parsed = urlparse(config.redis_url)
+    if parsed.password:
+        return config.redis_url
+
+    username = parsed.username or ""
+    credentials = (
+        f"{username}:{config.redis_password}"
+        if username
+        else f":{config.redis_password}"
+    )
+    host = parsed.hostname or ""
+    port = f":{parsed.port}" if parsed.port else ""
+    netloc = f"{credentials}@{host}{port}"
+    rebuilt = parsed._replace(netloc=netloc)
+    return urlunparse(rebuilt)
 
 
 async def _rate_limited(_: Request, exc: RateLimitExceeded) -> JSONResponse:
