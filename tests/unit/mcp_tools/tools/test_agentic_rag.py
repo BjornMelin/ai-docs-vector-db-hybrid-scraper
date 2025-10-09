@@ -41,9 +41,6 @@ agentic_rag: Any = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = agentic_rag
 spec.loader.exec_module(agentic_rag)  # type: ignore[arg-type]
 
-if not hasattr(agentic_rag, "telemetry"):
-    agentic_rag.telemetry = types.SimpleNamespace(reset=lambda: None)
-
 GraphAnalysisOutcome = cast(Any, graph_module.GraphAnalysisOutcome)
 GraphSearchOutcome = cast(Any, graph_module.GraphSearchOutcome)
 
@@ -78,13 +75,27 @@ class StubGraphRunner:
         return self._analysis_outcome
 
 
+class StubMCP:
+    """Stub FastMCP server recording registered tools."""
+
+    def __init__(self) -> None:
+        self.tools: dict[str, Any] = {}
+
+    def tool(self, *, name: str, description: str, tags: set[str]):  # type: ignore[override]
+        def decorator(func: Any) -> Any:
+            self.tools[name] = func
+            return func
+
+        return decorator
+
+
 @pytest.fixture(autouse=True)
 def reset_agentic_state():
-    agentic_rag.telemetry.reset()
+    agentic_rag.get_ai_tracker().reset()
     agentic_rag._runner_cache.clear()
     agentic_rag._runner_locks.clear()
     yield
-    agentic_rag.telemetry.reset()
+    agentic_rag.get_ai_tracker().reset()
     agentic_rag._runner_cache.clear()
     agentic_rag._runner_locks.clear()
 
@@ -171,3 +182,45 @@ async def test_run_agentic_analysis() -> None:
     assert response.metrics["latency_ms"] == 12.0
     assert stub_runner.run_analysis_calls[0]["query"] == "analyse"
     assert response.errors[0]["code"] == "warning"
+
+
+@pytest.mark.asyncio
+async def test_metrics_tools_surface_tracker_snapshot() -> None:
+    """Metrics tools should expose aggregated tracker statistics."""
+
+    tracker = agentic_rag.get_ai_tracker()
+    tracker.reset()
+    tracker.record_operation(
+        operation="agent.graph.run",
+        provider="search",
+        model="run",
+        duration_s=0.5,
+        success=True,
+    )
+    tracker.record_operation(
+        operation="agent.graph.run",
+        provider="search",
+        model="run",
+        duration_s=0.25,
+        success=False,
+    )
+    tracker.record_operation(
+        operation="agent.graph.retrieval",
+        provider="docs",
+        model="search",
+        duration_s=0.2,
+    )
+
+    stub_mcp = StubMCP()
+    agentic_rag.register_tools(stub_mcp, DummyClientManager())
+    metrics_tool = stub_mcp.tools["agent_performance_metrics"]
+    orchestration_tool = stub_mcp.tools["agentic_orchestration_metrics"]
+
+    metrics_response = await metrics_tool()
+    assert metrics_response.success is True
+    assert metrics_response.operations["agent.graph.run"].count == 2
+
+    orchestration_response = await orchestration_tool()
+    assert orchestration_response.run_summary.total_runs == 2
+    assert orchestration_response.run_summary.successful_runs == 1
+    assert orchestration_response.operations["agent.graph.retrieval"].count == 1

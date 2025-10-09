@@ -20,12 +20,26 @@ class TestAIOperationTracker:
             duration_s=0.1,
             tokens=10,
             cost_usd=0.02,
+            success=True,
+        )
+        tracker.record_operation(
+            operation="llm",
+            provider="openai",
+            model="gpt",
+            duration_s=0.2,
+            tokens=5,
+            cost_usd=0.01,
+            success=False,
         )
 
         snapshot = tracker.snapshot()
-        assert snapshot["llm"]["count"] == 1
-        assert snapshot["llm"]["total_tokens"] == 10
-        assert snapshot["llm"]["total_cost_usd"] == 0.02
+        assert snapshot["llm"]["count"] == 2
+        assert snapshot["llm"]["success_count"] == 1
+        assert snapshot["llm"]["total_tokens"] == 15
+        assert snapshot["llm"]["total_cost_usd"] == 0.03
+
+        tracker.reset()
+        assert tracker.snapshot() == {}
 
     def test_singleton_helpers(self) -> None:
         tracker = get_ai_tracker()

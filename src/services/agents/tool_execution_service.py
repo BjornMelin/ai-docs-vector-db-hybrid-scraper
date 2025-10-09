@@ -20,19 +20,19 @@ from opentelemetry.trace import Status, StatusCode
 
 from src.infrastructure.client_manager import ClientManager
 from src.services.errors import APIError
-from src.services.monitoring.telemetry_repository import get_telemetry_repository
+from src.services.observability.tracking import record_ai_operation
 
 
 logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
-telemetry = get_telemetry_repository()
 
 _DEFAULT_MAX_ATTEMPTS = 2
 _DEFAULT_BACKOFF_SECONDS = 0.25
 
-_METRIC_TOOL_CALLS = "mcp_tool_calls_total"
-_METRIC_TOOL_ERRORS = "mcp_tool_errors_total"
-_METRIC_TOOL_LATENCY = "mcp_tool_latency_ms"
+_OP_TOOL_CALL = "mcp.tool.call"
+_OP_TOOL_ERROR_TIMEOUT = "mcp.tool.error.timeout"
+_OP_TOOL_ERROR_EXCEPTION = "mcp.tool.error.exception"
+_OP_TOOL_ERROR_REMOTE = "mcp.tool.error.remote"
 
 
 class ToolExecutionError(RuntimeError):
@@ -193,19 +193,19 @@ class ToolExecutionService:
                             read_timeout_seconds=timeout_seconds,
                         )
                 except TimeoutError as exc:
+                    duration = time.perf_counter() - start_time
                     last_error = ToolExecutionTimeout(
                         f"MCP tool '{tool_name}' timed out on server '{server_name}'",
                         server_name=server_name,
                     )
                     span.record_exception(exc)
                     span.set_status(Status(StatusCode.ERROR, "timeout"))
-                    telemetry.increment_counter(
-                        _METRIC_TOOL_ERRORS,
-                        tags={
-                            "tool": tool_name,
-                            "server": server_name,
-                            "reason": "timeout",
-                        },
+                    record_ai_operation(
+                        operation_type=_OP_TOOL_ERROR_TIMEOUT,
+                        provider=server_name,
+                        model=tool_name,
+                        duration_s=duration,
+                        success=False,
                     )
                     logger.warning(
                         "Timeout invoking MCP tool '%s' on server '%s' (attempt %s)",
@@ -214,19 +214,19 @@ class ToolExecutionService:
                         attempt,
                     )
                 except Exception as exc:  # pragma: no cover - defensive guard
+                    duration = time.perf_counter() - start_time
                     last_error = ToolExecutionError(
                         f"Unexpected error executing '{tool_name}' on '{server_name}'",
                         server_name=server_name,
                     )
                     span.record_exception(exc)
                     span.set_status(Status(StatusCode.ERROR, "exception"))
-                    telemetry.increment_counter(
-                        _METRIC_TOOL_ERRORS,
-                        tags={
-                            "tool": tool_name,
-                            "server": server_name,
-                            "reason": "exception",
-                        },
+                    record_ai_operation(
+                        operation_type=_OP_TOOL_ERROR_EXCEPTION,
+                        provider=server_name,
+                        model=tool_name,
+                        duration_s=duration,
+                        success=False,
                     )
                     logger.exception(
                         "Unexpected failure invoking MCP tool '%s' on server '%s'",
@@ -234,21 +234,20 @@ class ToolExecutionService:
                         server_name,
                     )
                 else:
-                    duration_ms = (time.perf_counter() - start_time) * 1000.0
+                    duration = time.perf_counter() - start_time
+                    duration_ms = duration * 1000.0
                     execution = ToolExecutionResult(
                         tool_name=tool_name,
                         server_name=server_name,
                         duration_ms=duration_ms,
                         result=result,
                     )
-                    telemetry.increment_counter(
-                        _METRIC_TOOL_CALLS,
-                        tags={"tool": tool_name, "server": server_name},
-                    )
-                    telemetry.record_observation(
-                        _METRIC_TOOL_LATENCY,
-                        execution.duration_ms,
-                        tags={"tool": tool_name, "server": server_name},
+                    record_ai_operation(
+                        operation_type=_OP_TOOL_CALL,
+                        provider=server_name,
+                        model=tool_name,
+                        duration_s=duration,
+                        success=not execution.is_error,
                     )
                     if execution.is_error:
                         last_error = ToolExecutionFailure(
@@ -258,13 +257,12 @@ class ToolExecutionService:
                         )
                         span.record_exception(last_error)
                         span.set_status(Status(StatusCode.ERROR, "tool_error"))
-                        telemetry.increment_counter(
-                            _METRIC_TOOL_ERRORS,
-                            tags={
-                                "tool": tool_name,
-                                "server": server_name,
-                                "reason": "tool",
-                            },
+                        record_ai_operation(
+                            operation_type=_OP_TOOL_ERROR_REMOTE,
+                            provider=server_name,
+                            model=tool_name,
+                            duration_s=duration,
+                            success=False,
                         )
                         logger.error(
                             "MCP tool '%s' reported error on server '%s'",

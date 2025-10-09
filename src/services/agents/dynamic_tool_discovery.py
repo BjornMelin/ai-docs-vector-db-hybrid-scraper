@@ -19,19 +19,17 @@ from opentelemetry import trace
 
 from src.infrastructure.client_manager import ClientManager
 from src.services.errors import APIError
-from src.services.monitoring.telemetry_repository import get_telemetry_repository
+from src.services.observability.tracking import record_ai_operation
 
 
 logger = logging.getLogger(__name__)
-telemetry = get_telemetry_repository()
 tracer = trace.get_tracer(__name__)
 
-_METRIC_DISCOVERY_RUNS = "mcp_discovery_runs_total"
-_METRIC_DISCOVERY_ERRORS = "mcp_discovery_errors_total"
-_METRIC_DISCOVERY_CACHE_HITS = "mcp_discovery_cache_hits_total"
-_METRIC_DISCOVERY_CACHE_MISSES = "mcp_discovery_cache_misses_total"
-_METRIC_DISCOVERY_REFRESH_LATENCY = "mcp_discovery_refresh_latency_ms"
-_METRIC_DISCOVERY_CHANGES = "mcp_discovery_changes_total"
+_OP_DISCOVERY_CACHE = "mcp.discovery.cache"
+_OP_DISCOVERY_REFRESH = "mcp.discovery.refresh"
+_OP_DISCOVERY_CHANGE = "mcp.discovery.change"
+_OP_DISCOVERY_RUN = "mcp.discovery.run"
+_OP_DISCOVERY_ERROR = "mcp.discovery.error"
 
 
 class ToolCapabilityType(str, Enum):
@@ -100,12 +98,22 @@ class DynamicToolDiscovery:  # pylint: disable=too-many-instance-attributes
 
         now = time.monotonic()
         if not force and self._cache_ttl_seconds and now < self._cache_expires_at:
-            telemetry.increment_counter(_METRIC_DISCOVERY_CACHE_HITS)
+            record_ai_operation(
+                operation_type=_OP_DISCOVERY_CACHE,
+                provider="mcp.discovery",
+                model="hit",
+                duration_s=0.0,
+            )
             return
         async with self._lock:
             now = time.monotonic()
             if not force and self._cache_ttl_seconds and now < self._cache_expires_at:
-                telemetry.increment_counter(_METRIC_DISCOVERY_CACHE_HITS)
+                record_ai_operation(
+                    operation_type=_OP_DISCOVERY_CACHE,
+                    provider="mcp.discovery",
+                    model="hit",
+                    duration_s=0.0,
+                )
                 return
 
             start_time = time.perf_counter()
@@ -116,14 +124,18 @@ class DynamicToolDiscovery:  # pylint: disable=too-many-instance-attributes
                 capabilities = await self._discover_capabilities()
             duration_ms = (time.perf_counter() - start_time) * 1000.0
 
-            telemetry.increment_counter(
-                _METRIC_DISCOVERY_CACHE_MISSES,
-                tags={
-                    "force": str(force).lower(),
-                    "tool_count": str(len(capabilities)),
-                },
+            record_ai_operation(
+                operation_type=_OP_DISCOVERY_CACHE,
+                provider="mcp.discovery",
+                model="miss" if not force else "force_refresh",
+                duration_s=0.0,
             )
-            telemetry.record_observation(_METRIC_DISCOVERY_REFRESH_LATENCY, duration_ms)
+            record_ai_operation(
+                operation_type=_OP_DISCOVERY_REFRESH,
+                provider="mcp.discovery",
+                model="refresh",
+                duration_s=duration_ms / 1000.0,
+            )
 
             previous_keys = set(self._capabilities.keys())
             new_keys = set(capabilities.keys())
@@ -131,15 +143,19 @@ class DynamicToolDiscovery:  # pylint: disable=too-many-instance-attributes
             removed_keys = previous_keys - new_keys
             for key in added_keys:
                 server, _ = key.split(":", 1)
-                telemetry.increment_counter(
-                    _METRIC_DISCOVERY_CHANGES,
-                    tags={"server": server, "action": "added"},
+                record_ai_operation(
+                    operation_type=_OP_DISCOVERY_CHANGE,
+                    provider=server,
+                    model="added",
+                    duration_s=0.0,
                 )
             for key in removed_keys:
                 server, _ = key.split(":", 1)
-                telemetry.increment_counter(
-                    _METRIC_DISCOVERY_CHANGES,
-                    tags={"server": server, "action": "removed"},
+                record_ai_operation(
+                    operation_type=_OP_DISCOVERY_CHANGE,
+                    provider=server,
+                    model="removed",
+                    duration_s=0.0,
                 )
 
             self._capabilities = capabilities
@@ -204,17 +220,22 @@ class DynamicToolDiscovery:  # pylint: disable=too-many-instance-attributes
 
         capabilities: dict[str, ToolCapability] = {}
         for server_name in client.connections:
-            telemetry.increment_counter(
-                _METRIC_DISCOVERY_RUNS,
-                tags={"server": server_name},
+            record_ai_operation(
+                operation_type=_OP_DISCOVERY_RUN,
+                provider=server_name,
+                model="discover",
+                duration_s=0.0,
             )
             try:
                 async with self._open_session(client, server_name) as session:
                     tools = await session.list_tools()
             except Exception:  # pragma: no cover - defensive guard
-                telemetry.increment_counter(
-                    _METRIC_DISCOVERY_ERRORS,
-                    tags={"server": server_name, "reason": "session_error"},
+                record_ai_operation(
+                    operation_type=_OP_DISCOVERY_ERROR,
+                    provider=server_name,
+                    model="session_error",
+                    duration_s=0.0,
+                    success=False,
                 )
                 logger.exception(
                     "Tool discovery failed for MCP server '%s'", server_name
@@ -297,9 +318,12 @@ class DynamicToolDiscovery:  # pylint: disable=too-many-instance-attributes
             async with client.session(server_name) as session:
                 yield session
         except ValueError as exc:  # server not configured
-            telemetry.increment_counter(
-                _METRIC_DISCOVERY_ERRORS,
-                tags={"server": server_name, "reason": "not_configured"},
+            record_ai_operation(
+                operation_type=_OP_DISCOVERY_ERROR,
+                provider=server_name,
+                model="not_configured",
+                duration_s=0.0,
+                success=False,
             )
             msg = f"MCP server '{server_name}' is not configured"
             raise APIError(msg) from exc
