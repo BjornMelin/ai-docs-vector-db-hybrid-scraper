@@ -37,18 +37,15 @@ from src.services.agents.tool_execution_service import (
     ToolExecutionService,
     ToolExecutionTimeout,
 )
-from src.services.monitoring.telemetry_repository import get_telemetry_repository
+from src.services.observability.tracking import record_ai_operation
 
 
 logger = logging.getLogger(__name__)
-telemetry = get_telemetry_repository()
 tracer = trace.get_tracer(__name__)
 
-_METRIC_RUNS = "agentic_graph_runs_total"
-_METRIC_LATENCY = "agentic_graph_latency_ms"
-_METRIC_RETRIEVAL_ATTEMPTS = "agentic_retrieval_attempts_total"
-_METRIC_RETRIEVAL_LATENCY = "agentic_retrieval_latency_ms"
-_METRIC_RETRIEVAL_ERRORS = "agentic_retrieval_errors_total"
+_OP_AGENT_RUN = "agent.graph.run"
+_OP_AGENT_DISCOVERY_ERROR = "agent.graph.discovery.error"
+_OP_AGENT_RETRIEVAL = "agent.graph.retrieval"
 
 
 def _serialise_document(document: Any) -> dict[str, Any]:
@@ -319,18 +316,12 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
                 now = time.perf_counter()
                 start_timestamp = float(state.get("start_time", now))
                 duration_ms = (now - start_timestamp) * 1000.0
-                telemetry.increment_counter(
-                    _METRIC_RUNS,
-                    tags={
-                        "mode": state.get("mode", "search"),
-                        "success": "false",
-                        "reason": "timeout",
-                    },
-                )
-                telemetry.record_observation(
-                    _METRIC_LATENCY,
-                    duration_ms,
-                    tags={"mode": state.get("mode", "search")},
+                record_ai_operation(
+                    operation_type=_OP_AGENT_RUN,
+                    provider=str(state.get("mode", "search")),
+                    model="timeout",
+                    duration_s=duration_ms / 1000.0,
+                    success=False,
                 )
                 errors = list(state.get("errors", []))
                 errors.append(
@@ -393,13 +384,12 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
                     "discovery", AgentErrorCode.DISCOVERY_ERROR, message=str(exc)
                 )
             )
-            telemetry.increment_counter(
-                _METRIC_RUNS,
-                tags={
-                    "mode": state.get("mode", "search"),
-                    "success": "false",
-                    "reason": "discovery_error",
-                },
+            record_ai_operation(
+                operation_type=_OP_AGENT_DISCOVERY_ERROR,
+                provider=str(state.get("mode", "search")),
+                model="refresh",
+                duration_s=0.0,
+                success=False,
             )
             with tracer.start_as_current_span(
                 "agent.tool_discovery",
@@ -453,28 +443,23 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
         }
         try:
             with tracer.start_as_current_span("agent.retrieval", attributes=attributes):
-                telemetry.increment_counter(
-                    _METRIC_RETRIEVAL_ATTEMPTS,
-                    tags={"collection": query.collection},
-                )
                 fetched = await self._retrieval_helper.fetch(query)
                 documents = [_serialise_document(doc) for doc in fetched]
                 duration_ms = (time.perf_counter() - start_time) * 1000.0
-                telemetry.record_observation(
-                    _METRIC_RETRIEVAL_LATENCY,
-                    duration_ms,
-                    tags={"collection": query.collection},
+                record_ai_operation(
+                    operation_type=_OP_AGENT_RETRIEVAL,
+                    provider=query.collection,
+                    model=str(state.get("mode", "search")),
+                    duration_s=duration_ms / 1000.0,
                 )
         except Exception:  # pragma: no cover - defensive guard
             duration_ms = (time.perf_counter() - start_time) * 1000.0
-            telemetry.record_observation(
-                _METRIC_RETRIEVAL_LATENCY,
-                duration_ms,
-                tags={"collection": query.collection},
-            )
-            telemetry.increment_counter(
-                _METRIC_RETRIEVAL_ERRORS,
-                tags={"collection": query.collection},
+            record_ai_operation(
+                operation_type=_OP_AGENT_RETRIEVAL,
+                provider=query.collection,
+                model=str(state.get("mode", "search")),
+                duration_s=duration_ms / 1000.0,
+                success=False,
             )
             logger.exception("Retrieval failed for collection %s", query.collection)
             errors = list(state.get("errors", []))
@@ -639,17 +624,12 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
                 "agent.error_count": len(errors),
             },
         ):
-            telemetry.increment_counter(
-                _METRIC_RUNS,
-                tags={
-                    "mode": state.get("mode", "search"),
-                    "success": str(success).lower(),
-                },
-            )
-            telemetry.record_observation(
-                _METRIC_LATENCY,
-                duration_ms,
-                tags={"mode": state.get("mode", "search")},
+            record_ai_operation(
+                operation_type=_OP_AGENT_RUN,
+                provider=str(state.get("mode", "search")),
+                model="run",
+                duration_s=duration_ms / 1000.0,
+                success=success,
             )
         return {"metrics": metrics, "success": success}
 

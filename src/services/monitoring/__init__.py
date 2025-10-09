@@ -15,13 +15,11 @@ from src.services.monitoring.initialization import (
 )
 from src.services.monitoring.metrics import MetricsRegistry
 from src.services.monitoring.middleware import PrometheusMiddleware
-from src.services.monitoring.telemetry_repository import get_telemetry_repository
 
 
 __all__ = [
     "HealthCheckManager",
     "MetricsRegistry",
-    "get_telemetry_repository",
     "PrometheusMiddleware",
     "initialize_monitoring_system",
     "setup_fastmcp_monitoring",

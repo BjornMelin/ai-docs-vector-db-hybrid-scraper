@@ -19,49 +19,43 @@ from src.services.agents import (
     GraphSearchOutcome,
 )
 from src.services.errors import ToolError
-from src.services.monitoring.telemetry_repository import get_telemetry_repository
+from src.services.observability.tracking import get_ai_tracker
 
 
 logger = logging.getLogger(__name__)
 
 SCHEMA_VERSION = "agentic_rag.v2"
-RUN_COUNT_METRIC = "agentic_graph_runs_total"
-LATENCY_METRIC = "agentic_graph_latency_ms"
+RUN_OPERATION = "agent.graph.run"
 
 _runner_cache: WeakKeyDictionary[ClientManager, GraphRunner] = WeakKeyDictionary()
 _runner_locks: WeakKeyDictionary[ClientManager, asyncio.Lock] = WeakKeyDictionary()
 
 
-class CounterSamplePayload(BaseModel):
-    """Telemetry counter sample."""
+class OperationSamplePayload(BaseModel):
+    """Aggregated statistics for a tracked operation."""
 
     model_config = ConfigDict(extra="forbid")
 
-    tags: dict[str, str] = Field(default_factory=dict, description="Sample tags")
-    value: float = Field(0.0, description="Observed counter value")
-
-
-class HistogramSamplePayload(BaseModel):
-    """Telemetry histogram sample."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    tags: dict[str, str] = Field(default_factory=dict, description="Sample tags")
-    count: int = Field(0, ge=0, description="Number of observations")
-    sum: float = Field(0.0, description="Sum of observations")
-    values: list[float] = Field(default_factory=list, description="Raw observations")
+    count: int = Field(0, ge=0, description="Total recorded operations")
+    success_count: int = Field(0, ge=0, description="Successful operations")
+    total_duration_s: float = Field(
+        0.0, ge=0.0, description="Cumulative duration in seconds"
+    )
+    total_tokens: int = Field(0, ge=0, description="Tokens processed")
+    total_cost_usd: float = Field(0.0, ge=0.0, description="Cost incurred in USD")
 
 
 class AgentPerformanceMetricsResponse(BaseModel):
-    """Metrics response capturing counters and histograms."""
+    """Metrics response exposing aggregated operation statistics."""
 
     model_config = ConfigDict(extra="forbid")
 
     success: bool
     schema_version: str
     request_id: str
-    counters: dict[str, list[CounterSamplePayload]] = Field(default_factory=dict)
-    histograms: dict[str, list[HistogramSamplePayload]] = Field(default_factory=dict)
+    operations: dict[str, OperationSamplePayload] = Field(
+        default_factory=dict, description="Aggregated metrics keyed by operation"
+    )
     warnings: list[str] = Field(default_factory=list)
 
 
@@ -70,9 +64,11 @@ class RunSummary(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    total: int = Field(0, ge=0, description="Total recorded runs")
-    successful: int = Field(0, ge=0, description="Successful runs")
-    samples: list[CounterSamplePayload] = Field(default_factory=list)
+    total_runs: int = Field(0, ge=0, description="Total recorded runs")
+    successful_runs: int = Field(0, ge=0, description="Successful runs")
+    total_duration_s: float = Field(
+        0.0, ge=0.0, description="Cumulative duration for all runs"
+    )
 
 
 class AgenticOrchestrationMetricsResponse(BaseModel):
@@ -84,7 +80,9 @@ class AgenticOrchestrationMetricsResponse(BaseModel):
     schema_version: str
     request_id: str
     run_summary: RunSummary
-    latency_samples: list[HistogramSamplePayload] = Field(default_factory=list)
+    operations: dict[str, OperationSamplePayload] = Field(
+        default_factory=dict, description="Aggregated metrics keyed by operation"
+    )
     warnings: list[str] = Field(default_factory=list)
 
 
@@ -461,77 +459,35 @@ async def _run_analysis(
 
 
 def _export_metrics_snapshot() -> tuple[dict[str, Any], list[str]]:
-    """Return telemetry snapshot with warnings for any export issues."""
+    """Return tracker snapshot with warnings for any export issues."""
 
     try:
-        snapshot = get_telemetry_repository().export_snapshot()
+        snapshot = get_ai_tracker().snapshot()
         return snapshot, []
     except Exception as exc:  # pragma: no cover - defensive guard.
         logger.exception("Failed to export telemetry snapshot", exc_info=exc)
-        return {"counters": {}, "histograms": {}}, [f"export_error:{exc}"]
+        return {}, [f"export_error:{exc}"]
 
 
-def _coerce_counter_samples(
+def _parse_operation_samples(
     data: Any, warnings: list[str]
-) -> dict[str, list[CounterSamplePayload]]:
+) -> dict[str, OperationSamplePayload]:
+    """Validate and coerce tracker snapshots into payload objects."""
+
     if not isinstance(data, Mapping):
         if data is not None:
-            warnings.append("counters: expected mapping")
+            warnings.append("operations: expected mapping")
         return {}
 
-    parsed: dict[str, list[CounterSamplePayload]] = {}
-    for name, entries in data.items():
-        if not isinstance(entries, Sequence):
-            warnings.append(f"counters[{name}]: expected sequence")
+    parsed: dict[str, OperationSamplePayload] = {}
+    for name, entry in data.items():
+        if not isinstance(entry, Mapping):
+            warnings.append(f"operations[{name}]: expected mapping")
             continue
-        samples: list[CounterSamplePayload] = []
-        for index, entry in enumerate(entries):
-            if not isinstance(entry, Mapping):
-                type_name = type(entry).__name__
-                warnings.append(
-                    f"counters[{name}][{index}]: expected mapping, got {type_name}"
-                )
-                continue
-            try:
-                samples.append(CounterSamplePayload(**dict(entry)))
-            except ValidationError as exc:
-                warnings.append(
-                    f"counters[{name}][{index}]: validation error {exc.errors()}"
-                )
-        if samples:
-            parsed[str(name)] = samples
-    return parsed
-
-
-def _coerce_histogram_samples(
-    data: Any, warnings: list[str]
-) -> dict[str, list[HistogramSamplePayload]]:
-    if not isinstance(data, Mapping):
-        if data is not None:
-            warnings.append("histograms: expected mapping")
-        return {}
-
-    parsed: dict[str, list[HistogramSamplePayload]] = {}
-    for name, entries in data.items():
-        if not isinstance(entries, Sequence):
-            warnings.append(f"histograms[{name}]: expected sequence")
-            continue
-        samples: list[HistogramSamplePayload] = []
-        for index, entry in enumerate(entries):
-            if not isinstance(entry, Mapping):
-                type_name = type(entry).__name__
-                warnings.append(
-                    f"histograms[{name}][{index}]: expected mapping, got {type_name}"
-                )
-                continue
-            try:
-                samples.append(HistogramSamplePayload(**dict(entry)))
-            except ValidationError as exc:
-                warnings.append(
-                    f"histograms[{name}][{index}]: validation error {exc.errors()}"
-                )
-        if samples:
-            parsed[str(name)] = samples
+        try:
+            parsed[str(name)] = OperationSamplePayload(**dict(entry))
+        except ValidationError as exc:
+            warnings.append(f"operations[{name}]: validation error {exc.errors()}")
     return parsed
 
 
@@ -562,21 +518,19 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
 
     @mcp.tool(
         name="agent_performance_metrics",
-        description="Inspect raw telemetry counters and histograms",
+        description="Inspect aggregated in-memory agent telemetry",
         tags={"telemetry", "metrics"},
     )
     async def get_agent_performance_metrics() -> AgentPerformanceMetricsResponse:
-        """Return raw telemetry counters and histograms for agent runs."""
+        """Return aggregated tracker statistics for agent operations."""
 
         snapshot, warnings = _export_metrics_snapshot()
-        counters = _coerce_counter_samples(snapshot.get("counters"), warnings)
-        histograms = _coerce_histogram_samples(snapshot.get("histograms"), warnings)
+        operations = _parse_operation_samples(snapshot, warnings)
         return AgentPerformanceMetricsResponse(
             success=not warnings,
             schema_version=SCHEMA_VERSION,
             request_id=str(uuid4()),
-            counters=counters,
-            histograms=histograms,
+            operations=operations,
             warnings=warnings,
         )
 
@@ -595,7 +549,7 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
                 context={"request_id": str(uuid4())},
             )
 
-        get_telemetry_repository().reset()
+        get_ai_tracker().reset()
         return {
             "success": True,
             "schema_version": SCHEMA_VERSION,
@@ -626,7 +580,7 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
 
     @mcp.tool(
         name="agentic_orchestration_metrics",
-        description="Summarise LangGraph run counters and latency histograms",
+        description="Summarise LangGraph run performance from the tracker",
         tags={"telemetry", "metrics"},
     )
     async def get_agentic_orchestration_metrics() -> (
@@ -635,30 +589,20 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
         """Return aggregated LangGraph orchestration metrics."""
 
         snapshot, warnings = _export_metrics_snapshot()
-        counters = _coerce_counter_samples(snapshot.get("counters"), warnings)
-        histograms = _coerce_histogram_samples(snapshot.get("histograms"), warnings)
-
-        run_samples = counters.get(RUN_COUNT_METRIC, [])
-        total_runs = int(sum(sample.value for sample in run_samples))
-        successful_runs = int(
-            sum(
-                sample.value
-                for sample in run_samples
-                if sample.tags.get("success") == "true"
-            )
+        operations = _parse_operation_samples(snapshot, warnings)
+        run_stats = operations.get(RUN_OPERATION)
+        summary = RunSummary(
+            total_runs=run_stats.count if run_stats else 0,
+            successful_runs=run_stats.success_count if run_stats else 0,
+            total_duration_s=run_stats.total_duration_s if run_stats else 0.0,
         )
-        latency_samples = histograms.get(LATENCY_METRIC, [])
 
         return AgenticOrchestrationMetricsResponse(
             success=not warnings,
             schema_version=SCHEMA_VERSION,
             request_id=str(uuid4()),
-            run_summary=RunSummary(
-                total=total_runs,
-                successful=successful_runs,
-                samples=run_samples,
-            ),
-            latency_samples=latency_samples,
+            run_summary=summary,
+            operations=operations,
             warnings=warnings,
         )
 

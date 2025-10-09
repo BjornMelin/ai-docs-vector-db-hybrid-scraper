@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, cast
+from typing import Any
 
 import pytest
 from mcp.types import CallToolResult
@@ -25,7 +25,7 @@ for module_name in (
     "src.services.agents",
     "src.services.agents.tool_execution_service",
     "src.infrastructure.client_manager",
-    "src.services.monitoring.telemetry_repository",
+    "src.services.observability.tracking",
     "src.services.errors",
 ):
     _original_modules[module_name] = sys.modules.pop(module_name, None)
@@ -34,14 +34,19 @@ infra_stub: Any = types.ModuleType("src.infrastructure.client_manager")
 
 
 class ClientManager:  # noqa: D401 - lightweight stub
-    def __init__(self) -> None:
+    def __init__(
+        self, servers: list[str] | None = None, *, timeout_ms: int = 1000
+    ) -> None:
+        server_names = servers or ["primary"]
         self.config = SimpleNamespace(
             mcp_client=SimpleNamespace(
-                request_timeout_ms=1000,
-                servers=[SimpleNamespace(name="primary")],
+                request_timeout_ms=timeout_ms,
+                servers=[SimpleNamespace(name=name) for name in server_names],
             )
         )
-        self._client = SimpleNamespace(connections={"primary": object()})
+        self._client = SimpleNamespace(
+            connections={name: object() for name in server_names}
+        )
 
     async def get_mcp_client(self) -> object:  # noqa: D401
         return self._client
@@ -50,49 +55,31 @@ class ClientManager:  # noqa: D401 - lightweight stub
 infra_stub.ClientManager = ClientManager
 sys.modules["src.infrastructure.client_manager"] = infra_stub
 
-telemetry_stub: Any = types.ModuleType("src.services.monitoring.telemetry_repository")
+tracking_stub: Any = types.ModuleType("src.services.observability.tracking")
 
 
-class _TelemetryRepository:
+class _Tracker:
     def __init__(self) -> None:
-        self.calls: list[tuple[str, dict[str, str]]] = []
-        self.observations: list[tuple[str, float, dict[str, str]]] = []
-
-    def increment_counter(
-        self, name: str, *, value: int = 1, tags: dict[str, str] | None = None
-    ) -> None:
-        self.calls.append((name, tags or {}))
-
-    def record_observation(
-        self, name: str, value: float, *, tags: dict[str, str] | None = None
-    ) -> None:
-        self.observations.append((name, value, tags or {}))
-
-    def export_snapshot(self) -> dict[str, object]:
-        counters: dict[str, list[dict[str, object]]] = {}
-        for metric, tags in self.calls:
-            counters.setdefault(metric, []).append({"value": 1, "tags": tags})
-        histograms: dict[str, list[dict[str, object]]] = {}
-        for metric, value, tags in self.observations:
-            histograms.setdefault(metric, []).append(
-                {"count": 1, "sum": value, "tags": tags}
-            )
-        return {"counters": counters, "histograms": histograms}
+        self.operations: list[dict[str, Any]] = []
 
     def reset(self) -> None:
-        self.calls.clear()
-        self.observations.clear()
+        self.operations.clear()
 
 
-_repository = _TelemetryRepository()
+_tracker = _Tracker()
 
 
-def _get_telemetry_repository() -> _TelemetryRepository:
-    return _repository
+def _record_ai_operation(**payload: Any) -> None:
+    _tracker.operations.append(payload)
 
 
-telemetry_stub.get_telemetry_repository = _get_telemetry_repository
-sys.modules["src.services.monitoring.telemetry_repository"] = telemetry_stub
+def _get_ai_tracker() -> _Tracker:
+    return _tracker
+
+
+tracking_stub.record_ai_operation = _record_ai_operation
+tracking_stub.get_ai_tracker = _get_ai_tracker
+sys.modules["src.services.observability.tracking"] = tracking_stub
 
 services_stub: Any = types.ModuleType("src.services")
 errors_stub: Any = types.ModuleType("src.services.errors")
@@ -123,7 +110,17 @@ ToolExecutionService = _module.ToolExecutionService
 ToolExecutionFailure = _module.ToolExecutionFailure
 ToolExecutionInvalidArgument = _module.ToolExecutionInvalidArgument
 ToolExecutionTimeout = _module.ToolExecutionTimeout
-get_telemetry_repository = _get_telemetry_repository
+ToolExecutionError = _module.ToolExecutionError
+recorded_operations = _tracker.operations
+
+
+@pytest.fixture(autouse=True)
+def _reset_tracker() -> Any:
+    """Ensure tracker state is cleared between tests."""
+
+    _tracker.reset()
+    yield
+    _tracker.reset()
 
 
 @pytest.mark.asyncio
@@ -133,8 +130,7 @@ async def test_execute_tool_success(monkeypatch: pytest.MonkeyPatch) -> None:
     manager = ClientManager()
     client = await manager.get_mcp_client()
     service = ToolExecutionService(manager, max_attempts=1)
-    telemetry = get_telemetry_repository()  # pylint: disable=no-member
-    telemetry.reset()
+    _tracker.reset()
 
     class DummySession:
         async def call_tool(
@@ -163,11 +159,12 @@ async def test_execute_tool_success(monkeypatch: pytest.MonkeyPatch) -> None:
 
     result = await service.execute_tool("demo", arguments={"foo": "bar"})
     assert result.server_name == "primary"
-    snapshot = cast(dict[str, Any], telemetry.export_snapshot())
-    counters = cast(dict[str, Any], snapshot.get("counters", {}))
-    histograms = cast(dict[str, Any], snapshot.get("histograms", {}))
-    assert counters.get("mcp_tool_calls_total")
-    assert histograms.get("mcp_tool_latency_ms")
+    assert len(recorded_operations) == 1
+    call_operation = recorded_operations[0]
+    assert call_operation["operation_type"] == "mcp.tool.call"
+    assert call_operation["provider"] == "primary"
+    assert call_operation["model"] == "demo"
+    assert call_operation["success"] is True
 
 
 @pytest.mark.asyncio
@@ -187,8 +184,7 @@ async def test_execute_tool_reports_remote_failure(
 
     manager = ClientManager()
     service = ToolExecutionService(manager, max_attempts=1, backoff_seconds=0)
-    telemetry = get_telemetry_repository()
-    telemetry.reset()
+    _tracker.reset()
 
     class DummySession:
         async def call_tool(
@@ -211,13 +207,13 @@ async def test_execute_tool_reports_remote_failure(
     with pytest.raises(ToolExecutionFailure):
         await service.execute_tool("demo", arguments={})
 
-    counters_snapshot = cast(dict[str, Any], telemetry.export_snapshot())
-    counters = cast(
-        list[dict[str, Any]],
-        counters_snapshot.get("counters", {}).get("mcp_tool_errors_total", []),
-    )
-    assert counters
-    assert counters[0]["value"] >= 1
+    assert len(recorded_operations) == 2
+    call_op = recorded_operations[0]
+    error_op = recorded_operations[1]
+    assert call_op["operation_type"] == "mcp.tool.call"
+    assert call_op["success"] is False
+    assert error_op["operation_type"] == "mcp.tool.error.remote"
+    assert error_op["provider"] == "primary"
 
 
 @pytest.mark.asyncio
@@ -226,6 +222,7 @@ async def test_execute_tool_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
 
     manager = ClientManager()
     service = ToolExecutionService(manager, max_attempts=2, backoff_seconds=0)
+    _tracker.reset()
 
     class DummySession:
         async def call_tool(self, *_: Any, **__: Any):  # noqa: D401
@@ -241,3 +238,86 @@ async def test_execute_tool_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
 
     with pytest.raises(ToolExecutionTimeout):
         await service.execute_tool("demo", arguments={})
+    assert len(recorded_operations) == 2
+    for operation in recorded_operations:
+        assert operation["operation_type"] == "mcp.tool.error.timeout"
+        assert operation["success"] is False
+
+
+@pytest.mark.asyncio
+async def test_execute_tool_moves_to_next_server_on_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Service should fallback to the next server and retain telemetry."""
+
+    manager = ClientManager(servers=["primary", "backup"])
+    service = ToolExecutionService(manager, max_attempts=1, backoff_seconds=0)
+
+    results: dict[str, CallToolResult] = {
+        "primary": CallToolResult(content=[], structuredContent=None, isError=True),
+        "backup": CallToolResult(
+            content=[], structuredContent={"ok": True}, isError=False
+        ),
+    }
+
+    class DummySession:
+        def __init__(self, name: str) -> None:
+            self._name = name
+
+        async def call_tool(
+            self,
+            tool_name: str,
+            arguments: dict[str, Any],
+            *,
+            read_timeout_seconds=None,
+        ):  # noqa: D401,ANN001
+            assert tool_name == "demo"
+            assert arguments == {"value": 1}
+            return results[self._name]
+
+    @asynccontextmanager
+    async def fake_open_session(client_arg: object, server_name: str):  # noqa: D401
+        yield DummySession(server_name)
+
+    monkeypatch.setattr(
+        _module.ToolExecutionService, "_open_session", staticmethod(fake_open_session)
+    )
+
+    outcome = await service.execute_tool("demo", arguments={"value": 1})
+    assert outcome.server_name == "backup"
+    assert outcome.result.structuredContent == {"ok": True}
+
+    op_types = [operation["operation_type"] for operation in recorded_operations]
+    assert op_types.count("mcp.tool.error.remote") == 1
+    assert op_types.count("mcp.tool.call") == 2
+    assert any(operation["provider"] == "backup" for operation in recorded_operations)
+
+
+@pytest.mark.asyncio
+async def test_execute_tool_records_unexpected_exceptions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Unexpected errors should raise ToolExecutionError and emit telemetry."""
+
+    manager = ClientManager()
+    service = ToolExecutionService(manager, max_attempts=1, backoff_seconds=0)
+
+    class DummySession:
+        async def call_tool(self, *_: Any, **__: Any):  # noqa: D401
+            raise RuntimeError("boom")
+
+    @asynccontextmanager
+    async def fake_open_session(client_arg: object, server_name: str):  # noqa: D401
+        yield DummySession()
+
+    monkeypatch.setattr(
+        _module.ToolExecutionService, "_open_session", staticmethod(fake_open_session)
+    )
+
+    with pytest.raises(ToolExecutionError) as exc:
+        await service.execute_tool("demo", arguments={})
+    assert exc.value.server_name == "primary"
+    assert len(recorded_operations) == 1
+    operation = recorded_operations[0]
+    assert operation["operation_type"] == "mcp.tool.error.exception"
+    assert operation["success"] is False

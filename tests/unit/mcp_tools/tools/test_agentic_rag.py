@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import importlib.util
 import sys
 import types
@@ -41,11 +42,9 @@ agentic_rag: Any = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = agentic_rag
 spec.loader.exec_module(agentic_rag)  # type: ignore[arg-type]
 
-if not hasattr(agentic_rag, "telemetry"):
-    agentic_rag.telemetry = types.SimpleNamespace(reset=lambda: None)
-
 GraphAnalysisOutcome = cast(Any, graph_module.GraphAnalysisOutcome)
 GraphSearchOutcome = cast(Any, graph_module.GraphSearchOutcome)
+ToolError = cast(Any, agentic_rag.ToolError)
 
 
 class DummyClientManager:
@@ -78,13 +77,27 @@ class StubGraphRunner:
         return self._analysis_outcome
 
 
+class StubMCP:
+    """Stub FastMCP server recording registered tools."""
+
+    def __init__(self) -> None:
+        self.tools: dict[str, Any] = {}
+
+    def tool(self, *, name: str, description: str, tags: set[str]):  # type: ignore[override]
+        def decorator(func: Any) -> Any:
+            self.tools[name] = func
+            return func
+
+        return decorator
+
+
 @pytest.fixture(autouse=True)
 def reset_agentic_state():
-    agentic_rag.telemetry.reset()
+    agentic_rag.get_ai_tracker().reset()
     agentic_rag._runner_cache.clear()
     agentic_rag._runner_locks.clear()
     yield
-    agentic_rag.telemetry.reset()
+    agentic_rag.get_ai_tracker().reset()
     agentic_rag._runner_cache.clear()
     agentic_rag._runner_locks.clear()
 
@@ -171,3 +184,161 @@ async def test_run_agentic_analysis() -> None:
     assert response.metrics["latency_ms"] == 12.0
     assert stub_runner.run_analysis_calls[0]["query"] == "analyse"
     assert response.errors[0]["code"] == "warning"
+
+
+@pytest.mark.asyncio
+async def test_metrics_tools_surface_tracker_snapshot() -> None:
+    """Metrics tools should expose aggregated tracker statistics."""
+
+    tracker = agentic_rag.get_ai_tracker()
+    tracker.reset()
+    tracker.record_operation(
+        operation="agent.graph.run",
+        provider="search",
+        model="run",
+        duration_s=0.5,
+        success=True,
+    )
+    tracker.record_operation(
+        operation="agent.graph.run",
+        provider="search",
+        model="run",
+        duration_s=0.25,
+        success=False,
+    )
+    tracker.record_operation(
+        operation="agent.graph.retrieval",
+        provider="docs",
+        model="search",
+        duration_s=0.2,
+    )
+
+    stub_mcp = StubMCP()
+    agentic_rag.register_tools(stub_mcp, DummyClientManager())
+    metrics_tool = stub_mcp.tools["agent_performance_metrics"]
+    orchestration_tool = stub_mcp.tools["agentic_orchestration_metrics"]
+
+    metrics_response = await metrics_tool()
+    assert metrics_response.success is True
+    assert metrics_response.operations["agent.graph.run"].count == 2
+
+    orchestration_response = await orchestration_tool()
+    assert orchestration_response.run_summary.total_runs == 2
+    assert orchestration_response.run_summary.successful_runs == 1
+    assert orchestration_response.operations["agent.graph.retrieval"].count == 1
+
+
+@pytest.mark.asyncio
+async def test_get_runner_initialises_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    """_get_runner should initialise the LangGraph runner with per-client locking."""
+
+    client_manager = DummyClientManager()
+    stub_runner = StubGraphRunner(search_outcome=None, analysis_outcome=None)
+    build_calls = 0
+
+    def _fake_build_components(
+        cls, manager: DummyClientManager
+    ) -> tuple[Any, Any, Any, StubGraphRunner]:
+        nonlocal build_calls
+        assert manager is client_manager
+        build_calls += 1
+        return (None, None, None, stub_runner)
+
+    monkeypatch.setattr(
+        agentic_rag.GraphRunner,
+        "build_components",
+        classmethod(_fake_build_components),
+    )
+
+    runner_a, runner_b = await asyncio.gather(
+        agentic_rag._get_runner(client_manager),
+        agentic_rag._get_runner(client_manager),
+    )
+
+    assert runner_a is stub_runner
+    assert runner_b is stub_runner
+    assert build_calls == 1
+
+
+def test_parse_operation_samples_validation() -> None:
+    """_parse_operation_samples should validate and coerce tracker snapshots."""
+
+    warnings: list[str] = []
+    parsed = agentic_rag._parse_operation_samples(
+        {
+            "agent.graph.run": {
+                "count": 2,
+                "success_count": 1,
+                "total_duration_s": 0.4,
+                "total_tokens": 32,
+                "total_cost_usd": 0.12,
+            }
+        },
+        warnings,
+    )
+    assert not warnings
+    assert parsed["agent.graph.run"].count == 2
+    assert parsed["agent.graph.run"].total_tokens == 32
+
+    warnings = []
+    parsed = agentic_rag._parse_operation_samples({"bad": "value"}, warnings)
+    assert parsed == {}
+    assert "operations[bad]" in warnings[0]
+
+
+def test_export_metrics_snapshot_handles_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """_export_metrics_snapshot should suppress tracker failures with warnings."""
+
+    class BrokenTracker:
+        def snapshot(self) -> dict[str, Any]:
+            raise RuntimeError("boom")
+
+    def _get_broken_tracker() -> BrokenTracker:
+        return BrokenTracker()
+
+    monkeypatch.setattr(agentic_rag, "get_ai_tracker", _get_broken_tracker)
+    snapshot, warnings = agentic_rag._export_metrics_snapshot()
+    assert snapshot == {}
+    assert warnings and warnings[0].startswith("export_error:")
+
+
+@pytest.mark.asyncio
+async def test_reset_agent_learning_requires_confirmation() -> None:
+    """reset_agent_learning should enforce confirmation and reset the tracker."""
+
+    stub_mcp = StubMCP()
+    tracker = agentic_rag.get_ai_tracker()
+    tracker.reset()
+    agentic_rag.register_tools(stub_mcp, DummyClientManager())
+
+    reset_tool = stub_mcp.tools["reset_agent_learning"]
+
+    with pytest.raises(ToolError) as exc:
+        await reset_tool()
+    assert exc.value.error_code == "CONFIRMATION_REQUIRED"
+
+    tracker.record_operation(
+        operation="agent.graph.run",
+        provider="search",
+        model="runner",
+        duration_s=0.1,
+    )
+    assert tracker.snapshot()["agent.graph.run"]["count"] == 1
+
+    await reset_tool(confirm=True)
+    assert tracker.snapshot() == {}
+
+
+@pytest.mark.asyncio
+async def test_optimize_agent_configuration_tool_error() -> None:
+    """optimize_agent_configuration should raise a descriptive ToolError."""
+
+    stub_mcp = StubMCP()
+    agentic_rag.register_tools(stub_mcp, DummyClientManager())
+    optimize_tool = stub_mcp.tools["optimize_agent_configuration"]
+
+    with pytest.raises(ToolError) as exc:
+        await optimize_tool(optimization_target="speed", constraints={"latency": 1.0})
+    assert exc.value.error_code == "NOT_IMPLEMENTED"

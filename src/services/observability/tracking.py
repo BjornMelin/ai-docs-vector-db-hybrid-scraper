@@ -19,14 +19,22 @@ from .tracing import span
 @dataclass
 class _OperationStats:
     count: int = 0
+    success_count: int = 0
     total_duration_s: float = 0.0
     total_tokens: int = 0
     total_cost_usd: float = 0.0
 
     def record(
-        self, *, duration_s: float, tokens: int | None, cost_usd: float | None
+        self,
+        *,
+        duration_s: float,
+        tokens: int | None,
+        cost_usd: float | None,
+        success: bool,
     ) -> None:
         self.count += 1
+        if success:
+            self.success_count += 1
         self.total_duration_s += duration_s
         if tokens is not None:
             self.total_tokens += tokens
@@ -124,7 +132,10 @@ class AIOperationTracker:
 
         with self._lock:
             self._stats[operation].record(
-                duration_s=duration_s, tokens=tokens, cost_usd=cost_usd
+                duration_s=duration_s,
+                tokens=tokens,
+                cost_usd=cost_usd,
+                success=success,
             )
 
         self._duration_histogram.record(duration_s, labels)
@@ -140,12 +151,19 @@ class AIOperationTracker:
             return {
                 name: {
                     "count": stat.count,
+                    "success_count": stat.success_count,
                     "total_duration_s": stat.total_duration_s,
                     "total_tokens": stat.total_tokens,
                     "total_cost_usd": stat.total_cost_usd,
                 }
                 for name, stat in self._stats.items()
             }
+
+    def reset(self) -> None:
+        """Clear all recorded statistics."""
+
+        with self._lock:
+            self._stats.clear()
 
 
 class PerformanceTracker:

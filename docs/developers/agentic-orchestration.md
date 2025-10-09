@@ -23,7 +23,7 @@ Conditional edges route failures to retry, fallback, or failure sinks depending 
 
 - State storage uses `MemorySaver` by default. Long-running sessions can switch to a persistent saver (SQLite, Redis) by injecting an alternative checkpointer when constructing `GraphRunner`.
 - Every invocation accepts a `RunnableConfig`. Callers pass correlation identifiers, telemetry callbacks, and per-request overrides (timeouts, tool filters) through this config rather than bespoke kwargs.
-- Prometheus metrics (`agentic_graph_runs_total`, `agentic_graph_latency_ms`, etc.) and OpenTelemetry spans are emitted inside each node. The metrics registry lives in `src/services/monitoring/telemetry_repository.py`.
+- OpenTelemetry spans and the in-memory `AIOperationTracker` (`src/services/observability/tracking.py`) capture per-stage metrics for introspection tooling.
 
 ## Tool Discovery
 
