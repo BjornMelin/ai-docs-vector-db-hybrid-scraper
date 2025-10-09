@@ -27,13 +27,12 @@ express the final "final-only" implementation.
      consensus score of 4.56/5 in the decision log while keeping the harness
      runnable in offline CI environments.
 
-2. **Telemetry Snapshot Integration**
+2. **Telemetry Integration via OpenTelemetry**
 
-   - Bootstrap an isolated `MetricsRegistry` with a per-run namespace and emit a
-     Prometheus snapshot alongside the evaluation report. The snapshot exposes
-     the stage latency, answer counters, and compression statistics defined in
-     the observability catalog so Workstream C can consume them without scraping
-     a live exporter.
+   - Capture stage latency, answer counters, and compression statistics through
+     OpenTelemetry spans recorded during the evaluation run. The structured
+     JSON report now includes these aggregates directly, eliminating the need
+     for a dedicated Prometheus snapshot or custom registry wiring.
 
 3. **Dataset Revision and JSON Reporting**
    - Extend `tests/data/rag/golden_set.jsonl` with `expected_contexts` and
@@ -48,9 +47,9 @@ express the final "final-only" implementation.
   generation, or telemetry) rather than a single opaque similarity score.
 - Teams can opt-in to semantic metrics without blocking local development;
   deterministic baselines remain available for quick checks.
-- The harness is more complex (additional dependencies and Prometheus snapshot
-  handling) but remains library-first by delegating semantics to RAGAS instead of
-  hand-rolled heuristics.
+- The harness remains library-first by delegating semantic scoring to RAGAS and
+  relies on OpenTelemetry instrumentation rather than bespoke Prometheus
+  plumbing, reducing maintenance overhead.
 
 ## References
 

@@ -14,8 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Captured ADR 0009 documenting the tiered Playwright anti-bot stack and exported the new browser metrics section in `docs/observability/query_processing_metrics.md` with challenge counters.
 - Published the consolidated Evaluation Harness Playbook (`docs/testing/evaluation-harness.md`) covering OpenTelemetry-aligned RAG metrics,
   dashboard guardrails, and operational workflows.
-- Extended the RAG evaluation harness to emit deterministic Prometheus snapshots
-  alongside golden-set similarity scores for CI regression analysis.
+- Extended the RAG evaluation harness to emit structured OpenTelemetry spans and
+  aggregated JSON metrics alongside golden-set similarity scores for CI
+  regression analysis.
 - Introduced a LangGraph `StateGraph` pipeline that chains retrieval, grading, and generation for RAG queries.
 - Replaced the bespoke FastEmbed provider with a LangChain FastEmbed wrapper and refreshed unit coverage for embeddings.
 - Shadow parity coverage for vector grouping fallback and score normalisation across
@@ -39,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   handling across the application.
 - **[Observability]:** Replaced the legacy `TelemetryRepository` with the unified, OpenTelemetry-based `AIOperationTracker` for all in-memory application telemetry.
 - **[Observability]:** Removed the legacy `RealTimePerformanceMonitor` and consolidated its functionality. Operation timing is now handled by the OpenTelemetry-based `PerformanceMonitor`, and system resource metrics are exposed via the `system_health` MCP tool.
+- **[Observability]:** Eliminated the bespoke Prometheus `MetricsRegistry` and middleware. All `/metrics` exposure now flows through `prometheus-fastapi-instrumentator` while application telemetry is captured via OpenTelemetry tracing utilities.
 - **[Architecture]:** Unified circuit breaker implementation by refactoring
   `TimeoutMiddleware` to use the shared `CircuitBreakerManager`, ensuring a
   global state for all breakers.
