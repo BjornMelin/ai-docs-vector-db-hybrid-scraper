@@ -22,11 +22,8 @@ from starlette.responses import JSONResponse, Response
 
 
 try:
-    from purgatory import AsyncCircuitBreakerFactory  # type: ignore[import]
     from purgatory.domain.model import OpenedState  # type: ignore[import]
 except ModuleNotFoundError:
-    AsyncCircuitBreakerFactory = None  # type: ignore[assignment]
-
     OpenedState = type(
         "OpenedState",
         (Exception,),
@@ -35,9 +32,16 @@ except ModuleNotFoundError:
         },
     )
 
+    PURGATORY_AVAILABLE = False
+else:
+    PURGATORY_AVAILABLE = True
+
 
 if TYPE_CHECKING:  # pragma: no cover - import for typing only
     from purgatory.service._async.circuitbreaker import AsyncCircuitBreaker  # type: ignore  # noqa: I001
+    from src.services.circuit_breaker.circuit_breaker_manager import (
+        CircuitBreakerManager,
+    )
 
 
 class CircuitState(str, Enum):
@@ -64,21 +68,16 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
     def __init__(self, app: Callable, *, config: TimeoutConfig) -> None:
         super().__init__(app)
         self._cfg = config
-        if AsyncCircuitBreakerFactory is not None:
-            self._factory = AsyncCircuitBreakerFactory(
-                default_threshold=config.failure_threshold,
-                default_ttl=config.recovery_timeout,
-            )
-        else:
-            self._factory = None
         self._breaker: AsyncCircuitBreaker | None = None
         self._breaker_name = "fastapi_request_timeout"
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        """Execute the request within timeout and circuit breaker constraints."""
+
         if not self._cfg.enabled:
             return await call_next(request)
 
-        if self._factory is None:
+        if not PURGATORY_AVAILABLE:
             with anyio.move_on_after(self._cfg.request_timeout) as scope:
                 response = await call_next(request)
                 return response
@@ -93,7 +92,12 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
             # If not cancelled, response was returned inside the with
             raise RuntimeError("Unexpected state")  # pragma: no cover
 
-        breaker = await self._ensure_breaker()
+        from src.services.circuit_breaker.provider import (
+            get_circuit_breaker_manager,
+        )
+
+        manager = await get_circuit_breaker_manager()
+        breaker = await self._ensure_breaker(manager)
 
         if breaker.context.state == "opened":
             return JSONResponse(
@@ -122,11 +126,13 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
                 content={"error": "Circuit rejecting requests", "circuit": "open"},
             )
 
-    async def _ensure_breaker(self) -> AsyncCircuitBreaker:
+    async def _ensure_breaker(
+        self, manager: CircuitBreakerManager
+    ) -> AsyncCircuitBreaker:
+        """Return the cached circuit breaker instance for FastAPI requests."""
+
         if self._breaker is None:
-            if self._factory is None:
-                raise RuntimeError("Circuit breaker factory not available")
-            self._breaker = await self._factory.get_breaker(
+            self._breaker = await manager.get_breaker(
                 self._breaker_name,
                 threshold=self._cfg.failure_threshold,
                 ttl=self._cfg.recovery_timeout,

@@ -40,25 +40,33 @@ class DummyBreaker:
         return None
 
 
-class DummyFactory:
-    def __init__(self, *args, **kwargs) -> None:  # pragma: no cover - args ignored
-        """Initialize dummy factory."""
+class DummyManager:
+    """In-memory manager returning a shared dummy breaker."""
 
+    def __init__(self) -> None:
         self.breaker = DummyBreaker()
 
     async def get_breaker(self, *_args, **_kwargs) -> DummyBreaker:
-        """Get a dummy breaker instance."""
+        """Return the shared dummy breaker."""
 
         return self.breaker
 
 
-@pytest.fixture(name="patched_factory")
-def _patched_factory(monkeypatch: pytest.MonkeyPatch) -> DummyFactory:
-    """Fixture to patch factory with dummy."""
+@pytest.fixture(name="patched_manager")
+def _patched_manager(monkeypatch: pytest.MonkeyPatch) -> DummyManager:
+    """Fixture to patch shared circuit breaker manager with dummy implementation."""
 
-    factory = DummyFactory()
-    monkeypatch.setattr(timeout, "AsyncCircuitBreakerFactory", lambda *a, **k: factory)
-    return factory
+    manager = DummyManager()
+
+    async def _get_manager() -> DummyManager:
+        return manager
+
+    monkeypatch.setattr(timeout, "PURGATORY_AVAILABLE", True)
+    monkeypatch.setattr(
+        "src.services.circuit_breaker.provider.get_circuit_breaker_manager",
+        _get_manager,
+    )
+    return manager
 
 
 def _build_request() -> Request:
@@ -75,7 +83,7 @@ def _build_request() -> Request:
 
 
 @pytest.mark.anyio
-async def test_timeout_middleware_passes_through(patched_factory: DummyFactory) -> None:
+async def test_timeout_middleware_passes_through(patched_manager: DummyManager) -> None:
     """Test that timeout middleware passes through when circuit closed."""
 
     middleware = TimeoutMiddleware(lambda *_: None, config=TimeoutConfig())
@@ -89,12 +97,12 @@ async def test_timeout_middleware_passes_through(patched_factory: DummyFactory) 
 
 @pytest.mark.anyio
 async def test_timeout_middleware_returns_open_response(
-    patched_factory: DummyFactory,
+    patched_manager: DummyManager,
 ) -> None:
     """Test that timeout middleware returns open response when circuit open."""
 
     middleware = TimeoutMiddleware(lambda *_: None, config=TimeoutConfig())
-    patched_factory.breaker.context.state = "opened"
+    patched_manager.breaker.context.state = "opened"
 
     async def call_next(_request: Request) -> Response:
         raise AssertionError("call_next should not run")
@@ -106,7 +114,7 @@ async def test_timeout_middleware_returns_open_response(
 
 
 @pytest.mark.anyio
-async def test_timeout_middleware_times_out(patched_factory: DummyFactory) -> None:
+async def test_timeout_middleware_times_out(patched_manager: DummyManager) -> None:
     """Test that timeout middleware times out requests."""
 
     middleware = TimeoutMiddleware(
@@ -124,7 +132,7 @@ async def test_timeout_middleware_times_out(patched_factory: DummyFactory) -> No
 
 @pytest.mark.anyio
 async def test_timeout_middleware_disabled_returns_directly(
-    patched_factory: DummyFactory,
+    patched_manager: DummyManager,
 ) -> None:
     """Test that disabled timeout middleware returns directly."""
 
