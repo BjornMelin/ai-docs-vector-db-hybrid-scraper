@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from unittest.mock import call
 
 import pytest
 from pytest_mock import MockerFixture
@@ -133,6 +134,12 @@ async def test_track_performance_records_metrics(mocker: MockerFixture) -> None:
     manager = ClientManager()
     histogram = mocker.patch.object(manager, "record_histogram")
     counter = mocker.patch.object(manager, "increment_counter")
+    monitor = mocker.patch(
+        "src.infrastructure.client_manager.monitor_operation",
+        autospec=True,
+    )
+    monitor.return_value.__enter__.return_value = None
+    monitor.return_value.__exit__.return_value = None
 
     async def _noop() -> str:
         await asyncio.sleep(0)
@@ -141,5 +148,42 @@ async def test_track_performance_records_metrics(mocker: MockerFixture) -> None:
     result = await manager.track_performance("demo", _noop)
 
     assert result == "ok"
-    histogram.assert_called()
-    counter.assert_called()
+    histogram.assert_called_once()
+    hist_name, duration_ms = histogram.call_args.args[:2]
+    assert hist_name == "demo_duration_ms"
+    assert duration_ms >= 0
+    counter.assert_called_once_with("demo_total", {"status": "success"})
+    monitor.assert_called_once_with("demo", metadata={"source": "client_manager"})
+
+
+@pytest.mark.asyncio
+async def test_track_performance_records_failure_metrics(mocker: MockerFixture) -> None:
+    """track_performance should emit failure counters and re-raise exceptions."""
+
+    manager = ClientManager()
+    histogram = mocker.patch.object(manager, "record_histogram")
+    counter = mocker.patch.object(manager, "increment_counter")
+    monitor = mocker.patch(
+        "src.infrastructure.client_manager.monitor_operation",
+        autospec=True,
+    )
+    monitor.return_value.__enter__.return_value = None
+    monitor.return_value.__exit__.return_value = None
+
+    async def _boom() -> None:
+        raise RuntimeError("boom")
+
+    with pytest.raises(RuntimeError, match="boom"):
+        await manager.track_performance("demo", _boom)
+
+    histogram.assert_called_once()
+    hist_name, duration_ms = histogram.call_args.args[:2]
+    assert hist_name == "demo_duration_ms"
+    assert duration_ms >= 0
+    counter.assert_has_calls(
+        [
+            call("demo_total", {"status": "error"}),
+            call("demo_errors"),
+        ]
+    )
+    monitor.assert_called_once_with("demo", metadata={"source": "client_manager"})
