@@ -45,6 +45,7 @@ from src.services.health.manager import (
     build_health_manager,
 )
 from src.services.observability.performance import (
+    get_performance_monitor,
     get_operation_statistics,
     get_system_performance_summary,
     monitor_operation,
@@ -838,6 +839,12 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
 
     async def _shutdown_monitoring(self) -> None:
         """Cleanup monitoring resources."""
+
+        try:
+            monitor = get_performance_monitor()
+            await monitor.cleanup()
+        except Exception:  # pragma: no cover - defensive
+            logger.debug("Failed to cleanup performance monitor", exc_info=True)
 
         self._metrics_registry = None
         self._health_manager = None

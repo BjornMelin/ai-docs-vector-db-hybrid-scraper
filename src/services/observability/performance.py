@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import time
+from collections import deque
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from functools import lru_cache
@@ -34,6 +35,8 @@ class OperationRecord:
 class PerformanceMonitor:
     """Minimal context-based performance monitor."""
 
+    _RECENT_OPERATION_LIMIT = 256
+
     def __init__(self, meter: Meter | None = None) -> None:
         self._meter = meter or metrics.get_meter(__name__)
         self._duration_histogram = self._meter.create_histogram(
@@ -51,7 +54,9 @@ class PerformanceMonitor:
             description="RSS memory usage captured at the end of monitored operations",
             unit="MB",
         )
-        self._recent_operations: list[OperationRecord] = []
+        self._recent_operations: deque[OperationRecord] = deque(
+            maxlen=self._RECENT_OPERATION_LIMIT
+        )
 
     def initialize(self) -> None:
         LOGGER.info("Performance monitor initialized")
@@ -101,7 +106,14 @@ class PerformanceMonitor:
             self._recent_operations.append(record)
 
     def recent_operations(self, limit: int = 10) -> list[OperationRecord]:
-        return self._recent_operations[-limit:]
+        if limit <= 0:
+            return []
+
+        operations = list(self._recent_operations)
+        if limit >= len(operations):
+            return operations
+
+        return operations[-limit:]
 
 
 @lru_cache(maxsize=1)
