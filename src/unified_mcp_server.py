@@ -18,14 +18,11 @@ from src.config.loader import get_settings
 from src.config.models import CrawlProvider, EmbeddingProvider
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.tool_registry import register_all_tools
-from src.services.dependencies import get_cache_manager
 from src.services.logging_config import configure_logging
 from src.services.monitoring.initialization import (
     initialize_monitoring_system,
     run_periodic_health_checks,
     setup_fastmcp_monitoring,
-    update_cache_metrics_periodically,
-    update_system_metrics_periodically,
 )
 
 
@@ -40,7 +37,6 @@ async def managed_lifespan(server: FastMCP[Any]) -> AsyncIterator[None]:  # pyli
     configure_logging(settings=config)
     monitoring_tasks: list[asyncio.Task[Any]] = []
     client_manager: ClientManager | None = None
-    metrics_registry = None
     health_manager = None
     try:
         validate_configuration()
@@ -62,44 +58,20 @@ async def managed_lifespan(server: FastMCP[Any]) -> AsyncIterator[None]:  # pyli
             else None
         )
 
-        metrics_registry, health_manager = initialize_monitoring_system(
-            config, qdrant_client, redis_url
-        )
+        health_manager = initialize_monitoring_system(config, qdrant_client, redis_url)
 
-        if metrics_registry and health_manager:
-            setup_fastmcp_monitoring(server, config, metrics_registry, health_manager)
+        if health_manager:
+            setup_fastmcp_monitoring(server, config, health_manager)
 
             if config.monitoring.enabled:
+                interval = config.monitoring.system_metrics_interval
                 health_check_task = asyncio.create_task(
-                    run_periodic_health_checks(health_manager, interval_seconds=60.0)
+                    run_periodic_health_checks(
+                        health_manager, interval_seconds=interval
+                    )
                 )
                 monitoring_tasks.append(health_check_task)
-
-                if config.monitoring.include_system_metrics:
-                    metrics_task = asyncio.create_task(
-                        update_system_metrics_periodically(
-                            metrics_registry,
-                            interval_seconds=config.monitoring.system_metrics_interval,
-                        )
-                    )
-                    monitoring_tasks.append(metrics_task)
-
-                cache_config = config.cache
-                if metrics_registry and (
-                    getattr(cache_config, "enable_local_cache", False)
-                    or getattr(cache_config, "enable_dragonfly_cache", False)
-                ):
-                    cache_manager = await get_cache_manager(client_manager)
-                    cache_metrics_task = asyncio.create_task(
-                        update_cache_metrics_periodically(
-                            metrics_registry,
-                            cache_manager,
-                            interval_seconds=30.0,
-                        )
-                    )
-                    monitoring_tasks.append(cache_metrics_task)
-
-                logger.info("Started background monitoring tasks")
+                logger.info("Started background health monitoring task")
 
         logger.info("Registering MCP tools...")
         await register_all_tools(server, client_manager)

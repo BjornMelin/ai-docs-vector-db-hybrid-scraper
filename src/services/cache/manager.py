@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
 from src.config.models import CacheType
+from src.services.observability.tracing import set_span_attributes, trace_function
 
 from .dragonfly_cache import DragonflyCache
 from .embedding_cache import EmbeddingCache
@@ -34,17 +35,6 @@ class _PatternClearableCache(Protocol):
         raise NotImplementedError
 
 
-try:
-    # Optional dependency: monitoring is only needed when metrics are enabled.
-    from ..monitoring.metrics import get_metrics_registry as _get_metrics_registry
-
-    MONITORING_AVAILABLE = True
-    get_metrics_registry = _get_metrics_registry
-except ImportError:  # pragma: no cover - optional monitoring stack
-    MONITORING_AVAILABLE = False
-    get_metrics_registry = None
-
-
 # pylint: disable=too-many-instance-attributes,too-many-arguments,too-many-positional-arguments
 class CacheManager:
     """Two-tier cache manager with DragonflyDB and specialized cache layers."""
@@ -59,7 +49,6 @@ class CacheManager:
         local_ttl_seconds: int = 300,  # 5 minutes
         distributed_ttl_seconds: dict[CacheType, int] | None = None,
         key_prefix: str = "aidocs:",
-        enable_metrics: bool = True,
         enable_specialized_caches: bool = True,
         local_cache_path: Path | None = None,
         memory_pressure_threshold: float | None = None,
@@ -75,7 +64,6 @@ class CacheManager:
             local_ttl_seconds: Default TTL for local cache
             distributed_ttl_seconds: TTL mapping for distributed cache by cache type
             key_prefix: Prefix for all cache keys
-            enable_metrics: Enable metrics collection
             enable_specialized_caches: Enable embedding and search result caches
         """
         self.enable_local_cache = enable_local_cache
@@ -113,24 +101,6 @@ class CacheManager:
             dragonfly_url=dragonfly_url,
             key_prefix=key_prefix,
         )
-
-        # Initialize Prometheus monitoring registry
-        self.metrics_registry = self._initialize_metrics_registry(enable_metrics)
-
-    def _initialize_metrics_registry(self, enable_metrics: bool):
-        """Initialize metrics registry with error handling."""
-        if not (
-            enable_metrics and MONITORING_AVAILABLE and get_metrics_registry is not None
-        ):
-            return None
-        try:
-            registry = get_metrics_registry()
-            logger.info("Cache monitoring enabled with Prometheus integration")
-            return registry
-        except (ImportError, AttributeError, RuntimeError) as e:
-            logger.warning("Failed to initialize cache monitoring: %s", e)
-            return None
-
         logger.info(
             "CacheManager initialized with DragonflyDB: %s, local=%s, specialized=%s",
             self.dragonfly_url,
@@ -267,6 +237,7 @@ class CacheManager:
         """
         return self._search_cache
 
+    @trace_function("cache.manager.get")
     async def get(
         self,
         key: str,
@@ -286,16 +257,6 @@ class CacheManager:
         Raises:
             Exception: Logged but not raised - returns default on error
         """
-        # Monitor cache operations with Prometheus if available
-        if self.metrics_registry:
-            decorator = self.metrics_registry.monitor_cache_performance(
-                cache_type=cache_type.value, operation="get"
-            )
-
-            async def _monitored_get():
-                return await self._execute_cache_get(key, cache_type, default)
-
-            return await decorator(_monitored_get)()
         return await self._execute_cache_get(key, cache_type, default)
 
     async def _execute_cache_get(
@@ -305,27 +266,24 @@ class CacheManager:
         default: object = None,
     ) -> object:
         """Execute the actual cache get operation."""
-        start_time = asyncio.get_event_loop().time()
         cache_key = self._get_cache_key(key, cache_type)
 
         # Try L1 cache first
-        l1_result = await self._try_local_cache_get(cache_key, cache_type, start_time)
+        l1_result = await self._try_local_cache_get(cache_key, cache_type)
         if l1_result is not None:
             return l1_result
 
         # Try L2 cache (DragonflyDB)
-        l2_result = await self._try_distributed_cache_get(
-            cache_key, cache_type, start_time
-        )
+        l2_result = await self._try_distributed_cache_get(cache_key, cache_type)
         if l2_result is not None:
             return l2_result
 
         # Cache miss - record metrics and return default
-        self._record_cache_miss(cache_type, start_time)
+        self._record_cache_miss(cache_type)
         return default
 
     async def _try_local_cache_get(
-        self, cache_key: str, cache_type: CacheType, start_time: float
+        self, cache_key: str, cache_type: CacheType
     ) -> object | None:
         """Try to get value from local cache."""
         if not self._local_cache:
@@ -338,11 +296,11 @@ class CacheManager:
             return None
 
         if value is not None:
-            self._record_cache_hit(cache_type, "local", start_time)
+            self._record_cache_hit(cache_type, "local")
         return value
 
     async def _try_distributed_cache_get(
-        self, cache_key: str, cache_type: CacheType, start_time: float
+        self, cache_key: str, cache_type: CacheType
     ) -> object | None:
         """Try to get value from distributed cache and populate L1 if found."""
         if not self._distributed_cache:
@@ -357,7 +315,7 @@ class CacheManager:
         if value is not None:
             # Populate L1 cache for future hits
             await self._populate_local_cache(cache_key, value)
-            self._record_cache_hit(cache_type, "distributed", start_time)
+            self._record_cache_hit(cache_type, "distributed")
         return value
 
     async def _populate_local_cache(self, cache_key: str, value: object) -> None:
@@ -372,18 +330,26 @@ class CacheManager:
                 "Failed to populate local cache for key %s: %s", cache_key, e
             )
 
-    def _record_cache_hit(
-        self, cache_type: CacheType, layer: str, start_time: float
-    ) -> None:
-        """Record cache hit metrics."""
-        if self.metrics_registry:
-            self.metrics_registry.record_cache_hit(layer, cache_type.value)
+    def _record_cache_hit(self, cache_type: CacheType, layer: str) -> None:
+        """Annotate active span with cache hit information."""
+        set_span_attributes(
+            {
+                "cache.result": "hit",
+                "cache.type": cache_type.value,
+                "cache.layer": layer,
+            }
+        )
 
-    def _record_cache_miss(self, cache_type: CacheType, start_time: float) -> None:
-        """Record cache miss metrics."""
-        if self.metrics_registry:
-            self.metrics_registry.record_cache_miss(cache_type.value)
+    def _record_cache_miss(self, cache_type: CacheType) -> None:
+        """Annotate active span with cache miss information."""
+        set_span_attributes(
+            {
+                "cache.result": "miss",
+                "cache.type": cache_type.value,
+            }
+        )
 
+    @trace_function("cache.manager.set")
     async def set(
         self,
         key: str,
@@ -405,16 +371,6 @@ class CacheManager:
         Raises:
             Exception: Logged but not raised - returns False on error
         """
-        # Monitor cache operations with Prometheus if available
-        if self.metrics_registry:
-            decorator = self.metrics_registry.monitor_cache_performance(
-                cache_type=cache_type.value, operation="set"
-            )
-
-            async def _monitored_set():
-                return await self._execute_cache_set(key, value, cache_type, ttl)
-
-            return await decorator(_monitored_set)()
         return await self._execute_cache_set(key, value, cache_type, ttl)
 
     async def _execute_cache_set(

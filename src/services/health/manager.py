@@ -80,7 +80,6 @@ except ImportError:  # pragma: no cover - fallback when qdrant client unavailabl
 
 
 from src.config.models import CrawlProvider, EmbeddingProvider
-from src.services.monitoring.metrics import MetricsRegistry
 
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
@@ -625,15 +624,10 @@ class SystemResourceHealthCheck(HealthCheck):
 class HealthCheckManager:
     """Coordinator for registered health checks."""
 
-    def __init__(
-        self,
-        config: HealthCheckConfig,
-        metrics_registry: MetricsRegistry | None = None,
-    ) -> None:
+    def __init__(self, config: HealthCheckConfig) -> None:
         """Initialize the health check manager."""
 
         self.config = config
-        self.metrics_registry = metrics_registry
         self._health_checks: list[HealthCheck] = []
         self._last_results: dict[str, HealthCheckResult] = {}
 
@@ -672,10 +666,6 @@ class HealthCheckManager:
             health_results[check.name] = health_result
             self._last_results[check.name] = health_result
 
-            if self.metrics_registry:
-                is_healthy = health_result.status == HealthStatus.HEALTHY
-                self.metrics_registry.update_dependency_health(check.name, is_healthy)
-
         return health_results
 
     async def check_single(self, check_name: str) -> HealthCheckResult | None:
@@ -685,11 +675,6 @@ class HealthCheckManager:
             if check.name == check_name:
                 result = await check.check()
                 self._last_results[check_name] = result
-                if self.metrics_registry:
-                    is_healthy = result.status == HealthStatus.HEALTHY
-                    self.metrics_registry.update_dependency_health(
-                        check.name, is_healthy
-                    )
                 return result
         return None
 
@@ -748,7 +733,6 @@ class HealthCheckManager:
 def build_health_manager(
     settings: Settings,
     *,
-    metrics_registry: MetricsRegistry | None = None,
     qdrant_client: AsyncQdrantClient | None = None,
     redis_url: str | None = None,
 ) -> HealthCheckManager:
@@ -756,7 +740,6 @@ def build_health_manager(
 
     Args:
         settings: Loaded application configuration.
-        metrics_registry: Optional metrics registry for reporting results.
         qdrant_client: Optional pre-configured Qdrant client instance.
         redis_url: Optional override for the Redis connection URL.
 
@@ -765,7 +748,7 @@ def build_health_manager(
     """
 
     config = HealthCheckConfig.from_unified_config(settings)
-    manager = HealthCheckManager(config, metrics_registry)
+    manager = HealthCheckManager(config)
 
     if settings.monitoring.include_system_metrics:
         manager.add_health_check(

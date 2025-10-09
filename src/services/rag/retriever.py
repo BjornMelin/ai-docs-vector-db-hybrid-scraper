@@ -33,7 +33,7 @@ try:  # pragma: no cover - optional dependency
 except ModuleNotFoundError:  # pragma: no cover - fallback for minimal installs
     tiktoken = None  # type: ignore[assignment]
 
-from src.services.monitoring.metrics import get_metrics_registry
+from src.services.observability.tracing import set_span_attributes
 from src.services.rag.models import RAGConfig
 from src.services.vector_db.service import VectorStoreService
 
@@ -247,12 +247,14 @@ class VectorServiceRetriever(BaseRetriever):
         )
         self._compression_stats = stats
 
-        try:
-            registry = get_metrics_registry()
-        except RuntimeError:  # pragma: no cover - monitoring disabled
-            registry = None
-        if registry is not None:
-            registry.record_compression_stats(self._collection, stats)
+        set_span_attributes(
+            {
+                "rag.compression.collection": self._collection,
+                "rag.compression.tokens_before": stats.tokens_before,
+                "rag.compression.tokens_after": stats.tokens_after,
+                "rag.compression.reduction_ratio": stats.reduction_ratio,
+            }
+        )
 
         return compressed_docs
 

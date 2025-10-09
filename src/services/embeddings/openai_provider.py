@@ -5,11 +5,13 @@ import json
 import logging
 import os
 import tempfile
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from src.services.errors import EmbeddingServiceError
-from src.services.monitoring.metrics import get_metrics_registry
+from src.services.observability.tracing import trace_function
+from src.services.observability.tracking import record_ai_operation
 from src.services.utilities.rate_limiter import RateLimitManager
 
 from .base import EmbeddingProvider
@@ -66,8 +68,8 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
             model_name: Model name (text-embedding-3-small, text-embedding-3-large)
             dimensions: Optional dimensions for text-embedding-3-* models
             rate_limiter: Optional RateLimitManager instance
-
         """
+
         super().__init__(model_name)
         self.api_key = api_key
         self._client: AsyncOpenAI | None = None
@@ -96,17 +98,10 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         else:
             self.dimensions = config["max_dimensions"]
 
-        # Initialize metrics if available
-        try:
-            self.metrics_registry = get_metrics_registry()
-        except (AttributeError, ImportError, OSError):
-            logger.warning(
-                "Metrics registry not available - embedding monitoring disabled"
-            )
-            self.metrics_registry = None
-
+    @trace_function()
     async def initialize(self) -> None:
         """Initialize OpenAI client using ClientManager."""
+
         if self._initialized:
             return
 
@@ -129,6 +124,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         self._client = None
         self._initialized = False
 
+    @trace_function()
     async def generate_embeddings(
         self, texts: list[str], batch_size: int | None = None
     ) -> list[list[float]]:
@@ -143,36 +139,36 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
 
         Raises:
             EmbeddingServiceError: If not initialized or API call fails
-
         """
-        # Monitor embedding generation
-        if self.metrics_registry:
-            decorator = self.metrics_registry.monitor_embedding_generation(
-                provider="openai", model=self.model_name
-            )
 
-            async def _monitored_generation():
-                return await self._execute_embedding_generation(texts, batch_size)
+        start = time.perf_counter()
+        success = True
+        total_tokens = sum(len(text.split()) for text in texts)
 
-            embeddings = await decorator(_monitored_generation)()
-
-            # Track costs
-            total_tokens = sum(
-                len(text.split()) for text in texts
-            )  # Rough token estimation
-            cost = self._calculate_cost(total_tokens)
-            if cost > 0:
-                self.metrics_registry.record_embedding_cost(
-                    "openai", self.model_name, cost
-                )
-
+        try:
+            embeddings = await self._execute_embedding_generation(texts, batch_size)
             return embeddings
-        return await self._execute_embedding_generation(texts, batch_size)
+        except Exception:
+            success = False
+            raise
+        finally:
+            duration = time.perf_counter() - start
+            cost = self._calculate_cost(total_tokens)
+            record_ai_operation(
+                operation_type="embedding",
+                provider="openai",
+                model=self.model_name,
+                duration_s=duration,
+                tokens=total_tokens or None,
+                cost_usd=cost or None,
+                success=success,
+            )
 
     async def _execute_embedding_generation(
         self, texts: list[str], batch_size: int | None = None
     ) -> list[list[float]]:
         """Execute the actual embedding generation."""
+
         if not self._initialized:
             msg = "Provider not initialized"
             raise EmbeddingServiceError(msg)
@@ -244,8 +240,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
             msg = f"Failed to generate embeddings: {e}"
             raise EmbeddingServiceError(msg) from e
 
-        else:
-            return embeddings
+        return embeddings
 
     async def _generate_embeddings_with_rate_limit(self, params: dict[str, Any]) -> Any:
         """Generate embeddings with rate limiting.
@@ -255,7 +250,6 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
 
         Returns:
             OpenAI embeddings response
-
         """
         if self.rate_limiter:
             await self.rate_limiter.acquire("openai")
@@ -305,8 +299,8 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         Note:
             Results available within 24 hours with 50% cost savings.
             No rate limits for batch processing.
-
         """
+
         if not self._initialized:
             msg = "Provider not initialized"
             raise EmbeddingServiceError(msg)
@@ -346,7 +340,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
                 os.fsync(f.fileno())
 
             # Upload file with rate limiting
-            with temp_file.open("rb") as f:
+            with Path(temp_file).open("rb") as f:
                 file_response = await self._upload_file_with_rate_limit(f, "batch")
 
             # Create batch with rate limiting
@@ -378,8 +372,8 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
 
         Returns:
             File response from OpenAI
-
         """
+
         if self.rate_limiter:
             await self.rate_limiter.acquire("openai")
         return await self._client.files.create(file=file, purpose=purpose)
@@ -396,7 +390,6 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
 
         Returns:
             Batch response from OpenAI
-
         """
         if self.rate_limiter:
             await self.rate_limiter.acquire("openai")

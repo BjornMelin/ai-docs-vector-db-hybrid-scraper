@@ -23,7 +23,7 @@ from src.services.base import BaseService
 from src.services.embeddings.base import EmbeddingProvider
 from src.services.embeddings.fastembed_provider import FastEmbedProvider
 from src.services.errors import EmbeddingServiceError
-from src.services.monitoring.metrics import get_metrics_registry
+from src.services.observability.tracing import set_span_attributes
 
 from .payload_schema import (
     CanonicalPayload,
@@ -633,12 +633,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         filters: Mapping[str, Any] | None,
         overfetch_multiplier: float | None,
     ) -> tuple[list[VectorMatch], bool]:  # pylint: disable=too-many-arguments,too-many-locals
-        registry = None
-        try:
-            registry = get_metrics_registry()
-        except RuntimeError:  # pragma: no cover - monitoring optional
-            registry = None
-
         cfg = self._require_qdrant_config()
         grouping_enabled = bool(group_by) and bool(
             getattr(cfg, "enable_grouping", False)
@@ -654,11 +648,19 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
                 filters=filters,
             )
             if applied:
-                if registry is not None:
-                    registry.record_grouping_attempt(collection, "applied")
+                set_span_attributes(
+                    {
+                        "qdrant.grouping.status": "applied",
+                        "qdrant.grouping.collection": collection,
+                    }
+                )
                 return matches, True
-            if registry is not None:
-                registry.record_grouping_attempt(collection, "fallback")
+            set_span_attributes(
+                {
+                    "qdrant.grouping.status": "fallback",
+                    "qdrant.grouping.collection": collection,
+                }
+            )
 
         fetch_limit = int(limit * (overfetch_multiplier or 2.0))
         store = self._require_vector_store(collection)
@@ -687,8 +689,12 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
             )
             return matches, False
 
-        if registry is not None:
-            registry.record_grouping_attempt(collection, "disabled")
+        set_span_attributes(
+            {
+                "qdrant.grouping.status": "disabled",
+                "qdrant.grouping.collection": collection,
+            }
+        )
         return matches[:limit], False
 
     async def _query_with_server_grouping(

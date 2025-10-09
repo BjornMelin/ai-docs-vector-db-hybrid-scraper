@@ -18,7 +18,6 @@ from langchain_core.retrievers import BaseRetriever
 from opentelemetry import trace
 
 from src.contracts.retrieval import SearchRecord
-from src.services.monitoring.metrics import MetricsRegistry, get_metrics_registry
 from src.services.query_processing.models import SearchRequest
 from src.services.vector_db.service import VectorStoreService
 
@@ -36,16 +35,6 @@ except ModuleNotFoundError:  # pragma: no cover
     LANGGRAPH_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
-
-
-def _safe_get_metrics_registry() -> MetricsRegistry | None:
-    try:
-        return get_metrics_registry()
-    except RuntimeError:
-        return None
-    except Exception:  # pragma: no cover - defensive fallback
-        logger.exception("Failed to access metrics registry")
-        return None
 
 
 def _build_callback_handlers(tracer: trace.Tracer) -> list[BaseCallbackHandler]:
@@ -127,7 +116,6 @@ class LangGraphRAGPipeline:
             lambda cfg, retr: RAGGenerator(cfg, retr)
         )
         self._tracer = trace.get_tracer(__name__)
-        self._metrics_registry = _safe_get_metrics_registry()
         self._callback_handlers = _build_callback_handlers(self._tracer)
 
     async def run(
@@ -179,7 +167,6 @@ class LangGraphRAGPipeline:
                 "rag.retriever_tool", "vector_context_retriever"
             )
 
-            metrics_registry = self._metrics_registry or _safe_get_metrics_registry()
             prefetched_documents = self._records_to_documents(prefetched_records or [])
             tracer = self._tracer
 
@@ -195,10 +182,13 @@ class LangGraphRAGPipeline:
                         "rag.retrieve.prefetched_used", int(used_prefetched)
                     )
                     stats = getattr(retriever, "compression_stats", None)
-                    if documents and metrics_registry is not None and stats is not None:
-                        metrics_registry.record_compression_stats(
-                            collection=collection, stats=stats
-                        )
+                    if documents and stats is not None:
+                        if isinstance(stats, dict):
+                            iterable = stats.items()
+                        else:
+                            iterable = getattr(stats, "items", lambda: [])()
+                        for key, value in iterable:
+                            span.set_attribute(f"rag.compress.{key}", value)
                 return {"documents": documents}
 
             async def grade_node(state: _RAGGraphState) -> dict[str, Any]:
@@ -273,14 +263,12 @@ class LangGraphRAGPipeline:
                     span.set_attribute(
                         "rag.generate.answer_length", len(rag_result.answer)
                     )
-                    if metrics_registry is not None:
-                        metrics_registry.record_rag_generation_stats(
-                            collection=collection,
-                            model=effective_config.model,
-                            latency_ms=rag_result.generation_time_ms,
-                            token_metrics=rag_result.metrics,
-                            confidence=confidence,
-                        )
+                    span.set_attribute(
+                        "rag.generate.latency_ms", rag_result.generation_time_ms
+                    )
+                    if rag_result.metrics:
+                        for key, value in rag_result.metrics.items():
+                            span.set_attribute(f"rag.generate.{key}", value)
                     return {
                         "answer": rag_result.answer.strip(),
                         "answer_sources": sources,
