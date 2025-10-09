@@ -27,6 +27,10 @@ from pydantic import (
 )
 
 from src.config.models import FusionAlgorithm, VectorType
+from src.services.errors import (
+    QdrantServiceError,
+    ValidationError as ServiceValidationError,
+)
 
 
 if TYPE_CHECKING:
@@ -53,11 +57,11 @@ class SecureBaseModel(BaseModel):
     )
 
 
-class VectorSearchError(Exception):
+class VectorSearchError(QdrantServiceError):
     """Base exception for vector search operations."""
 
 
-class SecurityValidationError(VectorSearchError):
+class SecurityValidationError(ServiceValidationError):
     """Raised when security validation fails."""
 
 

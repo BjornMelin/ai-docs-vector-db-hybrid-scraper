@@ -21,12 +21,21 @@ from src.infrastructure.client_manager import (
     ensure_client_manager,
     shutdown_client_manager,
 )
+from src.services.errors import QdrantServiceError
 from src.services.vector_db import CollectionSchema
 from src.services.vector_db.service import VectorStoreService
 from src.utils import async_command
 
 
 console = Console()
+
+
+class CollectionCreationError(QdrantServiceError):
+    """Exception raised when collection creation fails."""
+
+
+class CollectionDeletionError(QdrantServiceError):
+    """Exception raised when collection deletion fails."""
 
 
 class CollectionInfo(BaseModel):

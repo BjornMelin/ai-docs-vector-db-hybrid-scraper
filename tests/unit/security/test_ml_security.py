@@ -18,6 +18,7 @@ from src.security.ml_security import (
     SecurityError,
     SimpleRateLimiter,
 )
+from src.services.errors import ValidationError as ServiceValidationError
 
 
 class TestSecurityCheckResult:
@@ -551,3 +552,9 @@ class TestIntegration:
         assert summary["total_checks"] >= 2
         assert summary["failed"] >= 2  # Both checks should have failed
         assert summary["passed"] == 0
+
+
+def test_security_error_subclass_validation_error() -> None:
+    """Ensure SecurityError derives from the shared validation error base."""
+
+    assert issubclass(SecurityError, ServiceValidationError)

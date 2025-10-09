@@ -34,6 +34,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Refactor
 
+- **[Architecture]:** Standardized all custom exceptions to inherit from the
+  canonical error hierarchy defined in `src/services/errors.py`, unifying error
+  handling across the application.
 - **[Observability]:** Replaced the legacy `TelemetryRepository` with the unified, OpenTelemetry-based `AIOperationTracker` for all in-memory application telemetry.
 - **[Architecture]:** Unified circuit breaker implementation by refactoring
   `TimeoutMiddleware` to use the shared `CircuitBreakerManager`, ensuring a

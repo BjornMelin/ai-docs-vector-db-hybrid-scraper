@@ -35,20 +35,21 @@ from .chunking import DocumentChunker
 from .config.loader import Settings, get_settings
 from .infrastructure.client_manager import ClientManager
 from .services.embeddings.manager import QualityTier
+from .services.errors import ServiceError
 from .services.logging_config import configure_logging
 from .services.vector_db.service import VectorStoreService
 from .services.vector_db.types import CollectionSchema, VectorRecord
 
 
-class ScrapingError(Exception):
+class ScrapingError(ServiceError):
     """Exception raised when web scraping fails."""
 
 
-class ContentExtractionError(Exception):
+class ContentExtractionError(ServiceError):
     """Exception raised when content extraction fails."""
 
 
-class ChunkGenerationError(Exception):
+class ChunkGenerationError(ServiceError):
     """Exception raised when chunk generation fails."""
 
 
