@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 import numpy as np
 import pytest
 
+from src.config.models import CacheType
 from src.services.errors import APIError, EmbeddingServiceError
 from src.services.hyde.cache import CacheEntryContext, HyDECache, SearchResultPayload
 from src.services.hyde.config import HyDEConfig
@@ -72,6 +73,14 @@ class TestHyDECache:  # pylint: disable=too-many-public-methods
         mock_cache_manager.set.assert_called_once()
         mock_cache_manager.get.assert_called_once()
         mock_cache_manager.delete.assert_called_once()
+
+        set_call = mock_cache_manager.set.call_args
+        get_call = mock_cache_manager.get.call_args
+        delete_call = mock_cache_manager.delete.call_args
+
+        assert set_call.kwargs["cache_type"] == CacheType.HYDE
+        assert get_call.kwargs["cache_type"] == CacheType.HYDE
+        assert delete_call.kwargs["cache_type"] == CacheType.HYDE
 
     @pytest.mark.asyncio
     async def test_initialize_no_cache_manager_initialize(
@@ -160,6 +169,9 @@ class TestHyDECache:  # pylint: disable=too-many-public-methods
         assert cache.metrics.hits == 1
         assert cache.metrics.misses == 0
 
+        get_call = mock_cache_manager.get.call_args
+        assert get_call.kwargs["cache_type"] == CacheType.HYDE
+
     @pytest.mark.asyncio
     async def test_get_hyde_embedding_cache_hit_binary_format(
         self, cache, mock_cache_manager
@@ -184,6 +196,9 @@ class TestHyDECache:  # pylint: disable=too-many-public-methods
         assert abs(result[2] - 0.3) < 0.001
         assert cache.metrics.hits == 1
 
+        get_call = mock_cache_manager.get.call_args
+        assert get_call.kwargs["cache_type"] == CacheType.HYDE
+
     @pytest.mark.asyncio
     async def test_get_hyde_embedding_cache_hit_list_format(
         self, cache, mock_cache_manager
@@ -199,6 +214,9 @@ class TestHyDECache:  # pylint: disable=too-many-public-methods
         assert result == [0.1, 0.2, 0.3]
         assert cache.metrics.hits == 1
 
+        get_call = mock_cache_manager.get.call_args
+        assert get_call.kwargs["cache_type"] == CacheType.HYDE
+
     @pytest.mark.asyncio
     async def test_get_hyde_embedding_cache_miss(self, cache, mock_cache_manager):
         """Test getting HyDE embedding - cache miss."""
@@ -211,6 +229,9 @@ class TestHyDECache:  # pylint: disable=too-many-public-methods
         assert cache.metrics.hits == 0
         assert cache.metrics.misses == 1
 
+        get_call = mock_cache_manager.get.call_args
+        assert get_call.kwargs["cache_type"] == CacheType.HYDE
+
     @pytest.mark.asyncio
     async def test_get_hyde_embedding_invalid_format(self, cache, mock_cache_manager):
         """Test getting HyDE embedding with invalid cache format."""
@@ -222,6 +243,9 @@ class TestHyDECache:  # pylint: disable=too-many-public-methods
         assert result is None
         assert cache.metrics.misses == 1
 
+        get_call = mock_cache_manager.get.call_args
+        assert get_call.kwargs["cache_type"] == CacheType.HYDE
+
     @pytest.mark.asyncio
     async def test_get_hyde_embedding_error(self, cache, mock_cache_manager):
         """Test getting HyDE embedding with cache error."""
@@ -232,6 +256,9 @@ class TestHyDECache:  # pylint: disable=too-many-public-methods
 
         assert result is None
         assert cache.metrics.errors == 1
+
+        get_call = mock_cache_manager.get.call_args
+        assert get_call.kwargs["cache_type"] == CacheType.HYDE
 
     @pytest.mark.asyncio
     async def test_get_hyde_embedding_not_initialized(self, cache):
@@ -265,9 +292,9 @@ class TestHyDECache:  # pylint: disable=too-many-public-methods
 
         # Check the cached data structure
         call_args = mock_cache_manager.set.call_args
-        cache_key = call_args[0][0]
-        cache_data = call_args[0][1]
-        ttl = call_args[1]["ttl"]
+        cache_key = call_args.args[0]
+        cache_data = call_args.args[1]
+        ttl = call_args.kwargs["ttl"]
 
         assert "test_hyde:embedding:" in cache_key
         assert cache_data["query"] == "test query"
@@ -275,6 +302,7 @@ class TestHyDECache:  # pylint: disable=too-many-public-methods
         assert cache_data["hypothetical_docs"] == hypothetical_docs
         assert cache_data["metadata"] == metadata
         assert ttl == cache.config.cache_ttl_seconds
+        assert call_args.kwargs["cache_type"] == CacheType.HYDE
 
     @pytest.mark.asyncio
     async def test_set_hyde_embedding_no_hypothetical_docs(
@@ -298,8 +326,9 @@ class TestHyDECache:  # pylint: disable=too-many-public-methods
 
         # Check that hypothetical docs are not cached
         call_args = mock_cache_manager.set.call_args
-        cache_data = call_args[0][1]
+        cache_data = call_args.args[1]
         assert cache_data["hypothetical_docs"] == []
+        assert call_args.kwargs["cache_type"] == CacheType.HYDE
 
     @pytest.mark.asyncio
     async def test_set_hyde_embedding_error(self, cache, mock_cache_manager):
@@ -330,6 +359,9 @@ class TestHyDECache:  # pylint: disable=too-many-public-methods
         assert result == cached_docs
         assert cache.metrics.hits == 1
 
+        get_call = mock_cache_manager.get.call_args
+        assert get_call.kwargs["cache_type"] == CacheType.HYDE
+
     @pytest.mark.asyncio
     async def test_get_hypothetical_documents_disabled(self, cache, mock_cache_manager):
         """Test getting hypothetical documents when caching disabled."""
@@ -351,6 +383,9 @@ class TestHyDECache:  # pylint: disable=too-many-public-methods
         assert result is None
         assert cache.metrics.misses == 1
 
+        get_call = mock_cache_manager.get.call_args
+        assert get_call.kwargs["cache_type"] == CacheType.HYDE
+
     @pytest.mark.asyncio
     async def test_get_hypothetical_documents_error(self, cache, mock_cache_manager):
         """Test getting hypothetical documents with error."""
@@ -361,6 +396,9 @@ class TestHyDECache:  # pylint: disable=too-many-public-methods
 
         assert result is None
         assert cache.metrics.errors == 1
+
+        get_call = mock_cache_manager.get.call_args
+        assert get_call.kwargs["cache_type"] == CacheType.HYDE
 
     @pytest.mark.asyncio
     async def test_set_hypothetical_documents_success(self, cache, mock_cache_manager):
@@ -388,11 +426,12 @@ class TestHyDECache:  # pylint: disable=too-many-public-methods
 
         # Check cached data
         call_args = mock_cache_manager.set.call_args
-        cache_data = call_args[0][1]
+        cache_data = call_args.args[1]
         assert cache_data["documents"] == documents
         assert cache_data["generation_time"] == 1.5
         assert cache_data["tokens_used"] == 100
         assert cache_data["diversity_score"] == 0.8
+        assert call_args.kwargs["cache_type"] == CacheType.HYDE
 
     @pytest.mark.asyncio
     async def test_set_hypothetical_documents_disabled(self, cache, mock_cache_manager):
@@ -455,6 +494,9 @@ class TestHyDECache:  # pylint: disable=too-many-public-methods
         assert result == cached_results
         assert cache.metrics.hits == 1
 
+        get_call = mock_cache_manager.get.call_args
+        assert get_call.kwargs["cache_type"] == CacheType.SEARCH
+
     @pytest.mark.asyncio
     async def test_get_search_results_miss(self, cache, mock_cache_manager):
         """Test getting search results - cache miss."""
@@ -469,6 +511,9 @@ class TestHyDECache:  # pylint: disable=too-many-public-methods
         assert result is None
         assert cache.metrics.misses == 1
 
+        get_call = mock_cache_manager.get.call_args
+        assert get_call.kwargs["cache_type"] == CacheType.SEARCH
+
     @pytest.mark.asyncio
     async def test_get_search_results_error(self, cache, mock_cache_manager):
         """Test getting search results with error."""
@@ -482,6 +527,9 @@ class TestHyDECache:  # pylint: disable=too-many-public-methods
 
         assert result is None
         assert cache.metrics.errors == 1
+
+        get_call = mock_cache_manager.get.call_args
+        assert get_call.kwargs["cache_type"] == CacheType.SEARCH
 
     @pytest.mark.asyncio
     async def test_set_search_results_success(self, cache, mock_cache_manager):
@@ -504,8 +552,9 @@ class TestHyDECache:  # pylint: disable=too-many-public-methods
 
         # Check TTL is shorter for search results
         call_args = mock_cache_manager.set.call_args
-        ttl = call_args[1]["ttl"]
+        ttl = call_args.kwargs["ttl"]
         assert ttl <= cache.config.cache_ttl_seconds // 2
+        assert call_args.kwargs["cache_type"] == CacheType.SEARCH
 
     @pytest.mark.asyncio
     async def test_set_search_results_error(self, cache, mock_cache_manager):
@@ -560,6 +609,9 @@ class TestHyDECache:  # pylint: disable=too-many-public-methods
         assert result is True
         assert mock_cache_manager.delete.call_count == 2  # embedding + documents
 
+        for call in mock_cache_manager.delete.call_args_list:
+            assert call.kwargs["cache_type"] == CacheType.HYDE
+
     @pytest.mark.asyncio
     async def test_invalidate_query_partial_success(self, cache, mock_cache_manager):
         """Test query invalidation with partial success."""
@@ -572,6 +624,9 @@ class TestHyDECache:  # pylint: disable=too-many-public-methods
         result = await cache.invalidate_query("test query", "python")
 
         assert result is True  # At least one succeeded
+
+        for call in mock_cache_manager.delete.call_args_list:
+            assert call.kwargs["cache_type"] == CacheType.HYDE
 
     @pytest.mark.asyncio
     async def test_invalidate_query_error(self, cache, mock_cache_manager):
@@ -648,7 +703,7 @@ class TestHyDECache:  # pylint: disable=too-many-public-methods
         assert metrics["cache_misses"] == 2
         assert metrics["cache_sets"] == 5
         assert metrics["cache_errors"] == 1
-        assert metrics["_total_requests"] == 10
+        assert metrics["total_requests"] == 10
         assert metrics["hit_rate"] == 0.8
         assert metrics["error_rate"] == 0.1
 
@@ -660,7 +715,7 @@ class TestHyDECache:  # pylint: disable=too-many-public-methods
         assert metrics["cache_misses"] == 0
         assert metrics["cache_sets"] == 0
         assert metrics["cache_errors"] == 0
-        assert metrics["_total_requests"] == 0
+        assert metrics["total_requests"] == 0
         assert metrics["hit_rate"] == 0.0
         assert metrics["error_rate"] == 0.0
 
@@ -691,8 +746,9 @@ class TestHyDECache:  # pylint: disable=too-many-public-methods
 
         # Should use "general" as default domain
         call_args = mock_cache_manager.get.call_args
-        cache_key = call_args[0][0]
+        cache_key = call_args.args[0]
         assert "test_hyde:embedding:" in cache_key
+        assert call_args.kwargs["cache_type"] == CacheType.HYDE
 
     @pytest.mark.asyncio
     async def test_binary_embedding_storage_and_retrieval(
@@ -711,11 +767,12 @@ class TestHyDECache:  # pylint: disable=too-many-public-methods
 
         # Check that set was called with binary data
         call_args = mock_cache_manager.set.call_args
-        cache_data = call_args[0][1]
+        cache_data = call_args.args[1]
 
         assert isinstance(cache_data["embedding"], bytes)
         assert "embedding_shape" in cache_data
         assert "embedding_dtype" in cache_data
+        assert call_args.kwargs["cache_type"] == CacheType.HYDE
 
         # Test retrieval
         mock_cache_manager.get.return_value = cache_data
@@ -726,3 +783,6 @@ class TestHyDECache:  # pylint: disable=too-many-public-methods
         assert abs(retrieved[1] - 0.2) < 0.001
         assert abs(retrieved[2] - 0.3) < 0.001
         assert abs(retrieved[3] - 0.4) < 0.001
+
+        get_call = mock_cache_manager.get.call_args
+        assert get_call.kwargs["cache_type"] == CacheType.HYDE
