@@ -11,13 +11,16 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from importlib import import_module
-from inspect import iscoroutinefunction
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, Literal, NoReturn, cast
 
-from dependency_injector.wiring import Provide, inject
-from langchain_mcp_adapters.client import MultiServerMCPClient
-from langchain_mcp_adapters.sessions import Connection
+from dependency_injector.wiring import Provide, inject  # type: ignore[reportMissingImports]
+from langchain_mcp_adapters.client import (  # type: ignore[reportMissingImports]
+    MultiServerMCPClient,
+)
+from langchain_mcp_adapters.sessions import (  # type: ignore[reportMissingImports]
+    Connection,
+)
 
 from src.config import Settings, get_settings
 from src.config.models import CacheType, MCPClientConfig, MCPServerConfig, MCPTransport
@@ -38,11 +41,16 @@ from src.services.health.manager import (
     HealthStatus,
     build_health_manager,
 )
+from src.services.observability.performance import (
+    get_operation_statistics,
+    get_system_performance_summary,
+    monitor_operation,
+)
 from src.services.vector_db.types import VectorRecord
 
 
 if TYPE_CHECKING:  # pragma: no cover - imported for typing only
-    from redis.asyncio import Redis
+    from redis.asyncio import Redis  # type: ignore[reportMissingImports]
 
     from src.services.browser.unified_manager import UnifiedBrowserManager
     from src.services.cache.manager import CacheManager
@@ -233,7 +241,6 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         self._monitoring_initialized = False
         self._health_manager: HealthCheckManager | None = None
         self._metrics_registry: Any | None = None
-        self._performance_monitor: Any | None = None
 
     @property
     def config(self) -> Settings:
@@ -802,16 +809,6 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
             self._metrics_registry = get_metrics_registry()
 
         try:
-            from src.services.monitoring.performance_monitor import (  # pylint: disable=import-outside-toplevel
-                RealTimePerformanceMonitor,
-            )
-        except ImportError:
-            logger.warning("Performance monitor not available")
-            self._performance_monitor = None
-        else:
-            self._performance_monitor = RealTimePerformanceMonitor()
-
-        try:
             self._health_manager = build_health_manager(
                 self._config,
                 metrics_registry=self._metrics_registry,
@@ -839,16 +836,7 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
     async def _shutdown_monitoring(self) -> None:
         """Cleanup monitoring resources."""
 
-        if self._performance_monitor is not None:
-            cleanup_method = getattr(self._performance_monitor, "cleanup", None)
-            if callable(cleanup_method):
-                if iscoroutinefunction(cleanup_method):
-                    await cleanup_method()
-                else:
-                    cleanup_method()
-
         self._metrics_registry = None
-        self._performance_monitor = None
         self._health_manager = None
         self._monitoring_initialized = False
 
@@ -1011,15 +999,17 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         """Track performance of an asynchronous operation."""
 
         start_time = time.time()
-        try:
-            result = await operation_func(*args, **kwargs)
-        except Exception:
-            duration_ms = (time.time() - start_time) * 1000
-            self.record_histogram(f"{operation_name}_duration_ms", duration_ms)
-            self.increment_counter(f"{operation_name}_total", {"status": "error"})
-            self.increment_counter(f"{operation_name}_errors")
-            logger.exception("Operation %s failed", operation_name)
-            raise
+        with monitor_operation(operation_name, metadata={"source": "client_manager"}):
+            try:
+                result = await operation_func(*args, **kwargs)
+            except Exception:
+                duration_ms = (time.time() - start_time) * 1000
+                self.record_histogram(f"{operation_name}_duration_ms", duration_ms)
+                self.increment_counter(f"{operation_name}_total", {"status": "error"})
+                self.increment_counter(f"{operation_name}_errors")
+                logger.exception("Operation %s failed", operation_name)
+                raise
+
         duration_ms = (time.time() - start_time) * 1000
         self.record_histogram(f"{operation_name}_duration_ms", duration_ms)
         self.increment_counter(f"{operation_name}_total", {"status": "success"})
@@ -1029,14 +1019,12 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
         """Return captured performance metrics."""
 
         self._ensure_monitoring_ready()
-        if self._performance_monitor is None:
-            return {}
-        try:
-            if hasattr(self._performance_monitor, "get_metrics"):
-                return self._performance_monitor.get_metrics()
-        except Exception:  # pragma: no cover - defensive
-            logger.warning("Failed to get performance metrics", exc_info=True)
-        return {}
+        summary = get_operation_statistics()
+        system_summary = get_system_performance_summary()
+        metrics: dict[str, Any] = {"operations": summary}
+        if system_summary:
+            metrics["system"] = system_summary
+        return metrics
 
     async def log_operation(
         self,
@@ -1090,7 +1078,10 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
                 "services": check_names,
             },
             "metrics_registry": {"available": self._metrics_registry is not None},
-            "performance_monitor": {"available": self._performance_monitor is not None},
+            "performance_monitor": {
+                "available": True,
+                "provider": "opentelemetry",
+            },
             "overall_health": overall_health,
             "performance_metrics": self.get_performance_metrics(),
         }

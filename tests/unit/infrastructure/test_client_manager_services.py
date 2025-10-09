@@ -133,6 +133,12 @@ async def test_track_performance_records_metrics(mocker: MockerFixture) -> None:
     manager = ClientManager()
     histogram = mocker.patch.object(manager, "record_histogram")
     counter = mocker.patch.object(manager, "increment_counter")
+    monitor = mocker.patch(
+        "src.infrastructure.client_manager.monitor_operation",
+        autospec=True,
+    )
+    monitor.return_value.__enter__.return_value = None
+    monitor.return_value.__exit__.return_value = None
 
     async def _noop() -> str:
         await asyncio.sleep(0)
@@ -143,3 +149,4 @@ async def test_track_performance_records_metrics(mocker: MockerFixture) -> None:
     assert result == "ok"
     histogram.assert_called()
     counter.assert_called()
+    monitor.assert_called_once_with("demo", metadata={"source": "client_manager"})

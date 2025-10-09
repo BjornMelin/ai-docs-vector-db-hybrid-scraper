@@ -78,6 +78,19 @@ async def test_get_process_info_returns_check_metadata(
     """Process info should surface system resource metadata."""
 
     tools, health_manager = registered_tools
+    resource_snapshot = {
+        "psutil_available": True,
+        "process": {
+            "cpu_percent": 88.0,
+            "memory_percent": 79.0,
+            "rss_memory_mb": 512.0,
+        },
+        "system": {"cpu_count_logical": 8},
+    }
+    mocker.patch(
+        "src.mcp_tools.tools.system_health._collect_resource_snapshot",
+        return_value=resource_snapshot,
+    )
     health_manager.check_single = mocker.AsyncMock(
         return_value=HealthCheckResult(
             name="system_resources",
@@ -92,6 +105,8 @@ async def test_get_process_info_returns_check_metadata(
 
     assert response["status"] == HealthStatus.DEGRADED.value
     assert response["metrics"]["cpu_percent"] == 92.0
+    assert response["metrics"]["rss_memory_mb"] == 512.0
+    assert response["resource_snapshot"] == resource_snapshot
     health_manager.check_single.assert_awaited_once_with("system_resources")
     mock_context.info.assert_awaited()
 

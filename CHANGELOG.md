@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Refactor
 
 - **[Observability]:** Replaced the legacy `TelemetryRepository` with the unified, OpenTelemetry-based `AIOperationTracker` for all in-memory application telemetry.
+- **[Observability]:** Removed the legacy `RealTimePerformanceMonitor` and consolidated its functionality. Operation timing is now handled by the OpenTelemetry-based `PerformanceMonitor`, and system resource metrics are exposed via the `system_health` MCP tool.
 - **[Architecture]:** Unified circuit breaker implementation by refactoring
   `TimeoutMiddleware` to use the shared `CircuitBreakerManager`, ensuring a
   global state for all breakers.
