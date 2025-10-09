@@ -20,21 +20,15 @@ from rich.syntax import Syntax
 from rich.table import Table
 from rich.text import Text
 
-from src.manage_vector_db import VectorDBManager
+from src.manage_vector_db import (
+    CollectionCreationError,
+    CollectionDeletionError,
+    VectorDBManager,
+)
 
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     pass
-
-
-class CollectionCreationError(Exception):
-    """Exception raised when collection creation fails."""
-
-
-class CollectionDeletionError(Exception):
-    """Exception raised when collection deletion fails."""
-
-
 console = Console()
 
 

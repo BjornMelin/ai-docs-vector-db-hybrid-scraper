@@ -16,11 +16,15 @@ from click.testing import CliRunner
 from src.config import Settings
 from src.crawl4ai_bulk_embedder import (
     BulkEmbedder,
+    ChunkGenerationError,
+    ContentExtractionError,
     ProcessingState,
+    ScrapingError,
     _async_main,
     main,
 )
 from src.infrastructure.client_manager import ClientManager
+from src.services.errors import ServiceError
 
 
 pytestmark = pytest.mark.filterwarnings(
@@ -984,3 +988,11 @@ class TestAsyncMain:
                     )
 
         client_instance.cleanup.assert_awaited_once()
+
+
+def test_bulk_embedder_errors_subclass_service_error() -> None:
+    """Ensure bulk embedder custom exceptions derive from ServiceError."""
+
+    assert issubclass(ScrapingError, ServiceError)
+    assert issubclass(ContentExtractionError, ServiceError)
+    assert issubclass(ChunkGenerationError, ServiceError)

@@ -9,6 +9,7 @@ from src.models.vector_search import (
     DimensionError,
     FilterValidationError,
     FusionAlgorithm,
+    SecurityValidationError,
     HyDESearchRequest,
     MultiStageSearchRequest,
     SearchAccuracy,
@@ -18,7 +19,21 @@ from src.models.vector_search import (
     SecurePayloadModel,
     SecureSearchResult,
     SecureVectorModel,
+    VectorSearchError,
 )
+from src.services.errors import (
+    QdrantServiceError,
+    ValidationError as ServiceValidationError,
+)
+
+
+def test_vector_search_error_hierarchy() -> None:
+    """Ensure vector search errors derive from canonical bases."""
+
+    assert issubclass(VectorSearchError, QdrantServiceError)
+    assert issubclass(DimensionError, VectorSearchError)
+    assert issubclass(FilterValidationError, VectorSearchError)
+    assert issubclass(SecurityValidationError, ServiceValidationError)
 
 
 class TestSecureVectorModel:

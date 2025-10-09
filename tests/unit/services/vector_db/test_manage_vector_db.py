@@ -11,12 +11,15 @@ from click.testing import CliRunner
 
 from src.contracts.retrieval import SearchRecord
 from src.manage_vector_db import (
+    CollectionCreationError,
+    CollectionDeletionError,
     CollectionInfo,
     CollectionSchema,
     DatabaseStats,
     VectorDBManager,
     cli,
 )
+from src.services.errors import QdrantServiceError
 
 
 @pytest.fixture()
@@ -283,3 +286,10 @@ def test_cli_stats_prints_table() -> None:
     assert "Total Collections" in result.output
     manager_stub.get_database_stats.assert_awaited_once()
     manager_stub.cleanup.assert_awaited_once()
+
+
+def test_collection_errors_subclass_qdrant_service_error() -> None:
+    """Ensure collection lifecycle errors derive from QdrantServiceError."""
+
+    assert issubclass(CollectionCreationError, QdrantServiceError)
+    assert issubclass(CollectionDeletionError, QdrantServiceError)

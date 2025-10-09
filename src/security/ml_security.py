@@ -13,12 +13,13 @@ from urllib.parse import urlparse
 from pydantic import BaseModel, Field
 
 from src.config import get_settings
+from src.services.errors import ValidationError as ServiceValidationError
 
 
 logger = logging.getLogger(__name__)
 
 
-class SecurityError(ValueError):
+class SecurityError(ServiceValidationError):
     """Security-related error raised for invalid user-controlled inputs."""
 
 
