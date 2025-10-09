@@ -5,7 +5,6 @@ entry in the golden dataset and captures three layers of evaluation:
 
 * Deterministic baselines (string similarity + retrieval precision/recall)
 * Optional Ragas metrics (faithfulness, relevance, context recall)
-* Telemetry snapshots from the Prometheus metrics registry
 
 Usage:
     uv run python scripts/eval/rag_golden_eval.py \
@@ -32,16 +31,9 @@ from statistics import fmean
 from typing import Any, Protocol
 
 import yaml
-from prometheus_client import CollectorRegistry
-from prometheus_client.samples import Sample
 
 from scripts.eval.dataset_validator import DatasetValidationError, load_dataset_records
 from src.infrastructure.client_manager import ClientManager
-from src.services.monitoring.metrics import (
-    MetricsConfig,
-    MetricsRegistry,
-    set_metrics_registry,
-)
 from src.services.query_processing.models import SearchRequest, SearchResponse
 from src.services.query_processing.orchestrator import SearchOrchestrator
 
@@ -91,7 +83,6 @@ class EvaluationReport:
 
     results: list[ExampleResult]
     aggregates: dict[str, Any]
-    telemetry: dict[str, Any]
 
 
 class SupportsSearchOrchestrator(Protocol):
@@ -454,33 +445,6 @@ def _compute_retrieval_metrics(
     }
 
 
-def _snapshot_metrics(
-    registry: CollectorRegistry,
-    allowlist: frozenset[str] | None = None,
-) -> dict[str, Any]:
-    """Convert Prometheus metrics into a JSON-friendly structure."""
-
-    permitted = allowlist or frozenset()
-    snapshot: dict[str, Any] = {}
-    for metric in registry.collect():
-        if permitted and metric.name not in permitted:
-            continue
-        samples: list[dict[str, Any]] = []
-        for sample in metric.samples:
-            assert isinstance(sample, Sample)  # typing guard
-            redacted_labels = {
-                key: (value.split("/")[-1] if key.endswith("_path") else value)
-                for key, value in sample.labels.items()
-            }
-            samples.append({"labels": redacted_labels, "value": sample.value})
-        snapshot[metric.name] = {
-            "type": metric.type,
-            "documentation": metric.documentation,
-            "samples": samples,
-        }
-    return snapshot
-
-
 def _aggregate_metrics(results: Sequence[ExampleResult]) -> dict[str, Any]:
     """Aggregate numeric metrics across all examples."""
 
@@ -621,13 +585,6 @@ async def _run(args: argparse.Namespace) -> None:
     dataset_path = Path(args.dataset)
     examples = _load_dataset(dataset_path)
 
-    registry = CollectorRegistry(auto_describe=True)
-    metrics_registry = MetricsRegistry(
-        MetricsConfig(namespace=args.namespace, enabled=True),
-        registry=registry,
-    )
-    set_metrics_registry(metrics_registry)
-
     default_max_samples, _ = _load_cost_controls()
     ragas_sample_cap = args.ragas_max_samples
     if ragas_sample_cap is None:
@@ -654,15 +611,6 @@ async def _run(args: argparse.Namespace) -> None:
         )
     finally:
         await orchestrator.cleanup()
-        set_metrics_registry(None)
-
-    allowlist = args.metrics_allowlist
-    if not allowlist:
-        allowlist_path = Path("config/metrics_allowlist.json")
-        if allowlist_path.exists():
-            with allowlist_path.open(encoding="utf-8") as handle:
-                data = json.load(handle)
-                allowlist = data.get("metrics", [])
 
     aggregates = _aggregate_metrics(results)
     thresholds = _load_thresholds()
@@ -673,9 +621,6 @@ async def _run(args: argparse.Namespace) -> None:
     report = EvaluationReport(
         results=results,
         aggregates=aggregates,
-        telemetry={
-            "prometheus_snapshot": _snapshot_metrics(registry, frozenset(allowlist)),
-        },
     )
 
     payload = _render_report(report)
@@ -733,12 +678,6 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         type=int,
         default=None,
         help="Upper bound on examples processed with RAGAS (cost control)",
-    )
-    parser.add_argument(
-        "--metrics-allowlist",
-        nargs="*",
-        default=[],
-        help="Prometheus metric names to include in the snapshot",
     )
     return parser
 

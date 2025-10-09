@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from prometheus_client import CollectorRegistry, Counter
 
 from scripts.eval.dataset_validator import DatasetValidationError, validate_dataset
 from scripts.eval.rag_golden_eval import (
@@ -22,7 +21,6 @@ from scripts.eval.rag_golden_eval import (
     _load_dataset,
     _load_thresholds,
     _render_report,
-    _snapshot_metrics,
 )
 from src.contracts.retrieval import SearchRecord
 from src.services.query_processing.models import SearchResponse
@@ -244,29 +242,6 @@ def test_load_dataset_raises_on_invalid_json(tmp_path: Path) -> None:
     dataset_path.write_text("{invalid json}\n", encoding="utf-8")
     with pytest.raises(ValueError):
         _load_dataset(dataset_path)
-
-
-def test_snapshot_metrics_respects_allowlist() -> None:
-    """Only metrics on the allowlist should be exported."""
-
-    registry = CollectorRegistry()
-    hits = Counter(
-        "rag_hits",
-        "Dummy rag hits",
-        labelnames=("collection",),
-        registry=registry,
-    )
-    other = Counter(
-        "unrelated_counter_total",
-        "Noise",
-        registry=registry,
-    )
-    hits.labels(collection="golden_eval").inc()
-    other.inc()
-
-    snapshot = _snapshot_metrics(registry, frozenset({"rag_hits"}))
-    assert "rag_hits" in snapshot
-    assert "unrelated_counter_total" not in snapshot
 
 
 def test_dataset_validator_detects_missing_metadata(tmp_path: Path) -> None:

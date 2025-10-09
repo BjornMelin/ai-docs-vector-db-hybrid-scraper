@@ -63,7 +63,7 @@ async def test_lifespan_initializes_and_cleans_up(
     monkeypatch.setattr(
         unified_mcp_server,
         "initialize_monitoring_system",
-        lambda _config, _qdrant, _redis: (None, None),
+        lambda _config, _qdrant, _redis: None,
     )
 
     async with _lifespan_context():
@@ -106,11 +106,10 @@ async def test_lifespan_cancels_background_tasks(
     monkeypatch.setattr(unified_mcp_server, "register_all_tools", register_mock)
 
     health_manager = AsyncMock()
-    metrics_registry = AsyncMock()
     monkeypatch.setattr(
         unified_mcp_server,
         "initialize_monitoring_system",
-        lambda _config, _qdrant, _redis: (metrics_registry, health_manager),
+        lambda _config, _qdrant, _redis: health_manager,
     )
 
     monitor_tasks: list[asyncio.Task] = []
@@ -126,16 +125,6 @@ async def test_lifespan_cancels_background_tasks(
     monkeypatch.setattr(
         unified_mcp_server,
         "run_periodic_health_checks",
-        _fake_health_checks,
-    )
-    monkeypatch.setattr(
-        unified_mcp_server,
-        "update_system_metrics_periodically",
-        _fake_health_checks,
-    )
-    monkeypatch.setattr(
-        unified_mcp_server,
-        "update_cache_metrics_periodically",
         _fake_health_checks,
     )
     monkeypatch.setattr(unified_mcp_server, "setup_fastmcp_monitoring", MagicMock())

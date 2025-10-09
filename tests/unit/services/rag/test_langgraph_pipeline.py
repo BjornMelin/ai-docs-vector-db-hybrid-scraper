@@ -237,24 +237,7 @@ def test_rag_tracing_callback_records_token_usage() -> None:
 
 
 @pytest.mark.asyncio
-async def test_pipeline_emits_metrics_when_registry_available(monkeypatch) -> None:
-    class MetricsStub:
-        def __init__(self) -> None:
-            self.generation_calls: list[dict[str, Any]] = []
-            self.compression_calls: list[tuple[str, Any]] = []
-
-        def record_rag_generation_stats(self, **kwargs: Any) -> None:
-            self.generation_calls.append(kwargs)
-
-        def record_compression_stats(self, collection: str, stats: Any) -> None:
-            self.compression_calls.append((collection, stats))
-
-    metrics_stub = MetricsStub()
-    monkeypatch.setattr(
-        "src.services.rag.langgraph_pipeline._safe_get_metrics_registry",
-        lambda: metrics_stub,
-    )
-
+async def test_pipeline_returns_generation_payload(monkeypatch) -> None:
     match = VectorMatch(
         id="doc-1",
         score=0.9,
@@ -276,52 +259,39 @@ async def test_pipeline_emits_metrics_when_registry_available(monkeypatch) -> No
     request = SearchRequest(query="langgraph", limit=5)
     rag_config = RAGConfig(compression_enabled=False)
 
-    await pipeline.run(
+    result = await pipeline.run(
         query="langgraph",
         request=request,
         rag_config=rag_config,
         collection="docs",
     )
 
-    assert len(metrics_stub.generation_calls) == 1
-    call = metrics_stub.generation_calls[0]
-    assert call["collection"] == "docs"
-    assert call["model"] == rag_config.model
-    assert not metrics_stub.compression_calls
+    assert result is not None
+    assert result["answer"].startswith("Answer for")
+    assert result["confidence"] == pytest.approx(0.87)
+    assert len(result["sources"]) == 2
 
 
 @pytest.mark.asyncio
-async def test_pipeline_records_compression_metrics(monkeypatch) -> None:
-    class MetricsStub:
-        def __init__(self) -> None:
-            self.generation_calls: list[dict[str, Any]] = []
-            self.compression_calls: list[tuple[str, Any]] = []
-
-        def record_rag_generation_stats(self, **kwargs: Any) -> None:
-            self.generation_calls.append(kwargs)
-
-        def record_compression_stats(self, collection: str, stats: Any) -> None:
-            self.compression_calls.append((collection, stats))
-
-    metrics_stub = MetricsStub()
-    monkeypatch.setattr(
-        "src.services.rag.langgraph_pipeline._safe_get_metrics_registry",
-        lambda: metrics_stub,
-    )
+async def test_pipeline_populates_retriever_compression_stats(monkeypatch) -> None:
     monkeypatch.setattr(
         "src.services.rag.langgraph_pipeline.LangGraphRAGPipeline._build_compressor",
         lambda self, config: DocumentCompressorPipeline(transformers=[]),
     )
 
+    captured: dict[str, SimpleNamespace] = {}
+
     async def fake_maybe_compress(
         self, query: str, documents: list[Document]
     ) -> list[Document]:
-        self._compression_stats = SimpleNamespace(
+        stats = SimpleNamespace(
             tokens_before=10,
             tokens_after=5,
             documents_processed=len(documents),
             documents_compressed=max(0, len(documents) - 1),
         )
+        self._compression_stats = stats
+        captured["stats"] = stats
         return documents
 
     monkeypatch.setattr(
@@ -357,10 +327,7 @@ async def test_pipeline_records_compression_metrics(monkeypatch) -> None:
         collection="docs",
     )
 
-    assert len(metrics_stub.compression_calls) == 1
-    collection, stats = metrics_stub.compression_calls[0]
-    assert collection == "docs"
+    stats = captured.get("stats")
+    assert stats is not None
     assert stats.tokens_before == 10
     assert stats.tokens_after == 5
-    assert stats.documents_processed == 1
-    assert stats.documents_compressed == 0

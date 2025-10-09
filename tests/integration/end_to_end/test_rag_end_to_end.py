@@ -6,13 +6,7 @@ import time
 from typing import cast
 
 import pytest
-from prometheus_client import CollectorRegistry
 
-from src.services.monitoring.metrics import (
-    MetricsConfig,
-    MetricsRegistry,
-    set_metrics_registry,
-)
 from src.services.query_processing.models import SearchRequest
 from src.services.query_processing.orchestrator import (
     SearchOrchestrator,
@@ -114,8 +108,8 @@ class _StubGenerator:
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_end_to_end_query_with_metrics_snapshot() -> None:
-    """Full orchestrator run should return an answer and record metrics."""
+async def test_end_to_end_query_generates_answer() -> None:
+    """Full orchestrator run should return an answer with confidence metadata."""
 
     matches = [
         VectorMatch(
@@ -153,12 +147,6 @@ async def test_end_to_end_query_with_metrics_snapshot() -> None:
     )
     orchestrator._rag_pipeline = pipeline  # type: ignore[attr-defined]
 
-    registry = MetricsRegistry(
-        MetricsConfig(namespace="e2e", enabled=True),
-        registry=CollectorRegistry(),
-    )
-    set_metrics_registry(registry)
-
     await orchestrator.initialize()
 
     try:
@@ -169,13 +157,8 @@ async def test_end_to_end_query_with_metrics_snapshot() -> None:
         assert response.generated_answer is not None
         assert response.answer_confidence == pytest.approx(0.88)
         assert response.records
-
-        metrics = {metric.name: metric for metric in registry.registry.collect()}
-        assert "e2e_rag_stage_latency_seconds" in metrics
-        assert "e2e_rag_answers" in metrics
     finally:
         await orchestrator.cleanup()
-        set_metrics_registry(None)
         await vector_service.cleanup()
 
 

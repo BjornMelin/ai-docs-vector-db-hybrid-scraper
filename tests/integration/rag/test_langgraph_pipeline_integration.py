@@ -7,7 +7,6 @@ from typing import cast
 
 import pytest
 
-from src.services.monitoring.metrics import set_metrics_registry
 from src.services.query_processing.models import SearchRequest
 from src.services.rag import (
     AnswerMetrics,
@@ -116,8 +115,6 @@ class _StubGenerator:
 async def test_pipeline_generates_answer_from_vector_matches() -> None:
     """LangGraph pipeline should orchestrate retrieval and generation."""
 
-    set_metrics_registry(None)
-
     matches = [
         VectorMatch(
             id="doc-1",
@@ -176,7 +173,6 @@ async def test_pipeline_generates_answer_from_vector_matches() -> None:
 async def test_pipeline_returns_none_when_no_documents() -> None:
     """Pipeline should escalate when retrieval yields no documents."""
 
-    set_metrics_registry(None)
     stub_vector_service = _StubVectorService(matches=[], collection="docs")
     await stub_vector_service.initialize()
 

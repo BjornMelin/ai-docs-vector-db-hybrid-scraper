@@ -75,10 +75,6 @@ async def initialized_service(
         "src.services.vector_db.service.VectorStoreService._build_sync_client",
         lambda self, cfg: MagicMock(),
     )
-    monkeypatch.setattr(
-        "src.services.vector_db.service.get_metrics_registry",
-        lambda: SimpleNamespace(record_grouping_attempt=lambda *args, **kwargs: None),
-    )
 
     config = SimpleNamespace(
         fastembed=SimpleNamespace(model="stub"),
