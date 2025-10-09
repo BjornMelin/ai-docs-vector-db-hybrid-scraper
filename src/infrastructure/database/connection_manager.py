@@ -1,157 +1,133 @@
-"""Enterprise database connection manager with ML-driven optimization.
+"""Database connection utilities built around async SQLAlchemy."""
 
-Clean 2025 implementation of enterprise features:
-- Predictive load monitoring with 95% ML accuracy
-- Connection affinity management with 73% hit rate
-- Adaptive pool sizing for 887.9% throughput increase
-- Multi-level circuit breaker for 99.9% uptime
-"""
+from __future__ import annotations
 
 import logging
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Callable
 from contextlib import AsyncExitStack, asynccontextmanager
-from typing import Any
-
-from sqlalchemy.ext.asyncio import (  # type: ignore[import]
-    AsyncEngine,
-    AsyncSession,
-    async_sessionmaker,
-    create_async_engine,
-)
+from typing import TYPE_CHECKING, Any, cast
 
 from src.config import Settings
 from src.services.circuit_breaker import CircuitBreakerManager
 
-from .monitoring import LoadMonitor, QueryMonitor
+from .monitoring import QueryMonitor
 
 
 logger = logging.getLogger(__name__)
 
 
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
+
+    SessionFactory = Callable[[], AsyncSession]
+else:  # pragma: no cover - runtime typing fallbacks
+    AsyncEngine = Any  # type: ignore[assignment]
+    AsyncSession = Any  # type: ignore[assignment]
+    SessionFactory = Callable[[], Any]
+
+try:  # pragma: no cover - optional dependency import
+    from sqlalchemy.ext.asyncio import (  # type: ignore[import]
+        AsyncEngine,
+        AsyncSession,
+        async_sessionmaker,
+        create_async_engine,
+    )
+except ImportError:  # pragma: no cover - runtime fallback when SQLAlchemy unavailable
+
+    def _missing_sqlalchemy(*_args: Any, **_kwargs: Any) -> Any:
+        msg = "SQLAlchemy async dependencies are required for DatabaseManager"
+        raise RuntimeError(msg)
+
+    async_sessionmaker = _missing_sqlalchemy  # type: ignore[assignment]
+    create_async_engine = _missing_sqlalchemy  # type: ignore[assignment]
+
+
 class DatabaseManager:
-    """Enterprise database manager with ML-driven optimization.
-
-    This manager provides production-grade database infrastructure with:
-    - 887.9% throughput optimization through predictive monitoring
-    - 50.9% latency reduction via connection affinity
-    - 99.9% uptime with multi-level circuit breaker
-    - Real-time monitoring and adaptive configuration
-
-    Performance verified through comprehensive benchmarking (BJO-134).
-    """
+    """Coordinate async SQLAlchemy sessions with lightweight monitoring."""
 
     def __init__(
         self,
         config: Settings,
-        load_monitor: LoadMonitor | None = None,
         query_monitor: QueryMonitor | None = None,
         circuit_breaker_manager: CircuitBreakerManager | None = None,
         breaker_service_name: str = "infrastructure.database",
     ):  # pylint: disable=too-many-arguments
-        """Initialize enterprise database manager.
+        """Initialize the database manager.
 
         Args:
-            config: Database configuration with enterprise settings
-            load_monitor: ML-based load monitoring (auto-created if None)
-            query_monitor: Query performance tracking (auto-created if None)
-            circuit_breaker: Circuit breaker for resilience (auto-created if None)
-
+            config: Unified application settings instance.
+            query_monitor: Optional query performance tracker.
+            circuit_breaker_manager: Optional circuit breaker manager.
+            breaker_service_name: Service identifier for breaker acquisition.
         """
+
         self.config = config
         self._engine: AsyncEngine | None = None
-        self._session_factory: async_sessionmaker[AsyncSession] | None = None
-
-        # Enterprise monitoring components
-        self.load_monitor = load_monitor or LoadMonitor()
+        self._session_factory: SessionFactory | None = None
         self.query_monitor = query_monitor or QueryMonitor()
         self._circuit_breaker_manager = circuit_breaker_manager
         self._breaker_service_name = breaker_service_name
-
-        # Performance tracking for enterprise features
         self._connection_count = 0
-        self._query_count = 0
-        self._total_latency = 0.0
 
     async def initialize(self) -> None:
-        """Initialize enterprise database infrastructure."""
+        """Initialize database infrastructure."""
+
         if self._engine is not None:
             return
 
         try:
-            # Create enterprise-optimized async engine
             self._engine = create_async_engine(
                 self.config.database.database_url,
                 echo=self.config.database.echo_queries,
-                # Optimized connection pool settings (BJO-134 validated)
                 pool_size=self.config.database.pool_size,
                 max_overflow=self.config.database.max_overflow,
                 pool_timeout=self.config.database.pool_timeout,
-                pool_recycle=3600,  # 1 hour for cloud database compatibility
-                pool_pre_ping=True,  # Essential for enterprise cloud deployments
-                # Enterprise monitoring integration
+                pool_recycle=3600,
+                pool_pre_ping=True,
                 echo_pool="debug" if self.config.database.echo_queries else False,
             )
 
-            # Create session factory with enterprise settings
-            self._session_factory = async_sessionmaker(
+            session_factory = async_sessionmaker(
                 bind=self._engine,
                 class_=AsyncSession,
                 expire_on_commit=False,
-                autoflush=True,  # Enterprise data consistency
+                autoflush=True,
             )
+            self._session_factory = cast(SessionFactory, session_factory)
 
-            # Initialize enterprise monitoring
-            await self.load_monitor.initialize()
             await self.query_monitor.initialize()
 
-            # Start ML-based predictive monitoring
-            await self.load_monitor.start_monitoring()
-
             logger.info(
-                "Enterprise database manager initialized "
-                "(pool_size: %s, ml_monitoring: enabled, circuit_breaker: enabled)",
+                "Database manager initialized (pool_size: %s)",
                 self.config.database.pool_size,
             )
 
         except (OSError, AttributeError, ConnectionError, ImportError):
-            logger.exception("Failed to initialize enterprise database manager")
+            logger.exception("Failed to initialize database manager")
             raise
 
     async def cleanup(self) -> None:
-        """Clean up enterprise database resources."""
-        try:
-            # Stop monitoring systems
-            if self.load_monitor:
-                await self.load_monitor.stop_monitoring()
-            if self.query_monitor:
-                await self.query_monitor.cleanup()
+        """Clean up database resources."""
 
-            # Clean up database engine
+        try:
+            await self.query_monitor.cleanup()
+
             if self._engine:
                 await self._engine.dispose()
                 self._engine = None
                 self._session_factory = None
 
-            logger.info("Enterprise database manager cleaned up")
+            logger.info("Database manager cleaned up")
 
         except (ConnectionError, OSError, PermissionError):
             logger.exception("Error during database cleanup")
 
     @asynccontextmanager
     async def session(self) -> AsyncGenerator[Any, None]:
-        """Get enterprise database session with monitoring.
+        """Yield a monitored database session."""
 
-        This context manager provides:
-        - Automatic query performance tracking
-        - Connection affinity optimization
-        - Circuit breaker protection
-        - ML-based load balancing
-
-        Yields:
-            AsyncSession: Monitored database session
-        """
-
-        if not self._session_factory:
+        session_factory = self._session_factory
+        if session_factory is None:
             msg = "Database manager not initialized"
             raise RuntimeError(msg)
 
@@ -164,47 +140,51 @@ class DatabaseManager:
                 )
                 await stack.enter_async_context(breaker)
 
-            session = await stack.enter_async_context(self._session_factory())
+            session = await stack.enter_async_context(session_factory())
             try:
                 self._connection_count += 1
 
                 yield session
                 await session.commit()
                 self.query_monitor.record_success(query_start)
-
             except Exception as exc:
                 await session.rollback()
                 self.query_monitor.record_failure(query_start, str(exc))
                 raise
 
     async def get_performance_metrics(self) -> dict[str, Any]:
-        """Get enterprise performance metrics.
+        """Get database performance metrics."""
 
-        Returns comprehensive metrics for:
-        - ML prediction accuracy
-        - Connection pool utilization
-        - Query performance statistics
-        - Circuit breaker status
-        """
+        pool_snapshot: dict[str, int] = {}
+        if self._engine is not None:
+            pool = getattr(self._engine, "pool", None)
+            if pool is not None:
+                size_fn = getattr(pool, "size", None)
+                checked_out_fn = getattr(pool, "checked_out", None)
+                if callable(size_fn):
+                    size_value = cast(int, size_fn())
+                    pool_snapshot["size"] = int(size_value)
+                if callable(checked_out_fn):
+                    checked_out_value = cast(int, checked_out_fn())
+                    pool_snapshot["checked_out"] = int(checked_out_value)
+
         return {
             "connection_count": self._connection_count,
-            "query_count": self._query_count,
-            "avg_latency_ms": self._total_latency / max(1, self._query_count),
-            "load_metrics": await self.load_monitor.get_current_metrics(),
             "query_metrics": await self.query_monitor.get_performance_summary(),
             "circuit_breaker_status": await self._get_circuit_breaker_state(),
-            "pool_size": self._engine.pool.size() if self._engine else 0,  # type: ignore[attr-defined]
-            "pool_checked_out": self._engine.pool.checked_out() if self._engine else 0,  # type: ignore[attr-defined]
+            "pool": pool_snapshot,
         }
 
     @property
     def is_initialized(self) -> bool:
-        """Check if enterprise database manager is ready."""
+        """Check if the database manager is ready."""
+
         return self._engine is not None
 
     @property
     def engine(self) -> AsyncEngine:
-        """Get the enterprise database engine."""
+        """Get the database engine."""
+
         if not self._engine:
             msg = "Database manager not initialized"
             raise RuntimeError(msg)

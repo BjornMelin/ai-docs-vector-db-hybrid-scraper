@@ -11,13 +11,73 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
-import aiohttp
-import httpx
-import redis.asyncio as redis
-from openai import AsyncOpenAI, OpenAIError as OpenAIAPIError
 from pydantic import BaseModel, Field
-from qdrant_client import AsyncQdrantClient
-from qdrant_client.http.exceptions import UnexpectedResponse
+
+
+try:  # pragma: no cover - optional dependency import
+    import aiohttp
+
+    HAS_AIOHTTP = True
+except ImportError:  # pragma: no cover - fallback when aiohttp unavailable
+    aiohttp = None  # type: ignore[assignment]
+    HAS_AIOHTTP = False
+
+try:  # pragma: no cover - optional dependency import
+    import httpx
+
+    HTTPXError = httpx.HTTPError
+    HAS_HTTPX = True
+except ImportError:  # pragma: no cover - fallback when httpx unavailable
+    httpx = None  # type: ignore[assignment]
+    HAS_HTTPX = False
+
+    class HTTPXError(Exception):
+        """Fallback HTTPX error type when httpx is not installed."""
+
+
+try:  # pragma: no cover - optional dependency import
+    import redis.asyncio as redis
+
+    RedisConnectionError = redis.ConnectionError
+    RedisError = redis.RedisError
+    HAS_REDIS = True
+except ImportError:  # pragma: no cover - fallback when redis unavailable
+    redis = None  # type: ignore[assignment]
+    HAS_REDIS = False
+
+    class RedisConnectionError(ConnectionError):
+        """Fallback Redis connection error."""
+
+    class RedisError(RuntimeError):
+        """Fallback Redis error."""
+
+
+try:  # pragma: no cover - optional dependency import
+    from openai import AsyncOpenAI, OpenAIError as OpenAIAPIError
+
+    HAS_OPENAI_CLIENT = True
+except ImportError:  # pragma: no cover - fallback when OpenAI client unavailable
+    AsyncOpenAI = None  # type: ignore[assignment]
+    HAS_OPENAI_CLIENT = False
+
+    class OpenAIAPIError(RuntimeError):
+        """Fallback OpenAI error."""
+
+
+try:  # pragma: no cover - optional dependency import
+    from qdrant_client import AsyncQdrantClient
+    from qdrant_client.http.exceptions import UnexpectedResponse
+
+    HAS_QDRANT_CLIENT = True
+except ImportError:  # pragma: no cover - fallback when qdrant client unavailable
+    AsyncQdrantClient = Any  # type: ignore[assignment]
+    HAS_QDRANT_CLIENT = False
+
+    class UnexpectedResponseError(RuntimeError):
+        """Fallback Qdrant unexpected response error."""
+
+    UnexpectedResponse = UnexpectedResponseError
+
 
 from src.config.models import CrawlProvider, EmbeddingProvider
 from src.services.monitoring.metrics import MetricsRegistry
@@ -257,6 +317,14 @@ class RedisHealthCheck(HealthCheck):
     async def _perform_redis_check(self) -> HealthCheckResult:
         """Execute the Redis health probe."""
 
+        if not HAS_REDIS:
+            return HealthCheckResult(
+                name=self.name,
+                status=HealthStatus.SKIPPED,
+                message="redis.asyncio is not installed; skipping Redis check",
+                duration_ms=0.0,
+            )
+
         redis_client = None
         try:
             redis_client = redis.from_url(self._redis_url)
@@ -269,14 +337,14 @@ class RedisHealthCheck(HealthCheck):
                     duration_ms=0.0,
                 )
             info = await redis_client.info()
-        except redis.ConnectionError as exc:
+        except RedisConnectionError as exc:
             return HealthCheckResult(
                 name=self.name,
                 status=HealthStatus.UNHEALTHY,
                 message=f"Redis connection failed: {exc!s}",
                 duration_ms=0.0,
             )
-        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as exc:
+        except (RedisError, ConnectionError, TimeoutError, ValueError) as exc:
             return HealthCheckResult(
                 name=self.name,
                 status=HealthStatus.UNHEALTHY,
@@ -324,20 +392,28 @@ class OpenAIHealthCheck(HealthCheck):
     async def _perform_openai_check(self) -> HealthCheckResult:
         """Execute the OpenAI health probe."""
 
-        try:
-            models = await self._client.models.list()
-        except (ConnectionError, TimeoutError, RuntimeError, httpx.HTTPError) as exc:
+        if not HAS_OPENAI_CLIENT:
             return HealthCheckResult(
                 name=self.name,
-                status=HealthStatus.UNHEALTHY,
-                message=f"OpenAI connectivity failed: {exc!s}",
+                status=HealthStatus.SKIPPED,
+                message="OpenAI client library is not installed; skipping check",
                 duration_ms=0.0,
             )
+
+        try:
+            models = await self._client.models.list()
         except OpenAIAPIError as exc:
             return HealthCheckResult(
                 name=self.name,
                 status=HealthStatus.UNHEALTHY,
                 message=f"OpenAI API error: {exc!s}",
+                duration_ms=0.0,
+            )
+        except (ConnectionError, TimeoutError, RuntimeError, HTTPXError) as exc:
+            return HealthCheckResult(
+                name=self.name,
+                status=HealthStatus.UNHEALTHY,
+                message=f"OpenAI connectivity failed: {exc!s}",
                 duration_ms=0.0,
             )
 
@@ -382,6 +458,14 @@ class HTTPHealthCheck(HealthCheck):
     async def _perform_http_check(self) -> HealthCheckResult:
         """Execute the HTTP health probe."""
 
+        if not HAS_AIOHTTP:
+            return HealthCheckResult(
+                name=self.name,
+                status=HealthStatus.SKIPPED,
+                message="aiohttp is not installed; skipping HTTP check",
+                duration_ms=0.0,
+            )
+
         timeout = aiohttp.ClientTimeout(total=self.timeout_seconds)
         try:
             async with (
@@ -413,7 +497,7 @@ class HTTPHealthCheck(HealthCheck):
                     duration_ms=0.0,
                     metadata={"status_code": response.status},
                 )
-        except aiohttp.ClientError as exc:
+        except aiohttp.ClientError as exc:  # type: ignore[misc]
             return HealthCheckResult(
                 name=self.name,
                 status=HealthStatus.UNHEALTHY,
@@ -649,6 +733,17 @@ class HealthCheckManager:
             "total_count": len(self._last_results),
         }
 
+    def list_checks(self) -> tuple[str, ...]:
+        """Return the names of registered health checks."""
+
+        return tuple(check.name for check in self._health_checks)
+
+    async def get_overall_health(self) -> dict[str, Any]:
+        """Run all checks and return the aggregated summary."""
+
+        await self.check_all()
+        return self.get_health_summary()
+
 
 def build_health_manager(
     settings: Settings,
@@ -682,7 +777,7 @@ def build_health_manager(
             )
         )
 
-    if config.qdrant_url:
+    if config.qdrant_url and HAS_QDRANT_CLIENT:
         client = qdrant_client or AsyncQdrantClient(
             url=config.qdrant_url,
             api_key=getattr(settings.qdrant, "api_key", None),
@@ -694,22 +789,43 @@ def build_health_manager(
                 timeout_seconds=settings.monitoring.health_check_timeout,
             )
         )
+    elif config.qdrant_url:
+        logger.warning(
+            "Skipping Qdrant health check because qdrant_client is not installed",
+        )
 
     redis_source = redis_url or config.redis_url
-    if redis_source:
+    if redis_source and HAS_REDIS:
         manager.add_health_check(
             RedisHealthCheck(
                 redis_source,
                 timeout_seconds=settings.monitoring.health_check_timeout,
             )
         )
+    elif redis_source:
+        logger.warning(
+            "Skipping Redis health check because redis.asyncio is not installed",
+        )
 
     if settings.embedding_provider is EmbeddingProvider.OPENAI:
         api_key = getattr(settings.openai, "api_key", None)
-        if api_key:
+        if api_key and HAS_OPENAI_CLIENT:
             manager.add_health_check(
                 OpenAIHealthCheck(
                     AsyncOpenAI(api_key=api_key),
+                    timeout_seconds=settings.monitoring.health_check_timeout,
+                )
+            )
+        elif api_key:
+            logger.warning(
+                "OpenAI API key configured but openai package not installed; "
+                "falling back to HTTP reachability probe",
+            )
+            manager.add_health_check(
+                HTTPHealthCheck(
+                    url="https://api.openai.com/v1/models",
+                    name="openai",
+                    headers={"Authorization": "Bearer"},
                     timeout_seconds=settings.monitoring.health_check_timeout,
                 )
             )

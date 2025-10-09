@@ -1,8 +1,4 @@
-"""Core deployment models and data structures.
-
-This module defines the fundamental data models used across all deployment services,
-providing type-safe interfaces for deployment operations and metrics.
-"""
+"""Data models describing deployment configurations and metrics."""
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -34,26 +30,7 @@ class DeploymentEnvironment(str, Enum):
     GREEN = "green"
 
 
-class DeploymentHealth(BaseModel):
-    """Health metrics for deployment monitoring."""
-
-    status: str = Field(..., description="Overall health status")
-    response_time_ms: float = Field(
-        ..., description="Average response time in milliseconds"
-    )
-    error_rate: float = Field(..., description="Error rate as percentage (0-100)")
-    success_count: int = Field(default=0, description="Number of successful requests")
-    error_count: int = Field(default=0, description="Number of failed requests")
-    last_check: datetime = Field(
-        default_factory=lambda: datetime.now(UTC),
-        description="Last health check timestamp",
-    )
-    details: dict[str, Any] = Field(
-        default_factory=dict, description="Additional health details"
-    )
-
-
-class DeploymentMetrics(BaseModel):
+class DeploymentMetrics(BaseModel):  # pylint: disable=too-many-instance-attributes
     """Comprehensive deployment metrics for analysis."""
 
     deployment_id: str = Field(..., description="Unique deployment identifier")
@@ -126,7 +103,7 @@ class TrafficSplit:
     def __post_init__(self):
         """Validate traffic split percentages."""
         total = self.control_percentage + self.variant_percentage
-        if not (99.9 <= total <= 100.1):  # Allow for floating point precision
+        if not 99.9 <= total <= 100.1:  # Allow for floating point precision
             msg = f"Traffic split must total 100%, got {total}%"
             raise ValueError(msg)
 
@@ -136,7 +113,7 @@ class TrafficSplit:
 
 
 @dataclass
-class DeploymentConfig:
+class DeploymentConfig:  # pylint: disable=too-many-instance-attributes
     """Base configuration for deployment operations."""
 
     deployment_id: str

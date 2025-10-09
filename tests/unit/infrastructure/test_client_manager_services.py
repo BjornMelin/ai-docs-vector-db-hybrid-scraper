@@ -5,9 +5,14 @@ from __future__ import annotations
 import asyncio
 
 import pytest
+from pytest_mock import MockerFixture
 
-from src.infrastructure.client_manager import ClientManager, HealthCheckRegistration
-from src.infrastructure.shared import ClientHealth, ClientState
+from src.infrastructure.client_manager import ClientManager
+from src.services.health.manager import (
+    HealthCheckManager,
+    HealthCheckResult,
+    HealthStatus,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -19,7 +24,7 @@ def _reset_client_manager() -> None:
 
 @pytest.mark.asyncio
 async def test_database_session_exposes_resolved_services(
-    mocker: pytest.MockFixture,
+    mocker: MockerFixture,
 ) -> None:
     """database_session should provide redis, cache, and vector services."""
 
@@ -41,7 +46,7 @@ async def test_database_session_exposes_resolved_services(
 
 
 @pytest.mark.asyncio
-async def test_upsert_vector_records_wraps_payload(mocker: pytest.MockFixture) -> None:
+async def test_upsert_vector_records_wraps_payload(mocker: MockerFixture) -> None:
     """Vector payloads are converted to VectorRecord instances."""
 
     manager = ClientManager()
@@ -69,7 +74,7 @@ async def test_upsert_vector_records_wraps_payload(mocker: pytest.MockFixture) -
 
 @pytest.mark.asyncio
 async def test_search_vector_records_serialises_matches(
-    mocker: pytest.MockFixture,
+    mocker: MockerFixture,
 ) -> None:
     """Vector search results should be coerced into simple dictionaries."""
 
@@ -90,27 +95,39 @@ async def test_search_vector_records_serialises_matches(
 
 
 @pytest.mark.asyncio
-async def test_get_health_status_runs_checks(mocker: pytest.MockFixture) -> None:
+async def test_get_health_status_runs_checks(mocker: MockerFixture) -> None:
     """Health checks should execute and surface standard metadata."""
 
     manager = ClientManager()
-    manager._monitoring_initialized = True  # pylint: disable=protected-access
-    manager._health_checks = {}  # pylint: disable=protected-access
-    manager._health_checks["vector"] = HealthCheckRegistration(  # pylint: disable=protected-access
-        health=ClientHealth(state=ClientState.HEALTHY, last_check=0.0),
-        check_function=mocker.AsyncMock(return_value=True),
-        check_interval=30,
+    stub_result = HealthCheckResult(
+        name="vector",
+        status=HealthStatus.HEALTHY,
+        message="ok",
+        duration_ms=1.0,
+        metadata={"latency_ms": 12.3},
     )
+    health_manager = mocker.MagicMock(spec=HealthCheckManager)
+    health_manager.check_all = mocker.AsyncMock(return_value={"vector": stub_result})
+    manager._health_manager = health_manager  # pylint: disable=protected-access
     mocker.patch.object(manager, "_ensure_monitoring_ready")
 
     status = await manager.get_health_status()
 
-    assert "vector" in status
-    assert status["vector"]["is_healthy"] is True
+    assert status == {
+        "vector": {
+            "status": HealthStatus.HEALTHY.value,
+            "message": "ok",
+            "timestamp": stub_result.timestamp,
+            "duration_ms": stub_result.duration_ms,
+            "metadata": {"latency_ms": 12.3},
+            "is_healthy": True,
+        }
+    }
+    health_manager.check_all.assert_awaited_once()
 
 
 @pytest.mark.asyncio
-async def test_track_performance_records_metrics(mocker: pytest.MockFixture) -> None:
+async def test_track_performance_records_metrics(mocker: MockerFixture) -> None:
     """track_performance should emit latency and counters for success and errors."""
 
     manager = ClientManager()

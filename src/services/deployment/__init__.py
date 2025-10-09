@@ -16,7 +16,6 @@ from .canary import CanaryDeployment, CanaryMetrics, CanaryStatus
 from .feature_flags import DeploymentTier, FeatureFlagManager
 from .models import (
     DeploymentEnvironment,
-    DeploymentHealth,
     DeploymentMetrics,
     DeploymentStatus,
 )
@@ -36,7 +35,6 @@ __all__ = [
     "CanaryStatus",
     # Models
     "DeploymentEnvironment",
-    "DeploymentHealth",
     "DeploymentMetrics",
     "DeploymentStatus",
     # Feature Flags

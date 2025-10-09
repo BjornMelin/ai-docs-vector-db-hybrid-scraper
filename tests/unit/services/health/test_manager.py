@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import asyncio
+from types import SimpleNamespace
 
 import pytest
+from pytest_mock import MockerFixture
 
 from src.config.models import CrawlProvider, EmbeddingProvider
 from src.services.health.manager import (
+    HAS_QDRANT_CLIENT,
+    HAS_REDIS,
     HealthCheck,
     HealthCheckConfig,
     HealthCheckManager,
@@ -84,13 +88,40 @@ async def test_health_manager_aggregates_status() -> None:
     assert summary["total_count"] == 2
 
 
-def test_build_health_manager_includes_expected_checks(configured_settings) -> None:
+def test_build_health_manager_includes_expected_checks(
+    configured_settings, mocker: MockerFixture
+) -> None:
     """Building the manager wires up configured dependency checks."""
+
+    mocker.patch("src.services.health.manager.AsyncQdrantClient", autospec=True)
+    mocker.patch(
+        "src.services.health.manager.QdrantHealthCheck",
+        return_value=SimpleNamespace(name="qdrant"),
+    )
+    mocker.patch(
+        "src.services.health.manager.RedisHealthCheck",
+        return_value=SimpleNamespace(name="redis"),
+    )
+    mocker.patch(
+        "src.services.health.manager.OpenAIHealthCheck",
+        return_value=SimpleNamespace(name="openai"),
+    )
+    mocker.patch(
+        "src.services.health.manager.FirecrawlHealthCheck",
+        return_value=SimpleNamespace(name="firecrawl"),
+    )
+    mocker.patch("src.services.health.manager.AsyncOpenAI", autospec=True)
 
     manager = build_health_manager(configured_settings)
     check_names = {check.name for check in manager._health_checks}
 
-    assert {"qdrant", "redis", "openai", "firecrawl"}.issubset(check_names)
+    expected_checks = {"openai", "firecrawl"}
+    if HAS_QDRANT_CLIENT:
+        expected_checks.add("qdrant")
+    if HAS_REDIS:
+        expected_checks.add("redis")
+
+    assert expected_checks.issubset(check_names)
 
 
 def test_build_health_manager_skips_openai_when_disabled(config_factory) -> None:

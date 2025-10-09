@@ -153,6 +153,7 @@ flowchart LR
 ### Observability & Operations
 
 - Prometheus metrics and health endpoints instrument both the API and MCP servers; see `config/prometheus.yml` and `docs/operators/monitoring.md`.
+- Health probes for system resources, Qdrant, Redis, and external services are centrally coordinated by the `HealthCheckManager` (`src/services/health/manager.py`), ensuring MCP tools and FastAPI dependencies share the same health state.
 - Optional Dragonfly cache, PostgreSQL, ARQ workers, and Grafana dashboards are provisioned via `docker-compose.yml` profiles.
 - Structured logging and SlowAPI-based rate limiting are configured through the middleware manager (`src/services/fastapi/middleware/manager.py`) and security helpers (`src/services/fastapi/middleware/security.py`).
 

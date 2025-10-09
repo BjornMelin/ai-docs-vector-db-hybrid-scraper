@@ -1,27 +1,24 @@
-"""Blue-Green Deployment Service for Zero-Downtime Releases.
+"""Blue-green deployment orchestration built around health check results."""
 
-This module provides enterprise-grade blue-green deployment capabilities including:
-- Zero-downtime production deployments
-- Health check validation before traffic switching
-- Automated rollback on health check failures
-- State synchronization between environments
-"""
+from __future__ import annotations
 
 import asyncio
 import contextlib
 import logging
+import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
+from typing import Any, cast
 
 from pydantic import BaseModel, Field
+
+from src.services.health.manager import HealthCheckResult, HealthStatus
 
 from .feature_flags import FeatureFlagManager
 from .models import (
     DeploymentConfig,
     DeploymentEnvironment,
-    DeploymentHealth,
     DeploymentMetrics,
     DeploymentStatus,
 )
@@ -53,7 +50,9 @@ class BlueGreenEnvironment(BaseModel):
     )
     deployment_id: str | None = Field(default=None, description="Current deployment ID")
     version: str | None = Field(default=None, description="Deployed version")
-    health: DeploymentHealth | None = Field(default=None, description="Health status")
+    health: HealthCheckResult | None = Field(
+        default=None, description="Latest deployment health result"
+    )
     last_deployment: datetime | None = Field(
         default=None, description="Last deployment time"
     )
@@ -63,7 +62,7 @@ class BlueGreenEnvironment(BaseModel):
 
 
 @dataclass
-class BlueGreenConfig:
+class BlueGreenConfig:  # pylint: disable=too-many-instance-attributes
     """Configuration for blue-green deployment."""
 
     deployment_id: str
@@ -79,6 +78,7 @@ class BlueGreenConfig:
 
     def to_deployment_config(self) -> DeploymentConfig:
         """Convert to base deployment configuration."""
+
         return DeploymentConfig(
             deployment_id=self.deployment_id,
             environment=DeploymentEnvironment.PRODUCTION,
@@ -90,8 +90,8 @@ class BlueGreenConfig:
         )
 
 
-class BlueGreenDeployment:
-    """Enterprise blue-green deployment manager."""
+class BlueGreenDeployment:  # pylint: disable=too-many-instance-attributes
+    """Manage blue-green deployments and environment health."""
 
     def __init__(
         self,
@@ -99,14 +99,14 @@ class BlueGreenDeployment:
         cache_manager: Any,
         feature_flag_manager: FeatureFlagManager | None = None,
     ):
-        """Initialize blue-green deployment manager.
+        """Instantiate the deployment manager.
 
         Args:
-            qdrant_service: Qdrant service for data storage
-            cache_manager: Cache manager for state management
-            feature_flag_manager: Optional feature flag manager
-
+            qdrant_service: Data store client for persisting deployment metadata.
+            cache_manager: Cache manager used for environment state coordination.
+            feature_flag_manager: Optional feature flag manager controlling enablement.
         """
+
         self.qdrant_service = qdrant_service
         self.cache_manager = cache_manager
         self.feature_flag_manager = feature_flag_manager
@@ -126,6 +126,7 @@ class BlueGreenDeployment:
 
     async def initialize(self) -> None:
         """Initialize blue-green deployment manager."""
+
         if self._initialized:
             return
 
@@ -148,6 +149,7 @@ class BlueGreenDeployment:
 
     async def _check_feature_flags(self) -> None:
         """Check if blue-green deployment is enabled via feature flags."""
+
         if not self.feature_flag_manager:
             return
 
@@ -160,7 +162,6 @@ class BlueGreenDeployment:
             return
 
     async def _initialize_environment(self) -> None:
-        """Initialize environment state and monitoring."""
         # Load environment state from storage
         await self._load_environment_state()
 
@@ -178,8 +179,8 @@ class BlueGreenDeployment:
 
         Raises:
             RuntimeError: If deployment is already in progress
-
         """
+
         if not self._initialized:
             await self.initialize()
 
@@ -201,10 +202,10 @@ class BlueGreenDeployment:
         return config.deployment_id
 
     async def get_status(self) -> dict[str, Any]:
-        """Get current deployment status.
+        """Return the current deployment status snapshot.
 
         Returns:
-            dict[str, Any]: Current status including environments and deployment info
+            dict[str, Any]: Serialized status for the active deployment.
 
         """
         return {
@@ -232,8 +233,8 @@ class BlueGreenDeployment:
 
         Returns:
             bool: True if switch was successful
-
         """
+
         if not self._initialized:
             await self.initialize()
 
@@ -246,9 +247,9 @@ class BlueGreenDeployment:
             source_env = self._green_env
 
         # Health check target environment (unless forced)
-        if not force and (
-            not target_env.health or target_env.health.status != "healthy"  # pylint: disable=no-member
-        ):
+        target_health = cast(HealthCheckResult | None, target_env.health)
+        target_status = getattr(target_health, "status", None)
+        if not force and target_status != HealthStatus.HEALTHY:
             logger.warning(
                 "Target environment %s is not healthy, aborting switch",
                 target_env.name,
@@ -262,13 +263,11 @@ class BlueGreenDeployment:
             logger.exception("Failed to switch environments")
             self._deployment_status = BlueGreenStatus.FAILED
             return False
-        else:
-            return True
+        return True
 
     async def _execute_environment_switch(
         self, source_env: BlueGreenEnvironment, target_env: BlueGreenEnvironment
     ) -> None:
-        """Execute the environment switch process."""
         self._deployment_status = BlueGreenStatus.SWITCHING
 
         await self._switch_traffic(source_env.name, target_env.name)
@@ -300,11 +299,13 @@ class BlueGreenDeployment:
             return await self._execute_rollback()
         except (TimeoutError, OSError, PermissionError):
             logger.exception("Error during rollback")
+
             self._deployment_status = BlueGreenStatus.FAILED
             return False
 
     async def _execute_rollback(self) -> bool:
-        """Execute rollback to previous environment."""
+        """Perform rollback to the previously active environment."""
+
         self._deployment_status = BlueGreenStatus.ROLLING_BACK
 
         # Switch back to the other environment
@@ -320,26 +321,35 @@ class BlueGreenDeployment:
 
         Returns:
             dict[str, DeploymentMetrics]: Metrics for blue and green environments
-
         """
+
         metrics = {}
 
         for env in [self._blue_env, self._green_env]:
             if env.deployment_id:
                 # In production, fetch real metrics from monitoring system
+                response_time = 0.0
+                error_rate = 0.0
+                health = cast(HealthCheckResult | None, env.health)
+                metadata: dict[str, Any] = {}
+                if health:
+                    raw_metadata = getattr(health, "metadata", {}) or {}
+                    if isinstance(raw_metadata, dict):
+                        metadata = raw_metadata
+                    response_time = float(metadata.get("response_time_ms", 0.0))
+                    error_rate = float(metadata.get("error_rate", 0.0))
+
                 metrics[env.name] = DeploymentMetrics(
                     deployment_id=env.deployment_id,
                     environment=DeploymentEnvironment.PRODUCTION,
                     status=DeploymentStatus.SUCCESS
-                    if env.health and env.health.status == "healthy"  # pylint: disable=no-member
+                    if getattr(health, "status", None) == HealthStatus.HEALTHY
                     else DeploymentStatus.FAILED,
                     total_requests=0,  # Would be populated from real metrics
                     successful_requests=0,
                     failed_requests=0,
-                    avg_response_time_ms=env.health.response_time_ms  # pylint: disable=no-member
-                    if env.health
-                    else 0.0,
-                    error_rate=env.health.error_rate if env.health else 0.0,  # pylint: disable=no-member
+                    avg_response_time_ms=response_time,
+                    error_rate=error_rate,
                     created_at=env.last_deployment or datetime.now(tz=UTC),
                 )
 
@@ -347,6 +357,7 @@ class BlueGreenDeployment:
 
     async def _execute_deployment(self, config: BlueGreenConfig) -> None:
         """Execute the blue-green deployment process."""
+
         try:
             target_env = self._green_env if self._blue_env.active else self._blue_env
             logger.info(
@@ -364,7 +375,8 @@ class BlueGreenDeployment:
     async def _run_deployment_phases(
         self, target_env: BlueGreenEnvironment, config: BlueGreenConfig
     ) -> None:
-        """Run all deployment phases sequentially."""
+        """Run the sequential phases of blue-green deployment."""
+
         # Phase 1: Deploy to inactive environment
         self._deployment_status = BlueGreenStatus.DEPLOYING
         await self._deploy_to_environment(target_env, config)
@@ -381,6 +393,7 @@ class BlueGreenDeployment:
 
         # Phase 3: Ready to switch
         self._deployment_status = BlueGreenStatus.READY_TO_SWITCH
+
         logger.info(
             "Deployment to %s successful, ready to switch traffic", target_env.name
         )
@@ -389,7 +402,8 @@ class BlueGreenDeployment:
         await self._handle_automatic_switch(config)
 
     async def _handle_automatic_switch(self, config: BlueGreenConfig) -> None:
-        """Handle automatic environment switching if enabled."""
+        """Handle automatic traffic switch if enabled in config."""
+
         if not config.enable_automatic_switch:
             logger.info("Automatic switch disabled, manual intervention required")
             return
@@ -404,15 +418,16 @@ class BlueGreenDeployment:
             logger.error("Failed to switch environments")
 
     async def _handle_deployment_failure(self, config: BlueGreenConfig) -> None:
-        """Handle deployment failure and potential rollback."""
-        # Automatic rollback on failure
-        if config.enable_automatic_rollback:
+        """Handle deployment failure and perform rollback if enabled."""
+
+        if config.enable_automatic_rollback:  # Automatic rollback on failure
             await self.rollback()
 
     async def _deploy_to_environment(
         self, env: BlueGreenEnvironment, config: BlueGreenConfig
     ) -> None:
-        """Deploy new version to specified environment."""
+        """Deploy the new version to the specified environment."""
+
         try:
             self._update_environment_metadata(env, config)
             await self._execute_deployment_steps(env, config)
@@ -423,9 +438,11 @@ class BlueGreenDeployment:
     def _update_environment_metadata(
         self, env: BlueGreenEnvironment, config: BlueGreenConfig
     ) -> None:
-        """Update environment metadata for deployment."""
+        """Update environment metadata before deployment."""
+
         env.deployment_id = config.deployment_id
         env.version = config.target_version
+
         env.last_deployment = datetime.now(tz=UTC)
         env.metadata.update(
             {
@@ -437,11 +454,13 @@ class BlueGreenDeployment:
     async def _execute_deployment_steps(
         self, env: BlueGreenEnvironment, config: BlueGreenConfig
     ) -> None:
-        """Execute actual deployment steps."""
+        """Execute the actual deployment steps to the environment."""
+
         # In production, this would:
         # 1. Deploy new application version to environment
         # 2. Update load balancer configuration
         # 3. Apply database migrations if needed
+
         # 4. Update service configurations
 
         # Simulate deployment time
@@ -455,6 +474,7 @@ class BlueGreenDeployment:
         self, env: BlueGreenEnvironment, config: BlueGreenConfig
     ) -> bool:
         """Perform health checks on the deployed environment."""
+
         for attempt in range(config.health_check_retries):
             try:
                 if await self._perform_single_health_check(env, attempt):
@@ -471,13 +491,15 @@ class BlueGreenDeployment:
                     await asyncio.sleep(config.health_check_interval)
 
         # All health checks failed
-        env.health = DeploymentHealth(
-            status="unhealthy",
-            response_time_ms=0.0,
-            error_rate=100.0,
-            success_count=0,
-            error_count=config.health_check_retries,
-            last_check=datetime.now(tz=UTC),
+        env.health = HealthCheckResult(
+            name=f"{env.name}_deployment",
+            status=HealthStatus.UNHEALTHY,
+            message="Health checks failed",
+            duration_ms=0.0,
+            metadata={
+                "attempts": config.health_check_retries,
+                "last_attempt": datetime.now(tz=UTC).isoformat(),
+            },
         )
         return False
 
@@ -485,18 +507,23 @@ class BlueGreenDeployment:
         self, env: BlueGreenEnvironment, attempt: int
     ) -> bool:
         """Perform a single health check attempt."""
-        # Simulate health check
-        await asyncio.sleep(1)
+
+        await asyncio.sleep(1)  # Simulate health check
 
         # In production, this would make HTTP requests to health endpoints
-        health = DeploymentHealth(
-            status="healthy",
-            response_time_ms=50.0,
-            error_rate=0.0,
-            success_count=100,
-            error_count=0,
-            last_check=datetime.now(tz=UTC),
-            details={"environment": env.name, "version": env.version},
+        health = HealthCheckResult(
+            name=f"{env.name}_deployment",
+            status=HealthStatus.HEALTHY,
+            message="Environment healthy",
+            duration_ms=0.0,
+            metadata={
+                "response_time_ms": 50.0,
+                "error_rate": 0.0,
+                "success_count": 100,
+                "error_count": 0,
+                "environment": env.name,
+                "version": env.version,
+            },
         )
 
         env.health = health
@@ -508,7 +535,6 @@ class BlueGreenDeployment:
         return True
 
     async def _switch_traffic(self, from_env: str, to_env: str) -> None:
-        """Switch traffic from one environment to another."""
         try:
             await self._execute_traffic_switch(from_env, to_env)
         except (TimeoutError, OSError, PermissionError):
@@ -516,7 +542,8 @@ class BlueGreenDeployment:
             raise
 
     async def _execute_traffic_switch(self, from_env: str, to_env: str) -> None:
-        """Execute traffic switching operations."""
+        """Execute the actual traffic switch between environments."""
+
         # In production, this would:
         # 1. Update load balancer configuration
         # 2. Update DNS records if needed
@@ -531,46 +558,54 @@ class BlueGreenDeployment:
         logger.info("Traffic switch completed")
 
     async def _health_check_loop(self) -> None:
-        """Background task for continuous health monitoring."""
+        """Continuously monitor the health of both environments."""
+
         while True:
             try:
                 await asyncio.sleep(30)  # Check every 30 seconds
 
                 # Monitor both environments
+
                 for env in [self._blue_env, self._green_env]:
                     if env.deployment_id:  # Only check deployed environments
                         await self._check_environment_health(env)
 
             except asyncio.CancelledError:
                 break
+
             except (TimeoutError, OSError, PermissionError):
                 logger.exception("Error in health check loop")
                 await asyncio.sleep(30)
 
     async def _check_environment_health(self, env: BlueGreenEnvironment) -> None:
-        """Check health of a specific environment."""
+        """Check and update the health status of the given environment."""
+
         try:
             self._update_environment_health_status(env)
         except (ConnectionError, OSError, PermissionError):
             logger.exception("Error checking health for %s environment", env.name)
 
     def _update_environment_health_status(self, env: BlueGreenEnvironment) -> None:
-        """Update health status for environment."""
+        """Update the health status of the given environment."""
+
         # In production, perform actual health checks
         # For now, maintain existing health status
         if env.health:
-            env.health.last_check = datetime.now(tz=UTC)
+            env.health = env.health.model_copy(update={"timestamp": time.time()})
 
     async def _load_environment_state(self) -> None:
-        """Load environment state from storage."""
-        # In production, load from database/storage
+        """Load environment state from persistent storage."""
+
+        return None  # In production, load from database/storage
 
     async def _persist_environment_state(self) -> None:
-        """Persist environment state to storage."""
-        # In production, save to database/storage
+        """Persist current environment state to storage."""
+
+        return None  # In production, save to database/storage
 
     async def cleanup(self) -> None:
         """Cleanup blue-green deployment manager resources."""
+
         if self._deployment_task:
             self._deployment_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
