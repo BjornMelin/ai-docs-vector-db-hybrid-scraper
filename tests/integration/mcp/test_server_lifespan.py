@@ -31,6 +31,28 @@ def _lifespan_context() -> AbstractAsyncContextManager[None]:
     return cast(Callable[[], AbstractAsyncContextManager[None]], lifespan_factory)()
 
 
+def _stub_container() -> SimpleNamespace:
+    """Create a container stub exposing required service providers."""
+
+    vector_service = MagicMock(name="vector_service")
+    cache_manager = MagicMock(name="cache_manager")
+    browser_manager = MagicMock(name="browser_manager")
+    content_service = MagicMock(name="content_service")
+    project_storage = MagicMock(name="project_storage")
+    embedding_manager = MagicMock(name="embedding_manager")
+    qdrant_client = MagicMock(name="qdrant_client")
+
+    return SimpleNamespace(
+        qdrant_client=lambda: qdrant_client,
+        vector_store_service=lambda: vector_service,
+        cache_manager=lambda: cache_manager,
+        browser_manager=lambda: browser_manager,
+        content_intelligence_service=lambda: content_service,
+        project_storage=lambda: project_storage,
+        embedding_manager=lambda: embedding_manager,
+    )
+
+
 @pytest.mark.asyncio
 async def test_lifespan_initializes_and_cleans_up(
     monkeypatch: pytest.MonkeyPatch,
@@ -53,25 +75,41 @@ async def test_lifespan_initializes_and_cleans_up(
     )
     monkeypatch.setattr(unified_mcp_server, "get_settings", lambda: config)
 
-    client_manager = AsyncMock()
-    client_manager.cleanup = AsyncMock()
-    monkeypatch.setattr(unified_mcp_server, "ClientManager", lambda: client_manager)
+    container = _stub_container()
+    initialize_stub = AsyncMock(return_value=container)
+    shutdown_stub = AsyncMock()
+    monkeypatch.setattr(
+        "src.unified_mcp_server.initialize_container",
+        initialize_stub,
+    )
+    monkeypatch.setattr(
+        "src.unified_mcp_server.shutdown_container",
+        shutdown_stub,
+    )
 
     register_mock = AsyncMock()
-    monkeypatch.setattr(unified_mcp_server, "register_all_tools", register_mock)
+    monkeypatch.setattr(
+        "src.unified_mcp_server.register_all_tools",
+        register_mock,
+    )
 
     monkeypatch.setattr(
-        unified_mcp_server,
-        "initialize_monitoring_system",
+        "src.unified_mcp_server.initialize_monitoring_system",
         lambda _config, _qdrant, _redis: None,
     )
 
     async with _lifespan_context():
         pass
 
-    client_manager.initialize.assert_awaited_once()
-    client_manager.cleanup.assert_awaited_once()
-    register_mock.assert_awaited_once_with(unified_mcp_server.mcp, client_manager)
+    initialize_stub.assert_awaited_once_with(config)
+    shutdown_stub.assert_awaited_once()
+    register_mock.assert_awaited_once()
+    await_args = register_mock.await_args
+    assert await_args is not None
+    kwargs = await_args.kwargs
+    assert kwargs["vector_service"] is container.vector_store_service()
+    assert kwargs["cache_manager"] is container.cache_manager()
+    assert kwargs["embedding_manager"] is container.embedding_manager()
 
 
 @pytest.mark.asyncio
@@ -92,23 +130,32 @@ async def test_lifespan_cancels_background_tasks(
             enabled=True,
             include_system_metrics=True,
             system_metrics_interval=1,
+            enable_health_checks=True,
         ),
     )
     monkeypatch.setattr(unified_mcp_server, "get_settings", lambda: config)
 
-    client_manager = AsyncMock()
-    client_manager.cleanup = AsyncMock()
-    cache_dependency = AsyncMock(return_value=object())
-    monkeypatch.setattr(unified_mcp_server, "get_cache_manager", cache_dependency)
-    monkeypatch.setattr(unified_mcp_server, "ClientManager", lambda: client_manager)
+    container = _stub_container()
+    initialize_stub = AsyncMock(return_value=container)
+    shutdown_stub = AsyncMock()
+    monkeypatch.setattr(
+        "src.unified_mcp_server.initialize_container",
+        initialize_stub,
+    )
+    monkeypatch.setattr(
+        "src.unified_mcp_server.shutdown_container",
+        shutdown_stub,
+    )
 
     register_mock = AsyncMock()
-    monkeypatch.setattr(unified_mcp_server, "register_all_tools", register_mock)
-
-    health_manager = AsyncMock()
     monkeypatch.setattr(
-        unified_mcp_server,
-        "initialize_monitoring_system",
+        "src.unified_mcp_server.register_all_tools",
+        register_mock,
+    )
+
+    health_manager = SimpleNamespace(config=SimpleNamespace(enabled=True))
+    monkeypatch.setattr(
+        "src.unified_mcp_server.initialize_monitoring_system",
         lambda _config, _qdrant, _redis: health_manager,
     )
 
@@ -123,11 +170,13 @@ async def test_lifespan_cancels_background_tasks(
                 monitor_tasks.append(current)
 
     monkeypatch.setattr(
-        unified_mcp_server,
-        "run_periodic_health_checks",
+        "src.unified_mcp_server.run_periodic_health_checks",
         _fake_health_checks,
     )
-    monkeypatch.setattr(unified_mcp_server, "setup_fastmcp_monitoring", MagicMock())
+    monkeypatch.setattr(
+        "src.unified_mcp_server.setup_fastmcp_monitoring",
+        MagicMock(),
+    )
 
     async with _lifespan_context():
         await asyncio.sleep(0.01)

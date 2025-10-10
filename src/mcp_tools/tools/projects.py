@@ -12,7 +12,7 @@ from uuid import uuid4
 
 from fastmcp import Context
 
-from services.vector_db.service import VectorStoreService
+from src.services.vector_db.service import VectorStoreService
 from src.config.models import SearchStrategy
 from src.contracts.retrieval import SearchRecord
 from src.mcp_tools.models.requests import ProjectRequest

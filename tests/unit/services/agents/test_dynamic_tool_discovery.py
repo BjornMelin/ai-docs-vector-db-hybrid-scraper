@@ -1,43 +1,25 @@
-"""Tests for the dynamic tool discovery service."""
+"""Tests for dynamic discovery of MCP tools."""
 
 from __future__ import annotations
 
 import asyncio
-import importlib.util
-import sys
+from collections.abc import Callable
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
+from langchain_mcp_adapters.client import MultiServerMCPClient
 
-
-MODULE_PATH = (
-    Path(__file__).resolve().parents[4]
-    / "src/services/agents/dynamic_tool_discovery.py"
+from src.services.agents.dynamic_tool_discovery import (
+    DynamicToolDiscovery,
+    ToolCapabilityType,
 )
-
-JSONSCHEMA_REF_WARNING_FILTER = (
-    r"ignore:jsonschema\\.exceptions\\.RefResolutionError is deprecated:"
-    r"DeprecationWarning"
-)
-
-pytestmark = pytest.mark.filterwarnings(JSONSCHEMA_REF_WARNING_FILTER)
-
-spec = importlib.util.spec_from_file_location(
-    "dynamic_tool_discovery_under_test", MODULE_PATH
-)
-assert spec and spec.loader
-module = importlib.util.module_from_spec(spec)
-sys.modules[spec.name] = module
-spec.loader.exec_module(module)  # type: ignore[arg-type]
-
-DynamicToolDiscovery = module.DynamicToolDiscovery
-ToolCapabilityType = module.ToolCapabilityType
 
 
 @dataclass(slots=True)
 class DummyTool:
+    """Lightweight representation of an MCP tool entry."""
+
     name: str
     description: str
     inputSchema: dict[str, Any] | None = None  # noqa: N815
@@ -45,21 +27,25 @@ class DummyTool:
 
 
 class DummySession:
+    """Async context manager for MCP sessions returning deterministic tools."""
+
     def __init__(self, tools: list[DummyTool]) -> None:
         self._tools = tools
 
     async def __aenter__(self) -> DummySession:
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:  # noqa: D401, ANN001
+    async def __aexit__(self, exc_type, exc_value, traceback) -> None:
         return None
 
-    async def list_tools(self) -> list[DummyTool]:  # noqa: D401
+    async def list_tools(self) -> list[DummyTool]:
         await asyncio.sleep(0)
         return self._tools
 
 
 class DummyClient:
+    """Multi-server client stub exposing session() and connections metadata."""
+
     def __init__(self, inventory: dict[str, list[DummyTool]]) -> None:
         self.connections = inventory
 
@@ -67,17 +53,23 @@ class DummyClient:
         return DummySession(self.connections[server_name])
 
 
-class DummyClientManager:
-    def __init__(self, client: DummyClient) -> None:
-        self._client = client
-
-    async def get_mcp_client(self) -> DummyClient:  # noqa: D401
-        return self._client
+def _make_discovery(
+    client: DummyClient,
+    *,
+    cache_ttl_seconds: int = 60,
+    telemetry_hook: Callable[[dict[str, Any]], None] | None = None,
+) -> DynamicToolDiscovery:
+    typed_client = cast(MultiServerMCPClient, client)
+    return DynamicToolDiscovery(
+        typed_client,
+        cache_ttl_seconds=cache_ttl_seconds,
+        telemetry_hook=telemetry_hook,
+    )
 
 
 @pytest.mark.asyncio
 async def test_refresh_respects_ttl_and_force_flag() -> None:
-    """Discovery should honour TTL caching and allow forced refreshes."""
+    """Cache refresh should respect TTL and allow forced updates."""
 
     primary_tools = [
         DummyTool(
@@ -88,15 +80,15 @@ async def test_refresh_respects_ttl_and_force_flag() -> None:
     ]
     client = DummyClient({"primary": primary_tools})
     events: list[dict[str, Any]] = []
-    discovery = DynamicToolDiscovery(
-        DummyClientManager(client),
+    discovery = _make_discovery(
+        client,
         cache_ttl_seconds=60,
         telemetry_hook=events.append,
     )
 
     await discovery.refresh(force=True)
     assert len(discovery.get_capabilities()) == 1
-    assert events
+    assert events  # telemetry should emit cache miss + refresh events
 
     client.connections["primary"].append(
         DummyTool(
@@ -107,16 +99,16 @@ async def test_refresh_respects_ttl_and_force_flag() -> None:
     )
 
     await discovery.refresh()
-    assert len(discovery.get_capabilities()) == 1
+    assert len(discovery.get_capabilities()) == 1  # cache hit, no change
 
     await discovery.refresh(force=True)
-    capabilities = discovery.get_capabilities()
-    assert {cap.name for cap in capabilities} == {"hybrid_search", "qa_generate"}
+    names = {cap.name for cap in discovery.get_capabilities()}
+    assert names == {"hybrid_search", "qa_generate"}
 
 
 @pytest.mark.asyncio
 async def test_capability_metadata_and_type_detection() -> None:
-    """Discovery should classify tools and expose schema keys."""
+    """Discovery should classify tool schemas into capability types."""
 
     tools = [
         DummyTool(
@@ -130,9 +122,7 @@ async def test_capability_metadata_and_type_detection() -> None:
             outputSchema={"properties": {"insights": {"type": "array"}}},
         ),
     ]
-    discovery = DynamicToolDiscovery(
-        DummyClientManager(DummyClient({"primary": tools}))
-    )
+    discovery = _make_discovery(DummyClient({"primary": tools}))
     await discovery.refresh(force=True)
 
     search_capability = discovery.get_capability("semantic_search", server="primary")
@@ -144,3 +134,35 @@ async def test_capability_metadata_and_type_detection() -> None:
     assert analysis_capability is not None
     assert analysis_capability.capability_type == ToolCapabilityType.ANALYSIS
     assert analysis_capability.output_schema == ("insights",)
+
+
+@pytest.mark.asyncio
+async def test_get_capabilities_returns_copy() -> None:
+    """Callers should receive an immutable snapshot of cached capabilities."""
+
+    tools = [DummyTool(name="ops", description="Operations tool")]
+    discovery = _make_discovery(DummyClient({"primary": tools}))
+    await discovery.refresh(force=True)
+
+    first_snapshot = discovery.get_capabilities()
+    second_snapshot = discovery.get_capabilities()
+    assert first_snapshot is not second_snapshot
+
+
+@pytest.mark.asyncio
+async def test_cache_hit_telemetry(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Cache hits should emit telemetry events with correct metadata."""
+
+    tools = [DummyTool(name="ops", description="Operations tool")]
+    client = DummyClient({"primary": tools})
+    telemetry: list[dict[str, Any]] = []
+    discovery = _make_discovery(
+        client,
+        cache_ttl_seconds=120,
+        telemetry_hook=telemetry.append,
+    )
+
+    await discovery.refresh(force=True)  # populate cache
+    await discovery.refresh()  # should hit cache
+
+    assert any(event.get("tool_count") == 1 for event in telemetry)

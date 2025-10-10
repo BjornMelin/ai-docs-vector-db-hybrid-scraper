@@ -1,144 +1,221 @@
-"""Tests for unified retrieval tools."""
+"""Tests for MCP retrieval tools covering hybrid search helpers."""
 
 from __future__ import annotations
 
-import pytest
-import pytest_asyncio
+from collections.abc import Callable
+from typing import Any
+from unittest.mock import AsyncMock, MagicMock, Mock
 
+import pytest
+
+from src.config.models import SearchStrategy
 from src.contracts.retrieval import SearchRecord
 from src.mcp_tools.tools import retrieval
 from src.models.search import SearchRequest
 
 
-class _Ctx:
-    """Async logging stub."""
+class StubMCP:
+    """Stub FastMCP server recording registered tools."""
 
-    async def info(self, *_args, **_kwargs):  # noqa: D401
-        """Discard log calls."""
+    def __init__(self) -> None:
+        self.tools: dict[str, Callable[..., Any]] = {}
 
-        return None
+    def tool(self, *_, **__):  # pragma: no cover
+        def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+            self.tools[func.__name__] = func
+            return func
+
+        return decorator
 
 
-@pytest_asyncio.fixture()
-async def registered(fake_mcp, fake_client_manager):
-    """Register tools and yield registry."""
+@pytest.fixture
+def mock_vector_service() -> Mock:
+    """Provide a vector service mock primed for hybrid search calls."""
 
-    retrieval.register_tools(fake_mcp, fake_client_manager)
-    return fake_mcp.tools
+    service = Mock()
+    service.is_initialized.return_value = True
+    service.initialize = AsyncMock()
+    service.search_documents = AsyncMock()
+    service.ensure_payload_indexes = AsyncMock()
+    return service
+
+
+@pytest.fixture
+def registered_tools(mock_vector_service: Mock) -> dict[str, Callable[..., Any]]:
+    """Register retrieval tools and capture the exposed callables."""
+
+    mcp = StubMCP()
+    retrieval.register_tools(mcp, vector_service=mock_vector_service)
+    return mcp.tools
+
+
+@pytest.fixture
+def mock_context() -> MagicMock:
+    """Build an MCP context mock used for logging within tools."""
+
+    ctx = MagicMock()
+    ctx.info = AsyncMock()
+    ctx.error = AsyncMock()
+    return ctx
 
 
 @pytest.mark.asyncio
-async def test_search_documents_basic(registered):
-    """Search returns SearchRecord objects."""
+async def test_search_documents_returns_hybrid_results(
+    registered_tools: dict[str, Callable[..., Any]],
+    mock_vector_service: Mock,
+    mock_context: MagicMock,
+) -> None:
+    """Ensure hybrid search returns canonical search records."""
 
-    fn = registered["search_documents"]
-    res = await fn(
-        request=SearchRequest(
-            query="hello",
-            collection="documentation",
-            limit=3,
-            offset=0,
-            include_metadata=True,
+    mock_vector_service.search_documents.return_value = [
+        SearchRecord(
+            id="doc-1",
+            score=0.87,
+            content="body",
+            title="Hybrid",
+            url="https://example.com/doc",
+            metadata={
+                "content": "body",
+                "title": "Hybrid",
+                "url": "https://example.com/doc",
+            },
         ),
-        ctx=_Ctx(),
-    )
-    assert len(res) == 3
-    assert all(isinstance(item, SearchRecord) for item in res)
-    assert res[0].id == "1"
-    assert res[0].metadata is not None
-
-
-@pytest.mark.asyncio
-async def test_filtered_search_forwards_filters(registered):
-    """Filtered search forwards filters."""
-
-    fn = registered["filtered_search"]
-    res = await fn(
-        request=SearchRequest(
-            query="q",
-            collection="documentation",
-            limit=2,
-            offset=0,
-            filters={"site_name": {"value": "docs"}},
-            include_metadata=True,
+        SearchRecord(
+            id="doc-2",
+            score=0.45,
+            content="ignored",
+            metadata={"content": "ignored"},
         ),
-        ctx=_Ctx(),
-    )
-    assert res and res[0].metadata and res[0].metadata["q"] == "q"
+    ]
 
-
-@pytest.mark.asyncio
-async def test_multi_stage_merges_and_dedupes(registered):
-    """Multi-stage returns unique items by id."""
-
-    fn = registered["multi_stage_search"]
-    req = retrieval.MultiStageSearchPayload(
-        collection="documentation",
-        query="x",
-        limit=5,
-        stages=[{"limit": 5}, {"limit": 5, "filters": {"k": 1}}],
-        include_metadata=False,
-    )
-    res = await fn(payload=req, ctx=_Ctx())
-    ids = [r.id for r in res]
-    assert len(ids) == len(set(ids))
-
-
-@pytest.mark.asyncio
-async def test_search_with_context_expands_limit(registered):
-    """Context search increases retrieved candidates."""
-
-    fn = registered["search_with_context"]
-    res = await fn(
-        query="context",
-        collection="documentation",
-        limit=3,
-        context_size=2,
-        include_metadata=False,
-        ctx=_Ctx(),
-    )
-    assert len(res) == 5  # 3 base + 2 context hits
-    assert all(record.metadata is None for record in res)
-
-
-@pytest.mark.asyncio
-async def test_recommend_similar_excludes_seed(registered):
-    """Recommendation excludes the seed id."""
-
-    fn = registered["recommend_similar"]
-    res = await fn(
-        point_id="d0",
-        collection="documentation",
-        limit=5,
-        score_threshold=0.0,
-        filters=None,
-        ctx=None,
-    )
-    assert all(r.id != "d0" for r in res)
-    assert all(r.metadata is not None for r in res)
-
-
-@pytest.mark.asyncio
-async def test_reranked_search_returns_limit(registered):
-    """Reranked search trims to requested limit."""
-
-    fn = registered["reranked_search"]
-    req = SearchRequest(
-        collection="documentation",
-        query="y",
-        limit=7,
+    request = SearchRequest(
+        query="hybrid",
+        collection="docs",
+        limit=1,
         offset=0,
-        include_metadata=False,
+        search_strategy=SearchStrategy.HYBRID,
+        include_metadata=True,
+        filters={"lang": "en"},
     )
-    res = await fn(request=req, ctx=_Ctx())
-    assert len(res) == 7
+
+    results = await registered_tools["search_documents"](request, mock_context)
+
+    mock_vector_service.search_documents.assert_awaited_once_with(
+        "docs", "hybrid", limit=1, filters={"lang": "en"}
+    )
+    assert len(results) == 1
+    assert isinstance(results[0], SearchRecord)
+    assert results[0].id == "doc-1"
+    assert results[0].metadata["title"] == "Hybrid"
 
 
 @pytest.mark.asyncio
-async def test_scroll_collection_paginates(registered):
-    """Scroll returns documents and next offset."""
+async def test_multi_stage_search_merges_deduped_matches(
+    registered_tools: dict[str, Callable[..., Any]],
+    mock_vector_service: Mock,
+    mock_context: MagicMock,
+) -> None:
+    """Verify multi-stage hybrid search dedupes IDs and keeps highest score."""
 
-    fn = registered["scroll_collection"]
-    page1 = await fn(collection="documentation", limit=2, offset=None, ctx=None)
-    assert len(page1["documents"]) == 2
-    assert page1["next_offset"] == "2"
+    mock_vector_service.search_documents.side_effect = [
+        [
+            SearchRecord(
+                id="doc-1",
+                score=0.55,
+                content="stage-one",
+                metadata={"content": "stage-one"},
+            ),
+            SearchRecord(
+                id="doc-2",
+                score=0.52,
+                content="first-pass",
+                metadata={"content": "first-pass"},
+            ),
+        ],
+        [
+            SearchRecord(
+                id="doc-1",
+                score=0.91,
+                content="stage-two",
+                metadata={"content": "stage-two"},
+            ),
+            SearchRecord(
+                id="doc-3",
+                score=0.64,
+                content="new",
+                metadata={"content": "new"},
+            ),
+        ],
+    ]
+
+    payload = retrieval.MultiStageSearchPayload(
+        query="hybrid",
+        collection="docs",
+        limit=2,
+        stages=[{"limit": 2}, {"limit": 3}],
+        include_metadata=True,
+    )
+
+    results = await registered_tools["multi_stage_search"](payload, mock_context)
+
+    assert mock_vector_service.search_documents.await_count == 2
+    assert len(results) == 2
+    assert [result.id for result in results] == ["doc-1", "doc-2"]
+    assert results[0].score == pytest.approx(0.91)
+    assert results[0].metadata == {"content": "stage-two"}
+
+
+@pytest.mark.asyncio
+async def test_filtered_search_forces_hybrid_strategy(
+    registered_tools: dict[str, Callable[..., Any]],
+    mock_vector_service: Mock,
+    mock_context: MagicMock,
+) -> None:
+    """Filtered search should normalise to hybrid strategy."""
+
+    mock_vector_service.search_documents.return_value = []
+    request = SearchRequest(
+        query="term",
+        collection="docs",
+        limit=5,
+        offset=0,
+        search_strategy=SearchStrategy.DENSE,
+        include_metadata=False,
+        filters={"lang": "en"},
+    )
+
+    await registered_tools["filtered_search"](request, mock_context)
+
+    args = mock_vector_service.search_documents.await_args[0]
+    assert args == ("docs", "term")
+
+
+@pytest.mark.asyncio
+async def test_search_documents_strips_metadata_when_disabled(
+    registered_tools: dict[str, Callable[..., Any]],
+    mock_vector_service: Mock,
+    mock_context: MagicMock,
+) -> None:
+    """Metadata stripping should remove metadata payloads."""
+
+    mock_vector_service.search_documents.return_value = [
+        SearchRecord(
+            id="doc-1",
+            score=0.5,
+            content="body",
+            metadata={"foo": "bar"},
+        )
+    ]
+
+    request = SearchRequest(
+        query="q",
+        collection="docs",
+        limit=1,
+        offset=0,
+        search_strategy=SearchStrategy.HYBRID,
+        include_metadata=False,
+    )
+
+    results = await registered_tools["search_documents"](request, mock_context)
+
+    assert results[0].metadata is None

@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator, Sequence
+from collections.abc import AsyncIterator, Iterator, Sequence
 from types import SimpleNamespace
 from typing import Any, cast
 from unittest.mock import AsyncMock
 
 import pytest
+from dependency_injector import providers
 from qdrant_client import AsyncQdrantClient
 
 from src.config.models import QdrantConfig, ScoreNormalizationStrategy
-from src.infrastructure.client_manager import ClientManager
+from src.infrastructure.container import ApplicationContainer
 from src.services.embeddings.base import EmbeddingProvider
 from src.services.vector_db.service import VectorStoreService
 from src.services.vector_db.types import CollectionSchema, TextDocument
@@ -55,49 +56,20 @@ class EmbeddingProviderStub:
         return self._embedding
 
 
-class ClientManagerStub:
-    """Client manager stub that records lifecycle interactions."""
-
-    def __init__(self, qdrant_client: AsyncQdrantClient | AsyncMock) -> None:
-        self._qdrant_client = qdrant_client
-        self.initialize_calls = 0
-        self.cleanup_calls = 0
-        self.is_initialized = False
-
-    async def initialize(self) -> None:
-        self.initialize_calls += 1
-        self.is_initialized = True
-
-    async def cleanup(self) -> None:
-        self.cleanup_calls += 1
-        self.is_initialized = False
-
-    async def get_qdrant_client(self) -> AsyncQdrantClient | AsyncMock:
-        return self._qdrant_client
-
-
 def build_vector_store_service(
-    config: Any,
-    client_manager: ClientManagerStub,
-    embeddings_provider: EmbeddingProviderStub,
+    container: ApplicationContainer,
 ) -> VectorStoreService:
-    """Create a VectorStoreService instance wired with provided stubs."""
+    """Create a VectorStoreService instance from the DI container."""
 
-    return VectorStoreService(
-        config=config,
-        client_manager=cast(ClientManager, client_manager),
-        embeddings_provider=cast(EmbeddingProvider, embeddings_provider),
-    )
+    return container.vector_store_service()
 
 
 async def initialize_vector_store_service(
-    config: Any,
-    client_manager: ClientManagerStub,
-    embeddings_provider: EmbeddingProviderStub,
+    container: ApplicationContainer,
 ) -> VectorStoreService:
     """Construct and initialize a VectorStoreService for reuse."""
 
-    service = build_vector_store_service(config, client_manager, embeddings_provider)
+    service = build_vector_store_service(container)
     await service.initialize()
     return service
 
@@ -127,10 +99,28 @@ def qdrant_client_mock() -> AsyncMock:
 
 
 @pytest.fixture
-def client_manager_stub(qdrant_client_mock: AsyncMock) -> ClientManagerStub:
-    """Provide a client manager stub wrapping the mocked Qdrant client."""
+def vector_container(
+    config_stub: Any,
+    qdrant_client_mock: AsyncMock,
+    embeddings_provider_stub: EmbeddingProviderStub,
+) -> Iterator[ApplicationContainer]:
+    """Provide a container with overrides for vector service dependencies."""
 
-    return ClientManagerStub(qdrant_client=qdrant_client_mock)
+    container = ApplicationContainer()
+    container.qdrant_client.override(providers.Object(qdrant_client_mock))
+    container.vector_store_service.override(
+        providers.Singleton(
+            VectorStoreService,
+            config=config_stub,
+            async_qdrant_client=qdrant_client_mock,
+            embeddings_provider=cast(EmbeddingProvider, embeddings_provider_stub),
+        )
+    )
+    try:
+        yield container
+    finally:
+        container.vector_store_service.reset_override()
+        container.qdrant_client.reset_override()
 
 
 @pytest.fixture
@@ -173,16 +163,11 @@ def config_stub() -> Any:
 @pytest.fixture
 async def initialized_vector_store_service(
     embeddings_provider_stub: EmbeddingProviderStub,
-    client_manager_stub: ClientManagerStub,
-    config_stub: Any,
+    vector_container: ApplicationContainer,
 ) -> AsyncIterator[VectorStoreService]:
     """Initialize VectorStoreService for tests and ensure cleanup."""
 
-    service = await initialize_vector_store_service(
-        config=config_stub,
-        client_manager=client_manager_stub,
-        embeddings_provider=embeddings_provider_stub,
-    )
+    service = await initialize_vector_store_service(vector_container)
     if service.config and hasattr(service.config, "qdrant"):
         service.config.qdrant.enable_grouping = False
     try:
@@ -193,12 +178,11 @@ async def initialized_vector_store_service(
 
 __all__ = [
     "EmbeddingProviderStub",
-    "ClientManagerStub",
     "build_vector_store_service",
     "initialize_vector_store_service",
     "embeddings_provider_stub",
     "qdrant_client_mock",
-    "client_manager_stub",
+    "vector_container",
     "collection_schema",
     "sample_documents",
     "config_stub",
