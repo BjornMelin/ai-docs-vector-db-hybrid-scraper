@@ -12,7 +12,6 @@ Subpackages
    src.benchmarks
    src.cli
    src.config
-   src.core
    src.infrastructure
    src.mcp_services
    src.mcp_tools

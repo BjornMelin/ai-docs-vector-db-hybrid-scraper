@@ -1,11 +1,19 @@
 """Typed configuration models for the AI docs platform."""
 
+# pylint: disable=too-many-lines  # Extensive configuration schema definitions live here
+
 from __future__ import annotations
 
 from enum import Enum
 from typing import Any, Literal, Self
 
-from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
+from pydantic import (  # pyright: ignore[reportMissingImports]
+    BaseModel,
+    Field,
+    HttpUrl,
+    field_validator,
+    model_validator,
+)
 
 
 #### Enumerations ####
@@ -263,7 +271,10 @@ class CacheConfig(BaseModel):
     ttl_search_results: int = Field(
         default=3600,
         gt=0,
-        description="Search result cache TTL in seconds (negative caching supported)",
+        description=(
+            "Search result cache TTL in seconds (must be positive; negative values are "
+            "not supported)."
+        ),
     )
     local_max_size: int = Field(
         default=1000,
@@ -643,10 +654,18 @@ class ChunkingConfig(BaseModel):
     strategy: ChunkingStrategy = Field(
         default=ChunkingStrategy.ENHANCED, description="Chunking strategy"
     )
-    chunk_size: int = Field(default=1600, gt=0, description="Target chunk size")
+    chunk_size: int = Field(
+        default=1600,
+        gt=0,
+        description="Target chunk size to preserve context fidelity",
+    )
     max_chunk_size: int = Field(default=3000, gt=0, description="Maximum chunk size")
     min_chunk_size: int = Field(default=100, gt=0, description="Minimum chunk size")
-    chunk_overlap: int = Field(default=320, ge=0, description="Overlap between chunks")
+    chunk_overlap: int = Field(
+        default=320,
+        ge=0,
+        description="Overlap between chunks to maintain coherence across boundaries",
+    )
     enable_ast_chunking: bool = Field(
         default=True, description="Enable AST-aware chunking"
     )
@@ -738,7 +757,14 @@ class PerformanceConfig(BaseModel):
     max_concurrent_embeddings: int = Field(
         default=32, gt=0, le=100, description="Max concurrent embeddings"
     )
-    request_timeout: float = Field(default=30.0, gt=0, description="Request timeout")
+    request_timeout: float = Field(
+        default=30.0,
+        gt=0,
+        description=(
+            "Request timeout in seconds; avoids indefinite waits while tolerating "
+            "slow APIs"
+        ),
+    )
     max_retries: int = Field(default=3, ge=0, le=10, description="Max retries")
     retry_base_delay: float = Field(default=1.0, gt=0, description="Retry backoff base")
     max_memory_usage_mb: float = Field(
@@ -754,10 +780,17 @@ class CircuitBreakerConfig(BaseModel):
     """Circuit breaker defaults and overrides."""
 
     failure_threshold: int = Field(
-        default=5, gt=0, le=20, description="Failures before opening circuit"
+        default=5,
+        gt=0,
+        le=20,
+        description="Failures before opening circuit to curb cascading faults",
     )
     recovery_timeout: float = Field(
-        default=60.0, gt=0, description="Recovery timeout seconds"
+        default=60.0,
+        gt=0,
+        description=(
+            "Recovery timeout in seconds; cooldown before retrying unstable services"
+        ),
     )
     service_overrides: dict[str, dict[str, Any]] = Field(
         default_factory=lambda: {

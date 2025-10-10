@@ -9,7 +9,7 @@ import pytest
 from pytest_mock import MockerFixture
 
 from src.config.models import CrawlProvider, EmbeddingProvider
-from src.services.health.manager import (
+from src.services.observability.health_manager import (
     HAS_QDRANT_CLIENT,
     HAS_REDIS,
     HealthCheck,
@@ -93,24 +93,26 @@ def test_build_health_manager_includes_expected_checks(
 ) -> None:
     """Building the manager wires up configured dependency checks."""
 
-    mocker.patch("src.services.health.manager.AsyncQdrantClient", autospec=True)
     mocker.patch(
-        "src.services.health.manager.QdrantHealthCheck",
+        "src.services.observability.health_manager.AsyncQdrantClient", autospec=True
+    )
+    mocker.patch(
+        "src.services.observability.health_manager.QdrantHealthCheck",
         return_value=SimpleNamespace(name="qdrant"),
     )
     mocker.patch(
-        "src.services.health.manager.RedisHealthCheck",
+        "src.services.observability.health_manager.RedisHealthCheck",
         return_value=SimpleNamespace(name="redis"),
     )
     mocker.patch(
-        "src.services.health.manager.OpenAIHealthCheck",
+        "src.services.observability.health_manager.OpenAIHealthCheck",
         return_value=SimpleNamespace(name="openai"),
     )
     mocker.patch(
-        "src.services.health.manager.FirecrawlHealthCheck",
+        "src.services.observability.health_manager.FirecrawlHealthCheck",
         return_value=SimpleNamespace(name="firecrawl"),
     )
-    mocker.patch("src.services.health.manager.AsyncOpenAI", autospec=True)
+    mocker.patch("src.services.observability.health_manager.AsyncOpenAI", autospec=True)
 
     manager = build_health_manager(configured_settings)
     check_names = {check.name for check in manager._health_checks}

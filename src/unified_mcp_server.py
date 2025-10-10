@@ -18,8 +18,11 @@ from src.config.loader import get_settings
 from src.config.models import CrawlProvider, EmbeddingProvider
 from src.infrastructure.bootstrap import container_session
 from src.mcp_tools.tool_registry import register_all_tools
-from src.services.health.manager import HealthCheckManager, build_health_manager
 from src.services.logging_config import configure_logging
+from src.services.observability.health_manager import (
+    HealthCheckManager,
+    build_health_manager,
+)
 
 
 logger = logging.getLogger(__name__)

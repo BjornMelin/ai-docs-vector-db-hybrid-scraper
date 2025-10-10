@@ -5,16 +5,25 @@ from __future__ import annotations
 import logging
 from collections.abc import AsyncGenerator, Callable
 from contextlib import AsyncExitStack, asynccontextmanager
+from time import perf_counter
 from typing import TYPE_CHECKING, Any, cast
+
+from opentelemetry import metrics, trace
+from opentelemetry.metrics import Histogram
+from opentelemetry.trace import Status, StatusCode
 
 from src.config import Settings
 from src.services.circuit_breaker import CircuitBreakerManager
 
-from .monitoring import QueryMonitor
-
 
 logger = logging.getLogger(__name__)
 
+
+_QUERY_DURATION_HISTOGRAM: Histogram = metrics.get_meter(__name__).create_histogram(
+    "db.query.duration",
+    description="Duration of database operations in milliseconds",
+    unit="ms",
+)
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
@@ -43,12 +52,11 @@ except ImportError:  # pragma: no cover - runtime fallback when SQLAlchemy unava
 
 
 class DatabaseManager:
-    """Coordinate async SQLAlchemy sessions with lightweight monitoring."""
+    """Coordinate async SQLAlchemy sessions with OpenTelemetry instrumentation."""
 
     def __init__(
         self,
         config: Settings,
-        query_monitor: QueryMonitor | None = None,
         circuit_breaker_manager: CircuitBreakerManager | None = None,
         breaker_service_name: str = "infrastructure.database",
     ):  # pylint: disable=too-many-arguments
@@ -56,7 +64,6 @@ class DatabaseManager:
 
         Args:
             config: Unified application settings instance.
-            query_monitor: Optional query performance tracker.
             circuit_breaker_manager: Optional circuit breaker manager.
             breaker_service_name: Service identifier for breaker acquisition.
         """
@@ -64,10 +71,11 @@ class DatabaseManager:
         self.config = config
         self._engine: AsyncEngine | None = None
         self._session_factory: SessionFactory | None = None
-        self.query_monitor = query_monitor or QueryMonitor()
         self._circuit_breaker_manager = circuit_breaker_manager
         self._breaker_service_name = breaker_service_name
         self._connection_count = 0
+        self._tracer = trace.get_tracer(__name__)
+        self._histogram = _QUERY_DURATION_HISTOGRAM
 
     async def initialize(self) -> None:
         """Initialize database infrastructure."""
@@ -95,8 +103,6 @@ class DatabaseManager:
             )
             self._session_factory = cast(SessionFactory, session_factory)
 
-            await self.query_monitor.initialize()
-
             logger.info(
                 "Database manager initialized (pool_size: %s)",
                 self.config.database.pool_size,
@@ -110,8 +116,6 @@ class DatabaseManager:
         """Clean up database resources."""
 
         try:
-            await self.query_monitor.cleanup()
-
             if self._engine:
                 await self._engine.dispose()
                 self._engine = None
@@ -131,8 +135,6 @@ class DatabaseManager:
             msg = "Database manager not initialized"
             raise RuntimeError(msg)
 
-        query_start = self.query_monitor.start_query()
-
         async with AsyncExitStack() as stack:
             if self._circuit_breaker_manager is not None:
                 breaker = await self._circuit_breaker_manager.get_breaker(
@@ -141,16 +143,34 @@ class DatabaseManager:
                 await stack.enter_async_context(breaker)
 
             session = await stack.enter_async_context(session_factory())
-            try:
-                self._connection_count += 1
-
-                yield session
-                await session.commit()
-                self.query_monitor.record_success(query_start)
-            except Exception as exc:
-                await session.rollback()
-                self.query_monitor.record_failure(query_start, str(exc))
-                raise
+            with self._tracer.start_as_current_span("database.session") as span:
+                operation_start = perf_counter()
+                span.set_attribute("db.system", "sqlalchemy")
+                span.set_attribute(
+                    "db.session.pool_size",
+                    int(getattr(self.config.database, "pool_size", 0)),
+                )
+                try:
+                    self._connection_count += 1
+                    yield session
+                    await session.commit()
+                    duration_ms = (perf_counter() - operation_start) * 1000
+                    self._histogram.record(
+                        duration_ms,
+                        {"outcome": "success", "service": self._breaker_service_name},
+                    )
+                    span.set_attribute("db.session.outcome", "success")
+                except Exception as exc:
+                    await session.rollback()
+                    duration_ms = (perf_counter() - operation_start) * 1000
+                    self._histogram.record(
+                        duration_ms,
+                        {"outcome": "failure", "service": self._breaker_service_name},
+                    )
+                    span.set_attribute("db.session.outcome", "failure")
+                    span.record_exception(exc)
+                    span.set_status(Status(StatusCode.ERROR, str(exc)))
+                    raise
 
     async def get_performance_metrics(self) -> dict[str, Any]:
         """Get database performance metrics."""
@@ -170,9 +190,12 @@ class DatabaseManager:
 
         return {
             "connection_count": self._connection_count,
-            "query_metrics": await self.query_monitor.get_performance_summary(),
             "circuit_breaker_status": await self._get_circuit_breaker_state(),
             "pool": pool_snapshot,
+            "telemetry": {
+                "histogram": "db.query.duration",
+                "span": "database.session",
+            },
         }
 
     @property

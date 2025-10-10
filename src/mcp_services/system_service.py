@@ -16,7 +16,7 @@ from src.mcp_tools.tools import (
     system_health,
 )
 from src.services.embeddings.manager import EmbeddingManager
-from src.services.health.manager import HealthCheckManager
+from src.services.observability.health_manager import HealthCheckManager
 from src.services.vector_db.service import VectorStoreService
 
 
