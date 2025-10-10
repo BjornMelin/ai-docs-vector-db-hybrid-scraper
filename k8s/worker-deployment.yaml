@@ -25,6 +25,8 @@ spec:
         envFrom:
         - configMapRef:
             name: ai-docs-config
+        - secretRef:
+            name: ai-docs-secrets
         resources:
           requests:
             memory: "1Gi"

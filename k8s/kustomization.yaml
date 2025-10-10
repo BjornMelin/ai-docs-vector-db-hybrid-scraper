@@ -1,9 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-metadata:
-  name: ai-docs-system
-  namespace: ai-docs-system
+namespace: ai-docs-system
 
 resources:
   - namespace.yaml
@@ -67,32 +65,16 @@ patches:
 configMapGenerator:
   - name: ai-docs-config
     literals:
-      - ENVIRONMENT=production
-      - DEBUG=false
-      - AI_DOCS_MODE=simple
+      - AI_DOCS_ENVIRONMENT=production
+      - AI_DOCS_DEBUG=false
       - AI_DOCS_LOG_LEVEL=INFO
-      - PYTHONPATH=/app/src
-      - AI_DOCS_VECTOR_DB__QDRANT_URL=http://qdrant:6333
-      - AI_DOCS_VECTOR_DB__COLLECTION_NAME=ai_docs
-      - AI_DOCS_VECTOR_DB__TIMEOUT=30
+      - AI_DOCS_MODE=simple
       - AI_DOCS_CACHE__REDIS_URL=redis://dragonfly:6379
-      - AI_DOCS_CACHE__REDIS_DATABASE=0
-      - AI_DOCS_CACHE__TTL=3600
-      - AI_DOCS_TASK_QUEUE__REDIS_URL=redis://dragonfly:6379
-      - AI_DOCS_TASK_QUEUE__REDIS_DATABASE=1
-      - AI_DOCS_TASK_QUEUE__WORKER_POOL_SIZE=4
-      - AI_DOCS_SEARCH__MAX_RESULTS=100
-      - AI_DOCS_SEARCH__DEFAULT_LIMIT=20
-      - AI_DOCS_EMBEDDING__BATCH_SIZE=100
-      - AI_DOCS_SECURITY__RATE_LIMIT_ENABLED=true
-      - AI_DOCS_SECURITY__CORS_ENABLED=true
-      - AI_DOCS_SECURITY__ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8000,https://localhost:3000,https://localhost:8000
+      - AI_DOCS_QDRANT__URL=http://qdrant:6333
+      - AI_DOCS_QDRANT__COLLECTION_NAME=ai_docs
 
 secretGenerator:
   - name: ai-docs-secrets
     files:
-      - secrets/OPENAI_API_KEY
-      - secrets/ANTHROPIC_API_KEY
-      - secrets/DB_PASSWORD
-      - secrets/JWT_SECRET
-    type: Opaque
+      - secrets/AI_DOCS_OPENAI__API_KEY
+

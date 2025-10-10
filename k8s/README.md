@@ -32,15 +32,14 @@ This project uses Kustomize to generate secrets from local files, which **must n
     mkdir -p k8s/secrets
     ```
 
-2.  Create a file for each required secret. The filename becomes the key in the Kubernetes Secret.
+2.  Create a file for each required secret. The filename becomes the environment variable that will be exposed to the pods.
     ```bash
-    # Create the files with your actual secret values
-    echo -n "your-openai-api-key" > k8s/secrets/OPENAI_API_KEY
-    echo -n "your-anthropic-api-key" > k8s/secrets/ANTHROPIC_API_KEY
-    echo -n "your-db-password" > k8s/secrets/DB_PASSWORD
-    echo -n "your-super-secret-jwt-token" > k8s/secrets/JWT_SECRET
+    # Create the file with your actual secret value
+    echo -n "your-openai-api-key" > k8s/secrets/AI_DOCS_OPENAI__API_KEY
     ```
     The `k8s/secrets/` directory is already listed in `.gitignore` to prevent accidental commits.
+
+    > **Tip:** Add any optional keys (for example, `AI_DOCS_FIRECRAWL__API_KEY`) as additional files in the same directory if you enable those integrations.
 
 ### 2. Apply the Full Stack with Kustomize
 
@@ -50,7 +49,7 @@ Run the Kustomize build so the generated ConfigMap (`ai-docs-config`) and Secret
 kubectl apply -k .
 ```
 
-> **Note:** This command is required because Kustomize adds a unique hash suffix to the generated ConfigMap and Secret. Applying the full stack ensures the deployments reference the correct generated resource names before any component starts.
+> **Note:** This command is required because Kustomize adds a unique hash suffix to the generated ConfigMap and Secret. Applying the full stack ensures the deployments reference the correct generated resource names before any component starts and keeps the `envFrom` references in the deployments aligned with the hashed resource names.
 
 ### 3. (Optional) Apply Components Individually
 
