@@ -156,9 +156,7 @@ async def test_get_health_checker_returns_singleton(monkeypatch: Any) -> None:
     monkeypatch.setattr(
         fastapi_dependencies, "build_health_manager", build_mock, raising=True
     )
-    monkeypatch.setattr(
-        fastapi_dependencies, "get_settings", lambda: object(), raising=True
-    )
+    monkeypatch.setattr(fastapi_dependencies, "get_settings", object(), raising=True)
     monkeypatch.setattr(fastapi_dependencies, "_health_manager", None, raising=False)
 
     first = await fastapi_dependencies.get_health_checker()
@@ -181,9 +179,7 @@ async def test_get_health_checker_handles_client_errors(monkeypatch: Any) -> Non
         lambda *_args, **_kwargs: manager,
         raising=True,
     )
-    monkeypatch.setattr(
-        fastapi_dependencies, "get_settings", lambda: object(), raising=True
-    )
+    monkeypatch.setattr(fastapi_dependencies, "get_settings", object(), raising=True)
     monkeypatch.setattr(fastapi_dependencies, "_health_manager", None, raising=False)
 
     result = await fastapi_dependencies.get_health_checker()
