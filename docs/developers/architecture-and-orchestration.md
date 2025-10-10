@@ -65,18 +65,17 @@ graph LR
     EmbeddingMgr --> Providers
 ```
 
-The global `ApplicationContainer` (``src/infrastructure/container.py``) now
-initialises shared infrastructure—vector store, embedding manager, cache
-manager, circuit breaker, content-intelligence service, project storage, and
-optional browser/RAG helpers—through dependency-injector providers. FastAPI and
-MCP lifespan hooks initialise the container once, and every dependency helper
-resolves services via `Provide[...]` bindings. This removes the previous
-`ClientManager` layer, shaving one level of indirection while retaining
-deterministic startup and teardown semantics.
+The global `ApplicationContainer` (`src/infrastructure/container.py`) provides
+vector store, embedding manager, cache manager, circuit breaker,
+content-intelligence service, project storage, and optional browser/RAG helpers
+via dependency-injector providers. FastAPI lifespans and the MCP server use
+`container_session` (`src/infrastructure/bootstrap.py`) to initialise the
+container once per process and dispose it deterministically; dependency helpers
+resolve services through `Provide[...]` bindings.
 
-CLI tooling and scripts also bootstrap the container (`initialize_container`,
-`shutdown_container`) instead of instantiating bespoke managers, ensuring
-resource lifecycle (HTTP sessions, async clients) is centralised.
+CLI tooling and scripts also rely on `ensure_container` / `container_session`
+instead of bespoke managers, keeping lifecycle management for HTTP sessions,
+async clients, and monitoring tasks centralised.
 
 ## 2. LangChain / LangGraph Orchestration
 
