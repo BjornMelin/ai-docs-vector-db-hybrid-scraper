@@ -8,10 +8,19 @@ import json
 from pathlib import Path
 from typing import Any
 
-from pydantic import Field, ValidationError, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import (  # pyright: ignore[reportMissingImports]
+    Field,
+    ValidationError,
+    model_validator,
+)
+from pydantic_settings import (  # pyright: ignore[reportMissingImports]
+    BaseSettings,
+    SettingsConfigDict,
+)
 
-from src.architecture.modes import ApplicationMode
+from src.architecture.modes import (  # pyright: ignore[reportMissingImports]
+    ApplicationMode,
+)
 
 from .models import (
     AgenticConfig,
@@ -20,6 +29,7 @@ from .models import (
     CacheConfig,
     ChunkingConfig,
     ChunkingStrategy,
+    CircuitBreakerConfig,
     Crawl4AIConfig,
     CrawlProvider,
     DatabaseConfig,
@@ -146,6 +156,10 @@ class Settings(BaseSettings):
     )
     performance: PerformanceConfig = Field(
         default_factory=PerformanceConfig, description="Performance configuration"
+    )
+    circuit_breaker: CircuitBreakerConfig = Field(
+        default_factory=CircuitBreakerConfig,
+        description="Circuit breaker configuration",
     )
     query_processing: QueryProcessingConfig = Field(
         default_factory=QueryProcessingConfig,
