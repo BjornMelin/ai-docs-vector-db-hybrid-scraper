@@ -261,6 +261,9 @@ def record_ai_operation(  # pylint: disable=too-many-arguments
     tokens: int | None = None,
     cost_usd: float | None = None,
     success: bool = True,
+    prompt_tokens: int | None = None,
+    completion_tokens: int | None = None,
+    attributes: dict[str, Any] | None = None,
 ) -> None:
     """Record a completed AI operation using the global tracker.
 
@@ -272,7 +275,31 @@ def record_ai_operation(  # pylint: disable=too-many-arguments
         tokens: Optional token count for the request.
         cost_usd: Optional USD cost.
         success: Whether the operation succeeded.
+        prompt_tokens: Optional prompt token count.
+        completion_tokens: Optional completion token count.
+        attributes: Optional additional span attributes to set.
     """
+
+    current_span = trace.get_current_span()
+    if current_span and current_span.get_span_context().is_valid:
+        span_attrs: dict[str, Any] = {
+            "gen_ai.operation.name": operation_type,
+            "gen_ai.provider": provider,
+            "gen_ai.request.model": model,
+        }
+        if tokens is not None:
+            span_attrs["gen_ai.usage.total_tokens"] = tokens
+        if prompt_tokens is not None:
+            span_attrs["gen_ai.usage.prompt_tokens"] = prompt_tokens
+        if completion_tokens is not None:
+            span_attrs["gen_ai.usage.completion_tokens"] = completion_tokens
+        if cost_usd is not None:
+            span_attrs["gen_ai.cost.usd"] = cost_usd
+        if attributes:
+            span_attrs.update(attributes)
+        for key, value in span_attrs.items():
+            if value is not None:
+                current_span.set_attribute(key, value)
 
     payload = _operation_payload(
         operation_type=operation_type,

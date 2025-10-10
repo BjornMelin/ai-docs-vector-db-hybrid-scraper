@@ -9,6 +9,8 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypedDict
 
+import tiktoken
+
 from src.services.errors import EmbeddingServiceError
 from src.services.observability.tracing import trace_function
 from src.services.observability.tracking import record_ai_operation
@@ -36,6 +38,14 @@ class ModelConfig(TypedDict):
     max_dimensions: int
     cost_per_million: float
     max_tokens: int
+
+
+class TokenSummary(TypedDict):
+    """Token usage summary for embedding calls."""
+
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
 
 
 class OpenAIEmbeddingProvider(EmbeddingProvider):
@@ -81,6 +91,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         self._dimensions = dimensions
         self._initialized = False
         self._client_manager = client_manager
+        self._token_encoder: Any | None = None
 
         if model_name not in self._model_configs:
             msg = (
@@ -150,41 +161,71 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
 
         start = time.perf_counter()
         success = True
-        total_tokens = sum(len(text.split()) for text in texts)
+        token_summary: TokenSummary = {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+        }
 
         try:
-            embeddings = await self._execute_embedding_generation(texts, batch_size)
+            embeddings, token_summary = await self._execute_embedding_generation(
+                texts, batch_size
+            )
             return embeddings
         except Exception:
             success = False
             raise
         finally:
             duration = time.perf_counter() - start
-            cost = self._calculate_cost(total_tokens)
+            total_tokens = token_summary["total_tokens"]
+            cost = self._calculate_cost(total_tokens) if total_tokens else 0.0
             record_ai_operation(
                 operation_type="embedding",
                 provider="openai",
                 model=self.model_name,
                 duration_s=duration,
                 tokens=total_tokens or None,
-                cost_usd=cost or None,
+                cost_usd=cost if total_tokens else None,
                 success=success,
+                prompt_tokens=token_summary["prompt_tokens"] or None,
+                completion_tokens=token_summary["completion_tokens"] or None,
             )
 
     async def _execute_embedding_generation(
         self, texts: list[str], batch_size: int | None = None
-    ) -> list[list[float]]:
-        """Execute the actual embedding generation."""
+    ) -> tuple[list[list[float]], TokenSummary]:
+        """Execute the actual embedding generation.
+
+        Args:
+            texts: Text payloads to embed.
+            batch_size: Maximum number of inputs per OpenAI request.
+
+        Returns:
+            Tuple containing embeddings and the aggregated token usage summary.
+
+        Raises:
+            EmbeddingServiceError: If the provider is not initialized or the
+            OpenAI client is unavailable.
+        """
 
         if not self._initialized:
             msg = "Provider not initialized"
             raise EmbeddingServiceError(msg)
 
         if not texts:
-            return []
+            return [], {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+            }
 
         batch_size = batch_size or 100
         embeddings: list[list[float]] = []
+        token_summary: TokenSummary = {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+        }
 
         if self._client is None:
             msg = "OpenAI client not initialized"
@@ -211,6 +252,9 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
                 # Extract embeddings in order
                 batch_embeddings = [embedding.embedding for embedding in response.data]
                 embeddings.extend(batch_embeddings)
+
+                usage = getattr(response, "usage", None)
+                self._update_token_summary(token_summary, usage, batch)
 
                 logger.debug(
                     "Generated embeddings for batch %d to %d (%d texts)",
@@ -251,7 +295,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
             msg = f"Failed to generate embeddings: {e}"
             raise EmbeddingServiceError(msg) from e
 
-        return embeddings
+        return embeddings, token_summary
 
     async def _send_embedding_request(self, params: dict[str, Any]) -> Any:
         """Submit the embeddings request to OpenAI.
@@ -293,32 +337,103 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
 
         return token_count * self.cost_per_token
 
+    def _get_token_encoder(self) -> Any:
+        """Return a cached tiktoken encoder for the configured model.
+
+        Returns:
+            The tokenizer capable of encoding inputs for the configured model.
+        """
+
+        if self._token_encoder is None:
+            try:
+                self._token_encoder = tiktoken.encoding_for_model(self.model_name)
+            except KeyError:
+                logger.debug(
+                    "Falling back to cl100k_base tokenizer for model %s",
+                    self.model_name,
+                )
+                self._token_encoder = tiktoken.get_encoding("cl100k_base")
+        return self._token_encoder
+
+    def _count_tokens(self, texts: list[str]) -> int:
+        """Estimate token usage for a batch of texts.
+
+        Args:
+            texts: Text payloads to tokenize.
+
+        Returns:
+            Estimated token count based on the configured encoder.
+        """
+
+        if not texts:
+            return 0
+        encoder = self._get_token_encoder()
+        return sum(len(encoder.encode(text)) for text in texts)
+
+    def _update_token_summary(
+        self,
+        summary: TokenSummary,
+        usage: Any,
+        batch: list[str],
+    ) -> None:
+        """Update aggregated token usage based on an API response.
+
+        Args:
+            summary: Mutable token summary accumulator.
+            usage: Usage payload returned by the OpenAI SDK (may be absent).
+            batch: Text batch corresponding to the current response.
+        """
+
+        if usage:
+            prompt = getattr(usage, "prompt_tokens", None)
+            completion = getattr(usage, "completion_tokens", None)
+            total = getattr(usage, "total_tokens", None)
+
+            if prompt is not None:
+                summary["prompt_tokens"] += int(prompt)
+            if completion is not None:
+                summary["completion_tokens"] += int(completion)
+            if total is not None:
+                summary["total_tokens"] += int(total)
+            else:
+                aggregate_total = 0
+                if prompt is not None:
+                    aggregate_total += int(prompt)
+                if completion is not None:
+                    aggregate_total += int(completion)
+                summary["total_tokens"] += aggregate_total
+            return
+
+        fallback_tokens = self._count_tokens(batch)
+        summary["prompt_tokens"] += fallback_tokens
+        summary["total_tokens"] += fallback_tokens
+
+    @trace_function()
     async def generate_embeddings_batch_api(
         self, texts: list[str], custom_ids: list[str] | None = None
     ) -> str:
-        """Submit embeddings for batch processing with 50% cost reduction.
-
-        Batch API processes within 24 hours with significant cost savings.
-        Ideal for large-scale, non-time-critical embedding generation.
+        """Submit embeddings for processing via the OpenAI Batch API.
 
         Args:
-            texts: Text strings to embed
-            custom_ids: Optional IDs for matching results (auto-generated if None)
+            texts: Text payloads to schedule for asynchronous embedding.
+            custom_ids: Optional identifiers to include alongside each payload.
+                When ``None``, sequential identifiers are generated automatically.
 
         Returns:
-            Batch job ID for status checking and result retrieval
+            The identifier returned by the OpenAI Batch API.
 
         Raises:
-            EmbeddingServiceError: If not initialized or batch creation fails
-
-        Note:
-            Results available within 24 hours with 50% cost savings.
-            No rate limits for batch processing.
+            EmbeddingServiceError: If the provider is not initialized or the
+            custom ID configuration does not match the number of texts.
         """
 
         if not self._initialized:
             msg = "Provider not initialized"
             raise EmbeddingServiceError(msg)
+
+        start = time.perf_counter()
+        success = False
+        custom_ids_provided = custom_ids is not None
 
         if not custom_ids:
             custom_ids = [f"text-{i}" for i in range(len(texts))]
@@ -330,61 +445,30 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
             )
             raise EmbeddingServiceError(msg)
 
-        temp_file: str | None = None
-
         try:
-            # Create JSONL content for batch
-            with tempfile.NamedTemporaryFile(
-                mode="w", suffix=".jsonl", delete=False
-            ) as f:
-                temp_file = f.name
-                for _i, (text, custom_id) in enumerate(
-                    zip(texts, custom_ids, strict=True)
-                ):
-                    request = {
-                        "custom_id": custom_id,
-                        "method": "POST",
-                        "url": "/v1/embeddings",
-                        "body": {
-                            "model": self.model_name,
-                            "input": text,
-                        },
-                    }
-
-                    if (
-                        self.model_name.startswith("text-embedding-3-")
-                        and self._dimensions
-                    ):
-                        request["body"]["dimensions"] = self._dimensions
-
-                    f.write(json.dumps(request) + "\n")
-
-                # Ensure all data is written to disk before closing
-                f.flush()
-                os.fsync(f.fileno())
-
-            # Upload file to OpenAI and create the batch job
-            with Path(temp_file).open("rb") as f:
-                file_response = await self._upload_file(f, "batch")
-
-            batch_response = await self._create_batch(
-                file_response.id, "/v1/embeddings", "24h"
-            )
-
-            logger.info(
-                "Created batch job %s for %d texts", batch_response.id, len(texts)
-            )
-
-        except Exception as e:
-            msg = f"Failed to create batch job: {e}"
-            raise EmbeddingServiceError(msg) from e
-        else:
-            return batch_response.id
+            batch_id = await self._submit_batch_job(texts, custom_ids)
+            success = True
+            return batch_id
         finally:
-            # Clean up temp file
-            if "temp_file" in locals() and temp_file and Path(temp_file).exists():
-                with contextlib.suppress(OSError):
-                    Path(temp_file).unlink()
+            duration = time.perf_counter() - start
+            token_estimate = self._count_tokens(texts)
+            record_ai_operation(
+                operation_type="embedding_batch",
+                provider="openai",
+                model=self.model_name,
+                duration_s=duration,
+                tokens=token_estimate or None,
+                cost_usd=self._calculate_cost(token_estimate)
+                if token_estimate
+                else None,
+                success=success,
+                prompt_tokens=token_estimate or None,
+                completion_tokens=None,
+                attributes={
+                    "gen_ai.request.batch_size": len(texts),
+                    "gen_ai.request.custom_ids_provided": custom_ids_provided,
+                },
+            )
 
     async def _upload_file(self, file: Any, purpose: Literal["batch"]) -> Any:
         """Upload a file to OpenAI."""
@@ -412,3 +496,63 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
             endpoint=endpoint,
             completion_window=completion_window,
         )
+
+    async def _submit_batch_job(self, texts: list[str], custom_ids: list[str]) -> str:
+        """Create the batch payload, upload it, and submit the job.
+
+        Args:
+            texts: Text payloads included in the batch.
+            custom_ids: Identifiers paired with each text entry.
+
+        Returns:
+            The identifier returned by the OpenAI Batch API.
+
+        Raises:
+            EmbeddingServiceError: If the payload cannot be uploaded or the
+            batch submission fails.
+        """
+
+        temp_file: str | None = None
+
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".jsonl", delete=False
+            ) as handle:
+                temp_file = handle.name
+                for text, custom_id in zip(texts, custom_ids, strict=True):
+                    request = {
+                        "custom_id": custom_id,
+                        "method": "POST",
+                        "url": "/v1/embeddings",
+                        "body": {
+                            "model": self.model_name,
+                            "input": text,
+                        },
+                    }
+                    if (
+                        self.model_name.startswith("text-embedding-3-")
+                        and self._dimensions
+                    ):
+                        request["body"]["dimensions"] = self._dimensions
+                    handle.write(json.dumps(request) + "\n")
+
+                handle.flush()
+                os.fsync(handle.fileno())
+
+            with Path(temp_file).open("rb") as binary_file:
+                file_response = await self._upload_file(binary_file, "batch")
+
+            batch_response = await self._create_batch(
+                file_response.id, "/v1/embeddings", "24h"
+            )
+            logger.info(
+                "Created batch job %s for %d texts", batch_response.id, len(texts)
+            )
+            return batch_response.id
+        except Exception as exc:
+            msg = f"Failed to create batch job: {exc}"
+            raise EmbeddingServiceError(msg) from exc
+        finally:
+            if temp_file and Path(temp_file).exists():
+                with contextlib.suppress(OSError):
+                    Path(temp_file).unlink()
