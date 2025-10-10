@@ -324,10 +324,6 @@ reportMissingImports = "warning"
 reportMissingTypeStubs = false
 
 [[tool.pyright.executionEnvironments]]
-root = "src/core"
-typeCheckingMode = "strict"
-
-[[tool.pyright.executionEnvironments]]
 root = "src/models"
 typeCheckingMode = "strict"
 
