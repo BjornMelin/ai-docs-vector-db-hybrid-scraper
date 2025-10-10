@@ -65,6 +65,12 @@ class SecurityConfig(BaseSettings):
         default_factory=list,
         description="List of API keys considered valid for configuration access.",
     )
+    cors_allowed_origins: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Allowed origins for CORS responses when the API runs in production."
+        ),
+    )
     enable_ml_input_validation: bool = Field(
         default=True,
         description="Enable MLSecurityValidator input/type checks.",
