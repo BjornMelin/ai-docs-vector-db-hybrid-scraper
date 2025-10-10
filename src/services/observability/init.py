@@ -5,9 +5,9 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import Any, Protocol, cast, runtime_checkable
 
 from .config import (
     DEFAULT_INSTRUMENTATIONS,
@@ -16,8 +16,14 @@ from .config import (
 )
 
 
-if TYPE_CHECKING:  # pragma: no cover - typing only
-    from src.config.loader import Settings
+@runtime_checkable
+class SettingsLike(Protocol):
+    """Structural protocol for application settings with observability data."""
+
+    app_name: str | None
+    version: str | None
+    environment: Any
+    observability: Any
 
 
 LOGGER = logging.getLogger(__name__)
@@ -43,10 +49,28 @@ def _has_explicit_instrumentation_preferences(observed: Any) -> bool:
     if fields_set is not None and preference_fields.intersection(fields_set):
         return True
 
-    return any(hasattr(observed, field) for field in preference_fields)
+    model_dump = getattr(observed, "model_dump", None)
+    if callable(model_dump):
+        explicit_values = cast(
+            Mapping[str, Any], model_dump(exclude_defaults=True, exclude_unset=True)
+        )
+        if any(field in explicit_values for field in preference_fields):
+            return True
+
+    if isinstance(observed, Mapping):
+        observed_mapping = cast(Mapping[str, Any], observed)
+        if any(field in observed_mapping for field in preference_fields):
+            return True
+
+    sentinel = object()
+    for field in preference_fields:
+        if getattr(observed, field, sentinel) is not sentinel:
+            return True
+
+    return False
 
 
-def _from_settings(settings: Settings) -> ObservabilityConfig:
+def _from_settings(settings: SettingsLike) -> ObservabilityConfig:
     """Create an :class:`ObservabilityConfig` from application settings."""
 
     observed = settings.observability
@@ -90,7 +114,7 @@ def _from_settings(settings: Settings) -> ObservabilityConfig:
 
 
 def _coerce_config(
-    config: ObservabilityConfig | Settings | None,
+    config: ObservabilityConfig | SettingsLike | None,
 ) -> ObservabilityConfig:
     """Normalize configuration inputs for observability initialization."""
 
@@ -98,8 +122,8 @@ def _coerce_config(
         return get_observability_config()
     if isinstance(config, ObservabilityConfig):
         return config
-    if hasattr(config, "observability"):
-        return _from_settings(config)  # type: ignore[arg-type]
+    if isinstance(config, SettingsLike):
+        return _from_settings(config)
     msg = f"Unsupported observability configuration type: {type(config)!r}"
     raise TypeError(msg)
 
@@ -115,25 +139,25 @@ def _configure_instrumentations(instrumentations: Iterable[str]) -> None:
         try:
             if name == "fastapi":
                 from opentelemetry.instrumentation.fastapi import (  # type: ignore[import-not-found]
-                    FastAPIInstrumentor,
+                    FastAPIInstrumentor,  # pyright: ignore[reportMissingImports]
                 )
 
                 FastAPIInstrumentor().instrument()
             elif name == "httpx":
                 from opentelemetry.instrumentation.httpx import (  # type: ignore[import-not-found]
-                    HTTPXClientInstrumentor,
+                    HTTPXClientInstrumentor,  # pyright: ignore[reportMissingImports]
                 )
 
                 HTTPXClientInstrumentor().instrument()
             elif name == "requests":
                 from opentelemetry.instrumentation.requests import (  # type: ignore[import-not-found]
-                    RequestsInstrumentor,
+                    RequestsInstrumentor,  # pyright: ignore[reportMissingImports]
                 )
 
                 RequestsInstrumentor().instrument()
             elif name == "logging":
                 from opentelemetry.instrumentation.logging import (  # type: ignore[import-not-found]
-                    LoggingInstrumentor,
+                    LoggingInstrumentor,  # pyright: ignore[reportMissingImports]
                 )
 
                 LoggingInstrumentor().instrument(set_logging_format=True)
@@ -144,7 +168,7 @@ def _configure_instrumentations(instrumentations: Iterable[str]) -> None:
 
 
 def initialize_observability(
-    config: ObservabilityConfig | Settings | None = None,
+    config: ObservabilityConfig | SettingsLike | None = None,
 ) -> bool:
     # pylint: disable=too-many-locals
     """Initialise OpenTelemetry providers based on configuration.
@@ -166,29 +190,32 @@ def initialize_observability(
         return True  # already initialized
 
     try:
-        from opentelemetry import metrics, trace
+        from opentelemetry import (  # pyright: ignore[reportMissingImports]
+            metrics,
+            trace,
+        )
         from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (  # type: ignore[import-not-found]
-            OTLPMetricExporter,
+            OTLPMetricExporter,  # pyright: ignore[reportMissingImports]
         )
         from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (  # type: ignore[import-not-found]
-            OTLPSpanExporter,
+            OTLPSpanExporter,  # pyright: ignore[reportMissingImports]
         )
-        from opentelemetry.sdk.metrics import (
+        from opentelemetry.sdk.metrics import (  # pyright: ignore[reportMissingImports]
             MeterProvider,  # type: ignore[import-not-found]
         )
         from opentelemetry.sdk.metrics.export import (  # type: ignore[import-not-found]
-            PeriodicExportingMetricReader,
+            PeriodicExportingMetricReader,  # pyright: ignore[reportMissingImports]
         )
-        from opentelemetry.sdk.resources import (
+        from opentelemetry.sdk.resources import (  # pyright: ignore[reportMissingImports]
             Resource,  # type: ignore[import-not-found]
         )
-        from opentelemetry.sdk.trace import (
+        from opentelemetry.sdk.trace import (  # pyright: ignore[reportMissingImports]
             TracerProvider,  # type: ignore[import-not-found]
         )
         from opentelemetry.sdk.trace.export import (  # type: ignore[import-not-found]
             BatchSpanProcessor,
             ConsoleSpanExporter,
-        )
+        )  # pyright: ignore[reportMissingImports]
     except ImportError as exc:  # pragma: no cover - validation guard
         LOGGER.warning("OpenTelemetry SDK not installed: %s", exc)
         return False
