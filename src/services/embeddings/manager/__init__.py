@@ -156,6 +156,7 @@ class EmbeddingManager:
         Initializes OpenAI provider if API key is available and FastEmbed provider
         for local embeddings. At least one provider must initialize successfully.
         """
+
         if self._initialized:
             return
 
@@ -176,6 +177,7 @@ class EmbeddingManager:
         Shuts down all initialized providers and closes cache manager
         if initialized. Errors during cleanup are logged but not raised.
         """
+
         await self._provider_registry.cleanup()
         self._initialized = False
 
@@ -207,6 +209,7 @@ class EmbeddingManager:
         Returns:
             tuple: (provider, model_name, estimated_cost, reasoning)
         """
+
         options = GenerationOptions(
             quality_tier=quality_tier,
             provider_name=provider_name,
