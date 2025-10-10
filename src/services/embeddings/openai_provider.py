@@ -431,19 +431,19 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
             msg = "Provider not initialized"
             raise EmbeddingServiceError(msg)
 
+        if custom_ids is not None and len(custom_ids) != len(texts):
+            msg = (
+                "Custom ID list must match the number of input texts; "
+                f"received {len(custom_ids)} IDs for {len(texts)} texts"
+            )
+            raise EmbeddingServiceError(msg)
+
         start = time.perf_counter()
         success = False
         custom_ids_provided = custom_ids is not None
 
         if not custom_ids:
             custom_ids = [f"text-{i}" for i in range(len(texts))]
-
-        if len(custom_ids) != len(texts):
-            msg = (
-                "Custom ID list must match the number of input texts; "
-                f"received {len(custom_ids)} IDs for {len(texts)} texts"
-            )
-            raise EmbeddingServiceError(msg)
 
         try:
             batch_id = await self._submit_batch_job(texts, custom_ids)
