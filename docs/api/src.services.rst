@@ -20,7 +20,6 @@ Subpackages
    src.services.fastapi
    src.services.hyde
    src.services.integration
-   src.services.middleware
    src.services.migration
    src.services.monitoring
    src.services.observability
