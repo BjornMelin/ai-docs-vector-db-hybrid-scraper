@@ -90,10 +90,11 @@ class VectorDBManager:
             refresh_settings(settings=updated_config)
             force_reload = True
 
-        if force_reload:
-            await shutdown_container()
-
-        container = await initialize_container(get_settings())
+        container = get_container()
+        if container is None or force_reload:
+            if force_reload and container is not None:
+                await shutdown_container()
+            container = await initialize_container(get_settings())
         self._vector_service = container.vector_store_service()
 
     async def get_vector_store_service(self) -> VectorStoreService:

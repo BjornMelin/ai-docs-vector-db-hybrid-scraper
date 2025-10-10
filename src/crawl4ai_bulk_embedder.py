@@ -33,7 +33,11 @@ from rich.table import Table  # type: ignore[import]
 
 from .chunking import DocumentChunker
 from .config.loader import Settings, get_settings
-from .infrastructure.client_manager import ClientManager
+from .infrastructure.container import (
+    get_container,
+    initialize_container,
+    shutdown_container,
+)
 from .services.embeddings.manager import QualityTier
 from .services.errors import ServiceError
 from .services.logging_config import configure_logging
@@ -93,7 +97,6 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
     def __init__(
         self,
         config: Settings,
-        client_manager: ClientManager,
         collection_name: str = "bulk_embeddings",
         state_file: Path | None = None,
     ):
@@ -101,13 +104,11 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
 
         Args:
             config: Unified configuration
-            client_manager: Client manager for services
             collection_name: Target vector collection name
             state_file: Optional state file for resumability
         """
 
         self.config = config
-        self.client_manager = client_manager
         self.collection_name = collection_name
         self.state_file = state_file or Path(".crawl4ai_state.json")
         self.state = self._load_state()
@@ -157,19 +158,29 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
     async def initialize_services(self) -> None:
         """Initialize all required services."""
 
-        # Get services from client manager
+        container = get_container()
+        if container is None:
+            container = await initialize_container(self.config)
+
         if self.crawl_manager is None:
-            self.crawl_manager = await self.client_manager.get_crawl_manager()
+            self.crawl_manager = container.browser_manager()
+        if self.crawl_manager is None:
+            raise RuntimeError("Crawl manager unavailable")
 
         if self.embedding_manager is None:
-            self.embedding_manager = await self.client_manager.get_embedding_manager()
+            self.embedding_manager = container.embedding_manager()
+        if self.embedding_manager is None:
+            raise RuntimeError("Embedding manager unavailable")
 
-        self.vector_service = await self.client_manager.get_vector_store_service()
-        if self.vector_service and not self.vector_service.is_initialized():
-            await self.vector_service.initialize()
-
+        self.vector_service = container.vector_store_service()
         if self.vector_service is None:
             raise RuntimeError("Vector store service unavailable")
+
+        if (
+            hasattr(self.vector_service, "is_initialized")
+            and not self.vector_service.is_initialized()
+        ):
+            await self.vector_service.initialize()
 
         # Create collection if it doesn't exist
         collections = await self.vector_service.list_collections()
@@ -732,13 +743,12 @@ async def _async_main(  # pylint: disable=too-many-arguments,too-many-locals
     resume: bool = True,
 ) -> None:
     """Async main function."""
-    # Initialize client manager
-    client_manager = ClientManager()
+    # Initialize container
+    await initialize_container(config)
 
     # Create embedder
     embedder = BulkEmbedder(
         config=config,
-        client_manager=client_manager,
         collection_name=collection,
         state_file=state_file,
     )
@@ -779,7 +789,7 @@ async def _async_main(  # pylint: disable=too-many-arguments,too-many-locals
         )
     finally:
         # Cleanup
-        await client_manager.cleanup()
+        await shutdown_container()
 
 
 if __name__ == "__main__":
