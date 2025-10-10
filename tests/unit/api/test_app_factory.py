@@ -7,9 +7,13 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 import pytest
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.testclient import TestClient
 
 from src.api import app_factory
+from src.config.loader import load_settings, refresh_settings
+from src.config.models import Environment
 
 
 @pytest.fixture(autouse=True)
@@ -117,3 +121,51 @@ def test_features_endpoint_matches_root_payload() -> None:
         features_payload = client.get("/features").json()
 
     assert features_payload == root_payload["features"]
+
+
+def _get_cors_middleware(app: FastAPI) -> dict[str, Any]:
+    """Return the configuration dictionary for the CORS middleware."""
+
+    middleware = next(
+        entry for entry in app.user_middleware if entry.cls is CORSMiddleware
+    )
+    return middleware.options
+
+
+def test_cors_disables_credentials_for_wildcard_origins(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Wildcard origins should disable credentials to satisfy Starlette constraints."""
+
+    monkeypatch.delenv("CORS_ALLOWED_ORIGINS", raising=False)
+    refresh_settings(
+        settings=load_settings(environment=Environment.DEVELOPMENT)
+    )
+
+    try:
+        app = app_factory.create_app()
+        cors_options = _get_cors_middleware(app)
+
+        assert cors_options["allow_origins"] == ["*"]
+        assert cors_options["allow_credentials"] is False
+    finally:
+        refresh_settings(settings=load_settings())
+
+
+def test_cors_retains_credentials_for_explicit_origins(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Explicit origins may continue to use credentials."""
+
+    monkeypatch.setenv("CORS_ALLOWED_ORIGINS", "https://example.test")
+    refresh_settings(settings=load_settings(environment=Environment.PRODUCTION))
+
+    try:
+        app = app_factory.create_app()
+        cors_options = _get_cors_middleware(app)
+
+        assert cors_options["allow_origins"] == ["https://example.test"]
+        assert cors_options["allow_credentials"] is True
+    finally:
+        monkeypatch.delenv("CORS_ALLOWED_ORIGINS", raising=False)
+        refresh_settings(settings=load_settings())

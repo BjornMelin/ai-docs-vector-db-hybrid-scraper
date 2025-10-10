@@ -110,11 +110,17 @@ def _configure_cors(app: FastAPI, *, settings: Settings) -> None:
 
     allowed_origins = _resolve_allowed_cors_origins(settings)
     allow_all = "*" in allowed_origins
+    allow_credentials = not allow_all
+
+    if allow_all:
+        logger.debug(
+            "Disabling CORS credentials because wildcard origins are permitted",
+        )
 
     app.add_middleware(
         CORSMiddleware,
         allow_origins=allowed_origins,
-        allow_credentials=True,
+        allow_credentials=allow_credentials,
         allow_methods=["*"]
         if allow_all
         else ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
