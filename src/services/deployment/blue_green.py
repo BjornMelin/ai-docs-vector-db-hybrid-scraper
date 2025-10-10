@@ -13,7 +13,10 @@ from typing import Any, cast
 
 from pydantic import BaseModel, Field
 
-from src.services.health.manager import HealthCheckResult, HealthStatus
+from src.services.observability.health_manager import (
+    HealthCheckResult,
+    HealthStatus,
+)
 
 from .feature_flags import FeatureFlagManager
 from .models import (

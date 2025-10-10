@@ -25,7 +25,7 @@ from src.services.dependencies import (
 )
 from src.services.fastapi.dependencies import HealthCheckerDep
 from src.services.fastapi.middleware.manager import apply_defaults, apply_named_stack
-from src.services.health.manager import HealthStatus
+from src.services.observability.health_manager import HealthStatus
 
 
 try:

@@ -52,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **[Observability]:** Removed the legacy `RealTimePerformanceMonitor` and consolidated its functionality. Operation timing is now handled by the OpenTelemetry-based `PerformanceMonitor`, and system resource metrics are exposed via the `system_health` MCP tool.
 - **[Observability]:** Completed the unification of monitoring systems by deleting the legacy `src/services/monitoring` package and updating all application entry points to use the modern `initialize_observability` lifecycle function.
 - **[Observability]:** Eliminated the bespoke Prometheus `MetricsRegistry` and middleware. All `/metrics` exposure now flows through `prometheus-fastapi-instrumentator` while application telemetry is captured via OpenTelemetry tracing utilities.
+- **[Observability]:** Replaced database query monitors with OpenTelemetry spans and the `db.query.duration` histogram, and relocated the shared `HealthCheckManager` under `services/observability` for unified health wiring.
 - **[Architecture]:** Unified circuit breaker implementation by refactoring
   `TimeoutMiddleware` to use the shared `CircuitBreakerManager`, ensuring a
   global state for all breakers.

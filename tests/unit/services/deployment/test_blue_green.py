@@ -11,7 +11,7 @@ from src.services.deployment.blue_green import (
     BlueGreenDeployment,
     BlueGreenEnvironment,
 )
-from src.services.health.manager import HealthCheckResult, HealthStatus
+from src.services.observability.health_manager import HealthCheckResult, HealthStatus
 
 
 @pytest.fixture()

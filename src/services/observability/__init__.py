@@ -19,13 +19,6 @@ from .init import (
     is_observability_enabled,
     shutdown_observability,
 )
-from .performance import (
-    PerformanceMonitor,
-    get_operation_statistics,
-    get_performance_monitor,
-    get_system_performance_summary,
-    monitor_operation,
-)
 from .tracing import (
     ConfigOperationType,
     get_tracer,
@@ -56,7 +49,6 @@ __all__ = [
     "ObservabilityConfig",
     "ObservabilityConfigDep",
     "ObservabilityServiceDep",
-    "PerformanceMonitor",
     "PerformanceTracker",
     "TraceCorrelationManager",
     "clear_observability_cache",
@@ -64,15 +56,11 @@ __all__ = [
     "get_correlation_manager",
     "get_observability_config",
     "get_observability_service",
-    "get_operation_statistics",
-    "get_performance_monitor",
     "get_resource_attributes",
-    "get_system_performance_summary",
     "get_tracer",
     "initialize_observability",
     "instrument_config_operation",
     "is_observability_enabled",
-    "monitor_operation",
     "record_ai_operation",
     "record_ai_operation_metrics",
     "set_span_attributes",
