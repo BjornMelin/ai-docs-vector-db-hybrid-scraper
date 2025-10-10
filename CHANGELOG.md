@@ -91,6 +91,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - LangGraph GraphRunner now emits structured metrics/errors, enforces optional
   run timeouts, and surfaces discovery/tool telemetry across MCP entry points;
   MCP orchestrator and tests were refreshed to exercise the new pipeline.
+- Dependency pin for `tiktoken` raised to the 0.12.x series to pick up the latest
+  model encodings, Python 3.14/free-threaded wheels, and file I/O improvements.
 - Metrics registry now exposes stage-level latency, answer, error, and token
   counters for LangGraph pipelines; `docs/observability/query_processing_metrics.md`
   and ADR 0007 describe the new instrumentation and SemVer impact.
