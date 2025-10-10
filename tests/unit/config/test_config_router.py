@@ -103,14 +103,24 @@ def test_read_settings_handles_invalid_snapshot(
     app = FastAPI()
     app.include_router(config_router.router)
 
+    from dataclasses import dataclass
+
+    @dataclass
+    class BrokenObservability:
+        enabled: bool = True
+
+    @dataclass
+    class BrokenSecurity:
+        api_key_required: bool = False
+
     class BrokenSettings:
         app_name = "broken"
         version = "0.0.0"
         mode = "invalid"
         environment = None
         debug = True
-        observability = SimpleNamespace(enabled=True)
-        security = SimpleNamespace(api_key_required=False)
+        observability = BrokenObservability()
+        security = BrokenSecurity()
 
         @staticmethod
         def get_feature_flags() -> dict[str, bool]:
