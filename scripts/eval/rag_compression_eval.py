@@ -14,20 +14,26 @@ from langchain.retrievers.document_compressors import (
     DocumentCompressorPipeline,
     EmbeddingsFilter,
 )
+from langchain_community.document_transformers import EmbeddingsRedundantFilter
 from langchain_core.documents import Document
-
-from src.config import get_settings
-from src.infrastructure.client_manager import ClientManager
-from src.services.vector_db.service import VectorStoreService
 
 
 try:
-    from langchain_community.document_transformers import EmbeddingsRedundantFilter
-    from langchain_community.embeddings import FastEmbedEmbeddings
+    from langchain_community.embeddings import (
+        FastEmbedEmbeddings,  # pylint: disable=ungrouped-imports
+    )
 except ModuleNotFoundError as exc:  # pragma: no cover - dependency guard
     raise ImportError(
         "FastEmbedEmbeddings requires the 'langchain-community' package."
     ) from exc
+
+from src.config import get_settings
+from src.infrastructure.container import (
+    get_container,
+    initialize_container,
+    shutdown_container,
+)
+from src.services.vector_db.service import VectorStoreService
 
 
 def _parse_args() -> argparse.Namespace:
@@ -48,15 +54,19 @@ def _parse_args() -> argparse.Namespace:
 
 async def _load_vector_service(
     collection_override: str | None,
-) -> tuple[VectorStoreService, ClientManager]:
+) -> VectorStoreService:
     config = get_settings()
+    container = get_container()
+    if container is None:
+        container = await initialize_container(config)
+    service = container.vector_store_service()
+    if service is None:
+        raise RuntimeError("Vector store service unavailable")
     if collection_override:
-        config.qdrant.collection_name = collection_override
-    client_manager = ClientManager()
-    await client_manager.initialize()
-    service = VectorStoreService(config=config, client_manager=client_manager)
-    await service.initialize()
-    return service, client_manager
+        service.collection_name = collection_override
+    if hasattr(service, "is_initialized") and not service.is_initialized():
+        await service.initialize()
+    return service
 
 
 def _build_documents(raw_documents: list[dict[str, Any]]) -> list[Document]:
@@ -79,15 +89,14 @@ def _estimate_tokens(text: str) -> int:
 async def _evaluate(  # pylint: disable=too-many-locals
     dataset_path: Path, collection_override: str | None
 ) -> None:
-    vector_service, client_manager = await _load_vector_service(collection_override)
+    vector_service = await _load_vector_service(collection_override)
     config = get_settings().rag
     if not config.compression_enabled:
         print(
             "Compression is disabled in the active configuration; nothing to evaluate."
         )
         await vector_service.cleanup()
-        await client_manager.cleanup()
-        await client_manager.cleanup()
+        await shutdown_container()
         return
 
     fastembed_config = getattr(vector_service.config, "fastembed", None)
@@ -148,7 +157,7 @@ async def _evaluate(  # pylint: disable=too-many-locals
                 )
     finally:
         await vector_service.cleanup()
-        await client_manager.cleanup()
+        await shutdown_container()
 
     if total_samples == 0:
         print("No valid samples found in the dataset.")
