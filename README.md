@@ -26,7 +26,7 @@ applications.
 - Hybrid retrieval stack leveraging OpenAI and FastEmbed embeddings, SPLADE
   sparse vectors, reranking, and HyDE augmentation through the modular Qdrant
   service (`src/services/vector_db/` and `src/services/hyde/`).
-- Dual interfaces: REST endpoints in FastAPI (`src/api/routers/simple/`) and a
+- Dual interfaces: REST endpoints in FastAPI (`src/api/routers/v1/`) and a
   FastMCP server (`src/unified_mcp_server.py`) that registers search, document
   management, analytics, and content intelligence tools for Claude Desktop /
   Code.
@@ -275,7 +275,29 @@ All search endpoints accept the canonical [`SearchRequest`](src/models/search.py
 }
 ```
 
-Responses are emitted as [`SearchResponse`](src/contracts/retrieval.py) payloads containing canonical [`SearchRecord`](src/contracts/retrieval.py) entries.
+Responses are emitted as [`SearchResponse`](src/contracts/retrieval.py) payloads containing canonical [`SearchRecord`](src/contracts/retrieval.py) entries. Example response payload:
+
+```json
+{
+  "query": "vector databases",
+  "total_results": 2,
+  "processing_time_ms": 12.4,
+  "records": [
+    {
+      "id": "doc-1",
+      "content": "Install Qdrant with Docker...",
+      "score": 0.91,
+      "collection": "documentation"
+    },
+    {
+      "id": "doc-2",
+      "content": "Manage hybrid sparse+dense search pipelines...",
+      "score": 0.88,
+      "collection": "documentation"
+    }
+  ]
+}
+```
 
 ### Run the MCP server
 
