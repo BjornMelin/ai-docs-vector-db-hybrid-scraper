@@ -61,9 +61,14 @@ async def managed_lifespan(server: FastMCP[Any]) -> AsyncIterator[None]:  # pyli
         health_manager = initialize_monitoring_system(config, qdrant_client, redis_url)
 
         if health_manager:
-            setup_fastmcp_monitoring(server, config, health_manager)
+            manager_config = getattr(health_manager, "config", None)
+            health_checks_enabled = bool(
+                getattr(config.monitoring, "enable_health_checks", False)
+            ) and bool(getattr(manager_config, "enabled", False))
 
-            if config.monitoring.enabled:
+            if health_checks_enabled:
+                setup_fastmcp_monitoring(server, config, health_manager)
+
                 interval = config.monitoring.system_metrics_interval
                 health_check_task = asyncio.create_task(
                     run_periodic_health_checks(
@@ -72,6 +77,10 @@ async def managed_lifespan(server: FastMCP[Any]) -> AsyncIterator[None]:  # pyli
                 )
                 monitoring_tasks.append(health_check_task)
                 logger.info("Started background health monitoring task")
+            else:
+                logger.info(
+                    "Health checks disabled; skipping endpoint registration and background task"
+                )
 
         logger.info("Registering MCP tools...")
         await register_all_tools(server, client_manager)

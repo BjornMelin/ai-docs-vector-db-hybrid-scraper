@@ -111,6 +111,16 @@ def setup_fastmcp_monitoring(
         logger.info("Skipping FastMCP monitoring setup (disabled or missing manager)")
         return
 
+    if (
+        not config.monitoring.enable_health_checks
+        or not getattr(health_manager, "config", None)
+        or not getattr(health_manager.config, "enabled", False)
+    ):
+        logger.info(
+            "Skipping FastMCP health endpoints registration (health checks disabled)"
+        )
+        return
+
     if not hasattr(mcp_app, "app"):
         logger.warning(
             "FastMCP app does not expose the embedded FastAPI app; health endpoints "
