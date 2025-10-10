@@ -51,26 +51,16 @@ kubectl apply -k .
 
 > **Note:** This command is required because Kustomize adds a unique hash suffix to the generated ConfigMap and Secret. Applying the full stack ensures the deployments reference the correct generated resource names before any component starts and keeps the `envFrom` references in the deployments aligned with the hashed resource names.
 
-### 3. (Optional) Apply Components Individually
+### 3. (Optional) Inspect Components Individually
 
-If you prefer to apply individual manifests (for example, during debugging), make sure the previous `kubectl apply -k .` command has already been run so the generated resources exist.
+If you need to debug a single manifest, render it with Kustomize so the hashed resource names remain consistent:
 
 ```bash
-# Create namespace (already included in the Kustomize apply)
-kubectl apply -f namespace.yaml
-
-# Deploy Qdrant vector database
-kubectl apply -f qdrant-statefulset.yaml
-
-# Deploy DragonflyDB cache
-kubectl apply -f dragonfly-deployment.yaml
-
-# Deploy main application
-kubectl apply -f app-deployment.yaml
-
-# Deploy background workers
-kubectl apply -f worker-deployment.yaml
+# Render just the application deployment for inspection
+kustomize build . | yq 'select(.metadata.name == "ai-docs-app")'
 ```
+
+> **Important:** Apply changes through Kustomize (`kubectl apply -k .` or `kustomize build . | kubectl apply -f -`). Applying the raw manifests with `kubectl apply -f …` will overwrite the hashed ConfigMap and Secret references, leaving the deployments pointing at non-existent resources.
 
 ## Using Kustomize (Recommended)
 
