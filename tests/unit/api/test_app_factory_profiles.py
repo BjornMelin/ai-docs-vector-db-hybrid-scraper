@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Generator
 from typing import Any
 
 import pytest
@@ -10,15 +9,6 @@ from fastapi.testclient import TestClient
 
 from src.api import app_factory
 from src.api.app_profiles import AppProfile
-from src.architecture.service_factory import reset_service_factory
-
-
-@pytest.fixture(autouse=True)
-def _reset_global_factory() -> Generator[None, None, None]:
-    """Reset the global service factory after each test to avoid leakage."""
-
-    yield
-    reset_service_factory()
 
 
 @pytest.fixture(autouse=True)
