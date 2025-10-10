@@ -270,7 +270,6 @@ class CacheConfig(BaseModel):
     )
     ttl_search_results: int = Field(
         default=3600,
-        gt=0,
         description="Search result cache TTL in seconds (negative caching supported)",
     )
     local_max_size: int = Field(
