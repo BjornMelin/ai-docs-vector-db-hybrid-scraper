@@ -162,7 +162,9 @@ def embedder_factory(
             config=overrides.pop("config", mock_config),
             collection_name=overrides.pop("collection_name", "test_collection"),
             state_file=state_path,
-            container=container if overrides.pop("use_container_override", True) else None,
+            container=container
+            if overrides.pop("use_container_override", True)
+            else None,
             **overrides,
         )
         embedder._test_context = SimpleNamespace(

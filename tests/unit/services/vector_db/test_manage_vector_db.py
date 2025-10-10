@@ -55,27 +55,32 @@ def manager_setup(
 ) -> SimpleNamespace:
     """Create a VectorDBManager wired to stubbed client manager helpers."""
 
-    client_manager = SimpleNamespace(
-        get_vector_store_service=AsyncMock(return_value=vector_service_mock)
+    container = SimpleNamespace(
+        vector_store_service=lambda: vector_service_mock,
     )
-    ensure_manager = AsyncMock(return_value=client_manager)
-    shutdown_manager = AsyncMock()
+    get_container_mock = lambda: container  # noqa: E731
+    init_mock = AsyncMock(return_value=container)
+    shutdown_mock = AsyncMock()
 
     monkeypatch.setattr(
-        "src.manage_vector_db.ensure_client_manager",
-        ensure_manager,
+        "src.manage_vector_db.get_container",
+        get_container_mock,
     )
     monkeypatch.setattr(
-        "src.manage_vector_db.shutdown_client_manager",
-        shutdown_manager,
+        "src.manage_vector_db.initialize_container",
+        init_mock,
+    )
+    monkeypatch.setattr(
+        "src.manage_vector_db.shutdown_container",
+        shutdown_mock,
     )
 
     manager = VectorDBManager()
 
     return SimpleNamespace(
         manager=manager,
-        ensure_manager=ensure_manager,
-        shutdown_manager=shutdown_manager,
+        init_mock=init_mock,
+        shutdown_mock=shutdown_mock,
         vector_service=vector_service_mock,
     )
 
@@ -88,7 +93,6 @@ async def test_initialize_use_client_manager(manager_setup: SimpleNamespace) -> 
 
     await manager.initialize()
 
-    manager_setup.ensure_manager.assert_awaited()
     service = await manager.get_vector_store_service()
     assert service is manager_setup.vector_service
 
