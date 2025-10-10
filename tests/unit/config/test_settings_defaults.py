@@ -42,3 +42,9 @@ def test_circuit_breaker_defaults() -> None:
     assert settings.performance.retry_base_delay == 1.0
     assert settings.circuit_breaker.failure_threshold == 5
     assert settings.circuit_breaker.recovery_timeout == 60.0
+    assert settings.circuit_breaker.service_overrides == {
+        "openai": {"failure_threshold": 3, "recovery_timeout": 30.0},
+        "firecrawl": {"failure_threshold": 5, "recovery_timeout": 60.0},
+        "qdrant": {"failure_threshold": 3, "recovery_timeout": 15.0},
+        "redis": {"failure_threshold": 2, "recovery_timeout": 10.0},
+    }
