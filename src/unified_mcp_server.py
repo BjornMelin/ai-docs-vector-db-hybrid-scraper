@@ -5,11 +5,10 @@ This is the main entry point for the MCP server. It follows FastMCP 2.0
 best practices with lazy initialization and modular tool registration.
 """
 
-import asyncio
 import logging
 import os
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager, suppress
+from contextlib import asynccontextmanager
 from typing import Any, Literal, cast
 
 from fastmcp import FastMCP
@@ -19,11 +18,7 @@ from src.config.models import CrawlProvider, EmbeddingProvider
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.tool_registry import register_all_tools
 from src.services.logging_config import configure_logging
-from src.services.monitoring.initialization import (
-    initialize_monitoring_system,
-    run_periodic_health_checks,
-    setup_fastmcp_monitoring,
-)
+from src.services.observability.init import initialize_observability
 
 
 logger = logging.getLogger(__name__)
@@ -35,9 +30,7 @@ async def managed_lifespan(server: FastMCP[Any]) -> AsyncIterator[None]:  # pyli
 
     config = get_settings()
     configure_logging(settings=config)
-    monitoring_tasks: list[asyncio.Task[Any]] = []
     client_manager: ClientManager | None = None
-    health_manager = None
     try:
         validate_configuration()
 
@@ -46,42 +39,8 @@ async def managed_lifespan(server: FastMCP[Any]) -> AsyncIterator[None]:  # pyli
         client_manager = ClientManager()
         await client_manager.initialize()
 
-        logger.info("Initializing monitoring system...")
-        qdrant_client = getattr(client_manager, "qdrant_client", None)
-
-        cache_config = getattr(config, "cache", None)
-        enable_dragonfly = bool(getattr(cache_config, "enable_dragonfly_cache", False))
-        dragonfly_url_value = getattr(cache_config, "dragonfly_url", None)
-        redis_url = (
-            str(dragonfly_url_value)
-            if enable_dragonfly and dragonfly_url_value
-            else None
-        )
-
-        health_manager = initialize_monitoring_system(config, qdrant_client, redis_url)
-
-        if health_manager:
-            manager_config = getattr(health_manager, "config", None)
-            health_checks_enabled = bool(
-                getattr(config.monitoring, "enable_health_checks", False)
-            ) and bool(getattr(manager_config, "enabled", False))
-
-            if health_checks_enabled:
-                setup_fastmcp_monitoring(server, config, health_manager)
-
-                interval = config.monitoring.system_metrics_interval
-                health_check_task = asyncio.create_task(
-                    run_periodic_health_checks(
-                        health_manager, interval_seconds=interval
-                    )
-                )
-                monitoring_tasks.append(health_check_task)
-                logger.info("Started background health monitoring task")
-            else:
-                logger.info(
-                    "Health checks disabled; skipping endpoint registration "
-                    "and background task"
-                )
+        logger.info("Initializing observability stack...")
+        initialize_observability(config)
 
         logger.info("Registering MCP tools...")
         await register_all_tools(server, client_manager)
@@ -91,11 +50,6 @@ async def managed_lifespan(server: FastMCP[Any]) -> AsyncIterator[None]:  # pyli
 
     finally:
         logger.info("Shutting down server...")
-
-        for task in monitoring_tasks:
-            task.cancel()
-            with suppress(asyncio.CancelledError):
-                await task
 
         if client_manager:
             await client_manager.cleanup()
