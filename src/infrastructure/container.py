@@ -718,7 +718,9 @@ def get_container() -> ApplicationContainer | None:
 async def initialize_container(config: Any) -> ApplicationContainer:
     """Initialize the global container."""
 
-    return await _container_manager.initialize(config)
+    container = await _container_manager.initialize(config)
+    get_container.cache_clear()
+    return container
 
 
 async def shutdown_container() -> None:
