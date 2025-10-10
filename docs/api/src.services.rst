@@ -21,7 +21,6 @@ Subpackages
    src.services.hyde
    src.services.integration
    src.services.migration
-   src.services.monitoring
    src.services.observability
    src.services.performance
    src.services.processing

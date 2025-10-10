@@ -61,7 +61,7 @@ Operational tips:
 
 ## Integration Notes
 
-- Metrics are registered in `src/services/monitoring/metrics.py` and emitted by
+- Metrics are registered in `src/services/observability/performance.py` and emitted by
   `VectorStoreService` (grouping), `VectorServiceRetriever` (compression), and
   `LangGraphRAGPipeline` (stage latency, answers, token metrics).
 - Dashboards should group by `collection` to spot regressions in specific
