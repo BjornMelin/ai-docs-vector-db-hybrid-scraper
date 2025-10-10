@@ -84,11 +84,9 @@ def mock_vector_service():
 
 @pytest.fixture
 def mock_client_manager(mock_vector_service):
-    """Client manager fixture exposing the mocked vector service."""
+    """Provide the mocked vector service directly for tool registration."""
 
-    manager = Mock()
-    manager.get_vector_store_service = AsyncMock(return_value=mock_vector_service)
-    return manager
+    return mock_vector_service
 
 
 @pytest.fixture
@@ -237,7 +235,6 @@ async def test_benchmark_filtered_search(mock_client_manager, mock_context):
         ctx=mock_context,
     )
 
-    mock_client_manager.get_vector_store_service.assert_awaited()
     assert response.results_found == 2
     assert "_total_points" not in response.model_dump()
     assert response.performance_estimate == "10-100x faster than unindexed"

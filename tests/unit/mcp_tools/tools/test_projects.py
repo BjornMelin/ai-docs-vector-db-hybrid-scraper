@@ -29,8 +29,8 @@ def mock_vector_service() -> Mock:
 
 
 @pytest.fixture
-def mock_client_manager(mock_vector_service: Mock, monkeypatch) -> Mock:
-    """Provide a client manager mock wired to the vector service mock."""
+def project_storage() -> Mock:
+    """Build a project storage mock exposing async methods."""
 
     storage = Mock()
     storage.save_project = AsyncMock()
@@ -38,28 +38,11 @@ def mock_client_manager(mock_vector_service: Mock, monkeypatch) -> Mock:
     storage.get_project = AsyncMock(return_value=None)
     storage.update_project = AsyncMock()
     storage.delete_project = AsyncMock()
-
-    storage_dependency = AsyncMock(return_value=storage)
-    monkeypatch.setattr(
-        "src.services.dependencies.get_project_storage", storage_dependency
-    )
-
-    manager = Mock()
-    manager.get_project_storage = AsyncMock(return_value=storage)
-    manager.storage_dependency = storage_dependency
-    manager.get_vector_store_service = AsyncMock(return_value=mock_vector_service)
-    return manager
+    return storage
 
 
 @pytest.fixture
-def project_storage(mock_client_manager: Mock) -> Mock:
-    """Return the project storage mock extracted from the manager."""
-
-    return mock_client_manager.get_project_storage.return_value
-
-
-@pytest.fixture
-def register(mock_client_manager: Mock) -> dict[str, Callable]:
+def register(mock_vector_service: Mock, project_storage: Mock) -> dict[str, Callable]:
     """Register project tools and expose them for tests."""
 
     mock_mcp = MagicMock()
@@ -70,7 +53,11 @@ def register(mock_client_manager: Mock) -> dict[str, Callable]:
         return func
 
     mock_mcp.tool.return_value = capture
-    register_tools(mock_mcp, mock_client_manager)
+    register_tools(
+        mock_mcp,
+        vector_service=mock_vector_service,
+        project_storage=project_storage,
+    )
     return registered_tools
 
 
@@ -195,4 +182,4 @@ async def test_search_project_uses_hybrid(
     )
 
     mock_vector_service.search_documents.assert_awaited_once()
-    assert results[0].content == "body"
+    assert results[0].payload == {"content": "body"}

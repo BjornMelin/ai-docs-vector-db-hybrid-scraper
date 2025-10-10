@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import sys
 import types
-from collections.abc import Iterable
-from typing import Any, cast
+from collections.abc import Iterable, Mapping
+from typing import Any, Self, cast
+
+from pydantic import BaseModel
 
 
 def _ensure_module(name: str) -> types.ModuleType:
@@ -42,53 +44,78 @@ class _ChatPromptTemplate:
         return template
 
 
+def _apply_module_specs(specs: Mapping[str, Mapping[str, object]]) -> None:
+    """Apply attribute specs to modules, creating the modules if missing."""
+
+    for module_name, attributes in specs.items():
+        module = _ensure_module(module_name)
+        _set_attributes(module, dict(attributes))
+
+
+def _ensure_namespace_packages(namespaces: Iterable[str]) -> None:
+    """Ensure namespace packages expose a __path__ attribute."""
+
+    for namespace in namespaces:
+        package = _ensure_module(namespace)
+        if not hasattr(package, "__path__"):
+            package.__path__ = []  # type: ignore[attr-defined]
+
+
 def _register_client_stubs() -> None:
     """Register stubs for client SDKs leveraged by the RAG pipeline."""
 
-    firecrawl = _ensure_module("firecrawl")
-    _set_attributes(
-        firecrawl,
-        {"AsyncFirecrawlApp": type("AsyncFirecrawlApp", (), {})},
-    )
-
-    openai = _ensure_module("openai")
-    _set_attributes(openai, {"AsyncOpenAI": type("AsyncOpenAI", (), {})})
-
-    langchain_openai = _ensure_module("langchain_openai")
-    _set_attributes(langchain_openai, {"ChatOpenAI": type("ChatOpenAI", (), {})})
-
-    qdrant = _ensure_module("langchain_qdrant")
-    _set_attributes(
-        qdrant,
+    _apply_module_specs(
         {
-            "QdrantVectorStore": type("QdrantVectorStore", (), {}),
-            "RetrievalMode": type("RetrievalMode", (), {}),
-            "FastEmbedSparse": type("FastEmbedSparse", (), {}),
-        },
+            "firecrawl": {
+                "AsyncFirecrawlApp": type("AsyncFirecrawlApp", (), {}),
+                "AsyncFirecrawl": type("AsyncFirecrawl", (), {}),
+            },
+            "openai": {"AsyncOpenAI": type("AsyncOpenAI", (), {})},
+            "langchain_openai": {"ChatOpenAI": type("ChatOpenAI", (), {})},
+            "langchain_qdrant": {
+                "QdrantVectorStore": type("QdrantVectorStore", (), {}),
+                "RetrievalMode": type("RetrievalMode", (), {}),
+                "FastEmbedSparse": type("FastEmbedSparse", (), {}),
+            },
+        }
     )
 
 
-def _register_langchain_core_stubs() -> None:
-    """Register core LangChain modules required for RAG tests."""
+def _register_langchain_retriever_stubs() -> None:
+    """Install retriever-related stubs for LangChain modules."""
 
-    langchain = cast(Any, _ensure_module("langchain"))
-    retrievers = cast(Any, _ensure_module("langchain.retrievers"))
-    document_compressors = cast(
+    langchain_module = cast(Any, _ensure_module("langchain"))
+    retrievers_module = cast(Any, _ensure_module("langchain.retrievers"))
+    compressor_module = cast(
         Any, _ensure_module("langchain.retrievers.document_compressors")
     )
     _set_attributes(
-        document_compressors,
+        compressor_module,
         {
             "DocumentCompressorPipeline": type("DocumentCompressorPipeline", (), {}),
             "EmbeddingsFilter": type("EmbeddingsFilter", (), {}),
         },
     )
-    retrievers.document_compressors = document_compressors
-    langchain.retrievers = retrievers
-
-    callbacks_manager = cast(Any, _ensure_module("langchain_core.callbacks.manager"))
+    retrievers_module.document_compressors = compressor_module
+    langchain_module.retrievers = retrievers_module
     _set_attributes(
-        callbacks_manager,
+        retrievers_module,
+        {
+            "ContextualCompressionRetriever": type(
+                "ContextualCompressionRetriever", (), {}
+            ),
+        },
+    )
+    if not hasattr(langchain_module, "__path__"):
+        langchain_module.__path__ = []  # type: ignore[attr-defined]
+
+
+def _register_langchain_callback_stubs() -> None:
+    """Install callback stubs for LangChain core modules."""
+
+    manager_module = cast(Any, _ensure_module("langchain_core.callbacks.manager"))
+    _set_attributes(
+        manager_module,
         {
             "AsyncCallbackManagerForRetrieverRun": type(
                 "AsyncCallbackManagerForRetrieverRun", (), {}
@@ -128,20 +155,15 @@ def _register_langchain_core_stubs() -> None:
         },
     )
 
-    messages = cast(Any, _ensure_module("langchain_core.messages"))
-    _set_attributes(
-        messages,
-        {
-            "AIMessage": type("AIMessage", (), {}),
-            "HumanMessage": type("HumanMessage", (), {}),
-        },
-    )
 
-    tools = cast(Any, _ensure_module("langchain_core.tools"))
-    if not hasattr(tools, "__path__"):
-        tools.__path__ = []  # type: ignore[attr-defined]
+def _register_langchain_tool_stubs() -> None:
+    """Install tooling and prompt stubs for LangChain."""
+
+    tools_module = cast(Any, _ensure_module("langchain_core.tools"))
+    if not hasattr(tools_module, "__path__"):
+        tools_module.__path__ = []  # type: ignore[attr-defined]
     _set_attributes(
-        tools,
+        tools_module,
         {
             "BaseTool": type("BaseTool", (), {}),
             "InjectedToolArg": type("InjectedToolArg", (), {}),
@@ -151,26 +173,45 @@ def _register_langchain_core_stubs() -> None:
         },
     )
 
-    tools_base = cast(Any, _ensure_module("langchain_core.tools.base"))
+    tool_base_module = cast(Any, _ensure_module("langchain_core.tools.base"))
     _set_attributes(
-        tools_base,
+        tool_base_module,
         {
             "BaseTool": type("BaseTool", (), {}),
             "get_all_basemodel_annotations": lambda *args, **kwargs: {},
         },
     )
 
-    prompts = cast(Any, _ensure_module("langchain_core.prompts"))
-    _set_attributes(prompts, {"ChatPromptTemplate": _ChatPromptTemplate})
+    prompts_module = cast(Any, _ensure_module("langchain_core.prompts"))
+    _set_attributes(prompts_module, {"ChatPromptTemplate": _ChatPromptTemplate})
 
-    documents = cast(Any, _ensure_module("langchain_core.documents"))
-    _set_attributes(documents, {"Document": type("Document", (), {})})
+
+def _register_langchain_document_stubs() -> None:
+    """Install document and embedding stubs for LangChain."""
+
+    documents_module = cast(Any, _ensure_module("langchain_core.documents"))
+    _set_attributes(documents_module, {"Document": type("Document", (), {})})
 
     documents_base = cast(Any, _ensure_module("langchain_core.documents.base"))
     _set_attributes(documents_base, {"Blob": type("Blob", (), {})})
 
     retrievers_core = cast(Any, _ensure_module("langchain_core.retrievers"))
     _set_attributes(retrievers_core, {"BaseRetriever": type("BaseRetriever", (), {})})
+
+    embeddings_core = cast(Any, _ensure_module("langchain_core.embeddings"))
+    _set_attributes(embeddings_core, {"Embeddings": type("Embeddings", (), {})})
+
+    runnables_module = cast(Any, _ensure_module("langchain_core.runnables"))
+    _set_attributes(
+        runnables_module,
+        {
+            "RunnableConfig": type("RunnableConfig", (), {}),
+        },
+    )
+
+
+def _register_langchain_text_splitters() -> None:
+    """Install text splitter stubs for LangChain."""
 
     text_splitters = cast(Any, _ensure_module("langchain_text_splitters"))
     _set_attributes(
@@ -182,8 +223,29 @@ def _register_langchain_core_stubs() -> None:
         },
     )
 
-    if not hasattr(langchain, "__path__"):
-        langchain.__path__ = []  # type: ignore[attr-defined]
+
+def _register_langchain_message_stubs() -> None:
+    """Install message primitives for LangChain."""
+
+    messages_module = cast(Any, _ensure_module("langchain_core.messages"))
+    _set_attributes(
+        messages_module,
+        {
+            "AIMessage": type("AIMessage", (), {}),
+            "HumanMessage": type("HumanMessage", (), {}),
+        },
+    )
+
+
+def _register_langchain_core_stubs() -> None:
+    """Register core LangChain modules required for RAG tests."""
+
+    _register_langchain_retriever_stubs()
+    _register_langchain_callback_stubs()
+    _register_langchain_tool_stubs()
+    _register_langchain_document_stubs()
+    _register_langchain_text_splitters()
+    _register_langchain_message_stubs()
 
 
 def _register_langchain_community_stubs() -> None:
@@ -215,72 +277,142 @@ def _register_langchain_community_stubs() -> None:
 def _register_crawl4ai_stubs() -> None:
     """Register Crawl4AI modules required for crawling stubs."""
 
-    crawl4ai = _ensure_module("crawl4ai")
-    _set_attributes(
-        crawl4ai,
+    _apply_module_specs(
         {
-            "AsyncWebCrawler": type("AsyncWebCrawler", (), {}),
-            "CacheMode": type("CacheMode", (), {"BYPASS": "bypass"}),
-            "BrowserConfig": type("BrowserConfig", (), {}),
-            "CrawlerRunConfig": type("CrawlerRunConfig", (), {}),
-            "MemoryAdaptiveDispatcher": type("MemoryAdaptiveDispatcher", (), {}),
-            "DefaultMarkdownGenerator": type("DefaultMarkdownGenerator", (), {}),
-            "LinkPreviewConfig": type("LinkPreviewConfig", (), {}),
-            "RunConfig": type("RunConfig", (), {"clone": lambda self, **_: self}),
-            "CrawlerMonitor": type("CrawlerMonitor", (), {}),
+            "crawl4ai": {
+                "AsyncWebCrawler": type("AsyncWebCrawler", (), {}),
+                "CacheMode": type("CacheMode", (), {"BYPASS": "bypass"}),
+                "BrowserConfig": type("BrowserConfig", (), {}),
+                "CrawlerRunConfig": type("CrawlerRunConfig", (), {}),
+                "MemoryAdaptiveDispatcher": type("MemoryAdaptiveDispatcher", (), {}),
+                "DefaultMarkdownGenerator": type("DefaultMarkdownGenerator", (), {}),
+                "LinkPreviewConfig": type("LinkPreviewConfig", (), {}),
+                "RunConfig": type("RunConfig", (), {"clone": lambda self, **_: self}),
+                "CrawlerMonitor": type("CrawlerMonitor", (), {}),
+            },
+            "crawl4ai.models": {"CrawlResult": type("CrawlResult", (), {})},
+            "crawl4ai.async_dispatcher": {
+                "SemaphoreDispatcher": type("SemaphoreDispatcher", (), {})
+            },
+            "crawl4ai.deep_crawling": {
+                "BestFirstCrawlingStrategy": type("BestFirstCrawlingStrategy", (), {}),
+                "BFSDeepCrawlStrategy": type("BFSDeepCrawlStrategy", (), {}),
+            },
+            "crawl4ai.deep_crawling.filters": {
+                "ContentRelevanceFilter": type("ContentRelevanceFilter", (), {}),
+                "ContentTypeFilter": type("ContentTypeFilter", (), {}),
+                "DomainFilter": type("DomainFilter", (), {}),
+                "FilterChain": type("FilterChain", (), {}),
+                "SEOFilter": type("SEOFilter", (), {}),
+                "URLFilter": type("URLFilter", (), {}),
+                "URLPatternFilter": type("URLPatternFilter", (), {}),
+            },
+            "crawl4ai.deep_crawling.scorers": {
+                "KeywordRelevanceScorer": type("KeywordRelevanceScorer", (), {})
+            },
+            "crawl4ai.content_filter_strategy": {
+                "BM25ContentFilter": type("BM25ContentFilter", (), {}),
+                "PruningContentFilter": type("PruningContentFilter", (), {}),
+            },
+        }
+    )
+
+    crawling_pkg = _ensure_module("src.services.crawling")
+
+    async def _noop_crawl_page(*_args: Any, **_kwargs: Any) -> Any:
+        return {}
+
+    _set_attributes(crawling_pkg, {"crawl_page": _noop_crawl_page})
+
+    _register_crawl4ai_presets()
+    _ensure_namespace_packages(("langchain_core", "langchain_community", "crawl4ai"))
+    _register_contract_and_langgraph_stubs()
+
+
+def _register_crawl4ai_presets() -> None:
+    """Install Crawl4AI preset helpers used by the adapter tests."""
+
+    presets_pkg = _ensure_module("src.services.crawling.c4a_presets")
+
+    class _BrowserOptions:  # pragma: no cover - lightweight stub
+        def __init__(
+            self, browser_type: str = "chromium", headless: bool = True
+        ) -> None:
+            self.browser_type = browser_type
+            self.headless = headless
+
+    def _preset_browser_config(_: Any) -> Any:
+        return types.SimpleNamespace()
+
+    def _base_run_config(**kwargs: Any) -> Any:
+        def clone(**clone_kwargs):
+            return types.SimpleNamespace(**clone_kwargs)
+
+        return types.SimpleNamespace(clone=clone, **kwargs)
+
+    def _memory_dispatcher(**_kwargs: Any) -> Any:
+        return object()
+
+    _set_attributes(
+        presets_pkg,
+        {
+            "BrowserOptions": _BrowserOptions,
+            "preset_browser_config": _preset_browser_config,
+            "base_run_config": _base_run_config,
+            "memory_dispatcher": _memory_dispatcher,
         },
     )
 
-    crawl4ai_models = _ensure_module("crawl4ai.models")
-    _set_attributes(crawl4ai_models, {"CrawlResult": type("CrawlResult", (), {})})
 
-    async_dispatcher = _ensure_module("crawl4ai.async_dispatcher")
-    _set_attributes(
-        async_dispatcher, {"SemaphoreDispatcher": type("SemaphoreDispatcher", (), {})}
-    )
+def _register_contract_and_langgraph_stubs() -> None:
+    """Install lightweight contract and LangGraph modules."""
 
-    crawl4ai_deep = _ensure_module("crawl4ai.deep_crawling")
+    contracts_pkg = _ensure_module("contracts")
+    retrieval_pkg = _ensure_module("contracts.retrieval")
+
+    class _SearchRecord(BaseModel):  # pragma: no cover - minimal stub
+        id: str = ""
+        content: str = ""
+        score: float = 0.0
+
+        @classmethod
+        def from_payload(cls, payload: Any) -> Self:
+            if hasattr(payload, "model_dump"):
+                data = payload.model_dump()
+            elif isinstance(payload, Mapping):
+                data = dict(payload)
+            else:
+                data = {}
+            return cls(
+                id=str(data.get("id", "")),
+                content=str(data.get("content", "")),
+                score=float(data.get("score", 0.0)),
+            )
+
+    _set_attributes(retrieval_pkg, {"SearchRecord": _SearchRecord})
+    contracts_pkg.retrieval = retrieval_pkg  # type: ignore[attr-defined]
+
+    flagembedding = _ensure_module("FlagEmbedding")
+    _set_attributes(flagembedding, {})
+
+    torch_module = _ensure_module("torch")
+    if not hasattr(torch_module, "__path__"):
+        torch_module.__path__ = []  # type: ignore[attr-defined]
+
+    langgraph_pkg = _ensure_module("langgraph")
+    graph_pkg = _ensure_module("langgraph.graph")
     _set_attributes(
-        crawl4ai_deep,
+        graph_pkg,
         {
-            "BestFirstCrawlingStrategy": type("BestFirstCrawlingStrategy", (), {}),
-            "BFSDeepCrawlStrategy": type("BFSDeepCrawlStrategy", (), {}),
+            "StateGraph": type("StateGraph", (), {}),
+            "END": object(),
         },
     )
-
-    filters_module = _ensure_module("crawl4ai.deep_crawling.filters")
-    _set_attributes(
-        filters_module,
-        {
-            "ContentRelevanceFilter": type("ContentRelevanceFilter", (), {}),
-            "ContentTypeFilter": type("ContentTypeFilter", (), {}),
-            "DomainFilter": type("DomainFilter", (), {}),
-            "FilterChain": type("FilterChain", (), {}),
-            "SEOFilter": type("SEOFilter", (), {}),
-            "URLFilter": type("URLFilter", (), {}),
-            "URLPatternFilter": type("URLPatternFilter", (), {}),
-        },
-    )
-
-    scorers_module = _ensure_module("crawl4ai.deep_crawling.scorers")
-    _set_attributes(
-        scorers_module,
-        {"KeywordRelevanceScorer": type("KeywordRelevanceScorer", (), {})},
-    )
-
-    content_filter = _ensure_module("crawl4ai.content_filter_strategy")
-    _set_attributes(
-        content_filter,
-        {
-            "BM25ContentFilter": type("BM25ContentFilter", (), {}),
-            "PruningContentFilter": type("PruningContentFilter", (), {}),
-        },
-    )
-
-    for namespace in ("langchain_core", "langchain_community", "crawl4ai"):
-        package = _ensure_module(namespace)
-        if not hasattr(package, "__path__"):
-            package.__path__ = []  # type: ignore[attr-defined]
+    langgraph_pkg.graph = graph_pkg  # type: ignore[attr-defined]
+    checkpoint_pkg = _ensure_module("langgraph.checkpoint")
+    memory_pkg = _ensure_module("langgraph.checkpoint.memory")
+    _set_attributes(memory_pkg, {"MemorySaver": type("MemorySaver", (), {})})
+    checkpoint_pkg.memory = memory_pkg  # type: ignore[attr-defined]
 
 
 def _register_miscellaneous_stubs() -> None:

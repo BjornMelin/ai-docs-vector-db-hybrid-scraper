@@ -17,7 +17,7 @@ class TestSearchRequest:
     """Validate the unified search request model."""
 
     def test_defaults_provide_balanced_hybrid_search(self) -> None:
-        request = SearchRequest(query="install vector db")
+        request = SearchRequest.model_validate({"query": "install vector db"})
 
         payload = request.model_dump()
         assert payload["collection"] == "documentation"

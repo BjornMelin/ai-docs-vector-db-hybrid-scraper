@@ -2,6 +2,7 @@
 
 # pylint: disable=duplicate-code
 
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -17,30 +18,6 @@ class TestEmbeddingsTools:
     @pytest.fixture
     def mock_client_manager(self):
         """Create a mock client manager with embedding service."""
-        mock_manager = MagicMock()
-
-        # Mock embedding manager
-        mock_embedding = AsyncMock()
-
-        mock_embedding.estimate_cost = MagicMock(
-            return_value={
-                "fastembed": {
-                    "estimated_tokens": 20,
-                    "cost_per_token": 0.0,
-                    "total_cost": 0.0,
-                }
-            }
-        )
-        mock_embedding.get_provider_info = MagicMock(
-            return_value={
-                "fastembed": {
-                    "model": "BAAI/bge-small-en-v1.5",
-                    "dimensions": 384,
-                    "max_tokens": 512,
-                    "cost_per_token": 0.0,
-                }
-            }
-        )
 
         # Create a smart mock that returns different results based on inputs
         class _EmbeddingResult(dict):
@@ -66,51 +43,78 @@ class TestEmbeddingsTools:
                 data.pop("tokens", None)
                 return data.items()
 
-        async def mock_generate_embeddings(
-            texts,
-            options=None,
-            **_kwargs,
-        ):
-            embeddings = [
-                [0.1 + i * 0.1, 0.2 + i * 0.1, 0.3 + i * 0.1, 0.4 + i * 0.1]
-                for i in range(len(texts))
-            ]
-            provider_name = getattr(options, "provider_name", None)
-            generate_sparse = getattr(options, "generate_sparse", False)
-            sparse = (
-                [
-                    [0.8 - i * 0.1, 0.0, 0.6 - i * 0.1, 0.0, 0.4 - i * 0.1]
+        class DummyEmbeddingManager:
+            def __init__(self) -> None:
+                self._initialized = True
+                self.calls: list[str] = []
+                self.embedding_mock = self
+                self.get_embedding_manager = AsyncMock(return_value=self)
+                self.last_kwargs: dict[str, Any] = {}
+
+            async def generate_embeddings(
+                self, texts, provider_name=None, generate_sparse=False, **_kwargs
+            ):
+                self.calls.append("generate_embeddings")
+                self.last_kwargs = {
+                    "texts": texts,
+                    "provider_name": provider_name,
+                    "generate_sparse": generate_sparse,
+                }
+                embeddings = [
+                    [0.1 + i * 0.1, 0.2 + i * 0.1, 0.3 + i * 0.1, 0.4 + i * 0.1]
                     for i in range(len(texts))
                 ]
-                if generate_sparse
-                else None
-            )
-            return _EmbeddingResult(
-                embeddings,
-                sparse=sparse,
-                metadata={
-                    "model": provider_name or "BAAI/bge-small-en-v1.5",
-                    "provider": provider_name or "fastembed",
-                    "tokens": len(texts) * 10,
-                },
-            )
+                sparse = (
+                    [
+                        [0.8 - i * 0.1, 0.0, 0.6 - i * 0.1, 0.0, 0.4 - i * 0.1]
+                        for i in range(len(texts))
+                    ]
+                    if generate_sparse
+                    else None
+                )
+                return _EmbeddingResult(
+                    embeddings,
+                    sparse=sparse,
+                    metadata={
+                        "model": provider_name or "BAAI/bge-small-en-v1.5",
+                        "provider": provider_name or "fastembed",
+                        "tokens": len(texts) * 10,
+                    },
+                )
 
-        mock_embedding.generate_embeddings.side_effect = mock_generate_embeddings
+            def estimate_cost(self, *_, **__):
+                self.calls.append("estimate_cost")
+                return {
+                    "fastembed": {
+                        "estimated_tokens": 20,
+                        "cost_per_token": 0.0,
+                        "total_cost": 0.0,
+                    }
+                }
 
-        # Make get_current_provider_info synchronous (not async)
-        def mock_provider_info():
-            return {
-                "name": "fastembed",
-                "model": "BAAI/bge-small-en-v1.5",
-                "dimensions": 384,
-            }
+            def get_provider_info(self):
+                self.calls.append("get_provider_info")
+                return {
+                    "fastembed": {
+                        "model": "BAAI/bge-small-en-v1.5",
+                        "dimensions": 384,
+                        "max_tokens": 512,
+                        "cost_per_token": 0.0,
+                    }
+                }
 
-        mock_embedding.get_current_provider_info = mock_provider_info
+            def get_current_provider_info(self):
+                self.calls.append("get_current_provider_info")
+                return {
+                    "name": "fastembed",
+                    "model": "BAAI/bge-small-en-v1.5",
+                    "dimensions": 384,
+                }
 
-        mock_manager.get_embedding_manager = AsyncMock(return_value=mock_embedding)
-        mock_manager.embedding_mock = mock_embedding
+            def is_initialized(self) -> bool:
+                return self._initialized
 
-        return mock_manager
+        return DummyEmbeddingManager()
 
     @pytest.fixture
     def mock_context(self):
@@ -240,11 +244,10 @@ class TestEmbeddingsTools:
         """Test embeddings error handling."""
 
         # Make embedding manager raise an exception
-        mock_embedding = AsyncMock()
-        mock_embedding.generate_embeddings.side_effect = Exception(
-            "Embedding service unavailable"
-        )
-        mock_client_manager.get_embedding_manager.return_value = mock_embedding
+        async def _raise(*_args, **_kwargs):
+            raise RuntimeError("Embedding service unavailable")
+
+        mock_client_manager.generate_embeddings = AsyncMock(side_effect=_raise)
 
         mock_mcp = MagicMock()
         registered_tools = {}
@@ -263,7 +266,7 @@ class TestEmbeddingsTools:
         )
 
         # Should raise the exception after logging
-        with pytest.raises(Exception, match="Embedding service unavailable"):
+        with pytest.raises(RuntimeError, match="Embedding service unavailable"):
             await generate_embeddings(request, mock_context)
 
         # Error should be logged
@@ -389,8 +392,7 @@ class TestEmbeddingsTools:
         # Test embedding manager is retrieved
         request = EmbeddingRequest(texts=["test"])
         await generate_embeddings(request, mock_context)
-        mock_client_manager.get_embedding_manager.assert_called()
-        mock_client_manager.embedding_mock.generate_embeddings.assert_called()
+        assert "generate_embeddings" in mock_client_manager.calls
 
         # Test providers call
         await list_embedding_providers(ctx=mock_context)
@@ -450,12 +452,10 @@ class TestEmbeddingsTools:
         assert len(result.embeddings) == 1
 
         # Verify embedding manager was called with custom model details
-        mock_client_manager.embedding_mock.generate_embeddings.assert_called()
-        _call_args, call_kwargs = (
-            mock_client_manager.embedding_mock.generate_embeddings.call_args
+        assert "generate_embeddings" in mock_client_manager.calls
+        assert mock_client_manager.last_kwargs["texts"] == ["test text"]
+        assert (
+            mock_client_manager.last_kwargs["provider_name"]
+            == "sentence-transformers/all-MiniLM-L6-v2"
         )
-        assert call_kwargs.get("texts") == ["test text"]
-        options = call_kwargs.get("options")
-        assert options is not None
-        assert options.provider_name == "sentence-transformers/all-MiniLM-L6-v2"
-        assert options.generate_sparse is False
+        assert mock_client_manager.last_kwargs["generate_sparse"] is False

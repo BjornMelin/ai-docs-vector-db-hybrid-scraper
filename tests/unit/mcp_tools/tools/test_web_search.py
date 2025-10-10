@@ -67,9 +67,7 @@ async def test_web_search_success(
     ctx.error = AsyncMock()
     ctx.warning = AsyncMock()
     ctx.debug = AsyncMock()
-    client_manager = Mock()
-
-    register_tools(fake_mcp, client_manager)
+    register_tools(fake_mcp)
     tool = fake_mcp.tools["web_search"]
 
     result = await tool(
@@ -115,7 +113,7 @@ async def test_web_search_missing_api_key(fake_mcp, monkeypatch, fake_tavily):
     ctx.warning = AsyncMock()
     ctx.debug = AsyncMock()
 
-    register_tools(fake_mcp, Mock())
+    register_tools(fake_mcp)
     tool = fake_mcp.tools["web_search"]
 
     result = await tool(query="secure query", ctx=ctx)
@@ -138,7 +136,7 @@ async def test_advanced_web_search_uses_advanced_depth(
     ctx.warning = AsyncMock()
     ctx.debug = AsyncMock()
 
-    register_tools(fake_mcp, Mock())
+    register_tools(fake_mcp)
     tool = fake_mcp.tools["advanced_web_search"]
 
     result = await tool(
