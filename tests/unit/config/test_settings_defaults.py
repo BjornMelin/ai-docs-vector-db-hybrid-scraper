@@ -1,6 +1,11 @@
 """Regression tests for Settings defaults formerly defined as core constants."""
 
-from src.config.loader import Settings
+# pylint: disable=no-member  # Pydantic models populate attributes dynamically at runtime
+
+import pytest
+from pydantic import ValidationError  # pyright: ignore[reportMissingImports]
+
+from src.config.loader import Settings  # pyright: ignore[reportMissingImports]
 
 
 def test_cache_ttl_defaults() -> None:
@@ -9,6 +14,13 @@ def test_cache_ttl_defaults() -> None:
     settings = Settings()
 
     assert settings.cache.ttl_search_results == 3600
+
+
+def test_cache_ttl_search_results_negative_value() -> None:
+    """Negative TTL values for search results should be rejected."""
+
+    with pytest.raises(ValidationError):
+        Settings(cache={"ttl_search_results": -100})
 
 
 def test_chunking_defaults() -> None:
