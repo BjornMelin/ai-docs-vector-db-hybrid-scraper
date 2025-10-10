@@ -16,7 +16,7 @@ from fastmcp import FastMCP
 
 from src.config.loader import get_settings
 from src.config.models import CrawlProvider, EmbeddingProvider
-from src.infrastructure.client_manager import ClientManager
+from src.infrastructure.container import initialize_container, shutdown_container
 from src.mcp_tools.tool_registry import register_all_tools
 from src.services.logging_config import configure_logging
 from src.services.monitoring.initialization import (
@@ -36,18 +36,17 @@ async def managed_lifespan(server: FastMCP[Any]) -> AsyncIterator[None]:  # pyli
     config = get_settings()
     configure_logging(settings=config)
     monitoring_tasks: list[asyncio.Task[Any]] = []
-    client_manager: ClientManager | None = None
+    container = None
     health_manager = None
     try:
         validate_configuration()
 
         logger.info("Initializing AI Documentation Vector DB MCP Server...")
 
-        client_manager = ClientManager()
-        await client_manager.initialize()
+        container = await initialize_container(config)
 
         logger.info("Initializing monitoring system...")
-        qdrant_client = getattr(client_manager, "qdrant_client", None)
+        qdrant_client = container.qdrant_client()
 
         cache_config = getattr(config, "cache", None)
         enable_dragonfly = bool(getattr(cache_config, "enable_dragonfly_cache", False))
@@ -84,7 +83,23 @@ async def managed_lifespan(server: FastMCP[Any]) -> AsyncIterator[None]:  # pyli
                 )
 
         logger.info("Registering MCP tools...")
-        await register_all_tools(server, client_manager)
+        vector_service = container.vector_store_service()
+        cache_manager = container.cache_manager()
+        crawl_manager = container.browser_manager()
+        content_service = container.content_intelligence_service()
+        project_storage = container.project_storage()
+        embedding_manager = container.embedding_manager()
+
+        await register_all_tools(
+            server,
+            vector_service=vector_service,
+            cache_manager=cache_manager,
+            crawl_manager=crawl_manager,
+            content_intelligence_service=content_service,
+            project_storage=project_storage,
+            embedding_manager=embedding_manager,
+            health_manager=health_manager,
+        )
 
         logger.info("Server initialization complete")
         yield
@@ -97,8 +112,8 @@ async def managed_lifespan(server: FastMCP[Any]) -> AsyncIterator[None]:  # pyli
             with suppress(asyncio.CancelledError):
                 await task
 
-        if client_manager:
-            await client_manager.cleanup()
+        if container:
+            await shutdown_container()
 
         logger.info("Server shutdown complete")
 
