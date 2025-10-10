@@ -153,17 +153,12 @@ def _install_application_routes(app: FastAPI) -> None:
     for key, module_path in required_modules.items():
         try:
             module = import_module(module_path)
-        except ImportError as exc:  # pragma: no cover - optional import failure
+            router = getattr(module, "router")
+        except (ImportError, AttributeError) as exc:  # pragma: no cover - optional import failure or missing router
             missing.append(f"{module_path} ({exc})")
             continue
 
-        router = getattr(module, "router", None)
-        if router is None:
-            missing.append(f"{module_path} (router attribute missing)")
-            continue
-
         routers[key] = router
-
     if missing:
         message = ", ".join(missing)
         logger.error("Application routes unavailable: %s", message)
