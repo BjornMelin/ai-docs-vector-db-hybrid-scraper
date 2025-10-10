@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import importlib
 import json
 import logging
 import re
@@ -126,32 +127,31 @@ class RagasEvaluator:
 
         # pylint: disable=import-outside-toplevel,too-many-locals
         try:  # pragma: no cover - optional dependency import path
-            from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-            from ragas import evaluate as ragas_evaluate
-            from ragas.dataset_schema import EvaluationDataset
-            from ragas.embeddings import LangchainEmbeddingsWrapper
-            from ragas.llms import LangchainLLMWrapper
-            from ragas.metrics import (
-                answer_relevancy,
-                context_precision,
-                context_recall,
-                faithfulness,
-            )
+            langchain_openai = importlib.import_module("langchain_openai")
+            ragas_module = importlib.import_module("ragas")
+            dataset_schema = importlib.import_module("ragas.dataset_schema")
+            embeddings_module = importlib.import_module("ragas.embeddings")
+            llms_module = importlib.import_module("ragas.llms")
+            metrics_module = importlib.import_module("ragas.metrics")
 
-            self._dataset_cls = EvaluationDataset
-            self._evaluate = ragas_evaluate
+            chat_open_ai = langchain_openai.ChatOpenAI
+            openai_embeddings = langchain_openai.OpenAIEmbeddings
+            self._dataset_cls = dataset_schema.EvaluationDataset
+            self._evaluate = ragas_module.evaluate
             self._metrics_suite = [
-                context_precision,
-                context_recall,
-                faithfulness,
-                answer_relevancy,
+                metrics_module.context_precision,
+                metrics_module.context_recall,
+                metrics_module.faithfulness,
+                metrics_module.answer_relevancy,
             ]
-            llm_instance = ChatOpenAI(model=llm_model or "gpt-4o-mini")
-            embedding_instance = OpenAIEmbeddings(
+            llm_instance = chat_open_ai(model=llm_model or "gpt-4o-mini")
+            embedding_instance = openai_embeddings(
                 model=embedding_model or "text-embedding-3-small"
             )
-            self._llm = LangchainLLMWrapper(llm_instance)
-            self._embeddings = LangchainEmbeddingsWrapper(embedding_instance)
+            embeddings_wrapper = embeddings_module.LangchainEmbeddingsWrapper
+            llm_wrapper = llms_module.LangchainLLMWrapper
+            self._llm = llm_wrapper(llm_instance)
+            self._embeddings = embeddings_wrapper(embedding_instance)
             LOGGER.info(
                 "Ragas evaluator initialised with model=%s embedding=%s",
                 llm_model or "gpt-4o-mini",
@@ -499,7 +499,8 @@ async def _evaluate_examples(
         if collection := example.metadata.get("collection"):
             request_overrides["collection"] = collection
 
-        request = SearchRequest.from_input(example.query, **request_overrides)
+        request_payload = {"query": example.query, **request_overrides}
+        request = SearchRequest(**request_payload)
         response: SearchResponse = await orchestrator.search(request)
 
         predicted = response.generated_answer or " ".join(
@@ -540,7 +541,6 @@ def _render_report(report: EvaluationReport) -> dict[str, Any]:
 
     return {
         "aggregates": report.aggregates,
-        "telemetry": report.telemetry,
         "results": [
             {
                 "example": {
