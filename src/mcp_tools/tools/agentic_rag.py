@@ -205,17 +205,33 @@ def _build_search_response(
             try:
                 records.append(SearchRecord.from_payload(item))
             except TypeError:
-                logger.debug(
-                    "Unexpected search result type %s; coercing to canonical record",
-                    type(item).__name__,
-                )
-                records.append(
-                    SearchRecord(
-                        id=str(uuid4()),
-                        content=str(item),
-                        score=0.0,
+                collection_hint = payload.get("collection")
+                if collection_hint is None:
+                    collection_hint = getattr(item, "collection", None)
+                item_payload = getattr(item, "payload", None)
+                if collection_hint is None and isinstance(item_payload, Mapping):
+                    collection_hint = item_payload.get(
+                        "collection"
+                    ) or item_payload.get("_collection")
+                try:
+                    records.append(
+                        SearchRecord.from_vector_match(
+                            item,
+                            collection_name=str(collection_hint or "default"),
+                        )
                     )
-                )
+                except TypeError:
+                    logger.debug(
+                        "Unexpected search result type %s; coercing to canonical record",
+                        type(item).__name__,
+                    )
+                    records.append(
+                        SearchRecord(
+                            id=str(uuid4()),
+                            content=str(item),
+                            score=0.0,
+                        )
+                    )
 
     tools_used: Sequence[str] | None = payload.get("tools_used")
     reasoning: Sequence[str] | None = payload.get("reasoning")

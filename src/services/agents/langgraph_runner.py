@@ -699,7 +699,7 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
 
     def _to_search_outcome(self, state: AgenticGraphState) -> GraphSearchOutcome:
         raw_documents = state.get("retrieved_documents", [])
-        results = SearchRecord.parse_list(raw_documents)
+        results = [SearchRecord.from_payload(doc) for doc in raw_documents]
         tools_used = [output["tool_name"] for output in state.get("tool_outputs", [])]
         return GraphSearchOutcome(
             success=state.get("success", True),
