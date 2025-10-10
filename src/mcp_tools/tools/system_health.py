@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import gc
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-from src.infrastructure.client_manager import ClientManager
+from fastmcp import Context
+
+from src.services.dependencies import _get_health_manager
 from src.services.health.manager import HealthCheckManager, HealthStatus
 
 
@@ -15,18 +17,18 @@ try:  # pragma: no cover - optional dependency
 except ImportError:  # pragma: no cover - optional dependency
     psutil = None  # type: ignore[assignment]
 
-try:  # pragma: no cover - optional dependency
-    from fastmcp import Context  # type: ignore[reportMissingImports]
-except ImportError:  # pragma: no cover - fallback for linting environments
-    Context = Any  # type: ignore[assignment]
-
-if TYPE_CHECKING:  # pragma: no cover - typing only
-    from fastmcp import Context as ContextType  # type: ignore[reportMissingImports]
-else:  # pragma: no cover - runtime fallback
-    ContextType = Any  # type: ignore[assignment]
-
 
 logger = logging.getLogger(__name__)
+
+
+async def _resolve_health_manager(
+    override: HealthCheckManager | None = None,
+) -> HealthCheckManager:
+    """Return the shared health manager instance."""
+
+    if override is not None:
+        return override
+    return await _get_health_manager()
 
 
 def _bytes_to_mb(value: float | int) -> float:
@@ -46,20 +48,15 @@ def _collect_resource_snapshot() -> dict[str, Any]:
     try:
         process = psutil.Process()
         with process.oneshot():
-            cpu_percent = process.cpu_percent(interval=None)
             memory_info = process.memory_info()
-            memory_percent = process.memory_percent()
-            num_threads = process.num_threads()
-            open_file_count = len(process.open_files())
-            connection_count = len(process.connections(kind="inet"))
-        snapshot["process"] = {
-            "cpu_percent": cpu_percent,
-            "memory_percent": memory_percent,
-            "rss_memory_mb": _bytes_to_mb(memory_info.rss),
-            "num_threads": num_threads,
-            "open_file_count": open_file_count,
-            "connection_count": connection_count,
-        }
+            snapshot["process"] = {
+                "cpu_percent": process.cpu_percent(interval=None),
+                "memory_percent": process.memory_percent(),
+                "rss_memory_mb": _bytes_to_mb(memory_info.rss),
+                "num_threads": process.num_threads(),
+                "open_file_count": len(process.open_files()),
+                "connection_count": len(process.net_connections(kind="inet")),
+            }
     except (psutil.Error, OSError):  # pragma: no cover - best effort only
         logger.debug("Failed to collect process metrics", exc_info=True)
 
@@ -83,9 +80,6 @@ def _collect_resource_snapshot() -> dict[str, Any]:
     try:
         disk_io = psutil.disk_io_counters()
         net_io = psutil.net_io_counters()
-    except (psutil.Error, OSError):  # pragma: no cover - best effort only
-        logger.debug("Failed to collect IO counters", exc_info=True)
-    else:
         if disk_io is not None and net_io is not None:
             snapshot["io"] = {
                 "disk_read_mb": _bytes_to_mb(disk_io.read_bytes),
@@ -93,10 +87,10 @@ def _collect_resource_snapshot() -> dict[str, Any]:
                 "net_sent_mb": _bytes_to_mb(net_io.bytes_sent),
                 "net_received_mb": _bytes_to_mb(net_io.bytes_recv),
             }
+    except (psutil.Error, OSError):  # pragma: no cover - best effort only
+        logger.debug("Failed to collect IO counters", exc_info=True)
 
-    gc_stats: dict[str, Any] = {
-        "counts": list(gc.get_count()),
-    }
+    gc_stats: dict[str, Any] = {"counts": list(gc.get_count())}
     get_stats = getattr(gc, "get_stats", None)
     if callable(get_stats):
         raw_stats = get_stats()
@@ -118,22 +112,15 @@ def _collect_resource_snapshot() -> dict[str, Any]:
     return snapshot
 
 
-def _resolve_health_manager(client_manager: ClientManager) -> HealthCheckManager:
-    """Return the configured health manager instance."""
-
-    try:
-        return client_manager.get_health_manager()
-    except RuntimeError as error:  # pragma: no cover - defensive
-        logger.error("Health manager unavailable: %s", error)
-        raise
-
-
-def register_tools(mcp, client_manager: ClientManager):
+def register_tools(
+    mcp,
+    health_manager: HealthCheckManager | None = None,
+) -> None:
     """Register system health monitoring tools."""
 
     @mcp.tool()
     async def get_system_health(
-        ctx: ContextType | None = None,
+        ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Return overall health information from the central manager.
 
@@ -145,7 +132,7 @@ def register_tools(mcp, client_manager: ClientManager):
         """
 
         try:
-            manager = _resolve_health_manager(client_manager)
+            manager = await _resolve_health_manager(health_manager)
         except RuntimeError as error:
             message = f"Health manager unavailable: {error}"
             logger.exception(message)
@@ -161,7 +148,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
     @mcp.tool()
     async def get_process_info(
-        ctx: ContextType | None = None,
+        ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Return the latest system resource check metadata.
 
@@ -173,7 +160,7 @@ def register_tools(mcp, client_manager: ClientManager):
         """
 
         try:
-            manager = _resolve_health_manager(client_manager)
+            manager = await _resolve_health_manager(health_manager)
         except RuntimeError as error:
             message = f"Health manager unavailable: {error}"
             logger.exception(message)
@@ -208,11 +195,11 @@ def register_tools(mcp, client_manager: ClientManager):
         }
 
         if ctx:
+            cpu_usage = combined_metrics.get("cpu_percent", 0.0)
+            memory_usage = combined_metrics.get("memory_percent", 0.0)
             await ctx.info(
-                "System resources %s: CPU %.1f%%, memory %.1f%%",
-                result.status.value,
-                combined_metrics.get("cpu_percent", 0.0),
-                combined_metrics.get("memory_percent", 0.0),
+                f"System resources {result.status.value}: "
+                f"CPU {cpu_usage:.1f}%, memory {memory_usage:.1f}%"
             )
 
         return response
