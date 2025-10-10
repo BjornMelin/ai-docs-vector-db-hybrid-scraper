@@ -9,7 +9,7 @@ The orchestration entry point is `GraphRunner` (`src/services/agents/langgraph_r
 - `DynamicToolDiscovery` (`src/services/agents/dynamic_tool_discovery.py`) enumerates active tools from MCP servers and classifies them into capability groups.
 - `ToolExecutionService` (`src/services/agents/tool_execution_service.py`) executes selected tools over `langchain_mcp_adapters.MultiServerMCPClient`, normalises errors, and enforces timeouts.
 - `RetrievalHelper` (`src/services/agents/retrieval.py`) performs dense + sparse retrieval using LangChain vector abstractions.
-- `ClientManager` (`src/infrastructure/client_manager.py`) provides shared transports and configuration handles.
+- `ApplicationContainer` (`src/infrastructure/container.py`) supplies shared clients (MultiServer MCP, vector store, cache, embeddings) to all agent services via dependency-injector providers.
 
 `GraphRunner` composes these components into a LangGraph `StateGraph` with the following nodes:
 
@@ -54,13 +54,13 @@ The retrieval node delegates to `RetrievalHelper`:
 
 - Dense embeddings via FastEmbed integrations in `src/services/embeddings/fastembed_provider.py`.
 - Sparse scoring using `langchain_qdrant.FastEmbedSparse` when configured.
-- Adaptive limits: defaults come from `client_manager.config.agentic.retrieval_limit` but can be overridden through the `RunnableConfig` metadata.
+- Adaptive limits: defaults come from the active `Settings.agentic.retrieval_limit` but can be overridden through the `RunnableConfig` metadata.
 
 Self-healing behaviour relies on rerun policies inside the graph: failed retrieval increments an error counter and triggers alternate tool sets on retry.
 
 ## Parallel Coordination
 
-When `client_manager.config.agentic.max_parallel_tools > 1`, the execution node spawns parallel tool tasks up to that limit. Results are merged deterministically by tool name and execution order. Errors from individual tools are recorded without aborting the entire run unless every selected tool fails.
+When `Settings.agentic.max_parallel_tools > 1`, the execution node spawns parallel tool tasks up to that limit. Results are merged deterministically by tool name and execution order. Errors from individual tools are recorded without aborting the entire run unless every selected tool fails.
 
 ## Testing Strategy
 

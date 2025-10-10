@@ -115,15 +115,15 @@ flowchart LR
 
 ### Infrastructure Orchestration
 
-- `ClientManager` (`src/infrastructure/client_manager.py`) is the central service
-  locator. It lazily wires clients (OpenAI, Qdrant, Redis, Firecrawl), caches,
-  vector storage, crawling, embeddings, monitoring, and RAG helpers with
-  configuration-aware constructors. All dependencies retrieve shared services by
-  calling `get_client_manager()` rather than instantiating bespoke manager
-  classes.
-- Service initialization is idempotent and thread-safe, with cleanup routines
-  that close caches, vector stores, MCP sessions, and background monitoring
-  tasks.
+- `ApplicationContainer` (`src/infrastructure/container.py`) is the single source
+  of truth for wiring clients (OpenAI, Qdrant, Redis, Firecrawl), caches, vector
+  storage, crawling, embeddings, monitoring, and RAG helpers. Runtime surfaces pull
+  dependencies from the container using `dependency-injector` providers rather than
+  instantiating bespoke managers.
+- Service initialization is coordinated through container lifecycle hooks with
+  deterministic startup/shutdown ordering, ensuring shared resources (HTTP sessions,
+  vector stores, MCP sessions, monitoring tasks) are initialised once and cleaned up
+  safely.
 
 ### Crawling & Ingestion
 
