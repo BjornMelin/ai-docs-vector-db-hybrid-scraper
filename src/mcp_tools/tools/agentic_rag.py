@@ -12,6 +12,7 @@ from weakref import WeakKeyDictionary
 from fastmcp import FastMCP
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from src.contracts.retrieval import SearchRecord
 from src.infrastructure.client_manager import ClientManager
 from src.services.agents import (
     GraphAnalysisOutcome,
@@ -149,7 +150,7 @@ class AgenticSearchResponse(BaseModel):
         ..., description="Whether the workflow completed successfully"
     )
     session_id: str = Field(..., description="Session identifier")
-    results: list[dict[str, Any]] = Field(
+    results: list[SearchRecord] = Field(
         default_factory=list, description="Search results"
     )
     answer: str | None = Field(None, description="Generated answer")
@@ -197,21 +198,12 @@ class AgenticAnalysisResponse(BaseModel):
 def _build_search_response(
     *, success: bool, session_id: str, payload: Mapping[str, Any]
 ) -> AgenticSearchResponse:
-    results: Sequence[Any] | None = payload.get("results")
-    normalised_results: list[dict[str, Any]] = []
-    if results:
-        for item in results:
-            if isinstance(item, Mapping):
-                normalised_results.append(dict(item))
-                continue
-            try:
-                normalised_results.append(dict(item))
-            except (TypeError, ValueError):
-                logger.debug(
-                    "Unexpected search result type %s; storing as string",
-                    type(item).__name__,
-                )
-                normalised_results.append({"value": str(item)})
+    raw_results: Sequence[Any] | None = payload.get("results")
+    records: list[SearchRecord] = []
+    if raw_results:
+        records = SearchRecord.parse_list(
+            raw_results, default_collection=payload.get("collection")
+        )
 
     tools_used: Sequence[str] | None = payload.get("tools_used")
     reasoning: Sequence[str] | None = payload.get("reasoning")
@@ -221,7 +213,7 @@ def _build_search_response(
     return AgenticSearchResponse(
         success=success,
         session_id=session_id,
-        results=normalised_results,
+        results=records,
         answer=payload.get("answer"),
         confidence=payload.get("confidence"),
         tools_used=list(tools_used or []),

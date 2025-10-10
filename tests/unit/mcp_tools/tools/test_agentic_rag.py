@@ -12,6 +12,8 @@ from typing import Any, cast
 
 import pytest
 
+from src.contracts.retrieval import SearchRecord
+
 
 ROOT = Path(__file__).resolve().parents[4]
 if str(ROOT) not in sys.path:
@@ -111,7 +113,7 @@ async def test_run_agentic_search() -> None:
         session_id="session-1",
         answer="Result",
         confidence=0.75,
-        results=[{"id": "1"}],
+        results=[SearchRecord(id="1", content="", score=0.9)],
         tools_used=["semantic_search"],
         reasoning=["step"],
         metrics={"latency_ms": 10.0, "tool_count": 1, "error_count": 0},

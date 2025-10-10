@@ -22,8 +22,7 @@ from scripts.eval.rag_golden_eval import (
     _load_thresholds,
     _render_report,
 )
-from src.contracts.retrieval import SearchRecord
-from src.services.query_processing.models import SearchResponse
+from src.contracts.retrieval import SearchRecord, SearchResponse
 
 
 class _StubOrchestrator:

@@ -12,6 +12,8 @@ from typing import Any, cast
 
 import pytest
 
+from src.contracts.retrieval import SearchRecord
+
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -200,7 +202,7 @@ async def test_orchestrate_multi_service_workflow_uses_graph_runner():
             session_id="sid",
             answer="done",
             confidence=0.8,
-            results=[{"id": "1"}],
+            results=[SearchRecord(id="1", content="", score=0.9)],
             tools_used=["semantic_search"],
             reasoning=["step"],
             metrics={"latency_ms": 12.0, "tool_count": 1, "error_count": 0},

@@ -1,27 +1,8 @@
-src.services.query\_processing package
+src.services.query_processing package
 ======================================
 
-Submodules
-----------
-
-src.services.query\_processing.intent\_classifier module
---------------------------------------------------------
-
-.. automodule:: src.services.query_processing.intent_classifier
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-src.services.query\_processing.models module
---------------------------------------------
-
-.. automodule:: src.services.query_processing.models
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-src.services.query\_processing.orchestrator module
---------------------------------------------------
+Orchestrator module
+-------------------
 
 .. automodule:: src.services.query_processing.orchestrator
    :members:

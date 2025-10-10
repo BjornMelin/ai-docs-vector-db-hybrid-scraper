@@ -17,12 +17,12 @@ When `AI_DOCS__MODE=simple`, routes under `src/api/routers/simple/` are mounted.
 }
 ```
 
-Response (`SimpleSearchResponse`):
+Response (`SearchResponse`):
 
 ```json
 {
   "query": "vector databases",
-  "results": [
+  "records": [
     {
       "id": "doc_123",
       "content": "Qdrant is a vector database...",
@@ -33,7 +33,7 @@ Response (`SimpleSearchResponse`):
       "metadata": {"title": "Introduction to Qdrant"}
     }
   ],
-  "total_count": 1,
+  "total_results": 1,
   "processing_time_ms": 12.5
 }
 ```
@@ -41,7 +41,7 @@ Response (`SimpleSearchResponse`):
 ### GET /search
 
 Accepts the same parameters as the POST variant (`query`, `collection`, `limit`).
-Returns a `SimpleSearchResponse` and serves as a convenient manual test endpoint.
+Returns a canonical `SearchResponse` and serves as a convenient manual test endpoint.
 
 ### Document Endpoints
 
@@ -79,7 +79,7 @@ Centralised readiness endpoint powered by `HealthCheckManager`. Example response
 
 ## 2. Query Processing Response Contract
 
-`src.services.query_processing.models.SearchResponse` is the canonical DTO.
+`src.contracts.retrieval.SearchResponse` is the canonical DTO.
 
 Fields:
 
@@ -102,9 +102,9 @@ removed. Clients must supply a single collection per request and use orchestrato
 helpers for multi-tenant behaviour.
 
 MCP tooling consumes the same DTOs. Tests covering the simplified pipeline live
-in `tests/unit/services/query_processing/test_pipeline.py`,
-`tests/unit/services/query_processing/test_orchestrator.py`, and
-`tests/unit/services/vector_db/test_service.py` (for grouping fallback).
+in `tests/unit/services/query_processing/test_orchestrator.py`,
+`tests/unit/services/vector_db/test_service.py` (for grouping fallback), and
+`tests/unit/models/test_search_request.py` for request normalisation helpers.
 
 ## 3. Enterprise Surface
 
