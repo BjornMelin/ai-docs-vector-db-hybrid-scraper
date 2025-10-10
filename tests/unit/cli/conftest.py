@@ -65,15 +65,6 @@ def mock_config_loader(mock_config):
 
 
 @pytest.fixture
-def mock_client_manager():
-    """Mock the ClientManager class."""
-    mock_manager = MagicMock()
-    mock_manager.get_qdrant_client.return_value = MagicMock()
-    mock_manager.get_embedding_client.return_value = MagicMock()
-    return mock_manager
-
-
-@pytest.fixture
 def mock_vector_db_manager():
     """Mock the VectorDBManager class with async methods."""
     mock_manager = AsyncMock()

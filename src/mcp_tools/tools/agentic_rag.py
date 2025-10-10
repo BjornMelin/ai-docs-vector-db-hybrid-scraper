@@ -7,13 +7,11 @@ import logging
 from collections.abc import Mapping, Sequence
 from typing import Any
 from uuid import uuid4
-from weakref import WeakKeyDictionary
 
 from fastmcp import FastMCP
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from src.contracts.retrieval import SearchRecord
-from src.infrastructure.client_manager import ClientManager
+from contracts.retrieval import SearchRecord
 from src.services.agents import (
     GraphAnalysisOutcome,
     GraphRunner,
@@ -28,8 +26,8 @@ logger = logging.getLogger(__name__)
 SCHEMA_VERSION = "agentic_rag.v2"
 RUN_OPERATION = "agent.graph.run"
 
-_runner_cache: WeakKeyDictionary[ClientManager, GraphRunner] = WeakKeyDictionary()
-_runner_locks: WeakKeyDictionary[ClientManager, asyncio.Lock] = WeakKeyDictionary()
+_RUNNER_LOCK = asyncio.Lock()
+_RUNNER_INSTANCE: GraphRunner | None = None
 
 
 class OperationSamplePayload(BaseModel):
@@ -87,26 +85,21 @@ class AgenticOrchestrationMetricsResponse(BaseModel):
     warnings: list[str] = Field(default_factory=list)
 
 
-async def _get_runner(client_manager: ClientManager) -> GraphRunner:
-    """Initialise and cache the LangGraph runner for the provided client manager."""
+async def _get_runner(override: GraphRunner | None = None) -> GraphRunner:
+    """Initialise and cache the LangGraph runner instance."""
 
-    runner = _runner_cache.get(client_manager)
-    if runner is not None:
-        return runner
+    if override is not None:
+        return override
 
-    lock = _runner_locks.get(client_manager)
-    if lock is None:
-        lock = asyncio.Lock()
-        _runner_locks[client_manager] = lock
+    global _RUNNER_INSTANCE  # pylint: disable=global-statement
+    if _RUNNER_INSTANCE is not None:
+        return _RUNNER_INSTANCE
 
-    async with lock:
-        runner = _runner_cache.get(client_manager)
-        if runner is not None:
-            return runner
-
-        _, _, _, runner = GraphRunner.build_components(client_manager)
-        _runner_cache[client_manager] = runner
-        return runner
+    async with _RUNNER_LOCK:
+        if _RUNNER_INSTANCE is None:
+            _, _, _, runner = GraphRunner.build_components()
+            _RUNNER_INSTANCE = runner
+    return _RUNNER_INSTANCE
 
 
 class AgenticSearchRequest(BaseModel):
@@ -198,12 +191,26 @@ class AgenticAnalysisResponse(BaseModel):
 def _build_search_response(
     *, success: bool, session_id: str, payload: Mapping[str, Any]
 ) -> AgenticSearchResponse:
-    raw_results: Sequence[Any] | None = payload.get("results")
-    records: list[SearchRecord] = []
-    if raw_results:
-        records = SearchRecord.parse_list(
-            raw_results, default_collection=payload.get("collection")
-        )
+    """Build an AgenticSearchResponse from raw payload data."""
+
+    results: Sequence[Any] | None = payload.get("results")
+    normalised_results: list[SearchRecord] = []
+    if results:
+        for item in results:
+            try:
+                normalised_results.append(SearchRecord.from_payload(item))
+            except (TypeError, ValidationError) as exc:
+                logger.debug(
+                    "Unexpected search result type %s: %s",
+                    type(item).__name__,
+                    exc,
+                )
+                fallback = {
+                    "id": str(uuid4()),
+                    "content": str(item),
+                    "score": 0.0,
+                }
+                normalised_results.append(SearchRecord.model_validate(fallback))
 
     tools_used: Sequence[str] | None = payload.get("tools_used")
     reasoning: Sequence[str] | None = payload.get("reasoning")
@@ -213,7 +220,7 @@ def _build_search_response(
     return AgenticSearchResponse(
         success=success,
         session_id=session_id,
-        results=records,
+        results=normalised_results,
         answer=payload.get("answer"),
         confidence=payload.get("confidence"),
         tools_used=list(tools_used or []),
@@ -228,6 +235,8 @@ def _build_search_response(
 def _build_analysis_response(
     *, success: bool, analysis_id: str, payload: Mapping[str, Any]
 ) -> AgenticAnalysisResponse:
+    """Build an AgenticAnalysisResponse from raw payload data."""
+
     return AgenticAnalysisResponse(
         success=success,
         analysis_id=analysis_id,
@@ -242,6 +251,8 @@ def _build_analysis_response(
 
 
 def _normalise_errors(values: Sequence[Any] | None) -> list[dict[str, Any]]:
+    """Coerce error payloads into a stable list of dictionaries."""
+
     items: Sequence[Any] = values or []
     normalised: list[dict[str, Any]] = []
     for item in items:
@@ -253,6 +264,8 @@ def _normalise_errors(values: Sequence[Any] | None) -> list[dict[str, Any]]:
 
 
 def _safe_latency(metrics: Mapping[str, Any]) -> float:
+    """Extract a safe latency value from the metrics dictionary."""
+
     value = metrics.get("latency_ms", 0.0)
     try:
         return float(value)
@@ -262,8 +275,10 @@ def _safe_latency(metrics: Mapping[str, Any]) -> float:
 
 
 async def _run_search(
-    request: AgenticSearchRequest, client_manager: ClientManager
+    request: AgenticSearchRequest, graph_runner: GraphRunner | None = None
 ) -> AgenticSearchResponse:
+    """Execute an agentic search and return the response."""
+
     call_id = str(uuid4())
     logger.info(
         "agentic_search started call_id=%s session_id=%s collection=%s",
@@ -271,7 +286,7 @@ async def _run_search(
         request.session_id,
         request.collection,
     )
-    runner = await _get_runner(client_manager)
+    runner = await _get_runner(graph_runner)
     try:
         outcome: GraphSearchOutcome = await runner.run_search(
             query=request.query,
@@ -362,15 +377,17 @@ async def _run_search(
 
 
 async def _run_analysis(
-    request: AgenticAnalysisRequest, client_manager: ClientManager
+    request: AgenticAnalysisRequest, graph_runner: GraphRunner | None = None
 ) -> AgenticAnalysisResponse:
+    """Execute an agentic analysis and return the response."""
+
     call_id = str(uuid4())
     logger.info(
         "agentic_analysis started call_id=%s session_id=%s",
         call_id,
         request.session_id,
     )
-    runner = await _get_runner(client_manager)
+    runner = await _get_runner(graph_runner)
     try:
         outcome: GraphAnalysisOutcome = await runner.run_analysis(
             query=request.query,
@@ -483,7 +500,10 @@ def _parse_operation_samples(
     return parsed
 
 
-def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
+def register_tools(
+    mcp: FastMCP,
+    graph_runner: GraphRunner | None = None,
+) -> None:
     """Register the agentic RAG tools with the FastMCP server."""
 
     @mcp.tool(
@@ -494,7 +514,7 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
     async def agentic_search(request: AgenticSearchRequest) -> AgenticSearchResponse:
         """Execute the LangGraph-based search workflow."""
 
-        return await _run_search(request, client_manager)
+        return await _run_search(request, graph_runner)
 
     @mcp.tool(
         name="agentic_analysis",
@@ -506,7 +526,7 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
     ) -> AgenticAnalysisResponse:
         """Execute the LangGraph-based analysis workflow."""
 
-        return await _run_analysis(request, client_manager)
+        return await _run_analysis(request, graph_runner)
 
     @mcp.tool(
         name="agent_performance_metrics",

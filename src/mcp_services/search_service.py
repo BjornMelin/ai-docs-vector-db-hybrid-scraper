@@ -7,8 +7,8 @@ from typing import Any
 
 from fastmcp import FastMCP
 
-from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.tools import retrieval, web_search
+from src.services.vector_db.service import VectorStoreService
 
 
 logger = logging.getLogger(__name__)
@@ -17,7 +17,12 @@ logger = logging.getLogger(__name__)
 class SearchService:
     """FastMCP service for retrieval operations."""
 
-    def __init__(self, name: str = "search-service"):
+    def __init__(
+        self,
+        name: str = "search-service",
+        *,
+        vector_service: VectorStoreService | None = None,
+    ):
         self.mcp = FastMCP(
             name,
             instructions=(
@@ -25,19 +30,9 @@ class SearchService:
                 "multi-stage, recommendations, reranking, and web search."
             ),
         )
-        self.client_manager: ClientManager | None = None
-
-    async def initialize(self, client_manager: ClientManager) -> None:
-        self.client_manager = client_manager
-        await self._register_tools()
-        logger.info("SearchService initialized")
-
-    async def _register_tools(self) -> None:
-        if not self.client_manager:
-            raise RuntimeError("SearchService not initialized")
-        retrieval.register_tools(self.mcp, self.client_manager)
-        web_search.register_tools(self.mcp, self.client_manager)
-        logger.info("Registered retrieval + web_search tools")
+        retrieval.register_tools(self.mcp, vector_service=vector_service)
+        web_search.register_tools(self.mcp)
+        logger.info("Search tools registered")
 
     def get_mcp_server(self) -> FastMCP:
         return self.mcp

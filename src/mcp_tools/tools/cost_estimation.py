@@ -3,16 +3,12 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from fastmcp import Context
 
 
 logger = logging.getLogger(__name__)
-
-if TYPE_CHECKING:
-    from src.infrastructure.client_manager import ClientManager
-
 # Current API pricing (as of 2024)
 PRICING = {
     "openai": {
@@ -31,7 +27,7 @@ PRICING = {
 }
 
 
-def register_tools(mcp, client_manager: ClientManager):
+def register_tools(mcp):
     """Register cost estimation tools."""
 
     @mcp.tool()
@@ -54,6 +50,7 @@ def register_tools(mcp, client_manager: ClientManager):
         Returns:
             Cost estimation
         """
+
         try:
             provider = provider.lower()
             if provider not in PRICING:
@@ -119,6 +116,7 @@ def register_tools(mcp, client_manager: ClientManager):
         Returns:
             Pricing information
         """
+
         try:
             if provider:
                 provider = provider.lower()

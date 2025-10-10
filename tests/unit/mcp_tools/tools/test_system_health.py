@@ -32,10 +32,8 @@ def registered_tools(
     mock_mcp.tool.return_value = capture
 
     health_manager = mocker.MagicMock(spec=HealthCheckManager)
-    client_manager = mocker.MagicMock()
-    client_manager.get_health_manager.return_value = health_manager
 
-    register_tools(mock_mcp, client_manager)
+    register_tools(mock_mcp, health_manager=health_manager)
     return tools, cast(HealthCheckManager, health_manager)
 
 
@@ -127,10 +125,12 @@ async def test_get_system_health_reports_manager_failure(
 
     mock_mcp.tool.return_value = capture
 
-    client_manager = mocker.MagicMock()
-    client_manager.get_health_manager.side_effect = RuntimeError("not configured")
+    mocker.patch(
+        "src.mcp_tools.tools.system_health._get_health_manager",
+        side_effect=RuntimeError("not configured"),
+    )
 
-    register_tools(mock_mcp, client_manager)
+    register_tools(mock_mcp)
 
     result = await tools["get_system_health"](mock_context)
 

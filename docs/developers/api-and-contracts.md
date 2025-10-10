@@ -1,13 +1,17 @@
 # API & Contracts
 
-This guide documents the simple profile REST endpoints and the canonical
-response contract used by the retrieval pipeline.
+This guide summarizes the canonical REST surface exposed under `/api/v1` and
+the response contracts produced by the retrieval pipeline. Both supported
+profiles (`simple` and `enterprise`) mount the same versioned routers; the
+profile only influences middleware, rate limits, and which background services
+are initialised.
 
-## 1. REST Endpoints (Simple Profile)
+## 1. REST Endpoints (`/api/v1/*`)
 
-When `AI_DOCS__MODE=simple`, routes under `src/api/routers/simple/` are mounted.
+All endpoints are defined in `src/api/routers/v1/` and backed by container
+managed services from `src/services/dependencies.py`.
 
-### POST /search
+### POST `/api/v1/search`
 
 ```json
 {
@@ -34,26 +38,30 @@ Response (`SearchResponse`):
     }
   ],
   "total_results": 1,
-  "processing_time_ms": 12.5
+  "processing_time_ms": 12.5,
+  "features_used": ["hybrid_search", "rerank"]
 }
 ```
 
-### GET /search
+### GET `/api/v1/search`
 
-Accepts the same parameters as the POST variant (`query`, `collection`, `limit`).
-Returns a canonical `SearchResponse` and serves as a convenient manual test endpoint.
+Accepts the same query parameters as the POST variant (`query`, `collection`,
+`limit`). This route is useful for manual smoke tests.
 
-### Document Endpoints
+### Document management
 
-- `POST /documents` – Adds a document using `VectorStoreService.add_document`.
-- `GET /documents/{id}` – Fetches a document (404 if missing).
-- `DELETE /documents/{id}` – Removes a document and returns a success payload.
-- `GET /documents` – Lists documents with pagination (`limit`, `offset`).
-- `GET /collections` – Lists available collections.
+- `POST /api/v1/documents` – Adds a document using
+  `VectorStoreService.add_document`.
+- `GET /api/v1/documents/{id}` – Fetches a document (404 if missing).
+- `DELETE /api/v1/documents/{id}` – Removes a document and returns a success
+  payload.
+- `GET /api/v1/documents` – Lists documents with pagination (`limit`, `offset`).
+- `GET /api/v1/collections` – Lists available collections.
 
-### GET /health
+### Health
 
-Centralised readiness endpoint powered by `HealthCheckManager`. Example response:
+`GET /health` exposes readiness information collected by `HealthCheckManager`.
+Example payload:
 
 ```json
 {
@@ -77,40 +85,41 @@ Centralised readiness endpoint powered by `HealthCheckManager`. Example response
 }
 ```
 
-## 2. Query Processing Response Contract
+## 2. Search Response Contract
 
-`src.contracts.retrieval.SearchResponse` is the canonical DTO.
+`src.contracts.retrieval.SearchResponse` is the canonical DTO returned by both
+FastAPI routes and MCP tooling.
 
 Fields:
 
-- `records`: `list[src.contracts.retrieval.SearchRecord]` with:
-  - `id`, `content`, optional `title`/`url`
+- `records`: list of `SearchRecord` items providing:
+  - `id`, `content`, optional `title` / `url`
   - `collection`
   - `raw_score` (unnormalised), `normalized_score`
   - `group_id`, `group_rank`, `grouping_applied`
-  - `metadata` (provider-specific annotations, replaces legacy vector payloads)
+  - `metadata` (provider-specific annotations)
 - `total_results`: number of returned records
 - `query`: processed query text
 - `expanded_query`: optional expanded variant
 - `processing_time_ms`: observed latency
-- `features_used`: applied features (`query_expansion`, `score_normalization`, etc.)
+- `features_used`: applied features (`query_expansion`, `score_normalization`,
+  etc.)
 - `grouping_applied`: boolean flag
-- Optional RAG fields: `generated_answer`, `answer_confidence`, `answer_sources`
+- Optional RAG fields: `generated_answer`, `answer_confidence`,
+  `answer_sources`
 
 Legacy DTOs (`QueryProcessingResponse`, multi-collection fan-out) have been
-removed. Clients must supply a single collection per request and use orchestrator
-helpers for multi-tenant behaviour.
+removed. Clients must supply a single collection per request and use
+orchestrator helpers for multi-tenant behaviour.
 
-MCP tooling consumes the same DTOs. Tests covering the simplified pipeline live
-in `tests/unit/services/query_processing/test_orchestrator.py`,
-`tests/unit/services/vector_db/test_service.py` (for grouping fallback), and
-`tests/unit/models/test_search_request.py` for request normalisation helpers.
+MCP tooling consumes the same DTOs. Contract coverage lives in
+`tests/unit/services/query_processing/test_orchestrator.py`,
+`tests/unit/services/vector_db/test_service.py`, and
+`tests/unit/models/test_search_request.py`.
 
-## 3. Enterprise Surface
+## 3. Enterprise Extensions
 
-Enterprise mode mounts additional routers (LangGraph orchestration, MCP tooling).
-See `docs/developers/architecture-and-orchestration.md` for endpoints delivered
-through LangChain/LangGraph and FastMCP.
-
-OpenAPI documentation for the active profile is always available at `/docs` and
-`/openapi.json`.
+Enterprise deployments mount additional routers for LangGraph workflows and MCP
+tooling, but continue to rely on the same `/api/v1` contract. See
+`docs/developers/architecture-and-orchestration.md` for a deep dive into
+extended surfaces.

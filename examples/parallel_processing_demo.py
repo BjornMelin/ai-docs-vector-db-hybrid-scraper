@@ -1,19 +1,16 @@
 #!/usr/bin/env python3
-"""
-Unified Parallel Processing System Demonstration.
+"""Unified Parallel Processing System Demonstration.
 
 This script demonstrates the complete parallel processing system integration,
-combining dependency injection, ClientManager access, performance optimization,
-and comprehensive system monitoring.
+combining dependency injection, performance optimization, and system monitoring.
 
 Portfolio Achievements:
 - 3-5x ML processing speedup through parallelization
 - O(n²) to O(n) algorithm optimization with 80% performance improvement
-- Intelligent caching with LRU and TTL strategies
-- Comprehensive performance monitoring and metrics
+- Caching with LRU and TTL strategies
+- Performance monitoring and metrics
 - Automatic optimization and system health monitoring
 - Full DI container integration
-- ClientManager seamless access
 """
 
 import asyncio
@@ -22,7 +19,6 @@ import time
 from typing import Any
 
 from src.config import load_settings
-from src.infrastructure.client_manager import ClientManager
 from src.infrastructure.container import DependencyContext
 
 
@@ -34,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 async def demonstrate_system_integration():
-    """Demonstrate complete system integration with DI container and ClientManager."""
+    """Demonstrate complete system integration with the DI container."""
     logger.info("🚀 Starting Unified Parallel Processing System Demo")
 
     # Load configuration
@@ -55,33 +51,6 @@ async def demonstrate_system_integration():
 
         # Display system status
         await display_system_status(parallel_system)
-
-        # Test 2: ClientManager Integration
-        logger.info("\n👥 Testing ClientManager Integration")
-        client_manager = ClientManager()
-        await client_manager.initialize()
-
-        try:
-            # Access via ClientManager
-            ps_client = await client_manager.get_parallel_processing_system()
-            if ps_client:
-                logger.info("✅ Parallel processing accessible via ClientManager")
-
-                # Test context manager access
-                async with client_manager.managed_client(
-                    "parallel_processing"
-                ) as managed_client:
-                    if managed_client:
-                        logger.info(
-                            "✅ Parallel processing accessible via context manager"
-                        )
-                    else:
-                        logger.warning("⚠️ Context manager returned None")
-            else:
-                logger.warning("⚠️ Parallel processing not accessible via ClientManager")
-
-        finally:
-            await client_manager.cleanup()
 
         # Test 3: Document Processing with Performance Metrics
         await demonstrate_document_processing(parallel_system)
@@ -355,7 +324,6 @@ async def main():
         logger.info("✅ <100ms API response time optimization")
         logger.info("✅ Comprehensive performance monitoring")
         logger.info("✅ Full DI container integration")
-        logger.info("✅ ClientManager seamless access")
 
     except Exception:
         logger.exception("❌ Demonstration failed")

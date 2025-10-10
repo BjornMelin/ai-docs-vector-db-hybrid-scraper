@@ -33,7 +33,8 @@ from rich.table import Table  # type: ignore[import]
 
 from .chunking import DocumentChunker
 from .config.loader import Settings, get_settings
-from .infrastructure.client_manager import ClientManager
+from .infrastructure.bootstrap import container_session, ensure_container
+from .infrastructure.container import ApplicationContainer
 from .services.embeddings.manager import QualityTier
 from .services.errors import ServiceError
 from .services.logging_config import configure_logging
@@ -93,24 +94,25 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
     def __init__(
         self,
         config: Settings,
-        client_manager: ClientManager,
         collection_name: str = "bulk_embeddings",
         state_file: Path | None = None,
+        *,
+        container: ApplicationContainer | None = None,
     ):
         """Initialize bulk embedder.
 
         Args:
             config: Unified configuration
-            client_manager: Client manager for services
             collection_name: Target vector collection name
             state_file: Optional state file for resumability
+            container: Optional DI container override (useful for testing)
         """
 
         self.config = config
-        self.client_manager = client_manager
         self.collection_name = collection_name
         self.state_file = state_file or Path(".crawl4ai_state.json")
         self.state = self._load_state()
+        self._container_override = container
 
         # Services (initialized in async context)
         self.crawl_manager: Any | None = None
@@ -157,19 +159,30 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
     async def initialize_services(self) -> None:
         """Initialize all required services."""
 
-        # Get services from client manager
+        if self._container_override is not None:
+            container = self._container_override
+        else:
+            container = await ensure_container(settings=self.config)
+
         if self.crawl_manager is None:
-            self.crawl_manager = await self.client_manager.get_crawl_manager()
+            self.crawl_manager = container.browser_manager()
+        if self.crawl_manager is None:
+            raise RuntimeError("Crawl manager unavailable")
 
         if self.embedding_manager is None:
-            self.embedding_manager = await self.client_manager.get_embedding_manager()
+            self.embedding_manager = container.embedding_manager()
+        if self.embedding_manager is None:
+            raise RuntimeError("Embedding manager unavailable")
 
-        self.vector_service = await self.client_manager.get_vector_store_service()
-        if self.vector_service and not self.vector_service.is_initialized():
-            await self.vector_service.initialize()
-
+        self.vector_service = container.vector_store_service()
         if self.vector_service is None:
             raise RuntimeError("Vector store service unavailable")
+
+        if (
+            hasattr(self.vector_service, "is_initialized")
+            and not self.vector_service.is_initialized()
+        ):
+            await self.vector_service.initialize()
 
         # Create collection if it doesn't exist
         collections = await self.vector_service.list_collections()
@@ -732,54 +745,51 @@ async def _async_main(  # pylint: disable=too-many-arguments,too-many-locals
     resume: bool = True,
 ) -> None:
     """Async main function."""
-    # Initialize client manager
-    client_manager = ClientManager()
+    async with container_session(settings=config, force_reload=True) as container:
+        embedder = BulkEmbedder(
+            config=config,
+            collection_name=collection,
+            state_file=state_file,
+            container=container,
+        )
 
-    # Create embedder
-    embedder = BulkEmbedder(
-        config=config,
-        client_manager=client_manager,
-        collection_name=collection,
-        state_file=state_file,
-    )
+        # Collect all URLs
+        all_urls = list(urls)
 
-    # Collect all URLs
-    all_urls = list(urls)
+        # Load from file
+        if file:
+            console.print(f"[cyan]Loading URLs from {file}...[/cyan]")
+            file_urls = await embedder.load_urls_from_file(file)
+            all_urls.extend(file_urls)
+            console.print(f"[green]Loaded {len(file_urls)} URLs from file[/green]")
 
-    # Load from file
-    if file:
-        console.print(f"[cyan]Loading URLs from {file}...[/cyan]")
-        file_urls = await embedder.load_urls_from_file(file)
-        all_urls.extend(file_urls)
-        console.print(f"[green]Loaded {len(file_urls)} URLs from file[/green]")
+        # Load from sitemap
+        if sitemap:
+            console.print(f"[cyan]Loading URLs from sitemap {sitemap}...[/cyan]")
+            sitemap_urls = await embedder.load_urls_from_sitemap(sitemap)
+            all_urls.extend(sitemap_urls)
+            console.print(
+                f"[green]Loaded {len(sitemap_urls)} URLs from sitemap[/green]"
+            )
 
-    # Load from sitemap
-    if sitemap:
-        console.print(f"[cyan]Loading URLs from sitemap {sitemap}...[/cyan]")
-        sitemap_urls = await embedder.load_urls_from_sitemap(sitemap)
-        all_urls.extend(sitemap_urls)
-        console.print(f"[green]Loaded {len(sitemap_urls)} URLs from sitemap[/green]")
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_urls = []
+        for url in all_urls:
+            if url not in seen:
+                seen.add(url)
+                unique_urls.append(url)
 
-    # Remove duplicates while preserving order
-    seen = set()
-    unique_urls = []
-    for url in all_urls:
-        if url not in seen:
-            seen.add(url)
-            unique_urls.append(url)
+        console.print(
+            f"\n[bold]Total unique URLs to process: {len(unique_urls)}[/bold]"
+        )
 
-    console.print(f"\n[bold]Total unique URLs to process: {len(unique_urls)}[/bold]")
-
-    try:
         # Run the pipeline
         await embedder.run(
             urls=unique_urls,
             max_concurrent=concurrent,
             resume=resume,
         )
-    finally:
-        # Cleanup
-        await client_manager.cleanup()
 
 
 if __name__ == "__main__":

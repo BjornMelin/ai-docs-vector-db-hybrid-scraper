@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from types import SimpleNamespace
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
@@ -130,14 +131,6 @@ def documents_env(monkeypatch) -> SimpleNamespace:  # pylint: disable=too-many-l
     )
     monkeypatch.setattr(documents, "DocumentChunker", DummyChunker)
 
-    client_manager = Mock()
-    client_manager.get_vector_store_service = AsyncMock(return_value=vector_service)
-    client_manager.get_cache_manager = AsyncMock(return_value=cache_manager)
-    client_manager.get_crawl_manager = AsyncMock(return_value=crawl_manager)
-    client_manager.get_content_intelligence_service = AsyncMock(
-        return_value=content_intelligence
-    )
-
     mock_mcp = MagicMock()
     registered: dict[str, Callable] = {}
 
@@ -146,7 +139,13 @@ def documents_env(monkeypatch) -> SimpleNamespace:  # pylint: disable=too-many-l
         return func
 
     mock_mcp.tool.return_value = capture
-    documents.register_tools(mock_mcp, client_manager)
+    documents.register_tools(
+        mock_mcp,
+        vector_service=cast(Any, vector_service),
+        cache_manager=cast(Any, cache_manager),
+        crawl_manager=cast(Any, crawl_manager),
+        content_intelligence_service=cast(Any, content_intelligence),
+    )
 
     ctx = Mock()
     ctx.info = AsyncMock()
@@ -160,10 +159,6 @@ def documents_env(monkeypatch) -> SimpleNamespace:  # pylint: disable=too-many-l
         cache_manager=cache_manager,
         crawl_manager=crawl_manager,
         content_intelligence=content_intelligence,
-        cache_dependency=client_manager.get_cache_manager,
-        crawl_dependency=client_manager.get_crawl_manager,
-        content_dependency=client_manager.get_content_intelligence_service,
-        client_manager=client_manager,
         context=ctx,
         validator=validator,
     )

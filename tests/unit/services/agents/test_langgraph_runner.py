@@ -140,7 +140,6 @@ async def test_run_search_produces_outcome() -> None:
         )
     ]
     runner = GraphRunner(
-        client_manager=None,
         discovery=StubDiscovery(capabilities),
         tool_service=StubToolService(),
         retrieval_helper=StubRetrievalHelper(),
@@ -174,7 +173,6 @@ async def test_run_analysis_returns_summary() -> None:
         )
     ]
     runner = GraphRunner(
-        client_manager=None,
         discovery=StubDiscovery(capabilities),
         tool_service=StubToolService(),
         retrieval_helper=StubRetrievalHelper(),
@@ -205,7 +203,6 @@ async def test_run_search_surfaces_structured_tool_error() -> None:
         )
     ]
     runner = GraphRunner(
-        client_manager=None,
         discovery=StubDiscovery(capabilities),
         tool_service=FailingToolService(),
         retrieval_helper=StubRetrievalHelper(),
@@ -237,7 +234,6 @@ async def test_run_search_times_out() -> None:
     ]
     slow_service = SlowToolService()
     runner = GraphRunner(
-        client_manager=None,
         discovery=StubDiscovery(capabilities),
         tool_service=slow_service,
         retrieval_helper=StubRetrievalHelper(),
@@ -268,7 +264,6 @@ async def test_discovery_failure_returns_structured_error() -> None:
 
     discovery = BrokenDiscovery()
     runner = GraphRunner(
-        client_manager=None,
         discovery=discovery,
         tool_service=StubToolService(),
         retrieval_helper=StubRetrievalHelper(),

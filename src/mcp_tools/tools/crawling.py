@@ -10,7 +10,6 @@ from typing import Any
 
 from fastmcp import Context
 
-from src.infrastructure.client_manager import ClientManager
 from src.services.dependencies import get_crawl_manager
 
 
@@ -32,8 +31,9 @@ def _raise_crawling_failed(tier: str) -> None:
 
 
 def register_tools(  # pylint: disable=too-many-statements
-    mcp, client_manager: ClientManager
-):
+    mcp,
+    crawl_manager: Any | None = None,
+) -> None:
     """Register 5-tier crawling tools with the MCP server."""
 
     @mcp.tool()
@@ -57,6 +57,7 @@ def register_tools(  # pylint: disable=too-many-statements
         Returns:
             Tier selection results with reasoning and optimization metadata
         """
+
         try:
             # Validate URL
             parsed_url = urllib.parse.urlparse(url)
@@ -67,8 +68,7 @@ def register_tools(  # pylint: disable=too-many-statements
             if ctx:
                 await ctx.info(f"Analyzing optimal tier for URL: {validated_url}")
 
-            # Get browser manager for tier selection
-            # browser_manager = await client_manager.get_browser_manager()
+            # Get browser manager for tier selection if deeper logic is reintroduced
 
             # Analyze URL characteristics for tier selection
             url_analysis = {
@@ -156,7 +156,7 @@ def register_tools(  # pylint: disable=too-many-statements
                 await ctx.info(f"Starting enhanced 5-tier crawl for: {validated_url}")
 
             # Get crawling manager
-            crawl_manager = await get_crawl_manager(client_manager)
+            manager = await get_crawl_manager(crawl_manager)
 
             # Intelligent tier selection if not specified
             if tier is None and autonomous_optimization:
@@ -171,7 +171,7 @@ def register_tools(  # pylint: disable=too-many-statements
                 resolved_tier = "crawl4ai"  # Default
 
             # Perform crawling with selected tier
-            crawl_result = await crawl_manager.scrape_url(
+            crawl_result = await manager.scrape_url(
                 validated_url,
                 tier=resolved_tier,
                 enhanced_processing=autonomous_optimization,
@@ -235,7 +235,8 @@ def register_tools(  # pylint: disable=too-many-statements
         """Get 5-tier crawling capabilities and status."""
 
         try:
-            # browser_manager = await client_manager.get_browser_manager()
+            # Uncomment line below if direct manager access is needed
+            # browser_manager = await get_crawl_manager()
 
             return {
                 "available_tiers": [

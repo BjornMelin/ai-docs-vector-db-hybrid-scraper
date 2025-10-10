@@ -14,12 +14,6 @@ from rich.panel import Panel
 from src.cli.commands import batch as batch_module
 
 
-def _client_manager_stub() -> object:
-    """Return a unique placeholder client manager instance."""
-
-    return object()
-
-
 def _always_true(*_args: Any, **_kwargs: Any) -> bool:
     """Return ``True`` regardless of inputs."""
 
@@ -66,12 +60,11 @@ def test_complete_collection_name_returns_filtered_items(
         async def cleanup(self) -> None:  # pragma: no cover - nothing to clean
             return None
 
-    monkeypatch.setattr(batch_module, "ClientManager", _client_manager_stub)
-
-    def _vector_manager(_client: object) -> _VectorDBStub:
-        return _VectorDBStub()
-
-    monkeypatch.setattr(batch_module, "VectorDBManager", _vector_manager)
+    monkeypatch.setattr(
+        batch_module,
+        "_init_vector_manager",
+        _VectorDBStub,
+    )
     ctx = click.Context(batch_module.batch, obj={"config": object()})
     param = cast(click.Parameter, None)
 
@@ -92,12 +85,7 @@ def test_complete_collection_name_handles_errors(
         async def cleanup(self) -> None:  # pragma: no cover - nothing to clean
             return None
 
-    monkeypatch.setattr(batch_module, "ClientManager", _client_manager_stub)
-
-    def _vector_manager(_client: object) -> _VectorDBStub:
-        return _VectorDBStub()
-
-    monkeypatch.setattr(batch_module, "VectorDBManager", _vector_manager)
+    monkeypatch.setattr(batch_module, "_init_vector_manager", _VectorDBStub())
     ctx = click.Context(batch_module.batch, obj={"config": object()})
     param = cast(click.Parameter, None)
 
@@ -232,20 +220,17 @@ def test_create_collections_enqueues_operations(
     """Confirmed requests should enqueue batch operations and execute them."""
 
     monkeypatch.setattr(batch_module, "Confirm", SimpleNamespace(ask=_always_true))
-    monkeypatch.setattr(batch_module, "ClientManager", _client_manager_stub)
-
-    db_instances: list[_VectorDBStub] = []
+    db_manager = SimpleNamespace(calls=[])
 
     class _VectorDBStub:
-        def __init__(self, _client: object):
-            self.calls: list[tuple[str, int]] = []
-            db_instances.append(self)
-
         async def create_collection(self, name: str, dimension: int) -> bool:
-            self.calls.append((name, dimension))
+            db_manager.calls.append((name, dimension))
             return True
 
-    monkeypatch.setattr(batch_module, "VectorDBManager", _VectorDBStub)
+        async def cleanup(self) -> None:
+            return None
+
+    monkeypatch.setattr(batch_module, "_init_vector_manager", _VectorDBStub())
 
     queue_instances: list[_QueueStub] = []
 
@@ -294,7 +279,7 @@ def test_create_collections_enqueues_operations(
         "Create beta",
     ]
     assert queue.confirm_flag is False
-    assert db_instances[0].calls == [("alpha", 128), ("beta", 128)]
+    assert db_manager.calls == [("alpha", 128), ("beta", 128)]
 
 
 def test_delete_collections_aborts_without_double_confirmation(
@@ -329,22 +314,17 @@ def test_delete_collections_enqueues_deletions(
 ) -> None:
     """The delete command should enqueue operations when confirmation is bypassed."""
 
-    monkeypatch.setattr(batch_module, "ClientManager", _client_manager_stub)
+    db_manager = SimpleNamespace(deleted=[])
 
     class _VectorDBStub:
-        def __init__(self, _client: object):
-            self.deleted: list[str] = []
-
         async def delete_collection(self, name: str) -> bool:
-            self.deleted.append(name)
+            db_manager.deleted.append(name)
             return True
 
-    db_instance = _VectorDBStub(object())
+        async def cleanup(self) -> None:
+            return None
 
-    def _vector_manager(_client: object) -> _VectorDBStub:
-        return db_instance
-
-    monkeypatch.setattr(batch_module, "VectorDBManager", _vector_manager)
+    monkeypatch.setattr(batch_module, "_init_vector_manager", _VectorDBStub())
 
     queue_instances: list[_QueueStub] = []
 
@@ -389,4 +369,4 @@ def test_delete_collections_enqueues_deletions(
         "Delete alpha",
         "Delete beta",
     ]
-    assert db_instance.deleted == ["alpha", "beta"]
+    assert db_manager.deleted == ["alpha", "beta"]

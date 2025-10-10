@@ -57,19 +57,11 @@ class TestEmbeddingManagerBenchmarks:
 
         return config
 
-    @pytest.fixture
-    def mock_client_manager(self):
-        """Create a mock client manager."""
-        return MagicMock()
-
-    def test_load_custom_benchmarks_success(
-        self, mock_config, mock_client_manager, tmp_path
-    ):
+    def test_load_custom_benchmarks_success(self, mock_config, tmp_path):
         """Test successful loading of custom benchmarks."""
         # Create embedding manager
         manager = EmbeddingManager(
             config=mock_config,
-            client_manager=mock_client_manager,
         )
 
         # Verify initial benchmarks
@@ -140,26 +132,16 @@ class TestEmbeddingManagerBenchmarks:
         assert model1["quality_score"] == 95
         assert model1["avg_latency_ms"] == 25
 
-    def test_load_custom_benchmarks_file_not_found(
-        self, mock_config, mock_client_manager
-    ):
+    def test_load_custom_benchmarks_file_not_found(self, mock_config):
         """Test loading custom benchmarks when file doesn't exist."""
-        manager = EmbeddingManager(
-            config=mock_config,
-            client_manager=mock_client_manager,
-        )
+        manager = EmbeddingManager(config=mock_config)
 
         with pytest.raises(FileNotFoundError):
             manager.load_custom_benchmarks("/non/existent/file.json")
 
-    def test_load_custom_benchmarks_invalid_json(
-        self, mock_config, mock_client_manager, tmp_path
-    ):
+    def test_load_custom_benchmarks_invalid_json(self, mock_config, tmp_path):
         """Test loading custom benchmarks with invalid JSON."""
-        manager = EmbeddingManager(
-            config=mock_config,
-            client_manager=mock_client_manager,
-        )
+        manager = EmbeddingManager(config=mock_config)
 
         # Create file with invalid JSON
         benchmark_file = tmp_path / "invalid.json"
@@ -170,13 +152,10 @@ class TestEmbeddingManagerBenchmarks:
             manager.load_custom_benchmarks(benchmark_file)
 
     def test_load_custom_benchmarks_preserves_previous_on_error(
-        self, mock_config, mock_client_manager, tmp_path
+        self, mock_config, tmp_path
     ):
         """Test that previous benchmarks are preserved if loading fails."""
-        manager = EmbeddingManager(
-            config=mock_config,
-            client_manager=mock_client_manager,
-        )
+        manager = EmbeddingManager(config=mock_config)
 
         # Store original benchmarks
         original_benchmarks = manager._benchmarks.copy()
@@ -197,14 +176,9 @@ class TestEmbeddingManagerBenchmarks:
         assert manager._smart_config == original_smart_config
 
     @patch("src.services.embeddings.manager.logger")
-    def test_load_custom_benchmarks_logging(
-        self, mock_logger, mock_config, mock_client_manager, tmp_path
-    ):
+    def test_load_custom_benchmarks_logging(self, mock_logger, mock_config, tmp_path):
         """Test that loading custom benchmarks logs appropriate messages."""
-        manager = EmbeddingManager(
-            config=mock_config,
-            client_manager=mock_client_manager,
-        )
+        manager = EmbeddingManager(config=mock_config)
 
         # Create minimal valid benchmark file
         custom_data = {
@@ -254,13 +228,10 @@ class TestEmbeddingManagerBenchmarks:
         assert "2 models" in log_message
 
     def test_load_custom_benchmarks_integration_with_smart_selection(
-        self, mock_config, mock_client_manager, tmp_path
+        self, mock_config, tmp_path
     ):
         """Test that loaded benchmarks integrate properly with  selection."""
-        manager = EmbeddingManager(
-            config=mock_config,
-            client_manager=mock_client_manager,
-        )
+        manager = EmbeddingManager(config=mock_config)
 
         # Create custom benchmark with specific models
         custom_data = {
@@ -323,7 +294,7 @@ class TestEmbeddingManagerBenchmarks:
         mock_openai_provider.model_name = "high-quality-model"
         mock_local_provider = MagicMock()
         mock_local_provider.model_name = "fast-cheap-model"
-        manager.providers = {
+        manager._provider_registry.providers = {
             "openai": mock_openai_provider,
             "fastembed": mock_local_provider,
         }

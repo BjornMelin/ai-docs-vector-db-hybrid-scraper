@@ -29,7 +29,8 @@ from .usage import UsageRecord, UsageStats, UsageTracker
 
 
 if TYPE_CHECKING:
-    from src.infrastructure.client_manager import ClientManager
+    from openai import AsyncOpenAI
+
     from src.services.cache import CacheManager as CacheManagerType
     from src.services.cache.embedding_cache import EmbeddingCache
 else:  # pragma: no cover - runtime fallback for optional cache dependency
@@ -51,26 +52,32 @@ class EmbeddingManager:
     def __init__(
         self,
         config: Settings,
-        client_manager: "ClientManager",
+        *,
+        openai_client: "AsyncOpenAI | None" = None,
+        cache_manager: "CacheManagerType | None" = None,
         budget_limit: float | None = None,
     ):
         """Initializes the embedding manager.
 
         Args:
             config: Configuration object with provider settings and selection rules.
-            client_manager: Manages shared HTTP clients.
+            openai_client: Optional preconfigured OpenAI async client.
+            cache_manager: Optional externally managed CacheManager instance.
             budget_limit: Daily budget limit in USD, if set.
         """
 
         self.config = config
         self._initialized = False
-        self._client_manager = client_manager
         self._usage: UsageTracker | None = None
         self._budget_limit = budget_limit
 
         # Initialize cache manager if caching is enabled
-        self.cache_manager: CacheManagerType | None = None
-        if config.cache.enable_caching and CacheManager is not None:
+        self.cache_manager: CacheManagerType | None = cache_manager
+        if (
+            self.cache_manager is None
+            and config.cache.enable_caching
+            and CacheManager is not None
+        ):
             dragonfly_url_config = getattr(config.cache, "dragonfly_url", None)
             dragonfly_url = (
                 str(dragonfly_url_config)
@@ -86,7 +93,7 @@ class EmbeddingManager:
             cache_ttl_seconds = getattr(config.cache, "cache_ttl_seconds", {})
             cache_root = Path(getattr(config, "cache_dir", Path("cache")))
             memory_threshold = getattr(config.cache, "memory_pressure_threshold", None)
-            cache_manager = CacheManager(
+            generated_cache_manager = CacheManager(
                 dragonfly_url=dragonfly_url,
                 enable_local_cache=enable_local_cache,
                 enable_distributed_cache=enable_distributed_cache,
@@ -96,7 +103,7 @@ class EmbeddingManager:
                 local_cache_path=cache_root / "embeddings",
                 memory_pressure_threshold=memory_threshold,
             )
-            self.cache_manager = cast(CacheManagerType, cache_manager)
+            self.cache_manager = cast(CacheManagerType, generated_cache_manager)
 
         # Load model benchmarks and selection configuration from config
         self._benchmarks: dict[str, dict[str, Any]] = getattr(
@@ -107,7 +114,7 @@ class EmbeddingManager:
         self._selection = SelectionEngine(self._smart_config, self._benchmarks)
         self._provider_registry = ProviderRegistry(
             config=config,
-            client_manager=client_manager,
+            openai_client=openai_client,
             factories=None,
         )
         pipeline_context = PipelineContext(
@@ -143,24 +150,13 @@ class EmbeddingManager:
             self._pipeline.set_usage_tracker(self._usage)
         return self._usage.stats
 
-    @property
-    def providers(self) -> dict[str, EmbeddingProvider]:
-        """Return the provider registry for compatibility with legacy tests."""
-
-        return self._provider_registry.providers
-
-    @providers.setter
-    def providers(self, value: dict[str, EmbeddingProvider]) -> None:
-        """Allow tests to replace provider map directly."""
-
-        self._provider_registry.providers = value
-
     async def initialize(self) -> None:
         """Initializes available providers.
 
         Initializes OpenAI provider if API key is available and FastEmbed provider
         for local embeddings. At least one provider must initialize successfully.
         """
+
         if self._initialized:
             return
 
@@ -181,6 +177,7 @@ class EmbeddingManager:
         Shuts down all initialized providers and closes cache manager
         if initialized. Errors during cleanup are logged but not raised.
         """
+
         await self._provider_registry.cleanup()
         self._initialized = False
 
@@ -212,6 +209,7 @@ class EmbeddingManager:
         Returns:
             tuple: (provider, model_name, estimated_cost, reasoning)
         """
+
         options = GenerationOptions(
             quality_tier=quality_tier,
             provider_name=provider_name,
@@ -484,10 +482,11 @@ class EmbeddingManager:
 
         costs = {}
 
+        provider_map = self._provider_registry.providers
         if provider_name:
-            providers = {provider_name: self.providers.get(provider_name)}
+            providers = {provider_name: provider_map.get(provider_name)}
         else:
-            providers = self.providers
+            providers = provider_map
 
         for name, provider in providers.items():
             if provider:
@@ -506,8 +505,9 @@ class EmbeddingManager:
         Returns:
             dict[str, dict[str, object]]: Provider information
         """
-        info = {}
-        for name, provider in self.providers.items():
+        info: dict[str, dict[str, object]] = {}
+        provider_map = self._provider_registry.providers
+        for name, provider in provider_map.items():
             info[name] = {
                 "model": provider.model_name,
                 "dimensions": provider.dimensions,
@@ -539,8 +539,10 @@ class EmbeddingManager:
         # Simple heuristic-based provider selection
         estimated_tokens = text_length / 4
 
+        provider_map = self._provider_registry.providers
+
         candidates = []
-        for name, provider in self.providers.items():
+        for name, provider in provider_map.items():
             cost = estimated_tokens * provider.cost_per_token
 
             # Apply budget constraint
@@ -560,7 +562,7 @@ class EmbeddingManager:
             raise EmbeddingServiceError(msg)
 
         # Apply selection heuristics
-        if quality_required and "openai" in self.providers:
+        if quality_required and "openai" in provider_map:
             return "openai"
 
         # Prefer local processing for small texts
@@ -614,7 +616,7 @@ class EmbeddingManager:
         )
         try:
             return self._selection.recommend(
-                providers=self.providers,
+                providers=self._provider_registry.providers,
                 text_analysis=text_analysis,
                 params=params,
             )

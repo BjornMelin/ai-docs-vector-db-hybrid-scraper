@@ -11,7 +11,7 @@ from fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
 from src.config.loader import Settings, get_settings
-from src.infrastructure.client_manager import ClientManager
+from src.services.dependencies import get_rag_generator
 from src.services.rag.generator import RAGGenerator
 from src.services.rag.models import RAGRequest, RAGResult
 
@@ -69,6 +69,15 @@ class RAGMetricsResponse(BaseModel):
     )
 
 
+async def _resolve_rag_generator(generator: RAGGenerator | None = None) -> RAGGenerator:
+    """Return the RAG generator instance."""
+
+    resolved = await get_rag_generator(generator)
+    if not isinstance(resolved, RAGGenerator):
+        raise RuntimeError("RAG generator is unavailable")
+    return resolved
+
+
 def _ensure_rag_enabled(config: Settings) -> None:
     """Validate that RAG is enabled in the active configuration."""
 
@@ -109,7 +118,10 @@ def _build_rag_answer_response(result: RAGResult) -> RAGAnswerResponse:
     )
 
 
-def register_tools(app: FastMCP, client_manager: ClientManager) -> None:
+def register_tools(
+    app: FastMCP,
+    rag_generator_override: RAGGenerator | None = None,
+) -> None:
     """Register RAG tools with FastMCP app."""
 
     @app.tool()
@@ -131,10 +143,10 @@ def register_tools(app: FastMCP, client_manager: ClientManager) -> None:
         _ensure_rag_enabled(config)
 
         try:
-            rag_generator: RAGGenerator = await client_manager.get_rag_generator()
+            generator = await _resolve_rag_generator(rag_generator_override)
 
             rag_request = _build_rag_service_request(request)
-            result = await rag_generator.generate_answer(rag_request)
+            result = await generator.generate_answer(rag_request)
 
             return _build_rag_answer_response(result)
 
@@ -156,13 +168,14 @@ def register_tools(app: FastMCP, client_manager: ClientManager) -> None:
         Raises:
             RuntimeError: If metrics retrieval fails
         """
+
         config = get_settings()
 
         _ensure_rag_enabled(config)
 
         try:
-            rag_generator: RAGGenerator = await client_manager.get_rag_generator()
-            service_metrics = rag_generator.get_metrics()
+            generator = await _resolve_rag_generator(rag_generator_override)
+            service_metrics = generator.get_metrics()
             return RAGMetricsResponse(
                 generation_count=service_metrics.generation_count,
                 avg_generation_time_ms=service_metrics.avg_generation_time_ms,
@@ -187,6 +200,7 @@ def register_tools(app: FastMCP, client_manager: ClientManager) -> None:
         Raises:
             RuntimeError: If configuration test fails
         """
+
         config = get_settings()
 
         results = {
@@ -204,7 +218,7 @@ def register_tools(app: FastMCP, client_manager: ClientManager) -> None:
             return results
 
         try:
-            await client_manager.get_rag_generator()
+            await _resolve_rag_generator(rag_generator_override)
             results["connectivity_test"] = True
         except Exception as e:  # pragma: no cover - runtime safety
             results["error"] = str(e)
@@ -225,6 +239,7 @@ def register_tools(app: FastMCP, client_manager: ClientManager) -> None:
         Raises:
             RuntimeError: If cache clearing fails
         """
+
         config = get_settings()
 
         if not config.rag.enable_rag:

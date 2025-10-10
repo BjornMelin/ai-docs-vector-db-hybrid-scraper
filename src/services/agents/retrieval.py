@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass
 
 from src.contracts.retrieval import SearchRecord
-from src.infrastructure.client_manager import ClientManager
+from src.services.vector_db.service import VectorStoreService
 
 
 @dataclass(slots=True)
@@ -37,10 +37,29 @@ class RetrievedDocument:
 
 
 class RetrievalHelper:
-    """Query the configured vector store through the client manager."""
+    """Query the configured vector store service."""
 
-    def __init__(self, client_manager: ClientManager) -> None:
-        self._client_manager = client_manager
+    def __init__(
+        self,
+        vector_service: VectorStoreService
+        | Callable[[], Awaitable[VectorStoreService]],
+    ) -> None:
+        self._vector_service: VectorStoreService | None = None
+        if callable(vector_service):
+            self._vector_service_factory = vector_service
+        else:
+            self._vector_service = vector_service
+            self._vector_service_factory = None
+
+    async def _resolve_service(self) -> VectorStoreService:
+        if self._vector_service is not None:
+            return self._vector_service
+        if self._vector_service_factory is None:
+            msg = "Vector service resolver is not configured"
+            raise RuntimeError(msg)
+        service = await self._vector_service_factory()
+        self._vector_service = service
+        return service
 
     async def fetch(self, query: RetrievalQuery) -> Sequence[RetrievedDocument]:
         """Execute a dense retrieval query against the configured vector store.
@@ -53,7 +72,7 @@ class RetrievalHelper:
             Sequence of ``RetrievedDocument`` items sorted by similarity score.
         """
 
-        service = await self._client_manager.get_vector_store_service()
+        service = await self._resolve_service()
         records = await service.search_documents(
             query.collection,
             query.text,

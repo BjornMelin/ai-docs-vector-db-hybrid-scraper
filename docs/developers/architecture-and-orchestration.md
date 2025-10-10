@@ -44,7 +44,7 @@ Core layers:
 graph LR
     subgraph Core Services
         Config[Config loader]
-        ClientMgr[ClientManager]
+        Container[ApplicationContainer]
         Scheduler[Async task scheduler]
     end
     subgraph Application
@@ -54,29 +54,28 @@ graph LR
         EmbeddingMgr[Embedding manager]
         CacheMgr[Dragonfly cache]
     end
-    Config --> ClientMgr
-    ClientMgr --> API
-    ClientMgr --> HybridSearch
-    ClientMgr --> BrowserMgr
-    ClientMgr --> EmbeddingMgr
-    ClientMgr --> CacheMgr
+    Config --> Container
+    Container --> API
+    Container --> HybridSearch
+    Container --> BrowserMgr
+    Container --> EmbeddingMgr
+    Container --> CacheMgr
     HybridSearch --> Qdrant[(Qdrant)]
     BrowserMgr --> AutomationBackends
     EmbeddingMgr --> Providers
 ```
 
-The global `ClientManager` (``src/infrastructure/client_manager.py``) now
-initialises shared infrastructure—vector store, embedding manager, cache
-manager, circuit breaker, content-intelligence service, and project storage—on
-first use. FastAPI lifespan hooks ensure a single manager instance is prepared
-before routers execute, and every dependency helper requests services from that
-singleton. This removes the previous `ServiceRegistry` layer, shaving one level
-of indirection while retaining deterministic startup and teardown semantics.
+The global `ApplicationContainer` (`src/infrastructure/container.py`) provides
+vector store, embedding manager, cache manager, circuit breaker,
+content-intelligence service, project storage, and optional browser/RAG helpers
+via dependency-injector providers. FastAPI lifespans and the MCP server use
+`container_session` (`src/infrastructure/bootstrap.py`) to initialise the
+container once per process and dispose it deterministically; dependency helpers
+resolve services through `Provide[...]` bindings.
 
-`dependency_injector` still wires optional providers (OpenAI, Qdrant, Redis) for
-CLI tooling; however, HTTP request handling now relies on the shared
-`ClientManager` via native FastAPI dependencies. Outside FastAPI, scripts call
-``ensure_client_manager()`` to obtain the shared services.
+CLI tooling and scripts also rely on `ensure_container` / `container_session`
+instead of bespoke managers, keeping lifecycle management for HTTP sessions,
+async clients, and monitoring tasks centralised.
 
 ## 2. LangChain / LangGraph Orchestration
 
@@ -94,7 +93,7 @@ Key collaborators:
 | `DynamicToolDiscovery` | Enumerates MCP tools, classifies capabilities, filters by intent. |
 | `ToolExecutionService` | Executes tools via `langchain_mcp_adapters`, normalises errors/timeouts. |
 | `RetrievalHelper` | Performs dense+sparse retrieval through LangChain abstractions. |
-| `ClientManager` | Provides shared transports, configuration handles, and caches the shared RAG generator for FastAPI dependencies and MCP tooling. |
+| `ApplicationContainer` | Supplies shared transports, configuration handles, and caches the shared RAG generator, vector service, cache manager, and optional integrations for FastAPI dependencies and MCP tooling. |
 
 `RunnableConfig` carries telemetry callbacks, correlation IDs, and per-request
 timeouts. Metrics (`agentic_graph_runs_total`, `agentic_graph_latency_ms`, etc.)
@@ -102,9 +101,9 @@ are emitted in each node via the Prometheus registry.
 
 ### Parallel Coordination
 
-`agentic.max_parallel_tools` caps simultaneous tool invocations. Results merge
-in execution order; failures are recorded per tool without aborting the run
-unless all tools fail.
+`agentic.max_parallel_tools` caps simultaneous tool invocations. Results merge in
+execution order; failures are recorded per tool without aborting the run unless
+all tools fail.
 
 ### Testing Checklist
 

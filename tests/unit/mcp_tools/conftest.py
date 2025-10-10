@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from collections.abc import Iterable
 from typing import Any
 
@@ -316,61 +315,47 @@ class FakeProjectStorage:
         self._store.pop(pid, None)
 
 
-class FakeClientManager:
-    """Client manager fake."""
+class FakeServiceContainer:
+    """Service container fake mirroring dependency providers."""
 
     def __init__(self) -> None:
-        """Init fakes."""
-
-        self.unified_config = type(
-            "Cfg",
-            (),
-            {
-                "qdrant": type("Q", (), {"url": "http://qdrant"})(),
-                "cache": type("C", (), {"max_items": 100, "redis_url": None})(),
-                "openai": type("O", (), {"api_key": os.getenv("OPENAI_API_KEY")})(),
-                "firecrawl": type(
-                    "F", (), {"api_key": os.getenv("AI_DOCS__FIRECRAWL__API_KEY")}
-                )(),
-            },
-        )()
         self._vector = FakeVectorStoreService()
         self._cache = FakeCache()
         self._crawl = FakeCrawlManager()
         self._embed = FakeEmbeddingManager()
         self._projects = FakeProjectStorage()
 
-    async def get_vector_store_service(self) -> FakeVectorStoreService:
+    def vector_store_service(self) -> FakeVectorStoreService:
         """Return vector service."""
 
         return self._vector
 
-    async def get_cache_manager(self) -> FakeCache:
+    def cache_manager(self) -> FakeCache:
         """Return cache manager."""
 
         return self._cache
 
-    async def get_crawl_manager(self) -> FakeCrawlManager:
+    def browser_manager(self) -> FakeCrawlManager:
         """Return crawl manager."""
 
         return self._crawl
 
-    async def get_embedding_manager(self) -> FakeEmbeddingManager:
+    def embedding_manager(self) -> FakeEmbeddingManager:
         """Return embedding manager."""
 
         return self._embed
 
-    async def get_project_storage(self) -> FakeProjectStorage:
+    def project_storage(self) -> FakeProjectStorage:
         """Return project storage."""
 
         return self._projects
 
 
 @pytest.fixture()
-def fake_client_manager() -> FakeClientManager:
-    """Provide a fake ClientManager."""
+def fake_service_container() -> FakeServiceContainer:
+    """Provide a fake service container."""
 
-    return FakeClientManager()
+    return FakeServiceContainer()
 
 
 @pytest.fixture()

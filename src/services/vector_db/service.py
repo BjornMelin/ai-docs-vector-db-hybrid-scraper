@@ -9,7 +9,7 @@ import statistics
 from collections.abc import Iterable, Mapping, Sequence
 from datetime import UTC, datetime
 from enum import Enum
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, cast
 from uuid import uuid4
 
 from langchain_core.documents import Document
@@ -33,10 +33,6 @@ from .payload_schema import (
 from .types import CollectionSchema, TextDocument, VectorMatch, VectorRecord
 
 
-if TYPE_CHECKING:  # pragma: no cover - import cycle guard
-    from src.infrastructure.client_manager import ClientManager
-
-
 logger = logging.getLogger(__name__)
 
 
@@ -47,13 +43,13 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         self,
         *,
         config: Settings,
-        client_manager: ClientManager,
+        async_qdrant_client: AsyncQdrantClient,
         embeddings_provider: EmbeddingProvider | None = None,
     ) -> None:
         """Initialize the VectorStoreService."""
 
         super().__init__(config)
-        self._client_manager = client_manager
+        self.collection_name: str | None = None
         self._embeddings = (
             embeddings_provider
             if embeddings_provider is not None
@@ -61,7 +57,7 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
                 model_name=getattr(config.fastembed, "model", "BAAI/bge-small-en-v1.5")
             )
         )
-        self._async_client: AsyncQdrantClient | None = None
+        self._async_client: AsyncQdrantClient | None = async_qdrant_client
         self._sync_client: QdrantClient | None = None
         self._vector_store: QdrantVectorStore | None = None
 
@@ -71,8 +67,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         if self.is_initialized():
             return
 
-        await self._client_manager.initialize()
-        self._async_client = await self._client_manager.get_qdrant_client()
         await self._embeddings.initialize()
         cfg = self._require_qdrant_config()
         adapter = self._require_embedding_adapter()

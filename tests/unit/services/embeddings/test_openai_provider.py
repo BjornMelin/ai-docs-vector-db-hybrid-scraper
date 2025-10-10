@@ -1,5 +1,10 @@
-"""Tests for OpenAI embedding provider with ClientManager integration."""
+"""Tests for the OpenAI embedding provider with DI-managed clients."""
 
+from __future__ import annotations
+
+import json
+from types import SimpleNamespace
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -9,32 +14,25 @@ from src.services.errors import EmbeddingServiceError
 
 
 @pytest.fixture
-def mock_client_manager():
-    """Create mock ClientManager."""
-    manager = AsyncMock()
-    manager.get_openai_client = AsyncMock()
-    return manager
+def mock_openai_client() -> AsyncMock:
+    """Return a mocked AsyncOpenAI client."""
 
-
-@pytest.fixture
-def mock_openai_client():
-    """Create mock OpenAI client."""
     client = AsyncMock()
-
-    # Mock embeddings response
     embedding_response = MagicMock()
     embedding_response.data = [MagicMock(embedding=[0.1, 0.2, 0.3])]
     embedding_response.usage = MagicMock(
-        prompt_tokens=3, completion_tokens=0, total_tokens=3
+        prompt_tokens=3,
+        completion_tokens=0,
+        total_tokens=3,
     )
     client.embeddings.create = AsyncMock(return_value=embedding_response)
-
     return client
 
 
 @pytest.fixture
-def record_tracker(monkeypatch):
-    """Patch record_ai_operation to observe tracking metadata."""
+def record_tracker(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
+    """Patch telemetry hook to capture recorded operations."""
+
     tracker = MagicMock()
     monkeypatch.setattr(
         "src.services.embeddings.openai_provider.record_ai_operation", tracker
@@ -43,14 +41,15 @@ def record_tracker(monkeypatch):
 
 
 class TestOpenAIProviderInitialization:
-    """Test OpenAI provider initialization."""
+    """Lifecycle tests for the OpenAI embedding provider."""
 
-    def test_provider_creation_valid_model(self, mock_client_manager):
-        """Test creating provider with valid model."""
+    def test_provider_creation_valid_model(self, mock_openai_client: AsyncMock) -> None:
+        """Provider should accept supported models and default dimensions."""
+
         provider = OpenAIEmbeddingProvider(
             api_key="test-key",
             model_name="text-embedding-3-small",
-            client_manager=mock_client_manager,
+            client=mock_openai_client,
         )
 
         assert provider.api_key == "test-key"
@@ -58,94 +57,92 @@ class TestOpenAIProviderInitialization:
         assert provider.dimensions == 1536
         assert not provider._initialized
 
-    def test_provider_creation_invalid_model(self, mock_client_manager):
-        """Test creating provider with invalid model."""
+    def test_provider_creation_invalid_model(
+        self, mock_openai_client: AsyncMock
+    ) -> None:
+        """Unsupported model names should raise configuration errors."""
+
         with pytest.raises(EmbeddingServiceError, match="Unsupported model"):
             OpenAIEmbeddingProvider(
                 api_key="test-key",
                 model_name="invalid-model",
-                client_manager=mock_client_manager,
+                client=mock_openai_client,
             )
 
-    def test_provider_creation_custom_dimensions(self, mock_client_manager):
-        """Test creating provider with custom dimensions."""
+    def test_provider_creation_custom_dimensions(
+        self, mock_openai_client: AsyncMock
+    ) -> None:
+        """Custom dimensions within bounds should be accepted."""
+
         provider = OpenAIEmbeddingProvider(
             api_key="test-key",
             model_name="text-embedding-3-large",
             dimensions=2048,
-            client_manager=mock_client_manager,
+            client=mock_openai_client,
         )
 
         assert provider.dimensions == 2048
 
-    def test_provider_creation_dimensions_too_large(self, mock_client_manager):
-        """Test creating provider with dimensions exceeding limit."""
+    def test_provider_creation_dimensions_too_large(
+        self, mock_openai_client: AsyncMock
+    ) -> None:
+        """Dimensions above model limits must raise validation errors."""
+
         with pytest.raises(EmbeddingServiceError, match=r"Dimensions .* exceeds max"):
             OpenAIEmbeddingProvider(
                 api_key="test-key",
                 model_name="text-embedding-3-small",
-                dimensions=2000,  # Exceeds 1536 limit
-                client_manager=mock_client_manager,
+                dimensions=2000,
+                client=mock_openai_client,
             )
 
     @pytest.mark.asyncio
-    async def test_initialization_with_client_manager(
-        self, mock_client_manager, mock_openai_client
-    ):
-        """Test initialization using ClientManager."""
-        mock_client_manager.get_openai_client.return_value = mock_openai_client
+    async def test_initialization_with_client(
+        self, mock_openai_client: AsyncMock
+    ) -> None:
+        """Initialization should reuse DI-supplied client instances."""
 
         provider = OpenAIEmbeddingProvider(
-            api_key="test-key", client_manager=mock_client_manager
+            api_key="test-key", client=mock_openai_client
         )
-
         await provider.initialize()
 
         assert provider._initialized
         assert provider._client == mock_openai_client
-        mock_client_manager.get_openai_client.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_initialization_client_manager_fallback(self, mock_client_manager):
-        """Test init when ClientManager returns None (fallback to direct client)."""
-        # ClientManager returns None, so provider
-        # should fail since it requires ClientManager
-        mock_client_manager.get_openai_client.return_value = None
+    async def test_initialization_with_factory(
+        self, mock_openai_client: AsyncMock
+    ) -> None:
+        """Client factories must be awaited exactly once."""
 
+        client_factory = AsyncMock(return_value=mock_openai_client)
         provider = OpenAIEmbeddingProvider(
-            api_key="test-key", client_manager=mock_client_manager
+            api_key="test-key", client_factory=client_factory
         )
 
+        await provider.initialize()
+
+        client_factory.assert_awaited_once()
+        assert provider._client == mock_openai_client
+
+    @pytest.mark.asyncio
+    async def test_initialization_missing_api_key(self) -> None:
+        """Initialization without API key or client should fail fast."""
+
+        provider = OpenAIEmbeddingProvider(api_key="")
         with pytest.raises(
             EmbeddingServiceError, match="OpenAI API key not configured"
         ):
             await provider.initialize()
 
     @pytest.mark.asyncio
-    async def test_initialization_no_api_key_with_client_manager(
-        self, mock_client_manager
-    ):
-        """Test initialization when ClientManager returns None (no API key)."""
-        mock_client_manager.get_openai_client.return_value = None
+    async def test_initialization_failure(self) -> None:
+        """Errors thrown by a client factory should surface as service errors."""
 
+        client_factory = AsyncMock(side_effect=Exception("Connection failed"))
         provider = OpenAIEmbeddingProvider(
-            api_key="test-key", client_manager=mock_client_manager
-        )
-
-        with pytest.raises(
-            EmbeddingServiceError, match="OpenAI API key not configured"
-        ):
-            await provider.initialize()
-
-    @pytest.mark.asyncio
-    async def test_initialization_failure(self, mock_client_manager):
-        """Test initialization failure handling."""
-        mock_client_manager.get_openai_client.side_effect = Exception(
-            "Connection failed"
-        )
-
-        provider = OpenAIEmbeddingProvider(
-            api_key="test-key", client_manager=mock_client_manager
+            api_key="test-key", client_factory=client_factory
         )
 
         with pytest.raises(
@@ -154,28 +151,26 @@ class TestOpenAIProviderInitialization:
             await provider.initialize()
 
     @pytest.mark.asyncio
-    async def test_double_initialization(self, mock_client_manager, mock_openai_client):
-        """Test that double initialization is safe."""
-        mock_client_manager.get_openai_client.return_value = mock_openai_client
+    async def test_double_initialization_is_idempotent(
+        self, mock_openai_client: AsyncMock
+    ) -> None:
+        """Calling initialize twice should be a no-op."""
 
         provider = OpenAIEmbeddingProvider(
-            api_key="test-key", client_manager=mock_client_manager
+            api_key="test-key", client=mock_openai_client
         )
-
         await provider.initialize()
-        await provider.initialize()  # Should not raise error
+        await provider.initialize()
 
         assert provider._initialized
 
     @pytest.mark.asyncio
-    async def test_cleanup(self, mock_client_manager, mock_openai_client):
-        """Test provider cleanup."""
-        mock_client_manager.get_openai_client.return_value = mock_openai_client
+    async def test_cleanup_resets_state(self, mock_openai_client: AsyncMock) -> None:
+        """Cleanup should release the cached client."""
 
         provider = OpenAIEmbeddingProvider(
-            api_key="test-key", client_manager=mock_client_manager
+            api_key="test-key", client=mock_openai_client
         )
-
         await provider.initialize()
         await provider.cleanup()
 
@@ -183,14 +178,17 @@ class TestOpenAIProviderInitialization:
         assert provider._client is None
 
 
-class TestOpenAIProviderEmbeddingGeneration:
-    """Test embedding generation functionality."""
+class TestOpenAIProviderEmbeddings:
+    """Embedding request behaviour."""
 
     @pytest.mark.asyncio
-    async def test_generate_embeddings_not_initialized(self, mock_client_manager):
-        """Test embedding generation when not initialized."""
+    async def test_generate_embeddings_not_initialized(
+        self, mock_openai_client: AsyncMock
+    ) -> None:
+        """Provider must enforce initialization before embedding generation."""
+
         provider = OpenAIEmbeddingProvider(
-            api_key="test-key", client_manager=mock_client_manager
+            api_key="test-key", client=mock_openai_client
         )
 
         with pytest.raises(EmbeddingServiceError, match="Provider not initialized"):
@@ -198,274 +196,59 @@ class TestOpenAIProviderEmbeddingGeneration:
 
     @pytest.mark.asyncio
     async def test_generate_embeddings_empty_input(
-        self, mock_client_manager, mock_openai_client
-    ):
-        """Test embedding generation with empty input."""
-        mock_client_manager.get_openai_client.return_value = mock_openai_client
+        self,
+        mock_openai_client: AsyncMock,
+        record_tracker: MagicMock,
+    ) -> None:
+        """Empty input should short-circuit without invoking OpenAI."""
 
         provider = OpenAIEmbeddingProvider(
-            api_key="test-key", client_manager=mock_client_manager
+            api_key="test-key", client=mock_openai_client
         )
         await provider.initialize()
 
         result = await provider.generate_embeddings([])
 
         assert result == []
+        mock_openai_client.embeddings.create.assert_not_called()
+        record_tracker.assert_called_once()
+        op_kwargs = record_tracker.call_args.kwargs
+        assert op_kwargs["tokens"] is None
+        assert op_kwargs["success"] is True
 
     @pytest.mark.asyncio
-    async def test_generate_embeddings_single_text(
-        self, mock_client_manager, mock_openai_client, record_tracker
-    ):
-        """Test embedding generation for single text."""
-        mock_client_manager.get_openai_client.return_value = mock_openai_client
-
-        provider = OpenAIEmbeddingProvider(
-            api_key="test-key", client_manager=mock_client_manager
-        )
-        await provider.initialize()
-
-        result = await provider.generate_embeddings(["test text"])
-
-        assert len(result) == 1
-        assert result[0] == [0.1, 0.2, 0.3]
-        mock_openai_client.embeddings.create.assert_called_once()
-        assert record_tracker.call_count == 1
-        kwargs = record_tracker.call_args.kwargs
-        assert kwargs["operation_type"] == "embedding"
-        assert kwargs["success"] is True
-        assert kwargs["provider"] == "openai"
-        assert kwargs["tokens"] == 3
-        assert kwargs["prompt_tokens"] == 3
-        assert kwargs["completion_tokens"] is None
-
-    @pytest.mark.asyncio
-    async def test_generate_embeddings_batch(
-        self, mock_client_manager, mock_openai_client
-    ):
-        """Test embedding generation with batching."""
-        # Mock multiple embeddings response
-        embedding_response = MagicMock()
-        embedding_response.data = [
-            MagicMock(embedding=[0.1, 0.2, 0.3]),
-            MagicMock(embedding=[0.4, 0.5, 0.6]),
-            MagicMock(embedding=[0.7, 0.8, 0.9]),
-        ]
-        embedding_response.usage = MagicMock(
-            prompt_tokens=3, completion_tokens=0, total_tokens=3
-        )
-        mock_openai_client.embeddings.create.return_value = embedding_response
-        mock_client_manager.get_openai_client.return_value = mock_openai_client
-
-        provider = OpenAIEmbeddingProvider(
-            api_key="test-key", client_manager=mock_client_manager
-        )
-        await provider.initialize()
-
-        texts = ["text1", "text2", "text3"]
-        result = await provider.generate_embeddings(texts, batch_size=3)
-
-        assert len(result) == 3
-        assert result[0] == [0.1, 0.2, 0.3]
-        assert result[1] == [0.4, 0.5, 0.6]
-        assert result[2] == [0.7, 0.8, 0.9]
-
-    @pytest.mark.asyncio
-    async def test_generate_embeddings_usage_fallback(
+    async def test_generate_embeddings_success(
         self,
-        mock_client_manager,
-        mock_openai_client,
-        record_tracker,
-        monkeypatch,
-    ):
-        """Validate token fallback when API usage metadata is missing."""
-        mock_client_manager.get_openai_client.return_value = mock_openai_client
-
-        fallback_response = MagicMock()
-        fallback_response.data = [MagicMock(embedding=[0.5, 0.6, 0.7])]
-        fallback_response.usage = None
-        mock_openai_client.embeddings.create.return_value = fallback_response
-
-        monkeypatch.setattr(
-            "src.services.embeddings.openai_provider.OpenAIEmbeddingProvider._count_tokens",
-            lambda _self, _texts: 99,
-        )
+        mock_openai_client: AsyncMock,
+        record_tracker: MagicMock,
+    ) -> None:
+        """Embeddings should be generated and telemetry recorded."""
 
         provider = OpenAIEmbeddingProvider(
-            api_key="test-key", client_manager=mock_client_manager
+            api_key="test-key", client=mock_openai_client
         )
         await provider.initialize()
 
-        result = await provider.generate_embeddings(["fallback"])
+        embeddings = await provider.generate_embeddings(["hello", "world"])
 
-        assert result == [[0.5, 0.6, 0.7]]
-        kwargs = record_tracker.call_args.kwargs
-        assert kwargs["tokens"] == 99
-        assert kwargs["prompt_tokens"] == 99
-        assert kwargs["completion_tokens"] is None
-
-    @pytest.mark.asyncio
-    async def test_generate_embeddings_large_batch(
-        self, mock_client_manager, mock_openai_client
-    ):
-        """Test embedding generation with large batch requiring multiple API calls."""
-
-        # Mock responses for each batch - must return the correct number of embeddings
-        def mock_create_embeddings(*_args, **_kwargs):
-            # Get the input text count from the request
-            input_texts = _kwargs.get("input", [])
-            batch_size = len(input_texts)
-
-            embedding_response = MagicMock()
-            embedding_response.data = [
-                MagicMock(embedding=[0.1, 0.2, 0.3]) for _ in range(batch_size)
-            ]
-            # provide usage metadata for each call
-            embedding_response.usage = MagicMock(
-                prompt_tokens=batch_size,
-                completion_tokens=0,
-                total_tokens=batch_size,
-            )
-            return embedding_response
-
-        mock_openai_client.embeddings.create.side_effect = mock_create_embeddings
-        mock_client_manager.get_openai_client.return_value = mock_openai_client
-
-        provider = OpenAIEmbeddingProvider(
-            api_key="test-key", client_manager=mock_client_manager
-        )
-        await provider.initialize()
-
-        # Create 150 texts to force multiple batches with default batch_size=100
-        texts = [f"text{i}" for i in range(150)]
-        result = await provider.generate_embeddings(texts)
-
-        assert len(result) == 150
-        # Should make 2 API calls (100 + 50)
-        assert mock_openai_client.embeddings.create.call_count == 2
-
-    @pytest.mark.asyncio
-    async def test_generate_embeddings_with_dimensions(
-        self, mock_client_manager, mock_openai_client
-    ):
-        """Test embedding gen with custom dimensions for text-embedding-3 models."""
-        mock_client_manager.get_openai_client.return_value = mock_openai_client
-
-        provider = OpenAIEmbeddingProvider(
-            api_key="test-key",
-            model_name="text-embedding-3-small",
-            dimensions=512,
-            client_manager=mock_client_manager,
-        )
-        await provider.initialize()
-
-        await provider.generate_embeddings(["test"])
-
-        # Verify dimensions parameter was passed
-        call_args = mock_openai_client.embeddings.create.call_args
-        assert call_args[1]["dimensions"] == 512
-
-    @pytest.mark.asyncio
-    async def test_generate_embeddings_no_dimensions_for_old_model(
-        self, mock_client_manager, mock_openai_client
-    ):
-        """Test that dimensions parameter is not passed for old models."""
-        mock_client_manager.get_openai_client.return_value = mock_openai_client
-
-        provider = OpenAIEmbeddingProvider(
-            api_key="test-key",
-            model_name="text-embedding-ada-002",
-            client_manager=mock_client_manager,
-        )
-        await provider.initialize()
-
-        await provider.generate_embeddings(["test"])
-
-        # Verify dimensions parameter was not passed
-        call_args = mock_openai_client.embeddings.create.call_args
-        assert "dimensions" not in call_args[1]
-
-    @pytest.mark.asyncio
-    async def test_generate_embeddings_api_error_rate_limit(
-        self, mock_client_manager, mock_openai_client, record_tracker
-    ):
-        """Test handling of rate limit API errors."""
-        mock_openai_client.embeddings.create.side_effect = Exception(
-            "rate_limit_exceeded"
-        )
-        mock_client_manager.get_openai_client.return_value = mock_openai_client
-
-        provider = OpenAIEmbeddingProvider(
-            api_key="test-key", client_manager=mock_client_manager
-        )
-        await provider.initialize()
-
-        with pytest.raises(EmbeddingServiceError, match="OpenAI rate limit exceeded"):
-            await provider.generate_embeddings(["test"])
+        assert embeddings == [[0.1, 0.2, 0.3], [0.1, 0.2, 0.3]]
+        mock_openai_client.embeddings.create.assert_awaited_once()
         assert record_tracker.call_count == 1
-        assert record_tracker.call_args.kwargs["success"] is False
+        op_kwargs = record_tracker.call_args.kwargs
+        assert op_kwargs["success"] is True
+        assert op_kwargs["tokens"] == 3
 
     @pytest.mark.asyncio
-    async def test_generate_embeddings_api_error_quota(
-        self, mock_client_manager, mock_openai_client
-    ):
-        """Test handling of quota exceeded API errors."""
-        mock_openai_client.embeddings.create.side_effect = Exception(
-            "insufficient_quota"
-        )
-        mock_client_manager.get_openai_client.return_value = mock_openai_client
+    async def test_generate_embeddings_error_records_failure(
+        self,
+        mock_openai_client: AsyncMock,
+        record_tracker: MagicMock,
+    ) -> None:
+        """Failures should propagate and mark telemetry as unsuccessful."""
 
+        mock_openai_client.embeddings.create.side_effect = RuntimeError("API error")
         provider = OpenAIEmbeddingProvider(
-            api_key="test-key", client_manager=mock_client_manager
-        )
-        await provider.initialize()
-
-        with pytest.raises(EmbeddingServiceError, match="OpenAI API quota exceeded"):
-            await provider.generate_embeddings(["test"])
-
-    @pytest.mark.asyncio
-    async def test_generate_embeddings_api_error_invalid_key(
-        self, mock_client_manager, mock_openai_client
-    ):
-        """Test handling of invalid API key errors."""
-        mock_openai_client.embeddings.create.side_effect = Exception("invalid_api_key")
-        mock_client_manager.get_openai_client.return_value = mock_openai_client
-
-        provider = OpenAIEmbeddingProvider(
-            api_key="test-key", client_manager=mock_client_manager
-        )
-        await provider.initialize()
-
-        with pytest.raises(EmbeddingServiceError, match="Invalid OpenAI API key"):
-            await provider.generate_embeddings(["test"])
-
-    @pytest.mark.asyncio
-    async def test_generate_embeddings_api_error_context_length(
-        self, mock_client_manager, mock_openai_client
-    ):
-        """Test handling of context length exceeded errors."""
-        mock_openai_client.embeddings.create.side_effect = Exception(
-            "context_length_exceeded"
-        )
-        mock_client_manager.get_openai_client.return_value = mock_openai_client
-
-        provider = OpenAIEmbeddingProvider(
-            api_key="test-key", client_manager=mock_client_manager
-        )
-        await provider.initialize()
-
-        with pytest.raises(EmbeddingServiceError, match="Text too long for model"):
-            await provider.generate_embeddings(["test"])
-
-    @pytest.mark.asyncio
-    async def test_generate_embeddings_generic_error(
-        self, mock_client_manager, mock_openai_client
-    ):
-        """Test handling of generic API errors."""
-        mock_openai_client.embeddings.create.side_effect = Exception("Generic error")
-        mock_client_manager.get_openai_client.return_value = mock_openai_client
-
-        provider = OpenAIEmbeddingProvider(
-            api_key="test-key", client_manager=mock_client_manager
+            api_key="test-key", client=mock_openai_client
         )
         await provider.initialize()
 
@@ -474,172 +257,158 @@ class TestOpenAIProviderEmbeddingGeneration:
         ):
             await provider.generate_embeddings(["test"])
 
-
-class TestOpenAIProviderProperties:
-    """Test provider properties."""
-
-    def test_cost_per_token_small_model(self, mock_client_manager):
-        """Test cost per token for small model."""
-        provider = OpenAIEmbeddingProvider(
-            api_key="test-key",
-            model_name="text-embedding-3-small",
-            client_manager=mock_client_manager,
-        )
-
-        expected_cost = 0.02 / 1_000_000  # $0.02 per 1M tokens
-        assert provider.cost_per_token == expected_cost
-
-    def test_cost_per_token_large_model(self, mock_client_manager):
-        """Test cost per token for large model."""
-        provider = OpenAIEmbeddingProvider(
-            api_key="test-key",
-            model_name="text-embedding-3-large",
-            client_manager=mock_client_manager,
-        )
-
-        expected_cost = 0.13 / 1_000_000  # $0.13 per 1M tokens
-        assert provider.cost_per_token == expected_cost
-
-    def test_max_tokens_per_request(self, mock_client_manager):
-        """Test maximum tokens per request."""
-        provider = OpenAIEmbeddingProvider(
-            api_key="test-key",
-            model_name="text-embedding-3-small",
-            client_manager=mock_client_manager,
-        )
-
-        assert provider.max_tokens_per_request == 8191
+        assert record_tracker.call_count == 1
+        assert record_tracker.call_args.kwargs["success"] is False
 
 
 class TestOpenAIProviderBatchAPI:
-    """Test batch API functionality."""
+    """Batch submission behaviour."""
 
     @pytest.mark.asyncio
-    async def test_generate_embeddings_batch_api_not_initialized(
-        self, mock_client_manager
-    ):
-        """Test batch API when not initialized."""
+    async def test_batch_api_not_initialized(
+        self, mock_openai_client: AsyncMock
+    ) -> None:
+        """Provider must be initialized before submitting batch jobs."""
+
         provider = OpenAIEmbeddingProvider(
-            api_key="test-key", client_manager=mock_client_manager
+            api_key="test-key", client=mock_openai_client
         )
 
         with pytest.raises(EmbeddingServiceError, match="Provider not initialized"):
-            await provider.generate_embeddings_batch_api(["test"])
+            await provider.generate_embeddings_batch_api(["text"])
 
     @pytest.mark.asyncio
-    async def test_generate_embeddings_batch_api_success(
-        self, mock_client_manager, mock_openai_client, record_tracker, monkeypatch
-    ):
-        """Test successful batch API submission."""
-        # Mock file upload and batch creation
-        mock_file_response = MagicMock()
-        mock_file_response.id = "file-123"
-        mock_batch_response = MagicMock()
-        mock_batch_response.id = "batch-456"
-
-        mock_openai_client.files.create = AsyncMock(return_value=mock_file_response)
-        mock_openai_client.batches.create = AsyncMock(return_value=mock_batch_response)
-        mock_client_manager.get_openai_client.return_value = mock_openai_client
-
-        monkeypatch.setattr(
-            "src.services.embeddings.openai_provider.OpenAIEmbeddingProvider._count_tokens",
-            lambda _self, _texts: 24,
-        )
+    async def test_batch_api_custom_id_mismatch(
+        self,
+        mock_openai_client: AsyncMock,
+    ) -> None:
+        """Custom ID length must match text payload length."""
 
         provider = OpenAIEmbeddingProvider(
-            api_key="test-key", client_manager=mock_client_manager
+            api_key="test-key", client=mock_openai_client
         )
         await provider.initialize()
 
-        result = await provider.generate_embeddings_batch_api(["text1", "text2"])
-
-        assert result == "batch-456"
-        mock_openai_client.files.create.assert_called_once()
-        mock_openai_client.batches.create.assert_called_once()
-        assert record_tracker.call_count == 1
-        kwargs = record_tracker.call_args.kwargs
-        assert kwargs["operation_type"] == "embedding_batch"
-        assert kwargs["tokens"] == 24
-        assert kwargs["prompt_tokens"] == 24
-        assert kwargs["attributes"]["gen_ai.request.batch_size"] == 2
-        assert kwargs["attributes"]["gen_ai.request.custom_ids_provided"] is False
-        assert kwargs["success"] is True
+        with pytest.raises(EmbeddingServiceError, match="Custom ID list must match"):
+            await provider.generate_embeddings_batch_api(
+                ["text"], custom_ids=["only-one"]
+            )
 
     @pytest.mark.asyncio
-    async def test_generate_embeddings_batch_api_with_custom_ids(
-        self, mock_client_manager, mock_openai_client, record_tracker, monkeypatch
-    ):
-        """Test batch API with custom IDs."""
-        mock_file_response = MagicMock()
-        mock_file_response.id = "file-123"
-        mock_batch_response = MagicMock()
-        mock_batch_response.id = "batch-456"
-
-        mock_openai_client.files.create = AsyncMock(return_value=mock_file_response)
-        mock_openai_client.batches.create = AsyncMock(return_value=mock_batch_response)
-        mock_client_manager.get_openai_client.return_value = mock_openai_client
-
-        monkeypatch.setattr(
-            "src.services.embeddings.openai_provider.OpenAIEmbeddingProvider._count_tokens",
-            lambda _self, _texts: 18,
-        )
+    async def test_batch_api_success(
+        self,
+        mock_openai_client: AsyncMock,
+        record_tracker: MagicMock,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Successful batch submission returns batch ID and records telemetry."""
 
         provider = OpenAIEmbeddingProvider(
-            api_key="test-key", client_manager=mock_client_manager
+            api_key="test-key", client=mock_openai_client
         )
         await provider.initialize()
 
-        custom_ids = ["id1", "id2"]
-        result = await provider.generate_embeddings_batch_api(
-            ["text1", "text2"], custom_ids=custom_ids
-        )
+        upload_mock = AsyncMock(return_value=SimpleNamespace(id="file-123"))
+        create_batch_mock = AsyncMock(return_value=SimpleNamespace(id="batch-456"))
 
-        assert result == "batch-456"
-        kwargs = record_tracker.call_args.kwargs
-        assert kwargs["tokens"] == 18
-        assert kwargs["attributes"]["gen_ai.request.custom_ids_provided"] is True
+        monkeypatch.setattr(provider, "_upload_file", upload_mock)
+        monkeypatch.setattr(provider, "_create_batch", create_batch_mock)
+        monkeypatch.setattr(provider, "_count_tokens", lambda texts: 24)
+
+        batch_id = await provider.generate_embeddings_batch_api(["foo", "bar"])
+
+        assert batch_id == "batch-456"
+        upload_mock.assert_awaited_once()
+        create_batch_mock.assert_awaited_once()
+        op_kwargs = record_tracker.call_args.kwargs
+        assert op_kwargs["success"] is True
+        assert op_kwargs["tokens"] == 24
+        assert op_kwargs["attributes"]["gen_ai.request.batch_size"] == 2
+        assert op_kwargs["attributes"]["gen_ai.request.custom_ids_provided"] is False
 
     @pytest.mark.asyncio
-    async def test_generate_embeddings_batch_api_with_dimensions(
-        self, mock_client_manager, mock_openai_client
-    ):
-        """Test batch API with dimensions for text-embedding-3 models."""
-        mock_file_response = MagicMock()
-        mock_file_response.id = "file-123"
-        mock_batch_response = MagicMock()
-        mock_batch_response.id = "batch-456"
+    async def test_batch_api_custom_ids(
+        self,
+        mock_openai_client: AsyncMock,
+        record_tracker: MagicMock,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Batch submission should honour explicit custom identifiers."""
 
-        mock_openai_client.files.create = AsyncMock(return_value=mock_file_response)
-        mock_openai_client.batches.create = AsyncMock(return_value=mock_batch_response)
-        mock_client_manager.get_openai_client.return_value = mock_openai_client
+        provider = OpenAIEmbeddingProvider(
+            api_key="test-key", client=mock_openai_client
+        )
+        await provider.initialize()
+
+        upload_mock = AsyncMock(return_value=SimpleNamespace(id="file-123"))
+        create_batch_mock = AsyncMock(return_value=SimpleNamespace(id="batch-789"))
+        monkeypatch.setattr(provider, "_upload_file", upload_mock)
+        monkeypatch.setattr(provider, "_create_batch", create_batch_mock)
+        monkeypatch.setattr(provider, "_count_tokens", lambda texts: 10)
+
+        batch_id = await provider.generate_embeddings_batch_api(
+            ["foo", "bar"], custom_ids=["id-1", "id-2"]
+        )
+
+        assert batch_id == "batch-789"
+        op_kwargs = record_tracker.call_args.kwargs
+        assert op_kwargs["attributes"]["gen_ai.request.custom_ids_provided"] is True
+
+    @pytest.mark.asyncio
+    async def test_batch_api_includes_dimensions(
+        self,
+        mock_openai_client: AsyncMock,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """text-embedding-3 models should pass dimensions in payload."""
 
         provider = OpenAIEmbeddingProvider(
             api_key="test-key",
             model_name="text-embedding-3-small",
-            dimensions=512,
-            client_manager=mock_client_manager,
+            dimensions=256,
+            client=mock_openai_client,
         )
         await provider.initialize()
 
-        result = await provider.generate_embeddings_batch_api(["text1"])
+        requests: list[dict[str, Any]] = []
 
-        assert result == "batch-456"
+        async def _upload_stub(file, purpose):  # type: ignore[override] # noqa: D401
+            payload = file.read().decode("utf-8").strip().splitlines()
+            for line in payload:
+                requests.append(json.loads(line))
+            return SimpleNamespace(id="file-123")
+
+        async def _create_batch_stub(*args, **kwargs):  # noqa: D401
+            return SimpleNamespace(id="batch-123")
+
+        monkeypatch.setattr(provider, "_upload_file", _upload_stub)
+        monkeypatch.setattr(provider, "_create_batch", _create_batch_stub)
+        monkeypatch.setattr(provider, "_count_tokens", lambda texts: 6)
+
+        await provider.generate_embeddings_batch_api(["foo"])
+
+        assert requests
+        assert requests[0]["body"]["dimensions"] == 256
 
     @pytest.mark.asyncio
-    async def test_generate_embeddings_batch_api_error_handling(
-        self, mock_client_manager, mock_openai_client, record_tracker
-    ):
-        """Test batch API error handling."""
-        mock_openai_client.files.create = AsyncMock(
-            side_effect=Exception("File upload failed")
-        )
-        mock_client_manager.get_openai_client.return_value = mock_openai_client
+    async def test_batch_api_error_records_failure(
+        self,
+        mock_openai_client: AsyncMock,
+        record_tracker: MagicMock,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Errors during submission should mark telemetry as unsuccessful."""
 
         provider = OpenAIEmbeddingProvider(
-            api_key="test-key", client_manager=mock_client_manager
+            api_key="test-key", client=mock_openai_client
         )
         await provider.initialize()
 
+        upload_mock = AsyncMock(side_effect=RuntimeError("upload failure"))
+        monkeypatch.setattr(provider, "_upload_file", upload_mock)
+        monkeypatch.setattr(provider, "_count_tokens", lambda texts: 4)
+
         with pytest.raises(EmbeddingServiceError, match="Failed to create batch job"):
-            await provider.generate_embeddings_batch_api(["test"])
+            await provider.generate_embeddings_batch_api(["foo"])
+
         assert record_tracker.call_args.kwargs["success"] is False

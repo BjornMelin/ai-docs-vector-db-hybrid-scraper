@@ -3,20 +3,15 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from langchain_core.documents import Document
 from qdrant_client import models
 
+from src.infrastructure.container import ApplicationContainer
 from src.services.vector_db.service import VectorStoreService, _filter_from_mapping
 from src.services.vector_db.types import CollectionSchema, TextDocument, VectorRecord
-from tests.unit.services.vector_db.conftest import (
-    ClientManagerStub,
-    EmbeddingProviderStub,
-    build_vector_store_service,
-)
 
 
 class StubVectorStore:
@@ -55,16 +50,9 @@ class StubVectorStore:
 @pytest.fixture
 async def initialized_service(
     monkeypatch: pytest.MonkeyPatch,
+    vector_container: ApplicationContainer,
 ) -> AsyncIterator[VectorStoreService]:
     """Provide an initialized VectorStoreService with stubbed dependencies."""
-
-    embeddings = EmbeddingProviderStub(dimension=3)
-
-    async_client = AsyncMock()
-    async_client.collection_exists.return_value = True
-    async_client.upsert.return_value = None
-    async_client.collection_exists.return_value = True
-    client_manager = ClientManagerStub(async_client)
 
     stub_store = StubVectorStore(collection_name="documents")
     monkeypatch.setattr(
@@ -76,26 +64,7 @@ async def initialized_service(
         lambda self, cfg: MagicMock(),
     )
 
-    config = SimpleNamespace(
-        fastembed=SimpleNamespace(model="stub"),
-        qdrant=SimpleNamespace(
-            url="http://localhost:6333",
-            api_key=None,
-            timeout=1.0,
-            prefer_grpc=False,
-            use_grpc=False,
-            grpc_port=6334,
-            collection_name="documents",
-            enable_grouping=False,
-        ),
-        query_processing=SimpleNamespace(
-            enable_score_normalization=False,
-            score_normalization_strategy=None,
-            score_normalization_epsilon=1e-6,
-        ),
-    )
-
-    service = build_vector_store_service(config, client_manager, embeddings)
+    service = vector_container.vector_store_service()
     await service.initialize()
     try:
         yield service

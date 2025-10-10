@@ -28,10 +28,10 @@ keys in `.env` before starting the stack.
 
 The API server exposes two profiles controlled by `AI_DOCS__MODE`:
 
-| Profile      | Description                                                                 | Activation                        |
-| ------------ | --------------------------------------------------------------------------- | --------------------------------- |
-| `simple`     | Local-first: minimal routers, in-process cache, no external dependencies.   | default (`AI_DOCS__MODE=simple`)  |
-| `enterprise` | Full surface area: Redis/Dragonfly, Postgres, Prometheus, extended routers. | `export AI_DOCS__MODE=enterprise` |
+| Profile      | Description                                                                                   | Activation                        |
+| ------------ | --------------------------------------------------------------------------------------------- | --------------------------------- |
+| `simple`     | Solo-developer defaults: minimal external services, same `/api/v1` surface as enterprise.     | default (`AI_DOCS__MODE=simple`)  |
+| `enterprise` | Full surface area: Redis/Dragonfly, Postgres, Prometheus, extended orchestration & telemetry. | `export AI_DOCS__MODE=enterprise` |
 
 Profiles are resolved by `AppProfile` (`src/api/app_profiles.py`). Router and
 service installers consult the profile to decide which modules to mount. Health
@@ -55,7 +55,7 @@ configuration from environment variables. Key behaviours:
 - Nested keys use double underscores (e.g. `AI_DOCS__QDRANT__URL`).
 - `.env` is loaded automatically for local development.
 - `validate_assignment=True` keeps runtime overrides type-safe.
-- Defaults favour the simple profile; enterprise deployments override relevant
+- Defaults favour the developer (simple) profile; enterprise deployments override relevant
   sections (cache, database, monitoring, etc.).
 
 ### Core Sections
@@ -63,7 +63,7 @@ configuration from environment variables. Key behaviours:
 | Section                        | Model                   | Notes                                                |
 | ------------------------------ | ----------------------- | ---------------------------------------------------- |
 | `cache`                        | `CacheConfig`           | Controls local + distributed caches, TTLs, eviction. |
-| `database`                     | `DatabaseConfig`        | Postgres connection settings; unused in simple mode. |
+| `database`                     | `DatabaseConfig`        | Postgres connection settings; optional for the simple profile. |
 | `qdrant`                       | `QdrantConfig`          | Vector store URL, API key, collection defaults.      |
 | `agentic`                      | `AgenticConfig`         | LangGraph runner budgets (parallelism, timeouts).    |
 | `query_processing`             | `QueryProcessingConfig` | Retrieval knobs (hybrid ratios, rerank budgets).     |
@@ -119,7 +119,7 @@ Hot reloading has been removed. When configuration changes are required, refresh
 ## 5. Running Services
 
 ```bash
-# Launch simple profile dependencies
+# Launch developer defaults (simple profile)
 docker compose --profile simple up -d
 
 # Enterprise stack
@@ -145,6 +145,7 @@ new environment variables.
 
 ## 7. Service Access Patterns
 
-- **Client access**: FastAPI and MCP layers request services via the dependency helpers in `src/services/dependencies.py`, which resolve a shared `ClientManager`. Avoid constructing managers directly; the helper ensures consistent caching and telemetry wiring.
-- **Observability**: Metrics, traces, and health checks are configured through `src/services/observability/`. Use `ObservabilityConfig` to enable OpenTelemetry exporters and rely on the shared performance helpers for registry bootstrap.
-- **Health checks**: The centralized `HealthCheckManager` (`src/services/health/manager.py`) tracks service probes and feeds `/health` endpoints. When adding new services, register probes via the manager instead of ad-hoc endpoints.
+- **Client access**: FastAPI, MCP, and CLI layers resolve services via dependency helpers in `src/services/dependencies.py`, backed by the global `ApplicationContainer`.
+- Avoid constructing bespoke managers; call `initialize_container()` once at startup and retrieve providers through `Provide[...]` or `get_container()`.
+- **Observability**: Metrics, traces, and health checks are configured through `src/services/observability/` and `src/services/monitoring/`. Use `ObservabilityConfig` to enable OpenTelemetry exporters and rely on `setup_prometheus` for registry bootstrap.
+- **Health checks**: The centralized `HealthCheckManager` (`src/services/monitoring/health.py`) tracks service probes and feeds `/health` endpoints. When adding new services, register probes via the manager instead of ad-hoc endpoints.

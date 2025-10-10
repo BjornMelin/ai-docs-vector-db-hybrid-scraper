@@ -6,6 +6,7 @@ import logging
 import os
 import tempfile
 import time
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypedDict
 
@@ -20,8 +21,6 @@ from .base import EmbeddingProvider
 
 if TYPE_CHECKING:
     from openai import AsyncOpenAI
-
-    from src.infrastructure.client_manager import ClientManager
 
 logger = logging.getLogger(__name__)
 
@@ -72,17 +71,20 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
     def __init__(
         self,
         api_key: str,
-        client_manager: "ClientManager",
         model_name: str = "text-embedding-3-small",
         dimensions: int | None = None,
+        *,
+        client: "AsyncOpenAI | None" = None,
+        client_factory: (Callable[[], Awaitable["AsyncOpenAI"]] | None) = None,
     ):
         """Initialize OpenAI provider.
 
         Args:
             api_key: OpenAI API key
-            client_manager: ClientManager instance for dependency injection
             model_name: Model name (text-embedding-3-small, text-embedding-3-large)
             dimensions: Optional dimensions for text-embedding-3-* models
+            client: Optional preconfigured AsyncOpenAI client instance
+            client_factory: Optional factory returning an AsyncOpenAI client
         """
 
         super().__init__(model_name)
@@ -90,7 +92,8 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         self._client: AsyncOpenAI | None = None
         self._dimensions = dimensions
         self._initialized = False
-        self._client_manager = client_manager
+        self._client_override = client
+        self._client_factory = client_factory
         self._token_encoder: Any | None = None
 
         if model_name not in self._model_configs:
@@ -115,17 +118,23 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
 
     @trace_function()
     async def initialize(self) -> None:
-        """Initialize OpenAI client using ClientManager."""
+        """Initialize OpenAI client using the DI-supplied factory or API key."""
 
         if self._initialized:
             return
 
-        if not self.api_key:
-            _raise_openai_api_key_not_configured()
-
         try:
-            # Get client from ClientManager
-            self._client = await self._client_manager.get_openai_client()
+            if self._client_override is not None and self._client is None:
+                self._client = self._client_override
+            elif self._client_factory is not None and self._client is None:
+                self._client = await self._client_factory()
+            elif self._client is None:
+                if not self.api_key:
+                    _raise_openai_api_key_not_configured()
+                # Create a standalone client as a fallback (main path uses DI)
+                from openai import AsyncOpenAI  # local import to avoid mandatory dep
+
+                self._client = AsyncOpenAI(api_key=self.api_key)
 
             if self._client is None:
                 _raise_openai_api_key_not_configured()
@@ -137,8 +146,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
             raise EmbeddingServiceError(msg) from e
 
     async def cleanup(self) -> None:
-        """Cleanup OpenAI client (delegated to ClientManager)."""
-        # Note: ClientManager handles client cleanup, we just reset our reference
+        """Cleanup OpenAI client by clearing the cached instance."""
         self._client = None
         self._initialized = False
 

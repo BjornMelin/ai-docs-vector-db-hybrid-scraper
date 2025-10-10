@@ -7,7 +7,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from collections.abc import AsyncIterator, Callable, Mapping
+from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -17,7 +17,6 @@ from typing import Any
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from opentelemetry import trace
 
-from src.infrastructure.client_manager import ClientManager
 from src.services.errors import APIError
 from src.services.observability.tracking import record_ai_operation
 
@@ -77,17 +76,36 @@ class DynamicToolDiscovery:  # pylint: disable=too-many-instance-attributes
 
     def __init__(
         self,
-        client_manager: ClientManager,
+        client: MultiServerMCPClient | Callable[[], Awaitable[MultiServerMCPClient]],
         *,
         cache_ttl_seconds: int = 60,
         telemetry_hook: Callable[[dict[str, Any]], None] | None = None,
     ) -> None:
-        self._client_manager = client_manager
+        """Initialise the dynamic tool discovery service."""
+
+        if callable(client):
+            self._client_factory = client
+            self._client: MultiServerMCPClient | None = None
+        else:
+            self._client = client
+            self._client_factory = None
         self._cache_ttl_seconds = max(0, cache_ttl_seconds)
         self._telemetry_hook = telemetry_hook
         self._capabilities: dict[str, ToolCapability] = {}
         self._cache_expires_at = 0.0
         self._lock = asyncio.Lock()
+
+    async def _resolve_client(self) -> MultiServerMCPClient:
+        """Return the MCP client, creating it if necessary."""
+
+        if self._client is not None:
+            return self._client
+        if self._client_factory is None:
+            msg = "MCP client resolver is not configured"
+            raise RuntimeError(msg)
+        client = await self._client_factory()
+        self._client = client
+        return client
 
     async def refresh(self, *, force: bool = False) -> None:
         """Populate the capability cache when the TTL expires.
@@ -213,7 +231,7 @@ class DynamicToolDiscovery:  # pylint: disable=too-many-instance-attributes
             APIError: If no MCP connections are configured.
         """
 
-        client = await self._client_manager.get_mcp_client()
+        client = await self._resolve_client()
         if not getattr(client, "connections", None):
             msg = "No MCP server connections available for discovery"
             raise APIError(msg)

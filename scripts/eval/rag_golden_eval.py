@@ -27,23 +27,47 @@ from collections import defaultdict
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from difflib import SequenceMatcher
+from functools import lru_cache
 from pathlib import Path
 from statistics import fmean
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 import yaml
 
 from scripts.eval.dataset_validator import DatasetValidationError, load_dataset_records
-from src.contracts.retrieval import SearchResponse
-from src.infrastructure.client_manager import ClientManager
-from src.models.search import SearchRequest
-from src.services.query_processing.orchestrator import SearchOrchestrator
+from src.config import get_settings
+from src.infrastructure.bootstrap import container_session, ensure_container
+
+
+if TYPE_CHECKING:
+    from src.contracts.retrieval import SearchResponse
+    from src.models.search import SearchRequest
+    from src.services.query_processing.orchestrator import SearchOrchestrator
+else:  # pragma: no cover - runtime typing fallback
+    SearchRequest = Any
+    SearchResponse = Any
+    SearchOrchestrator = Any
 
 
 LOGGER = logging.getLogger(__name__)
 
 # Ragas imports are optional to keep the harness runnable in offline mode.
 # They are resolved lazily inside ``RagasEvaluator``.
+
+
+@lru_cache(maxsize=1)
+def _load_search_components() -> tuple[type[Any], type[Any], type[Any]]:
+    """Lazily import search request/response models and orchestrator."""
+
+    models_module = importlib.import_module("src.models.search")
+    retrieval_module = importlib.import_module("src.contracts.retrieval")
+    orchestrator_module = importlib.import_module(
+        "src.services.query_processing.orchestrator"
+    )
+    request_cls = models_module.SearchRequest
+    response_cls = retrieval_module.SearchResponse
+    orchestrator_cls = orchestrator_module.SearchOrchestrator
+    return (request_cls, response_cls, orchestrator_cls)
 
 
 @dataclass(slots=True)
@@ -370,9 +394,12 @@ def _load_dataset(path: Path) -> list[GoldenExample]:
 async def _load_orchestrator() -> SearchOrchestrator:
     """Instantiate and initialise the shared search orchestrator."""
 
-    client_manager = ClientManager()
-    vector_service = await client_manager.get_vector_store_service()
-    orchestrator = SearchOrchestrator(vector_store_service=vector_service)
+    _, _, orchestrator_cls = _load_search_components()
+    container = await ensure_container(settings=get_settings())
+    vector_service = container.vector_store_service()
+    if vector_service is None:
+        raise RuntimeError("Vector store service unavailable")
+    orchestrator = orchestrator_cls(vector_store_service=vector_service)
     await orchestrator.initialize()
     return orchestrator
 
@@ -491,6 +518,7 @@ async def _evaluate_examples(
 
     # pylint: disable=too-many-locals  # named intermediates keep reporting explicit
     results: list[ExampleResult] = []
+    search_request_cls, _, _ = _load_search_components()
 
     for example in examples:
         request_overrides: dict[str, Any] = {
@@ -501,7 +529,7 @@ async def _evaluate_examples(
             request_overrides["collection"] = collection
 
         request_payload = {"query": example.query, **request_overrides}
-        request = SearchRequest(**request_payload)
+        request = search_request_cls(**request_payload)
         response: SearchResponse = await orchestrator.search(request)
 
         predicted = response.generated_answer or " ".join(
@@ -601,17 +629,18 @@ async def _run(args: argparse.Namespace) -> None:
             "Semantic evaluation enabled. API usage limits should be configured."
         )
 
-    orchestrator = await _load_orchestrator()
-    try:
-        results = await _evaluate_examples(
-            examples,
-            orchestrator,
-            ragas_evaluator,
-            limit=args.limit,
-            ragas_sample_cap=ragas_sample_cap,
-        )
-    finally:
-        await orchestrator.cleanup()
+    async with container_session(force_reload=True):
+        orchestrator = await _load_orchestrator()
+        try:
+            results = await _evaluate_examples(
+                examples,
+                orchestrator,
+                ragas_evaluator,
+                limit=args.limit,
+                ragas_sample_cap=ragas_sample_cap,
+            )
+        finally:
+            await orchestrator.cleanup()
 
     aggregates = _aggregate_metrics(results)
     thresholds = _load_thresholds()

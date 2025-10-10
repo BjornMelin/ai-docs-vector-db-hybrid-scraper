@@ -5,23 +5,66 @@ This is the main entry point for the MCP server. It follows FastMCP 2.0
 best practices with lazy initialization and modular tool registration.
 """
 
+import asyncio
 import logging
 import os
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from typing import Any, Literal, cast
 
 from fastmcp import FastMCP
 
 from src.config.loader import get_settings
 from src.config.models import CrawlProvider, EmbeddingProvider
-from src.infrastructure.client_manager import ClientManager
+from src.infrastructure.bootstrap import container_session
 from src.mcp_tools.tool_registry import register_all_tools
+from src.services.health.manager import HealthCheckManager, build_health_manager
 from src.services.logging_config import configure_logging
-from src.services.observability.init import initialize_observability
 
 
 logger = logging.getLogger(__name__)
+_MONITORING_STATE: dict[int, HealthCheckManager] = {}
+
+
+def initialize_monitoring_system(
+    config: Any,
+    qdrant_client: Any,
+    redis_url: str | None,
+) -> HealthCheckManager | None:
+    """Set up the health monitoring system using application configuration."""
+
+    if not getattr(config.monitoring, "enabled", False):
+        return None
+    return build_health_manager(
+        config,
+        qdrant_client=qdrant_client,
+        redis_url=redis_url,
+    )
+
+
+def setup_fastmcp_monitoring(
+    server: FastMCP[Any],
+    config: Any,
+    health_manager: HealthCheckManager,
+) -> None:
+    """Attach monitoring metadata to the FastMCP server."""
+
+    if not getattr(config.monitoring, "include_system_metrics", False):
+        return
+    _MONITORING_STATE[id(server)] = health_manager
+    logger.info("Registered MCP health manager; monitoring enabled.")
+
+
+async def run_periodic_health_checks(
+    health_manager: HealthCheckManager,
+    *,
+    interval_seconds: float,
+) -> None:
+    """Periodically execute all registered health checks."""
+
+    while True:
+        await health_manager.check_all()
+        await asyncio.sleep(interval_seconds)
 
 
 @asynccontextmanager
@@ -30,31 +73,87 @@ async def managed_lifespan(server: FastMCP[Any]) -> AsyncIterator[None]:  # pyli
 
     config = get_settings()
     configure_logging(settings=config)
-    client_manager: ClientManager | None = None
-    try:
-        validate_configuration()
+    monitoring_tasks: list[asyncio.Task[Any]] = []
+    health_manager = None
+    validate_configuration()
+    logger.info("Initializing AI Documentation Vector DB MCP Server...")
 
-        logger.info("Initializing AI Documentation Vector DB MCP Server...")
+    async with container_session(settings=config, force_reload=True) as container:
+        try:
+            logger.info("Initializing monitoring system...")
+            qdrant_client = container.qdrant_client()
 
-        client_manager = ClientManager()
-        await client_manager.initialize()
+            cache_config = getattr(config, "cache", None)
+            enable_dragonfly = bool(
+                getattr(cache_config, "enable_dragonfly_cache", False)
+            )
+            dragonfly_url_value = getattr(cache_config, "dragonfly_url", None)
+            redis_url = (
+                str(dragonfly_url_value)
+                if enable_dragonfly and dragonfly_url_value
+                else None
+            )
 
-        logger.info("Initializing observability stack...")
-        initialize_observability(config)
+            health_manager = initialize_monitoring_system(
+                config, qdrant_client, redis_url
+            )
 
-        logger.info("Registering MCP tools...")
-        await register_all_tools(server, client_manager)
+            if health_manager:
+                manager_config = getattr(health_manager, "config", None)
+                health_checks_enabled = bool(
+                    getattr(config.monitoring, "enable_health_checks", False)
+                ) and bool(getattr(manager_config, "enabled", False))
 
-        logger.info("Server initialization complete")
-        yield
+                if health_checks_enabled:
+                    setup_fastmcp_monitoring(server, config, health_manager)
 
-    finally:
-        logger.info("Shutting down server...")
+                    interval = config.monitoring.system_metrics_interval
+                    health_check_task = asyncio.create_task(
+                        run_periodic_health_checks(
+                            health_manager, interval_seconds=float(interval)
+                        )
+                    )
+                    monitoring_tasks.append(health_check_task)
+                    logger.info("Started background health monitoring task")
+                else:
+                    logger.info(
+                        "Health checks disabled; skipping endpoint registration "
+                        "and background task"
+                    )
 
-        if client_manager:
-            await client_manager.cleanup()
+            logger.info("Registering MCP tools...")
+            vector_service = container.vector_store_service()
+            cache_manager = container.cache_manager()
+            crawl_manager = container.browser_manager()
+            content_service = container.content_intelligence_service()
+            project_storage = container.project_storage()
+            embedding_manager = container.embedding_manager()
 
-        logger.info("Server shutdown complete")
+            await register_all_tools(
+                server,
+                vector_service=vector_service,
+                cache_manager=cache_manager,
+                crawl_manager=crawl_manager,
+                content_intelligence_service=content_service,
+                project_storage=project_storage,
+                embedding_manager=embedding_manager,
+                health_manager=health_manager,
+            )
+
+            logger.info("Server initialization complete")
+            yield
+        finally:
+            logger.info("Shutting down server...")
+
+            for task in monitoring_tasks:
+                task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await task
+
+            removed = _MONITORING_STATE.pop(id(server), None)
+            if removed is not None:
+                logger.info("Monitoring state cleared for MCP server.")
+            logger.info("Server shutdown complete")
 
 
 # Initialize FastMCP server with streaming support

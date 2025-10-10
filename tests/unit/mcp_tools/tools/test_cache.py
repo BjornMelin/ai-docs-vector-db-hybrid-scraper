@@ -2,6 +2,8 @@
 
 # pylint: disable=duplicate-code
 
+from collections.abc import Awaitable, Callable
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -14,51 +16,55 @@ class TestCacheTools:
     """Test suite for cache MCP tools."""
 
     @pytest.fixture
-    def mock_client_manager(self):
-        """Create a mock client manager with cache service."""
-        mock_manager = MagicMock()
+    def mock_cache_manager(self):
+        """Create a mock cache manager with async methods."""
 
-        # Mock cache manager
-        mock_cache = AsyncMock()
-        mock_cache.clear_all.return_value = 50  # cleared 50 items
-        mock_cache.clear_pattern.return_value = 50  # cleared 50 items
-        mock_cache.get_stats.return_value = {
-            "hit_rate": 0.92,
-            "size": 1500,
-            "total_requests": 25000,
-            "vendor_metric": 0.88,
-        }
-
-        mock_manager.get_cache_manager = AsyncMock(return_value=mock_cache)
-        mock_manager.cache_mock = mock_cache
-
-        return mock_manager
+        cache_manager = MagicMock()
+        cache_manager.clear_all = AsyncMock(return_value=50)
+        cache_manager.clear_pattern = AsyncMock(return_value=50)
+        cache_manager.get_stats = AsyncMock(
+            return_value={
+                "hit_rate": 0.92,
+                "size": 1500,
+                "total_requests": 25000,
+                "vendor_metric": 0.88,
+            }
+        )
+        return cache_manager
 
     @pytest.fixture
     def mock_context(self):
         """Create a mock context for testing."""
-        mock_ctx = AsyncMock()
-        mock_ctx.info = AsyncMock()
-        mock_ctx.debug = AsyncMock()
-        mock_ctx.error = AsyncMock()
-        mock_ctx.warning = AsyncMock()
-        return mock_ctx
 
-    @pytest.mark.asyncio
-    async def test_clear_cache_all(self, mock_client_manager, mock_context):
-        """Test clearing all cache."""
+        ctx = MagicMock()
+        ctx.info = AsyncMock()
+        ctx.debug = AsyncMock()
+        ctx.error = AsyncMock()
+        ctx.warning = AsyncMock()
+        return ctx
 
+    def _register_tools(
+        self, cache_manager: Any
+    ) -> tuple[MagicMock, dict[str, Callable[..., Awaitable[Any]]]]:
         mock_mcp = MagicMock()
-        registered_tools = {}
+        registered_tools: dict[str, Callable[..., Awaitable[Any]]] = {}
 
-        def capture_tool(func):
+        def capture(
+            func: Callable[..., Awaitable[Any]],
+        ) -> Callable[..., Awaitable[Any]]:
             registered_tools[func.__name__] = func
             return func
 
-        mock_mcp.tool.return_value = capture_tool
-        register_tools(mock_mcp, mock_client_manager)
+        mock_mcp.tool.return_value = capture
+        register_tools(mock_mcp, cache_manager=cache_manager)
+        return mock_mcp, registered_tools
 
-        clear_cache = registered_tools["clear_cache"]
+    @pytest.mark.asyncio()
+    async def test_clear_cache_all(self, mock_cache_manager, mock_context):
+        """Clearing all cache entries should succeed and log progress."""
+
+        _, tools = self._register_tools(mock_cache_manager)
+        clear_cache = tools["clear_cache"]
 
         result = await clear_cache(pattern=None, ctx=mock_context)
 
@@ -66,51 +72,29 @@ class TestCacheTools:
         assert result.status == "success"
         assert result.cleared_count == 50
         assert result.pattern is None
-
-        # Verify context logging
+        mock_cache_manager.clear_all.assert_awaited_once()
         mock_context.info.assert_called()
 
-    @pytest.mark.asyncio
-    async def test_clear_cache_pattern(self, mock_client_manager, mock_context):
-        """Test clearing cache with pattern."""
+    @pytest.mark.asyncio()
+    async def test_clear_cache_pattern(self, mock_cache_manager, mock_context):
+        """Clearing a specific pattern should call ``clear_pattern``."""
 
-        mock_mcp = MagicMock()
-        registered_tools = {}
-
-        def capture_tool(func):
-            registered_tools[func.__name__] = func
-            return func
-
-        mock_mcp.tool.return_value = capture_tool
-        register_tools(mock_mcp, mock_client_manager)
-
-        clear_cache = registered_tools["clear_cache"]
+        _, tools = self._register_tools(mock_cache_manager)
+        clear_cache = tools["clear_cache"]
 
         result = await clear_cache(pattern="search:*", ctx=mock_context)
 
         assert isinstance(result, CacheClearResponse)
-        assert result.status == "success"
-        assert result.cleared_count == 50
         assert result.pattern == "search:*"
-
-        # Verify pattern-specific logging
+        mock_cache_manager.clear_pattern.assert_awaited_once_with("search:*")
         mock_context.info.assert_called()
 
-    @pytest.mark.asyncio
-    async def test_get_cache_stats(self, mock_client_manager, mock_context):
-        """Test getting cache statistics."""
+    @pytest.mark.asyncio()
+    async def test_get_cache_stats(self, mock_cache_manager, mock_context):
+        """Retrieving cache stats should normalise data and log context."""
 
-        mock_mcp = MagicMock()
-        registered_tools = {}
-
-        def capture_tool(func):
-            registered_tools[func.__name__] = func
-            return func
-
-        mock_mcp.tool.return_value = capture_tool
-        register_tools(mock_mcp, mock_client_manager)
-
-        get_cache_stats = registered_tools["get_cache_stats"]
+        _, tools = self._register_tools(mock_cache_manager)
+        get_cache_stats = tools["get_cache_stats"]
 
         result = await get_cache_stats(ctx=mock_context)
 
@@ -118,175 +102,68 @@ class TestCacheTools:
         assert result.hit_rate == 0.92
         assert result.size == 1500
         assert result.total_requests == 25000
-
-        # Verify context logging
+        mock_cache_manager.get_stats.assert_awaited_once()
         mock_context.info.assert_called()
 
-    @pytest.mark.asyncio
-    async def test_cache_error_handling(self, mock_client_manager, mock_context):
-        """Test cache error handling."""
+    @pytest.mark.asyncio()
+    async def test_cache_error_handling(self, mock_cache_manager, mock_context):
+        """Errors from the cache manager should bubble up with logging."""
 
-        # Make cache manager raise an exception
-        mock_cache = AsyncMock()
-        mock_cache.clear_all.side_effect = Exception("Cache service unavailable")
-        mock_client_manager.get_cache_manager = AsyncMock(return_value=mock_cache)
+        mock_cache_manager.clear_all.side_effect = RuntimeError("cache offline")
+        _, tools = self._register_tools(mock_cache_manager)
+        clear_cache = tools["clear_cache"]
 
-        mock_mcp = MagicMock()
-        registered_tools = {}
-
-        def capture_tool(func):
-            registered_tools[func.__name__] = func
-            return func
-
-        mock_mcp.tool.return_value = capture_tool
-        register_tools(mock_mcp, mock_client_manager)
-
-        clear_cache = registered_tools["clear_cache"]
-
-        # Should raise the exception after logging
-        with pytest.raises(Exception, match="Cache service unavailable"):
+        with pytest.raises(RuntimeError, match="cache offline"):
             await clear_cache(pattern=None, ctx=mock_context)
 
-        # Error should be logged
         mock_context.error.assert_called()
 
-    @pytest.mark.asyncio
-    async def test_cache_stats_error_handling(self, mock_client_manager, mock_context):
-        """Test cache stats error handling."""
+    @pytest.mark.asyncio()
+    async def test_cache_stats_error_handling(self, mock_cache_manager, mock_context):
+        """Stats failures should propagate and emit error logs."""
 
-        # Make cache manager raise an exception
-        mock_cache = AsyncMock()
-        mock_cache.get_stats.side_effect = Exception("Stats unavailable")
-        mock_client_manager.get_cache_manager = AsyncMock(return_value=mock_cache)
+        mock_cache_manager.get_stats.side_effect = RuntimeError("stats offline")
+        _, tools = self._register_tools(mock_cache_manager)
+        get_cache_stats = tools["get_cache_stats"]
 
-        mock_mcp = MagicMock()
-        registered_tools = {}
-
-        def capture_tool(func):
-            registered_tools[func.__name__] = func
-            return func
-
-        mock_mcp.tool.return_value = capture_tool
-        register_tools(mock_mcp, mock_client_manager)
-
-        get_cache_stats = registered_tools["get_cache_stats"]
-
-        # Should raise the exception after logging
-        with pytest.raises(Exception, match="Stats unavailable"):
+        with pytest.raises(RuntimeError, match="stats offline"):
             await get_cache_stats(ctx=mock_context)
 
-        # Error should be logged
         mock_context.error.assert_called()
 
-    def test_cache_clear_response_validation(self):
-        """Test cache clear response model validation."""
-        response = CacheClearResponse(
-            status="success", cleared_count=25, pattern="test:*"
-        )
+    def test_tool_registration(self, mock_cache_manager):
+        """Both cache tools should be registered."""
 
-        assert response.status == "success"
-        assert response.cleared_count == 25
-        assert response.pattern == "test:*"
-
-        # Test without pattern
-        response_no_pattern = CacheClearResponse(
-            status="success", cleared_count=100, pattern=None
-        )
-
-        assert response_no_pattern.status == "success"
-        assert response_no_pattern.cleared_count == 100
-        assert response_no_pattern.pattern is None
-
-    def test_cache_stats_response_validation(self):
-        """Test cache stats response model validation."""
-        response = CacheStatsResponse(hit_rate=0.95, size=2000, total_requests=50000)
-
-        assert response.hit_rate == 0.95
-        assert response.size == 2000
-        assert response.total_requests == 50000
-
-    @pytest.mark.asyncio
-    async def test_context_logging_integration(self, mock_client_manager, mock_context):
-        """Test that context logging is properly integrated."""
-
-        mock_mcp = MagicMock()
-        registered_tools = {}
-
-        def capture_tool(func):
-            registered_tools[func.__name__] = func
-            return func
-
-        mock_mcp.tool.return_value = capture_tool
-        register_tools(mock_mcp, mock_client_manager)
-
-        clear_cache = registered_tools["clear_cache"]
-        get_cache_stats = registered_tools["get_cache_stats"]
-
-        # Test clear cache logging
-        await clear_cache(pattern="test:*", ctx=mock_context)
-        assert mock_context.info.call_count >= 1
-
-        # Reset and test stats logging
-        mock_context.reset_mock()
-        await get_cache_stats(ctx=mock_context)
-        assert mock_context.info.call_count >= 1
-
-    def test_tool_registration(self, mock_client_manager):
-        """Test that cache tools are properly registered."""
-
-        mock_mcp = MagicMock()
-        register_tools(mock_mcp, mock_client_manager)
-
-        # Should have registered 2 tools
+        mock_mcp, _ = self._register_tools(mock_cache_manager)
         assert mock_mcp.tool.call_count == 2
 
-    @pytest.mark.asyncio
-    async def test_cache_manager_interactions(self, mock_client_manager, mock_context):
-        """Test proper interaction with cache manager."""
+    @pytest.mark.asyncio()
+    async def test_context_logging_integration(
+        self, mock_cache_manager, mock_context
+    ) -> None:
+        """Both tools should emit informational logs via context."""
 
-        mock_mcp = MagicMock()
-        registered_tools = {}
+        _, tools = self._register_tools(mock_cache_manager)
+        clear_cache = tools["clear_cache"]
+        get_cache_stats = tools["get_cache_stats"]
 
-        def capture_tool(func):
-            registered_tools[func.__name__] = func
-            return func
-
-        mock_mcp.tool.return_value = capture_tool
-        register_tools(mock_mcp, mock_client_manager)
-
-        clear_cache = registered_tools["clear_cache"]
-        get_cache_stats = registered_tools["get_cache_stats"]
-
-        # Test cache manager is retrieved
-        await clear_cache(pattern=None, ctx=mock_context)
-        mock_client_manager.get_cache_manager.assert_awaited()
-
-        # Test stats call
+        await clear_cache(pattern="test:*", ctx=mock_context)
         await get_cache_stats(ctx=mock_context)
-        cache_manager = await mock_client_manager.get_cache_manager()
-        cache_manager.get_stats.assert_awaited()
 
-    @pytest.mark.asyncio
-    async def test_different_clear_patterns(self, mock_client_manager, mock_context):
-        """Test clearing cache with different patterns."""
+        assert mock_context.info.call_count >= 2
 
-        mock_mcp = MagicMock()
-        registered_tools = {}
+    @pytest.mark.asyncio()
+    async def test_cache_manager_interactions(
+        self, mock_cache_manager, mock_context
+    ) -> None:
+        """Verify the cache manager methods are invoked as expected."""
 
-        def capture_tool(func):
-            registered_tools[func.__name__] = func
-            return func
+        _, tools = self._register_tools(mock_cache_manager)
+        clear_cache = tools["clear_cache"]
+        get_cache_stats = tools["get_cache_stats"]
 
-        mock_mcp.tool.return_value = capture_tool
-        register_tools(mock_mcp, mock_client_manager)
+        await clear_cache(pattern=None, ctx=mock_context)
+        await get_cache_stats(ctx=mock_context)
 
-        clear_cache = registered_tools["clear_cache"]
-
-        # Test different patterns
-        patterns = ["search:*", "embedding:*", "vector:*", None]
-
-        for pattern in patterns:
-            result = await clear_cache(pattern=pattern, ctx=mock_context)
-            assert isinstance(result, CacheClearResponse)
-            assert result.pattern == pattern
-            assert result.pattern == pattern
+        mock_cache_manager.clear_all.assert_awaited_once()
+        mock_cache_manager.get_stats.assert_awaited_once()

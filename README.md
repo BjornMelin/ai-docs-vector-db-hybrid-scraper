@@ -26,7 +26,7 @@ applications.
 - Hybrid retrieval stack leveraging OpenAI and FastEmbed embeddings, SPLADE
   sparse vectors, reranking, and HyDE augmentation through the modular Qdrant
   service (`src/services/vector_db/` and `src/services/hyde/`).
-- Dual interfaces: REST endpoints in FastAPI (`src/api/routers/simple/`) and a
+- Dual interfaces: REST endpoints in FastAPI (`src/api/routers/v1/`) and a
   FastMCP server (`src/unified_mcp_server.py`) that registers search, document
   management, analytics, and content intelligence tools for Claude Desktop /
   Code.
@@ -115,15 +115,19 @@ flowchart LR
 
 ### Infrastructure Orchestration
 
-- `ClientManager` (`src/infrastructure/client_manager.py`) is the central service
-  locator. It lazily wires clients (OpenAI, Qdrant, Redis, Firecrawl), caches,
-  vector storage, crawling, embeddings, monitoring, and RAG helpers with
-  configuration-aware constructors. All dependencies retrieve shared services by
-  calling `get_client_manager()` rather than instantiating bespoke manager
-  classes.
-- Service initialization is idempotent and thread-safe, with cleanup routines
-  that close caches, vector stores, MCP sessions, and background monitoring
-  tasks.
+- `ApplicationContainer` (`src/infrastructure/container.py`) is the single source
+  of truth for wiring clients (OpenAI, Qdrant, Redis, Firecrawl), caches, vector
+  storage, crawling, embeddings, monitoring, and RAG helpers. Runtime surfaces pull
+  dependencies from the container using `dependency-injector` providers rather than
+  instantiating bespoke managers.
+- `src/infrastructure/bootstrap.py` exposes `ensure_container` and
+  `container_session` helpers so FastAPI lifespans, the unified MCP server, CLI
+  utilities, and evaluation scripts share identical lifecycle management without
+  reimplementing startup/shutdown logic.
+- Service initialization is coordinated through container lifecycle hooks with
+  deterministic startup/shutdown ordering, ensuring shared resources (HTTP sessions,
+  vector stores, MCP sessions, monitoring tasks) are initialised once and cleaned up
+  safely.
 
 ### Crawling & Ingestion
 
@@ -271,7 +275,29 @@ All search endpoints accept the canonical [`SearchRequest`](src/models/search.py
 }
 ```
 
-Responses are emitted as [`SearchResponse`](src/contracts/retrieval.py) payloads containing canonical [`SearchRecord`](src/contracts/retrieval.py) entries.
+Responses are emitted as [`SearchResponse`](src/contracts/retrieval.py) payloads containing canonical [`SearchRecord`](src/contracts/retrieval.py) entries. Example response payload:
+
+```json
+{
+  "query": "vector databases",
+  "total_results": 2,
+  "processing_time_ms": 12.4,
+  "records": [
+    {
+      "id": "doc-1",
+      "content": "Install Qdrant with Docker...",
+      "score": 0.91,
+      "collection": "documentation"
+    },
+    {
+      "id": "doc-2",
+      "content": "Manage hybrid sparse+dense search pipelines...",
+      "score": 0.88,
+      "collection": "documentation"
+    }
+  ]
+}
+```
 
 ### Run the MCP server
 

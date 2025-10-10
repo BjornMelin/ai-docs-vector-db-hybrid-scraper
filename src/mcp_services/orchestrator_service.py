@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from dataclasses import dataclass
 from typing import Any, cast
 
 from fastmcp import FastMCP
 
-from src.infrastructure.client_manager import ClientManager
 from src.services.agents import (
     DynamicToolDiscovery,
     GraphRunner,
@@ -23,87 +23,60 @@ from .system_service import SystemService
 logger = logging.getLogger(__name__)
 
 
+@dataclass(slots=True)
+class OrchestratorDependencies:
+    """Container for optional orchestrator dependency overrides."""
+
+    search_service: SearchService | None = None
+    document_service: DocumentService | None = None
+    analytics_service: AnalyticsService | None = None
+    system_service: SystemService | None = None
+    graph_runner: GraphRunner | None = None
+    discovery: DynamicToolDiscovery | None = None
+
+
 class OrchestratorService:  # pylint: disable=too-many-instance-attributes
     """FastMCP service coordinating domain-specific MCP tools."""
 
-    def __init__(self, name: str = "orchestrator-service") -> None:
+    def __init__(
+        self,
+        name: str = "orchestrator-service",
+        *,
+        dependencies: OrchestratorDependencies | None = None,
+    ) -> None:
         instructions = (
             "Coordinate domain tools, surface orchestration telemetry, and expose "
             "LangGraph-based workflows for multi-service requests."
         )
         self.mcp = FastMCP(name, instructions=instructions)
-        self.client_manager: ClientManager | None = None
+        deps = dependencies or OrchestratorDependencies()
+        self.search_service = deps.search_service or SearchService()
+        self.document_service = deps.document_service or DocumentService()
+        self.analytics_service = deps.analytics_service or AnalyticsService()
+        self.system_service = deps.system_service or SystemService()
 
-        self.search_service: SearchService | None = None
-        self.document_service: DocumentService | None = None
-        self.analytics_service: AnalyticsService | None = None
-        self.system_service: SystemService | None = None
-
-        self._discovery: DynamicToolDiscovery | None = None
-        self._graph_runner: GraphRunner | None = None
-
-    async def initialize(self, client_manager: ClientManager) -> None:
-        """Initialise domain services and register orchestrator tools."""
-
-        self.client_manager = client_manager
-        await self._initialize_domain_services()
-        await self._initialize_agentic_components()
-        await self._register_orchestrator_tools()
-        logger.info("OrchestratorService initialized")
-
-    async def _initialize_domain_services(self) -> None:
-        if not self.client_manager:
-            msg = "OrchestratorService not initialized"
-            raise RuntimeError(msg)
-
-        services = [
-            ("search", SearchService()),
-            ("document", DocumentService()),
-            ("analytics", AnalyticsService()),
-            ("system", SystemService()),
-        ]
-
-        tasks = [
-            (
-                name,
-                service,
-                asyncio.create_task(
-                    service.initialize(self.client_manager), name=f"init_{name}"
-                ),
+        discovery = deps.discovery
+        graph_runner = deps.graph_runner
+        if discovery is None or graph_runner is None:
+            discovery, _, _, graph_runner = GraphRunner.build_components(
+                discovery=discovery
             )
-            for name, service in services
-        ]
-
-        for service_name, service, task in tasks:
+        self._discovery: DynamicToolDiscovery | None = discovery
+        self._graph_runner: GraphRunner | None = graph_runner
+        if self._discovery:
             try:
-                await task
-            except Exception:  # pragma: no cover - defensive log
-                logger.exception("Failed to initialize %s service", service_name)
-                continue
-            if service_name == "search":
-                self.search_service = service
-            elif service_name == "document":
-                self.document_service = service
-            elif service_name == "analytics":
-                self.analytics_service = service
-            elif service_name == "system":
-                self.system_service = service
-            logger.info("Initialized %s service", service_name)
+                loop = asyncio.get_running_loop()
+                loop.create_task(self._discovery.refresh(force=True))
+            except RuntimeError:
+                logger.debug("Event loop not running; discovery refresh deferred")
+        else:  # pragma: no cover - defensive branch
+            logger.warning("Dynamic tool discovery not initialised for orchestrator")
+        logger.info("Initialized LangGraph components for orchestrator")
 
-    async def _initialize_agentic_components(self) -> None:
-        if not self.client_manager:
-            return
+        self._register_orchestrator_tools()
 
-        discovery, _, _, runner = GraphRunner.build_components(self.client_manager)
-        self._discovery = discovery
-        self._graph_runner = runner
-        await discovery.refresh(force=True)
-        logger.info("initialized LangGraph runner for orchestrator")
-
-    async def _register_orchestrator_tools(self) -> None:
-        if not self.client_manager:
-            msg = "OrchestratorService not initialized"
-            raise RuntimeError(msg)
+    def _register_orchestrator_tools(self) -> None:
+        """Register FastMCP tool handlers exposed by the orchestrator."""
 
         @self.mcp.tool()  # pylint: disable=no-value-for-parameter
         async def orchestrate_multi_service_workflow(

@@ -5,15 +5,16 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import ValidationError
 
-from src.mcp_tools.models.responses import CrawlResult, SearchResult
+from src.contracts.retrieval import SearchRecord
+from src.mcp_tools.models.responses import CrawlResult
 
 
-class TestSearchResult:
-    """Test SearchResult model."""
+class TestSearchRecord:
+    """Test SearchRecord model."""
 
     def test_minimal_valid_result(self):
         """Test minimal valid search result."""
-        result = SearchResult(
+        result = SearchRecord(
             id="doc_123",
             content="This is the document content",
             score=0.95,
@@ -32,7 +33,7 @@ class TestSearchResult:
             "created_at": "2024-01-01",
             "tags": ["python", "tutorial"],
         }
-        result = SearchResult(
+        result = SearchRecord(
             id="doc_456",
             content="Advanced Python tutorial content",
             score=0.87,
@@ -52,43 +53,43 @@ class TestSearchResult:
         """Test that required fields must be present."""
         # Missing id
         with pytest.raises(ValidationError) as exc_info:
-            SearchResult.model_validate({"content": "test", "score": 0.5})
+            SearchRecord.model_validate({"content": "test", "score": 0.5})
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("id",) for error in errors)
 
         # Missing content
         with pytest.raises(ValidationError) as exc_info:
-            SearchResult.model_validate({"id": "123", "score": 0.5})
+            SearchRecord.model_validate({"id": "123", "score": 0.5})
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("content",) for error in errors)
 
         # Missing score
         with pytest.raises(ValidationError) as exc_info:
-            SearchResult.model_validate({"id": "123", "content": "test"})
+            SearchRecord.model_validate({"id": "123", "content": "test"})
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("score",) for error in errors)
 
     def test_score_validation(self):
         """Test score field accepts various numeric values."""
         # Valid scores
-        SearchResult(id="1", content="test", score=0.0)
-        SearchResult(id="2", content="test", score=1.0)
-        SearchResult(id="3", content="test", score=0.5)
-        SearchResult(id="5", content="test", score=1.5)  # Scores > 1 allowed
+        SearchRecord(id="1", content="test", score=0.0)
+        SearchRecord(id="2", content="test", score=1.0)
+        SearchRecord(id="3", content="test", score=0.5)
+        SearchRecord(id="5", content="test", score=1.5)  # Scores > 1 allowed
 
         # Negative scores should raise validation errors
         with pytest.raises(ValidationError):
-            SearchResult(id="4", content="test", score=-0.1)
+            SearchRecord(id="4", content="test", score=-0.1)
 
     def test_empty_content(self):
         """Test that empty content is allowed."""
-        result = SearchResult(id="empty", content="", score=0.1)
+        result = SearchRecord(id="empty", content="", score=0.1)
         assert result.content == ""
 
     def test_metadata_flexibility(self):
         """Test that metadata can contain any structure."""
         # Simple metadata
-        result1 = SearchResult(
+        result1 = SearchRecord(
             id="1",
             content="test",
             score=0.5,
@@ -109,7 +110,7 @@ class TestSearchResult:
             "boolean": True,
             "null": None,
         }
-        result2 = SearchResult(
+        result2 = SearchRecord(
             id="2",
             content="test",
             score=0.5,
@@ -121,6 +122,14 @@ class TestSearchResult:
         assert metadata_result2["array"] == ["a", "b", "c"]
         assert metadata_result2["boolean"] is True
         assert metadata_result2["null"] is None
+
+    def test_model_dump_excludes_none(self):
+        """Test that serialization omits optional None fields when requested."""
+        result = SearchRecord(id="serialize", content="data", score=0.3)
+        dumped = result.model_dump(exclude_none=True)
+        assert "url" not in dumped
+        assert "title" not in dumped
+        assert dumped["id"] == "serialize"
 
 
 class TestCrawlResult:

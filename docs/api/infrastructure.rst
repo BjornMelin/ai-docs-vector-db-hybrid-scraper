@@ -12,14 +12,6 @@ Subpackages
 Submodules
 ----------
 
-infrastructure.client\_manager module
--------------------------------------
-
-.. automodule:: infrastructure.client_manager
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 infrastructure.shared module
 ----------------------------
 

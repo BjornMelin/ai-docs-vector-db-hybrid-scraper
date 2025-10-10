@@ -7,7 +7,6 @@ from typing import Any
 
 from fastmcp import FastMCP
 
-from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.tools import (
     collection_management,
     content_intelligence,
@@ -15,6 +14,9 @@ from src.mcp_tools.tools import (
     documents,
     projects,
 )
+from src.services.cache.manager import CacheManager
+from src.services.core.project_storage import ProjectStorage
+from src.services.vector_db.service import VectorStoreService
 
 
 logger = logging.getLogger(__name__)
@@ -23,7 +25,16 @@ logger = logging.getLogger(__name__)
 class DocumentService:
     """Document ingestion and management."""
 
-    def __init__(self, name: str = "document-service"):
+    def __init__(
+        self,
+        name: str = "document-service",
+        *,
+        vector_service: VectorStoreService | None = None,
+        cache_manager: CacheManager | None = None,
+        crawl_manager: Any | None = None,
+        content_intelligence_service: Any | None = None,
+        project_storage: ProjectStorage | None = None,
+    ):
         self.mcp = FastMCP(
             name,
             instructions=(
@@ -31,24 +42,30 @@ class DocumentService:
                 "collections, and project tools."
             ),
         )
-        self.client_manager: ClientManager | None = None
 
-    async def initialize(self, client_manager: ClientManager) -> None:
-        self.client_manager = client_manager
-        await self._register_tools()
-        logger.info("DocumentService initialized")
-
-    async def _register_tools(self) -> None:
-        if not self.client_manager:
-            raise RuntimeError("DocumentService not initialized")
-
-        documents.register_tools(self.mcp, self.client_manager)
-        collection_management.register_tools(self.mcp, self.client_manager)
-        projects.register_tools(self.mcp, self.client_manager)
-        crawling.register_tools(self.mcp, self.client_manager)
-        content_intelligence.register_tools(self.mcp, self.client_manager)
-
-        logger.info("Registered document tools")
+        documents.register_tools(
+            self.mcp,
+            vector_service=vector_service,
+            cache_manager=cache_manager,
+            crawl_manager=crawl_manager,
+            content_intelligence_service=content_intelligence_service,
+        )
+        collection_management.register_tools(
+            self.mcp,
+            vector_service=vector_service,
+            cache_manager=cache_manager,
+        )
+        projects.register_tools(
+            self.mcp,
+            vector_service=vector_service,
+            project_storage=project_storage,
+        )
+        crawling.register_tools(self.mcp, crawl_manager=crawl_manager)
+        content_intelligence.register_tools(
+            self.mcp,
+            content_service=content_intelligence_service,
+        )
+        logger.info("Document tools registered")
 
     def get_mcp_server(self) -> FastMCP:
         return self.mcp

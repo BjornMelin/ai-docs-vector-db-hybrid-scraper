@@ -1,44 +1,125 @@
-"""Tests for tool registry wiring."""
+"""Tests for tool registry wiring under dependency-injector."""
 
 from __future__ import annotations
 
-import logging
-import sys
-import types
-from typing import Any, cast
+from types import SimpleNamespace
+from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
 
-
-if "src.infrastructure.client_manager" not in sys.modules:
-    client_manager_stub = types.ModuleType("src.infrastructure.client_manager")
-
-    class ClientManager:  # pragma: no cover - import shim for tests
-        """Minimal client manager placeholder."""
-
-        async def initialize(self) -> None:  # pragma: no cover - unused placeholder
-            return None
-
-    client_manager_stub.ClientManager = ClientManager  # type: ignore[attr-defined]
-    sys.modules["src.infrastructure.client_manager"] = client_manager_stub
+from src.mcp_tools import tool_registry
 
 
-if "src.services.crawling" not in sys.modules:
-    crawling_stub = types.ModuleType("src.services.crawling")
+@pytest.fixture()
+def fake_mcp() -> MagicMock:
+    """Provide a fake FastMCP application."""
 
-    async def crawl_page(
-        *_args: Any, **_kwargs: Any
-    ) -> dict[str, Any]:  # pragma: no cover
-        return {}
-
-    crawling_stub.crawl_page = crawl_page  # type: ignore[attr-defined]
-    sys.modules["src.services.crawling"] = crawling_stub
+    app = MagicMock()
+    app.tool.side_effect = lambda *args, **kwargs: (lambda fn: fn)
+    return app
 
 
-if "src.mcp_tools.tools" not in sys.modules:
-    tools_stub = types.ModuleType("src.mcp_tools.tools")
+@pytest.fixture()
+def stub_services() -> dict[str, Any]:
+    """Expose stubbed service dependencies."""
 
-    for module_name in [
+    return {
+        "vector_service": MagicMock(name="vector_service"),
+        "cache_manager": MagicMock(name="cache_manager"),
+        "crawl_manager": MagicMock(name="crawl_manager"),
+        "content_intelligence_service": MagicMock(name="content_service"),
+        "project_storage": MagicMock(name="project_storage"),
+        "embedding_manager": MagicMock(name="embedding_manager"),
+        "health_manager": MagicMock(name="health_manager"),
+    }
+
+
+@pytest.mark.asyncio
+async def test_register_all_tools_invokes_registrars_once(
+    monkeypatch: pytest.MonkeyPatch,
+    fake_mcp: MagicMock,
+    stub_services: dict[str, Any],
+) -> None:
+    """Each tool module should be invoked exactly once with expected args."""
+
+    calls: dict[str, SimpleNamespace] = {}
+
+    def _capture(name: str):
+        def _record(*args: Any, **kwargs: Any) -> None:
+            calls[name] = SimpleNamespace(args=args, kwargs=kwargs)
+
+        return _record
+
+    monkeypatch.setattr(
+        tool_registry.tools.retrieval,
+        "register_tools",
+        _capture("retrieval"),
+    )
+    monkeypatch.setattr(
+        tool_registry.tools.documents,
+        "register_tools",
+        _capture("documents"),
+    )
+    monkeypatch.setattr(
+        tool_registry.tools.embeddings,
+        "register_tools",
+        _capture("embeddings"),
+    )
+    monkeypatch.setattr(
+        tool_registry.tools.lightweight_scrape,
+        "register_tools",
+        _capture("lightweight_scrape"),
+    )
+    monkeypatch.setattr(
+        tool_registry.tools.collection_management,
+        "register_tools",
+        _capture("collection_management"),
+    )
+    monkeypatch.setattr(
+        tool_registry.tools.projects,
+        "register_tools",
+        _capture("projects"),
+    )
+    monkeypatch.setattr(
+        tool_registry.tools.payload_indexing,
+        "register_tools",
+        _capture("payload_indexing"),
+    )
+    monkeypatch.setattr(
+        tool_registry.tools.analytics,
+        "register_tools",
+        _capture("analytics"),
+    )
+    monkeypatch.setattr(
+        tool_registry.tools.cache,
+        "register_tools",
+        _capture("cache"),
+    )
+    monkeypatch.setattr(
+        tool_registry.tools.content_intelligence,
+        "register_tools",
+        _capture("content_intelligence"),
+    )
+    monkeypatch.setattr(
+        tool_registry.tools.system_health,
+        "register_tools",
+        _capture("system_health"),
+    )
+    monkeypatch.setattr(
+        tool_registry.tools.web_search,
+        "register_tools",
+        _capture("web_search"),
+    )
+    monkeypatch.setattr(
+        tool_registry.tools.cost_estimation,
+        "register_tools",
+        _capture("cost_estimation"),
+    )
+
+    await tool_registry.register_all_tools(fake_mcp, **stub_services)
+
+    expected_modules = {
         "retrieval",
         "documents",
         "embeddings",
@@ -52,121 +133,82 @@ if "src.mcp_tools.tools" not in sys.modules:
         "system_health",
         "web_search",
         "cost_estimation",
-    ]:
-        full_name = f"src.mcp_tools.tools.{module_name}"
-        submodule = types.ModuleType(full_name)
+    }
 
-        def register_tools(*_args: Any, **_kwargs: Any) -> None:  # pragma: no cover
-            return None
-
-        submodule.register_tools = register_tools  # type: ignore[attr-defined]
-        setattr(tools_stub, module_name, submodule)
-        sys.modules[full_name] = submodule
-
-    sys.modules["src.mcp_tools.tools"] = tools_stub
-
-
-from src.mcp_tools import tool_registry
-
-from .conftest import FakeClientManager, FakeMCP
-
-
-@pytest.mark.asyncio
-async def test_register_all_tools_invokes_pipeline_in_order(
-    monkeypatch: pytest.MonkeyPatch,
-    fake_mcp: FakeMCP,
-    fake_client_manager: FakeClientManager,
-) -> None:
-    """All registrars execute once in the defined pipeline order."""
-
-    calls: list[str] = []
-
-    stubbed_pipeline = []
-
-    for module_name, _ in tool_registry._REGISTRATION_PIPELINE:
-
-        def stub(mcp: Any, manager: Any, *, _name: str = module_name) -> None:
-            assert mcp is fake_mcp
-            assert manager is fake_client_manager
-            calls.append(_name)
-
-        stubbed_pipeline.append((module_name, stub))
-
-    monkeypatch.setattr(tool_registry, "_REGISTRATION_PIPELINE", stubbed_pipeline)
-
-    await tool_registry.register_all_tools(
-        cast(Any, fake_mcp), cast(Any, fake_client_manager)
+    assert set(calls) == expected_modules
+    assert all(namespace.args[0] is fake_mcp for namespace in calls.values())
+    assert (
+        calls["retrieval"].kwargs["vector_service"] is stub_services["vector_service"]
+    )
+    assert calls["documents"].kwargs["cache_manager"] is stub_services["cache_manager"]
+    assert (
+        calls["system_health"].kwargs["health_manager"]
+        is stub_services["health_manager"]
     )
 
-    expected_order = [name for name, _ in tool_registry._REGISTRATION_PIPELINE]
-    assert calls == expected_order
-
 
 @pytest.mark.asyncio
-async def test_register_all_tools_propagates_registration_errors(
+async def test_register_all_tools_propagates_errors(
     monkeypatch: pytest.MonkeyPatch,
-    fake_mcp: FakeMCP,
-    fake_client_manager: FakeClientManager,
+    fake_mcp: MagicMock,
+    stub_services: dict[str, Any],
 ) -> None:
-    """Exceptions from a registrar bubble up and halt subsequent registrations."""
+    """Exceptions from registrars should surface and stop registration."""
 
-    calls: list[str] = []
-    names = [name for name, _ in tool_registry._REGISTRATION_PIPELINE]
-
-    def fail_stub(mcp: Any, manager: Any) -> None:
-        assert mcp is fake_mcp
-        assert manager is fake_client_manager
-        calls.append(names[1])
+    def _fail(*_args: Any, **_kwargs: Any) -> None:
         raise RuntimeError("boom")
 
-    def first_stub(mcp: Any, manager: Any) -> None:
-        assert mcp is fake_mcp
-        assert manager is fake_client_manager
-        calls.append(names[0])
+    monkeypatch.setattr(
+        tool_registry.tools.retrieval,
+        "register_tools",
+        _fail,
+    )
+    called = False
 
-    stubbed_pipeline = [(names[0], first_stub), (names[1], fail_stub)]
+    def _documents(*_args: Any, **_kwargs: Any) -> None:
+        nonlocal called
+        called = True
 
-    for module_name in names[2:]:
-
-        def later_stub(mcp: Any, manager: Any, *, _name: str = module_name) -> None:
-            calls.append(_name)
-
-        stubbed_pipeline.append((module_name, later_stub))
-
-    monkeypatch.setattr(tool_registry, "_REGISTRATION_PIPELINE", stubbed_pipeline)
+    monkeypatch.setattr(
+        tool_registry.tools.documents,
+        "register_tools",
+        _documents,
+    )
 
     with pytest.raises(RuntimeError, match="boom"):
-        await tool_registry.register_all_tools(
-            cast(Any, fake_mcp), cast(Any, fake_client_manager)
-        )
+        await tool_registry.register_all_tools(fake_mcp, **stub_services)
 
-    assert calls == names[:2]
+    assert called is False
 
 
 @pytest.mark.asyncio
 async def test_register_all_tools_logs_summary(
     monkeypatch: pytest.MonkeyPatch,
-    fake_mcp: FakeMCP,
-    fake_client_manager: FakeClientManager,
+    fake_mcp: MagicMock,
+    stub_services: dict[str, Any],
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """Registry reports the number of modules registered via logging."""
+    """Registry should log a concise summary after successful registration."""
 
-    stubbed_pipeline = []
+    for module in [
+        tool_registry.tools.retrieval,
+        tool_registry.tools.documents,
+        tool_registry.tools.embeddings,
+        tool_registry.tools.lightweight_scrape,
+        tool_registry.tools.collection_management,
+        tool_registry.tools.projects,
+        tool_registry.tools.payload_indexing,
+        tool_registry.tools.analytics,
+        tool_registry.tools.cache,
+        tool_registry.tools.content_intelligence,
+        tool_registry.tools.system_health,
+        tool_registry.tools.web_search,
+        tool_registry.tools.cost_estimation,
+    ]:
+        monkeypatch.setattr(module, "register_tools", lambda *args, **kwargs: None)
 
-    for module_name, _ in tool_registry._REGISTRATION_PIPELINE:
+    caplog.set_level("INFO", tool_registry.__name__)
 
-        def stub(*_args: Any, **_kwargs: Any) -> None:  # pragma: no cover - trivial
-            return None
+    await tool_registry.register_all_tools(fake_mcp, **stub_services)
 
-        stubbed_pipeline.append((module_name, stub))
-
-    monkeypatch.setattr(tool_registry, "_REGISTRATION_PIPELINE", stubbed_pipeline)
-
-    caplog.set_level(logging.INFO, tool_registry.__name__)
-    await tool_registry.register_all_tools(
-        cast(Any, fake_mcp), cast(Any, fake_client_manager)
-    )
-
-    summary = f"Registered {len(tool_registry._REGISTRATION_PIPELINE)} MCP tool modules"
-    assert summary in caplog.text
+    assert "Registered MCP tools" in caplog.text

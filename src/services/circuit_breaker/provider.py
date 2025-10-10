@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 
 
@@ -11,31 +10,13 @@ try:
 except ModuleNotFoundError:  # pragma: no cover - optional dependency
     AsyncInMemoryUnitOfWork = None  # type: ignore[assignment]
 
-from src.infrastructure.client_manager import ensure_client_manager, get_client_manager
+from src.infrastructure.container import get_container
 from src.services.circuit_breaker import CircuitBreakerManager
 
 
 logger = logging.getLogger(__name__)
 
-_manager: CircuitBreakerManager | None = None
 _fallback_manager: CircuitBreakerManager | None = None
-_manager_lock = asyncio.Lock()
-
-
-async def _resolve_registry_manager() -> CircuitBreakerManager | None:
-    try:
-        registry = get_client_manager()
-    except RuntimeError:
-        try:
-            registry = await ensure_client_manager()
-        except Exception as exc:  # pragma: no cover - startup race conditions
-            logger.debug(
-                "Service registry unavailable for circuit breaker manager: %s",
-                exc,
-                exc_info=True,
-            )
-            return None
-    return await registry.get_circuit_breaker_manager()
 
 
 def _build_fallback_manager() -> CircuitBreakerManager:
@@ -59,21 +40,15 @@ def _build_fallback_manager() -> CircuitBreakerManager:
 
 
 async def get_circuit_breaker_manager() -> CircuitBreakerManager:
-    """Return the shared CircuitBreakerManager instance from the ClientManager."""
+    """Return the shared CircuitBreakerManager instance from the DI container."""
 
-    global _manager  # pylint: disable=global-statement
-    if _manager is not None:
-        if _manager is _fallback_manager:
-            # Allow subsequent calls to retry registry resolution.
-            async with _manager_lock:
-                _manager = await _resolve_registry_manager() or _manager
-        return _manager
+    container = get_container()
+    if container is None:
+        logger.debug("DI container not initialized; using fallback circuit breaker")
+        return _build_fallback_manager()
 
-    async with _manager_lock:
-        if _manager is None:
-            resolved_manager = await _resolve_registry_manager()
-            if resolved_manager is not None:
-                _manager = resolved_manager
-            else:
-                return _build_fallback_manager()
-    return _manager if _manager is not None else _build_fallback_manager()
+    manager = container.circuit_breaker_manager()
+    if manager is None:
+        logger.debug("CircuitBreakerManager provider returned None; using fallback")
+        return _build_fallback_manager()
+    return manager

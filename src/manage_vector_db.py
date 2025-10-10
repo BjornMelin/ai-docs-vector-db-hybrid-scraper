@@ -17,10 +17,8 @@ from rich.table import Table
 # Import unified configuration and service layer
 from src.config import get_settings, refresh_settings
 from src.contracts.retrieval import SearchRecord
-from src.infrastructure.client_manager import (
-    ensure_client_manager,
-    shutdown_client_manager,
-)
+from src.infrastructure.bootstrap import ensure_container
+from src.infrastructure.container import get_container, shutdown_container
 from src.services.errors import QdrantServiceError
 from src.services.vector_db import CollectionSchema
 from src.services.vector_db.service import VectorStoreService
@@ -67,7 +65,7 @@ def setup_logging(level: str = "INFO") -> logging.Logger:
 
 
 class VectorDBManager:
-    """Comprehensive vector database management using the ClientManager."""
+    """Comprehensive vector database management backed by the DI container."""
 
     def __init__(self, qdrant_url: str | None = None) -> None:
         """Initialize with optional Qdrant override."""
@@ -76,21 +74,27 @@ class VectorDBManager:
         self._vector_service: VectorStoreService | None = None
 
     async def initialize(self) -> None:
-        """Ensure the ClientManager is ready and apply overrides when required."""
+        """Ensure container-managed services are ready."""
 
-        force_reload = False
+        reload_required = False
+        settings = get_settings()
         if self.qdrant_url:
-            config = get_settings()
-            updated_config = config.model_copy(
+            updated_settings = settings.model_copy(
                 update={
-                    "qdrant": config.qdrant.model_copy(update={"url": self.qdrant_url})
+                    "qdrant": settings.qdrant.model_copy(
+                        update={"url": self.qdrant_url}
+                    )
                 }
             )
-            refresh_settings(settings=updated_config)
-            force_reload = True
+            refresh_settings(settings=updated_settings)
+            settings = updated_settings
+            reload_required = True
 
-        client_manager = await ensure_client_manager(force=force_reload)
-        self._vector_service = await client_manager.get_vector_store_service()
+        container = await ensure_container(
+            settings=settings,
+            force_reload=reload_required,
+        )
+        self._vector_service = container.vector_store_service()
 
     async def get_vector_store_service(self) -> VectorStoreService:
         """Return the shared vector store service."""
@@ -102,10 +106,11 @@ class VectorDBManager:
         return self._vector_service
 
     async def cleanup(self) -> None:
-        """Release registry-managed services."""
+        """Release container-managed services."""
 
         self._vector_service = None
-        await shutdown_client_manager()
+        if get_container() is not None:
+            await shutdown_container()
 
     async def list_collections(self) -> list[str]:
         """List all collections."""
@@ -220,7 +225,8 @@ class VectorDBManager:
             return []
 
     async def get_database_stats(self) -> DatabaseStats | None:
-        """Get comprehensive database statistics."""
+        """Get database statistics."""
+
         try:
             await self.initialize()
             vector_service = await self.get_vector_store_service()
@@ -258,6 +264,7 @@ class VectorDBManager:
 
     async def clear_collection(self, collection_name: str) -> bool:
         """Clear all vectors from a collection."""
+
         try:
             await self.initialize()
 
@@ -325,6 +332,7 @@ def cli(ctx, url, log_level):
 @async_command
 async def list_collections(ctx):
     """List all collections."""
+
     manager = _create_manager_from_context(ctx)
     try:
         collections = await manager.list_collections()
@@ -345,6 +353,7 @@ async def list_collections(ctx):
 @async_command
 async def create(ctx, collection_name, vector_size):
     """Create a new collection."""
+
     manager = _create_manager_from_context(ctx)
     try:
         success = await manager.create_collection(
@@ -365,6 +374,7 @@ async def create(ctx, collection_name, vector_size):
 @async_command
 async def delete(ctx, collection_name):
     """Delete a collection."""
+
     manager = _create_manager_from_context(ctx)
     try:
         success = await manager.delete_collection(collection_name)
@@ -382,6 +392,7 @@ async def delete(ctx, collection_name):
 @async_command
 async def stats(ctx):
     """Show database statistics."""
+
     manager = _create_manager_from_context(ctx)
     try:
         stats = await manager.get_database_stats()
@@ -416,6 +427,7 @@ async def stats(ctx):
 @async_command
 async def info(ctx, collection_name):
     """Show collection information."""
+
     manager = _create_manager_from_context(ctx)
     try:
         info = await manager.get_collection_info(collection_name)
@@ -435,6 +447,7 @@ async def info(ctx, collection_name):
 @async_command
 async def clear(ctx, collection_name):
     """Clear all vectors from a collection."""
+
     manager = _create_manager_from_context(ctx)
     try:
         await manager.clear_collection(collection_name)
@@ -450,6 +463,7 @@ async def clear(ctx, collection_name):
 @async_command
 async def search(ctx, collection_name, query, limit):
     """Search for similar documents."""
+
     manager = _create_manager_from_context(ctx)
     try:
         results = await manager.search_documents(
@@ -478,6 +492,7 @@ async def search(ctx, collection_name, query, limit):
 
 def main():
     """Main entry point."""
+
     cli()  # pylint: disable=no-value-for-parameter
 
 

@@ -8,7 +8,7 @@ import asyncio
 import logging
 import random
 import time
-from collections.abc import AsyncIterator, Mapping
+from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Any
@@ -18,7 +18,7 @@ from mcp.types import CallToolResult
 from opentelemetry import trace
 from opentelemetry.trace import Status, StatusCode
 
-from src.infrastructure.client_manager import ClientManager
+from src.config.models import MCPClientConfig
 from src.services.errors import APIError
 from src.services.observability.tracking import record_ai_operation
 
@@ -104,14 +104,31 @@ class ToolExecutionService:
 
     def __init__(
         self,
-        client_manager: ClientManager,
+        client: MultiServerMCPClient | Callable[[], Awaitable[MultiServerMCPClient]],
+        mcp_config: MCPClientConfig,
         *,
         max_attempts: int = _DEFAULT_MAX_ATTEMPTS,
         backoff_seconds: float = _DEFAULT_BACKOFF_SECONDS,
     ) -> None:
-        self._client_manager = client_manager
+        if callable(client):
+            self._client_factory = client
+            self._client: MultiServerMCPClient | None = None
+        else:
+            self._client = client
+            self._client_factory = None
+        self._config = mcp_config
         self._max_attempts = max(1, max_attempts)
         self._backoff_seconds = max(0.0, backoff_seconds)
+
+    async def _resolve_client(self) -> MultiServerMCPClient:
+        if self._client is not None:
+            return self._client
+        if self._client_factory is None:
+            msg = "MCP client resolver is not configured"
+            raise RuntimeError(msg)
+        client = await self._client_factory()
+        self._client = client
+        return client
 
     async def execute_tool(
         self,
@@ -124,8 +141,8 @@ class ToolExecutionService:
         """Execute an MCP tool and return the structured result."""
 
         payload = _validate_arguments(arguments)
-        client = await self._client_manager.get_mcp_client()
-        mcp_config = getattr(self._client_manager.config, "mcp_client", None)
+        client = await self._resolve_client()
+        mcp_config = self._config
         if not mcp_config or not mcp_config.servers:
             msg = "No MCP servers configured for tool execution"
             raise ToolExecutionFailure(msg)

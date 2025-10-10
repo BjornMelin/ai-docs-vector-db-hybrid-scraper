@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Generator
 from typing import Any
 
 import pytest
@@ -10,15 +9,6 @@ from fastapi.testclient import TestClient
 
 from src.api import app_factory
 from src.api.app_profiles import AppProfile
-from src.architecture.service_factory import reset_service_factory
-
-
-@pytest.fixture(autouse=True)
-def _reset_global_factory() -> Generator[None, None, None]:
-    """Reset the global service factory after each test to avoid leakage."""
-
-    yield
-    reset_service_factory()
 
 
 @pytest.fixture(autouse=True)
@@ -67,8 +57,16 @@ def test_create_app_simple_profile_exposes_service_status() -> None:
         ]
 
 
-def test_create_app_enterprise_requires_routers() -> None:
-    """Enterprise profile fails fast when modules are missing."""
+@pytest.mark.parametrize("profile", [AppProfile.SIMPLE, AppProfile.ENTERPRISE])
+def test_create_app_profiles_register_canonical_routes(profile: AppProfile) -> None:
+    """All profiles expose the canonical v1 routers."""
 
-    with pytest.raises(RuntimeError, match="Enterprise profile requires"):
-        app_factory.create_app(AppProfile.ENTERPRISE)
+    app = app_factory.create_app(profile)
+
+    with TestClient(app) as client:
+        response = client.get("/openapi.json")
+
+    assert response.status_code == 200
+    schema = response.json()
+    assert "/api/v1/search" in schema["paths"]
+    assert "/api/v1/documents" in schema["paths"]

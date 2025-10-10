@@ -9,13 +9,15 @@ from typing import Any
 
 from fastmcp import FastMCP
 
-from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.tools import (
     configuration,
     cost_estimation,
     embeddings,
     system_health,
 )
+from src.services.embeddings.manager import EmbeddingManager
+from src.services.health.manager import HealthCheckManager
+from src.services.vector_db.service import VectorStoreService
 
 
 logger = logging.getLogger(__name__)
@@ -27,7 +29,14 @@ class SystemService:
     Provides system monitoring, configuration management, and resource tracking.
     """
 
-    def __init__(self, name: str = "system-service"):
+    def __init__(
+        self,
+        name: str = "system-service",
+        *,
+        vector_service: VectorStoreService | None = None,
+        embedding_manager: EmbeddingManager | None = None,
+        health_manager: HealthCheckManager | None = None,
+    ):
         """Initialize the system service.
 
         Args:
@@ -47,36 +56,11 @@ class SystemService:
             - Embedding provider management
             """,
         )
-        self.client_manager: ClientManager | None = None
-
-    async def initialize(self, client_manager: ClientManager) -> None:
-        """Initialize the system service with client manager.
-
-        Args:
-            client_manager: Shared client manager instance
-        """
-
-        self.client_manager = client_manager
-
-        # Register system tools
-        await self._register_system_tools()
-
-        logger.info("SystemService initialized")
-
-    async def _register_system_tools(self) -> None:
-        """Register all system-related MCP tools."""
-
-        if not self.client_manager:
-            msg = "SystemService not initialized"
-            raise RuntimeError(msg)
-
-        # Register core system tools
-        system_health.register_tools(self.mcp, self.client_manager)
-        configuration.register_tools(self.mcp, self.client_manager)
-        cost_estimation.register_tools(self.mcp, self.client_manager)
-        embeddings.register_tools(self.mcp, self.client_manager)
-
-        logger.info("Registered system tools")
+        system_health.register_tools(self.mcp, health_manager=health_manager)
+        configuration.register_tools(self.mcp)
+        cost_estimation.register_tools(self.mcp)
+        embeddings.register_tools(self.mcp, embedding_manager=embedding_manager)
+        logger.info("System tools registered")
 
     def get_mcp_server(self) -> FastMCP:
         """Get the FastMCP server instance.

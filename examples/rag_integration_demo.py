@@ -27,7 +27,7 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from src.config import Settings, get_settings
-from src.infrastructure.client_manager import ClientManager
+from src.infrastructure.bootstrap import container_session, ensure_container
 from src.services.dependencies import (
     RAGResponse,
     RAGRequest,
@@ -60,11 +60,15 @@ def _print_configuration(config: Settings) -> None:
 
 
 async def _initialise_generator(
-    client_manager: ClientManager, config: Settings
+    config: Settings,
 ) -> tuple[RAGGenerator, ServiceRAGConfig]:
     """Initialise the vector-backed RAG generator."""
 
-    vector_store = await client_manager.get_vector_store_service()
+    container = await ensure_container(settings=config)
+
+    vector_store = container.vector_store_service()
+    if vector_store is None:
+        raise RuntimeError("Vector store service unavailable")
     generator, rag_config = await initialise_rag_generator(config, vector_store)
     print("✅ RAG generator initialized successfully")
     return generator, rag_config
@@ -182,23 +186,20 @@ async def demonstrate_rag_patterns() -> None:
 
     _print_configuration(config)
 
-    client_manager = ClientManager.from_unified_config()
-    await client_manager.initialize()
-
     rag_generator: RAGGenerator | None = None
-    try:
-        print("📋 Pattern 1: Direct Service Integration")
-        print("-" * 40)
-        rag_generator, rag_config = await _initialise_generator(client_manager, config)
-        _display_initial_metrics(rag_generator)
+    async with container_session(settings=config, force_reload=True):
+        try:
+            print("📋 Pattern 1: Direct Service Integration")
+            print("-" * 40)
+            rag_generator, rag_config = await _initialise_generator(config)
+            _display_initial_metrics(rag_generator)
 
-        rag_request = _demo_rag_request(rag_config)
-        await _run_rag_workflow(rag_request, rag_generator)
-        await _display_observability(rag_generator)
-    finally:
-        if rag_generator and rag_generator.llm_client_available:
-            await rag_generator.cleanup()
-        await client_manager.cleanup()
+            rag_request = _demo_rag_request(rag_config)
+            await _run_rag_workflow(rag_request, rag_generator)
+            await _display_observability(rag_generator)
+        finally:
+            if rag_generator and rag_generator.llm_client_available:
+                await rag_generator.cleanup()
 
 
 if __name__ == "__main__":

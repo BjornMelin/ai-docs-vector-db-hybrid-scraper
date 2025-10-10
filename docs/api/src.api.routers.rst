@@ -7,7 +7,7 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
-   src.api.routers.simple
+   src.api.routers.v1
 
 Submodules
 ----------

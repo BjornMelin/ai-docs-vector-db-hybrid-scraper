@@ -4,11 +4,11 @@ import logging
 import re
 import time
 from collections.abc import Mapping, Sequence
-from typing import Literal
+from typing import Any, Literal
 
 from fastmcp import Context
 
-from src.infrastructure.client_manager import ClientManager
+from src.services.dependencies import get_crawl_manager
 from src.services.errors import CrawlServiceError
 
 
@@ -32,6 +32,7 @@ async def _analyze_url_suitability(
     crawl_manager, url: str, ctx: Context | None
 ) -> bool:
     """Analyze URL to determine if lightweight tier is suitable."""
+
     if not (crawl_manager and hasattr(crawl_manager, "analyze_url")):
         return True  # Default to allowing the attempt
 
@@ -54,6 +55,7 @@ def _convert_content_formats(
     content: str, formats: Sequence[str], result: Mapping[str, object]
 ) -> dict[str, str]:
     """Convert content to requested formats."""
+
     content_dict = {}
 
     metadata = result.get("metadata")
@@ -136,7 +138,10 @@ async def _handle_scrape_failure(
     raise CrawlServiceError(msg)
 
 
-def register_tools(mcp, client_manager: ClientManager):
+def register_tools(
+    mcp,
+    crawl_manager: Any | None = None,
+) -> None:
     """Register lightweight scraping tools with the MCP server."""
 
     @mcp.tool()
@@ -190,20 +195,20 @@ def register_tools(mcp, client_manager: ClientManager):
         validated_formats = _validate_formats(formats)
 
         # Get CrawlManager which uses UnifiedBrowserManager
-        crawl_manager = await client_manager.get_crawl_manager()
+        manager = await get_crawl_manager(crawl_manager)
 
         if ctx:
             await ctx.debug("Using UnifiedBrowserManager with lightweight tier")
 
         # Analyze URL suitability for lightweight tier
-        can_handle = await _analyze_url_suitability(crawl_manager, url, ctx)
+        can_handle = await _analyze_url_suitability(manager, url, ctx)
 
         # Perform the scrape using UnifiedBrowserManager with forced lightweight tier
         try:
             start_time = time.time()
 
             # Force lightweight tier by specifying preferred_provider
-            result = await crawl_manager.scrape_url(url=url, tier="lightweight")
+            result = await manager.scrape_url(url=url, tier="lightweight")
 
             elapsed_ms = (time.time() - start_time) * 1000
 

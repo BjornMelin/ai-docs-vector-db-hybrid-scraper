@@ -17,10 +17,9 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 from opentelemetry import trace
-from pydantic import ValidationError
 
+from src.config.loader import get_settings
 from src.contracts.retrieval import SearchRecord
-from src.infrastructure.client_manager import ClientManager
 from src.services.agents.dynamic_tool_discovery import (
     DynamicToolDiscovery,
     ToolCapability,
@@ -38,6 +37,10 @@ from src.services.agents.tool_execution_service import (
     ToolExecutionResult,
     ToolExecutionService,
     ToolExecutionTimeout,
+)
+from src.services.dependencies import (
+    get_mcp_client,
+    get_vector_store_service as core_get_vector_store_service,
 )
 from src.services.observability.tracking import record_ai_operation
 
@@ -153,7 +156,6 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
 
     def __init__(
         self,
-        client_manager: ClientManager,
         discovery: DynamicToolDiscovery,
         tool_service: ToolExecutionService,
         *,
@@ -162,10 +164,11 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
         run_timeout_seconds: float | None = None,
         retrieval_limit: int = 8,
     ) -> None:
-        self._client_manager = client_manager
         self._discovery = discovery
         self._tool_service = tool_service
-        self._retrieval_helper = retrieval_helper or RetrievalHelper(client_manager)
+        self._retrieval_helper = retrieval_helper or RetrievalHelper(
+            core_get_vector_store_service
+        )
         self._max_parallel_tools = max(1, max_parallel_tools)
         self._run_timeout_seconds = run_timeout_seconds
         self._default_retrieval_limit = max(1, retrieval_limit)
@@ -173,7 +176,14 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
 
     @classmethod
     def build_components(
-        cls, client_manager: ClientManager
+        cls,
+        discovery: DynamicToolDiscovery | None = None,
+        tool_service: ToolExecutionService | None = None,
+        retrieval_helper: RetrievalHelper | None = None,
+        *,
+        max_parallel_tools: int | None = None,
+        run_timeout_seconds: float | None = None,
+        retrieval_limit: int | None = None,
     ) -> tuple[
         DynamicToolDiscovery,
         ToolExecutionService,
@@ -182,21 +192,34 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
     ]:
         """Construct discovery, execution service, retrieval helper, and runner."""
 
-        discovery = DynamicToolDiscovery(client_manager)
-        tool_service = ToolExecutionService(client_manager)
-        retrieval_helper = RetrievalHelper(client_manager)
-        agentic_cfg = getattr(client_manager.config, "agentic", None)
-        max_parallel = getattr(agentic_cfg, "max_parallel_tools", 3)
-        run_timeout = getattr(agentic_cfg, "run_timeout_seconds", 30.0)
-        retrieval_limit = getattr(agentic_cfg, "retrieval_limit", 8)
+        settings = get_settings()
+        agentic_cfg = getattr(settings, "agentic", None)
+
+        discovery = discovery or DynamicToolDiscovery(get_mcp_client)
+        tool_service = tool_service or ToolExecutionService(
+            get_mcp_client,
+            settings.mcp_client,
+        )
+        retrieval_helper = retrieval_helper or RetrievalHelper(
+            core_get_vector_store_service
+        )
+
+        max_parallel = max_parallel_tools or getattr(
+            agentic_cfg, "max_parallel_tools", 3
+        )
+        run_timeout = run_timeout_seconds or getattr(
+            agentic_cfg, "run_timeout_seconds", 30.0
+        )
+        retrieval_limit_resolved = retrieval_limit or getattr(
+            agentic_cfg, "retrieval_limit", 8
+        )
         runner = cls(
-            client_manager=client_manager,
             discovery=discovery,
             tool_service=tool_service,
             retrieval_helper=retrieval_helper,
             max_parallel_tools=max_parallel,
             run_timeout_seconds=run_timeout,
-            retrieval_limit=retrieval_limit,
+            retrieval_limit=retrieval_limit_resolved,
         )
         return discovery, tool_service, retrieval_helper, runner
 

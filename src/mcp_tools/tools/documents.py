@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import Any, cast
 from uuid import uuid4
@@ -10,14 +11,15 @@ from fastmcp import Context
 
 from src.chunking import DocumentChunker
 from src.config.models import ChunkingConfig, ChunkingStrategy
-from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.models.requests import BatchRequest, DocumentRequest
 from src.mcp_tools.models.responses import AddDocumentResponse, DocumentBatchResponse
 from src.security.ml_security import MLSecurityValidator
+from src.services.cache.manager import CacheManager
 from src.services.dependencies import (
     get_cache_manager,
     get_content_intelligence_service,
     get_crawl_manager,
+    get_vector_store_service,
 )
 from src.services.vector_db.service import VectorStoreService
 from src.services.vector_db.types import CollectionSchema, TextDocument
@@ -26,19 +28,49 @@ from src.services.vector_db.types import CollectionSchema, TextDocument
 logger = logging.getLogger(__name__)
 
 
+def _coerce_add_document_response(value: Any) -> AddDocumentResponse | None:
+    """Convert cached payloads into :class:`AddDocumentResponse` instances."""
+
+    if isinstance(value, AddDocumentResponse):
+        return value
+
+    if isinstance(value, Mapping) and all(isinstance(key, str) for key in value):
+        return AddDocumentResponse(**cast(Mapping[str, Any], value))
+
+    return None
+
+
 def _raise_scrape_error(url: str) -> None:
     """Raise ValueError for scraping failure."""
+
     msg = f"Failed to scrape {url}"
     raise ValueError(msg)
 
 
-async def _get_vector_service(client_manager: ClientManager) -> VectorStoreService:
+async def _resolve_vector_service(
+    vector_service: VectorStoreService | None = None,
+) -> VectorStoreService:
     """Return an initialized VectorStoreService instance."""
 
-    service = await client_manager.get_vector_store_service()
-    if not service.is_initialized():
-        await service.initialize()
+    service = vector_service or await get_vector_store_service()
+    if hasattr(service, "is_initialized") and not service.is_initialized():
+        initializer = getattr(service, "initialize", None)
+        if callable(initializer):
+            result = initializer()
+            if asyncio.iscoroutine(result):
+                await result
     return service
+
+
+async def _resolve_cache_manager(
+    cache_manager: CacheManager | None = None,
+) -> CacheManager:
+    """Return the cache manager instance, resolving from the container when needed."""
+
+    resolved = await get_cache_manager(cache_manager)
+    if not isinstance(resolved, CacheManager):
+        raise RuntimeError("Resolved cache manager has unexpected type")
+    return resolved
 
 
 async def _run_content_intelligence(
@@ -87,21 +119,20 @@ async def _run_content_intelligence(
 
 
 async def _scrape_document(
-    client_manager: ClientManager,
     request: DocumentRequest,
     doc_id: str,
     ctx: Context,
+    *,
+    crawl_manager: Any | None = None,
+    content_service: Any | None = None,
 ) -> tuple[dict[str, Any], Any | None]:
     """Scrape the target URL and optionally enrich the content."""
 
-    crawl_manager = await get_crawl_manager(client_manager)
-    if crawl_manager is None:
-        msg = "Crawl manager not available"
-        raise RuntimeError(msg)
-    crawl_manager = cast(Any, crawl_manager)
+    resolved_crawl_manager = await get_crawl_manager(crawl_manager)
+    resolved_crawl_manager = cast(Any, resolved_crawl_manager)
 
     await ctx.debug(f"Scraping URL for document {doc_id} via UnifiedBrowserManager")
-    crawl_result = await crawl_manager.scrape_url(request.url)
+    crawl_result = await resolved_crawl_manager.scrape_url(request.url)
     if (
         not crawl_result
         or not crawl_result.get("success")
@@ -110,17 +141,18 @@ async def _scrape_document(
         await ctx.error(f"Failed to scrape {request.url}")
         _raise_scrape_error(request.url)
 
+    content_intelligence = content_service
     try:
-        content_intelligence_service = await get_content_intelligence_service(
-            client_manager
+        content_intelligence = await get_content_intelligence_service(
+            content_intelligence
         )
     except Exception as exc:  # pragma: no cover - optional component
         logger.info(
             "Content intelligence unavailable for %s: %s", doc_id, exc, exc_info=exc
         )
-        content_intelligence_service = None
+        content_intelligence = None
     enriched_content = await _run_content_intelligence(
-        content_intelligence_service,
+        content_intelligence,
         crawl_result,
         request,
         doc_id,
@@ -290,7 +322,13 @@ def _build_ingestion_response(
     return AddDocumentResponse(**response_kwargs)
 
 
-def register_tools(mcp, client_manager: ClientManager):
+def register_tools(
+    mcp,
+    vector_service: VectorStoreService | None = None,
+    cache_manager: CacheManager | None = None,
+    crawl_manager: Any | None = None,
+    content_intelligence_service: Any | None = None,
+) -> None:
     """Register document management tools with the MCP server."""
 
     @mcp.tool()
@@ -306,23 +344,26 @@ def register_tools(mcp, client_manager: ClientManager):
         await ctx.info(f"Processing document {doc_id}: {request.url}")
 
         try:
-            vector_service = await _get_vector_service(client_manager)
-            cache_manager = await get_cache_manager(client_manager)
+            service = await _resolve_vector_service(vector_service)
+            resolved_cache = await _resolve_cache_manager(cache_manager)
 
-            security_validator = MLSecurityValidator.from_unified_config()
-            request.url = security_validator.validate_url(request.url)
+            request.url = MLSecurityValidator.from_unified_config().validate_url(
+                request.url
+            )
 
             cache_key = f"doc:{request.url}"
-            cached_result = await cache_manager.get(cache_key)
-            if cached_result:
+            cached_value = await resolved_cache.get(cache_key)
+            cached_response = _coerce_add_document_response(cached_value)
+            if cached_response is not None:
                 await ctx.debug(f"Document {doc_id} found in cache")
-                return AddDocumentResponse(**cached_result)
+                return cached_response
 
             crawl_result, enriched_content = await _scrape_document(
-                client_manager,
                 request,
                 doc_id,
                 ctx,
+                crawl_manager=crawl_manager,
+                content_service=content_intelligence_service,
             )
 
             chunks = await _chunk_document(
@@ -333,7 +374,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 ctx,
             )
             await _persist_documents(
-                vector_service,
+                service,
                 request.collection,
                 request.chunk_strategy,
                 _build_text_documents(
@@ -349,11 +390,11 @@ def register_tools(mcp, client_manager: ClientManager):
                 request,
                 crawl_result,
                 len(chunks),
-                vector_service,
+                service,
                 enriched_content,
             )
 
-            await cache_manager.set(cache_key, result.model_dump(), ttl=86400)
+            await resolved_cache.set(cache_key, result.model_dump(), ttl=86400)
 
             message = (
                 f"Document {doc_id} processed successfully: "
@@ -381,6 +422,7 @@ def register_tools(mcp, client_manager: ClientManager):
         Processes multiple URLs concurrently with rate limiting and
         progress tracking.
         """
+
         successes: list[AddDocumentResponse] = []
         failures: list[str] = []
         total_urls = len(request.urls)

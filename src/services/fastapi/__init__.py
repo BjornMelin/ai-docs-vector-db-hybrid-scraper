@@ -6,7 +6,6 @@ task management for the unified MCP Server.
 
 from .dependencies import (
     cleanup_dependencies,
-    get_client_manager,
     get_config_dependency as get_settings,
     get_health_checker,
     get_vector_service,
@@ -43,7 +42,6 @@ __all__ = [
     "TracingMiddleware",
     "cleanup_dependencies",
     "create_production_server",
-    "get_client_manager",
     "get_settings",
     "get_correlation_id",
     "get_health_checker",
