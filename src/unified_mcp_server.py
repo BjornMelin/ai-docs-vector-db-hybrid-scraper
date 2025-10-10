@@ -79,7 +79,8 @@ async def managed_lifespan(server: FastMCP[Any]) -> AsyncIterator[None]:  # pyli
                 logger.info("Started background health monitoring task")
             else:
                 logger.info(
-                    "Health checks disabled; skipping endpoint registration and background task"
+                    "Health checks disabled; skipping endpoint registration "
+                    "and background task"
                 )
 
         logger.info("Registering MCP tools...")
