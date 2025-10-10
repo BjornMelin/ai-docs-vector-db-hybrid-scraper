@@ -204,7 +204,7 @@ def _build_search_response(
         for item in raw_results:
             try:
                 records.append(SearchRecord.from_payload(item))
-            except TypeError:
+            except (TypeError, ValidationError):
                 collection_hint = payload.get("collection")
                 if collection_hint is None:
                     collection_hint = getattr(item, "collection", None)
@@ -220,9 +220,10 @@ def _build_search_response(
                             collection_name=str(collection_hint or "default"),
                         )
                     )
-                except TypeError:
+                except (TypeError, ValidationError):
                     logger.debug(
-                        "Unexpected search result type %s; coercing to canonical record",
+                        "Unexpected search result type %s; "
+                        "coercing to canonical record",
                         type(item).__name__,
                     )
                     records.append(

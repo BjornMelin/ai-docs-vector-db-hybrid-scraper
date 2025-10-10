@@ -17,6 +17,7 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 from opentelemetry import trace
+from pydantic import ValidationError
 
 from src.contracts.retrieval import SearchRecord
 from src.infrastructure.client_manager import ClientManager
@@ -699,7 +700,26 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
 
     def _to_search_outcome(self, state: AgenticGraphState) -> GraphSearchOutcome:
         raw_documents = state.get("retrieved_documents", [])
-        results = [SearchRecord.from_payload(doc) for doc in raw_documents]
+        results: list[SearchRecord] = []
+        if raw_documents:
+            try:
+                results = SearchRecord.parse_list(raw_documents)
+            except (TypeError, ValidationError):
+                for doc in raw_documents:
+                    try:
+                        results.append(SearchRecord.from_payload(doc))
+                    except (TypeError, ValidationError):
+                        logger.debug(
+                            "Failed to normalise retrieved document of type %s",
+                            type(doc).__name__,
+                        )
+                        results.append(
+                            SearchRecord(
+                                id=str(uuid4()),
+                                content=str(doc),
+                                score=0.0,
+                            )
+                        )
         tools_used = [output["tool_name"] for output in state.get("tool_outputs", [])]
         return GraphSearchOutcome(
             success=state.get("success", True),
