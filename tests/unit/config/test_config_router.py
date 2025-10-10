@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Generator
+from types import SimpleNamespace
 
 import pytest
 from fastapi import FastAPI, status
@@ -92,3 +93,49 @@ def test_api_key_required_blocks_requests(
 
     response = client.get("/config", headers={"X-API-Key": "super-secret"})
     assert response.status_code == status.HTTP_200_OK
+
+
+def test_read_settings_handles_invalid_snapshot(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Configuration snapshot endpoint sanitizes malformed settings."""
+
+    app = FastAPI()
+    app.include_router(config_router.router)
+
+    from dataclasses import dataclass
+
+    @dataclass
+    class BrokenObservability:
+        enabled: bool = True
+
+    @dataclass
+    class BrokenSecurity:
+        api_key_required: bool = False
+
+    class BrokenSettings:
+        app_name = "broken"
+        version = "0.0.0"
+        mode = "invalid"
+        environment = None
+        debug = True
+        observability = BrokenObservability()
+        security = BrokenSecurity()
+
+        @staticmethod
+        def get_feature_flags() -> dict[str, bool]:
+            raise RuntimeError("unexpected feature failure")
+
+    def _get_broken_settings() -> BrokenSettings:
+        return BrokenSettings()
+
+    monkeypatch.setattr(config_router, "get_settings", _get_broken_settings)
+
+    with TestClient(app) as client, caplog.at_level("ERROR"):
+        response = client.get("/config")
+
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    payload = response.json()
+    assert payload == {"detail": "Settings snapshot unavailable"}
+    assert "Failed to serialize settings snapshot" in caplog.text
+    assert "unexpected feature failure" not in str(payload)

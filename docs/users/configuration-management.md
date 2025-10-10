@@ -530,6 +530,10 @@ export AI_DOCS__CACHE__REDIS_URL=redis://localhost:6379
 
 # Arrays as JSON
 export AI_DOCS__SECURITY__ALLOWED_DOMAINS='["example.com", "docs.example.com"]'
+# Restrict CORS origins for production deployments
+export AI_DOCS__SECURITY__CORS_ALLOWED_ORIGINS='["https://docs.example.com"]'
+# Or override via a simple comma-separated allow list
+export CORS_ALLOWED_ORIGINS=https://docs.example.com,https://app.example.com
 ```
 
 ### Configuration Display

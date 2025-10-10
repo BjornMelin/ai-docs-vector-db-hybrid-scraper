@@ -81,42 +81,9 @@ class RefreshResponse(BaseModel):
 def read_settings() -> SettingsSnapshot:
     """Return a sanitized snapshot of the current settings."""
 
-    settings = get_settings()
-    return SettingsSnapshot(
-        app_name=settings.app_name,
-        version=settings.version,
-        mode=settings.mode,
-        environment=settings.environment.value,
-        debug=settings.debug,
-        observability_enabled=settings.observability.enabled,
-        feature_flags=settings.get_feature_flags(),
-    )
-
-
-@router.get("/status", response_model=SettingsSnapshot)
-def read_status() -> SettingsSnapshot:
-    """Return the same snapshot with emphasis on current mode."""
-
-    settings = get_settings()
-    return SettingsSnapshot(
-        app_name=settings.app_name,
-        version=settings.version,
-        mode=settings.mode,
-        environment=settings.environment.value,
-        debug=settings.debug,
-        observability_enabled=settings.observability.enabled,
-        feature_flags=settings.get_feature_flags(),
-    )
-
-
-@router.post("/refresh", response_model=RefreshResponse, status_code=status.HTTP_200_OK)
-def refresh_settings_endpoint(request: RefreshRequest) -> RefreshResponse:
-    """Refresh the cached settings instance, applying optional overrides."""
-
-    overrides = request.overrides or {}
-    settings = refresh_settings(**overrides)
-    return RefreshResponse(
-        snapshot=SettingsSnapshot(
+    try:
+        settings = get_settings()
+        return SettingsSnapshot(
             app_name=settings.app_name,
             version=settings.version,
             mode=settings.mode,
@@ -125,4 +92,58 @@ def refresh_settings_endpoint(request: RefreshRequest) -> RefreshResponse:
             observability_enabled=settings.observability.enabled,
             feature_flags=settings.get_feature_flags(),
         )
-    )
+    except Exception as exc:  # pragma: no cover - defensive logging
+        logger.exception("Failed to serialize settings snapshot")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Settings snapshot unavailable",
+        ) from exc
+
+
+@router.get("/status", response_model=SettingsSnapshot)
+def read_status() -> SettingsSnapshot:
+    """Return the same snapshot with emphasis on current mode."""
+
+    try:
+        settings = get_settings()
+        return SettingsSnapshot(
+            app_name=settings.app_name,
+            version=settings.version,
+            mode=settings.mode,
+            environment=settings.environment.value,
+            debug=settings.debug,
+            observability_enabled=settings.observability.enabled,
+            feature_flags=settings.get_feature_flags(),
+        )
+    except Exception as exc:  # pragma: no cover - defensive logging
+        logger.exception("Failed to serialize status snapshot")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Settings snapshot unavailable",
+        ) from exc
+
+
+@router.post("/refresh", response_model=RefreshResponse, status_code=status.HTTP_200_OK)
+def refresh_settings_endpoint(request: RefreshRequest) -> RefreshResponse:
+    """Refresh the cached settings instance, applying optional overrides."""
+
+    overrides = request.overrides or {}
+    try:
+        settings = refresh_settings(**overrides)
+        return RefreshResponse(
+            snapshot=SettingsSnapshot(
+                app_name=settings.app_name,
+                version=settings.version,
+                mode=settings.mode,
+                environment=settings.environment.value,
+                debug=settings.debug,
+                observability_enabled=settings.observability.enabled,
+                feature_flags=settings.get_feature_flags(),
+            )
+        )
+    except Exception as exc:  # pragma: no cover - defensive logging
+        logger.exception("Failed to refresh settings with overrides")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to refresh settings",
+        ) from exc
