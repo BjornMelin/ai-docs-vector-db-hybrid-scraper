@@ -27,6 +27,7 @@ from .models import (
     AutomationRouterConfig,
     BrowserUseConfig,
     CacheConfig,
+    CircuitBreakerConfig,
     ChunkingConfig,
     ChunkingStrategy,
     CircuitBreakerConfig,
