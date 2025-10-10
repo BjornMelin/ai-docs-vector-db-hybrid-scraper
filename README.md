@@ -233,11 +233,13 @@ flowchart LR
 
 | Variable | Purpose | Example |
 | --- | --- | --- |
-| `AI_DOCS__MODE` | Selects simple or enterprise service wiring. | `AI_DOCS__MODE=enterprise` |
 | `AI_DOCS__QDRANT__URL` | Points services at your Qdrant instance. | `http://localhost:6333` |
 | `OPENAI_API_KEY` | Enables OpenAI embeddings and HyDE prompts. | `sk-...` |
 | `AI_DOCS__FIRECRAWL__API_KEY` | Authenticates Firecrawl API usage. | `fc-...` |
 | `AI_DOCS__CACHE__REDIS_URL` | Enables Dragonfly/Redis caching layers. | `redis://localhost:6379` |
+| `AI_DOCS__ENABLE_ADVANCED_MONITORING` | Toggles advanced monitoring dashboards. | `true` |
+| `AI_DOCS__ENABLE_DEPLOYMENT_FEATURES` | Enables deployment automation endpoints. | `true` |
+| `AI_DOCS__ENABLE_AB_TESTING` | Enables experimentation helpers. | `false` |
 | `FASTMCP_TRANSPORT` | Chooses MCP transport (`streamable-http` or `stdio`). | `streamable-http` |
 | `FASTMCP_HOST` / `FASTMCP_PORT` | Hostname and port for MCP HTTP transport. | `0.0.0.0` / `8001` |
 | `FASTMCP_BUFFER_SIZE` | Tunes MCP stream buffer size (bytes). | `8192` |
@@ -262,7 +264,7 @@ export AI_DOCS__FIRECRAWL__API_KEY="fc-..."    # optional but recommended
 uv run python -m src.api.main
 ```
 
-Visit `http://localhost:8000/docs` for interactive OpenAPI docs. Default mode is `simple`; set `AI_DOCS__MODE=enterprise` to enable the enterprise service stack.
+Visit `http://localhost:8000/docs` for interactive OpenAPI docs. Feature flags such as `AI_DOCS__ENABLE_ADVANCED_MONITORING=true` adjust optional services without switching application modes.
 
 ### Search API payloads
 

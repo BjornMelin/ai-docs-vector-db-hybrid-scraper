@@ -67,14 +67,12 @@ def cli():
 
 
 @cli.command()
-@click.option("--mode", type=click.Choice(["simple", "enterprise"]), default="simple")
 @click.option("--reload/--no-reload", default=True)
 @click.option("--host", default="0.0.0.0")  # noqa: S104
 @click.option("--port", default=8000)
-def dev(mode: str, reload: bool, host: str, port: int):
-    """Start development server"""
-    os.environ["AI_DOCS__MODE"] = mode
-    click.echo(f"Starting development server in {mode} mode")
+def dev(reload: bool, host: str, port: int):
+    """Start development server using the unified configuration."""
+    click.echo("Starting development server with unified configuration")
     click.echo(f"Server: http://{host}:{port}")
 
     uvicorn.run("src.api.main:app", reload=reload, host=host, port=port)
@@ -135,7 +133,12 @@ def setup():
             )
         else:
             env_local.write_text(
-                "AI_DOCS__MODE=simple\nAI_DOCS__DEBUG=true\n",
+                (
+                    "AI_DOCS__ENABLE_ADVANCED_MONITORING=true\n"
+                    "AI_DOCS__ENABLE_DEPLOYMENT_FEATURES=true\n"
+                    "AI_DOCS__ENABLE_AB_TESTING=false\n"
+                    "AI_DOCS__DEBUG=true\n"
+                ),
                 encoding="utf-8",
             )
 

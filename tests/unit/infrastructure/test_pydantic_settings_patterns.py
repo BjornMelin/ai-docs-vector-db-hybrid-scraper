@@ -13,7 +13,6 @@ from typing import TypedDict
 import pytest
 from pydantic import ValidationError
 
-from src.architecture.modes import ApplicationMode
 from src.config import Settings, get_settings, refresh_settings
 from src.config.models import (
     ChunkingStrategy,
@@ -153,56 +152,33 @@ def test_config_nested_credentials_and_urls(tmp_path: Path) -> None:
     assert snapshot["cache"]["redis_url"] == "redis://redis:6379/1"
 
 
-def test_config_simple_mode_adjustments_and_helpers(tmp_path: Path) -> None:
-    """Simple mode should clamp aggressive settings and expose simplified helpers."""
+def test_config_feature_flags_and_helpers(tmp_path: Path) -> None:
+    """Feature flags control optional capabilities without mode profiles."""
 
     overrides = _path_overrides(tmp_path)
     config = Settings.model_validate(
         {
             "environment": Environment.TESTING,
-            "mode": ApplicationMode.SIMPLE,
-            "performance": {"max_concurrent_crawls": 25},
-            "cache": {"local_max_memory_mb": 512},
-            "reranking": {"enabled": True},
+            "enable_advanced_monitoring": False,
+            "enable_deployment_features": False,
+            "enable_ab_testing": True,
             "observability": {"enabled": True},
-            "chunking": {"strategy": ChunkingStrategy.ENHANCED},
-            "data_dir": overrides["data_dir"],
-            "cache_dir": overrides["cache_dir"],
-            "logs_dir": overrides["logs_dir"],
-        }
-    )
-    snapshot = config.model_dump()
-
-    assert snapshot["performance"]["max_concurrent_crawls"] == 10
-    assert snapshot["cache"]["local_max_memory_mb"] == 200
-    assert snapshot["reranking"]["enabled"] is False
-    assert snapshot["observability"]["enabled"] is False
-    assert config.get_effective_chunking_strategy() is ChunkingStrategy.BASIC
-    assert config.get_effective_search_strategy() is SearchStrategy.DENSE
-
-
-def test_config_enterprise_mode_adjustments(tmp_path: Path) -> None:
-    """Enterprise mode retains advanced features while keeping concurrency sensible."""
-
-    overrides = _path_overrides(tmp_path)
-    config = Settings.model_validate(
-        {
-            "environment": Environment.TESTING,
-            "mode": ApplicationMode.ENTERPRISE,
-            "performance": {"max_concurrent_crawls": 45},
             "chunking": {"strategy": ChunkingStrategy.AST_AWARE},
-            "reranking": {"enabled": True},
-            "observability": {"enabled": True},
+            "embedding": {"search_strategy": SearchStrategy.HYBRID},
             "data_dir": overrides["data_dir"],
             "cache_dir": overrides["cache_dir"],
             "logs_dir": overrides["logs_dir"],
         }
     )
-    snapshot = config.model_dump()
 
-    assert snapshot["performance"]["max_concurrent_crawls"] == 45
-    assert snapshot["reranking"]["enabled"] is True
-    assert snapshot["observability"]["enabled"] is True
+    feature_flags = config.get_feature_flags()
+
+    assert feature_flags == {
+        "advanced_monitoring": False,
+        "deployment_features": False,
+        "a_b_testing": True,
+        "comprehensive_observability": True,
+    }
     assert config.get_effective_chunking_strategy() is ChunkingStrategy.AST_AWARE
     assert config.get_effective_search_strategy() is SearchStrategy.HYBRID
 

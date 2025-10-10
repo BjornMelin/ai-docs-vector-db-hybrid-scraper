@@ -44,17 +44,19 @@ def test_read_settings_returns_snapshot(client: TestClient) -> None:
     payload = response.json()
     assert payload["app_name"] == get_settings().app_name
     assert payload["version"] == get_settings().version
-    assert payload["mode"] == get_settings().mode.value
+    assert payload["mode"] == get_settings().mode
     assert payload["environment"] == get_settings().environment.value
+    assert payload["feature_flags"] == get_settings().get_feature_flags()
 
 
-def test_read_status_uses_resolve_mode(client: TestClient) -> None:
-    """GET /config/status should mirror resolve_mode semantics."""
+def test_read_status_reports_unified_configuration(client: TestClient) -> None:
+    """GET /config/status mirrors the active settings state."""
 
     response = client.get("/config/status")
     assert response.status_code == status.HTTP_200_OK
     payload = response.json()
-    assert payload["mode"] == get_settings().mode.value
+    assert payload["mode"] == get_settings().mode
+    assert payload["feature_flags"] == get_settings().get_feature_flags()
 
 
 def test_refresh_endpoint_applies_overrides(client: TestClient) -> None:

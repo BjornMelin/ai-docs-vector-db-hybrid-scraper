@@ -4,12 +4,10 @@ from __future__ import annotations
 
 from .loader import (
     Settings,
-    apply_mode_overrides,
     ensure_runtime_directories,
     get_settings,
     load_settings,
     refresh_settings,
-    resolve_mode,
     validate_settings_payload,
 )
 from .models import (
@@ -64,12 +62,10 @@ from .security.config import SecurityConfig
 
 __all__ = [
     "Settings",
-    "apply_mode_overrides",
     "ensure_runtime_directories",
     "get_settings",
     "load_settings",
     "refresh_settings",
-    "resolve_mode",
     "validate_settings_payload",
     "AgenticConfig",
     "BrowserUseConfig",

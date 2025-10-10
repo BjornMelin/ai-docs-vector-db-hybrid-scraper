@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Refactor
 
+- Removed dual-mode architecture. Single unified app with feature flags.
 - **[Core]:** Unified dependency lifecycle under the dependency-injector
   container, deleting the legacy `ClientManager` pattern and introducing shared
   bootstrap helpers for FastAPI, MCP, CLI utilities, and evaluation scripts.
