@@ -1,5 +1,6 @@
 """Mock MCP tools for testing without FastMCP Context issues."""
 
+from dataclasses import dataclass
 from typing import Any, Protocol
 from unittest.mock import AsyncMock
 
@@ -62,8 +63,21 @@ class MockMCPServer:
         return decorator
 
 
-def create_mock_tools(client_manager) -> dict[str, AsyncMock]:
-    """Create mock tool functions for testing."""
+@dataclass
+class ToolDependencies:
+    """Collection of services required by the mock tools."""
+
+    vector_service: Any
+    embedding_service: Any
+    crawling_service: Any
+    project_service: Any
+    analytics_service: Any
+    cache_service: Any
+    deployment_service: Any
+
+
+def create_mock_tools(dependencies: ToolDependencies) -> dict[str, AsyncMock]:
+    """Create mock tool functions wired to the provided dependencies."""
 
     # Mock search tool
     async def mock_search_documents(
@@ -75,7 +89,8 @@ def create_mock_tools(client_manager) -> dict[str, AsyncMock]:
         **__kwargs,
     ) -> list[dict[str, Any]]:
         """Mock search documents tool."""
-        result = await client_manager.vector_service.search_documents(
+
+        result = await dependencies.vector_service.search_documents(
             query=query,
             collection=collection,
             limit=limit,
@@ -98,7 +113,8 @@ def create_mock_tools(client_manager) -> dict[str, AsyncMock]:
         texts: list[str], model: str | None = None, **_kwargs
     ) -> dict[str, Any]:
         """Mock generate embeddings tool."""
-        return await client_manager.embedding_service.generate_embeddings(
+
+        return await dependencies.embedding_service.generate_embeddings(
             texts=texts,
             model=model,
         )
@@ -111,11 +127,12 @@ def create_mock_tools(client_manager) -> dict[str, AsyncMock]:
         **__kwargs,
     ) -> dict[str, Any]:
         """Mock add document tool."""
+
         # First crawl the URL
-        await client_manager.crawling_service.crawl_url(url)
+        await dependencies.crawling_service.crawl_url(url)
 
         # Then add to vector service
-        return await client_manager.vector_service.add_document(
+        return await dependencies.vector_service.add_document(
             url=url,
             collection=collection,
             chunk_strategy=chunk_strategy,
@@ -124,7 +141,8 @@ def create_mock_tools(client_manager) -> dict[str, AsyncMock]:
     # Mock collections tool
     async def mock_list_collections(**__kwargs) -> list[dict[str, Any]]:
         """Mock list collections tool."""
-        return await client_manager.vector_service.list_collections()
+
+        return await dependencies.vector_service.list_collections()
 
     # Mock project tool
     async def mock_create_project(
@@ -134,7 +152,8 @@ def create_mock_tools(client_manager) -> dict[str, AsyncMock]:
         **__kwargs,
     ) -> dict[str, Any]:
         """Mock create project tool."""
-        return await client_manager.project_service.create_project(
+
+        return await dependencies.project_service.create_project(
             name=name,
             description=description,
             quality_tier=quality_tier,
@@ -148,7 +167,8 @@ def create_mock_tools(client_manager) -> dict[str, AsyncMock]:
         **__kwargs,
     ) -> dict[str, Any]:
         """Mock get analytics tool."""
-        return await client_manager.analytics_service.get_analytics(
+
+        return await dependencies.analytics_service.get_analytics(
             collection=collection,
             include_performance=include_performance,
             include_costs=include_costs,
@@ -157,30 +177,35 @@ def create_mock_tools(client_manager) -> dict[str, AsyncMock]:
     # Mock cache tools
     async def mock_get_cache_stats(**__kwargs) -> dict[str, Any]:
         """Mock get cache stats tool."""
-        return await client_manager.cache_service.get_stats()
+
+        return await dependencies.cache_service.get_stats()
 
     async def mock_clear_cache(
         pattern: str | None = None, **__kwargs
     ) -> dict[str, Any]:
         """Mock clear cache tool."""
-        return await client_manager.cache_service.clear(pattern=pattern)
+
+        return await dependencies.cache_service.clear(pattern=pattern)
 
     # Mock deployment tool
     async def mock_list_aliases(**__kwargs) -> dict[str, Any]:
         """Mock list aliases tool."""
-        result = await client_manager.deployment_service.list_aliases()
+
+        result = await dependencies.deployment_service.list_aliases()
         return {"aliases": result}
 
     # Mock utilities tool
     async def mock_validate_configuration(**__kwargs) -> dict[str, Any]:
         """Mock validate configuration tool."""
+
         # This would normally validate the actual config
         return {"status": "success", "message": "Configuration is valid"}
 
     # Mock payload indexing tool
     async def mock_reindex_collection(collection: str, **__kwargs) -> dict[str, Any]:
         """Mock reindex collection tool."""
-        return await client_manager.vector_service.reindex_collection(
+
+        return await dependencies.vector_service.reindex_collection(
             collection=collection
         )
 
@@ -190,7 +215,7 @@ def create_mock_tools(client_manager) -> dict[str, AsyncMock]:
 
         query = getattr(request, "query", "")
         collection = getattr(request, "collection", "documentation")
-        return await client_manager.vector_service.hybrid_search(
+        return await dependencies.vector_service.hybrid_search(
             collection=collection,
             query=query,
             limit=getattr(request, "limit", 10),
@@ -213,9 +238,14 @@ def create_mock_tools(client_manager) -> dict[str, AsyncMock]:
     }
 
 
-def register_mock_tools(mcp_server: MockMCPServer, client_manager) -> None:
+def register_mock_tools(
+    mcp_server: MockMCPServer,
+    *,
+    dependencies: ToolDependencies,
+) -> None:
     """Register mock tools with the mock MCP server."""
-    mock_tools = create_mock_tools(client_manager)
+
+    mock_tools = create_mock_tools(dependencies)
 
     for tool_name, tool_func in mock_tools.items():
         # Create a mock tool and add it to the server

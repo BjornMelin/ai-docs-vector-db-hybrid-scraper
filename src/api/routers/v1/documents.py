@@ -9,6 +9,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from src.api.dependencies import get_vector_service_dependency
+from src.api.routers.v1.service_helpers import execute_service_call
 from src.contracts.documents import (
     DocumentListResponse,
     DocumentOperationResponse,
@@ -33,21 +34,27 @@ async def add_document(
     request: DocumentUpsertRequest,
     vector_service: VectorServiceDependency,
 ) -> DocumentOperationResponse:
-    """Insert a document into the configured vector collection."""
+    """Insert a document into the configured vector collection.
 
-    try:
-        collection = request.collection
-        document_id = await vector_service.add_document(
+    Args:
+        request: Canonical document upsert payload.
+        vector_service: Vector store dependency resolved from DI.
+
+    Returns:
+        Operation response containing the new document identifier.
+    """
+    collection = request.collection
+    document_id = await execute_service_call(
+        operation="documents.add",
+        logger=logger,
+        coroutine_factory=lambda: vector_service.add_document(
             collection,
             request.content,
             metadata=_maybe_to_dict(request.metadata),
-        )
-    except Exception as exc:  # pragma: no cover - service-level failures
-        logger.exception("Failed to add document")
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to add document to the vector store.",
-        ) from exc
+        ),
+        error_detail="Failed to add document to the vector store.",
+        extra={"collection": collection},
+    )
 
     return DocumentOperationResponse(
         id=document_id,
@@ -64,18 +71,24 @@ async def get_document(
         description="Collection that stores the document.",
     ),
 ) -> DocumentRecord:
-    """Fetch a document payload by identifier."""
+    """Fetch a document payload by identifier.
 
-    try:
-        payload = await vector_service.get_document(collection, document_id)
-    except Exception as exc:  # pragma: no cover - service-level failures
-        logger.exception(
-            "Failed to retrieve document", extra={"document_id": document_id}
-        )
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to retrieve document from the vector store.",
-        ) from exc
+    Args:
+        document_id: Identifier of the document to load.
+        vector_service: Vector store dependency resolved from DI.
+        collection: Collection that stores the document.
+
+    Returns:
+        Canonical document record constructed from the vector payload.
+    """
+
+    payload = await execute_service_call(
+        operation="documents.get",
+        logger=logger,
+        coroutine_factory=lambda: vector_service.get_document(collection, document_id),
+        error_detail="Failed to retrieve document from the vector store.",
+        extra={"collection": collection, "document_id": document_id},
+    )
 
     if payload is None:
         raise HTTPException(status_code=404, detail="Document not found.")
@@ -91,18 +104,26 @@ async def delete_document(
         description="Collection that stores the document.",
     ),
 ) -> DocumentOperationResponse:
-    """Delete a document by identifier."""
+    """Delete a document by identifier.
 
-    try:
-        deleted = await vector_service.delete_document(collection, document_id)
-    except Exception as exc:  # pragma: no cover - service-level failures
-        logger.exception(
-            "Failed to delete document", extra={"document_id": document_id}
-        )
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to delete document from the vector store.",
-        ) from exc
+    Args:
+        document_id: Identifier of the document to delete.
+        vector_service: Vector store dependency resolved from DI.
+        collection: Collection that stores the document.
+
+    Returns:
+        Operation response describing the deletion outcome.
+    """
+
+    deleted = await execute_service_call(
+        operation="documents.delete",
+        logger=logger,
+        coroutine_factory=lambda: vector_service.delete_document(
+            collection, document_id
+        ),
+        error_detail="Failed to delete document from the vector store.",
+        extra={"collection": collection, "document_id": document_id},
+    )
 
     if not deleted:
         raise HTTPException(status_code=404, detail="Document not found.")
@@ -130,20 +151,28 @@ async def list_documents(
         description="Opaque cursor used to continue listing results.",
     ),
 ) -> DocumentListResponse:
-    """List documents within a collection."""
+    """List documents within a collection.
 
-    try:
-        documents, next_offset = await vector_service.list_documents(
+    Args:
+        vector_service: Vector store dependency resolved from DI.
+        collection: Collection that stores the documents.
+        limit: Maximum number of documents requested.
+        offset: Optional pagination cursor.
+
+    Returns:
+        Paginated list of canonical document records.
+    """
+    documents, next_offset = await execute_service_call(
+        operation="documents.list",
+        logger=logger,
+        coroutine_factory=lambda: vector_service.list_documents(
             collection,
             limit=limit,
             offset=offset,
-        )
-    except Exception as exc:  # pragma: no cover - service-level failures
-        logger.exception("Failed to list documents", extra={"collection": collection})
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to list documents from the vector store.",
-        ) from exc
+        ),
+        error_detail="Failed to list documents from the vector store.",
+        extra={"collection": collection},
+    )
 
     records = [_to_document_record(doc, collection) for doc in documents]
     return DocumentListResponse(
@@ -158,16 +187,21 @@ async def list_documents(
 async def list_collections(
     vector_service: VectorServiceDependency,
 ) -> dict[str, Any]:
-    """Enumerate available vector store collections."""
+    """Enumerate available vector store collections.
 
-    try:
-        collections = await vector_service.list_collections()
-    except Exception as exc:  # pragma: no cover - service-level failures
-        logger.exception("Failed to list collections")
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to list vector store collections.",
-        ) from exc
+    Args:
+        vector_service: Vector store dependency resolved from DI.
+
+    Returns:
+        Mapping containing collection names and total count.
+    """
+
+    collections = await execute_service_call(
+        operation="documents.list_collections",
+        logger=logger,
+        coroutine_factory=vector_service.list_collections,
+        error_detail="Failed to list vector store collections.",
+    )
 
     return {"collections": collections, "count": len(collections)}
 

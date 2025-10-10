@@ -10,6 +10,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from src.api.dependencies import get_vector_service_dependency
+from src.api.routers.v1.service_helpers import execute_service_call
 from src.contracts.retrieval import SearchRecord, SearchResponse
 from src.models.search import SearchRequest
 from src.services.vector_db.service import VectorStoreService
@@ -31,18 +32,17 @@ async def search_documents(
     request: SearchRequest,
     vector_service: VectorServiceDependency,
 ) -> SearchResponse:
-    """Execute a search request using the canonical SearchRequest contract."""
+    """Execute a search request using the canonical search contracts.
 
-    try:
-        return await _perform_search(request, vector_service)
-    except HTTPException:
-        raise
-    except Exception as exc:  # pragma: no cover - defensive logging
-        logger.exception("Search execution failed")
-        raise HTTPException(
-            status_code=500,
-            detail="Search request failed due to an internal error.",
-        ) from exc
+    Args:
+        request: Validated search payload containing query parameters.
+        vector_service: Vector store dependency resolved from the DI container.
+
+    Returns:
+        Canonical search response composed of ``SearchRecord`` entries.
+    """
+
+    return await _perform_search(request, vector_service)
 
 
 @router.get("/search", response_model=SearchResponse)
@@ -59,7 +59,18 @@ async def search_documents_get(
         default=0, ge=0, description="Number of records to skip for pagination."
     ),
 ) -> SearchResponse:
-    """Convenience GET endpoint that maps query parameters to SearchRequest."""
+    """Convenience GET endpoint that emits a ``SearchRequest`` internally.
+
+    Args:
+        vector_service: Vector store dependency resolved from the DI container.
+        q: Text query submitted via query parameters.
+        limit: Maximum number of results to return.
+        collection: Collection identifier to search within.
+        offset: Pagination offset expressed as record count.
+
+    Returns:
+        Canonical search response payload.
+    """
 
     request = SearchRequest(query=q, limit=limit, collection=collection, offset=offset)
     return await search_documents(request, vector_service)
@@ -85,14 +96,8 @@ async def _perform_search(
     else:
         records = await _search_by_query(
             vector_service,
+            request=request,
             collection=collection,
-            query=request.query,
-            limit=request.limit,
-            filters=request.filters,
-            group_by=request.group_by,
-            group_size=request.group_size,
-            overfetch_multiplier=request.overfetch_multiplier,
-            normalize_scores=request.normalize_scores,
         )
 
     elapsed_ms = (perf_counter() - started) * 1000
@@ -110,31 +115,26 @@ async def _perform_search(
 async def _search_by_query(
     vector_service: VectorStoreService,
     *,
+    request: SearchRequest,
     collection: str,
-    query: str,
-    limit: int,
-    filters: dict[str, Any] | None,
-    group_by: str | None,
-    group_size: int | None,
-    overfetch_multiplier: float | None,
-    normalize_scores: bool | None,
 ) -> list[SearchRecord]:
     """Execute a dense similarity search."""
 
-    if not query:
-        raise HTTPException(
-            status_code=400,
-            detail="Search query must not be empty when query_vector is omitted.",
-        )
-    return await vector_service.search_documents(
-        collection=collection,
-        query=query,
-        limit=limit,
-        filters=filters,
-        group_by=group_by,
-        group_size=group_size,
-        overfetch_multiplier=overfetch_multiplier,
-        normalize_scores=normalize_scores,
+    return await execute_service_call(
+        operation="search.query",
+        logger=logger,
+        coroutine_factory=lambda: vector_service.search_documents(
+            collection=collection,
+            query=request.query,
+            limit=request.limit,
+            filters=request.filters,
+            group_by=request.group_by,
+            group_size=request.group_size,
+            overfetch_multiplier=request.overfetch_multiplier,
+            normalize_scores=request.normalize_scores,
+        ),
+        error_detail="Search request failed due to an internal error.",
+        extra={"collection": collection},
     )
 
 
@@ -153,9 +153,15 @@ async def _search_by_vector(
             status_code=400,
             detail="query_vector must contain at least one value.",
         )
-    return await vector_service.search_vector(
-        collection=collection,
-        vector=vector,
-        limit=limit,
-        filters=filters,
+    return await execute_service_call(
+        operation="search.vector",
+        logger=logger,
+        coroutine_factory=lambda: vector_service.search_vector(
+            collection=collection,
+            vector=vector,
+            limit=limit,
+            filters=filters,
+        ),
+        error_detail="Vector search failed due to an internal error.",
+        extra={"collection": collection},
     )

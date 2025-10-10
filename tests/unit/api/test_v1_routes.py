@@ -26,6 +26,7 @@ def app_with_overrides() -> FastAPI:
         return stub
 
     app.dependency_overrides[get_vector_service_dependency] = _get_stub_service
+    app.state.stub_vector_service = stub
     return app
 
 
@@ -34,6 +35,17 @@ class _StubVectorService:
 
     def __init__(self) -> None:
         self.documents: dict[str, dict[str, Any]] = {}
+        self._failures: dict[str, Exception] = {}
+
+    def set_failure(self, operation: str, exc: Exception) -> None:
+        """Inject a failure for the specified operation."""
+
+        self._failures[operation] = exc
+
+    def clear_failures(self) -> None:
+        """Remove all injected failures."""
+
+        self._failures.clear()
 
     async def search_documents(
         self,
@@ -47,6 +59,9 @@ class _StubVectorService:
         overfetch_multiplier: float | None = None,  # noqa: ARG002
         normalize_scores: bool | None = None,  # noqa: ARG002
     ) -> list[SearchRecord]:
+        if failure := self._failures.get("search_documents"):
+            raise failure
+
         return [
             SearchRecord(
                 id="doc-1",
@@ -64,6 +79,9 @@ class _StubVectorService:
         limit: int,
         filters: dict[str, Any] | None = None,  # noqa: ARG002 - signature parity
     ) -> list[SearchRecord]:
+        if failure := self._failures.get("search_vector"):
+            raise failure
+
         magnitude = sum(vector)
         return [
             SearchRecord(
@@ -80,6 +98,9 @@ class _StubVectorService:
         *,
         metadata: dict[str, Any] | None = None,
     ) -> str:
+        if failure := self._failures.get("add_document"):
+            raise failure
+
         document_id = f"{collection}-{len(self.documents) + 1}"
         payload: dict[str, Any] = {
             "id": document_id,
@@ -96,6 +117,9 @@ class _StubVectorService:
         collection: str,
         document_id: str,
     ) -> dict[str, Any] | None:
+        if failure := self._failures.get("get_document"):
+            raise failure
+
         payload = self.documents.get(document_id)
         if payload is None:
             return None
@@ -108,6 +132,9 @@ class _StubVectorService:
         collection: str,
         document_id: str,
     ) -> bool:
+        if failure := self._failures.get("delete_document"):
+            raise failure
+
         return self.documents.pop(document_id, None) is not None
 
     async def list_documents(
@@ -117,6 +144,9 @@ class _StubVectorService:
         limit: int,
         offset: str | None = None,
     ) -> tuple[list[dict[str, Any]], str | None]:
+        if failure := self._failures.get("list_documents"):
+            raise failure
+
         docs = [
             doc
             for doc in self.documents.values()
@@ -125,6 +155,9 @@ class _StubVectorService:
         return docs[:limit], None
 
     async def list_collections(self) -> list[str]:
+        if failure := self._failures.get("list_collections"):
+            raise failure
+
         return ["documentation", "guides"]
 
 
@@ -161,6 +194,26 @@ def test_post_search_supports_query_vector(app_with_overrides: FastAPI) -> None:
     payload = response.json()
     assert response.status_code == 200
     assert payload["records"][0]["id"] == "doc-vector"
+
+
+def test_post_search_handles_service_failure(app_with_overrides: FastAPI) -> None:
+    """Search endpoint surfaces 500 when the service raises unexpected errors."""
+
+    stub: _StubVectorService = app_with_overrides.state.stub_vector_service
+    stub.set_failure("search_documents", RuntimeError("boom"))
+    try:
+        with TestClient(app_with_overrides) as client:
+            response = client.post(
+                "/api/v1/search",
+                json={"query": "install", "collection": "documentation", "limit": 5},
+            )
+        assert response.status_code == 500
+        assert (
+            response.json()["detail"]
+            == "Search request failed due to an internal error."
+        )
+    finally:
+        stub.clear_failures()
 
 
 def test_document_lifecycle_endpoints(app_with_overrides: FastAPI) -> None:
@@ -207,3 +260,25 @@ def test_document_lifecycle_endpoints(app_with_overrides: FastAPI) -> None:
             params={"collection": "documentation"},
         )
         assert missing_response.status_code == 404
+
+
+def test_add_document_handles_service_failure(app_with_overrides: FastAPI) -> None:
+    """Document creation surfaces 500 when the service raises unexpected errors."""
+
+    stub: _StubVectorService = app_with_overrides.state.stub_vector_service
+    stub.set_failure("add_document", RuntimeError("boom"))
+    try:
+        with TestClient(app_with_overrides) as client:
+            response = client.post(
+                "/api/v1/documents",
+                json={
+                    "content": "Hello world",
+                    "collection": "documentation",
+                },
+            )
+        assert response.status_code == 500
+        assert (
+            response.json()["detail"] == "Failed to add document to the vector store."
+        )
+    finally:
+        stub.clear_failures()
