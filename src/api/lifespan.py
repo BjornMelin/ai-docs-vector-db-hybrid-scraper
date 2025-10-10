@@ -7,20 +7,18 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from src.infrastructure.client_manager import (
-    ensure_client_manager,
-    shutdown_client_manager,
-)
+from src.config.loader import get_settings
+from src.infrastructure.container import initialize_container, shutdown_container
 
 
 @asynccontextmanager
 async def client_manager_lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Manage the global ClientManager lifecycle for FastAPI."""
+    """Manage the DI container lifecycle for FastAPI."""
 
-    client_manager = await ensure_client_manager()
-    app.state.client_manager = client_manager
+    container = await initialize_container(get_settings())
+    app.state.container = container
     try:
         yield
     finally:
-        await shutdown_client_manager()
-        app.state.client_manager = None
+        await shutdown_container()
+        app.state.container = None
