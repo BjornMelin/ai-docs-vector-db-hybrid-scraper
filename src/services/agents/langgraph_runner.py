@@ -17,6 +17,7 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 from opentelemetry import trace
+from pydantic import ValidationError
 
 from src.contracts.retrieval import SearchRecord
 from src.infrastructure.client_manager import ClientManager

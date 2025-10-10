@@ -105,6 +105,74 @@ class TestInitializeObservability:
             assert is_observability_enabled() is True
             configure.assert_called_once_with(config.instrumentations)
 
+    def test_initialisation_from_settings(self) -> None:
+        """Settings objects should be coerced into runtime observability configs."""
+
+        settings = SimpleNamespace(
+            app_name="Test Application",
+            version="9.9.9",
+            environment=SimpleNamespace(value="staging"),
+            observability=SimpleNamespace(
+                enabled=True,
+                service_name="override-service",
+                service_version="2.0.0",
+                otlp_endpoint="http://collector:4317",
+                otlp_headers={"authorization": "Bearer token"},
+                otlp_insecure=False,
+                track_ai_operations=True,
+                track_costs=False,
+                instrument_fastapi=True,
+                instrument_httpx=False,
+                console_exporter=True,
+            ),
+        )
+
+        resource_mock = MagicMock()
+        resource_mock.create.return_value = MagicMock()
+
+        with (
+            patch.object(init_module, "_configure_instrumentations") as configure,
+            patch.dict(
+                "sys.modules",
+                _otel_modules(resource_factory=resource_mock),
+            ),
+        ):
+            assert initialize_observability(settings) is True
+
+        configure.assert_called_once()
+        instrumentation = tuple(configure.call_args.args[0])
+        assert instrumentation == ("fastapi", "logging")
+
+    def test_settings_respect_disabled_instrumentations(self) -> None:
+        """Explicitly disabled instrumentations should not be re-enabled."""
+
+        settings = SimpleNamespace(
+            app_name="Test Application",
+            version="9.9.9",
+            environment="development",
+            observability=SimpleNamespace(
+                enabled=True,
+                instrument_fastapi=False,
+                instrument_httpx=False,
+                track_ai_operations=False,
+                track_costs=False,
+            ),
+        )
+
+        resource_mock = MagicMock()
+        resource_mock.create.return_value = MagicMock()
+
+        with (
+            patch.object(init_module, "_configure_instrumentations") as configure,
+            patch.dict(
+                "sys.modules",
+                _otel_modules(resource_factory=resource_mock),
+            ),
+        ):
+            assert initialize_observability(settings) is True
+
+        configure.assert_called_once_with(())
+
     def test_reinitialisation_is_idempotent(self) -> None:
         """Confirm repeated initialisation calls keep state stable."""
 

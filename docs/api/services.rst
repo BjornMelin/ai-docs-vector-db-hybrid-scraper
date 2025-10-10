@@ -16,7 +16,6 @@ Subpackages
    services.embeddings
    services.fastapi
    services.hyde
-   services.monitoring
    services.query_processing
    services.utilities
    services.vector_db
