@@ -199,4 +199,43 @@ class SearchRecord(BaseModel):
         )
 
 
-__all__ = ["SearchRecord"]
+class SearchResponse(BaseModel):
+    """Canonical response payload for search operations.
+
+    Attributes mirror orchestrator outputs so HTTP handlers, CLI utilities,
+    and MCP tools rely on the same envelope.
+    """
+
+    records: list[SearchRecord] = Field(
+        default_factory=list, description="Search results in canonical form"
+    )
+    total_results: int = Field(
+        default=0, ge=0, description="Number of records returned"
+    )
+    query: str = Field(..., description="Processed query text")
+    processing_time_ms: float = Field(
+        ..., ge=0.0, description="Latency measured in milliseconds"
+    )
+    expanded_query: str | None = Field(
+        default=None, description="Expanded query when query expansion applied"
+    )
+    features_used: list[str] = Field(
+        default_factory=list, description="Features engaged during search"
+    )
+    grouping_applied: bool = Field(
+        default=False, description="Whether server-side grouping was applied"
+    )
+    generated_answer: str | None = Field(
+        default=None, description="Generated RAG answer when requested"
+    )
+    answer_confidence: float | None = Field(
+        default=None, description="Confidence score for the generated answer"
+    )
+    answer_sources: list[dict[str, Any]] | None = Field(
+        default=None, description="Sources that support the generated answer"
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+
+__all__ = ["SearchRecord", "SearchResponse"]

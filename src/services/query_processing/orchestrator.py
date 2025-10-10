@@ -14,13 +14,12 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, cast
 
-from src.contracts.retrieval import SearchRecord
+from src.contracts.retrieval import SearchRecord, SearchResponse
+from src.models.search import SearchRequest
 from src.services.base import BaseService
 from src.services.rag.langgraph_pipeline import LangGraphRAGPipeline
 from src.services.rag.models import RAGConfig as ServiceRAGConfig
 from src.services.vector_db.service import VectorStoreService
-
-from .models import SearchRequest, SearchResponse
 
 
 logger = logging.getLogger(__name__)

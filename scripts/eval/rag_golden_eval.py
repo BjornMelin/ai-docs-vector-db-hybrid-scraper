@@ -34,8 +34,9 @@ from typing import Any, Protocol
 import yaml
 
 from scripts.eval.dataset_validator import DatasetValidationError, load_dataset_records
+from src.contracts.retrieval import SearchResponse
 from src.infrastructure.client_manager import ClientManager
-from src.services.query_processing.models import SearchRequest, SearchResponse
+from src.models.search import SearchRequest
 from src.services.query_processing.orchestrator import SearchOrchestrator
 
 

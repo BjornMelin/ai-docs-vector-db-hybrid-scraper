@@ -15,6 +15,7 @@
 ## Decision
 
 - Introduce `src/contracts/retrieval.py::SearchRecord` as the single authoritative DTO for retrieval responses. Service and MCP layers re-export this contract instead of redefining schemas.
+- Promote `src/contracts/retrieval.py::SearchResponse` as the shared response envelope consumed by orchestrator, HTTP APIs, and MCP tooling.
 - Normalize grouped result metadata to `collection`, `collection_confidence`, and `collection_priority`, discarding `_collection*` variants. Vector service annotates payloads, federated merging copies fields, and MCP converters preserve them.
 - Instrument grouped search outcomes via Prometheus (`grouping_requests_total`, `grouping_latency_seconds`) inside `VectorStoreService` so fallbacks and success ratios are observable.
 

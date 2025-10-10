@@ -12,6 +12,7 @@ from weakref import WeakKeyDictionary
 from fastmcp import FastMCP
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from src.contracts.retrieval import SearchRecord
 from src.infrastructure.client_manager import ClientManager
 from src.services.agents import (
     GraphAnalysisOutcome,
@@ -149,7 +150,7 @@ class AgenticSearchResponse(BaseModel):
         ..., description="Whether the workflow completed successfully"
     )
     session_id: str = Field(..., description="Session identifier")
-    results: list[dict[str, Any]] = Field(
+    results: list[SearchRecord] = Field(
         default_factory=list, description="Search results"
     )
     answer: str | None = Field(None, description="Generated answer")
@@ -197,21 +198,24 @@ class AgenticAnalysisResponse(BaseModel):
 def _build_search_response(
     *, success: bool, session_id: str, payload: Mapping[str, Any]
 ) -> AgenticSearchResponse:
-    results: Sequence[Any] | None = payload.get("results")
-    normalised_results: list[dict[str, Any]] = []
-    if results:
-        for item in results:
-            if isinstance(item, Mapping):
-                normalised_results.append(dict(item))
-                continue
+    raw_results: Sequence[Any] | None = payload.get("results")
+    records: list[SearchRecord] = []
+    if raw_results:
+        for item in raw_results:
             try:
-                normalised_results.append(dict(item))
-            except (TypeError, ValueError):
+                records.append(SearchRecord.from_payload(item))
+            except TypeError:
                 logger.debug(
-                    "Unexpected search result type %s; storing as string",
+                    "Unexpected search result type %s; coercing to canonical record",
                     type(item).__name__,
                 )
-                normalised_results.append({"value": str(item)})
+                records.append(
+                    SearchRecord(
+                        id=str(uuid4()),
+                        content=str(item),
+                        score=0.0,
+                    )
+                )
 
     tools_used: Sequence[str] | None = payload.get("tools_used")
     reasoning: Sequence[str] | None = payload.get("reasoning")
@@ -221,7 +225,7 @@ def _build_search_response(
     return AgenticSearchResponse(
         success=success,
         session_id=session_id,
-        results=normalised_results,
+        results=records,
         answer=payload.get("answer"),
         confidence=payload.get("confidence"),
         tools_used=list(tools_used or []),
