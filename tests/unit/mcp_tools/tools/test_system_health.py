@@ -9,7 +9,7 @@ import pytest
 from pytest_mock import MockerFixture
 
 from src.mcp_tools.tools.system_health import register_tools
-from src.services.health.manager import (
+from src.services.observability.health_manager import (
     HealthCheckManager,
     HealthCheckResult,
     HealthStatus,

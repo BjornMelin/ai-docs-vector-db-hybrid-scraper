@@ -9,7 +9,10 @@ from typing import Any
 from fastmcp import Context
 
 from src.services.dependencies import _get_health_manager
-from src.services.health.manager import HealthCheckManager, HealthStatus
+from src.services.observability.health_manager import (
+    HealthCheckManager,
+    HealthStatus,
+)
 
 
 try:  # pragma: no cover - optional dependency
