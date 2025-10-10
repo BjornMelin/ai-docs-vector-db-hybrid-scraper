@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Refactor
 
+- **[Models]:** Consolidated all search-related request and response models into canonical `SearchRequest` and `SearchRecord` contracts, removing significant code duplication.
 - **[Core]:** Removed custom rate-limiting implementation in favor of the
   `slowapi` library, centralizing all rate-limiting logic at the middleware
   layer.
@@ -43,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   handling across the application.
 - **[Observability]:** Replaced the legacy `TelemetryRepository` with the unified, OpenTelemetry-based `AIOperationTracker` for all in-memory application telemetry.
 - **[Observability]:** Removed the legacy `RealTimePerformanceMonitor` and consolidated its functionality. Operation timing is now handled by the OpenTelemetry-based `PerformanceMonitor`, and system resource metrics are exposed via the `system_health` MCP tool.
+- **[Observability]:** Completed the unification of monitoring systems by deleting the legacy `src/services/monitoring` package and updating all application entry points to use the modern `initialize_observability` lifecycle function.
 - **[Observability]:** Eliminated the bespoke Prometheus `MetricsRegistry` and middleware. All `/metrics` exposure now flows through `prometheus-fastapi-instrumentator` while application telemetry is captured via OpenTelemetry tracing utilities.
 - **[Architecture]:** Unified circuit breaker implementation by refactoring
   `TimeoutMiddleware` to use the shared `CircuitBreakerManager`, ensuring a

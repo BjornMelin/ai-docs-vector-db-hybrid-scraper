@@ -22,13 +22,11 @@ spec:
       - name: ai-docs-worker
         image: ai-docs-worker:latest  # Replace with your registry URL
         imagePullPolicy: IfNotPresent
-        env:
-        - name: AI_DOCS_LOG_LEVEL
-          value: "INFO"
-        - name: PYTHONPATH
-          value: "/app/src"
-        - name: AI_DOCS_VECTOR_DB__QDRANT_URL
-          value: "http://qdrant:6333"
+        envFrom:
+        - configMapRef:
+            name: ai-docs-config
+        - secretRef:
+            name: ai-docs-secrets
         resources:
           requests:
             memory: "1Gi"

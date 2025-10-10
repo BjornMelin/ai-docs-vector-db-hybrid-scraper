@@ -7,7 +7,7 @@ from typing import cast
 
 import pytest
 
-from src.services.query_processing.models import SearchRequest
+from src.models.search import SearchRequest
 from src.services.rag import (
     AnswerMetrics,
     LangGraphRAGPipeline,

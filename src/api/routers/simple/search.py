@@ -8,7 +8,6 @@ from time import perf_counter
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, Field
 
 from src.api.dependencies import get_vector_service_dependency
 from src.contracts.retrieval import SearchRecord
@@ -44,7 +43,7 @@ VectorServiceDependency = Annotated[
 ]
 
 
-@router.post("/search", response_model=SimpleSearchResponse)
+@router.post("/search", response_model=SearchResponse)
 async def search_documents(
     request: SimpleSearchRequest,
     vector_service: VectorServiceDependency,
@@ -71,32 +70,34 @@ async def _perform_search(
     """Perform search with service lookup and response conversion."""
     started = perf_counter()
     records = await vector_service.search_documents(
-        request.collection,
+        request.collection or "documentation",
         request.query,
         limit=request.limit,
-        group_by="doc_id",
-        group_size=1,
-        normalize_scores=True,
+        filters=request.filters,
+        group_by=request.group_by,
+        group_size=request.group_size,
+        overfetch_multiplier=request.overfetch_multiplier,
+        normalize_scores=request.normalize_scores,
     )
     processing_time_ms = (perf_counter() - started) * 1000
-    return SimpleSearchResponse(
+    return SearchResponse(
         query=request.query,
-        results=records,
-        total_count=len(records),
+        records=records,
+        total_results=len(records),
         processing_time_ms=processing_time_ms,
     )
 
 
-@router.get("/search", response_model=SimpleSearchResponse)
+@router.get("/search", response_model=SearchResponse)
 async def search_documents_get(
     vector_service: VectorServiceDependency,
     q: str = Query(..., min_length=1, max_length=500, description="Search query"),
     limit: int = Query(default=10, ge=1, le=25, description="Maximum results"),
     collection: str = Query(default="documents", description="Collection to search"),
-) -> SimpleSearchResponse:
+) -> SearchResponse:
     """Search documents using GET request (simplified interface)."""
-    request = SimpleSearchRequest(
-        query=q,
+    request = SearchRequest.from_input(
+        q,
         limit=limit,
         collection=collection,
     )

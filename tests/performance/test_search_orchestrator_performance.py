@@ -8,7 +8,7 @@ from typing import cast
 
 import pytest
 
-from src.services.query_processing.models import SearchRequest
+from src.models.search import SearchRequest
 from src.services.query_processing.orchestrator import (
     SearchOrchestrator,
     ServiceRAGConfig,

@@ -6,6 +6,7 @@ all search operations across the entire codebase.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -248,6 +249,45 @@ class SearchRequest(BaseModel):
     )
 
     model_config = {"extra": "forbid"}
+
+    @classmethod
+    def from_input(
+        cls,
+        payload: SearchRequest | Mapping[str, Any] | str,
+        **overrides: Any,
+    ) -> SearchRequest:
+        """Normalize heterogeneous search request payloads.
+
+        Args:
+            payload: An existing :class:`SearchRequest`, mapping, or raw query
+                string describing the search.
+            **overrides: Field overrides applied after normalisation.
+
+        Returns:
+            A validated :class:`SearchRequest` instance built from the provided
+            payload.
+
+        Raises:
+            TypeError: If the payload type cannot be normalised.
+        """
+
+        if isinstance(payload, cls):
+            if not overrides:
+                return payload
+            return payload.model_copy(update=overrides)
+
+        if isinstance(payload, str):
+            data: dict[str, Any] = {"query": payload}
+            data.update(overrides)
+            return cls.model_validate(data)
+
+        if isinstance(payload, Mapping):
+            data = dict(payload)
+            data.update(overrides)
+            return cls.model_validate(data)
+
+        msg = f"Unsupported search request payload type: {type(payload)!r}"
+        raise TypeError(msg)
 
 
 __all__ = ["SearchRequest"]

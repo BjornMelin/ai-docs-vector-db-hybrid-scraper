@@ -23,45 +23,44 @@ The deployment consists of:
 
 ## Quick Deployment
 
-### 1. Create Namespace and Base Resources
+### 1. Prepare Local Secrets (Required)
+
+This project uses Kustomize to generate secrets from local files, which **must not** be committed to version control.
+
+1.  Create a `secrets` directory inside the `k8s` directory:
+    ```bash
+    mkdir -p k8s/secrets
+    ```
+
+2.  Create a file for each required secret. The filename becomes the environment variable that will be exposed to the pods.
+    ```bash
+    # Create the file with your actual secret value
+    echo -n "your-openai-api-key" > k8s/secrets/AI_DOCS_OPENAI__API_KEY
+    ```
+    The `k8s/secrets/` directory is already listed in `.gitignore` to prevent accidental commits.
+
+    > **Tip:** Add any optional keys (for example, `AI_DOCS_FIRECRAWL__API_KEY`) as additional files in the same directory if you enable those integrations.
+
+### 2. Apply the Full Stack with Kustomize
+
+Run the Kustomize build so the generated ConfigMap (`ai-docs-config`) and Secret (`ai-docs-secrets`) are created before the deployments start. This command also applies the namespace, storage, and deployment manifests referenced by `kustomization.yaml`.
 
 ```bash
-kubectl apply -f namespace.yaml
-kubectl apply -f configmap.yaml
+kubectl apply -k .
 ```
 
-### 2. Deploy Storage Layer
+> **Note:** This command is required because Kustomize adds a unique hash suffix to the generated ConfigMap and Secret. Applying the full stack ensures the deployments reference the correct generated resource names before any component starts and keeps the `envFrom` references in the deployments aligned with the hashed resource names.
+
+### 3. (Optional) Inspect Components Individually
+
+If you need to debug a single manifest, render it with Kustomize so the hashed resource names remain consistent:
 
 ```bash
-# Deploy Qdrant vector database
-kubectl apply -f qdrant-statefulset.yaml
-
-# Deploy DragonflyDB cache
-kubectl apply -f dragonfly-deployment.yaml
+# Render just the application deployment for inspection
+kustomize build . | yq 'select(.metadata.name == "ai-docs-app")'
 ```
 
-### 3. Deploy Application Layer
-
-```bash
-# Deploy main application
-kubectl apply -f app-deployment.yaml
-
-# Deploy background workers
-kubectl apply -f worker-deployment.yaml
-```
-
-### 4. Update Secrets (Required)
-
-Before deploying, update the secrets in `configmap.yaml`:
-
-```bash
-# Encode your API keys
-echo -n "your-openai-api-key" | base64
-echo -n "your-anthropic-api-key" | base64
-
-# Edit configmap.yaml and add the base64 values
-kubectl apply -f configmap.yaml
-```
+> **Important:** Apply changes through Kustomize (`kubectl apply -k .` or `kustomize build . | kubectl apply -f -`). Applying the raw manifests with `kubectl apply -f …` will overwrite the hashed ConfigMap and Secret references, leaving the deployments pointing at non-existent resources.
 
 ## Using Kustomize (Recommended)
 
@@ -168,22 +167,9 @@ kubectl get hpa -n ai-docs-system
 
 ## Configuration
 
-### Environment Variables
+All non-sensitive configuration is managed declaratively within the `kustomization.yaml` file under the `configMapGenerator` section. To change a configuration value (e.g., `AI_DOCS_LOG_LEVEL`), edit the `literals` in this file directly. This ensures a single source of truth for configuration across all components.
 
-Key configuration options in ConfigMap:
-
-- `AI_DOCS_MODE`: `simple` or `enterprise`
-- `AI_DOCS_LOG_LEVEL`: `DEBUG`, `INFO`, `WARNING`, `ERROR`
-- `AI_DOCS_VECTOR_DB__QDRANT_URL`: Qdrant connection URL
-- `AI_DOCS_CACHE__REDIS_URL`: Cache connection URL
-
-### Secrets
-
-Required secrets in `ai-docs-secrets`:
-
-- `OPENAI_API_KEY`: OpenAI API key
-- `ANTHROPIC_API_KEY`: Anthropic Claude API key
-- `JWT_SECRET`: JWT signing secret
+Required secrets are managed via the `secretGenerator` in `kustomization.yaml`. See the "Create Local Secrets (Required)" section for instructions on providing secret values locally.
 
 ## Troubleshooting
 

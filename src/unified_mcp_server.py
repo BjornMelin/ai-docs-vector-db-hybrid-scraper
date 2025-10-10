@@ -5,11 +5,10 @@ This is the main entry point for the MCP server. It follows FastMCP 2.0
 best practices with lazy initialization and modular tool registration.
 """
 
-import asyncio
 import logging
 import os
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager, suppress
+from contextlib import asynccontextmanager
 from typing import Any, Literal, cast
 
 from fastmcp import FastMCP
@@ -19,11 +18,6 @@ from src.config.models import CrawlProvider, EmbeddingProvider
 from src.infrastructure.container import initialize_container, shutdown_container
 from src.mcp_tools.tool_registry import register_all_tools
 from src.services.logging_config import configure_logging
-from src.services.monitoring.initialization import (
-    initialize_monitoring_system,
-    run_periodic_health_checks,
-    setup_fastmcp_monitoring,
-)
 
 
 logger = logging.getLogger(__name__)

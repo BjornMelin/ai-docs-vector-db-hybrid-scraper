@@ -260,6 +260,19 @@ uv run python -m src.api.main
 
 Visit `http://localhost:8000/docs` for interactive OpenAPI docs. Default mode is `simple`; set `AI_DOCS__MODE=enterprise` to enable the enterprise service stack.
 
+### Search API payloads
+
+All search endpoints accept the canonical [`SearchRequest`](src/models/search.py) body. Minimal example:
+
+```json
+{
+  "query": "vector databases",
+  "limit": 5
+}
+```
+
+Responses are emitted as [`SearchResponse`](src/contracts/retrieval.py) payloads containing canonical [`SearchRecord`](src/contracts/retrieval.py) entries.
+
 ### Run the MCP server
 
 ```bash

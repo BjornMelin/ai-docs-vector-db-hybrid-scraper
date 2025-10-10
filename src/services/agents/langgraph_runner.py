@@ -129,7 +129,7 @@ class GraphSearchOutcome:  # pylint: disable=too-many-instance-attributes
     session_id: str
     answer: str | None
     confidence: float | None
-    results: list[dict[str, Any]]
+    results: list[SearchRecord]
     tools_used: list[str]
     reasoning: list[str]
     metrics: dict[str, Any]
@@ -721,14 +721,12 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
         return arguments
 
     def _to_search_outcome(self, state: AgenticGraphState) -> GraphSearchOutcome:
-        results = [
-            {
-                "id": doc.get("id"),
-                "score": doc.get("score"),
-                "metadata": doc.get("metadata"),
-            }
-            for doc in state.get("retrieved_documents", [])
-        ]
+        raw_documents = state.get("retrieved_documents", [])
+        results: list[SearchRecord] = []
+        if raw_documents:
+            results = SearchRecord.parse_list(
+                raw_documents, default_collection=state.get("collection")
+            )
         tools_used = [output["tool_name"] for output in state.get("tool_outputs", [])]
         return GraphSearchOutcome(
             success=state.get("success", True),

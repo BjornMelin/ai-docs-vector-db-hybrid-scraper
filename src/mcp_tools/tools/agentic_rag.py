@@ -142,7 +142,7 @@ class AgenticSearchResponse(BaseModel):
         ..., description="Whether the workflow completed successfully"
     )
     session_id: str = Field(..., description="Session identifier")
-    results: list[dict[str, Any]] = Field(
+    results: list[SearchRecord] = Field(
         default_factory=list, description="Search results"
     )
     answer: str | None = Field(None, description="Generated answer")
@@ -216,7 +216,7 @@ def _build_search_response(
     return AgenticSearchResponse(
         success=success,
         session_id=session_id,
-        results=normalised_results,
+        results=records,
         answer=payload.get("answer"),
         confidence=payload.get("confidence"),
         tools_used=list(tools_used or []),

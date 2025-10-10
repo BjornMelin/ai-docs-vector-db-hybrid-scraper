@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterable, Mapping
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
+
+
+logger = logging.getLogger(__name__)
 
 
 if TYPE_CHECKING:  # pragma: no cover - import cycles avoided at runtime
@@ -99,10 +103,83 @@ class SearchRecord(BaseModel):
         raise TypeError(msg)
 
     @classmethod
-    def parse_list(cls, payloads: Iterable[Any]) -> list[SearchRecord]:
-        """Normalize a sequence of payloads into search records."""
+    def parse_list(
+        cls,
+        payloads: Iterable[Any],
+        *,
+        default_collection: str | None = None,
+    ) -> list[SearchRecord]:
+        """Normalize a sequence of payloads into search records.
 
-        return [cls.from_payload(item) for item in payloads]
+        Args:
+            payloads: Raw search results to normalize.
+            default_collection: Optional collection hint used when a payload does
+                not expose a collection value.
+
+        Returns:
+            List of validated :class:`SearchRecord` instances.
+        """
+
+        return [
+            cls._coerce_from_any(item, default_collection=default_collection)
+            for item in payloads
+        ]
+
+    @classmethod
+    def _coerce_from_any(
+        cls, payload: Any, *, default_collection: str | None
+    ) -> SearchRecord:
+        """Best-effort coercion of arbitrary payloads into ``SearchRecord``s."""
+
+        try:
+            return cls.from_payload(payload)
+        except (TypeError, ValidationError) as exc:
+            logger.debug("SearchRecord payload coercion failed: %s", exc)
+
+        collection_hint = cls._resolve_collection(payload, default_collection)
+
+        try:
+            return cls.from_vector_match(
+                payload,
+                collection_name=str(collection_hint or "default"),
+            )
+        except (TypeError, ValidationError, AttributeError) as exc:
+            logger.debug("Vector match normalisation failed: %s", exc)
+
+        score_value = getattr(payload, "score", None)
+        score = float(score_value) if isinstance(score_value, int | float) else 0.0
+        return cls(
+            id=str(getattr(payload, "id", uuid4())),
+            content=str(payload),
+            score=score,
+            collection=(str(collection_hint) if collection_hint is not None else None),
+        )
+
+    @staticmethod
+    def _resolve_collection(payload: Any, default_collection: str | None) -> str | None:
+        """Extract a collection hint from known payload shapes."""
+
+        if isinstance(payload, Mapping):
+            collection = payload.get("collection") or payload.get("_collection")
+            if isinstance(collection, str):
+                return collection
+
+        payload_mapping = getattr(payload, "payload", None)
+        if isinstance(payload_mapping, Mapping):
+            collection = payload_mapping.get("collection") or payload_mapping.get(
+                "_collection"
+            )
+            if isinstance(collection, str):
+                return collection
+
+        collection_attr = getattr(payload, "collection", None)
+        if isinstance(collection_attr, str):
+            return collection_attr
+
+        if isinstance(default_collection, str):
+            return default_collection
+
+        return None
 
     @classmethod
     def from_vector_match(
@@ -199,4 +276,43 @@ class SearchRecord(BaseModel):
         )
 
 
-__all__ = ["SearchRecord"]
+class SearchResponse(BaseModel):
+    """Canonical response payload for search operations.
+
+    Attributes mirror orchestrator outputs so HTTP handlers, CLI utilities,
+    and MCP tools rely on the same envelope.
+    """
+
+    records: list[SearchRecord] = Field(
+        default_factory=list, description="Search results in canonical form"
+    )
+    total_results: int = Field(
+        default=0, ge=0, description="Number of records returned"
+    )
+    query: str = Field(..., description="Processed query text")
+    processing_time_ms: float = Field(
+        ..., ge=0.0, description="Latency measured in milliseconds"
+    )
+    expanded_query: str | None = Field(
+        default=None, description="Expanded query when query expansion applied"
+    )
+    features_used: list[str] = Field(
+        default_factory=list, description="Features engaged during search"
+    )
+    grouping_applied: bool = Field(
+        default=False, description="Whether server-side grouping was applied"
+    )
+    generated_answer: str | None = Field(
+        default=None, description="Generated RAG answer when requested"
+    )
+    answer_confidence: float | None = Field(
+        default=None, description="Confidence score for the generated answer"
+    )
+    answer_sources: list[dict[str, Any]] | None = Field(
+        default=None, description="Sources that support the generated answer"
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+
+__all__ = ["SearchRecord", "SearchResponse"]

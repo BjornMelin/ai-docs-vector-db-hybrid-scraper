@@ -18,7 +18,7 @@ from langchain_core.retrievers import BaseRetriever
 from opentelemetry import trace
 
 from src.contracts.retrieval import SearchRecord
-from src.services.query_processing.models import SearchRequest
+from src.models.search import SearchRequest
 from src.services.vector_db.service import VectorStoreService
 
 from .generator import RAGGenerator

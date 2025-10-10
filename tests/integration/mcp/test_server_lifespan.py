@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
 from contextlib import AbstractAsyncContextManager
 from types import SimpleNamespace
-from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -15,17 +13,9 @@ from src import unified_mcp_server
 
 
 def _lifespan_context() -> AbstractAsyncContextManager[None]:
-    lifespan_attr = getattr(unified_mcp_server, "lifespan", None)
-    if lifespan_attr is not None:
-        callable_lifespan = cast(
-            Callable[[], AbstractAsyncContextManager[None]], lifespan_attr
-        )
-        return callable_lifespan()
-
-    mcp_runtime: Any = unified_mcp_server.mcp
-    lifespan_factory = getattr(mcp_runtime, "lifespan", None)
-    if lifespan_factory is None:
-        msg = "FastMCP instance does not expose a lifespan context."
+    lifespan_attr = getattr(unified_mcp_server, "managed_lifespan", None)
+    if lifespan_attr is None:
+        msg = "Unified MCP server does not expose a managed lifespan context."
         raise AttributeError(msg)
     # pylint: disable=not-callable
     return cast(Callable[[], AbstractAsyncContextManager[None]], lifespan_factory)()
@@ -62,6 +52,10 @@ async def test_lifespan_initializes_and_cleans_up(
     monkeypatch.setattr(unified_mcp_server, "validate_configuration", MagicMock())
 
     config = SimpleNamespace(
+        app_name="Test App",
+        version="1.2.3",
+        environment=SimpleNamespace(value="testing"),
+        log_level=SimpleNamespace(value="INFO"),
         cache=SimpleNamespace(
             enable_dragonfly_cache=False,
             enable_local_cache=False,
@@ -71,6 +65,20 @@ async def test_lifespan_initializes_and_cleans_up(
             enabled=False,
             include_system_metrics=False,
             system_metrics_interval=60,
+            enable_health_checks=False,
+        ),
+        observability=SimpleNamespace(
+            enabled=True,
+            service_name="test-service",
+            service_version="0.0.1",
+            otlp_endpoint="http://localhost:4317",
+            otlp_headers={},
+            otlp_insecure=True,
+            track_ai_operations=False,
+            track_costs=False,
+            instrument_fastapi=False,
+            instrument_httpx=False,
+            console_exporter=False,
         ),
     )
     monkeypatch.setattr(unified_mcp_server, "get_settings", lambda: config)
@@ -93,6 +101,7 @@ async def test_lifespan_initializes_and_cleans_up(
         register_mock,
     )
 
+    initialize_observability = MagicMock(return_value=True)
     monkeypatch.setattr(
         "src.unified_mcp_server.initialize_monitoring_system",
         lambda _config, _qdrant, _redis: None,
@@ -113,14 +122,18 @@ async def test_lifespan_initializes_and_cleans_up(
 
 
 @pytest.mark.asyncio
-async def test_lifespan_cancels_background_tasks(
+async def test_lifespan_initializes_observability_with_monitoring(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Background monitoring tasks should be cancelled on shutdown."""
+    """Observability should be initialized even when monitoring features are on."""
 
     monkeypatch.setattr(unified_mcp_server, "validate_configuration", MagicMock())
 
     config = SimpleNamespace(
+        app_name="Test App",
+        version="1.2.3",
+        environment=SimpleNamespace(value="testing"),
+        log_level=SimpleNamespace(value="INFO"),
         cache=SimpleNamespace(
             enable_dragonfly_cache=False,
             enable_local_cache=True,
@@ -181,6 +194,7 @@ async def test_lifespan_cancels_background_tasks(
     async with _lifespan_context():
         await asyncio.sleep(0.01)
 
-    assert monitor_tasks, "Expected monitoring tasks to be started"
-    for task in monitor_tasks:
-        assert task.cancelled()
+    client_manager.initialize.assert_awaited_once()
+    client_manager.cleanup.assert_awaited_once()
+    register_mock.assert_awaited_once_with(unified_mcp_server.mcp, client_manager)
+    initialize_observability.assert_called_once_with(config)

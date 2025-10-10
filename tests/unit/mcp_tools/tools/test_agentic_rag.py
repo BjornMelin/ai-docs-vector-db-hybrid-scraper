@@ -66,7 +66,7 @@ def stub_runner() -> StubGraphRunner:
         session_id="session-1",
         answer="Result",
         confidence=0.75,
-        results=[{"id": "1"}],
+        results=[SearchRecord(id="1", content="", score=0.9)],
         tools_used=["semantic_search"],
         reasoning=["step"],
         metrics={"total_latency_ms": 10.0},

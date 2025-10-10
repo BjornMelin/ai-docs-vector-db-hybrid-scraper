@@ -40,7 +40,7 @@ generic `Exception`. When suppression is unavoidable, justify it with targeted
 `# pylint: disable=` or `# pyright: ignore` comments. Inject structured logging
 and tracing where it improves operability—import the helpers from
 `src/services/logging_config.py` and emit actionable messages (context, impact,
-next steps). Use existing OpenTelemetry utilities under `src/services/monitoring`
+next steps). Use existing OpenTelemetry utilities under `src/services/observability`
 to attach spans/metrics when expanding service boundaries.
 
 ## DISALLOWED GIT COMMANDS
