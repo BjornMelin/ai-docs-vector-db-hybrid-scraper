@@ -11,6 +11,7 @@ from uuid import uuid4
 from fastmcp import FastMCP
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from contracts.retrieval import SearchRecord
 from src.services.agents import (
     GraphAnalysisOutcome,
     GraphRunner,
@@ -193,20 +194,23 @@ def _build_search_response(
     """Build an AgenticSearchResponse from raw payload data."""
 
     results: Sequence[Any] | None = payload.get("results")
-    normalised_results: list[dict[str, Any]] = []
+    normalised_results: list[SearchRecord] = []
     if results:
         for item in results:
-            if isinstance(item, Mapping):
-                normalised_results.append(dict(item))
-                continue
             try:
-                normalised_results.append(dict(item))
-            except (TypeError, ValueError):
+                normalised_results.append(SearchRecord.from_payload(item))
+            except (TypeError, ValidationError) as exc:
                 logger.debug(
-                    "Unexpected search result type %s; storing as string",
+                    "Unexpected search result type %s: %s",
                     type(item).__name__,
+                    exc,
                 )
-                normalised_results.append({"value": str(item)})
+                fallback = {
+                    "id": str(uuid4()),
+                    "content": str(item),
+                    "score": 0.0,
+                }
+                normalised_results.append(SearchRecord.model_validate(fallback))
 
     tools_used: Sequence[str] | None = payload.get("tools_used")
     reasoning: Sequence[str] | None = payload.get("reasoning")
@@ -216,7 +220,7 @@ def _build_search_response(
     return AgenticSearchResponse(
         success=success,
         session_id=session_id,
-        results=records,
+        results=normalised_results,
         answer=payload.get("answer"),
         confidence=payload.get("confidence"),
         tools_used=list(tools_used or []),
