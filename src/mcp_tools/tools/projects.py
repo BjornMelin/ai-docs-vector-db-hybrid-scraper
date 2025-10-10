@@ -12,13 +12,13 @@ from uuid import uuid4
 
 from fastmcp import Context
 
-from src.services.vector_db.service import VectorStoreService
 from src.config.models import SearchStrategy
 from src.contracts.retrieval import SearchRecord
 from src.mcp_tools.models.requests import ProjectRequest
 from src.mcp_tools.models.responses import OperationStatus, ProjectInfo
 from src.services.core.project_storage import ProjectStorage
 from src.services.dependencies import get_project_storage, get_vector_store_service
+from src.services.vector_db.service import VectorStoreService
 from src.services.vector_db.types import CollectionSchema
 
 

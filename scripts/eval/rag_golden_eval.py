@@ -34,7 +34,12 @@ from typing import Any, Protocol
 import yaml
 
 from scripts.eval.dataset_validator import DatasetValidationError, load_dataset_records
-from src.infrastructure.client_manager import ClientManager
+from src.config import get_settings
+from src.infrastructure.container import (
+    get_container,
+    initialize_container,
+    shutdown_container,
+)
 from src.services.query_processing.models import SearchRequest, SearchResponse
 from src.services.query_processing.orchestrator import SearchOrchestrator
 
@@ -369,8 +374,12 @@ def _load_dataset(path: Path) -> list[GoldenExample]:
 async def _load_orchestrator() -> SearchOrchestrator:
     """Instantiate and initialise the shared search orchestrator."""
 
-    client_manager = ClientManager()
-    vector_service = await client_manager.get_vector_store_service()
+    container = get_container()
+    if container is None:
+        container = await initialize_container(get_settings())
+    vector_service = container.vector_store_service()
+    if vector_service is None:
+        raise RuntimeError("Vector store service unavailable")
     orchestrator = SearchOrchestrator(vector_store_service=vector_service)
     await orchestrator.initialize()
     return orchestrator
@@ -611,6 +620,7 @@ async def _run(args: argparse.Namespace) -> None:
         )
     finally:
         await orchestrator.cleanup()
+        await shutdown_container()
 
     aggregates = _aggregate_metrics(results)
     thresholds = _load_thresholds()

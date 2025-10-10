@@ -34,6 +34,7 @@ from rich.table import Table  # type: ignore[import]
 from .chunking import DocumentChunker
 from .config.loader import Settings, get_settings
 from .infrastructure.container import (
+    ApplicationContainer,
     get_container,
     initialize_container,
     shutdown_container,
@@ -99,6 +100,8 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
         config: Settings,
         collection_name: str = "bulk_embeddings",
         state_file: Path | None = None,
+        *,
+        container: ApplicationContainer | None = None,
     ):
         """Initialize bulk embedder.
 
@@ -106,12 +109,14 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
             config: Unified configuration
             collection_name: Target vector collection name
             state_file: Optional state file for resumability
+            container: Optional DI container override (useful for testing)
         """
 
         self.config = config
         self.collection_name = collection_name
         self.state_file = state_file or Path(".crawl4ai_state.json")
         self.state = self._load_state()
+        self._container_override = container
 
         # Services (initialized in async context)
         self.crawl_manager: Any | None = None
@@ -158,9 +163,12 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
     async def initialize_services(self) -> None:
         """Initialize all required services."""
 
-        container = get_container()
+        container = self._container_override or get_container()
         if container is None:
             container = await initialize_container(self.config)
+        elif self._container_override is not None:
+            # When an override is supplied, rely on it directly without lifecycle calls.
+            container = self._container_override
 
         if self.crawl_manager is None:
             self.crawl_manager = container.browser_manager()
