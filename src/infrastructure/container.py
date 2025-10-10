@@ -5,16 +5,25 @@ import importlib
 import logging
 from collections.abc import AsyncGenerator
 from functools import lru_cache
-from typing import Any
+from pathlib import Path
+from typing import Any, cast
 
 import aiohttp
 import redis.asyncio as redis
 from dependency_injector import containers, providers
-from dependency_injector.providers import Singleton  # pylint: disable=no-name-in-module
 from dependency_injector.wiring import Provide
 from firecrawl import AsyncFirecrawlApp
+from langchain_mcp_adapters.client import MultiServerMCPClient
+from langchain_mcp_adapters.sessions import Connection
 from openai import AsyncOpenAI
 from qdrant_client import AsyncQdrantClient
+
+from src.config.models import MCPClientConfig, MCPServerConfig, MCPTransport
+from src.services.cache.manager import CacheManager
+from src.services.circuit_breaker import CircuitBreakerManager
+from src.services.core.project_storage import ProjectStorage
+from src.services.embeddings.manager import EmbeddingManager
+from src.services.vector_db.service import VectorStoreService
 
 
 logger = logging.getLogger(__name__)
@@ -100,6 +109,8 @@ def _create_parallel_processing_system(*, embedding_manager: Any) -> Any:
     Falls back to a lightweight stub when the optional dependency graph is absent.
     """
 
+    manager = embedding_manager() if callable(embedding_manager) else embedding_manager
+
     try:  # Lazy import to avoid mandatory dependency.
         module = importlib.import_module(
             "src.services.processing.parallel_processing_system"
@@ -107,9 +118,391 @@ def _create_parallel_processing_system(*, embedding_manager: Any) -> Any:
         factory = module.create_parallel_processing_system
     except (ModuleNotFoundError, AttributeError):
         logger.debug("Parallel processing factory unavailable; using embedding manager")
-        return embedding_manager()
+        return manager
 
-    return factory(embedding_manager=embedding_manager())
+    return factory(embedding_manager=manager)
+
+
+def _create_cache_manager(config: Any) -> CacheManager:
+    """Instantiate the CacheManager from application configuration."""
+
+    cache_config = getattr(config, "cache", None)
+    dragonfly_url = None
+    enable_local_cache = False
+    enable_distributed_cache = False
+    local_max_size = 1000
+    local_max_memory_mb = 512
+    local_ttl_seconds = 300
+    distributed_ttl_seconds = {}
+    memory_threshold = None
+
+    if cache_config is not None:
+        dragonfly_url = getattr(cache_config, "dragonfly_url", None)
+        redis_url = getattr(cache_config, "redis_url", None)
+        dragonfly_url = dragonfly_url or redis_url or "redis://localhost:6379"
+        enable_local_cache = bool(getattr(cache_config, "enable_local_cache", False))
+        enable_distributed_cache = bool(
+            getattr(cache_config, "enable_dragonfly_cache", False)
+        )
+        local_max_size = int(getattr(cache_config, "local_max_size", local_max_size))
+        local_max_memory_mb = float(
+            getattr(cache_config, "local_max_memory_mb", local_max_memory_mb)
+        )
+        local_ttl_seconds = int(
+            getattr(cache_config, "local_ttl_seconds", local_ttl_seconds)
+        )
+        distributed_ttl_seconds = getattr(
+            cache_config,
+            "cache_ttl_seconds",
+            distributed_ttl_seconds,
+        )
+        memory_threshold = getattr(
+            cache_config, "memory_pressure_threshold", memory_threshold
+        )
+    else:
+        dragonfly_url = "redis://localhost:6379"
+
+    cache_root = Path(getattr(config, "cache_dir", Path("cache")))
+
+    return CacheManager(
+        dragonfly_url=dragonfly_url,
+        enable_local_cache=enable_local_cache,
+        enable_distributed_cache=enable_distributed_cache,
+        local_max_size=local_max_size,
+        local_max_memory_mb=local_max_memory_mb,
+        local_ttl_seconds=local_ttl_seconds,
+        distributed_ttl_seconds=distributed_ttl_seconds,
+        local_cache_path=cache_root / "embeddings",
+        memory_pressure_threshold=memory_threshold,
+    )
+
+
+def _create_embedding_manager(
+    config: Any,
+    openai_client: AsyncOpenAI | None,
+    cache_manager: CacheManager | None,
+) -> EmbeddingManager:
+    """Instantiate the EmbeddingManager with DI-provided dependencies."""
+
+    return EmbeddingManager(
+        config=config,
+        openai_client=openai_client,
+        cache_manager=cache_manager,
+    )
+
+
+def _create_vector_store_service(
+    config: Any,
+    async_qdrant_client: AsyncQdrantClient,
+) -> VectorStoreService:
+    """Instantiate VectorStoreService backed by LangChain's Qdrant adapter."""
+
+    return VectorStoreService(
+        config=config,
+        async_qdrant_client=async_qdrant_client,
+    )
+
+
+def _create_circuit_breaker_manager(config: Any) -> CircuitBreakerManager | None:
+    """Instantiate the CircuitBreakerManager if purgatory is available."""
+
+    cache_config = getattr(config, "cache", None)
+    redis_url = None
+    if cache_config is not None:
+        redis_url = getattr(cache_config, "redis_url", None) or getattr(
+            cache_config, "dragonfly_url", None
+        )
+    redis_url = redis_url or "redis://localhost:6379"
+
+    try:
+        return CircuitBreakerManager(
+            redis_url=redis_url,
+            config=config,
+        )
+    except RuntimeError as exc:
+        logger.warning(
+            "CircuitBreakerManager unavailable (purgatory missing?): %s", exc
+        )
+        return None
+
+
+def _create_project_storage(config: Any) -> ProjectStorage:
+    """Instantiate project storage backed by filesystem."""
+
+    data_dir = getattr(config, "data_dir", None)
+    if data_dir is None:
+        msg = "Configuration missing data_dir for project storage"
+        raise RuntimeError(msg)
+    return ProjectStorage(data_dir=Path(data_dir))
+
+
+def _create_content_intelligence_service(
+    config: Any,
+    embedding_manager: Any,
+    cache_manager: Any,
+) -> Any | None:
+    """Lazily instantiate the ContentIntelligenceService if available."""
+
+    try:
+        module = importlib.import_module("src.services.content_intelligence.service")
+    except ModuleNotFoundError:
+        logger.debug(
+            "Content intelligence service unavailable; optional dependency missing"
+        )
+        return None
+
+    service_cls = getattr(module, "ContentIntelligenceService", None)
+    if service_cls is None:
+        logger.warning(
+            "Content intelligence module does not expose ContentIntelligenceService"
+        )
+        return None
+
+    service = service_cls(
+        config=config,
+        embedding_manager=embedding_manager,
+        cache_manager=cache_manager,
+    )
+    return service
+
+
+def _create_browser_manager(config: Any) -> Any | None:
+    """Instantiate the UnifiedBrowserManager if optional dependencies exist."""
+
+    try:
+        module = importlib.import_module("src.services.browser.unified_manager")
+    except ModuleNotFoundError:
+        logger.debug("UnifiedBrowserManager unavailable; optional dependency missing")
+        return None
+
+    manager_cls = getattr(module, "UnifiedBrowserManager", None)
+    if manager_cls is None:
+        logger.warning(
+            "Unified browser module does not define UnifiedBrowserManager class"
+        )
+        return None
+
+    return manager_cls(config)
+
+
+def _create_rag_generator(
+    config: Any,
+    vector_service: VectorStoreService,
+) -> Any | None:
+    """Instantiate the RAG generator if the optional module is installed."""
+
+    try:
+        rag_module = importlib.import_module("src.services.rag.generator")
+        rag_models = importlib.import_module("src.services.rag.models")
+        retriever_module = importlib.import_module("src.services.rag.retriever")
+    except ModuleNotFoundError:
+        logger.debug("RAG generator dependencies unavailable; skipping initialization")
+        return None
+
+    rag_config_model = getattr(config, "rag", None)
+    rag_config_cls = getattr(rag_models, "RAGConfig", None)
+    if rag_config_cls is None:
+        logger.warning("RAG models module missing RAGConfig; generator disabled")
+        return None
+
+    payload = {}
+    if rag_config_model is not None:
+        if hasattr(rag_config_model, "model_dump"):
+            payload = rag_config_model.model_dump()
+        elif isinstance(rag_config_model, dict):
+            payload = rag_config_model
+    rag_config = rag_config_cls.model_validate(payload)
+
+    collection_name = getattr(
+        getattr(config, "qdrant", None),
+        "collection_name",
+        "documents",
+    )
+
+    retriever_cls = getattr(retriever_module, "VectorServiceRetriever", None)
+    if retriever_cls is None:
+        logger.warning("RAG retriever class missing; generator disabled")
+        return None
+
+    retriever = retriever_cls(
+        vector_service=vector_service,
+        collection=collection_name,
+        k=getattr(rag_config, "retriever_top_k", 5),
+        rag_config=rag_config,
+    )
+
+    generator_cls = getattr(rag_module, "RAGGenerator", None)
+    if generator_cls is None:
+        logger.warning("RAG generator class missing; generator disabled")
+        return None
+
+    return generator_cls(rag_config, retriever)
+
+
+def _build_mcp_connections(config: MCPClientConfig) -> dict[str, Connection]:
+    """Translate MCP client configuration into session connections."""
+
+    connections: dict[str, Connection] = {}
+    for server in config.servers:
+        connections[server.name] = _serialise_mcp_server(server, config)
+    return connections
+
+
+def _serialise_mcp_server(
+    server: MCPServerConfig, config: MCPClientConfig
+) -> Connection:
+    timeout_ms = (
+        server.timeout_ms
+        if server.timeout_ms is not None
+        else config.request_timeout_ms
+    )
+    timeout_seconds = timeout_ms / 1000.0
+
+    if server.transport == MCPTransport.STDIO:
+        payload: dict[str, Any] = {
+            "transport": "stdio",
+            "command": server.command,
+            "args": list(server.args),
+        }
+        if server.env:
+            payload["env"] = dict(server.env)
+        return cast(Connection, payload)
+
+    if server.transport == MCPTransport.STREAMABLE_HTTP:
+        payload = {
+            "transport": "streamable_http",
+            "url": str(server.url),
+            "timeout": timeout_seconds,
+        }
+        if server.headers:
+            payload["headers"] = dict(server.headers)
+        return cast(Connection, payload)
+
+    payload = {
+        "transport": "sse",
+        "url": str(server.url),
+        "timeout": timeout_seconds,
+        "sse_read_timeout": timeout_seconds,
+    }
+    if server.headers:
+        payload["headers"] = dict(server.headers)
+    return cast(Connection, payload)
+
+
+def _create_mcp_client(config: Any) -> MultiServerMCPClient | None:
+    """Instantiate MultiServerMCPClient when enabled in configuration."""
+
+    mcp_config = getattr(config, "mcp_client", None)
+    if not isinstance(mcp_config, MCPClientConfig) or not mcp_config.enabled:
+        return None
+    if not mcp_config.servers:
+        logger.warning("MCP client enabled but no servers configured")
+        return None
+    connections = _build_mcp_connections(mcp_config)
+    return MultiServerMCPClient(connections)
+
+
+async def _maybe_initialize(service: Any, name: str, *, required: bool = True) -> None:
+    """Execute service.initialize() if available."""
+
+    if service is None:
+        return
+
+    initializer = getattr(service, "initialize", None)
+    if initializer is None:
+        return
+
+    try:
+        result = initializer()
+        if asyncio.iscoroutine(result):
+            await result
+    except Exception as exc:  # pragma: no cover - defensive
+        if required:
+            msg = f"Failed to initialize core service '{name}': {exc}"
+            raise RuntimeError(msg) from exc
+        logger.warning("Optional service '%s' failed to initialize: %s", name, exc)
+
+
+async def _maybe_cleanup(service: Any, name: str) -> None:
+    """Execute service.cleanup() if available."""
+
+    if service is None:
+        return
+
+    cleaner = getattr(service, "cleanup", None)
+    if cleaner is None:
+        return
+
+    try:
+        result = cleaner()
+        if asyncio.iscoroutine(result):
+            await result
+    except Exception:  # pragma: no cover - defensive
+        logger.debug("Error during cleanup for service '%s'", name, exc_info=True)
+
+
+async def _initialize_service_graph(container: "ApplicationContainer") -> None:
+    """Initialize core and optional services managed by the container."""
+
+    await _maybe_initialize(
+        container.cache_manager(),
+        "cache_manager",
+        required=False,
+    )
+    await _maybe_initialize(container.embedding_manager(), "embedding_manager")
+    await _maybe_initialize(container.vector_store_service(), "vector_store_service")
+    await _maybe_initialize(container.project_storage(), "project_storage")
+    await _maybe_initialize(
+        container.circuit_breaker_manager(),
+        "circuit_breaker_manager",
+        required=False,
+    )
+    await _maybe_initialize(
+        container.content_intelligence_service(),
+        "content_intelligence_service",
+        required=False,
+    )
+    await _maybe_initialize(
+        container.browser_manager(),
+        "browser_manager",
+        required=False,
+    )
+    await _maybe_initialize(
+        container.rag_generator(),
+        "rag_generator",
+        required=False,
+    )
+
+
+async def _cleanup_service_graph(container: "ApplicationContainer") -> None:
+    """Cleanup services managed by the container in reverse order."""
+
+    await _maybe_cleanup(container.rag_generator(), "rag_generator")
+    await _maybe_cleanup(container.browser_manager(), "browser_manager")
+    await _maybe_cleanup(
+        container.content_intelligence_service(),
+        "content_intelligence_service",
+    )
+    await _maybe_cleanup(container.vector_store_service(), "vector_store_service")
+    await _maybe_cleanup(container.embedding_manager(), "embedding_manager")
+    await _maybe_cleanup(container.cache_manager(), "cache_manager")
+    await _maybe_cleanup(container.project_storage(), "project_storage")
+    await _maybe_cleanup(
+        container.circuit_breaker_manager(),
+        "circuit_breaker_manager",
+    )
+
+
+async def _run_task_factories(factories: list[Any]) -> None:
+    """Execute callables returned by container task registries."""
+
+    for factory in factories:
+        try:
+            result = factory()
+            if asyncio.iscoroutine(result):
+                await result
+        except Exception:  # pragma: no cover - defensive
+            logger.debug("Container task execution failed", exc_info=True)
 
 
 class ApplicationContainer(containers.DeclarativeContainer):  # pylint: disable=c-extension-no-member
@@ -119,22 +512,22 @@ class ApplicationContainer(containers.DeclarativeContainer):  # pylint: disable=
     config = providers.Configuration()  # pylint: disable=c-extension-no-member
 
     # Core client providers - using Factory for safe initialization
-    openai_client = providers.Factory(  # pylint: disable=c-extension-no-member
+    openai_client = providers.Singleton(  # pylint: disable=c-extension-no-member
         _create_openai_client,
         config=config,
     )
 
-    qdrant_client = providers.Factory(  # pylint: disable=c-extension-no-member
+    qdrant_client = providers.Singleton(  # pylint: disable=c-extension-no-member
         _create_qdrant_client,
         config=config,
     )
 
-    redis_client = providers.Factory(  # pylint: disable=c-extension-no-member
+    redis_client = providers.Singleton(  # pylint: disable=c-extension-no-member
         _create_redis_client,
         config=config,
     )
 
-    firecrawl_client = providers.Factory(  # pylint: disable=c-extension-no-member
+    firecrawl_client = providers.Singleton(  # pylint: disable=c-extension-no-member
         _create_firecrawl_client,
         config=config,
     )
@@ -145,37 +538,86 @@ class ApplicationContainer(containers.DeclarativeContainer):  # pylint: disable=
     )
 
     # Client provider layer
-    openai_provider = Singleton(
+    openai_provider = providers.Singleton(
         "src.infrastructure.clients.openai_client.OpenAIClientProvider",
         openai_client=openai_client,
     )
 
-    qdrant_provider = Singleton(
+    qdrant_provider = providers.Singleton(
         "src.infrastructure.clients.qdrant_client.QdrantClientProvider",
         qdrant_client=qdrant_client,
     )
 
-    redis_provider = Singleton(
+    redis_provider = providers.Singleton(
         "src.infrastructure.clients.redis_client.RedisClientProvider",
         redis_client=redis_client,
     )
 
-    firecrawl_provider = Singleton(
+    firecrawl_provider = providers.Singleton(
         "src.infrastructure.clients.firecrawl_client.FirecrawlClientProvider",
         firecrawl_client=firecrawl_client,
     )
 
-    http_provider = Singleton(
+    http_provider = providers.Singleton(
         "src.infrastructure.clients.http_client.HTTPClientProvider",
         http_client=http_client,
+    )
+
+    cache_manager = providers.Singleton(
+        _create_cache_manager,
+        config=config,
+    )
+
+    embedding_manager = providers.Singleton(
+        _create_embedding_manager,
+        config=config,
+        openai_client=openai_client,
+        cache_manager=cache_manager,
+    )
+
+    vector_store_service = providers.Singleton(
+        _create_vector_store_service,
+        config=config,
+        async_qdrant_client=qdrant_client,
+    )
+
+    circuit_breaker_manager = providers.Singleton(
+        _create_circuit_breaker_manager,
+        config=config,
+    )
+
+    project_storage = providers.Singleton(
+        _create_project_storage,
+        config=config,
+    )
+
+    content_intelligence_service = providers.Singleton(
+        _create_content_intelligence_service,
+        config=config,
+        embedding_manager=embedding_manager,
+        cache_manager=cache_manager,
+    )
+
+    browser_manager = providers.Singleton(
+        _create_browser_manager,
+        config=config,
+    )
+
+    rag_generator = providers.Singleton(
+        _create_rag_generator,
+        config=config,
+        vector_service=vector_store_service,
+    )
+
+    mcp_client = providers.Singleton(
+        _create_mcp_client,
+        config=config,
     )
 
     # Parallel processing system
     parallel_processing_system = providers.Factory(  # pylint: disable=c-extension-no-member
         _create_parallel_processing_system,
-        embedding_manager=providers.DelegatedFactory(  # pylint: disable=c-extension-no-member
-            "src.services.embeddings.manager.EmbeddingManager"
-        ),
+        embedding_manager=embedding_manager,
     )
 
     # Lifecycle management
@@ -204,6 +646,9 @@ class ContainerManager:
         # Initialize resource providers
         await self.container.init_resources()  # pyright: ignore[reportGeneralTypeIssues]
 
+        await _initialize_service_graph(self.container)
+        await _run_task_factories(list(self.container.startup_tasks()))
+
         self._initialized = True
         logger.info("Dependency injection container initialized")
         return self.container
@@ -212,6 +657,8 @@ class ContainerManager:
         """Shutdown the container and cleanup resources."""
 
         if self._initialized and self.container is not None:
+            await _run_task_factories(list(self.container.shutdown_tasks()))
+            await _cleanup_service_graph(self.container)
             await self.container.shutdown_resources()  # pyright: ignore[reportGeneralTypeIssues]
             self.container = None
             self._initialized = False
@@ -316,6 +763,54 @@ def inject_parallel_processing_system():
     """Inject parallel processing system dependency."""
 
     return Provide[ApplicationContainer.parallel_processing_system]
+
+
+def inject_cache_manager():
+    """Inject cache manager dependency."""
+
+    return Provide[ApplicationContainer.cache_manager]
+
+
+def inject_embedding_manager():
+    """Inject embedding manager dependency."""
+
+    return Provide[ApplicationContainer.embedding_manager]
+
+
+def inject_vector_store_service():
+    """Inject vector store service dependency."""
+
+    return Provide[ApplicationContainer.vector_store_service]
+
+
+def inject_circuit_breaker_manager():
+    """Inject circuit breaker manager dependency."""
+
+    return Provide[ApplicationContainer.circuit_breaker_manager]
+
+
+def inject_project_storage():
+    """Inject project storage dependency."""
+
+    return Provide[ApplicationContainer.project_storage]
+
+
+def inject_content_intelligence_service():
+    """Inject content intelligence service dependency."""
+
+    return Provide[ApplicationContainer.content_intelligence_service]
+
+
+def inject_browser_manager():
+    """Inject unified browser manager dependency."""
+
+    return Provide[ApplicationContainer.browser_manager]
+
+
+def inject_rag_generator():
+    """Inject RAG generator dependency."""
+
+    return Provide[ApplicationContainer.rag_generator]
 
 
 # Legacy raw client injection (for backward compatibility)
