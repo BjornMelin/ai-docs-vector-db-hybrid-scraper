@@ -51,11 +51,11 @@ def _has_explicit_instrumentation_preferences(observed: Any) -> bool:
 
     model_dump = getattr(observed, "model_dump", None)
     if callable(model_dump):
-        explicit_values = cast(
-            Mapping[str, Any], model_dump(exclude_defaults=True, exclude_unset=True)
-        )
-        if any(field in explicit_values for field in preference_fields):
-            return True
+        result = model_dump(exclude_defaults=True, exclude_unset=True)
+        if isinstance(result, Mapping):
+            explicit_values = cast(Mapping[str, Any], result)
+            if any(field in explicit_values for field in preference_fields):
+                return True
 
     if isinstance(observed, Mapping):
         observed_mapping = cast(Mapping[str, Any], observed)
