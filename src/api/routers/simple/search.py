@@ -5,14 +5,13 @@ Simplified search endpoints optimized for solo developers.
 
 import logging
 from time import perf_counter
-from typing import Annotated, cast
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from src.api.dependencies import get_vector_client_manager
+from src.api.dependencies import get_vector_service_dependency
 from src.contracts.retrieval import SearchRecord
-from src.infrastructure.client_manager import ClientManager
 from src.services.vector_db.service import VectorStoreService
 
 
@@ -40,13 +39,15 @@ class SimpleSearchResponse(BaseModel):
     )
 
 
-ClientManagerDependency = Annotated[ClientManager, Depends(get_vector_client_manager)]
+VectorServiceDependency = Annotated[
+    VectorStoreService, Depends(get_vector_service_dependency)
+]
 
 
 @router.post("/search", response_model=SimpleSearchResponse)
 async def search_documents(
     request: SimpleSearchRequest,
-    client_manager: ClientManagerDependency,
+    vector_service: VectorServiceDependency,
 ) -> SimpleSearchResponse:
     """Search documents using simple vector search.
 
@@ -54,7 +55,7 @@ async def search_documents(
     like reranking, query expansion, or hybrid search.
     """
     try:
-        return await _perform_search(request, client_manager)
+        return await _perform_search(request, vector_service)
     except Exception as e:
         logger.exception("Search failed")
         # Return generic error message to prevent information disclosure
@@ -65,10 +66,9 @@ async def search_documents(
 
 
 async def _perform_search(
-    request: SimpleSearchRequest, client_manager: ClientManager
+    request: SimpleSearchRequest, vector_service: VectorStoreService
 ) -> SimpleSearchResponse:
     """Perform search with service lookup and response conversion."""
-    vector_service = await _get_vector_store_service(client_manager)
     started = perf_counter()
     records = await vector_service.search_documents(
         request.collection,
@@ -89,7 +89,7 @@ async def _perform_search(
 
 @router.get("/search", response_model=SimpleSearchResponse)
 async def search_documents_get(
-    client_manager: ClientManagerDependency,
+    vector_service: VectorServiceDependency,
     q: str = Query(..., min_length=1, max_length=500, description="Search query"),
     limit: int = Query(default=10, ge=1, le=25, description="Maximum results"),
     collection: str = Query(default="documents", description="Collection to search"),
@@ -100,16 +100,4 @@ async def search_documents_get(
         limit=limit,
         collection=collection,
     )
-    return await search_documents(request, client_manager)
-
-
-async def _get_vector_store_service(
-    client_manager: ClientManager,
-) -> VectorStoreService:
-    """Resolve the initialized vector store service from the factory."""
-
-    service = await client_manager.get_vector_store_service()
-    if not isinstance(service, VectorStoreService):  # pragma: no cover - safety net
-        msg = "Vector DB service is not a VectorStoreService instance"
-        raise TypeError(msg)
-    return cast(VectorStoreService, service)
+    return await search_documents(request, vector_service)

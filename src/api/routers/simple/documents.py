@@ -1,13 +1,12 @@
 """Simple mode documents API router."""
 
 import logging
-from typing import Annotated, Any, cast
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from src.api.dependencies import get_vector_client_manager
-from src.infrastructure.client_manager import ClientManager
+from src.api.dependencies import get_vector_service_dependency
 from src.services.vector_db.service import VectorStoreService
 
 
@@ -16,7 +15,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-ClientManagerDependency = Annotated[ClientManager, Depends(get_vector_client_manager)]
+VectorServiceDependency = Annotated[
+    VectorStoreService, Depends(get_vector_service_dependency)
+]
 
 
 class SimpleDocumentRequest(BaseModel):
@@ -42,25 +43,25 @@ class SimpleDocumentResponse(BaseModel):
 @router.post("/documents", response_model=SimpleDocumentResponse)
 async def add_document(
     request: SimpleDocumentRequest,
-    client_manager: ClientManagerDependency,
+    vector_service: VectorServiceDependency,
 ) -> SimpleDocumentResponse:
     """Add a single document to the collection.
 
     This endpoint provides basic document indexing without advanced features
     like batch processing or advanced content analysis.
     """
+
     try:
-        return await _add_document_to_service(request, client_manager)
+        return await _add_document_to_service(request, vector_service)
     except Exception as e:
         logger.exception("Document addition failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 async def _add_document_to_service(
-    request: SimpleDocumentRequest, client_manager: ClientManager
+    request: SimpleDocumentRequest, vector_db_service: VectorStoreService
 ) -> SimpleDocumentResponse:
     """Add document to vector database service."""
-    vector_db_service = await _get_vector_store_service(client_manager)
 
     document_id = await vector_db_service.add_document(
         request.collection_name,
@@ -78,13 +79,14 @@ async def _add_document_to_service(
 @router.get("/documents/{document_id}")
 async def get_document(
     document_id: str,
-    client_manager: ClientManagerDependency,
+    vector_service: VectorServiceDependency,
     collection_name: str = Query(default="documents", description="Collection name"),
 ) -> dict[str, Any]:
     """Get a document by ID."""
+
     try:
         document = await _get_document_from_service(
-            document_id, collection_name, client_manager
+            document_id, collection_name, vector_service
         )
     except Exception as e:
         logger.exception("Document retrieval failed")
@@ -96,10 +98,10 @@ async def get_document(
 
 
 async def _get_document_from_service(
-    document_id: str, collection_name: str, client_manager: ClientManager
+    document_id: str, collection_name: str, vector_db_service: VectorStoreService
 ) -> dict[str, Any] | None:
     """Get document from vector database service."""
-    vector_db_service = await _get_vector_store_service(client_manager)
+
     document = await vector_db_service.get_document(collection_name, document_id)
     return dict(document) if document else None
 
@@ -107,13 +109,14 @@ async def _get_document_from_service(
 @router.delete("/documents/{document_id}")
 async def delete_document(
     document_id: str,
-    client_manager: ClientManagerDependency,
+    vector_service: VectorServiceDependency,
     collection_name: str = Query(default="documents", description="Collection name"),
 ) -> dict[str, str]:
     """Delete a document by ID."""
+
     try:
         success = await _delete_document_from_service(
-            document_id, collection_name, client_manager
+            document_id, collection_name, vector_service
         )
     except Exception as e:
         logger.exception("Document deletion failed")
@@ -125,16 +128,16 @@ async def delete_document(
 
 
 async def _delete_document_from_service(
-    document_id: str, collection_name: str, client_manager: ClientManager
+    document_id: str, collection_name: str, vector_db_service: VectorStoreService
 ) -> bool:
     """Delete document from vector database service."""
-    vector_db_service = await _get_vector_store_service(client_manager)
+
     return await vector_db_service.delete_document(collection_name, document_id)
 
 
 @router.get("/documents")
 async def list_documents(
-    client_manager: ClientManagerDependency,
+    vector_service: VectorServiceDependency,
     collection_name: str = Query(default="documents", description="Collection name"),
     limit: int = Query(default=10, ge=1, le=50, description="Maximum results"),
     offset: str | None = Query(
@@ -142,9 +145,10 @@ async def list_documents(
     ),
 ) -> dict[str, Any]:
     """List documents in a collection (simplified)."""
+
     try:
         return await _list_documents_from_service(
-            collection_name, limit, offset, client_manager
+            collection_name, limit, offset, vector_service
         )
     except Exception as e:
         logger.exception("Document listing failed")
@@ -155,10 +159,9 @@ async def _list_documents_from_service(
     collection_name: str,
     limit: int,
     offset: str | None,
-    client_manager: ClientManager,
+    vector_db_service: VectorStoreService,
 ) -> dict[str, Any]:
     """List documents from vector database service."""
-    vector_db_service = await _get_vector_store_service(client_manager)
 
     documents, next_offset = await vector_db_service.list_documents(
         collection_name,
@@ -177,36 +180,25 @@ async def _list_documents_from_service(
 
 @router.get("/collections")
 async def list_collections(
-    client_manager: ClientManagerDependency,
+    vector_service: VectorServiceDependency,
 ) -> dict[str, Any]:
     """List available collections."""
+
     try:
-        return await _list_collections_from_service(client_manager)
+        return await _list_collections_from_service(vector_service)
     except Exception as e:
         logger.exception("Collection listing failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 async def _list_collections_from_service(
-    client_manager: ClientManager,
+    vector_db_service: VectorStoreService,
 ) -> dict[str, Any]:
     """List collections from vector database service."""
-    vector_db_service = await _get_vector_store_service(client_manager)
+
     collections = await vector_db_service.list_collections()
 
     return {
         "collections": collections,
         "count": len(collections),
     }
-
-
-async def _get_vector_store_service(
-    client_manager: ClientManager,
-) -> VectorStoreService:
-    """Resolve the vector store service with runtime type protection."""
-
-    service = await client_manager.get_vector_store_service()
-    if not isinstance(service, VectorStoreService):  # pragma: no cover - safety
-        msg = "Vector DB service is not a VectorStoreService instance"
-        raise TypeError(msg)
-    return cast(VectorStoreService, service)
