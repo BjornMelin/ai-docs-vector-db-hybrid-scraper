@@ -122,6 +122,7 @@ def router_with_stubs(
     monkeypatch.setattr(router_module, "FirecrawlAdapter", FirecrawlStub)
 
     settings = Settings(environment=Environment.TESTING)
+    settings.firecrawl.api_key = "test-key"
     router = AutomationRouter(settings)
 
     return router, stubs

@@ -319,7 +319,7 @@ class TestProjectStorage:
 
         # Mock datetime to control timestamp
         with patch("src.services.core.project_storage.datetime") as mock_datetime:
-            mock_datetime.utcnow.return_value.isoformat.return_value = (
+            mock_datetime.now.return_value.isoformat.return_value = (
                 "2023-01-01T12:00:00"
             )
 

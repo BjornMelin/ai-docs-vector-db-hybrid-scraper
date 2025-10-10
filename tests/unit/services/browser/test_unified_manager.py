@@ -28,6 +28,7 @@ def manager_with_stubs(
     install_manager_stubs(monkeypatch, stubs)
 
     settings = Settings(environment=Environment.TESTING)
+    settings.firecrawl.api_key = "test-key"
     manager = UnifiedBrowserManager(settings)
 
     return manager, stubs

@@ -4,6 +4,7 @@ import asyncio
 import time
 
 import pytest
+from pydantic.warnings import PydanticDeprecatedSince20
 
 from src.services.browser.monitoring import (
     Alert,
@@ -229,13 +230,16 @@ class TestBrowserAutomationMonitor:
         await monitor.record_request_metrics("tier2", False, 8000.0)  # Unhealthy
         await monitor.record_request_metrics("tier3", True, 3000.0)  # Healthy
 
-        system_health = monitor.get_system_health()
+        with pytest.warns(PydanticDeprecatedSince20):
+            system_health = monitor.get_system_health()
 
         assert system_health["overall_status"] == "unhealthy"  # One unhealthy tier
-        assert system_health["tier_health"]["_total"] == 3
-        assert system_health["tier_health"]["healthy"] == 2
-        assert system_health["tier_health"]["unhealthy"] == 1
         assert "tier_details" in system_health
+        tiers = system_health["tier_details"]
+        assert len(tiers) == 3
+        statuses = [details["status"] for details in tiers.values()]
+        assert statuses.count("healthy") == 2
+        assert statuses.count("unhealthy") == 1
 
     @pytest.mark.asyncio
     async def test_get_recent_metrics(self, monitor):

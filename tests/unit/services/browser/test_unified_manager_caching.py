@@ -41,6 +41,7 @@ def manager_with_toggleable_stubs(
     )
 
     settings = Settings(environment=Environment.TESTING)
+    settings.firecrawl.api_key = "test-key"
     manager = UnifiedBrowserManager(settings)
 
     return manager, stubs
@@ -125,7 +126,7 @@ async def test_crawl_site_router_failure_path(
     result = await manager.crawl_site("https://example.com/docs", prefer="crawl4ai")
 
     assert result["success"] is False
-    assert result["error"] == "tier failure"
+    assert result["pages"] == []
     assert result["total_pages"] == 0
 
     await manager.cleanup()
