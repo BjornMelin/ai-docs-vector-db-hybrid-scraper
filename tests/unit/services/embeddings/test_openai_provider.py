@@ -291,7 +291,7 @@ class TestOpenAIProviderBatchAPI:
 
         with pytest.raises(EmbeddingServiceError, match="Custom ID list must match"):
             await provider.generate_embeddings_batch_api(
-                ["text"], custom_ids=["only-one"]
+                ["text", "another"], custom_ids=["only-one"]
             )
 
     @pytest.mark.asyncio
