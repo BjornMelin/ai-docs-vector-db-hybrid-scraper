@@ -18,6 +18,7 @@ from .models import (
     AutomationRouterConfig,
     BrowserUseConfig,
     CacheConfig,
+    CircuitBreakerConfig,
     ChunkingConfig,
     ChunkingStrategy,
     Crawl4AIConfig,
@@ -146,6 +147,10 @@ class Settings(BaseSettings):
     )
     performance: PerformanceConfig = Field(
         default_factory=PerformanceConfig, description="Performance configuration"
+    )
+    circuit_breaker: CircuitBreakerConfig = Field(
+        default_factory=CircuitBreakerConfig,
+        description="Circuit breaker configuration",
     )
     query_processing: QueryProcessingConfig = Field(
         default_factory=QueryProcessingConfig,
