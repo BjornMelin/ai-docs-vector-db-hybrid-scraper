@@ -100,36 +100,16 @@ eval = [
     "datasets>=2.18.0,<5.0.0",
 ]
 
-# Development dependencies
-dev = [
-    "pytest>=8.4.2,<9.0.0",
-    "pytest-asyncio>=1.2.0,<2.0.0",
-    "asgi-lifespan>=2.1.0,<3.0.0",
-    "pytest-cov>=7.0.0,<8.0.0",
-    "pytest-mock>=3.15.1,<4.0.0",
-    "pytest-timeout>=2.4.0,<3.0.0",
-    "pytest-xdist>=3.8.0,<4.0.0",
-    "pytest-benchmark>=5.1.0,<6.0.0",
-    "hypothesis>=6.140.0,<7.0.0",
-    "mutmut>=3.3.1,<4.0.0",
-    "testcontainers>=4.8.1,<5.0.0",
-    "fakeredis>=2.31.3,<3.0.0",
-    "coverage>=7.6.0,<8.0.0",
-    "ruff>=0.13.1,<0.15.0",
-    "pylint>=3.3.8,<4.0.0",
-    "pyright>=1.1.379,<2.0.0",
-    "taskipy>=1.14.1,<2.0.0",
-    "locust>=2.37.10,<3.0.0",
-    "pyjwt>=2.10.1,<3.0.0",
-    "respx>=0.22.0",
-]
-
 # Documentation
 docs = [
     "mkdocs>=1.6.1",
     "mkdocs-material>=9.6.20",
     "mkdocstrings>=0.30.1",
-    "mkdocstrings-python>=1.18.2"
+    "mkdocstrings-python>=1.18.2",
+    "streamlit>=1.41.1,<2.0.0",
+    "plotly>=5.24.1,<6.0.0",
+    "requests>=2.32.3,<3.0.0",
+    "pandas>=2.3.2,<3.0.0",
 ]
 
 # Contract testing tools
@@ -183,8 +163,12 @@ parsing = [
     "tree-sitter-typescript>=0.23.2,<0.24.0",
 ]
 
-# High-performance data processing
-dataframe = ["polars>=1.33.1,<2.0.0", "pyarrow>=21.0.0,<22.0.0"]
+# High-performance data processing and analytics
+dataframes = [
+    "polars>=1.33.1,<2.0.0",
+    "pyarrow>=21.0.0,<22.0.0",
+    "pandas>=2.3.2,<3.0.0",
+]
 
 # GPU acceleration (optional AI/ML performance boost)
 gpu = [
@@ -217,8 +201,47 @@ web = [
 
 # All optional dependencies
 all = [
-    "ai-docs-vector-db-hybrid-scraper[dev,contract,accessibility,browser,llm,observability,parsing,dataframe,docs,gpu,eval,server,web]",
+    "ai-docs-vector-db-hybrid-scraper[contract,accessibility,browser,llm,observability,parsing,dataframes,docs,gpu,eval,server,web]",
 ]
+
+[dependency-groups]
+lint = [
+    "ruff>=0.13.1,<0.15.0",
+    "pylint>=3.3.8,<4.0.0",
+]
+
+typecheck = [
+    "pyright>=1.1.379,<2.0.0",
+    "pandas-stubs>=2.3.2.240909",
+    "types-requests>=2.32.0.20241016",
+]
+
+test = [
+    "pytest>=8.4.2,<9.0.0",
+    "pytest-asyncio>=1.2.0,<2.0.0",
+    "asgi-lifespan>=2.1.0,<3.0.0",
+    "pytest-cov>=7.0.0,<8.0.0",
+    "pytest-mock>=3.15.1,<4.0.0",
+    "pytest-timeout>=2.4.0,<3.0.0",
+    "pytest-xdist>=3.8.0,<4.0.0",
+    "pytest-benchmark>=5.1.0,<6.0.0",
+    "hypothesis>=6.140.0,<7.0.0",
+    "fakeredis>=2.31.3,<3.0.0",
+    "coverage>=7.6.0,<8.0.0",
+    "respx>=0.22.0",
+    "pyjwt>=2.10.1,<3.0.0",
+]
+
+load = [
+    "locust>=2.37.10,<3.0.0",
+    "testcontainers>=4.8.1,<5.0.0",
+]
+
+qa = [
+    "mutmut>=3.3.1,<4.0.0",
+    "taskipy>=1.14.1,<2.0.0",
+]
+
 
 [project.urls]
 Homepage = "https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper"
@@ -320,8 +343,9 @@ exclude = [
     ".mypy_cache",
     ".venv",
 ]
+stubPath = "typings"
 reportMissingImports = "warning"
-reportMissingTypeStubs = false
+reportMissingTypeStubs = "warning"
 
 [[tool.pyright.executionEnvironments]]
 root = "src/core"
@@ -381,8 +405,8 @@ addopts = [
 
 # Warning filters for clean test output
 filterwarnings = [
-    "ignore::DeprecationWarning",
-    "ignore::PendingDeprecationWarning",
+    "error",
+    "ignore::pydantic.warnings.PydanticDeprecatedSince20",
     "ignore::UserWarning:.*playwright.*",
 ]
 
@@ -443,6 +467,8 @@ fail_under = 80.0
 [tool.uv]
 managed = true
 package = true
+# Install these groups by default for developer environments
+default-groups = ["lint", "typecheck", "test"]
 # UV performance optimizations
 compile-bytecode = true
 link-mode = "copy" # Better for Docker builds
@@ -454,6 +480,7 @@ upgrade-package = [
 ] # Keep core tools updated
 resolution = "highest" # Prefer latest compatible versions
 python-preference = "managed" # Better Python version management
+preview = true # Acknowledge use of preview-only extra-build-dependencies configuration
 
 # Python 3.11-3.13 compatibility constraints
 constraint-dependencies = [
@@ -474,6 +501,21 @@ extra-build-variables = { flash-attn = { FLASH_ATTENTION_SKIP_CUDA_BUILD = "TRUE
 extension-pkg-allow-list = ["pydantic"]
 reports = false
 score = true
+ignored-modules = [
+    "crawl4ai",
+    "crawl4ai.models",
+    "crawl4ai.async_dispatcher",
+    "crawl4ai.deep_crawling",
+    "crawl4ai.deep_crawling.filters",
+    "crawl4ai.deep_crawling.scorers",
+    "firecrawl",
+    "firecrawl.async_client",
+    "firecrawl.sync_client",
+    "playwright.async_api",
+    "playwright.sync_api",
+    "src.services.crawling",
+    "src.services.crawling.c4a_presets",
+]
 
 [tool.pylint.messages_control]
 # Conservative disable list - only genuinely problematic rules
