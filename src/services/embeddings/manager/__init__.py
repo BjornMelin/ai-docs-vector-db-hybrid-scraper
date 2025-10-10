@@ -150,18 +150,6 @@ class EmbeddingManager:
             self._pipeline.set_usage_tracker(self._usage)
         return self._usage.stats
 
-    @property
-    def providers(self) -> dict[str, EmbeddingProvider]:
-        """Return the provider registry for compatibility with legacy tests."""
-
-        return self._provider_registry.providers
-
-    @providers.setter
-    def providers(self, value: dict[str, EmbeddingProvider]) -> None:
-        """Allow tests to replace provider map directly."""
-
-        self._provider_registry.providers = value
-
     async def initialize(self) -> None:
         """Initializes available providers.
 
@@ -491,10 +479,11 @@ class EmbeddingManager:
 
         costs = {}
 
+        provider_map = self._provider_registry.providers
         if provider_name:
-            providers = {provider_name: self.providers.get(provider_name)}
+            providers = {provider_name: provider_map.get(provider_name)}
         else:
-            providers = self.providers
+            providers = provider_map
 
         for name, provider in providers.items():
             if provider:
@@ -513,8 +502,9 @@ class EmbeddingManager:
         Returns:
             dict[str, dict[str, object]]: Provider information
         """
-        info = {}
-        for name, provider in self.providers.items():
+        info: dict[str, dict[str, object]] = {}
+        provider_map = self._provider_registry.providers
+        for name, provider in provider_map.items():
             info[name] = {
                 "model": provider.model_name,
                 "dimensions": provider.dimensions,
@@ -546,8 +536,10 @@ class EmbeddingManager:
         # Simple heuristic-based provider selection
         estimated_tokens = text_length / 4
 
+        provider_map = self._provider_registry.providers
+
         candidates = []
-        for name, provider in self.providers.items():
+        for name, provider in provider_map.items():
             cost = estimated_tokens * provider.cost_per_token
 
             # Apply budget constraint
@@ -567,7 +559,7 @@ class EmbeddingManager:
             raise EmbeddingServiceError(msg)
 
         # Apply selection heuristics
-        if quality_required and "openai" in self.providers:
+        if quality_required and "openai" in provider_map:
             return "openai"
 
         # Prefer local processing for small texts
@@ -621,7 +613,7 @@ class EmbeddingManager:
         )
         try:
             return self._selection.recommend(
-                providers=self.providers,
+                providers=self._provider_registry.providers,
                 text_analysis=text_analysis,
                 params=params,
             )

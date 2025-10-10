@@ -49,6 +49,7 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         """Initialize the VectorStoreService."""
 
         super().__init__(config)
+        self.collection_name: str | None = None
         self._embeddings = (
             embeddings_provider
             if embeddings_provider is not None
