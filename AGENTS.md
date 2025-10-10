@@ -30,7 +30,7 @@ Use Conventional Commit prefixes (`feat:`, `fix:`, `docs:`), explain motivation,
 
 ## Security & Configuration Tips
 
-Store secrets in `.env`, `.env.local`, or a vault—never commit `OPENAI_API_KEY` or `AI_DOCS__FIRECRAWL__API_KEY`. Align FastAPI and MCP via `AI_DOCS__MODE`, `AI_DOCS__QDRANT__URL`, and `FASTMCP_TRANSPORT/FASTMCP_HOST/FASTMCP_PORT`.
+Store secrets in `.env`, `.env.local`, or a vault—never commit `OPENAI_API_KEY` or `AI_DOCS__FIRECRAWL__API_KEY`. Align FastAPI and MCP via feature flags like `AI_DOCS__ENABLE_ADVANCED_MONITORING`, service URLs such as `AI_DOCS__QDRANT__URL`, and `FASTMCP_TRANSPORT/FASTMCP_HOST/FASTMCP_PORT`.
 Prefer precise exceptions, justify any `# pylint: disable` or `# pyright: ignore`, trim `cache/`, `logs/`, `tmp/`, and run `python scripts/dev.py validate --strict` regularly.
 
 ## Error Handling & Observability

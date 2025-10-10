@@ -24,28 +24,11 @@ cp .env.example .env
 `uv sync` respects the lockfile and creates the virtual environment. Supply API
 keys in `.env` before starting the stack.
 
-## 3. Application Profiles
+## 3. Application Configuration
 
-The API server exposes two profiles controlled by `AI_DOCS__MODE`:
+The API server now runs with a single unified configuration. Optional capabilities are toggled through explicit feature flags (for example `AI_DOCS__ENABLE_ADVANCED_MONITORING=true`). Every deployment exposes the same FastAPI surface, simplifying integration testing and automation scripts.
 
-| Profile      | Description                                                                                   | Activation                        |
-| ------------ | --------------------------------------------------------------------------------------------- | --------------------------------- |
-| `simple`     | Solo-developer defaults: minimal external services, same `/api/v1` surface as enterprise.     | default (`AI_DOCS__MODE=simple`)  |
-| `enterprise` | Full surface area: Redis/Dragonfly, Postgres, Prometheus, extended orchestration & telemetry. | `export AI_DOCS__MODE=enterprise` |
-
-Profiles are resolved by `AppProfile` (`src/api/app_profiles.py`). Router and
-service installers consult the profile to decide which modules to mount. Health
-status for each service is exposed via `/health`.
-
-### Switching Profiles
-
-```bash
-# Simple smoke test
-uv run python scripts/dev.py test --profile quick
-
-# Enterprise validation
-AI_DOCS__MODE=enterprise uv run python scripts/dev.py test --profile quick
-```
+Feature flags and nested configuration models are resolved during startup via the dependency-injector container. Health status for each registered service remains available from `/health`, and `/features` exposes the resolved flag values for observability dashboards.
 
 ## 4. Configuration Loader
 
@@ -55,15 +38,14 @@ configuration from environment variables. Key behaviours:
 - Nested keys use double underscores (e.g. `AI_DOCS__QDRANT__URL`).
 - `.env` is loaded automatically for local development.
 - `validate_assignment=True` keeps runtime overrides type-safe.
-- Defaults favour the developer (simple) profile; enterprise deployments override relevant
-  sections (cache, database, monitoring, etc.).
+- Defaults favour local development; production deployments override cache, database, monitoring, and observability sections as needed.
 
 ### Core Sections
 
 | Section                        | Model                   | Notes                                                |
 | ------------------------------ | ----------------------- | ---------------------------------------------------- |
 | `cache`                        | `CacheConfig`           | Controls local + distributed caches, TTLs, eviction. |
-| `database`                     | `DatabaseConfig`        | Postgres connection settings; optional for the simple profile. |
+| `database`                     | `DatabaseConfig`        | Postgres connection settings; optional for lightweight deployments. |
 | `qdrant`                       | `QdrantConfig`          | Vector store URL, API key, collection defaults.      |
 | `agentic`                      | `AgenticConfig`         | LangGraph runner budgets (parallelism, timeouts).    |
 | `query_processing`             | `QueryProcessingConfig` | Retrieval knobs (hybrid ratios, rerank budgets).     |
@@ -119,11 +101,8 @@ Hot reloading has been removed. When configuration changes are required, refresh
 ## 5. Running Services
 
 ```bash
-# Launch developer defaults (simple profile)
-docker compose --profile simple up -d
-
-# Enterprise stack
-docker compose --profile enterprise up -d
+# Launch core services
+docker compose up -d
 
 # Check status
 docker compose ps

@@ -106,8 +106,10 @@ services:
       - AI_DOCS__QDRANT__URL=http://qdrant:6333
       - AI_DOCS__CACHE__REDIS_URL=redis://redis:6379 # Only if redis profile active
       - AI_DOCS__LOG_LEVEL=INFO
+      - AI_DOCS__ENABLE_ADVANCED_MONITORING=${AI_DOCS__ENABLE_ADVANCED_MONITORING:-true}
+      - AI_DOCS__ENABLE_DEPLOYMENT_FEATURES=${AI_DOCS__ENABLE_DEPLOYMENT_FEATURES:-true}
+      - AI_DOCS__ENABLE_AB_TESTING=${AI_DOCS__ENABLE_AB_TESTING:-false}
       - PYTHONPATH=/app/src
-      - AI_DOCS__MODE=${AI_DOCS__MODE:-simple} # Default to simple
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs

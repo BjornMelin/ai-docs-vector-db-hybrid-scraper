@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Generator
+from types import SimpleNamespace
 
 import pytest
 from fastapi import FastAPI, status
@@ -44,17 +45,19 @@ def test_read_settings_returns_snapshot(client: TestClient) -> None:
     payload = response.json()
     assert payload["app_name"] == get_settings().app_name
     assert payload["version"] == get_settings().version
-    assert payload["mode"] == get_settings().mode.value
+    assert payload["mode"] == get_settings().mode
     assert payload["environment"] == get_settings().environment.value
+    assert payload["feature_flags"] == get_settings().get_feature_flags()
 
 
-def test_read_status_uses_resolve_mode(client: TestClient) -> None:
-    """GET /config/status should mirror resolve_mode semantics."""
+def test_read_status_reports_unified_configuration(client: TestClient) -> None:
+    """GET /config/status mirrors the active settings state."""
 
     response = client.get("/config/status")
     assert response.status_code == status.HTTP_200_OK
     payload = response.json()
-    assert payload["mode"] == get_settings().mode.value
+    assert payload["mode"] == get_settings().mode
+    assert payload["feature_flags"] == get_settings().get_feature_flags()
 
 
 def test_refresh_endpoint_applies_overrides(client: TestClient) -> None:
@@ -90,3 +93,49 @@ def test_api_key_required_blocks_requests(
 
     response = client.get("/config", headers={"X-API-Key": "super-secret"})
     assert response.status_code == status.HTTP_200_OK
+
+
+def test_read_settings_handles_invalid_snapshot(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Configuration snapshot endpoint sanitizes malformed settings."""
+
+    app = FastAPI()
+    app.include_router(config_router.router)
+
+    from dataclasses import dataclass
+
+    @dataclass
+    class BrokenObservability:
+        enabled: bool = True
+
+    @dataclass
+    class BrokenSecurity:
+        api_key_required: bool = False
+
+    class BrokenSettings:
+        app_name = "broken"
+        version = "0.0.0"
+        mode = "invalid"
+        environment = None
+        debug = True
+        observability = BrokenObservability()
+        security = BrokenSecurity()
+
+        @staticmethod
+        def get_feature_flags() -> dict[str, bool]:
+            raise RuntimeError("unexpected feature failure")
+
+    def _get_broken_settings() -> BrokenSettings:
+        return BrokenSettings()
+
+    monkeypatch.setattr(config_router, "get_settings", _get_broken_settings)
+
+    with TestClient(app) as client, caplog.at_level("ERROR"):
+        response = client.get("/config")
+
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    payload = response.json()
+    assert payload == {"detail": "Settings snapshot unavailable"}
+    assert "Failed to serialize settings snapshot" in caplog.text
+    assert "unexpected feature failure" not in str(payload)

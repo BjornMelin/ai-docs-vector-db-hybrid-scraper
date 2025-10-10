@@ -14,16 +14,18 @@ DOCKER_BUILDKIT=1 docker build -t ai-docs-app:latest .
 The multi-stage Dockerfile installs dependencies with uv and copies the runtime
 virtual environment into a slim Python 3.12 base image.
 
-### Compose Profiles
+### Compose Orchestration
 
-| Profile | Services | Command |
-| --- | --- | --- |
-| `simple` | `app`, `qdrant` | `docker compose --profile simple up -d` |
-| `enterprise` | `app`, `qdrant`, `redis`, `postgres`, `prometheus`, `grafana`, `alertmanager` | `docker compose --profile enterprise up -d` |
+The stack deploys with a single command and optional feature services may be
+enabled via environment variables. Start the defaults with:
 
-Set `AI_DOCS__MODE` to switch modes; see `setup-and-configuration.md` for more on
-profile behaviour. Both profiles expose the canonical `/api/v1` routes—your
-selection only changes the supporting infrastructure and middleware.
+```bash
+docker compose up -d
+```
+
+Services such as Redis, Postgres, Prometheus, Grafana, and Alertmanager can be
+enabled by exporting their respective `AI_DOCS__` configuration values before
+launching `docker compose`.
 
 ### Environment Variables
 

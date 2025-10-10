@@ -18,10 +18,6 @@ from pydantic_settings import (  # pyright: ignore[reportMissingImports]
     SettingsConfigDict,
 )
 
-from src.architecture.modes import (  # pyright: ignore[reportMissingImports]
-    ApplicationMode,
-)
-
 from .models import (
     AgenticConfig,
     AutomationRouterConfig,
@@ -77,14 +73,21 @@ class Settings(BaseSettings):
         default="AI Documentation Vector DB", description="Application name"
     )
     version: str = Field(default="1.0.0", description="Application version")
-    mode: ApplicationMode = Field(
-        default=ApplicationMode.SIMPLE, description="Deployment mode profile"
-    )
+    mode: str = Field(default="production", description="Deployment mode label")
     environment: Environment = Field(
         default=Environment.DEVELOPMENT, description="Deployment environment"
     )
     debug: bool = Field(default=False, description="Enable debug features")
     log_level: LogLevel = Field(default=LogLevel.INFO, description="Log level")
+    enable_advanced_monitoring: bool = Field(
+        default=True, description="Enable advanced monitoring features"
+    )
+    enable_deployment_features: bool = Field(
+        default=True, description="Enable deployment and operations APIs"
+    )
+    enable_ab_testing: bool = Field(
+        default=False, description="Enable A/B testing and experimentation"
+    )
 
     # Paths
     data_dir: Path = Field(default=Path("data"), description="Data directory")
@@ -193,11 +196,6 @@ class Settings(BaseSettings):
             raise ValueError(msg)
         return self
 
-    def is_enterprise_mode(self) -> bool:
-        """Return True when the enterprise application mode is active."""
-
-        return self.mode is ApplicationMode.ENTERPRISE
-
     def is_development(self) -> bool:
         """Return True when running in development environment."""
 
@@ -209,18 +207,26 @@ class Settings(BaseSettings):
         return self.environment is Environment.PRODUCTION
 
     def get_effective_chunking_strategy(self) -> ChunkingStrategy:
-        """Return chunking strategy, forcing BASIC for simple mode."""
+        """Return the configured chunking strategy."""
 
-        if self.mode is ApplicationMode.SIMPLE:
-            return ChunkingStrategy.BASIC
         return getattr(self.chunking, "strategy", ChunkingStrategy.BASIC)
 
     def get_effective_search_strategy(self) -> SearchStrategy:
-        """Return search strategy, forcing DENSE for simple mode."""
+        """Return the configured search strategy."""
 
-        if self.mode is ApplicationMode.SIMPLE:
-            return SearchStrategy.DENSE
-        return SearchStrategy.HYBRID
+        return getattr(self.embedding, "search_strategy", SearchStrategy.DENSE)
+
+    def get_feature_flags(self) -> dict[str, bool]:
+        """Return the active feature flags for the unified application."""
+
+        return {
+            "advanced_monitoring": self.enable_advanced_monitoring,
+            "deployment_features": self.enable_deployment_features,
+            "a_b_testing": self.enable_ab_testing,
+            "comprehensive_observability": bool(
+                getattr(self.observability, "enabled", False)
+            ),
+        }
 
 
 def ensure_runtime_directories(settings: Settings) -> None:
@@ -230,38 +236,10 @@ def ensure_runtime_directories(settings: Settings) -> None:
         directory.mkdir(parents=True, exist_ok=True)
 
 
-def apply_mode_overrides(settings: Settings) -> None:
-    """Apply mode-specific adjustments to the loaded settings."""
-
-    if settings.mode is ApplicationMode.SIMPLE:
-        settings.performance.max_concurrent_crawls = min(
-            settings.performance.max_concurrent_crawls, 10
-        )
-        settings.cache.local_max_memory_mb = min(
-            settings.cache.local_max_memory_mb, 200
-        )
-        settings.reranking.enabled = False
-        settings.observability.enabled = False
-        return
-    if settings.mode is ApplicationMode.ENTERPRISE:
-        settings.performance.max_concurrent_crawls = min(
-            settings.performance.max_concurrent_crawls, 50
-        )
-
-
-def resolve_mode(settings: Settings | None = None) -> ApplicationMode:
-    """Return the active application mode."""
-
-    if settings is None:
-        settings = get_settings()
-    return settings.mode
-
-
 def load_settings(**overrides: Any) -> Settings:
     """Instantiate settings from the environment without caching."""
 
     settings = Settings(**overrides)
-    apply_mode_overrides(settings)
     ensure_runtime_directories(settings)
     return settings
 
@@ -372,12 +350,10 @@ def load_settings_from_file(path: Path) -> Settings:
 
 __all__ = [
     "Settings",
-    "apply_mode_overrides",
     "ensure_runtime_directories",
     "get_settings",
     "load_settings",
     "refresh_settings",
-    "resolve_mode",
     "load_settings_from_file",
     "validate_settings_payload",
 ]
