@@ -28,10 +28,10 @@ keys in `.env` before starting the stack.
 
 The API server exposes two profiles controlled by `AI_DOCS__MODE`:
 
-| Profile      | Description                                                                 | Activation                        |
-| ------------ | --------------------------------------------------------------------------- | --------------------------------- |
-| `simple`     | Local-first: minimal routers, in-process cache, no external dependencies.   | default (`AI_DOCS__MODE=simple`)  |
-| `enterprise` | Full surface area: Redis/Dragonfly, Postgres, Prometheus, extended routers. | `export AI_DOCS__MODE=enterprise` |
+| Profile      | Description                                                                                   | Activation                        |
+| ------------ | --------------------------------------------------------------------------------------------- | --------------------------------- |
+| `simple`     | Solo-developer defaults: minimal external services, same `/api/v1` surface as enterprise.     | default (`AI_DOCS__MODE=simple`)  |
+| `enterprise` | Full surface area: Redis/Dragonfly, Postgres, Prometheus, extended orchestration & telemetry. | `export AI_DOCS__MODE=enterprise` |
 
 Profiles are resolved by `AppProfile` (`src/api/app_profiles.py`). Router and
 service installers consult the profile to decide which modules to mount. Health
@@ -55,7 +55,7 @@ configuration from environment variables. Key behaviours:
 - Nested keys use double underscores (e.g. `AI_DOCS__QDRANT__URL`).
 - `.env` is loaded automatically for local development.
 - `validate_assignment=True` keeps runtime overrides type-safe.
-- Defaults favour the simple profile; enterprise deployments override relevant
+- Defaults favour the developer (simple) profile; enterprise deployments override relevant
   sections (cache, database, monitoring, etc.).
 
 ### Core Sections
@@ -63,7 +63,7 @@ configuration from environment variables. Key behaviours:
 | Section                        | Model                   | Notes                                                |
 | ------------------------------ | ----------------------- | ---------------------------------------------------- |
 | `cache`                        | `CacheConfig`           | Controls local + distributed caches, TTLs, eviction. |
-| `database`                     | `DatabaseConfig`        | Postgres connection settings; unused in simple mode. |
+| `database`                     | `DatabaseConfig`        | Postgres connection settings; optional for the simple profile. |
 | `qdrant`                       | `QdrantConfig`          | Vector store URL, API key, collection defaults.      |
 | `agentic`                      | `AgenticConfig`         | LangGraph runner budgets (parallelism, timeouts).    |
 | `query_processing`             | `QueryProcessingConfig` | Retrieval knobs (hybrid ratios, rerank budgets).     |
@@ -119,7 +119,7 @@ Hot reloading has been removed. When configuration changes are required, refresh
 ## 5. Running Services
 
 ```bash
-# Launch simple profile dependencies
+# Launch developer defaults (simple profile)
 docker compose --profile simple up -d
 
 # Enterprise stack

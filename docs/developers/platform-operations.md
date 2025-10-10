@@ -22,7 +22,8 @@ virtual environment into a slim Python 3.12 base image.
 | `enterprise` | `app`, `qdrant`, `redis`, `postgres`, `prometheus`, `grafana`, `alertmanager` | `docker compose --profile enterprise up -d` |
 
 Set `AI_DOCS__MODE` to switch modes; see `setup-and-configuration.md` for more on
-profile behaviour.
+profile behaviour. Both profiles expose the canonical `/api/v1` routes—your
+selection only changes the supporting infrastructure and middleware.
 
 ### Environment Variables
 

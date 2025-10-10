@@ -111,6 +111,23 @@ _health_manager_instance: HealthCheckManager | None = None
 _health_manager_lock = asyncio.Lock()
 
 
+def reset_dependency_singletons() -> None:
+    """Reset cached service singletons maintained by this module.
+
+    Container shutdown paths must invoke this helper to ensure that global
+    caches such as the automation router and health manager are discarded.
+    Without this reset, subsequent container initialisation in the same
+    process (for example across tests or CLI invocations) would reuse stale
+    instances that reference closed resources.
+    """
+
+    global _automation_router_instance  # pylint: disable=global-statement
+    global _health_manager_instance  # pylint: disable=global-statement
+
+    _automation_router_instance = None
+    _health_manager_instance = None
+
+
 def _load_automation_router_class() -> type[Any]:
     """Import the AutomationRouter implementation."""
 
