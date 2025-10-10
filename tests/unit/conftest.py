@@ -64,10 +64,10 @@ def fixture_tool_module_factory() -> Callable[..., SimpleNamespace]:
         *,
         raises: Exception | None = None,
     ) -> SimpleNamespace:
-        def register(mcp: Any, client_manager: Any) -> None:
+        def register(mcp: Any, **kwargs: Any) -> None:
             """Record the module registration or simulate a failure path."""
 
-            del mcp, client_manager
+            del mcp, kwargs
             if raises is not None:
                 raise raises
             registered.append(name)

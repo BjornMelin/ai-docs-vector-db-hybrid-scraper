@@ -172,40 +172,18 @@ def _configure_routes(app: FastAPI, profile: AppProfile, mode: ApplicationMode) 
     if config_router:
         app.include_router(config_router, prefix="/api/v1")
 
-    # Add profile-specific routes
-    if profile is AppProfile.SIMPLE:
-        _install_simple_routes(app)
-    elif profile is AppProfile.ENTERPRISE:
-        _install_enterprise_routes(app)
+    _install_application_routes(app)
 
     # Add common routes
     _configure_common_routes(app)
 
 
-def _install_simple_routes(app: FastAPI) -> None:
-    """Mount routers for the simple profile with lazy imports."""
-
-    try:
-        simple_search = import_module("src.api.routers.simple.search")
-        simple_documents = import_module("src.api.routers.simple.documents")
-    except ImportError as exc:  # pragma: no cover - defensive
-        logger.error("Simple profile requires simple routers: %s", exc)
-        raise RuntimeError(
-            "Simple profile requires simple routers to be installed"
-        ) from exc
-    app.include_router(simple_search.router, prefix="/api/v1", tags=["search"])
-    app.include_router(simple_documents.router, prefix="/api/v1", tags=["documents"])
-    logger.debug("Configured simple profile routes")
-
-
-def _install_enterprise_routes(app: FastAPI) -> None:
-    """Mount routers for the enterprise profile with lazy imports."""
+def _install_application_routes(app: FastAPI) -> None:
+    """Mount routers for the application profile with lazy imports."""
 
     required_modules = {
-        "search": "src.api.routers.enterprise.search",
-        "documents": "src.api.routers.enterprise.documents",
-        "analytics": "src.api.routers.enterprise.analytics",
-        "deployment": "src.api.routers.enterprise.deployment",
+        "search": "src.api.routers.v1.search",
+        "documents": "src.api.routers.v1.documents",
     }
     routers: dict[str, Any] = {}
     missing: list[str] = []
@@ -219,24 +197,18 @@ def _install_enterprise_routes(app: FastAPI) -> None:
     if missing:
         message = ", ".join(missing)
         logger.error(
-            "Enterprise profile selected but enterprise routers are unavailable: %s",
+            "Application routes unavailable: %s",
             message,
         )
         raise RuntimeError(
-            "Enterprise profile requires enterprise routers to be installed"
+            "Application routes require canonical routers to be installed"
         ) from ImportError(message)
 
     app.include_router(routers["search"].router, prefix="/api/v1", tags=["search"])
     app.include_router(
         routers["documents"].router, prefix="/api/v1", tags=["documents"]
     )
-    app.include_router(
-        routers["analytics"].router, prefix="/api/v1", tags=["analytics"]
-    )
-    app.include_router(
-        routers["deployment"].router, prefix="/api/v1", tags=["deployment"]
-    )
-    logger.debug("Configured enterprise profile routes")
+    logger.debug("Configured application routes")
 
 
 def _configure_common_routes(app: FastAPI) -> None:
