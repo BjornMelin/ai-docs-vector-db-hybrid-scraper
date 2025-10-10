@@ -17,11 +17,8 @@ from rich.table import Table
 # Import unified configuration and service layer
 from src.config import get_settings, refresh_settings
 from src.contracts.retrieval import SearchRecord
-from src.infrastructure.container import (
-    get_container,
-    initialize_container,
-    shutdown_container,
-)
+from src.infrastructure.bootstrap import ensure_container
+from src.infrastructure.container import get_container, shutdown_container
 from src.services.errors import QdrantServiceError
 from src.services.vector_db import CollectionSchema
 from src.services.vector_db.service import VectorStoreService
@@ -79,22 +76,24 @@ class VectorDBManager:
     async def initialize(self) -> None:
         """Ensure container-managed services are ready."""
 
-        force_reload = False
+        reload_required = False
+        settings = get_settings()
         if self.qdrant_url:
-            config = get_settings()
-            updated_config = config.model_copy(
+            updated_settings = settings.model_copy(
                 update={
-                    "qdrant": config.qdrant.model_copy(update={"url": self.qdrant_url})
+                    "qdrant": settings.qdrant.model_copy(
+                        update={"url": self.qdrant_url}
+                    )
                 }
             )
-            refresh_settings(settings=updated_config)
-            force_reload = True
+            refresh_settings(settings=updated_settings)
+            settings = updated_settings
+            reload_required = True
 
-        container = get_container()
-        if container is None or force_reload:
-            if force_reload and container is not None:
-                await shutdown_container()
-            container = await initialize_container(get_settings())
+        container = await ensure_container(
+            settings=settings,
+            force_reload=reload_required,
+        )
         self._vector_service = container.vector_store_service()
 
     async def get_vector_store_service(self) -> VectorStoreService:

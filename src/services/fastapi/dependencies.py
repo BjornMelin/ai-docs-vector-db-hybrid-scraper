@@ -14,10 +14,8 @@ from fastapi.requests import Request  # type: ignore
 from starlette.status import HTTP_503_SERVICE_UNAVAILABLE
 
 from src.config.loader import Settings, get_settings
-from src.infrastructure.container import (
-    initialize_container,
-    shutdown_container,
-)
+from src.infrastructure.bootstrap import ensure_container
+from src.infrastructure.container import shutdown_container
 from src.services.dependencies import (
     get_cache_manager as core_get_cache_manager,
     get_database_session as core_get_database_session,
@@ -40,7 +38,7 @@ logger = logging.getLogger(__name__)
 async def initialize_dependencies() -> None:
     """Prime long-lived services used by the FastAPI application."""
 
-    await initialize_container(get_settings())
+    await ensure_container(settings=get_settings(), force_reload=True)
 
 
 async def cleanup_dependencies() -> None:

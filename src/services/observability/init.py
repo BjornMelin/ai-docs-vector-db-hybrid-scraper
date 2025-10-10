@@ -57,9 +57,10 @@ def _has_explicit_instrumentation_preferences(observed: Any) -> bool:
             if any(field in explicit_values for field in preference_fields):
                 return True
 
-    if isinstance(observed, Mapping):
-        if any(field in observed for field in preference_fields):
-            return True
+    if isinstance(observed, Mapping) and any(
+        field in observed for field in preference_fields
+    ):
+        return True
 
     sentinel = object()
     for field in preference_fields:

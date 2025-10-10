@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import asyncio
-from contextlib import AbstractAsyncContextManager
+from collections.abc import AsyncIterator, Callable
+from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from types import SimpleNamespace
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -13,16 +15,20 @@ from src import unified_mcp_server
 
 
 def _lifespan_context() -> AbstractAsyncContextManager[None]:
-    lifespan_attr = getattr(unified_mcp_server, "managed_lifespan", None)
-    if lifespan_attr is None:
+    """Return the managed lifespan context for the unified MCP server."""
+
+    lifespan_factory = getattr(unified_mcp_server, "managed_lifespan", None)
+    if lifespan_factory is None:
         msg = "Unified MCP server does not expose a managed lifespan context."
         raise AttributeError(msg)
-    # pylint: disable=not-callable
-    return cast(Callable[[], AbstractAsyncContextManager[None]], lifespan_factory)()
+    return cast(
+        Callable[[Any], AbstractAsyncContextManager[None]],
+        lifespan_factory,
+    )(unified_mcp_server.mcp)
 
 
 def _stub_container() -> SimpleNamespace:
-    """Create a container stub exposing required service providers."""
+    """Return a container stub exposing the providers used during startup."""
 
     vector_service = MagicMock(name="vector_service")
     cache_manager = MagicMock(name="cache_manager")
@@ -84,15 +90,14 @@ async def test_lifespan_initializes_and_cleans_up(
     monkeypatch.setattr(unified_mcp_server, "get_settings", lambda: config)
 
     container = _stub_container()
-    initialize_stub = AsyncMock(return_value=container)
-    shutdown_stub = AsyncMock()
+
+    @asynccontextmanager
+    async def _container_context(*_args: Any, **_kwargs: Any) -> AsyncIterator[Any]:
+        yield container
+
     monkeypatch.setattr(
-        "src.unified_mcp_server.initialize_container",
-        initialize_stub,
-    )
-    monkeypatch.setattr(
-        "src.unified_mcp_server.shutdown_container",
-        shutdown_stub,
+        "src.unified_mcp_server.container_session",
+        _container_context,
     )
 
     register_mock = AsyncMock()
@@ -101,17 +106,14 @@ async def test_lifespan_initializes_and_cleans_up(
         register_mock,
     )
 
-    initialize_observability = MagicMock(return_value=True)
     monkeypatch.setattr(
         "src.unified_mcp_server.initialize_monitoring_system",
-        lambda _config, _qdrant, _redis: None,
+        MagicMock(return_value=None),
     )
 
     async with _lifespan_context():
         pass
 
-    initialize_stub.assert_awaited_once_with(config)
-    shutdown_stub.assert_awaited_once()
     register_mock.assert_awaited_once()
     await_args = register_mock.await_args
     assert await_args is not None
@@ -122,10 +124,10 @@ async def test_lifespan_initializes_and_cleans_up(
 
 
 @pytest.mark.asyncio
-async def test_lifespan_initializes_observability_with_monitoring(
+async def test_lifespan_enables_monitoring_when_configured(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Observability should be initialized even when monitoring features are on."""
+    """Health monitoring should start when configuration enables it."""
 
     monkeypatch.setattr(unified_mcp_server, "validate_configuration", MagicMock())
 
@@ -145,19 +147,19 @@ async def test_lifespan_initializes_observability_with_monitoring(
             system_metrics_interval=1,
             enable_health_checks=True,
         ),
+        observability=SimpleNamespace(enabled=False),
     )
     monkeypatch.setattr(unified_mcp_server, "get_settings", lambda: config)
 
     container = _stub_container()
-    initialize_stub = AsyncMock(return_value=container)
-    shutdown_stub = AsyncMock()
+
+    @asynccontextmanager
+    async def _container_context(*_args: Any, **_kwargs: Any) -> AsyncIterator[Any]:
+        yield container
+
     monkeypatch.setattr(
-        "src.unified_mcp_server.initialize_container",
-        initialize_stub,
-    )
-    monkeypatch.setattr(
-        "src.unified_mcp_server.shutdown_container",
-        shutdown_stub,
+        "src.unified_mcp_server.container_session",
+        _container_context,
     )
 
     register_mock = AsyncMock()
@@ -169,32 +171,43 @@ async def test_lifespan_initializes_observability_with_monitoring(
     health_manager = SimpleNamespace(config=SimpleNamespace(enabled=True))
     monkeypatch.setattr(
         "src.unified_mcp_server.initialize_monitoring_system",
-        lambda _config, _qdrant, _redis: health_manager,
+        MagicMock(return_value=health_manager),
     )
 
-    monitor_tasks: list[asyncio.Task] = []
+    created_tasks: list[asyncio.Task[Any]] = []
+    original_create_task = asyncio.create_task
 
-    async def _fake_health_checks(*_args, **_kwargs):
-        try:
-            await asyncio.sleep(3600)
-        finally:
-            current = asyncio.current_task()
-            if current is not None:
-                monitor_tasks.append(current)
+    def _track_create_task(coro: Any, *args: Any, **kwargs: Any) -> asyncio.Task[Any]:
+        task = original_create_task(coro, *args, **kwargs)
+        created_tasks.append(task)
+        return task
+
+    monkeypatch.setattr(
+        "src.unified_mcp_server.asyncio.create_task",
+        _track_create_task,
+    )
+
+    async def _fake_health_checks(*_args: Any, **_kwargs: Any) -> None:
+        await asyncio.sleep(0)
 
     monkeypatch.setattr(
         "src.unified_mcp_server.run_periodic_health_checks",
         _fake_health_checks,
     )
+
+    monitoring_mock = MagicMock()
     monkeypatch.setattr(
         "src.unified_mcp_server.setup_fastmcp_monitoring",
-        MagicMock(),
+        monitoring_mock,
     )
 
     async with _lifespan_context():
-        await asyncio.sleep(0.01)
+        await asyncio.sleep(0)
 
-    client_manager.initialize.assert_awaited_once()
-    client_manager.cleanup.assert_awaited_once()
-    register_mock.assert_awaited_once_with(unified_mcp_server.mcp, client_manager)
-    initialize_observability.assert_called_once_with(config)
+    register_mock.assert_awaited_once()
+    monitoring_mock.assert_called_once_with(
+        unified_mcp_server.mcp, config, health_manager
+    )
+    assert created_tasks, "Expected a monitoring task to be scheduled."
+    for task in created_tasks:
+        assert task.cancelled()

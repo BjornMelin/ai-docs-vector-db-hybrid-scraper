@@ -33,12 +33,8 @@ from rich.table import Table  # type: ignore[import]
 
 from .chunking import DocumentChunker
 from .config.loader import Settings, get_settings
-from .infrastructure.container import (
-    ApplicationContainer,
-    get_container,
-    initialize_container,
-    shutdown_container,
-)
+from .infrastructure.bootstrap import container_session, ensure_container
+from .infrastructure.container import ApplicationContainer
 from .services.embeddings.manager import QualityTier
 from .services.errors import ServiceError
 from .services.logging_config import configure_logging
@@ -163,12 +159,10 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
     async def initialize_services(self) -> None:
         """Initialize all required services."""
 
-        container = self._container_override or get_container()
-        if container is None:
-            container = await initialize_container(self.config)
-        elif self._container_override is not None:
-            # When an override is supplied, rely on it directly without lifecycle calls.
+        if self._container_override is not None:
             container = self._container_override
+        else:
+            container = await ensure_container(settings=self.config)
 
         if self.crawl_manager is None:
             self.crawl_manager = container.browser_manager()
@@ -751,53 +745,51 @@ async def _async_main(  # pylint: disable=too-many-arguments,too-many-locals
     resume: bool = True,
 ) -> None:
     """Async main function."""
-    # Initialize container
-    await initialize_container(config)
+    async with container_session(settings=config, force_reload=True) as container:
+        embedder = BulkEmbedder(
+            config=config,
+            collection_name=collection,
+            state_file=state_file,
+            container=container,
+        )
 
-    # Create embedder
-    embedder = BulkEmbedder(
-        config=config,
-        collection_name=collection,
-        state_file=state_file,
-    )
+        # Collect all URLs
+        all_urls = list(urls)
 
-    # Collect all URLs
-    all_urls = list(urls)
+        # Load from file
+        if file:
+            console.print(f"[cyan]Loading URLs from {file}...[/cyan]")
+            file_urls = await embedder.load_urls_from_file(file)
+            all_urls.extend(file_urls)
+            console.print(f"[green]Loaded {len(file_urls)} URLs from file[/green]")
 
-    # Load from file
-    if file:
-        console.print(f"[cyan]Loading URLs from {file}...[/cyan]")
-        file_urls = await embedder.load_urls_from_file(file)
-        all_urls.extend(file_urls)
-        console.print(f"[green]Loaded {len(file_urls)} URLs from file[/green]")
+        # Load from sitemap
+        if sitemap:
+            console.print(f"[cyan]Loading URLs from sitemap {sitemap}...[/cyan]")
+            sitemap_urls = await embedder.load_urls_from_sitemap(sitemap)
+            all_urls.extend(sitemap_urls)
+            console.print(
+                f"[green]Loaded {len(sitemap_urls)} URLs from sitemap[/green]"
+            )
 
-    # Load from sitemap
-    if sitemap:
-        console.print(f"[cyan]Loading URLs from sitemap {sitemap}...[/cyan]")
-        sitemap_urls = await embedder.load_urls_from_sitemap(sitemap)
-        all_urls.extend(sitemap_urls)
-        console.print(f"[green]Loaded {len(sitemap_urls)} URLs from sitemap[/green]")
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_urls = []
+        for url in all_urls:
+            if url not in seen:
+                seen.add(url)
+                unique_urls.append(url)
 
-    # Remove duplicates while preserving order
-    seen = set()
-    unique_urls = []
-    for url in all_urls:
-        if url not in seen:
-            seen.add(url)
-            unique_urls.append(url)
+        console.print(
+            f"\n[bold]Total unique URLs to process: {len(unique_urls)}[/bold]"
+        )
 
-    console.print(f"\n[bold]Total unique URLs to process: {len(unique_urls)}[/bold]")
-
-    try:
         # Run the pipeline
         await embedder.run(
             urls=unique_urls,
             max_concurrent=concurrent,
             resume=resume,
         )
-    finally:
-        # Cleanup
-        await shutdown_container()
 
 
 if __name__ == "__main__":

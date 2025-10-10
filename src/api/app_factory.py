@@ -14,7 +14,7 @@ from fastapi.responses import JSONResponse
 from starlette import status
 
 from src.api.app_profiles import AppProfile, detect_profile
-from src.api.lifespan import client_manager_lifespan
+from src.api.lifespan import container_lifespan
 from src.architecture.modes import ApplicationMode, ModeConfig, get_mode_config
 from src.infrastructure.container import ApplicationContainer, get_container
 from src.services.dependencies import (
@@ -350,7 +350,7 @@ def _build_app_lifespan(app: FastAPI):
 
         logger.info("Starting application in %s mode", mode.value)
 
-        async with client_manager_lifespan(app):
+        async with container_lifespan(app):
             await _initialize_mode_services(mode_config)
 
             logger.info("Application startup complete in %s mode", mode.value)
