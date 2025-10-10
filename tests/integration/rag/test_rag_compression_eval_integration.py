@@ -6,7 +6,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -28,29 +28,30 @@ def compression_eval_dataset(tmp_path: Path) -> Path:
             "documents": [
                 {
                     "content": (
-                        "LangChain is a framework for building applications with "
-                        "large language models.",
+                        "LangChain is a framework for building applications "
+                        "with large language models."
                     ),
                     "metadata": {"source": "docs/langchain.md", "chunk_id": 1},
                 },
                 {
                     "content": (
-                        "LangChain provides components for retrieval-augmented "
-                        "generation and agent orchestration.",
+                        "LangChain provides components for "
+                        "retrieval-augmented generation and "
+                        "agent orchestration."
                     ),
                     "metadata": {"source": "docs/langchain.md", "chunk_id": 2},
                 },
                 {
                     "content": (
-                        "LangChain is a framework for building applications with "
-                        "large language models.",
+                        "LangChain is a framework for building applications "
+                        "with large language models."
                     ),
                     "metadata": {"source": "docs/langchain.md", "chunk_id": 3},
                 },  # duplicate content
                 {
                     "content": (
                         "The framework supports multiple LLM providers including "
-                        "OpenAI and Anthropic.",
+                        "OpenAI and Anthropic."
                     ),
                     "metadata": {"source": "docs/providers.md", "chunk_id": 1},
                 },
@@ -66,14 +67,14 @@ def compression_eval_dataset(tmp_path: Path) -> Path:
                 {
                     "content": (
                         "Vector search finds similar items by comparing their "
-                        "vector representations in high-dimensional space.",
+                        "vector representations in high-dimensional space."
                     ),
                     "metadata": {"source": "docs/vector_search.md", "chunk_id": 1},
                 },
                 {
                     "content": (
                         "Embeddings convert text into numerical vectors that "
-                        "capture semantic meaning.",
+                        "capture semantic meaning."
                     ),
                     "metadata": {"source": "docs/embeddings.md", "chunk_id": 1},
                 },
@@ -134,9 +135,26 @@ async def test_compression_evaluation_with_empty_dataset(tmp_path: Path) -> None
             "scripts.eval.rag_compression_eval._load_vector_service"
         ) as mock_load_service,
         patch("builtins.print") as mock_print,
+        patch(
+            "scripts.eval.rag_compression_eval.FastEmbedEmbeddings"
+        ) as mock_embeddings,
+        patch(
+            "scripts.eval.rag_compression_eval.EmbeddingsRedundantFilter"
+        ) as mock_redundant_filter,
+        patch(
+            "scripts.eval.rag_compression_eval.EmbeddingsFilter"
+        ) as mock_embeddings_filter,
+        patch(
+            "scripts.eval.rag_compression_eval.DocumentCompressorPipeline"
+        ) as mock_compressor,
     ):
         mock_service = MagicMock()
+        mock_service.cleanup = AsyncMock()
         mock_load_service.return_value = mock_service
+        mock_embeddings.return_value = MagicMock()
+        mock_redundant_filter.return_value = MagicMock()
+        mock_embeddings_filter.return_value = MagicMock()
+        mock_compressor.return_value = MagicMock()
 
         await _evaluate(empty_dataset, None)
 
@@ -175,15 +193,34 @@ async def test_compression_evaluation_with_malformed_data(tmp_path: Path) -> Non
             "scripts.eval.rag_compression_eval._load_vector_service"
         ) as mock_load_service,
         patch("builtins.print") as mock_print,
+        patch(
+            "scripts.eval.rag_compression_eval.FastEmbedEmbeddings"
+        ) as mock_embeddings,
+        patch(
+            "scripts.eval.rag_compression_eval.EmbeddingsRedundantFilter"
+        ) as mock_redundant_filter,
+        patch(
+            "scripts.eval.rag_compression_eval.EmbeddingsFilter"
+        ) as mock_embeddings_filter,
+        patch(
+            "scripts.eval.rag_compression_eval.DocumentCompressorPipeline"
+        ) as mock_compressor,
     ):
         mock_service = MagicMock()
+        mock_service.cleanup = AsyncMock()
         mock_load_service.return_value = mock_service
+        mock_embeddings.return_value = MagicMock()
+        mock_redundant_filter.return_value = MagicMock()
+        mock_embeddings_filter.return_value = MagicMock()
+        mock_compressor.return_value = MagicMock()
 
         await _evaluate(malformed_dataset, None)
 
-        # Should handle gracefully and print summary with 0 samples
+        # Should handle gracefully and print no valid samples message
         print_calls = [call.args[0] for call in mock_print.call_args_list]
-        assert any("Samples evaluated: 0" in call for call in print_calls)
+        assert any(
+            "No valid samples found in the dataset" in call for call in print_calls
+        )
 
 
 @pytest.mark.integration
@@ -199,7 +236,7 @@ def test_token_estimation_realistic_cases() -> None:
         (
             "Technical documentation often contains complex terms like "
             "Retrieval-Augmented Generation and Large Language Models.",
-            12,
+            13,
         ),
         ("Multi\nline\ntext\nwith\nbreaks", 5),  # split() handles newlines
     ]
@@ -215,7 +252,7 @@ def test_document_building_with_realistic_metadata() -> None:
     raw_docs = [
         {
             "content": (
-                "FastAPI is a modern web framework for building APIs with Python.",
+                "FastAPI is a modern web framework for building APIs with Python."
             ),
             "metadata": {
                 "source": "docs/fastapi.md",
