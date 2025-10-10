@@ -138,20 +138,10 @@ def embedder_factory(
         container.embedding_manager.return_value = embedding_manager
         container.vector_store_service.return_value = vector_service
 
-        get_container_value = overrides.pop("get_container_value", container)
+        ensure_mock = AsyncMock(return_value=container)
         monkeypatch.setattr(
-            "src.crawl4ai_bulk_embedder.get_container",
-            lambda: get_container_value,
-        )
-        init_mock = AsyncMock(return_value=container)
-        shutdown_mock = AsyncMock()
-        monkeypatch.setattr(
-            "src.crawl4ai_bulk_embedder.initialize_container",
-            init_mock,
-        )
-        monkeypatch.setattr(
-            "src.crawl4ai_bulk_embedder.shutdown_container",
-            shutdown_mock,
+            "src.crawl4ai_bulk_embedder.ensure_container",
+            ensure_mock,
         )
 
         state_path = overrides.pop(
@@ -172,8 +162,7 @@ def embedder_factory(
             crawl_manager=crawl_manager,
             embedding_manager=embedding_manager,
             vector_service=vector_service,
-            init_mock=init_mock,
-            shutdown_mock=shutdown_mock,
+            ensure_mock=ensure_mock,
         )
         return embedder
 
@@ -857,11 +846,21 @@ class TestAsyncMain:
         mock_config: MagicMock,
         tmp_path: Path,
     ) -> None:
-        init_mock = AsyncMock()
-        shutdown_mock = AsyncMock()
+        container = MagicMock()
+
+        class _Ctx:
+            async def __aenter__(self):
+                return container
+
+            async def __aexit__(self, exc_type, exc, tb):
+                return False
+
+        ctx_instance = _Ctx()
         with (
-            patch("src.crawl4ai_bulk_embedder.initialize_container", init_mock),
-            patch("src.crawl4ai_bulk_embedder.shutdown_container", shutdown_mock),
+            patch(
+                "src.crawl4ai_bulk_embedder.container_session",
+                return_value=ctx_instance,
+            ) as session_mock,
             patch("src.crawl4ai_bulk_embedder.BulkEmbedder") as embedder_cls,
         ):
             embedder = AsyncMock()
@@ -884,8 +883,7 @@ class TestAsyncMain:
         assert run_kwargs["urls"] == ["https://example.com/1", "https://example.com/2"]
         assert run_kwargs["max_concurrent"] == 5
         assert run_kwargs["resume"] is True
-        init_mock.assert_awaited_once()
-        shutdown_mock.assert_awaited_once()
+        session_mock.assert_called_once_with(settings=mock_config, force_reload=True)
 
     @pytest.mark.asyncio
     async def test_async_main_with_file_and_sitemap(
@@ -898,11 +896,21 @@ class TestAsyncMain:
             "https://example.com/file1\nhttps://example.com/file2\n", encoding="utf-8"
         )
 
-        init_mock = AsyncMock()
-        shutdown_mock = AsyncMock()
+        container = MagicMock()
+
+        class _Ctx:
+            async def __aenter__(self):
+                return container
+
+            async def __aexit__(self, exc_type, exc, tb):
+                return False
+
+        ctx_instance = _Ctx()
         with (
-            patch("src.crawl4ai_bulk_embedder.initialize_container", init_mock),
-            patch("src.crawl4ai_bulk_embedder.shutdown_container", shutdown_mock),
+            patch(
+                "src.crawl4ai_bulk_embedder.container_session",
+                return_value=ctx_instance,
+            ) as session_mock,
             patch("src.crawl4ai_bulk_embedder.BulkEmbedder") as embedder_cls,
         ):
             embedder = AsyncMock()
@@ -938,8 +946,7 @@ class TestAsyncMain:
         embedder.load_urls_from_sitemap.assert_awaited_once_with(
             "https://example.com/sitemap.xml"
         )
-        init_mock.assert_awaited_once()
-        shutdown_mock.assert_awaited_once()
+        session_mock.assert_called_once_with(settings=mock_config, force_reload=True)
 
     @pytest.mark.asyncio
     async def test_async_main_deduplicates_urls(
@@ -947,11 +954,21 @@ class TestAsyncMain:
         mock_config: MagicMock,
         tmp_path: Path,
     ) -> None:
-        init_mock = AsyncMock()
-        shutdown_mock = AsyncMock()
+        container = MagicMock()
+
+        class _Ctx:
+            async def __aenter__(self):
+                return container
+
+            async def __aexit__(self, exc_type, exc, tb):
+                return False
+
+        ctx_instance = _Ctx()
         with (
-            patch("src.crawl4ai_bulk_embedder.initialize_container", init_mock),
-            patch("src.crawl4ai_bulk_embedder.shutdown_container", shutdown_mock),
+            patch(
+                "src.crawl4ai_bulk_embedder.container_session",
+                return_value=ctx_instance,
+            ) as session_mock,
             patch("src.crawl4ai_bulk_embedder.BulkEmbedder") as embedder_cls,
         ):
             embedder = AsyncMock()
@@ -975,8 +992,7 @@ class TestAsyncMain:
 
         unique_urls = embedder.run.call_args.kwargs["urls"]
         assert sorted(unique_urls) == ["https://example.com/1", "https://example.com/2"]
-        init_mock.assert_awaited_once()
-        shutdown_mock.assert_awaited_once()
+        session_mock.assert_called_once_with(settings=mock_config, force_reload=True)
 
     @pytest.mark.asyncio
     async def test_async_main_cleanup_on_error(
@@ -984,10 +1000,21 @@ class TestAsyncMain:
         mock_config: MagicMock,
         tmp_path: Path,
     ) -> None:
-        shutdown_mock = AsyncMock()
+        container = MagicMock()
+
+        class _Ctx:
+            async def __aenter__(self):
+                return container
+
+            async def __aexit__(self, exc_type, exc, tb):
+                return False
+
+        ctx_instance = _Ctx()
         with (
-            patch("src.crawl4ai_bulk_embedder.initialize_container", AsyncMock()),
-            patch("src.crawl4ai_bulk_embedder.shutdown_container", shutdown_mock),
+            patch(
+                "src.crawl4ai_bulk_embedder.container_session",
+                return_value=ctx_instance,
+            ),
             patch("src.crawl4ai_bulk_embedder.BulkEmbedder") as embedder_cls,
         ):
             embedder = AsyncMock()
@@ -1006,7 +1033,8 @@ class TestAsyncMain:
                     resume=True,
                 )
 
-        shutdown_mock.assert_awaited_once()
+        # Cleanup handled by context manager; ensure BulkEmbedder instantiated
+        embedder_cls.assert_called_once()
 
 
 def test_bulk_embedder_errors_subclass_service_error() -> None:

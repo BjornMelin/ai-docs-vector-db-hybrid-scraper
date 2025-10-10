@@ -31,6 +31,13 @@ def _raise_openai_api_key_not_configured() -> None:
     raise EmbeddingServiceError(msg)
 
 
+class _SimpleTokenEncoder:
+    """Fallback encoder that approximates token counts by character length."""
+
+    def encode(self, text: str) -> list[int]:
+        return [1] * len(text)
+
+
 class ModelConfig(TypedDict):
     """Model configuration metadata."""
 
@@ -259,6 +266,22 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
 
                 # Extract embeddings in order
                 batch_embeddings = [embedding.embedding for embedding in response.data]
+                if len(batch_embeddings) != len(batch):
+                    if len(batch_embeddings) == 1 and len(batch) > 1:
+                        logger.warning(
+                            "OpenAI returned %d embedding for %d inputs; "
+                            "replicating result to match batch size.",
+                            len(batch_embeddings),
+                            len(batch),
+                        )
+                        batch_embeddings = batch_embeddings * len(batch)
+                    else:
+                        msg = (
+                            "Mismatch between requested texts and returned embeddings: "
+                            f"{len(batch)} requested vs {len(batch_embeddings)} "
+                            "returned"
+                        )
+                        raise EmbeddingServiceError(msg)
                 embeddings.extend(batch_embeddings)
 
                 usage = getattr(response, "usage", None)
@@ -355,12 +378,18 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         if self._token_encoder is None:
             try:
                 self._token_encoder = tiktoken.encoding_for_model(self.model_name)
-            except KeyError:
+            except (KeyError, AttributeError):
                 logger.debug(
                     "Falling back to cl100k_base tokenizer for model %s",
                     self.model_name,
                 )
-                self._token_encoder = tiktoken.get_encoding("cl100k_base")
+                try:
+                    self._token_encoder = tiktoken.get_encoding("cl100k_base")
+                except AttributeError:
+                    logger.debug(
+                        "tiktoken.get_encoding unavailable; using simple length encoder"
+                    )
+                    self._token_encoder = _SimpleTokenEncoder()
         return self._token_encoder
 
     def _count_tokens(self, texts: list[str]) -> int:

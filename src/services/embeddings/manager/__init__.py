@@ -430,13 +430,35 @@ class EmbeddingManager:
         with benchmark_path.open("r", encoding="utf-8") as f:
             benchmark_data = json.load(f)
 
-        embedding_config = SettingsEmbeddingConfig.model_validate(
-            benchmark_data.get("embedding", {})
-        )
+        embedding_section = benchmark_data.get("embedding")
+        if embedding_section is None:
+            msg = "Benchmark file must include an 'embedding' section"
+            raise ValueError(msg)
+
+        embedding_config = SettingsEmbeddingConfig.model_validate(embedding_section)
+
+        benchmarks = getattr(embedding_config, "model_benchmarks", {}) or {}
+        smart_config = getattr(embedding_config, "smart_selection", None)
+
+        if smart_config is None or not benchmarks:
+            msg = (
+                "Benchmark file must define smart_selection and at least one "
+                "model_benchmarks entry"
+            )
+            raise ValueError(msg)
+
+        normalized_benchmarks = {
+            model_name: (
+                benchmark.model_dump()
+                if hasattr(benchmark, "model_dump")
+                else dict(benchmark)
+            )
+            for model_name, benchmark in benchmarks.items()
+        }
 
         # Update manager's benchmarks and selection configuration
-        self._benchmarks = getattr(embedding_config, "model_benchmarks", {}) or {}
-        self._smart_config = getattr(embedding_config, "smart_selection", None)
+        self._benchmarks = normalized_benchmarks
+        self._smart_config = smart_config
         self._selection = SelectionEngine(self._smart_config, self._benchmarks)
         if self._usage is None:
             self._usage = UsageTracker(self._smart_config, self._budget_limit)

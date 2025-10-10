@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sys
 import types
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from typing import Any, Self, cast
 
 from pydantic import BaseModel
@@ -254,9 +254,24 @@ def _register_langchain_community_stubs() -> None:
     community = cast(Any, _ensure_module("langchain_community"))
     community_embeddings = cast(Any, _ensure_module("langchain_community.embeddings"))
     fastembed = cast(Any, _ensure_module("langchain_community.embeddings.fastembed"))
+
+    class _StubFastEmbedEmbeddings:
+        """Minimal stub of LangChain FastEmbed embeddings."""
+
+        max_length = 512
+
+        def __init__(self, **_kwargs: Any) -> None:  # noqa: D401 - simple stub
+            self._vector = [0.1, 0.2, 0.3]
+
+        def embed_documents(self, texts: Sequence[str]) -> list[list[float]]:
+            return [list(self._vector) for _ in texts]
+
+        def embed_query(self, _text: str) -> list[float]:
+            return list(self._vector)
+
     _set_attributes(
         fastembed,
-        {"FastEmbedEmbeddings": type("FastEmbedEmbeddings", (), {})},
+        {"FastEmbedEmbeddings": _StubFastEmbedEmbeddings},
     )
     community_embeddings.fastembed = fastembed
     community_embeddings.FastEmbedEmbeddings = fastembed.FastEmbedEmbeddings
