@@ -22,7 +22,6 @@ Subpackages
    src.services.integration
    src.services.middleware
    src.services.migration
-   src.services.monitoring
    src.services.observability
    src.services.performance
    src.services.processing

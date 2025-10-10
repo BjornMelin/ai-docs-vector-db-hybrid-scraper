@@ -7,9 +7,17 @@ from __future__ import annotations
 import logging
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from .config import ObservabilityConfig, get_observability_config
+from .config import (
+    DEFAULT_INSTRUMENTATIONS,
+    ObservabilityConfig,
+    get_observability_config,
+)
+
+
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    from src.config.loader import Settings
 
 
 LOGGER = logging.getLogger(__name__)
@@ -24,6 +32,62 @@ class _TelemetryState:
 
 
 _STATE = _TelemetryState()
+
+
+def _from_settings(settings: Settings) -> ObservabilityConfig:
+    """Create an :class:`ObservabilityConfig` from application settings."""
+
+    observed = settings.observability
+    instrumentations: list[str] = []
+    if getattr(observed, "instrument_fastapi", False):
+        instrumentations.append("fastapi")
+    if getattr(observed, "instrument_httpx", False):
+        instrumentations.append("httpx")
+    if getattr(observed, "track_ai_operations", False) or getattr(
+        observed, "track_costs", False
+    ):
+        instrumentations.append("logging")
+
+    instrumentation_tuple = (
+        tuple(dict.fromkeys(instrumentations)) or DEFAULT_INSTRUMENTATIONS
+    )
+
+    environment = getattr(settings, "environment", "development")
+    environment_value = getattr(environment, "value", environment)
+
+    return ObservabilityConfig(
+        enabled=bool(observed.enabled),
+        service_name=getattr(observed, "service_name", "")
+        or getattr(settings, "app_name", "ai-docs-vector-db"),
+        service_version=getattr(observed, "service_version", "")
+        or getattr(settings, "version", "1.0.0"),
+        environment=str(environment_value),
+        otlp_endpoint=getattr(observed, "otlp_endpoint", "http://localhost:4317"),
+        otlp_headers=dict(getattr(observed, "otlp_headers", {})),
+        insecure_transport=bool(getattr(observed, "otlp_insecure", True)),
+        instrumentations=instrumentation_tuple,
+        metrics_enabled=bool(getattr(observed, "track_ai_operations", False)),
+        console_exporter=bool(getattr(observed, "console_exporter", False)),
+        log_correlation=bool(
+            getattr(observed, "track_ai_operations", False)
+            or getattr(observed, "track_costs", False)
+        ),
+    )
+
+
+def _coerce_config(
+    config: ObservabilityConfig | Settings | None,
+) -> ObservabilityConfig:
+    """Normalize configuration inputs for observability initialization."""
+
+    if config is None:
+        return get_observability_config()
+    if isinstance(config, ObservabilityConfig):
+        return config
+    if hasattr(config, "observability"):
+        return _from_settings(config)  # type: ignore[arg-type]
+    msg = f"Unsupported observability configuration type: {type(config)!r}"
+    raise TypeError(msg)
 
 
 def _configure_instrumentations(instrumentations: Iterable[str]) -> None:
@@ -65,20 +129,22 @@ def _configure_instrumentations(instrumentations: Iterable[str]) -> None:
             LOGGER.warning("Instrumentation '%s' not installed", name)
 
 
-def initialize_observability(config: ObservabilityConfig | None = None) -> bool:
+def initialize_observability(
+    config: ObservabilityConfig | Settings | None = None,
+) -> bool:
     # pylint: disable=too-many-locals
     """Initialise OpenTelemetry providers based on configuration.
 
     Args:
-        config: Optional pre-parsed observability configuration. When omitted the
-            value is loaded via ``get_observability_config``.
+        config: Optional observability configuration or full application settings.
+            When omitted the value is loaded via ``get_observability_config``.
 
     Returns:
         bool: ``True`` when observability is enabled and providers are initialized.
     """
 
-    config = config or get_observability_config()
-    if not config.enabled:
+    runtime_config = _coerce_config(config)
+    if not runtime_config.enabled:
         LOGGER.info("Observability disabled via configuration")
         return False
 
@@ -113,27 +179,27 @@ def initialize_observability(config: ObservabilityConfig | None = None) -> bool:
         LOGGER.warning("OpenTelemetry SDK not installed: %s", exc)
         return False
 
-    resource = Resource.create(config.resource_attributes())
+    resource = Resource.create(runtime_config.resource_attributes())
 
     tracer_provider = TracerProvider(resource=resource)
     span_exporter = OTLPSpanExporter(
-        endpoint=config.otlp_endpoint,
-        headers=dict(config.otlp_headers),
-        insecure=config.insecure_transport,
+        endpoint=runtime_config.otlp_endpoint,
+        headers=dict(runtime_config.otlp_headers),
+        insecure=runtime_config.insecure_transport,
     )
     tracer_provider.add_span_processor(BatchSpanProcessor(span_exporter))
-    if config.console_exporter:
+    if runtime_config.console_exporter:
         tracer_provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
 
     trace.set_tracer_provider(tracer_provider)
     _STATE.tracer_provider = tracer_provider
 
-    if config.metrics_enabled:
+    if runtime_config.metrics_enabled:
         metric_reader = PeriodicExportingMetricReader(
             OTLPMetricExporter(
-                endpoint=config.otlp_endpoint,
-                headers=dict(config.otlp_headers),
-                insecure=config.insecure_transport,
+                endpoint=runtime_config.otlp_endpoint,
+                headers=dict(runtime_config.otlp_headers),
+                insecure=runtime_config.insecure_transport,
             )
         )
         meter_provider = MeterProvider(
@@ -145,11 +211,11 @@ def initialize_observability(config: ObservabilityConfig | None = None) -> bool:
     else:
         _STATE.meter_provider = None
 
-    _configure_instrumentations(config.instrumentations)
+    _configure_instrumentations(runtime_config.instrumentations)
     LOGGER.info(
         "Observability initialized - service=%s endpoint=%s",
-        config.service_name,
-        config.otlp_endpoint,
+        runtime_config.service_name,
+        runtime_config.otlp_endpoint,
     )
     return True
 
