@@ -120,6 +120,10 @@ flowchart LR
   storage, crawling, embeddings, monitoring, and RAG helpers. Runtime surfaces pull
   dependencies from the container using `dependency-injector` providers rather than
   instantiating bespoke managers.
+- `src/infrastructure/bootstrap.py` exposes `ensure_container` and
+  `container_session` helpers so FastAPI lifespans, the unified MCP server, CLI
+  utilities, and evaluation scripts share identical lifecycle management without
+  reimplementing startup/shutdown logic.
 - Service initialization is coordinated through container lifecycle hooks with
   deterministic startup/shutdown ordering, ensuring shared resources (HTTP sessions,
   vector stores, MCP sessions, monitoring tasks) are initialised once and cleaned up

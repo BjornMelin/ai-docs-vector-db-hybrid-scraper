@@ -35,6 +35,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Refactor
 
+- **[Core]:** Unified dependency lifecycle under the dependency-injector
+  container, deleting the legacy `ClientManager` pattern and introducing shared
+  bootstrap helpers for FastAPI, MCP, CLI utilities, and evaluation scripts.
 - **[Models]:** Consolidated all search-related request and response models into canonical `SearchRequest` and `SearchRecord` contracts, removing significant code duplication.
 - **[Core]:** Removed custom rate-limiting implementation in favor of the
   `slowapi` library, centralizing all rate-limiting logic at the middleware
