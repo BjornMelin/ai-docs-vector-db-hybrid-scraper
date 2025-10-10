@@ -14,13 +14,13 @@ from langchain.retrievers.document_compressors import (
     DocumentCompressorPipeline,
     EmbeddingsFilter,
 )
-from langchain_community.document_transformers import EmbeddingsRedundantFilter
 from langchain_core.documents import Document
 
 
 try:
+    from langchain_community.document_transformers import EmbeddingsRedundantFilter
     from langchain_community.embeddings import (
-        FastEmbedEmbeddings,  # pylint: disable=ungrouped-imports
+        FastEmbedEmbeddings,
     )
 except ModuleNotFoundError as exc:  # pragma: no cover - dependency guard
     raise ImportError(
@@ -28,11 +28,7 @@ except ModuleNotFoundError as exc:  # pragma: no cover - dependency guard
     ) from exc
 
 from src.config import get_settings
-from src.infrastructure.container import (
-    get_container,
-    initialize_container,
-    shutdown_container,
-)
+from src.infrastructure.bootstrap import container_session, ensure_container
 from src.services.vector_db.service import VectorStoreService
 
 
@@ -56,9 +52,7 @@ async def _load_vector_service(
     collection_override: str | None,
 ) -> VectorStoreService:
     config = get_settings()
-    container = get_container()
-    if container is None:
-        container = await initialize_container(config)
+    container = await ensure_container(settings=config)
     service = container.vector_store_service()
     if service is None:
         raise RuntimeError("Vector store service unavailable")
@@ -89,75 +83,77 @@ def _estimate_tokens(text: str) -> int:
 async def _evaluate(  # pylint: disable=too-many-locals
     dataset_path: Path, collection_override: str | None
 ) -> None:
-    vector_service = await _load_vector_service(collection_override)
-    config = get_settings().rag
-    if not config.compression_enabled:
-        print(
-            "Compression is disabled in the active configuration; nothing to evaluate."
+    async with container_session(force_reload=True):
+        vector_service = await _load_vector_service(collection_override)
+        config = get_settings().rag
+        if not config.compression_enabled:
+            print(
+                "Compression is disabled in the active configuration; "
+                "nothing to evaluate."
+            )
+            await vector_service.cleanup()
+            return
+
+        fastembed_config = getattr(vector_service.config, "fastembed", None)
+        model_name = getattr(fastembed_config, "model", None)
+        embeddings = FastEmbedEmbeddings(
+            model_name=cast(str, model_name or "BAAI/bge-small-en-v1.5")
         )
-        await vector_service.cleanup()
-        await shutdown_container()
-        return
+        compressor = DocumentCompressorPipeline(
+            transformers=[
+                EmbeddingsRedundantFilter(embeddings=embeddings),
+                EmbeddingsFilter(
+                    embeddings=embeddings,
+                    similarity_threshold=config.compression_similarity_threshold,
+                ),
+            ]
+        )
 
-    fastembed_config = getattr(vector_service.config, "fastembed", None)
-    model_name = getattr(fastembed_config, "model", None)
-    embeddings = FastEmbedEmbeddings(
-        model_name=cast(str, model_name or "BAAI/bge-small-en-v1.5")
-    )
-    compressor = DocumentCompressorPipeline(
-        transformers=[
-            EmbeddingsRedundantFilter(embeddings=embeddings),
-            EmbeddingsFilter(
-                embeddings=embeddings,
-                similarity_threshold=config.compression_similarity_threshold,
-            ),
-        ]
-    )
+        try:
+            with dataset_path.open(encoding="utf-8") as handle:
+                dataset = json.load(handle)
 
-    try:
-        with dataset_path.open(encoding="utf-8") as handle:
-            dataset = json.load(handle)
+            total_samples = 0
+            recall_hits = 0
+            recall_total = 0
+            aggregate_tokens_before = 0
+            aggregate_tokens_after = 0
+            aggregate_documents_compressed = 0
 
-        total_samples = 0
-        recall_hits = 0
-        recall_total = 0
-        aggregate_tokens_before = 0
-        aggregate_tokens_after = 0
-        aggregate_documents_compressed = 0
+            for entry in dataset:
+                query = str(entry.get("query", "")).strip()
+                raw_documents = entry.get("documents") or []
+                if not query or not raw_documents:
+                    continue
 
-        for entry in dataset:
-            query = str(entry.get("query", "")).strip()
-            raw_documents = entry.get("documents") or []
-            if not query or not raw_documents:
-                continue
-
-            documents = _build_documents(raw_documents)
-            compressed_docs = compressor.compress_documents(documents, query=query)
-            total_samples += 1
-            tokens_before = sum(_estimate_tokens(doc.page_content) for doc in documents)
-            tokens_after = sum(
-                _estimate_tokens(doc.page_content) for doc in compressed_docs
-            )
-            aggregate_tokens_before += tokens_before
-            aggregate_tokens_after += tokens_after
-            aggregate_documents_compressed += max(
-                0, len(documents) - len(compressed_docs)
-            )
-
-            relevant_phrases = entry.get("relevant_phrases")
-            if isinstance(relevant_phrases, list) and relevant_phrases:
-                recall_total += len(relevant_phrases)
-                compressed_text = " \n".join(
-                    doc.page_content for doc in compressed_docs
+                documents = _build_documents(raw_documents)
+                compressed_docs = compressor.compress_documents(documents, query=query)
+                total_samples += 1
+                tokens_before = sum(
+                    _estimate_tokens(doc.page_content) for doc in documents
                 )
-                recall_hits += sum(
-                    1
-                    for phrase in relevant_phrases
-                    if phrase and phrase in compressed_text
+                tokens_after = sum(
+                    _estimate_tokens(doc.page_content) for doc in compressed_docs
                 )
-    finally:
-        await vector_service.cleanup()
-        await shutdown_container()
+                aggregate_tokens_before += tokens_before
+                aggregate_tokens_after += tokens_after
+                aggregate_documents_compressed += max(
+                    0, len(documents) - len(compressed_docs)
+                )
+
+                relevant_phrases = entry.get("relevant_phrases")
+                if isinstance(relevant_phrases, list) and relevant_phrases:
+                    recall_total += len(relevant_phrases)
+                    compressed_text = " \n".join(
+                        doc.page_content for doc in compressed_docs
+                    )
+                    recall_hits += sum(
+                        1
+                        for phrase in relevant_phrases
+                        if phrase and phrase in compressed_text
+                    )
+        finally:
+            await vector_service.cleanup()
 
     if total_samples == 0:
         print("No valid samples found in the dataset.")
