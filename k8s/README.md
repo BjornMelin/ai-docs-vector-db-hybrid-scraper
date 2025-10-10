@@ -23,33 +23,7 @@ The deployment consists of:
 
 ## Quick Deployment
 
-### 1. Create Namespace
-
-```bash
-kubectl apply -f namespace.yaml
-```
-
-### 2. Deploy Storage Layer
-
-```bash
-# Deploy Qdrant vector database
-kubectl apply -f qdrant-statefulset.yaml
-
-# Deploy DragonflyDB cache
-kubectl apply -f dragonfly-deployment.yaml
-```
-
-### 3. Deploy Application Layer
-
-```bash
-# Deploy main application
-kubectl apply -f app-deployment.yaml
-
-# Deploy background workers
-kubectl apply -f worker-deployment.yaml
-```
-
-### 4. Create Local Secrets (Required)
+### 1. Prepare Local Secrets (Required)
 
 This project uses Kustomize to generate secrets from local files, which **must not** be committed to version control.
 
@@ -67,6 +41,35 @@ This project uses Kustomize to generate secrets from local files, which **must n
     echo -n "your-super-secret-jwt-token" > k8s/secrets/JWT_SECRET
     ```
     The `k8s/secrets/` directory is already listed in `.gitignore` to prevent accidental commits.
+
+### 2. Apply the Full Stack with Kustomize
+
+Run the Kustomize build so the generated ConfigMap (`ai-docs-config`) and Secret (`ai-docs-secrets`) are created before the deployments start. This command also applies the namespace, storage, and deployment manifests referenced by `kustomization.yaml`.
+
+```bash
+kubectl apply -k .
+```
+
+### 3. (Optional) Apply Components Individually
+
+If you prefer to apply individual manifests (for example, during debugging), make sure the previous `kubectl apply -k .` command has already been run so the generated resources exist.
+
+```bash
+# Create namespace (already included in the Kustomize apply)
+kubectl apply -f namespace.yaml
+
+# Deploy Qdrant vector database
+kubectl apply -f qdrant-statefulset.yaml
+
+# Deploy DragonflyDB cache
+kubectl apply -f dragonfly-deployment.yaml
+
+# Deploy main application
+kubectl apply -f app-deployment.yaml
+
+# Deploy background workers
+kubectl apply -f worker-deployment.yaml
+```
 
 ## Using Kustomize (Recommended)
 
