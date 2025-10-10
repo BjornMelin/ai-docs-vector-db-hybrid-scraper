@@ -49,9 +49,9 @@ Tier 0 to satisfy KISS/DRY requirements.
      marking challenge outcomes (`detected`, `solved`, `none`).
    - Return structured results containing tier/runtime metadata so upstream routing
      and monitoring can act on escalation outcomes.
-3. Enhance `MetricsRegistry`/`BrowserAutomationMonitor` with the
-   `*_browser_challenges_total` counter and propagate challenge outcome labels to
-   Prometheus.
+3. Enhance `BrowserAutomationMonitor` with challenge outcome tracking exposed
+   through OpenTelemetry spans and structured logs, enabling downstream
+   dashboards without bespoke Prometheus counters.
 4. Update unit suites covering the adapter, automation router, and metrics to
    assert tier metadata and challenge accounting. Expose tiered config through
    `src/config/__init__.py` so application code can reference the models.

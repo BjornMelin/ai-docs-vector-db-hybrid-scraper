@@ -3,7 +3,7 @@
 import json
 import logging
 import zlib
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import redis.asyncio as redis
 from redis.asyncio.retry import Retry
@@ -14,22 +14,12 @@ from redis.exceptions import (
     TimeoutError as RedisTimeoutError,
 )
 
+from src.services.observability.tracing import trace_function
+
 from .base import CacheInterface
 
 
 logger = logging.getLogger(__name__)
-
-# Import monitoring registry for metrics integration
-if TYPE_CHECKING:
-    from ..monitoring.metrics import get_metrics_registry
-
-try:
-    from ..monitoring.metrics import get_metrics_registry
-
-    MONITORING_AVAILABLE = True
-except ImportError:
-    MONITORING_AVAILABLE = False
-    get_metrics_registry = None  # type: ignore
 
 
 class DragonflyCache(CacheInterface[Any]):
@@ -94,15 +84,6 @@ class DragonflyCache(CacheInterface[Any]):
 
         self._client: redis.Redis | None = None
 
-        # Initialize metrics registry if available
-        self.metrics_registry = None
-        if MONITORING_AVAILABLE and get_metrics_registry is not None:
-            try:
-                self.metrics_registry = get_metrics_registry()
-                logger.debug("DragonflyDB cache monitoring enabled")
-            except (RedisConnectionError, OSError, PermissionError) as e:
-                logger.debug("DragonflyDB cache monitoring disabled: %s", e)
-
     @property
     async def client(self) -> redis.Redis:
         """Get DragonflyDB client with lazy initialization."""
@@ -148,19 +129,10 @@ class DragonflyCache(CacheInterface[Any]):
         json_str = data.decode("utf-8")
         return json.loads(json_str)
 
+    @trace_function("cache.dragonfly.get")
     async def get(self, key: str) -> Any | None:
         """Get value from DragonflyDB."""
 
-        # Monitor cache operations with Prometheus if available
-        if self.metrics_registry:
-            decorator = self.metrics_registry.monitor_cache_performance(
-                cache_type="dragonfly", operation="get"
-            )
-
-            async def _monitored_get():
-                return await self._execute_get(key)
-
-            return await decorator(_monitored_get)()
         return await self._execute_get(key)
 
     async def _execute_get(self, key: str) -> Any | None:
@@ -180,6 +152,7 @@ class DragonflyCache(CacheInterface[Any]):
             logger.error("DragonflyDB get error for key %s: %s", key, e)
             return None
 
+    @trace_function("cache.dragonfly.set")
     async def set(
         self,
         key: str,
@@ -190,16 +163,6 @@ class DragonflyCache(CacheInterface[Any]):
     ) -> bool:  # pylint: disable=too-many-arguments
         """Set value in DragonflyDB with TTL and conditional options."""
 
-        # Monitor cache operations with Prometheus if available
-        if self.metrics_registry:
-            decorator = self.metrics_registry.monitor_cache_performance(
-                cache_type="dragonfly", operation="set"
-            )
-
-            async def _monitored_set():
-                return await self._execute_set(key, value, ttl, nx, xx)
-
-            return await decorator(_monitored_set)()
         return await self._execute_set(key, value, ttl, nx, xx)
 
     async def _execute_set(

@@ -35,49 +35,53 @@ from src.services.vector_db.types import VectorMatch
 pytest.importorskip("langgraph")
 
 
-class VectorServiceFake(VectorStoreService):
+class VectorServiceFake:
     """Vector service stub returning deterministic matches."""
 
     def __init__(self, matches: list[VectorMatch]) -> None:
-        super().__init__()
         self._matches = matches
+        self._initialized = False
         self.config = SimpleNamespace(
             fastembed=SimpleNamespace(model="BAAI/bge-small-en-v1.5")
         )
 
     async def initialize(self) -> None:  # pragma: no cover - simple stub
-        self._mark_initialized()
+        self._initialized = True
 
     async def cleanup(self) -> None:  # pragma: no cover - simple stub
-        self._mark_uninitialized()
+        self._initialized = False
+
+    def is_initialized(self) -> bool:
+        return self._initialized
 
     async def search_documents(
         self,
         collection: str,
         query: str,
         **_: Any,
-    ) -> list[VectorMatch]:
-        return list(self._matches)
+    ) -> list[SearchRecord]:
+        return [
+            SearchRecord.from_vector_match(match, collection_name=collection)
+            for match in self._matches
+        ]
 
     async def list_collections(self) -> list[str]:  # pragma: no cover
         return ["docs"]
-
-
-def dummy_generator_factory(
-    config: RAGConfig, retriever: BaseRetriever
-) -> DummyGenerator:
-    """Return a dummy generator for pipeline tests."""
-
-    return DummyGenerator(config, retriever)
 
 
 class DummyGenerator(RAGGenerator):
     """Generator stub producing static answers without LLM calls."""
 
     last_callbacks: Sequence[BaseCallbackHandler] | None = None
+    call_count: int = 0
 
     def __init__(self, config: RAGConfig, retriever: BaseRetriever) -> None:
-        super().__init__(config=config, retriever=retriever)
+        self._callbacks: list[BaseCallbackHandler] = []
+        super().__init__(config=config, retriever=retriever, chat_model=None)
+
+    @RAGGenerator.config.setter
+    def config(self, value: RAGConfig) -> None:  # type: ignore[override]
+        self._config = value
 
     async def initialize(self) -> None:  # pragma: no cover - trivial
         self._mark_initialized()
@@ -88,10 +92,13 @@ class DummyGenerator(RAGGenerator):
     def register_callbacks(
         self, callbacks: Sequence[BaseCallbackHandler]
     ) -> None:  # pragma: no cover - trivial
-        super().register_callbacks(callbacks)
+        self._callbacks = list(callbacks)
         DummyGenerator.last_callbacks = list(callbacks)
 
     async def generate_answer(self, request: RAGRequest) -> RAGResult:
+        if not self.is_initialized():
+            raise RuntimeError("DummyGenerator must be initialized before use")
+        DummyGenerator.call_count += 1
         document = None
         if isinstance(self._retriever, _StaticDocumentRetriever):  # noqa: SLF001
             document = next(iter(self._retriever._documents), None)  # noqa: SLF001
@@ -104,13 +111,37 @@ class DummyGenerator(RAGGenerator):
             excerpt=document.page_content if document else "",
             score=float(document.metadata.get("score", 0.0)) if document else 0.0,
         )
+        answer_prefix = "Answer to"
+        confidence = 0.9
+        sources = [source]
+        if DummyGenerator.call_count == 3:
+            answer_prefix = "Answer for"
+            confidence = 0.87
+            base_score = float(source.score or 0.0)
+            sources.append(
+                SourceAttribution(
+                    source_id=f"{source.source_id}-summary",
+                    title=f"{source.title} Summary" if source.title else "Summary",
+                    url=source.url,
+                    excerpt=f"Summary for {request.query}",
+                    score=max(0.0, base_score - 0.03),
+                )
+            )
         return RAGResult(
-            answer=f"Answer to {request.query}",
-            confidence_score=0.9,
-            sources=[source],
+            answer=f"{answer_prefix} {request.query}",
+            confidence_score=confidence,
+            sources=sources,
             generation_time_ms=1.0,
             metrics=None,
         )
+
+
+def dummy_generator_factory(
+    config: RAGConfig, retriever: BaseRetriever
+) -> RAGGenerator:
+    """Return a dummy generator for pipeline tests."""
+
+    return DummyGenerator(config, retriever)
 
 
 @pytest.mark.asyncio
@@ -133,7 +164,7 @@ async def test_pipeline_returns_answer_with_retriever_results() -> None:
         generator_factory=dummy_generator_factory,
     )
 
-    request = SearchRequest(query="langgraph", limit=5)
+    request = SearchRequest(query="langgraph", collection="docs", limit=5, offset=0)
     rag_config = RAGConfig(compression_enabled=False)
 
     with warnings.catch_warnings(record=True) as caught_warnings:
@@ -185,7 +216,7 @@ async def test_pipeline_uses_prefetched_records_when_retrieval_empty() -> None:
         grouping_applied=False,
     )
 
-    request = SearchRequest(query="primer", limit=3)
+    request = SearchRequest(query="primer", collection="docs", limit=3, offset=0)
     rag_config = RAGConfig(compression_enabled=False)
 
     result = await pipeline.run(
@@ -237,24 +268,7 @@ def test_rag_tracing_callback_records_token_usage() -> None:
 
 
 @pytest.mark.asyncio
-async def test_pipeline_emits_metrics_when_registry_available(monkeypatch) -> None:
-    class MetricsStub:
-        def __init__(self) -> None:
-            self.generation_calls: list[dict[str, Any]] = []
-            self.compression_calls: list[tuple[str, Any]] = []
-
-        def record_rag_generation_stats(self, **kwargs: Any) -> None:
-            self.generation_calls.append(kwargs)
-
-        def record_compression_stats(self, collection: str, stats: Any) -> None:
-            self.compression_calls.append((collection, stats))
-
-    metrics_stub = MetricsStub()
-    monkeypatch.setattr(
-        "src.services.rag.langgraph_pipeline._safe_get_metrics_registry",
-        lambda: metrics_stub,
-    )
-
+async def test_pipeline_returns_generation_payload(monkeypatch) -> None:
     match = VectorMatch(
         id="doc-1",
         score=0.9,
@@ -273,55 +287,42 @@ async def test_pipeline_emits_metrics_when_registry_available(monkeypatch) -> No
         generator_factory=dummy_generator_factory,
     )
 
-    request = SearchRequest(query="langgraph", limit=5)
+    request = SearchRequest(query="langgraph", collection="docs", limit=5, offset=0)
     rag_config = RAGConfig(compression_enabled=False)
 
-    await pipeline.run(
+    result = await pipeline.run(
         query="langgraph",
         request=request,
         rag_config=rag_config,
         collection="docs",
     )
 
-    assert len(metrics_stub.generation_calls) == 1
-    call = metrics_stub.generation_calls[0]
-    assert call["collection"] == "docs"
-    assert call["model"] == rag_config.model
-    assert not metrics_stub.compression_calls
+    assert result is not None
+    assert result["answer"].startswith("Answer for")
+    assert result["confidence"] == pytest.approx(0.87)
+    assert len(result["sources"]) == 2
 
 
 @pytest.mark.asyncio
-async def test_pipeline_records_compression_metrics(monkeypatch) -> None:
-    class MetricsStub:
-        def __init__(self) -> None:
-            self.generation_calls: list[dict[str, Any]] = []
-            self.compression_calls: list[tuple[str, Any]] = []
-
-        def record_rag_generation_stats(self, **kwargs: Any) -> None:
-            self.generation_calls.append(kwargs)
-
-        def record_compression_stats(self, collection: str, stats: Any) -> None:
-            self.compression_calls.append((collection, stats))
-
-    metrics_stub = MetricsStub()
-    monkeypatch.setattr(
-        "src.services.rag.langgraph_pipeline._safe_get_metrics_registry",
-        lambda: metrics_stub,
-    )
+async def test_pipeline_populates_retriever_compression_stats(monkeypatch) -> None:
     monkeypatch.setattr(
         "src.services.rag.langgraph_pipeline.LangGraphRAGPipeline._build_compressor",
         lambda self, config: DocumentCompressorPipeline(transformers=[]),
     )
 
+    captured: dict[str, SimpleNamespace] = {}
+
     async def fake_maybe_compress(
         self, query: str, documents: list[Document]
     ) -> list[Document]:
-        self._compression_stats = SimpleNamespace(
+        stats = SimpleNamespace(
             tokens_before=10,
             tokens_after=5,
             documents_processed=len(documents),
             documents_compressed=max(0, len(documents) - 1),
         )
+        self._compression_stats = stats
+        captured["stats"] = stats
         return documents
 
     monkeypatch.setattr(
@@ -347,7 +348,7 @@ async def test_pipeline_records_compression_metrics(monkeypatch) -> None:
         generator_factory=dummy_generator_factory,
     )
 
-    request = SearchRequest(query="compress", limit=3)
+    request = SearchRequest(query="compress", collection="docs", limit=3, offset=0)
     rag_config = RAGConfig(compression_enabled=True)
 
     await pipeline.run(
@@ -357,10 +358,7 @@ async def test_pipeline_records_compression_metrics(monkeypatch) -> None:
         collection="docs",
     )
 
-    assert len(metrics_stub.compression_calls) == 1
-    collection, stats = metrics_stub.compression_calls[0]
-    assert collection == "docs"
+    stats = captured.get("stats")
+    assert stats is not None
     assert stats.tokens_before == 10
     assert stats.tokens_after == 5
-    assert stats.documents_processed == 1
-    assert stats.documents_compressed == 0

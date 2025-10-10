@@ -496,8 +496,6 @@ class TestCircuitBreakers:
         logger.info("Final circuit breaker metrics: %s", circuit_breaker.metrics)
 
 
-
-
 @pytest.fixture
 def circuit_breaker_config():
     """Provide circuit breaker configuration for tests."""

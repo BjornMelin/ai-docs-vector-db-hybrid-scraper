@@ -1,12 +1,11 @@
-"""Monitoring system initialization for FastMCP applications.
+"""Monitoring initialization for FastMCP applications using OTel instrumentation."""
 
-This module provides utilities to initialize and configure monitoring
-for FastMCP-based applications.
-"""
+from __future__ import annotations
 
 import asyncio
 import logging
 import time
+from typing import Any
 
 from fastapi.responses import JSONResponse
 
@@ -18,11 +17,6 @@ from src.services.health.manager import (
     HealthStatus,
     build_health_manager,
 )
-from src.services.monitoring.metrics import (
-    MetricsConfig,
-    MetricsRegistry,
-    initialize_metrics,
-)
 
 
 logger = logging.getLogger(__name__)
@@ -30,389 +24,183 @@ logger = logging.getLogger(__name__)
 
 async def initialize_monitoring(
     config: MonitoringConfig,
-) -> tuple[MetricsRegistry | None, HealthCheckManager | None]:
-    """Initialize monitoring system.
-
-    Args:
-        config: Monitoring configuration
-
-    Returns:
-        Tuple of (MetricsRegistry, HealthCheckManager) or (None, None) if disabled
-    """
+) -> HealthCheckManager | None:
+    """Initialize health monitoring from a MonitoringConfig instance."""
 
     if not config.enabled:
         logger.info("Monitoring disabled by configuration")
-        return None, None
+        return None
 
-    logger.info("Initializing monitoring system...")
-
-    # Create metrics config from monitoring config
-    metrics_config = MetricsConfig(
-        enabled=config.enabled,
-        export_port=config.metrics_port,
-        namespace=config.namespace,
-        include_system_metrics=config.include_system_metrics,
-        collection_interval=config.system_metrics_interval,
-    )
-
-    # Initialize metrics registry
-    metrics_registry = MetricsRegistry(metrics_config)
-
-    # Create health check config from monitoring config
     health_config = HealthCheckConfig(
         enabled=config.enabled,
         interval=config.system_metrics_interval,
         timeout=config.health_check_timeout,
     )
-
-    # Initialize health check manager
-    health_manager = HealthCheckManager(health_config)
-
-    logger.info("Monitoring system initialization complete")
-    return metrics_registry, health_manager
+    logger.info("Monitoring initialized with health checks only")
+    return HealthCheckManager(health_config)
 
 
 async def cleanup_monitoring(
-    metrics_registry: MetricsRegistry | None, health_manager: HealthCheckManager | None
+    health_manager: HealthCheckManager | None,
 ) -> None:
-    """Clean up monitoring resources.
-
-    Args:
-        metrics_registry: Metrics registry to clean up
-        health_manager: Health manager to clean up
-    """
-
-    if metrics_registry:
-        logger.info("Cleaning up metrics registry...")
-        # Any cleanup needed for metrics
+    """Clean up health monitoring resources (placeholder for symmetry)."""
 
     if health_manager:
-        logger.info("Cleaning up health manager...")
-        # Any cleanup needed for health checks
-
+        logger.info("Cleaning up health manager resources")
     logger.info("Monitoring cleanup complete")
 
 
 async def start_background_monitoring_tasks(
-    metrics_registry: MetricsRegistry | None, health_manager: HealthCheckManager | None
-) -> list[asyncio.Task]:
-    """Start background monitoring tasks.
+    health_manager: HealthCheckManager | None,
+) -> list[asyncio.Task[Any]]:
+    """Start periodic health checks when monitoring is enabled."""
 
-    Args:
-        metrics_registry: Metrics registry
-        health_manager: Health manager
+    if not health_manager or not health_manager.config.enabled:
+        return []
 
-    Returns:
-        List of started tasks
-    """
-
-    tasks = []
-
-    # Start system metrics collection if enabled
-    if (
-        metrics_registry
-        and metrics_registry.config.enabled
-        and metrics_registry.config.include_system_metrics
-    ):
-        task = asyncio.create_task(
-            update_system_metrics_periodically(
-                metrics_registry, metrics_registry.config.collection_interval
-            )
-        )
-        tasks.append(task)
-        logger.info("Started system metrics collection task")
-
-    # Start health checks if enabled
-    if health_manager and health_manager.config.enabled:
-        task = asyncio.create_task(
-            run_periodic_health_checks(health_manager, health_manager.config.interval)
-        )
-        tasks.append(task)
-        logger.info("Started periodic health checks task")
-
-    return tasks
+    interval = health_manager.config.interval
+    task = asyncio.create_task(
+        run_periodic_health_checks(health_manager, interval_seconds=interval)
+    )
+    logger.info("Started periodic health checks task")
+    return [task]
 
 
-async def stop_background_monitoring_tasks(tasks: list[asyncio.Task]) -> None:
-    """Stop background monitoring tasks.
-
-    Args:
-        tasks: List of tasks to stop
-    """
+async def stop_background_monitoring_tasks(tasks: list[asyncio.Task[Any]]) -> None:
+    """Stop background monitoring tasks."""
 
     if not tasks:
         return
 
     logger.info("Stopping %d background monitoring tasks...", len(tasks))
-
     for task in tasks:
         task.cancel()
-
-    # Wait for tasks to be cancelled
     await asyncio.gather(*tasks, return_exceptions=True)
-
     logger.info("Background monitoring tasks stopped")
 
 
 def initialize_monitoring_system(
-    config: Settings, qdrant_client=None, redis_url: str | None = None
-) -> tuple[MetricsRegistry | None, HealthCheckManager | None]:
-    """Initialize the complete monitoring system.
-
-    Args:
-        config: Application configuration
-        qdrant_client: Optional Qdrant client for health checks
-        redis_url: Optional Redis URL for health checks
-
-    Returns:
-        Tuple of (MetricsRegistry, HealthCheckManager)
-    """
+    config: Settings,
+    qdrant_client: Any | None = None,
+    redis_url: str | None = None,
+) -> HealthCheckManager | None:
+    """Initialize monitoring stack for the unified MCP server."""
 
     if not config.monitoring.enabled:
         logger.info("Monitoring disabled by configuration")
-        return None, None
+        return None
 
-    logger.info("Initializing monitoring system...")
-
-    # Create metrics configuration
-    metrics_config = MetricsConfig(
-        enabled=config.monitoring.enabled,
-        export_port=config.monitoring.metrics_port,
-        namespace=config.monitoring.namespace,
-        include_system_metrics=config.monitoring.include_system_metrics,
-        collection_interval=config.monitoring.system_metrics_interval,
-    )
-
-    # Initialize metrics registry
-    metrics_registry = initialize_metrics(metrics_config)
-
-    # Create health check manager using centralized builder
-
+    logger.info("Initializing monitoring system (health checks only)...")
     health_manager = build_health_manager(
         config,
-        metrics_registry=metrics_registry,
         qdrant_client=qdrant_client,
         redis_url=redis_url,
     )
-
-    # Start metrics server
-    if metrics_config.enabled:
-        try:
-            metrics_registry.start_metrics_server()
-            logger.info(
-                "Prometheus metrics server started on port %d",
-                metrics_config.export_port,
-            )
-        except (OSError, PermissionError):
-            logger.exception("Failed to start metrics server")
-
     logger.info("Monitoring system initialization complete")
-    return metrics_registry, health_manager
+    return health_manager
 
 
 def setup_fastmcp_monitoring(
-    mcp_app,
+    mcp_app: Any,
     config: Settings,
-    metrics_registry: MetricsRegistry,
-    health_manager: HealthCheckManager,
+    health_manager: HealthCheckManager | None,
 ) -> None:
-    """Set up monitoring for FastMCP application.
+    """Attach health endpoints to the FastMCP FastAPI app."""
 
-    Args:
-        mcp_app: FastMCP application instance
-        config: Application configuration
-        metrics_registry: Initialized metrics registry
-        health_manager: Initialized health check manager
-    """
-
-    if not config.monitoring.enabled or not metrics_registry or not health_manager:
-        logger.info("Monitoring not enabled or not initialized")
+    if not config.monitoring.enabled or health_manager is None:
+        logger.info("Skipping FastMCP monitoring setup (disabled or missing manager)")
         return
 
-    logger.info("Setting up FastMCP monitoring integration...")
+    if (
+        not config.monitoring.enable_health_checks
+        or not getattr(health_manager, "config", None)
+        or not getattr(health_manager.config, "enabled", False)
+    ):
+        logger.info(
+            "Skipping FastMCP health endpoints registration (health checks disabled)"
+        )
+        return
 
-    try:
-        # Check if FastMCP exposes the underlying FastAPI app
-        if hasattr(mcp_app, "app"):
-            fastapi_app = mcp_app.app
+    if not hasattr(mcp_app, "app"):
+        logger.warning(
+            "FastMCP app does not expose the embedded FastAPI app; health endpoints "
+            "disabled"
+        )
+        return
 
-            # Add health endpoint
-            @fastapi_app.get(
-                config.monitoring.health_path,
-                include_in_schema=False,
-                tags=["monitoring"],
-            )
-            async def health_endpoint():
-                """Health check endpoint for FastMCP."""
+    fastapi_app = mcp_app.app
 
-                if not health_manager:
-                    return JSONResponse(
-                        content={
-                            "status": "healthy",
-                            "message": "No health checks configured",
-                            "timestamp": time.time(),
-                        },
-                        status_code=200,
-                    )
+    @fastapi_app.get(
+        config.monitoring.health_path,
+        include_in_schema=False,
+        tags=["monitoring"],
+    )
+    async def health_endpoint():
+        """Return aggregated health status."""
 
-                # Run all health checks
-                await health_manager.check_all()
-                overall_status = health_manager.get_overall_status()
+        await health_manager.check_all()
+        overall_status = health_manager.get_overall_status()
+        status_code = (
+            200
+            if overall_status in (HealthStatus.HEALTHY, HealthStatus.DEGRADED)
+            else 503
+        )
+        return JSONResponse(
+            content=health_manager.get_health_summary(),
+            status_code=status_code,
+        )
 
-                # Determine HTTP status code based on health
-                if overall_status == HealthStatus.HEALTHY:
-                    status_code = 200
-                elif overall_status == HealthStatus.DEGRADED:
-                    status_code = 200  # Still OK but with warnings
-                else:
-                    status_code = 503  # Service unavailable
+    @fastapi_app.get(
+        f"{config.monitoring.health_path}/live",
+        include_in_schema=False,
+        tags=["monitoring"],
+    )
+    async def liveness_endpoint():
+        """Kubernetes liveness probe endpoint."""
 
-                return JSONResponse(
-                    content=health_manager.get_health_summary(), status_code=status_code
-                )
+        return JSONResponse(
+            content={"status": "alive", "timestamp": time.time()},
+            status_code=200,
+        )
 
-            # Add liveness endpoint
-            @fastapi_app.get(
-                f"{config.monitoring.health_path}/live",
-                include_in_schema=False,
-                tags=["monitoring"],
-            )
-            async def liveness_endpoint():
-                """Kubernetes liveness probe endpoint."""
+    @fastapi_app.get(
+        f"{config.monitoring.health_path}/ready",
+        include_in_schema=False,
+        tags=["monitoring"],
+    )
+    async def readiness_endpoint():
+        """Kubernetes readiness probe endpoint."""
 
-                return JSONResponse(
-                    content={"status": "alive", "timestamp": time.time()},
-                    status_code=200,
-                )
+        await health_manager.check_all()
+        overall_status = health_manager.get_overall_status()
+        ready = overall_status in (HealthStatus.HEALTHY, HealthStatus.DEGRADED)
+        status_code = 200 if ready else 503
+        status_value = "ready" if ready else "not_ready"
+        return JSONResponse(
+            content={
+                "status": status_value,
+                "health_summary": health_manager.get_health_summary(),
+                "timestamp": time.time(),
+            },
+            status_code=status_code,
+        )
 
-            # Add readiness endpoint
-            @fastapi_app.get(
-                f"{config.monitoring.health_path}/ready",
-                include_in_schema=False,
-                tags=["monitoring"],
-            )
-            async def readiness_endpoint():
-                """Kubernetes readiness probe endpoint."""
-                if not health_manager:
-                    return JSONResponse(
-                        content={
-                            "status": "ready",
-                            "message": "No dependencies to check",
-                            "timestamp": time.time(),
-                        },
-                        status_code=200,
-                    )
-
-                # Check critical dependencies only
-                await health_manager.check_all()
-                overall_status = health_manager.get_overall_status()
-
-                # Ready only if all critical dependencies are healthy
-                if overall_status in [HealthStatus.HEALTHY, HealthStatus.DEGRADED]:
-                    return JSONResponse(
-                        content={
-                            "status": "ready",
-                            "health_summary": health_manager.get_health_summary(),
-                            "timestamp": time.time(),
-                        },
-                        status_code=200,
-                    )
-                return JSONResponse(
-                    content={
-                        "status": "not_ready",
-                        "health_summary": health_manager.get_health_summary(),
-                        "timestamp": time.time(),
-                    },
-                    status_code=503,
-                )
-
-            logger.info("Added health endpoints at %s", config.monitoring.health_path)
-
-        else:
-            logger.warning(
-                "FastMCP app does not expose underlying FastAPI app - "
-                "health endpoints not added"
-            )
-
-    except (ConnectionError, OSError, PermissionError):
-        logger.exception("Failed to set up FastMCP monitoring")
+    logger.info(
+        "FastMCP health endpoints registered at %s", config.monitoring.health_path
+    )
 
 
 async def run_periodic_health_checks(
-    health_manager: HealthCheckManager, interval_seconds: float = 60.0
+    health_manager: HealthCheckManager,
+    interval_seconds: float = 60.0,
 ) -> None:
-    """Run periodic health checks in the background.
+    """Run periodic health checks in the background."""
 
-    Args:
-        health_manager: Health check manager
-        interval_seconds: Interval between health checks
-    """
-
-    if not health_manager:
-        return
-
-    logger.info("Starting periodic health checks (interval: %ds)", interval_seconds)
-
+    logger.info("Starting periodic health checks (interval: %ss)", interval_seconds)
     while True:
         try:
             await health_manager.check_all()
-            logger.debug("Completed periodic health check")
-        except (TimeoutError, OSError, PermissionError):
-            logger.exception("Error in periodic health check")
-
-        await asyncio.sleep(interval_seconds)
-
-
-async def update_system_metrics_periodically(
-    metrics_registry: MetricsRegistry, interval_seconds: float = 30.0
-) -> None:
-    """Update system metrics periodically.
-
-    Args:
-        metrics_registry: Metrics registry
-        interval_seconds: Interval between updates
-    """
-
-    if not metrics_registry or not metrics_registry.config.include_system_metrics:
-        return
-
-    logger.info(
-        "Starting periodic system metrics updates (interval: %ds)", interval_seconds
-    )
-
-    while True:
-        try:
-            metrics_registry.update_system_metrics()
-            logger.debug("Updated system metrics")
-        except (TimeoutError, OSError, PermissionError):
-            logger.exception("Error updating system metrics")
-
-        await asyncio.sleep(interval_seconds)
-
-
-async def update_cache_metrics_periodically(
-    metrics_registry: MetricsRegistry, cache_manager, interval_seconds: float = 30.0
-) -> None:
-    """Update cache metrics periodically.
-
-    Args:
-        metrics_registry: Metrics registry
-        cache_manager: Cache manager instance to collect stats from
-        interval_seconds: Interval between updates
-    """
-
-    if not metrics_registry or not cache_manager:
-        return
-
-    logger.info(
-        "Starting periodic cache metrics updates (interval: %ds)", interval_seconds
-    )
-
-    while True:
-        try:
-            metrics_registry.update_cache_stats(cache_manager)
-            logger.debug("Updated cache metrics")
-        except (ConnectionError, OSError, PermissionError):
-            logger.exception("Error updating cache metrics")
-
+            logger.debug("Completed periodic health check cycle")
+        except Exception:  # pragma: no cover - defensive logging
+            logger.exception("Error executing periodic health check")
         await asyncio.sleep(interval_seconds)

@@ -12,14 +12,6 @@ src.services.utilities.hnsw\_optimizer module
    :show-inheritance:
    :undoc-members:
 
-src.services.utilities.rate\_limiter module
--------------------------------------------
-
-.. automodule:: src.services.utilities.rate_limiter
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 Module contents
 ---------------
 

@@ -6,13 +6,7 @@ import time
 from typing import cast
 
 import pytest
-from prometheus_client import CollectorRegistry
 
-from src.services.monitoring.metrics import (
-    MetricsConfig,
-    MetricsRegistry,
-    set_metrics_registry,
-)
 from src.services.query_processing.models import SearchRequest
 from src.services.query_processing.orchestrator import (
     SearchOrchestrator,
@@ -113,8 +107,8 @@ class _StubGenerator:
 
 
 @pytest.mark.asyncio
-async def test_services_emit_metrics_for_successful_run() -> None:
-    """Running the orchestrator should populate the metrics registry."""
+async def test_services_generate_answer() -> None:
+    """Running the orchestrator should return an answer with sources."""
 
     matches = [
         VectorMatch(
@@ -135,12 +129,6 @@ async def test_services_emit_metrics_for_successful_run() -> None:
     def generator_factory(config: RAGConfig, retriever) -> RAGGenerator:
         _ = config
         return cast(RAGGenerator, _StubGenerator(retriever))
-
-    registry = MetricsRegistry(
-        MetricsConfig(namespace="service", enabled=True),
-        registry=CollectorRegistry(),
-    )
-    set_metrics_registry(registry)
 
     pipeline = LangGraphRAGPipeline(
         cast(VectorStoreService, vector_service),
@@ -166,14 +154,9 @@ async def test_services_emit_metrics_for_successful_run() -> None:
         )
         response = await orchestrator.search(request)
         assert response.generated_answer is not None
-
-        samples = {metric.name: metric for metric in registry.registry.collect()}
-        assert "service_rag_stage_latency_seconds" in samples
-        assert "service_rag_answers" in samples
     finally:
         await orchestrator.cleanup()
         await vector_service.cleanup()
-        set_metrics_registry(None)
 
 
 @pytest.mark.asyncio

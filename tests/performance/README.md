@@ -14,10 +14,6 @@ infrastructure or long-running load jobs.
 - **Search orchestrator concurrency** (`test_search_orchestrator_performance.py`)
   - Executes the `SearchOrchestrator` against a stub pipeline under high
     concurrency and verifies both response correctness and throughput.
-- **Metrics recording throughput** (`test_metrics_registry_performance.py`)
-  - Performs hundreds of metric updates against the `MetricsRegistry` and checks
-    that operations remain fast while the resulting Prometheus samples reflect
-    the expected counts.
 
 Each test is labeled with `pytest.mark.performance` so the suite can be run
 on-demand:

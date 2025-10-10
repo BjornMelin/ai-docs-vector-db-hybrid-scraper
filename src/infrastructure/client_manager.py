@@ -803,19 +803,8 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
             return
 
         try:
-            from src.services.monitoring.metrics import (  # pylint: disable=import-outside-toplevel
-                get_metrics_registry,
-            )
-        except ImportError:
-            logger.warning("Monitoring metrics registry not available")
-            self._metrics_registry = None
-        else:
-            self._metrics_registry = get_metrics_registry()
-
-        try:
             self._health_manager = build_health_manager(
                 self._config,
-                metrics_registry=self._metrics_registry,
             )
         except Exception:  # pragma: no cover - defensive
             logger.exception("Failed to initialize health manager")
@@ -956,48 +945,30 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
     ) -> None:
         """Record a metric value via the monitoring registry."""
 
-        self._ensure_monitoring_ready()
-        if self._metrics_registry is None:
-            return
-        try:
-            if hasattr(self._metrics_registry, "record_metric"):
-                self._metrics_registry.record_metric(metric_name, value, labels or {})
-        except Exception:  # pragma: no cover - defensive
-            logger.warning("Failed to record metric %s", metric_name, exc_info=True)
+        logger.debug(
+            "record_metric called for %s=%s with labels=%s", metric_name, value, labels
+        )
 
     def increment_counter(
         self, counter_name: str, labels: dict[str, str] | None = None
     ) -> None:
         """Increment a counter metric."""
 
-        self._ensure_monitoring_ready()
-        if self._metrics_registry is None:
-            return
-        try:
-            if hasattr(self._metrics_registry, "increment_counter"):
-                self._metrics_registry.increment_counter(counter_name, labels or {})
-        except Exception:  # pragma: no cover - defensive
-            logger.warning(
-                "Failed to increment counter %s", counter_name, exc_info=True
-            )
+        logger.debug(
+            "increment_counter called for %s with labels=%s", counter_name, labels
+        )
 
     def record_histogram(
         self, histogram_name: str, value: float, labels: dict[str, str] | None = None
     ) -> None:
         """Record a histogram value."""
 
-        self._ensure_monitoring_ready()
-        if self._metrics_registry is None:
-            return
-        try:
-            if hasattr(self._metrics_registry, "record_histogram"):
-                self._metrics_registry.record_histogram(
-                    histogram_name, value, labels or {}
-                )
-        except Exception:  # pragma: no cover - defensive
-            logger.warning(
-                "Failed to record histogram %s", histogram_name, exc_info=True
-            )
+        logger.debug(
+            "record_histogram called for %s=%s with labels=%s",
+            histogram_name,
+            value,
+            labels,
+        )
 
     async def track_performance(
         self,
@@ -1014,14 +985,15 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
                 result = await operation_func(*args, **kwargs)
             except Exception:
                 duration_ms = (time.perf_counter() - start_time) * 1000
-                self.record_histogram(f"{operation_name}_duration_ms", duration_ms)
-                self.increment_counter(f"{operation_name}_total", {"status": "error"})
-                self.increment_counter(f"{operation_name}_errors")
+                logger.debug(
+                    "Operation %s failed after %.2f ms", operation_name, duration_ms
+                )
                 logger.exception("Operation %s failed", operation_name)
                 raise
             duration_ms = (time.perf_counter() - start_time) * 1000
-            self.record_histogram(f"{operation_name}_duration_ms", duration_ms)
-            self.increment_counter(f"{operation_name}_total", {"status": "success"})
+            logger.debug(
+                "Operation %s completed in %.2f ms", operation_name, duration_ms
+            )
             return result
 
     def get_performance_metrics(self) -> dict[str, Any]:
@@ -1086,7 +1058,6 @@ class ClientManager:  # pylint: disable=too-many-public-methods,too-many-instanc
                 "registered": len(check_names),
                 "services": check_names,
             },
-            "metrics_registry": {"available": self._metrics_registry is not None},
             "performance_monitor": {
                 "available": True,
                 "provider": "opentelemetry",

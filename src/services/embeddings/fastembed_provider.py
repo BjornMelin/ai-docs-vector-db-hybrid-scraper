@@ -4,13 +4,15 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
 from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
 
 from src.services.errors import EmbeddingServiceError
-from src.services.monitoring.metrics import get_metrics_registry
+from src.services.observability.tracing import trace_function
+from src.services.observability.tracking import record_ai_operation
 
 from .base import EmbeddingProvider
 
@@ -56,12 +58,8 @@ class FastEmbedProvider(EmbeddingProvider):
         self._sparse: FastEmbedSparseType | None = None
         self._sparse_model_name = sparse_model or self._DEFAULT_SPARSE_MODEL
         self._initialized = False
-        self._metrics = None
-        try:
-            self._metrics = get_metrics_registry()
-        except RuntimeError:  # pragma: no cover - monitoring optional
-            self._metrics = None
 
+    @trace_function()
     async def initialize(self) -> None:
         """Initialize the underlying LangChain embeddings."""
 
@@ -95,6 +93,7 @@ class FastEmbedProvider(EmbeddingProvider):
             raise EmbeddingServiceError(msg)
         return self._dense
 
+    @trace_function()
     async def generate_embeddings(
         self, texts: list[str], batch_size: int | None = None
     ) -> list[list[float]]:
@@ -109,17 +108,31 @@ class FastEmbedProvider(EmbeddingProvider):
 
         dense_model = self._dense
 
+        start = time.perf_counter()
+        success = True
+
         async def _encode() -> list[list[float]]:
             return await asyncio.to_thread(dense_model.embed_documents, texts)
 
-        if self._metrics is None:
-            return await _encode()
+        try:
+            embeddings = await _encode()
+            return embeddings
+        except Exception:
+            success = False
+            raise
+        finally:
+            duration = time.perf_counter() - start
+            record_ai_operation(
+                operation_type="embedding",
+                provider="fastembed",
+                model=self.model_name,
+                duration_s=duration,
+                tokens=None,
+                cost_usd=0.0,
+                success=success,
+            )
 
-        decorator = self._metrics.monitor_embedding_generation(
-            provider="fastembed", model=self.model_name
-        )
-        return await decorator(_encode)()
-
+    @trace_function()
     async def generate_sparse_embeddings(
         self, texts: Sequence[str]
     ) -> list[dict[str, Sequence[float]]]:
@@ -136,7 +149,25 @@ class FastEmbedProvider(EmbeddingProvider):
         if self._sparse is None:
             self._sparse = FastEmbedSparseRuntime(model_name=self._sparse_model_name)
 
-        results = await asyncio.to_thread(self._sparse.embed_documents, list(texts))
+        start = time.perf_counter()
+        success = True
+        try:
+            results = await asyncio.to_thread(self._sparse.embed_documents, list(texts))
+        except Exception:
+            success = False
+            raise
+        finally:
+            duration = time.perf_counter() - start
+            record_ai_operation(
+                operation_type="sparse_embedding",
+                provider="fastembed",
+                model=self._sparse_model_name,
+                duration_s=duration,
+                tokens=None,
+                cost_usd=0.0,
+                success=success,
+            )
+
         serialized: list[dict[str, Sequence[float]]] = []
         for value in results:
             indices = getattr(value, "indices", None)

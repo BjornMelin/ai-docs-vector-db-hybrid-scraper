@@ -5,7 +5,6 @@ entry in the golden dataset and captures three layers of evaluation:
 
 * Deterministic baselines (string similarity + retrieval precision/recall)
 * Optional Ragas metrics (faithfulness, relevance, context recall)
-* Telemetry snapshots from the Prometheus metrics registry
 
 Usage:
     uv run python scripts/eval/rag_golden_eval.py \
@@ -20,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import importlib
 import json
 import logging
 import re
@@ -32,16 +32,9 @@ from statistics import fmean
 from typing import Any, Protocol
 
 import yaml
-from prometheus_client import CollectorRegistry
-from prometheus_client.samples import Sample
 
 from scripts.eval.dataset_validator import DatasetValidationError, load_dataset_records
 from src.infrastructure.client_manager import ClientManager
-from src.services.monitoring.metrics import (
-    MetricsConfig,
-    MetricsRegistry,
-    set_metrics_registry,
-)
 from src.services.query_processing.models import SearchRequest, SearchResponse
 from src.services.query_processing.orchestrator import SearchOrchestrator
 
@@ -91,7 +84,6 @@ class EvaluationReport:
 
     results: list[ExampleResult]
     aggregates: dict[str, Any]
-    telemetry: dict[str, Any]
 
 
 class SupportsSearchOrchestrator(Protocol):
@@ -135,32 +127,31 @@ class RagasEvaluator:
 
         # pylint: disable=import-outside-toplevel,too-many-locals
         try:  # pragma: no cover - optional dependency import path
-            from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-            from ragas import evaluate as ragas_evaluate
-            from ragas.dataset_schema import EvaluationDataset
-            from ragas.embeddings import LangchainEmbeddingsWrapper
-            from ragas.llms import LangchainLLMWrapper
-            from ragas.metrics import (
-                answer_relevancy,
-                context_precision,
-                context_recall,
-                faithfulness,
-            )
+            langchain_openai = importlib.import_module("langchain_openai")
+            ragas_module = importlib.import_module("ragas")
+            dataset_schema = importlib.import_module("ragas.dataset_schema")
+            embeddings_module = importlib.import_module("ragas.embeddings")
+            llms_module = importlib.import_module("ragas.llms")
+            metrics_module = importlib.import_module("ragas.metrics")
 
-            self._dataset_cls = EvaluationDataset
-            self._evaluate = ragas_evaluate
+            chat_open_ai = langchain_openai.ChatOpenAI
+            openai_embeddings = langchain_openai.OpenAIEmbeddings
+            self._dataset_cls = dataset_schema.EvaluationDataset
+            self._evaluate = ragas_module.evaluate
             self._metrics_suite = [
-                context_precision,
-                context_recall,
-                faithfulness,
-                answer_relevancy,
+                metrics_module.context_precision,
+                metrics_module.context_recall,
+                metrics_module.faithfulness,
+                metrics_module.answer_relevancy,
             ]
-            llm_instance = ChatOpenAI(model=llm_model or "gpt-4o-mini")
-            embedding_instance = OpenAIEmbeddings(
+            llm_instance = chat_open_ai(model=llm_model or "gpt-4o-mini")
+            embedding_instance = openai_embeddings(
                 model=embedding_model or "text-embedding-3-small"
             )
-            self._llm = LangchainLLMWrapper(llm_instance)
-            self._embeddings = LangchainEmbeddingsWrapper(embedding_instance)
+            embeddings_wrapper = embeddings_module.LangchainEmbeddingsWrapper
+            llm_wrapper = llms_module.LangchainLLMWrapper
+            self._llm = llm_wrapper(llm_instance)
+            self._embeddings = embeddings_wrapper(embedding_instance)
             LOGGER.info(
                 "Ragas evaluator initialised with model=%s embedding=%s",
                 llm_model or "gpt-4o-mini",
@@ -454,33 +445,6 @@ def _compute_retrieval_metrics(
     }
 
 
-def _snapshot_metrics(
-    registry: CollectorRegistry,
-    allowlist: frozenset[str] | None = None,
-) -> dict[str, Any]:
-    """Convert Prometheus metrics into a JSON-friendly structure."""
-
-    permitted = allowlist or frozenset()
-    snapshot: dict[str, Any] = {}
-    for metric in registry.collect():
-        if permitted and metric.name not in permitted:
-            continue
-        samples: list[dict[str, Any]] = []
-        for sample in metric.samples:
-            assert isinstance(sample, Sample)  # typing guard
-            redacted_labels = {
-                key: (value.split("/")[-1] if key.endswith("_path") else value)
-                for key, value in sample.labels.items()
-            }
-            samples.append({"labels": redacted_labels, "value": sample.value})
-        snapshot[metric.name] = {
-            "type": metric.type,
-            "documentation": metric.documentation,
-            "samples": samples,
-        }
-    return snapshot
-
-
 def _aggregate_metrics(results: Sequence[ExampleResult]) -> dict[str, Any]:
     """Aggregate numeric metrics across all examples."""
 
@@ -535,7 +499,8 @@ async def _evaluate_examples(
         if collection := example.metadata.get("collection"):
             request_overrides["collection"] = collection
 
-        request = SearchRequest.from_input(example.query, **request_overrides)
+        request_payload = {"query": example.query, **request_overrides}
+        request = SearchRequest(**request_payload)
         response: SearchResponse = await orchestrator.search(request)
 
         predicted = response.generated_answer or " ".join(
@@ -576,7 +541,6 @@ def _render_report(report: EvaluationReport) -> dict[str, Any]:
 
     return {
         "aggregates": report.aggregates,
-        "telemetry": report.telemetry,
         "results": [
             {
                 "example": {
@@ -621,13 +585,6 @@ async def _run(args: argparse.Namespace) -> None:
     dataset_path = Path(args.dataset)
     examples = _load_dataset(dataset_path)
 
-    registry = CollectorRegistry(auto_describe=True)
-    metrics_registry = MetricsRegistry(
-        MetricsConfig(namespace=args.namespace, enabled=True),
-        registry=registry,
-    )
-    set_metrics_registry(metrics_registry)
-
     default_max_samples, _ = _load_cost_controls()
     ragas_sample_cap = args.ragas_max_samples
     if ragas_sample_cap is None:
@@ -654,15 +611,6 @@ async def _run(args: argparse.Namespace) -> None:
         )
     finally:
         await orchestrator.cleanup()
-        set_metrics_registry(None)
-
-    allowlist = args.metrics_allowlist
-    if not allowlist:
-        allowlist_path = Path("config/metrics_allowlist.json")
-        if allowlist_path.exists():
-            with allowlist_path.open(encoding="utf-8") as handle:
-                data = json.load(handle)
-                allowlist = data.get("metrics", [])
 
     aggregates = _aggregate_metrics(results)
     thresholds = _load_thresholds()
@@ -673,9 +621,6 @@ async def _run(args: argparse.Namespace) -> None:
     report = EvaluationReport(
         results=results,
         aggregates=aggregates,
-        telemetry={
-            "prometheus_snapshot": _snapshot_metrics(registry, frozenset(allowlist)),
-        },
     )
 
     payload = _render_report(report)
@@ -733,12 +678,6 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         type=int,
         default=None,
         help="Upper bound on examples processed with RAGAS (cost control)",
-    )
-    parser.add_argument(
-        "--metrics-allowlist",
-        nargs="*",
-        default=[],
-        help="Prometheus metric names to include in the snapshot",
     )
     return parser
 

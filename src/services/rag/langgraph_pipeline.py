@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import logging
 import warnings
-from collections.abc import Callable, Sequence
-from typing import Any, TypedDict
+from collections.abc import Callable, Iterable, Mapping, Sequence
+from typing import Any, NotRequired, Required, TypedDict
 
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import (
@@ -18,13 +18,18 @@ from langchain_core.retrievers import BaseRetriever
 from opentelemetry import trace
 
 from src.contracts.retrieval import SearchRecord
-from src.services.monitoring.metrics import MetricsRegistry, get_metrics_registry
 from src.services.query_processing.models import SearchRequest
 from src.services.vector_db.service import VectorStoreService
 
 from .generator import RAGGenerator
 from .models import RAGConfig, RAGRequest, RAGResult
 from .retriever import VectorServiceRetriever
+
+
+try:  # pragma: no cover - optional dependency guard
+    from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
+except ModuleNotFoundError:  # pragma: no cover
+    FastEmbedEmbeddings = None  # type: ignore[assignment]
 
 
 try:  # pragma: no cover - optional dependency guard
@@ -36,16 +41,6 @@ except ModuleNotFoundError:  # pragma: no cover
     LANGGRAPH_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
-
-
-def _safe_get_metrics_registry() -> MetricsRegistry | None:
-    try:
-        return get_metrics_registry()
-    except RuntimeError:
-        return None
-    except Exception:  # pragma: no cover - defensive fallback
-        logger.exception("Failed to access metrics registry")
-        return None
 
 
 def _build_callback_handlers(tracer: trace.Tracer) -> list[BaseCallbackHandler]:
@@ -83,16 +78,16 @@ class RagTracingCallback(BaseCallbackHandler):
         span.end()
 
 
-class _RAGGraphState(TypedDict, total=False):
+class _RAGGraphState(TypedDict):
     """Internal LangGraph state for the RAG pipeline."""
 
-    query: str
-    documents: list[Document]
-    graded_documents: list[Document]
-    prefetched_documents: list[Document]
-    confidence: float | None
-    answer: str
-    answer_sources: list[dict[str, Any]]
+    query: Required[str]
+    documents: NotRequired[list[Document]]
+    graded_documents: NotRequired[list[Document]]
+    prefetched_documents: NotRequired[list[Document]]
+    confidence: NotRequired[float | None]
+    answer: NotRequired[str]
+    answer_sources: NotRequired[list[dict[str, Any]]]
 
 
 class _StaticDocumentRetriever(BaseRetriever):
@@ -123,13 +118,17 @@ class LangGraphRAGPipeline:
         generator_factory: GeneratorFactory | None = None,
     ) -> None:
         self._vector_service = vector_service
-        self._generator_factory = generator_factory or (
-            lambda cfg, retr: RAGGenerator(cfg, retr)
-        )
+        self._generator_factory = generator_factory or self._default_generator
         self._tracer = trace.get_tracer(__name__)
-        self._metrics_registry = _safe_get_metrics_registry()
         self._callback_handlers = _build_callback_handlers(self._tracer)
 
+    @staticmethod
+    def _default_generator(config: RAGConfig, retriever: BaseRetriever) -> RAGGenerator:
+        """Factory that instantiates the default RAG generator."""
+
+        return RAGGenerator(config, retriever)
+
+    # pylint: disable=too-many-arguments,too-many-locals,too-many-statements
     async def run(
         self,
         *,
@@ -144,6 +143,8 @@ class LangGraphRAGPipeline:
         if not LANGGRAPH_AVAILABLE:
             msg = "LangGraph must be installed to run the LangGraphRAGPipeline"
             raise RuntimeError(msg)
+
+        assert StateGraph is not None  # for type-checkers; guarded above
 
         with self._tracer.start_as_current_span("rag.pipeline") as pipeline_span:
             pipeline_span.set_attribute("rag.collection", collection)
@@ -179,7 +180,6 @@ class LangGraphRAGPipeline:
                 "rag.retriever_tool", "vector_context_retriever"
             )
 
-            metrics_registry = self._metrics_registry or _safe_get_metrics_registry()
             prefetched_documents = self._records_to_documents(prefetched_records or [])
             tracer = self._tracer
 
@@ -195,10 +195,9 @@ class LangGraphRAGPipeline:
                         "rag.retrieve.prefetched_used", int(used_prefetched)
                     )
                     stats = getattr(retriever, "compression_stats", None)
-                    if documents and metrics_registry is not None and stats is not None:
-                        metrics_registry.record_compression_stats(
-                            collection=collection, stats=stats
-                        )
+                    if documents:
+                        for key, value in self._iter_items(stats):
+                            span.set_attribute(f"rag.compress.{key}", value)
                 return {"documents": documents}
 
             async def grade_node(state: _RAGGraphState) -> dict[str, Any]:
@@ -273,14 +272,11 @@ class LangGraphRAGPipeline:
                     span.set_attribute(
                         "rag.generate.answer_length", len(rag_result.answer)
                     )
-                    if metrics_registry is not None:
-                        metrics_registry.record_rag_generation_stats(
-                            collection=collection,
-                            model=effective_config.model,
-                            latency_ms=rag_result.generation_time_ms,
-                            token_metrics=rag_result.metrics,
-                            confidence=confidence,
-                        )
+                    span.set_attribute(
+                        "rag.generate.latency_ms", rag_result.generation_time_ms
+                    )
+                    for key, value in self._iter_items(rag_result.metrics):
+                        span.set_attribute(f"rag.generate.{key}", value)
                     return {
                         "answer": rag_result.answer.strip(),
                         "answer_sources": sources,
@@ -321,9 +317,7 @@ class LangGraphRAGPipeline:
         if not config.compression_enabled:
             return DocumentCompressorPipeline(transformers=[])
 
-        try:
-            from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
-        except ModuleNotFoundError:  # pragma: no cover - optional dependency guard
+        if FastEmbedEmbeddings is None:  # pragma: no cover - optional dependency guard
             warnings.warn(
                 "FastEmbedEmbeddings not available; disabling compression.",
                 category=RuntimeWarning,
@@ -339,6 +333,34 @@ class LangGraphRAGPipeline:
             similarity_threshold=config.compression_similarity_threshold,
         )
         return DocumentCompressorPipeline(transformers=[transformer])
+
+    @staticmethod
+    def _iter_items(obj: Any) -> Iterable[tuple[str, Any]]:
+        """Yield key/value pairs from mapping-like instrumentation payloads."""
+
+        empty: tuple[tuple[str, Any], ...] = ()
+        if obj is None:
+            return empty
+        if isinstance(obj, Mapping):
+            return tuple((str(key), value) for key, value in obj.items())
+        items_getter = getattr(obj, "items", None)
+        if callable(items_getter):
+            try:
+                candidate = items_getter()
+            except TypeError:
+                return empty
+            if isinstance(candidate, Iterable):
+                pairs: list[tuple[str, Any]] = []
+                for item in candidate:
+                    if (
+                        isinstance(item, tuple)
+                        and len(item) == 2
+                        and isinstance(item[0], str)
+                    ):
+                        pairs.append((item[0], item[1]))
+                if pairs:
+                    return tuple(pairs)
+        return empty
 
     @staticmethod
     def _records_to_documents(records: Sequence[SearchRecord]) -> list[Document]:

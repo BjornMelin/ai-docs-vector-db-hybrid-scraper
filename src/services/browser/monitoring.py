@@ -22,15 +22,6 @@ from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
-# Import monitoring registry for Prometheus integration
-try:
-    from src.services.monitoring.metrics import get_metrics_registry
-
-    MONITORING_AVAILABLE = True
-except ImportError:
-    MONITORING_AVAILABLE = False
-    get_metrics_registry = None  # type: ignore[assignment]
-
 
 class AlertSeverity(str, Enum):
     """Alert severity levels."""
@@ -168,15 +159,6 @@ class BrowserAutomationMonitor:  # pylint: disable=too-many-instance-attributes
         self.metrics_lock = asyncio.Lock()
         self.alerts_lock = asyncio.Lock()
 
-        # Initialize Prometheus metrics registry if available
-        self.metrics_registry = None
-        if MONITORING_AVAILABLE and get_metrics_registry is not None:
-            try:
-                self.metrics_registry = get_metrics_registry()
-                logger.info("Browser monitoring Prometheus integration enabled")
-            except (AttributeError, ImportError, OSError):
-                logger.debug("Browser monitoring Prometheus integration disabled")
-
         logger.info("BrowserAutomationMonitor initialized")
 
     async def start_monitoring(self):
@@ -286,15 +268,6 @@ class BrowserAutomationMonitor:  # pylint: disable=too-many-instance-attributes
             # Check for alerts
             await self._check_alert_conditions(tier, metrics)
 
-            if self.metrics_registry:
-                self.metrics_registry.record_browser_request(
-                    tier=tier,
-                    duration_seconds=response_time_ms / 1000,
-                    success=success,
-                    runtime=runtime,
-                    challenge=challenge,
-                )
-
     async def _update_health_status(self, tier: str, metrics: PerformanceMetrics):
         """Update health status for a tier based on metrics."""
         # Determine health status
@@ -328,12 +301,6 @@ class BrowserAutomationMonitor:  # pylint: disable=too-many-instance-attributes
         )
 
         self.health_status[tier] = health
-
-        # Update Prometheus metrics if available
-        if self.metrics_registry:
-            # Update service health status
-            healthy = health.status == "healthy"
-            self.metrics_registry.update_service_health(f"browser_{tier}", healthy)
 
     async def _check_alert_conditions(self, tier: str, metrics: PerformanceMetrics):
         """Check if any alert conditions are met."""

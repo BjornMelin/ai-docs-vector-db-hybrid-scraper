@@ -23,7 +23,7 @@ from src.services.base import BaseService
 from src.services.embeddings.base import EmbeddingProvider
 from src.services.embeddings.fastembed_provider import FastEmbedProvider
 from src.services.errors import EmbeddingServiceError
-from src.services.monitoring.metrics import get_metrics_registry
+from src.services.observability.tracing import set_span_attributes
 
 from .payload_schema import (
     CanonicalPayload,
@@ -50,6 +50,8 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         client_manager: ClientManager,
         embeddings_provider: EmbeddingProvider | None = None,
     ) -> None:
+        """Initialize the VectorStoreService."""
+
         super().__init__(config)
         self._client_manager = client_manager
         self._embeddings = (
@@ -595,12 +597,16 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
     # Internal helpers
 
     def _require_async_client(self) -> AsyncQdrantClient:
+        """Return the async Qdrant client."""
+
         if self._async_client is None:
             msg = "VectorStoreService not initialized"
             raise RuntimeError(msg)
         return self._async_client
 
     def _require_vector_store(self, collection: str) -> QdrantVectorStore:
+        """Return the vector store for the collection."""
+
         if self._vector_store is None:
             msg = "VectorStoreService not initialized"
             raise RuntimeError(msg)
@@ -609,6 +615,8 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         return self._vector_store
 
     def _require_qdrant_config(self) -> Any:
+        """Return the Qdrant configuration."""
+
         cfg = getattr(self.config, "qdrant", None)
         if cfg is None:
             msg = "Qdrant configuration missing"
@@ -616,6 +624,8 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         return cfg
 
     def _require_embedding_adapter(self) -> Any:
+        """Return the LangChain embedding adapter."""
+
         adapter = getattr(self._embeddings, "langchain_embeddings", None)
         if adapter is None:
             msg = "Embedding provider does not expose LangChain embeddings"
@@ -633,11 +643,7 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         filters: Mapping[str, Any] | None,
         overfetch_multiplier: float | None,
     ) -> tuple[list[VectorMatch], bool]:  # pylint: disable=too-many-arguments,too-many-locals
-        registry = None
-        try:
-            registry = get_metrics_registry()
-        except RuntimeError:  # pragma: no cover - monitoring optional
-            registry = None
+        """Query with optional grouping support."""
 
         cfg = self._require_qdrant_config()
         grouping_enabled = bool(group_by) and bool(
@@ -654,11 +660,19 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
                 filters=filters,
             )
             if applied:
-                if registry is not None:
-                    registry.record_grouping_attempt(collection, "applied")
+                set_span_attributes(
+                    {
+                        "qdrant.grouping.status": "applied",
+                        "qdrant.grouping.collection": collection,
+                    }
+                )
                 return matches, True
-            if registry is not None:
-                registry.record_grouping_attempt(collection, "fallback")
+            set_span_attributes(
+                {
+                    "qdrant.grouping.status": "fallback",
+                    "qdrant.grouping.collection": collection,
+                }
+            )
 
         fetch_limit = int(limit * (overfetch_multiplier or 2.0))
         store = self._require_vector_store(collection)
@@ -687,8 +701,12 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
             )
             return matches, False
 
-        if registry is not None:
-            registry.record_grouping_attempt(collection, "disabled")
+        set_span_attributes(
+            {
+                "qdrant.grouping.status": "disabled",
+                "qdrant.grouping.collection": collection,
+            }
+        )
         return matches[:limit], False
 
     async def _query_with_server_grouping(
@@ -701,6 +719,8 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         limit: int,
         filters: Mapping[str, Any] | None,
     ) -> tuple[list[VectorMatch], bool]:  # pylint: disable=too-many-arguments
+        """Query with server-side grouping."""
+
         client = self._require_async_client()
         cfg = self._require_qdrant_config()
         if not getattr(cfg, "enable_grouping", False):
@@ -752,6 +772,8 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         group_size: int,
         limit: int,
     ) -> list[VectorMatch]:
+        """Group matches client-side."""
+
         groups: dict[str, list[VectorMatch]] = {}
         for match in matches:
             payload: dict[str, Any] = dict(match.payload or {})
@@ -792,6 +814,8 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         group_by: str | None,
         grouping_applied: bool,
     ) -> list[VectorMatch]:
+        """Annotate matches with grouping metadata."""
+
         if not group_by:
             return matches
         for rank, match in enumerate(matches, start=1):
@@ -809,6 +833,8 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
     def _normalize_scores(
         self, matches: list[VectorMatch], *, enabled: bool | None
     ) -> list[VectorMatch]:  # pylint: disable=too-many-branches,too-many-return-statements
+        """Normalize match scores."""
+
         if not matches:
             return matches
 
@@ -885,6 +911,8 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         ]
 
     def _build_sync_client(self, cfg: Any) -> QdrantClient:
+        """Build the synchronous Qdrant client."""
+
         timeout = getattr(cfg, "timeout", 30)
         return QdrantClient(
             url=str(getattr(cfg, "url", "http://localhost:6333")),
@@ -906,6 +934,8 @@ def _document_to_match(
     document: Document,
     score: float,
 ) -> VectorMatch:
+    """Convert a document to a vector match."""
+
     payload: dict[str, Any] = dict(document.metadata or {})
     payload.setdefault("page_content", document.page_content)
     identifier = (
@@ -924,6 +954,8 @@ def _document_to_match(
 
 
 def _serialize_collection_info(info: Any) -> Mapping[str, Any]:
+    """Serialize collection info."""
+
     config = getattr(info, "config", None)
     payload_schema = (
         cast(dict[str, Any], getattr(config, "payload_schema", {})) if config else {}
@@ -942,12 +974,16 @@ def _serialize_collection_info(info: Any) -> Mapping[str, Any]:
 def _schema_matches(
     existing: Mapping[str, Any] | None, schema: models.PayloadSchemaType
 ) -> bool:
+    """Check if schema matches existing."""
+
     if not existing:
         return False
     return existing.get("type") == schema.value if isinstance(schema, Enum) else False
 
 
 def _distance_from_string(name: str) -> models.Distance:
+    """Convert distance name to enum."""
+
     mapping = {
         "cosine": models.Distance.COSINE,
         "dot": models.Distance.DOT,
@@ -958,6 +994,8 @@ def _distance_from_string(name: str) -> models.Distance:
 
 
 def _filter_from_mapping(filters: Mapping[str, Any] | None) -> models.Filter | None:
+    """Convert mapping to Qdrant filter."""
+
     if not filters:
         return None
     must_conditions = []

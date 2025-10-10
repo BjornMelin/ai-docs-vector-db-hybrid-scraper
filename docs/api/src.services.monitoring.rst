@@ -20,22 +20,6 @@ src.services.monitoring.initialization module
    :show-inheritance:
    :undoc-members:
 
-src.services.monitoring.metrics module
---------------------------------------
-
-.. automodule:: src.services.monitoring.metrics
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-src.services.monitoring.middleware module
------------------------------------------
-
-.. automodule:: src.services.monitoring.middleware
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 src.services.monitoring.performance\_monitor module
 ---------------------------------------------------
 

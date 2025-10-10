@@ -32,9 +32,9 @@ applications.
   Code.
 - Built-in API hardening with SlowAPI-powered global rate limiting configured
   through the `SecurityConfig` model and middleware stack.
-- Observability built in: Prometheus instrumentation, structured logging,
-  health checks, optional Dragonfly cache, and configuration-driven monitoring
-  (`src/services/monitoring/`).
+- Observability built in: OpenTelemetry tracing, structured logging, health
+  checks, optional Dragonfly cache, and `/metrics` exposure via
+  `prometheus-fastapi-instrumentator` (`src/services/observability/`).
 - Developer ergonomics with uv-managed environments, dependency-injector driven
   service wiring, Ruff + pytest quality gates, and a unified developer CLI
   (`scripts/dev.py`).
@@ -154,10 +154,62 @@ flowchart LR
 
 ### Observability & Operations
 
-- Prometheus metrics and health endpoints instrument both the API and MCP servers; see `config/prometheus.yml` and `docs/operators/monitoring.md`.
+- `/metrics` endpoints are exposed through
+  `prometheus-fastapi-instrumentator`, while OpenTelemetry spans capture
+  embedding, cache, and RAG pipeline telemetry; see
+  `docs/observability/embeddings_telemetry.md` and
+  `docs/operators/monitoring.md` for configuration details.
 - Health probes for system resources, Qdrant, Redis, and external services are centrally coordinated by the `HealthCheckManager` (`src/services/health/manager.py`), ensuring MCP tools and FastAPI dependencies share the same health state.
 - Optional Dragonfly cache, PostgreSQL, ARQ workers, and Grafana dashboards are provisioned via `docker-compose.yml` profiles.
 - Structured logging and SlowAPI-based rate limiting are configured through the middleware manager (`src/services/fastapi/middleware/manager.py`) and security helpers (`src/services/fastapi/middleware/security.py`).
+
+#### AI Telemetry Quickstart
+
+1. Enable OTLP export (set in `.env` or deployment secrets):
+   ```bash
+   export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4317"
+   export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer <token>"
+   ```
+2. Run an OpenTelemetry Collector that forwards spans/metrics to your backend:
+   ```yaml
+   receivers:
+     otlp:
+       protocols:
+         grpc:
+         http:
+   processors:
+     batch: {}
+   exporters:
+     prometheus:
+       endpoint: "0.0.0.0:9464"
+     otlp:
+       endpoint: "https://observability.example.com:4317"
+       headers:
+         authorization: "Bearer ${OBSERVABILITY_API_TOKEN}"
+   service:
+     pipelines:
+       metrics:
+         receivers: [otlp]
+         processors: [batch]
+         exporters: [prometheus, otlp]
+       traces:
+         receivers: [otlp]
+         processors: [batch]
+         exporters: [otlp]
+   ```
+3. Scrape `/metrics` with Prometheus (the collector exposes the OTLP pipeline
+   to Prometheus in the example above). Helpful PromQL snippets:
+   ```promql
+   sum by (model) (rate(ai_operation_tokens{operation="embedding"}[5m]))
+   sum by (operation) (increase(ai_operation_cost[1h]))
+   histogram_quantile(
+     0.95,
+     sum by (le) (rate(ai_operation_duration_bucket{operation="embedding"}[5m]))
+   )
+   ```
+4. Trace dashboards can group spans with `gen_ai.operation.name`,
+   `gen_ai.request.model`, and `gen_ai.usage.*` attributes to visualize
+   synchronous embeds versus asynchronous batch jobs.
 
 ### Security & Validation
 
