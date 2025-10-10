@@ -112,7 +112,7 @@ class SearchRecord(BaseModel):
         """Normalize a sequence of payloads into search records.
 
         Args:
-            payloads: Raw search results to normalise.
+            payloads: Raw search results to normalize.
             default_collection: Optional collection hint used when a payload does
                 not expose a collection value.
 
