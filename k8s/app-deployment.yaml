@@ -25,19 +25,9 @@ spec:
         ports:
         - containerPort: 8000
           name: http
-        env:
-        - name: AI_DOCS_VECTOR_DB__QDRANT_URL
-          value: "http://qdrant:6333"
-        - name: AI_DOCS_CACHE__REDIS_URL
-          value: "redis://dragonfly:6379"
-        - name: AI_DOCS_CACHE__REDIS_DATABASE
-          value: "0"
-        - name: AI_DOCS_LOG_LEVEL
-          value: "INFO"
-        - name: PYTHONPATH
-          value: "/app/src"
-        - name: AI_DOCS_MODE
-          value: "simple"  # Can be changed to 'enterprise'
+        envFrom:
+        - configMapRef:
+            name: ai-docs-config
         resources:
           requests:
             memory: "1Gi"

@@ -6,12 +6,11 @@ metadata:
   namespace: ai-docs-system
 
 resources:
-- namespace.yaml
-- configmap.yaml
-- qdrant-statefulset.yaml
-- dragonfly-deployment.yaml
-- app-deployment.yaml
-- worker-deployment.yaml
+  - namespace.yaml
+  - qdrant-statefulset.yaml
+  - dragonfly-deployment.yaml
+  - app-deployment.yaml
+  - worker-deployment.yaml
 
 # Common labels applied to all resources
 commonLabels:
@@ -27,20 +26,47 @@ commonAnnotations:
 
 # Image transformations (replace with your registry)
 images:
-- name: ai-docs-app
-  newName: your-registry.com/ai-docs-app
-  newTag: "v1.0.0"
-- name: ai-docs-worker
-  newName: your-registry.com/ai-docs-worker
-  newTag: "v1.0.0"
+  - name: ai-docs-app
+    newName: your-registry.com/ai-docs-app
+    newTag: "v1.0.0"
+  - name: ai-docs-worker
+    newName: your-registry.com/ai-docs-worker
+    newTag: "v1.0.0"
 
 # Resource patches for different environments
-patchesStrategicMerge:
-- patches/production-resources.yaml
+patches:
+  - path: patches/production-resources.yaml
 
-# Config map generator for environment-specific values
+# Config map generator for application configuration
 configMapGenerator:
-- name: ai-docs-env-config
-  literals:
-  - ENVIRONMENT=production
-  - DEBUG=false
+  - name: ai-docs-config
+    literals:
+      - ENVIRONMENT=production
+      - DEBUG=false
+      - AI_DOCS_MODE=simple
+      - AI_DOCS_LOG_LEVEL=INFO
+      - PYTHONPATH=/app/src
+      - AI_DOCS_VECTOR_DB__QDRANT_URL=http://qdrant:6333
+      - AI_DOCS_VECTOR_DB__COLLECTION_NAME=ai_docs
+      - AI_DOCS_VECTOR_DB__TIMEOUT=30
+      - AI_DOCS_CACHE__REDIS_URL=redis://dragonfly:6379
+      - AI_DOCS_CACHE__REDIS_DATABASE=0
+      - AI_DOCS_CACHE__TTL=3600
+      - AI_DOCS_TASK_QUEUE__REDIS_URL=redis://dragonfly:6379
+      - AI_DOCS_TASK_QUEUE__REDIS_DATABASE=1
+      - AI_DOCS_TASK_QUEUE__WORKER_POOL_SIZE=4
+      - AI_DOCS_SEARCH__MAX_RESULTS=100
+      - AI_DOCS_SEARCH__DEFAULT_LIMIT=20
+      - AI_DOCS_EMBEDDING__BATCH_SIZE=100
+      - AI_DOCS_SECURITY__RATE_LIMIT_ENABLED=true
+      - AI_DOCS_SECURITY__CORS_ENABLED=true
+      - AI_DOCS_SECURITY__ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8000,https://localhost:3000,https://localhost:8000
+
+secretGenerator:
+  - name: ai-docs-secrets
+    files:
+      - secrets/OPENAI_API_KEY
+      - secrets/ANTHROPIC_API_KEY
+      - secrets/DB_PASSWORD
+      - secrets/JWT_SECRET
+    type: Opaque

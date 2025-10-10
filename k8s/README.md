@@ -23,11 +23,10 @@ The deployment consists of:
 
 ## Quick Deployment
 
-### 1. Create Namespace and Base Resources
+### 1. Create Namespace
 
 ```bash
 kubectl apply -f namespace.yaml
-kubectl apply -f configmap.yaml
 ```
 
 ### 2. Deploy Storage Layer
@@ -50,18 +49,24 @@ kubectl apply -f app-deployment.yaml
 kubectl apply -f worker-deployment.yaml
 ```
 
-### 4. Update Secrets (Required)
+### 4. Create Local Secrets (Required)
 
-Before deploying, update the secrets in `configmap.yaml`:
+This project uses Kustomize to generate secrets from local files, which **must not** be committed to version control.
 
-```bash
-# Encode your API keys
-echo -n "your-openai-api-key" | base64
-echo -n "your-anthropic-api-key" | base64
+1.  Create a `secrets` directory inside the `k8s` directory:
+    ```bash
+    mkdir -p k8s/secrets
+    ```
 
-# Edit configmap.yaml and add the base64 values
-kubectl apply -f configmap.yaml
-```
+2.  Create a file for each required secret. The filename becomes the key in the Kubernetes Secret.
+    ```bash
+    # Create the files with your actual secret values
+    echo -n "your-openai-api-key" > k8s/secrets/OPENAI_API_KEY
+    echo -n "your-anthropic-api-key" > k8s/secrets/ANTHROPIC_API_KEY
+    echo -n "your-db-password" > k8s/secrets/DB_PASSWORD
+    echo -n "your-super-secret-jwt-token" > k8s/secrets/JWT_SECRET
+    ```
+    The `k8s/secrets/` directory is already listed in `.gitignore` to prevent accidental commits.
 
 ## Using Kustomize (Recommended)
 
@@ -168,22 +173,9 @@ kubectl get hpa -n ai-docs-system
 
 ## Configuration
 
-### Environment Variables
+All non-sensitive configuration is managed declaratively within the `kustomization.yaml` file under the `configMapGenerator` section. To change a configuration value (e.g., `AI_DOCS_LOG_LEVEL`), edit the `literals` in this file directly. This ensures a single source of truth for configuration across all components.
 
-Key configuration options in ConfigMap:
-
-- `AI_DOCS_MODE`: `simple` or `enterprise`
-- `AI_DOCS_LOG_LEVEL`: `DEBUG`, `INFO`, `WARNING`, `ERROR`
-- `AI_DOCS_VECTOR_DB__QDRANT_URL`: Qdrant connection URL
-- `AI_DOCS_CACHE__REDIS_URL`: Cache connection URL
-
-### Secrets
-
-Required secrets in `ai-docs-secrets`:
-
-- `OPENAI_API_KEY`: OpenAI API key
-- `ANTHROPIC_API_KEY`: Anthropic Claude API key
-- `JWT_SECRET`: JWT signing secret
+Required secrets are managed via the `secretGenerator` in `kustomization.yaml`. See the "Create Local Secrets (Required)" section for instructions on providing secret values locally.
 
 ## Troubleshooting
 
