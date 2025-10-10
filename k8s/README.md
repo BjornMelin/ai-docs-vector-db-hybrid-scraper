@@ -50,6 +50,8 @@ Run the Kustomize build so the generated ConfigMap (`ai-docs-config`) and Secret
 kubectl apply -k .
 ```
 
+> **Note:** This command is required because Kustomize adds a unique hash suffix to the generated ConfigMap and Secret. Applying the full stack ensures the deployments reference the correct generated resource names before any component starts.
+
 ### 3. (Optional) Apply Components Individually
 
 If you prefer to apply individual manifests (for example, during debugging), make sure the previous `kubectl apply -k .` command has already been run so the generated resources exist.

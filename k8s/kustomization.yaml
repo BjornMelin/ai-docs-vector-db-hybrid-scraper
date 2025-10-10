@@ -12,6 +12,9 @@ resources:
   - app-deployment.yaml
   - worker-deployment.yaml
 
+configurations:
+  - kustomizeconfig/envfrom-references.yaml
+
 # Common labels applied to all resources
 commonLabels:
   app.kubernetes.io/name: ai-docs-vector-db
@@ -36,6 +39,29 @@ images:
 # Resource patches for different environments
 patches:
   - path: patches/production-resources.yaml
+    target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: ai-docs-app
+  - path: patches/production-resources.yaml
+    target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: ai-docs-worker
+  - path: patches/production-resources.yaml
+    target:
+      group: apps
+      version: v1
+      kind: StatefulSet
+      name: qdrant
+  - path: patches/production-resources.yaml
+    target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: dragonfly
 
 # Config map generator for application configuration
 configMapGenerator:

@@ -1,0 +1,23 @@
+nameReference:
+  - kind: ConfigMap
+    version: v1
+    fieldSpecs:
+      - group: apps
+        version: v1
+        kind: Deployment
+        path: spec/template/spec/containers/envFrom/configMapRef/name
+      - group: apps
+        version: v1
+        kind: Deployment
+        path: spec/template/spec/initContainers/envFrom/configMapRef/name
+  - kind: Secret
+    version: v1
+    fieldSpecs:
+      - group: apps
+        version: v1
+        kind: Deployment
+        path: spec/template/spec/containers/envFrom/secretRef/name
+      - group: apps
+        version: v1
+        kind: Deployment
+        path: spec/template/spec/initContainers/envFrom/secretRef/name
