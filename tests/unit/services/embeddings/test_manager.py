@@ -107,8 +107,8 @@ class TestEmbeddingManagerInitialization:
             await manager.initialize()
 
             assert manager._initialized
-            assert "openai" in manager.providers
-            assert "fastembed" in manager.providers
+            assert "openai" in manager._provider_registry.providers
+            assert "fastembed" in manager._provider_registry.providers
 
             # Verify OpenAI client was passed to provider
             mock_openai_provider.assert_called_once()
@@ -136,8 +136,8 @@ class TestEmbeddingManagerInitialization:
             await manager.initialize()
 
             assert manager._initialized
-            assert "openai" not in manager.providers
-            assert "fastembed" in manager.providers
+            assert "openai" not in manager._provider_registry.providers
+            assert "fastembed" in manager._provider_registry.providers
 
     @pytest.mark.asyncio
     async def test_initialization_no_providers_available(
@@ -210,12 +210,12 @@ class TestEmbeddingManagerInitialization:
 
             # Add mock providers
             mock_provider = AsyncMock()
-            embedding_manager.providers["test"] = mock_provider
+            embedding_manager._provider_registry.providers["test"] = mock_provider
 
             await embedding_manager.cleanup()
 
             assert not embedding_manager._initialized
-            assert len(embedding_manager.providers) == 0
+            assert len(embedding_manager._provider_registry.providers) == 0
             mock_provider.cleanup.assert_called_once()
 
 
@@ -285,7 +285,7 @@ class TestEmbeddingManagerProviderSelection:
     async def test_get_provider_instance_by_name(self, embedding_manager):
         """Test getting provider by name."""
         mock_provider = AsyncMock()
-        embedding_manager.providers["openai"] = mock_provider
+        embedding_manager._provider_registry.providers["openai"] = mock_provider
 
         result = embedding_manager._provider_registry.resolve("openai", None)
 
@@ -296,8 +296,10 @@ class TestEmbeddingManagerProviderSelection:
         """Test getting provider by quality tier."""
         mock_openai_provider = AsyncMock()
         mock_fastembed_provider = AsyncMock()
-        embedding_manager.providers["openai"] = mock_openai_provider
-        embedding_manager.providers["fastembed"] = mock_fastembed_provider
+        embedding_manager._provider_registry.providers["openai"] = mock_openai_provider
+        embedding_manager._provider_registry.providers["fastembed"] = (
+            mock_fastembed_provider
+        )
 
         # Test BEST tier should prefer OpenAI
         result = embedding_manager._provider_registry.resolve(None, QualityTier.BEST)
@@ -319,7 +321,7 @@ class TestEmbeddingManagerProviderSelection:
     async def test_get_provider_instance_fallback(self, embedding_manager):
         """Test fallback when preferred provider unavailable."""
         mock_provider = AsyncMock()
-        embedding_manager.providers["fastembed"] = mock_provider
+        embedding_manager._provider_registry.providers["fastembed"] = mock_provider
 
         # Request OpenAI (BEST tier) but only FastEmbed available
         result = embedding_manager._provider_registry.resolve(None, QualityTier.BEST)
@@ -405,7 +407,7 @@ class TestEmbeddingManagerCostEstimation:
 
         mock_provider = AsyncMock()
         mock_provider.cost_per_token = 0.0001
-        embedding_manager.providers["test"] = mock_provider
+        embedding_manager._provider_registry.providers["test"] = mock_provider
 
         result = embedding_manager.estimate_cost(["test text with multiple words"])
 
@@ -421,7 +423,7 @@ class TestEmbeddingManagerCostEstimation:
 
         mock_provider = AsyncMock()
         mock_provider.cost_per_token = 0.0002
-        embedding_manager.providers["openai"] = mock_provider
+        embedding_manager._provider_registry.providers["openai"] = mock_provider
 
         result = embedding_manager.estimate_cost(["test"], provider_name="openai")
 
@@ -439,7 +441,7 @@ class TestEmbeddingManagerProviderInfo:
         mock_provider.dimensions = 1536
         mock_provider.cost_per_token = 0.0001
         mock_provider.max_tokens_per_request = 8191
-        embedding_manager.providers["test"] = mock_provider
+        embedding_manager._provider_registry.providers["test"] = mock_provider
 
         info = embedding_manager.get_provider_info()
 
@@ -465,8 +467,8 @@ class TestEmbeddingManagerProviderInfo:
         mock_fastembed = AsyncMock()
         mock_fastembed.cost_per_token = 0.0
 
-        embedding_manager.providers["openai"] = mock_openai
-        embedding_manager.providers["fastembed"] = mock_fastembed
+        embedding_manager._provider_registry.providers["openai"] = mock_openai
+        embedding_manager._provider_registry.providers["fastembed"] = mock_fastembed
 
         result = await embedding_manager.get_optimal_provider(
             text_length=1000, quality_required=True
@@ -488,8 +490,8 @@ class TestEmbeddingManagerProviderInfo:
             0.00001  # Very cheap - 1000/4 * 0.00001 = 0.0025 cost
         )
 
-        embedding_manager.providers["expensive"] = mock_expensive
-        embedding_manager.providers["cheap"] = mock_cheap
+        embedding_manager._provider_registry.providers["expensive"] = mock_expensive
+        embedding_manager._provider_registry.providers["cheap"] = mock_cheap
 
         result = await embedding_manager.get_optimal_provider(
             text_length=1000,
@@ -505,7 +507,7 @@ class TestEmbeddingManagerProviderInfo:
 
         mock_expensive = AsyncMock()
         mock_expensive.cost_per_token = 1.0
-        embedding_manager.providers["expensive"] = mock_expensive
+        embedding_manager._provider_registry.providers["expensive"] = mock_expensive
 
         with pytest.raises(
             EmbeddingServiceError, match="No provider available within budget"
@@ -634,7 +636,7 @@ class TestEmbeddingManagerSmartSelection:
         mock_fastembed = AsyncMock()
         mock_fastembed.model_name = "BAAI/bge-small-en-v1.5"
 
-        embedding_manager.providers = {
+        embedding_manager._provider_registry.providers = {
             "openai": mock_openai,
             "fastembed": mock_fastembed,
         }
@@ -809,7 +811,7 @@ class TestEmbeddingManagerAdvancedFeatures:
         mock_provider.generate_embeddings.return_value = [[0.2] * 1536]
         mock_provider.cost_per_token = 0.0
         mock_provider.model_name = "BAAI/bge-small-en-v1.5"
-        embedding_manager.providers = {"fastembed": mock_provider}
+        embedding_manager._provider_registry.providers = {"fastembed": mock_provider}
 
         # Avoid budget mock interactions returning MagicMock instances
         if hasattr(embedding_manager._smart_config, "daily_budget_limit"):
@@ -837,7 +839,7 @@ class TestEmbeddingManagerAdvancedFeatures:
         mock_provider.generate_sparse_embeddings = AsyncMock(
             return_value=[{0: 0.5, 1: 0.3}]
         )
-        embedding_manager.providers = {"test": mock_provider}
+        embedding_manager._provider_registry.providers = {"test": mock_provider}
 
         expected = {
             "embeddings": [[0.1] * 1536],

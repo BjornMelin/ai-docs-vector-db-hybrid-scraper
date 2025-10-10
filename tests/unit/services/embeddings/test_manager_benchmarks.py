@@ -294,7 +294,7 @@ class TestEmbeddingManagerBenchmarks:
         mock_openai_provider.model_name = "high-quality-model"
         mock_local_provider = MagicMock()
         mock_local_provider.model_name = "fast-cheap-model"
-        manager.providers = {
+        manager._provider_registry.providers = {
             "openai": mock_openai_provider,
             "fastembed": mock_local_provider,
         }
