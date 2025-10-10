@@ -15,18 +15,20 @@ Relies on the project's VectorStoreService and existing Pydantic schemas.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections import OrderedDict
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from fastmcp import Context
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.config.models import SearchStrategy
 from src.contracts.retrieval import SearchRecord
-from src.mcp_tools.tools._shared import ensure_vector_service
 from src.models.search import SearchRequest as CoreSearchRequest
+from src.services.dependencies import get_vector_store_service
+from src.services.vector_db.service import VectorStoreService
 
 
 logger = logging.getLogger(__name__)
@@ -54,12 +56,6 @@ class MultiStageSearchPayload(BaseModel):
     )
 
     model_config = ConfigDict(extra="forbid")
-
-
-if TYPE_CHECKING:  # pragma: no cover - typing only
-    from src.infrastructure.client_manager import ClientManager
-else:  # pragma: no cover - runtime alias for tooling
-    ClientManager = Any
 
 
 def _dedupe_by_id(matches: Iterable[SearchRecord]) -> list[SearchRecord]:
@@ -95,15 +91,34 @@ def _rrf_rank(matches: list[SearchRecord], *, k: int = 60) -> list[SearchRecord]
     return [record for _, record in scored]
 
 
+async def _resolve_vector_service(
+    vector_service: VectorStoreService | None = None,
+) -> VectorStoreService:
+    """Return an initialized vector service."""
+
+    if vector_service is not None:
+        if (
+            hasattr(vector_service, "is_initialized")
+            and not vector_service.is_initialized()
+        ):
+            initializer = getattr(vector_service, "initialize", None)
+            if callable(initializer):
+                result = initializer()
+                if asyncio.iscoroutine(result):
+                    await result
+        return vector_service
+    return await get_vector_store_service()
+
+
 async def _search_matches(
-    client_manager: ClientManager,
     request: CoreSearchRequest,
     *,
+    vector_service: VectorStoreService | None = None,
     ctx: Context | None = None,
 ) -> list[SearchRecord]:
     """Run a vector search and return the raw matches."""
 
-    service = await ensure_vector_service(client_manager)
+    service = await _resolve_vector_service(vector_service)
     collection_value = request.collection or "documentation"
     if ctx:
         strategy_value = (
@@ -132,8 +147,18 @@ async def _search_matches(
     return matches
 
 
-def register_tools(mcp, client_manager: ClientManager) -> None:
-    """Register unified retrieval tools."""
+def register_tools(
+    mcp,
+    vector_service: VectorStoreService | None = None,
+) -> None:
+    """Register unified retrieval tools.
+
+    Args:
+        mcp: FastMCP server instance.
+        vector_service: Optional pre-resolved vector service for testing or
+            specialised setups. When omitted, the service is fetched from the
+            dependency-injector container.
+    """
 
     @mcp.tool()
     async def search_documents(
@@ -141,7 +166,7 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
     ) -> list[SearchRecord]:
         """Execute a single-stage search."""
 
-        matches = await _search_matches(client_manager, request, ctx=ctx)
+        matches = await _search_matches(request, vector_service=vector_service, ctx=ctx)
         return _maybe_strip_metadata(
             matches[: request.limit], include_metadata=request.include_metadata
         )
@@ -155,7 +180,9 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
         normalized_request = request.model_copy(
             update={"search_strategy": SearchStrategy.HYBRID}
         )
-        matches = await _search_matches(client_manager, normalized_request, ctx=ctx)
+        matches = await _search_matches(
+            normalized_request, vector_service=vector_service, ctx=ctx
+        )
         return _maybe_strip_metadata(
             matches[: normalized_request.limit],
             include_metadata=normalized_request.include_metadata,
@@ -167,7 +194,7 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
     ) -> list[SearchRecord]:
         """Execute a simplified multi‑stage search."""
 
-        service = await ensure_vector_service(client_manager)
+        service = await _resolve_vector_service(vector_service)
         all_matches: list[SearchRecord] = []
 
         for stage in payload.stages:
@@ -214,7 +241,9 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
                 "search_strategy": SearchStrategy.HYBRID,
             }
         )
-        matches = await _search_matches(client_manager, base_request, ctx=ctx)
+        matches = await _search_matches(
+            base_request, vector_service=vector_service, ctx=ctx
+        )
         return _maybe_strip_metadata(
             matches[:extended_limit], include_metadata=include_metadata
         )
@@ -231,7 +260,7 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
     ) -> list[SearchRecord]:
         """Recommend documents similar to a given point."""
 
-        service = await ensure_vector_service(client_manager)
+        service = await _resolve_vector_service(vector_service)
         payload = await service.get_document(collection, point_id)
         if payload is None:
             msg = f"document {point_id} not found in {collection}"
@@ -257,7 +286,7 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
     ) -> list[SearchRecord]:
         """Search then apply RRF scoring for shallow reranking."""
 
-        service = await ensure_vector_service(client_manager)
+        service = await _resolve_vector_service(vector_service)
         collection_value = request.collection or "documentation"
         baseline = await service.search_documents(
             collection_value,
@@ -279,7 +308,7 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
     ) -> dict[str, Any]:
         """Scroll a collection with pagination."""
 
-        service = await ensure_vector_service(client_manager)
+        service = await _resolve_vector_service(vector_service)
         docs, next_off = await service.list_documents(
             collection, limit=limit, offset=offset
         )

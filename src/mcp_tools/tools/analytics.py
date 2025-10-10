@@ -9,37 +9,50 @@ from typing import Any
 
 from fastmcp import Context
 
-from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.models.requests import AnalyticsRequest
 from src.mcp_tools.models.responses import (
     AnalyticsResponse,
     SystemHealthResponse,
     SystemHealthServiceStatus,
 )
+from src.services.dependencies import get_vector_store_service
 from src.services.vector_db.service import VectorStoreService
 
 
 logger = logging.getLogger(__name__)
-_VECTOR_SERVICE_INIT_LOCK = asyncio.Lock()
 _ESTIMATE_DIMENSIONS = 1536
 _BYTES_PER_FLOAT32 = 4
 
 
-async def _get_vector_service(client_manager: ClientManager) -> VectorStoreService:
-    svc = await client_manager.get_vector_store_service()
-    if not svc.is_initialized():
-        async with _VECTOR_SERVICE_INIT_LOCK:
-            if not svc.is_initialized():
-                await svc.initialize()
-    return svc
+async def _resolve_vector_service(
+    vector_service: VectorStoreService | None = None,
+) -> VectorStoreService:
+    """Return an initialized vector service, resolving from container when needed."""
+
+    if vector_service is not None:
+        if (
+            hasattr(vector_service, "is_initialized")
+            and not vector_service.is_initialized()
+        ):
+            initializer = getattr(vector_service, "initialize", None)
+            if callable(initializer):
+                result = initializer()
+                if asyncio.iscoroutine(result):
+                    await result
+        return vector_service
+    return await get_vector_store_service()
 
 
 def _timestamp() -> str:
+    """Return the current UTC timestamp in ISO 8601 format."""
+
     ts = datetime.now(tz=UTC).isoformat()
     return ts.replace("+00:00", "Z")
 
 
 def _normalize_stats(stats: Any) -> dict[str, Any]:
+    """Normalize stats payload into a plain dictionary."""
+
     if isinstance(stats, dict):
         return stats
     for attr in ("model_dump", "dict"):
@@ -51,26 +64,36 @@ def _normalize_stats(stats: Any) -> dict[str, Any]:
     raise TypeError(f"Unsupported stats payload type: {type(stats)!r}")
 
 
-def register_tools(mcp, client_manager: ClientManager) -> None:
-    """Register analytics tools."""
+def register_tools(
+    mcp,
+    vector_service: VectorStoreService | None = None,
+) -> None:
+    """Register analytics tools.
+
+    Args:
+        mcp: FastMCP server instance used for tool registration.
+        vector_service: Optional pre-resolved vector service. When omitted, the
+            service is resolved from the dependency-injector container.
+    """
 
     @mcp.tool()
     async def get_analytics(
         request: AnalyticsRequest, ctx: Context | None = None
     ) -> AnalyticsResponse:
         """Return lightweight analytics for vector collections."""
-        vector_service = await _get_vector_service(client_manager)
+
+        service = await _resolve_vector_service(vector_service)
         collections = (
             [request.collection]
             if request.collection
-            else await vector_service.list_collections()
+            else await service.list_collections()
         )
 
         collection_stats: dict[str, dict[str, Any]] = {}
 
         async def _fetch(name: str) -> None:
             try:
-                stats = await vector_service.collection_stats(name)
+                stats = await service.collection_stats(name)
                 collection_stats[name] = _normalize_stats(stats)
             except (ValueError, RuntimeError) as exc:
                 logger.warning("Analytics failed for %s: %s", name, exc)
@@ -115,8 +138,8 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
         overall_status = "healthy"
 
         try:
-            vector_service = await _get_vector_service(client_manager)
-            await vector_service.list_collections()
+            service = await _resolve_vector_service(vector_service)
+            await service.list_collections()
             if ctx:
                 await ctx.info("Vector store service responded successfully")
         except Exception as exc:  # pragma: no cover - defensive guard

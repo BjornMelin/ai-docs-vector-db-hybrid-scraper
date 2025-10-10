@@ -4,18 +4,21 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from uuid import uuid4
 
 from fastmcp import Context
 
+from services.vector_db.service import VectorStoreService
 from src.config.models import SearchStrategy
 from src.contracts.retrieval import SearchRecord
 from src.mcp_tools.models.requests import ProjectRequest
 from src.mcp_tools.models.responses import OperationStatus, ProjectInfo
-from src.mcp_tools.tools._shared import ensure_vector_service
+from src.services.core.project_storage import ProjectStorage
+from src.services.dependencies import get_project_storage, get_vector_store_service
 from src.services.vector_db.types import CollectionSchema
 
 
@@ -37,11 +40,30 @@ def _collection_schema(collection: str, tier: str) -> CollectionSchema:
     return CollectionSchema(name=collection, vector_size=vector_size, distance="cosine")
 
 
-if TYPE_CHECKING:
-    from src.infrastructure.client_manager import ClientManager
+async def _resolve_vector_service(vector_service: Any | None = None):
+    """Return an initialized vector service instance."""
+
+    service = vector_service or await get_vector_store_service()
+    if hasattr(service, "is_initialized") and not service.is_initialized():
+        initializer = getattr(service, "initialize", None)
+        if callable(initializer):
+            result = initializer()
+            if asyncio.iscoroutine(result):
+                await result
+    return service
 
 
-def register_tools(mcp, client_manager: ClientManager) -> None:
+async def _resolve_project_storage(storage: Any | None = None):
+    """Return the project storage instance."""
+
+    return await get_project_storage(storage)
+
+
+def register_tools(
+    mcp,
+    vector_service: VectorStoreService | None = None,
+    project_storage: ProjectStorage | None = None,
+) -> None:
     """Register project management tools with the MCP server."""
 
     @mcp.tool()
@@ -50,13 +72,13 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
     ) -> ProjectInfo:
         """Create a new project with a dedicated vector collection."""
 
-        project_storage = await client_manager.get_project_storage()
-        vector_service = await ensure_vector_service(client_manager)
+        storage = await _resolve_project_storage(project_storage)
+        service = await _resolve_vector_service(vector_service)
 
         project_id = str(uuid4())
         collection_name = f"project_{project_id}"
         schema = _collection_schema(collection_name, request.quality_tier)
-        await vector_service.ensure_collection(schema)
+        await service.ensure_collection(schema)
 
         project_record: dict[str, Any] = {
             "id": project_id,
@@ -67,7 +89,7 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
             "urls": request.urls or [],
             "created_at": _timestamp(),
         }
-        await project_storage.save_project(project_id, project_record)
+        await storage.save_project(project_id, project_record)
 
         if ctx:
             await ctx.info(
@@ -80,16 +102,16 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
     async def list_projects(ctx: Context | None = None) -> list[ProjectInfo]:
         """Return all projects with lightweight collection statistics."""
 
-        project_storage = await client_manager.get_project_storage()
-        vector_service = await ensure_vector_service(client_manager)
+        storage = await _resolve_project_storage(project_storage)
+        service = await _resolve_vector_service(vector_service)
 
-        projects = await project_storage.list_projects()
+        projects = await storage.list_projects()
         enriched: list[ProjectInfo] = []
         for project in projects:
             collection = project.get("collection")
             if collection:
                 try:
-                    stats = await vector_service.collection_stats(collection)
+                    stats = await service.collection_stats(collection)
                     project.setdefault("stats", dict(stats))
                 except Exception as exc:  # pragma: no cover - service errors
                     logger.warning(
@@ -113,8 +135,8 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
     ) -> ProjectInfo:
         """Update basic project metadata."""
 
-        project_storage = await client_manager.get_project_storage()
-        project = await project_storage.get_project(project_id)
+        storage = await _resolve_project_storage(project_storage)
+        project = await storage.get_project(project_id)
         if not project:
             msg = f"Project {project_id} not found"
             raise ValueError(msg)
@@ -127,7 +149,7 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
             project["description"] = description
             updates["description"] = description
         if updates:
-            await project_storage.update_project(project_id, updates)
+            await storage.update_project(project_id, updates)
             if ctx:
                 changed_fields = ", ".join(updates.keys())
                 await ctx.info(
@@ -143,16 +165,16 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
     ) -> OperationStatus:
         """Delete a project record and optionally drop its vector collection."""
 
-        project_storage = await client_manager.get_project_storage()
-        project = await project_storage.get_project(project_id)
+        storage = await _resolve_project_storage(project_storage)
+        project = await storage.get_project(project_id)
         if not project:
             msg = f"Project {project_id} not found"
             raise ValueError(msg)
 
         collection_name = project.get("collection")
         if delete_collection and collection_name:
-            vector_service = await ensure_vector_service(client_manager)
-            await vector_service.drop_collection(collection_name)
+            service = await _resolve_vector_service(vector_service)
+            await service.drop_collection(collection_name)
             if ctx:
                 message = (
                     f"Dropped vector collection '{collection_name}' for project "
@@ -160,7 +182,7 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
                 )
                 await ctx.debug(message)
 
-        await project_storage.delete_project(project_id)
+        await storage.delete_project(project_id)
         if ctx:
             await ctx.info(f"Deleted project {project_id}")
 
@@ -179,8 +201,8 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
     ) -> list[SearchRecord]:
         """Search within a project's dedicated collection."""
 
-        project_storage = await client_manager.get_project_storage()
-        project = await project_storage.get_project(project_id)
+        storage = await _resolve_project_storage(project_storage)
+        project = await storage.get_project(project_id)
         if not project:
             msg = f"Project {project_id} not found"
             raise ValueError(msg)
@@ -190,8 +212,8 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
             msg = f"Project {project_id} is missing a collection reference"
             raise ValueError(msg)
 
-        vector_service = await ensure_vector_service(client_manager)
-        records = await vector_service.search_documents(
+        service = await _resolve_vector_service(vector_service)
+        records = await service.search_documents(
             collection,
             query,
             limit=limit,

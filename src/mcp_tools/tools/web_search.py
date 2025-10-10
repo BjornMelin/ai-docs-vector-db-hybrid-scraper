@@ -6,7 +6,6 @@ from typing import Any, Literal
 
 from fastmcp import Context
 
-from src.infrastructure.client_manager import ClientManager
 from src.security.ml_security import MLSecurityValidator
 
 
@@ -19,10 +18,8 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-def register_tools(mcp, client_manager: ClientManager) -> None:
+def register_tools(mcp) -> None:
     """Register Tavily-powered web search tools."""
-
-    del client_manager  # Client manager not required for Tavily-backed tools.
 
     @mcp.tool()
     async def web_search(  # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
@@ -50,6 +47,7 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
         Returns:
             Search results with URLs, content, scores
         """
+
         try:
             if ctx:
                 await ctx.info(f"Web search: '{query}' (depth={search_depth})")
@@ -126,6 +124,7 @@ def register_tools(mcp, client_manager: ClientManager) -> None:
         Returns:
             Detailed search results with full content
         """
+
         try:
             if ctx:
                 await ctx.info(f"Advanced search: '{query}'")

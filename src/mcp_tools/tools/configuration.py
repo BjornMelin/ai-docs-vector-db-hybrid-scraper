@@ -12,7 +12,7 @@ from typing import Any, cast
 from fastmcp import Context
 
 from src.config.loader import Settings, get_settings as load_unified_config
-from src.infrastructure.client_manager import ClientManager
+from src.services.dependencies import get_vector_store_service
 
 
 logger = logging.getLogger(__name__)
@@ -79,7 +79,7 @@ def _collect_provider_warnings(config: Settings) -> list[str]:
 
 
 async def _grouping_support_status(
-    config: Settings, client_manager: ClientManager
+    config: Settings,
 ) -> tuple[list[str], bool | None]:
     """Check QueryPointGroups readiness and emit warnings if required."""
 
@@ -87,7 +87,7 @@ async def _grouping_support_status(
     if not getattr(qdrant_settings, "enable_grouping", False):
         return [], None
 
-    grouping_supported = await _probe_grouping_support(client_manager)
+    grouping_supported = await _probe_grouping_support()
     if grouping_supported is False:
         return [
             "QueryPointGroups requested but backend lacks support; grouping will "
@@ -139,11 +139,11 @@ def _resolve_key(config: Settings, key: str) -> Any:
     return current
 
 
-async def _probe_grouping_support(client_manager: ClientManager) -> bool | None:
+async def _probe_grouping_support() -> bool | None:
     """Detect whether the active vector service supports QueryPointGroups."""
 
     try:
-        vector_service = await client_manager.get_vector_store_service()
+        vector_service = await get_vector_store_service()
         server_side_probe = getattr(
             vector_service, "supports_server_side_grouping", None
         )
@@ -166,7 +166,7 @@ async def _probe_grouping_support(client_manager: ClientManager) -> bool | None:
     return None
 
 
-def register_tools(mcp, client_manager: ClientManager):
+def register_tools(mcp):
     """Register configuration management tools."""
 
     config_loader = load_unified_config
@@ -216,7 +216,7 @@ def register_tools(mcp, client_manager: ClientManager):
             issues: list[str] = []
             warnings = _collect_provider_warnings(config)
             grouping_warnings, grouping_supported = await _grouping_support_status(
-                config, client_manager
+                config
             )
             warnings.extend(grouping_warnings)
 

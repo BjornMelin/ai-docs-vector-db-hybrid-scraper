@@ -13,14 +13,14 @@ from uuid import uuid4
 from fastmcp import Context
 from qdrant_client import models
 
-from src.infrastructure.client_manager import ClientManager
+from src.contracts.retrieval import SearchRecord
 from src.mcp_tools.models.responses import (
     GenericDictResponse,
     ReindexCollectionResponse,
 )
 from src.security.ml_security import MLSecurityValidator
-
-from ._shared import search_record_to_dict
+from src.services.dependencies import get_vector_store_service
+from src.services.vector_db.service import VectorStoreService
 
 
 logger = logging.getLogger(__name__)
@@ -34,18 +34,53 @@ _INDEX_DEFINITIONS: dict[str, models.PayloadSchemaType] = {
     "crawl_timestamp": models.PayloadSchemaType.DATETIME,
 }
 
-_VECTOR_SERVICE_INIT_LOCK = asyncio.Lock()
 
+async def _resolve_vector_service(
+    vector_service: VectorStoreService | None = None,
+) -> VectorStoreService:
+    """Return an initialized vector service instance."""
 
-async def _get_vector_service(client_manager: ClientManager):
-    """Return an initialized VectorStoreService instance."""
-
-    service = await client_manager.get_vector_store_service()
-    if not service.is_initialized():
-        async with _VECTOR_SERVICE_INIT_LOCK:
-            if not service.is_initialized():
-                await service.initialize()
+    service = vector_service or await get_vector_store_service()
+    if hasattr(service, "is_initialized") and not service.is_initialized():
+        initializer = getattr(service, "initialize", None)
+        if callable(initializer):
+            result = initializer()
+            if asyncio.iscoroutine(result):
+                await result
     return service
+
+
+def _record_to_dict(record: SearchRecord) -> dict[str, Any]:
+    """Serialize a search record into a plain dictionary."""
+
+    payload: dict[str, Any] = {
+        "id": record.id,
+        "score": record.score,
+    }
+
+    if record.content:
+        payload["content"] = record.content
+    if record.title is not None:
+        payload["title"] = record.title
+    if record.url is not None:
+        payload["url"] = record.url
+    if record.collection is not None:
+        payload["collection"] = record.collection
+    if record.normalized_score is not None:
+        payload["normalized_score"] = record.normalized_score
+    if record.raw_score is not None:
+        payload["raw_score"] = record.raw_score
+    if record.group_id is not None:
+        payload["group_id"] = record.group_id
+    if record.group_rank is not None:
+        payload["group_rank"] = record.group_rank
+    if record.grouping_applied is not None:
+        payload["grouping_applied"] = record.grouping_applied
+    if record.content_type is not None:
+        payload["content_type"] = record.content_type
+
+    payload["metadata"] = dict(record.metadata or {})
+    return payload
 
 
 def _normalise_summary(
@@ -74,7 +109,10 @@ def _normalise_summary(
     return GenericDictResponse.model_validate(payload)
 
 
-def register_tools(mcp, client_manager: ClientManager):
+def register_tools(
+    mcp,
+    vector_service: VectorStoreService | None = None,
+) -> None:
     """Register payload indexing helpers with the MCP server."""
 
     validator = MLSecurityValidator.from_unified_config()
@@ -91,7 +129,7 @@ def register_tools(mcp, client_manager: ClientManager):
         )
 
         safe_name = validator.validate_collection_name(collection_name)
-        service = await _get_vector_service(client_manager)
+        service = await _resolve_vector_service(vector_service)
         collections = await service.list_collections()
         if safe_name not in collections:
             msg = f"Collection '{safe_name}' not found"
@@ -108,8 +146,10 @@ def register_tools(mcp, client_manager: ClientManager):
         collection_name: str,
         ctx: Context,
     ) -> GenericDictResponse:
+        """List existing payload indexes for a collection."""
+
         safe_name = validator.validate_collection_name(collection_name)
-        service = await _get_vector_service(client_manager)
+        service = await _resolve_vector_service(vector_service)
         summary = await service.get_payload_index_summary(safe_name)
         count = summary["indexed_fields_count"]
         await ctx.info(f"Collection {safe_name} exposes {count} payload indexes")
@@ -120,6 +160,8 @@ def register_tools(mcp, client_manager: ClientManager):
         collection_name: str,
         ctx: Context,
     ) -> ReindexCollectionResponse:
+        """Reindex payload fields for an existing collection."""
+
         request_id = str(uuid4())
         await ctx.info(
             "Reindexing payload fields for collection: "
@@ -127,7 +169,7 @@ def register_tools(mcp, client_manager: ClientManager):
         )
 
         safe_name = validator.validate_collection_name(collection_name)
-        service = await _get_vector_service(client_manager)
+        service = await _resolve_vector_service(vector_service)
 
         before = await service.get_payload_index_summary(safe_name)
         await service.drop_payload_indexes(safe_name, _INDEX_DEFINITIONS.keys())
@@ -155,6 +197,8 @@ def register_tools(mcp, client_manager: ClientManager):
         query: str = "documentation search test",
         ctx: Context | None = None,
     ) -> GenericDictResponse:
+        """Benchmark filtered search performance on a collection."""
+
         if ctx:
             await ctx.info(
                 "Benchmarking filtered search on %s",  # type: ignore[arg-type]
@@ -164,7 +208,7 @@ def register_tools(mcp, client_manager: ClientManager):
         safe_name = validator.validate_collection_name(collection_name)
         clean_query = validator.validate_query_string(query)
 
-        service = await _get_vector_service(client_manager)
+        service = await _resolve_vector_service(vector_service)
 
         start = perf_counter()
         matches = await service.search_documents(
@@ -175,9 +219,7 @@ def register_tools(mcp, client_manager: ClientManager):
         )
         elapsed_ms = (perf_counter() - start) * 1000
 
-        results = [
-            search_record_to_dict(match, include_metadata=True) for match in matches
-        ]
+        results = [_record_to_dict(match) for match in matches]
 
         stats = await service.collection_stats(safe_name)
         summary = await service.get_payload_index_summary(safe_name)

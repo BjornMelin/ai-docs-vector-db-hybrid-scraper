@@ -6,7 +6,7 @@ import logging
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from fastmcp import Context
 
@@ -16,10 +16,7 @@ from src.mcp_tools.models.responses import (
     EmbeddingProviderInfo,
 )
 from src.mcp_tools.utils.provider_metadata import normalize_provider_catalog
-
-
-if TYPE_CHECKING:
-    from src.infrastructure.client_manager import ClientManager
+from src.services.dependencies import get_embedding_manager
 
 
 logger = logging.getLogger(__name__)
@@ -37,7 +34,16 @@ _PROVIDER_CACHE_TTL = timedelta(seconds=300)
 _PROVIDER_CACHE = _ProviderCacheState()
 
 
-def register_tools(mcp, client_manager: ClientManager):
+async def _resolve_embedding_manager(embedding_manager: Any | None = None) -> Any:
+    """Return the embedding manager instance."""
+
+    return await get_embedding_manager(embedding_manager)
+
+
+def register_tools(
+    mcp,
+    embedding_manager: Any | None = None,
+) -> None:
     """Register embedding management tools with the MCP server."""
 
     @mcp.tool()
@@ -46,9 +52,10 @@ def register_tools(mcp, client_manager: ClientManager):
     ) -> EmbeddingGenerationResponse:
         """Generate embeddings using the optimal provider.
 
-        Automatically selects the best embedding model based on cost,
+        Auto-selects the best embedding model based on cost,
         performance, and availability.
         """
+
         if ctx:
             await ctx.info(
                 f"Generating embeddings for {len(request.texts)} texts using model: "
@@ -56,8 +63,8 @@ def register_tools(mcp, client_manager: ClientManager):
             )
 
         try:
-            # Get embedding manager from client manager
-            embedding_manager = await client_manager.get_embedding_manager()
+            # Get embedding manager from DI container or override
+            manager = await _resolve_embedding_manager(embedding_manager)
 
             if ctx:
                 await ctx.debug(
@@ -66,7 +73,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 )
 
             # Generate embeddings
-            result = await embedding_manager.generate_embeddings(
+            result = await manager.generate_embeddings(
                 texts=request.texts,
                 provider_name=request.model,
                 generate_sparse=request.generate_sparse,
@@ -75,7 +82,7 @@ def register_tools(mcp, client_manager: ClientManager):
             provider_name = str(result.get("provider", "unknown"))
 
             cost_estimate = _safe_estimate_cost(
-                embedding_manager,
+                manager,
                 request.texts,
                 provider_name,
             )
@@ -127,14 +134,15 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns information about supported models, costs, and current status.
         """
+
         if ctx:
             await ctx.info("Retrieving available embedding providers")
 
         try:
-            # Get embedding manager from client manager
-            embedding_manager = await client_manager.get_embedding_manager()
+            # Get embedding manager from DI container or override
+            manager = await _resolve_embedding_manager(embedding_manager)
 
-            providers = _get_normalized_providers(embedding_manager)
+            providers = _get_normalized_providers(manager)
 
             if ctx:
                 await ctx.info(f"Found {len(providers)} available embedding providers")
