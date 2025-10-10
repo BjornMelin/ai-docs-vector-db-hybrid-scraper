@@ -23,13 +23,6 @@ def mock_vector_service() -> Mock:
 
 
 @pytest.fixture
-def mock_client_manager(mock_vector_service: Mock) -> Mock:
-    manager = Mock()
-    manager.get_vector_store_service = AsyncMock(return_value=mock_vector_service)
-    return manager
-
-
-@pytest.fixture
 def mock_context() -> Mock:
     ctx = Mock()
     ctx.info = AsyncMock()
@@ -38,7 +31,7 @@ def mock_context() -> Mock:
 
 
 @pytest.fixture
-async def registered_tools(mock_client_manager: Mock) -> dict[str, Callable]:
+async def registered_tools(mock_vector_service: Mock) -> dict[str, Callable]:
     mock_mcp = MagicMock()
     tools: dict[str, Callable] = {}
 
@@ -47,7 +40,7 @@ async def registered_tools(mock_client_manager: Mock) -> dict[str, Callable]:
         return func
 
     mock_mcp.tool.return_value = capture
-    register_tools(mock_mcp, mock_client_manager)
+    register_tools(mock_mcp, vector_service=mock_vector_service)
     return tools
 
 
@@ -69,7 +62,6 @@ async def test_get_analytics_includes_performance_and_costs(
 @pytest.mark.asyncio
 async def test_get_analytics_handles_collection_failure(
     registered_tools: dict[str, Callable],
-    mock_client_manager: Mock,
     mock_vector_service: Mock,
     mock_context: Mock,
 ) -> None:

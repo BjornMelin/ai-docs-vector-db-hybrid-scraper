@@ -51,3 +51,27 @@ async def test_container_session_initializes_and_shuts_down(
 
     initialize_mock.assert_awaited_once_with("config")
     shutdown_mock.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_container_session_shutdown_on_context_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`container_session` should shut down even when the context body raises."""
+
+    created = SimpleNamespace()
+    monkeypatch.setattr(bootstrap, "get_container", MagicMock(return_value=None))
+    initialize_mock = AsyncMock(return_value=created)
+    shutdown_mock = AsyncMock()
+    monkeypatch.setattr(bootstrap, "initialize_container", initialize_mock)
+    monkeypatch.setattr(bootstrap, "shutdown_container", shutdown_mock)
+
+    with pytest.raises(RuntimeError, match="boom"):
+        async with bootstrap.container_session(
+            settings="config", force_reload=True
+        ) as container:
+            assert container is created
+            raise RuntimeError("boom")
+
+    initialize_mock.assert_awaited_once_with("config")
+    shutdown_mock.assert_awaited_once()

@@ -52,6 +52,7 @@ def setup_fastmcp_monitoring(
     if not getattr(config.monitoring, "include_system_metrics", False):
         return
     _MONITORING_STATE[id(server)] = health_manager
+    logger.info("Registered MCP health manager; monitoring enabled.")
 
 
 async def run_periodic_health_checks(
@@ -149,7 +150,9 @@ async def managed_lifespan(server: FastMCP[Any]) -> AsyncIterator[None]:  # pyli
                 with suppress(asyncio.CancelledError):
                     await task
 
-            _MONITORING_STATE.pop(id(server), None)
+            removed = _MONITORING_STATE.pop(id(server), None)
+            if removed is not None:
+                logger.info("Monitoring state cleared for MCP server.")
             logger.info("Server shutdown complete")
 
 
