@@ -34,7 +34,10 @@ from src.services.errors import (
     ExternalServiceError,
     NetworkError,
 )
-from src.services.health.manager import HealthCheckManager, build_health_manager
+from src.services.observability.health_manager import (
+    HealthCheckManager,
+    build_health_manager,
+)
 from src.services.rag.models import RAGRequest as InternalRAGRequest
 from src.services.vector_db.service import VectorStoreService
 

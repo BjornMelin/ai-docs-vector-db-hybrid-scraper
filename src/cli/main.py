@@ -13,7 +13,7 @@ from rich.table import Table
 from rich.text import Text
 
 from src.config.loader import Settings, get_settings, load_settings_from_file
-from src.services.health.manager import build_health_manager
+from src.services.observability.health_manager import build_health_manager
 
 # Import command groups
 from .commands import (

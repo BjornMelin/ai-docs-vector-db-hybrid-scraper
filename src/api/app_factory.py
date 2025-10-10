@@ -25,8 +25,8 @@ from src.services.dependencies import (
     get_vector_store_service as core_get_vector_store_service,
 )
 from src.services.fastapi.dependencies import HealthCheckerDep
-from src.services.fastapi.middleware.manager import apply_defaults
-from src.services.health.manager import HealthStatus
+from src.services.fastapi.middleware.manager import apply_defaults, apply_named_stack
+from src.services.observability.health_manager import HealthStatus
 
 
 try:

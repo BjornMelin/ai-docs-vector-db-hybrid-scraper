@@ -23,7 +23,10 @@ from src.services.dependencies import (
     get_vector_store_service as core_get_vector_store_service,
 )
 from src.services.fastapi.middleware.correlation import get_correlation_id
-from src.services.health.manager import HealthCheckManager, build_health_manager
+from src.services.observability.health_manager import (
+    HealthCheckManager,
+    build_health_manager,
+)
 from src.services.vector_db.service import VectorStoreService
 
 
