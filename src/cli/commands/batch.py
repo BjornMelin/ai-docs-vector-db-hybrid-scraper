@@ -36,6 +36,13 @@ def _init_vector_manager():
     return VectorDBManager()
 
 
+def _resolve_vector_manager() -> Any:
+    """Return an instantiated vector manager, honoring monkeypatched stubs."""
+
+    manager = _init_vector_manager
+    return manager() if callable(manager) else manager
+
+
 console = Console()
 
 
@@ -50,7 +57,7 @@ def complete_collection_name(
             return []
 
         # Initialize manager and retrieve collections lazily to avoid heavy import
-        db_manager = _init_vector_manager()
+        db_manager = _resolve_vector_manager()
 
         # Get collection names (synchronously for completion)
         collections = asyncio.run(db_manager.list_collections())
@@ -322,7 +329,7 @@ def create_collections(  # pylint: disable=too-many-locals
 
     # Create operation queue
     queue = OperationQueue()
-    db_manager = _init_vector_manager()
+    db_manager = _resolve_vector_manager()
 
     success = False
     try:
@@ -398,7 +405,7 @@ def delete_collections(ctx: click.Context, collections: tuple, yes: bool):
 
     # Create operation queue
     queue = OperationQueue()
-    db_manager = _init_vector_manager()
+    db_manager = _resolve_vector_manager()
 
     success = False
     try:
@@ -448,7 +455,7 @@ def backup_collections(
 
     # If no collections specified, backup all
     if not collections:
-        db_manager = _init_vector_manager()
+        db_manager = _resolve_vector_manager()
         try:
             collection_names = asyncio.run(db_manager.list_collections())
         finally:

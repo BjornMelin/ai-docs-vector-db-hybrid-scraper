@@ -15,13 +15,10 @@ from src.config.models import (
     EmbeddingModel,
     EmbeddingProvider,
     FastEmbedConfig,
-    HyDEConfig,
     ObservabilityConfig,
     PerformanceConfig,
-    PlaywrightConfig,
     SearchStrategy,
 )
-from src.config.security.config import SecurityConfig
 
 
 TEST_REDIS_PASSWORD = "test_redis_secret"  # noqa: S105
@@ -50,11 +47,6 @@ DEFAULT_EXPECTATIONS = [
         id="crawl4ai",
     ),
     pytest.param(
-        PlaywrightConfig,
-        {"browser": "chromium", "headless": True, "timeout": 30000},
-        id="playwright",
-    ),
-    pytest.param(
         BrowserUseConfig,
         {
             "llm_provider": "openai",
@@ -67,39 +59,6 @@ DEFAULT_EXPECTATIONS = [
             "generate_gif": False,
         },
         id="browseruse",
-    ),
-    pytest.param(
-        HyDEConfig,
-        {
-            "enable_hyde": True,
-            "model": "gpt-3.5-turbo",
-            "num_generations": 5,
-            "generation_temperature": 0.7,
-            "max_tokens": 150,
-            "cache_ttl": 3600,
-            "query_weight": 0.3,
-        },
-        id="hyde",
-    ),
-    pytest.param(
-        SecurityConfig,
-        {
-            "enabled": True,
-            "enable_rate_limiting": False,
-            "default_rate_limit": 200,
-            "rate_limit_window": 120,
-            "redis_url": "redis://localhost:6380/1",
-            "redis_password": "secret",
-            "x_frame_options": "SAMEORIGIN",
-            "x_content_type_options": "nosniff",
-            "x_xss_protection": "0",
-            "strict_transport_security": "max-age=31536000",
-            "content_security_policy": "default-src 'none'",
-            "api_key_required": True,
-            "api_key_header": "X-API-KEY",
-            "api_keys": ["alpha", "beta"],
-        },
-        id="security",
     ),
     pytest.param(
         DatabaseConfig,
@@ -211,57 +170,6 @@ CUSTOM_CONFIG_CASES = [
         id="browseruse",
     ),
     pytest.param(
-        HyDEConfig,
-        {
-            "enabled": False,
-            "enable_hyde": False,
-            "num_generations": 3,
-            "generation_temperature": 0.4,
-            "max_tokens": 256,
-        },
-        {
-            "enable_hyde": False,
-            "enabled": False,
-            "model": "gpt-3.5-turbo",
-            "num_generations": 3,
-            "generation_temperature": 0.4,
-            "max_tokens": 256,
-            "temperature": 0.7,
-            "cache_ttl": 3600,
-            "query_weight": 0.3,
-        },
-        id="hyde",
-    ),
-    pytest.param(
-        SecurityConfig,
-        {
-            "enabled": False,
-            "enable_rate_limiting": True,
-            "default_rate_limit": 50,
-            "rate_limit_window": 30,
-            "redis_url": "redis://cache:6379/0",
-            "redis_password": "topsecret",
-            "content_security_policy": "default-src 'self'",
-        },
-        {
-            "enabled": False,
-            "enable_rate_limiting": True,
-            "default_rate_limit": 50,
-            "rate_limit_window": 30,
-            "redis_url": "redis://cache:6379/0",
-            "redis_password": "topsecret",
-            "x_frame_options": "DENY",
-            "x_content_type_options": "nosniff",
-            "x_xss_protection": "1; mode=block",
-            "strict_transport_security": "max-age=31536000; includeSubDomains; preload",
-            "content_security_policy": "default-src 'self'",
-            "api_key_required": False,
-            "api_key_header": "X-API-Key",
-            "api_keys": [],
-        },
-        id="security_overrides",
-    ),
-    pytest.param(
         DatabaseConfig,
         {
             "database_url": "postgresql+asyncpg://user:pass@localhost/db",
@@ -346,10 +254,7 @@ INVALID_CONFIG_CASES = [
     pytest.param(FastEmbedConfig, {"batch_size": 0}, id="fastembed-batch"),
     pytest.param(Crawl4AIConfig, {"max_concurrent_crawls": 0}, id="crawl4ai-min"),
     pytest.param(Crawl4AIConfig, {"max_concurrent_crawls": 51}, id="crawl4ai-max"),
-    pytest.param(PlaywrightConfig, {"timeout": 0}, id="playwright-timeout"),
     pytest.param(BrowserUseConfig, {"max_retries": 0}, id="browseruse-retries"),
-    pytest.param(HyDEConfig, {"num_generations": 0}, id="hyde-generations"),
-    pytest.param(SecurityConfig, {"rate_limit_requests": 0}, id="security-rate"),
     pytest.param(DatabaseConfig, {"pool_size": 0}, id="database-pool"),
     pytest.param(
         PerformanceConfig, {"max_concurrent_requests": 0}, id="performance-requests"

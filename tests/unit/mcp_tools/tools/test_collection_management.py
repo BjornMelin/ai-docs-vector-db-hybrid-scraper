@@ -18,12 +18,10 @@ class TestCollectionsTools:
         mock_manager = MagicMock()
 
         # Mock vector store service
-        mock_vector = AsyncMock()
-        mock_vector.list_collections.return_value = [
-            "docs",
-            "api",
-            "knowledge",
-        ]
+        mock_vector = MagicMock()
+        mock_vector.list_collections = AsyncMock(
+            return_value=["docs", "api", "knowledge"]
+        )
 
         async def mock_stats(_name: str) -> dict[str, Any]:
             return {
@@ -32,15 +30,17 @@ class TestCollectionsTools:
                 "vectors": {"size": 384, "distance": "cosine"},
             }
 
-        mock_vector.collection_stats.side_effect = mock_stats
+        mock_vector.collection_stats = AsyncMock(side_effect=mock_stats)
         mock_vector.delete_collection = AsyncMock()
+        mock_vector.is_initialized = MagicMock(return_value=True)
 
         # Mock cache manager
         mock_cache = AsyncMock()
-        mock_cache.clear.return_value = 10  # cleared items
+        mock_cache.clear_pattern = AsyncMock(return_value=10)
         mock_manager.get_vector_store_service = AsyncMock(return_value=mock_vector)
         mock_manager.get_cache_manager = AsyncMock(return_value=mock_cache)
         mock_manager.cache_mock = mock_cache
+        mock_manager.vector_service = mock_vector
 
         return mock_manager
 
@@ -66,7 +66,11 @@ class TestCollectionsTools:
             return func
 
         mock_mcp.tool.return_value = capture_tool
-        register_tools(mock_mcp, mock_client_manager)
+        register_tools(
+            mock_mcp,
+            vector_service=mock_client_manager.vector_service,
+            cache_manager=mock_client_manager.cache_mock,
+        )
 
         list_collections = registered_tools["list_collections"]
 
@@ -95,7 +99,11 @@ class TestCollectionsTools:
             return func
 
         mock_mcp.tool.return_value = capture_tool
-        register_tools(mock_mcp, mock_client_manager)
+        register_tools(
+            mock_mcp,
+            vector_service=mock_client_manager.vector_service,
+            cache_manager=mock_client_manager.cache_mock,
+        )
 
         optimize_collection = registered_tools["optimize_collection"]
 
@@ -120,7 +128,11 @@ class TestCollectionsTools:
             return func
 
         mock_mcp.tool.return_value = capture_tool
-        register_tools(mock_mcp, mock_client_manager)
+        register_tools(
+            mock_mcp,
+            vector_service=mock_client_manager.vector_service,
+            cache_manager=mock_client_manager.cache_mock,
+        )
 
         delete_collection = registered_tools["delete_collection"]
         mock_vector = await mock_client_manager.get_vector_store_service()
@@ -135,7 +147,6 @@ class TestCollectionsTools:
 
         mock_context.info.assert_called()
         mock_vector.delete_collection.assert_awaited_once_with("old_collection")
-        mock_client_manager.get_cache_manager.assert_awaited_once()
         mock_client_manager.cache_mock.clear_pattern.assert_awaited_once_with(
             "*:old_collection:*"
         )
@@ -146,7 +157,7 @@ class TestCollectionsTools:
     ):
         """Ensure an explicit error surfaces when delete/drop are unavailable."""
 
-        mock_vector = await mock_client_manager.get_vector_store_service()
+        mock_vector = mock_client_manager.vector_service
         mock_vector.delete_collection = None
 
         mock_mcp = MagicMock()
@@ -157,7 +168,11 @@ class TestCollectionsTools:
             return func
 
         mock_mcp.tool.return_value = capture_tool
-        register_tools(mock_mcp, mock_client_manager)
+        register_tools(
+            mock_mcp,
+            vector_service=mock_client_manager.vector_service,
+            cache_manager=mock_client_manager.cache_mock,
+        )
 
         delete_collection = registered_tools["delete_collection"]
 
@@ -174,11 +189,11 @@ class TestCollectionsTools:
         """Test collections error handling."""
 
         # Make qdrant service raise an exception
-        mock_vector = AsyncMock()
-        mock_vector.list_collections.side_effect = Exception("Service unavailable")
-        mock_client_manager.get_vector_store_service = AsyncMock(
-            return_value=mock_vector
+        mock_vector = MagicMock()
+        mock_vector.list_collections = AsyncMock(
+            side_effect=Exception("Service unavailable")
         )
+        mock_client_manager.vector_service = mock_vector
 
         mock_mcp = MagicMock()
         registered_tools = {}
@@ -188,7 +203,11 @@ class TestCollectionsTools:
             return func
 
         mock_mcp.tool.return_value = capture_tool
-        register_tools(mock_mcp, mock_client_manager)
+        register_tools(
+            mock_mcp,
+            vector_service=mock_client_manager.vector_service,
+            cache_manager=mock_client_manager.cache_mock,
+        )
 
         list_collections = registered_tools["list_collections"]
 
@@ -235,7 +254,11 @@ class TestCollectionsTools:
             return func
 
         mock_mcp.tool.return_value = capture_tool
-        register_tools(mock_mcp, mock_client_manager)
+        register_tools(
+            mock_mcp,
+            vector_service=mock_client_manager.vector_service,
+            cache_manager=mock_client_manager.cache_mock,
+        )
 
         # Test each tool has logging
         tools_to_test = [
@@ -259,7 +282,11 @@ class TestCollectionsTools:
         """Test that collection tools are properly registered."""
 
         mock_mcp = MagicMock()
-        register_tools(mock_mcp, mock_client_manager)
+        register_tools(
+            mock_mcp,
+            vector_service=mock_client_manager.vector_service,
+            cache_manager=mock_client_manager.cache_mock,
+        )
 
         # Should have registered 3 tools
         assert mock_mcp.tool.call_count == 3

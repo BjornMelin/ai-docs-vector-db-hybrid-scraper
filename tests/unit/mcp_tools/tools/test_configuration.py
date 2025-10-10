@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -68,7 +68,7 @@ def patched_get_config(monkeypatch: pytest.MonkeyPatch, dummy_config: DummyConfi
 def patched_grouping_probe(monkeypatch: pytest.MonkeyPatch):
     """Patch grouping probe helper to control support flag."""
 
-    async def fake_probe(_client_manager):
+    async def fake_probe():
         return False
 
     monkeypatch.setattr(configuration_module, "_probe_grouping_support", fake_probe)
@@ -85,7 +85,7 @@ class TestConfigurationTools:
     ) -> None:
         """Global configuration export should mask sensitive keys."""
 
-        configuration_module.register_tools(mock_mcp, MagicMock())
+        configuration_module.register_tools(mock_mcp)
         get_config_tool = mock_mcp._registered["get_settings"]
 
         result = await get_config_tool(ctx=None)
@@ -104,7 +104,7 @@ class TestConfigurationTools:
     ) -> None:
         """Requesting an explicit key should return sanitized data."""
 
-        configuration_module.register_tools(mock_mcp, MagicMock())
+        configuration_module.register_tools(mock_mcp)
         get_config_tool = mock_mcp._registered["get_settings"]
 
         response = await get_config_tool(key="misc_setting", ctx=None)
@@ -120,11 +120,21 @@ class TestConfigurationTools:
         mock_mcp: MagicMock,
         patched_get_config,
         patched_grouping_probe,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Validation should surface provider and grouping warnings."""
 
-        client_manager = MagicMock()
-        configuration_module.register_tools(mock_mcp, client_manager)
+        async def fake_get_vector_service():
+            probe = MagicMock(
+                supports_server_side_grouping=AsyncMock(return_value=False)
+            )
+            return probe
+
+        monkeypatch.setattr(
+            configuration_module, "get_vector_store_service", fake_get_vector_service
+        )
+
+        configuration_module.register_tools(mock_mcp)
         validate_tool = mock_mcp._registered["validate_config"]
 
         result = await validate_tool(ctx=None)
@@ -140,5 +150,5 @@ class TestConfigurationTools:
     def test_tools_registered(self, mock_mcp: MagicMock, patched_get_config) -> None:
         """Registering configuration tools should expose two MCP endpoints."""
 
-        configuration_module.register_tools(mock_mcp, MagicMock())
+        configuration_module.register_tools(mock_mcp)
         assert set(mock_mcp._registered.keys()) == {"get_settings", "validate_config"}

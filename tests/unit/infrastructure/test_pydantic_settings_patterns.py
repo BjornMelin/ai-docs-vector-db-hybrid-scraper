@@ -1,8 +1,4 @@
-"""Unit tests for the configuration loader.
-
-The suite exercises the pydantic-settings integration."""
-
-# pylint: disable=no-member
+"""Unit tests for the configuration loader leveraging pydantic-settings."""
 
 from __future__ import annotations
 
@@ -14,7 +10,13 @@ import pytest
 from pydantic import ValidationError
 
 from src.architecture.modes import ApplicationMode
-from src.config import Settings, get_settings, refresh_settings
+from src.config import (
+    Settings,
+    apply_mode_overrides,
+    ensure_runtime_directories,
+    get_settings,
+    refresh_settings,
+)
 from src.config.models import (
     ChunkingStrategy,
     CrawlProvider,
@@ -26,7 +28,7 @@ from src.config.models import (
 
 @pytest.fixture(autouse=True)
 def _clean_config_cache() -> Iterator[None]:
-    """Ensure global config cache does not leak between tests."""
+    """Ensure the global settings cache is reset between tests."""
 
     refresh_settings()
     yield
@@ -55,15 +57,13 @@ def _path_overrides(tmp_path: Path) -> PathOverrides:
 def test_config_loads_env_values_and_nested_sections(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """Environment variables, including nested keys, populate the Settings model."""
+    """Environment variables populate nested configuration sections."""
 
     overrides = _path_overrides(tmp_path)
     monkeypatch.setenv("AI_DOCS_APP_NAME", "env-app")
     monkeypatch.setenv("AI_DOCS_ENVIRONMENT", "staging")
     monkeypatch.setenv("AI_DOCS_CACHE__TTL_EMBEDDINGS", "123")
-    monkeypatch.setenv(
-        "AI_DOCS_OPENAI_API_KEY", ""
-    )  # ignored thanks to env_ignore_empty
+    monkeypatch.setenv("AI_DOCS_OPENAI_API_KEY", "")
     monkeypatch.setenv("AI_DOCS_OPENAI__API_KEY", "sk-test")
     monkeypatch.setenv("AI_DOCS_CACHE__ENABLE_CACHING", "false")
     monkeypatch.setenv("AI_DOCS_DATA_DIR", str(overrides["data_dir"]))
@@ -71,6 +71,7 @@ def test_config_loads_env_values_and_nested_sections(
     monkeypatch.setenv("AI_DOCS_LOGS_DIR", str(overrides["logs_dir"]))
 
     config = Settings()
+    ensure_runtime_directories(config)
     snapshot = config.model_dump()
 
     assert config.app_name == "env-app"
@@ -99,7 +100,7 @@ def test_config_loads_env_values_and_nested_sections(
 def test_config_requires_provider_keys_outside_testing(
     provider_kwargs: dict[str, object], expected_message: str
 ) -> None:
-    """Production/staging configs should enforce provider-specific API keys."""
+    """Production/staging configs enforce provider-specific API keys."""
 
     payload: dict[str, object] = {"environment": Environment.PRODUCTION}
     payload.update(provider_kwargs)
@@ -111,7 +112,7 @@ def test_config_requires_provider_keys_outside_testing(
 
 
 def test_config_allows_missing_provider_keys_in_testing_environment() -> None:
-    """Testing configs bypass provider key validation for ease of local development."""
+    """Testing configs bypass provider key validation for developer ergonomics."""
 
     config = Settings.model_validate(
         {
@@ -129,7 +130,7 @@ def test_config_allows_missing_provider_keys_in_testing_environment() -> None:
 
 
 def test_config_nested_credentials_and_urls(tmp_path: Path) -> None:
-    """Nested credentials and URLs should be preserved without side effects."""
+    """Nested credential and URL settings persist without mutation."""
 
     overrides = _path_overrides(tmp_path)
     config = Settings.model_validate(
@@ -144,6 +145,7 @@ def test_config_nested_credentials_and_urls(tmp_path: Path) -> None:
             "logs_dir": overrides["logs_dir"],
         }
     )
+    ensure_runtime_directories(config)
     snapshot = config.model_dump()
 
     assert snapshot["openai"]["api_key"] == "sk-live"
@@ -154,7 +156,7 @@ def test_config_nested_credentials_and_urls(tmp_path: Path) -> None:
 
 
 def test_config_simple_mode_adjustments_and_helpers(tmp_path: Path) -> None:
-    """Simple mode should clamp aggressive settings and expose simplified helpers."""
+    """Simple mode clamps aggressive settings and exposes helpers."""
 
     overrides = _path_overrides(tmp_path)
     config = Settings.model_validate(
@@ -171,6 +173,8 @@ def test_config_simple_mode_adjustments_and_helpers(tmp_path: Path) -> None:
             "logs_dir": overrides["logs_dir"],
         }
     )
+    apply_mode_overrides(config)
+    ensure_runtime_directories(config)
     snapshot = config.model_dump()
 
     assert snapshot["performance"]["max_concurrent_crawls"] == 10
@@ -182,7 +186,7 @@ def test_config_simple_mode_adjustments_and_helpers(tmp_path: Path) -> None:
 
 
 def test_config_enterprise_mode_adjustments(tmp_path: Path) -> None:
-    """Enterprise mode retains advanced features while keeping concurrency sensible."""
+    """Enterprise mode retains full capabilities with safe limits."""
 
     overrides = _path_overrides(tmp_path)
     config = Settings.model_validate(
@@ -198,6 +202,8 @@ def test_config_enterprise_mode_adjustments(tmp_path: Path) -> None:
             "logs_dir": overrides["logs_dir"],
         }
     )
+    apply_mode_overrides(config)
+    ensure_runtime_directories(config)
     snapshot = config.model_dump()
 
     assert snapshot["performance"]["max_concurrent_crawls"] == 45
@@ -208,7 +214,7 @@ def test_config_enterprise_mode_adjustments(tmp_path: Path) -> None:
 
 
 def test_global_config_cache_and_reset(tmp_path: Path) -> None:
-    """Global helpers should manage cached configuration instances predictably."""
+    """Global helpers manage the cached settings instance predictably."""
 
     overrides = _path_overrides(tmp_path)
     refresh_settings()

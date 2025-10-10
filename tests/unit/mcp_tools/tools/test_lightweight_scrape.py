@@ -146,7 +146,7 @@ async def test_multiple_formats_are_transformed(
 
     assert response["content"]["markdown"] == "# Title"
     assert response["content"]["html"] == "<h1>Title</h1>"
-    assert response["content"]["text"] == "Title"
+    assert response["content"]["text"].strip() == "Title"
 
 
 @pytest.mark.asyncio

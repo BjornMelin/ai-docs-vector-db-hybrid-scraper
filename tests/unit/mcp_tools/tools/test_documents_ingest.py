@@ -130,6 +130,9 @@ def documents_env(monkeypatch) -> SimpleNamespace:  # pylint: disable=too-many-l
         classmethod(lambda cls: validator),
     )
     monkeypatch.setattr(documents, "DocumentChunker", DummyChunker)
+    monkeypatch.setattr(
+        documents, "_resolve_cache_manager", AsyncMock(return_value=cache_manager)
+    )
 
     mock_mcp = MagicMock()
     registered: dict[str, Callable] = {}
@@ -221,7 +224,10 @@ async def test_add_document_returns_cached_result(
 async def test_add_document_without_content_intelligence(
     documents_env: SimpleNamespace,
 ) -> None:
-    documents_env.content_dependency.return_value = None
+    documents_env.content_intelligence.analyze_content.return_value = SimpleNamespace(
+        success=False,
+        enriched_content=None,
+    )
 
     request = DocumentRequest(url="https://example.com/doc")
     result = await documents_env.tools["add_document"](request, documents_env.context)
