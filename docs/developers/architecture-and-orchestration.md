@@ -44,7 +44,7 @@ Core layers:
 graph LR
     subgraph Core Services
         Config[Config loader]
-        ClientMgr[ClientManager]
+        Container[ApplicationContainer]
         Scheduler[Async task scheduler]
     end
     subgraph Application
@@ -54,9 +54,9 @@ graph LR
         EmbeddingMgr[Embedding manager]
         CacheMgr[Dragonfly cache]
     end
-    Config --> ClientMgr
-    ClientMgr --> API
-    ClientMgr --> HybridSearch
+    Config --> Container
+    Container --> API
+    Container --> HybridSearch
     Container --> BrowserMgr
     Container --> EmbeddingMgr
     Container --> CacheMgr
