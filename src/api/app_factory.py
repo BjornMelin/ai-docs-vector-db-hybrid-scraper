@@ -1,5 +1,6 @@
 """Mode-aware FastAPI application factory with profile-driven composition."""
 
+import asyncio
 import logging
 from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
@@ -15,7 +16,13 @@ from starlette import status
 from src.api.app_profiles import AppProfile, detect_profile
 from src.api.lifespan import client_manager_lifespan
 from src.architecture.modes import ApplicationMode, ModeConfig, get_mode_config
-from src.infrastructure.client_manager import ClientManager
+from src.infrastructure.container import ApplicationContainer, get_container
+from src.services.dependencies import (
+    get_cache_manager as core_get_cache_manager,
+    get_content_intelligence_service as core_get_content_intelligence_service,
+    get_embedding_manager as core_get_embedding_manager,
+    get_vector_store_service as core_get_vector_store_service,
+)
 from src.services.fastapi.dependencies import HealthCheckerDep
 from src.services.fastapi.middleware.manager import apply_defaults, apply_named_stack
 from src.services.health.manager import HealthStatus
@@ -344,8 +351,7 @@ def _build_app_lifespan(app: FastAPI):
         logger.info("Starting application in %s mode", mode.value)
 
         async with client_manager_lifespan(app):
-            client_manager: ClientManager = app.state.client_manager
-            await _initialize_mode_services(client_manager, mode_config)
+            await _initialize_mode_services(mode_config)
 
             logger.info("Application startup complete in %s mode", mode.value)
 
@@ -358,21 +364,53 @@ def _build_app_lifespan(app: FastAPI):
     return lifespan
 
 
-async def _initialize_mode_services(
-    client_manager: ClientManager, mode_config: ModeConfig
-) -> None:
+async def _ping_redis() -> None:
+    container = get_container()
+    if container is None:
+        return
+    try:
+        redis_client = container.redis_client()
+        ping_result = redis_client.ping()
+        if asyncio.iscoroutine(ping_result):
+            await ping_result
+    except Exception:  # pragma: no cover - optional dependency not available
+        logger.debug("Redis ping failed during startup", exc_info=True)
+
+
+async def _init_qdrant_client() -> None:
+    container = get_container()
+    if container is None:
+        return
+    try:
+        qdrant_client = container.qdrant_client()
+        get_collections = getattr(qdrant_client, "get_collections", None)
+        if callable(get_collections):
+            result = get_collections()
+            if asyncio.iscoroutine(result):
+                await result
+    except Exception:  # pragma: no cover - optional dependency not available
+        logger.debug("Qdrant readiness check failed during startup", exc_info=True)
+
+
+async def _ensure_database_ready() -> None:
+    await core_get_vector_store_service()
+    await core_get_cache_manager()
+    await _ping_redis()
+
+
+async def _initialize_mode_services(mode_config: ModeConfig) -> None:
     """Initialize services required for the active application mode."""
 
     service_initializers: dict[str, Callable[[], Awaitable[Any]]] = {
-        "embedding_service": client_manager.get_embedding_manager,
-        "vector_db_service": client_manager.get_vector_store_service,
-        "qdrant_client": client_manager.get_qdrant_client,
-        "simple_caching": client_manager.get_cache_manager,
-        "multi_tier_caching": client_manager.get_cache_manager,
-        "advanced_search": client_manager.get_vector_store_service,
-        "basic_search": client_manager.get_vector_store_service,
-        "deployment_services": client_manager.ensure_database_ready,
-        "advanced_analytics": client_manager.get_content_intelligence_service,
+        "embedding_service": core_get_embedding_manager,
+        "vector_db_service": core_get_vector_store_service,
+        "qdrant_client": _init_qdrant_client,
+        "simple_caching": core_get_cache_manager,
+        "multi_tier_caching": core_get_cache_manager,
+        "advanced_search": core_get_vector_store_service,
+        "basic_search": core_get_vector_store_service,
+        "deployment_services": _ensure_database_ready,
+        "advanced_analytics": core_get_content_intelligence_service,
     }
 
     for service_name in mode_config.enabled_services:
@@ -391,14 +429,14 @@ def get_app_mode(app: FastAPI) -> ApplicationMode:
     return app.state.mode  # type: ignore[attr-defined]
 
 
-def get_app_client_manager(app: FastAPI) -> ClientManager:
-    """Get the ClientManager from a FastAPI application."""
+def get_app_container(app: FastAPI) -> ApplicationContainer:
+    """Get the dependency-injector container from a FastAPI application."""
 
-    manager = getattr(app.state, "client_manager", None)
-    if manager is None:
-        msg = "ClientManager is not attached to application state"
+    container = getattr(app.state, "container", None)
+    if container is None:
+        msg = "DI container is not attached to application state"
         raise RuntimeError(msg)
-    if not isinstance(manager, ClientManager):
-        msg = "Application state client_manager is not a ClientManager instance"
+    if not isinstance(container, ApplicationContainer):
+        msg = "Application state container is not an ApplicationContainer instance"
         raise TypeError(msg)
-    return manager
+    return container

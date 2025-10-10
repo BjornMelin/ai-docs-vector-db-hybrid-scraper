@@ -8,16 +8,21 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Annotated, Any
 
-from fastapi import Depends
+from fastapi import Depends  # type: ignore[attr-defined]
 from fastapi.exceptions import HTTPException
 from fastapi.requests import Request  # type: ignore
 from starlette.status import HTTP_503_SERVICE_UNAVAILABLE
 
 from src.config.loader import Settings, get_settings
-from src.infrastructure.client_manager import (
-    ClientManager,
-    ensure_client_manager,
-    shutdown_client_manager,
+from src.infrastructure.container import (
+    initialize_container,
+    shutdown_container,
+)
+from src.services.dependencies import (
+    get_cache_manager as core_get_cache_manager,
+    get_database_session as core_get_database_session,
+    get_embedding_manager as core_get_embedding_manager,
+    get_vector_store_service as core_get_vector_store_service,
 )
 from src.services.fastapi.middleware.correlation import get_correlation_id
 from src.services.health.manager import HealthCheckManager, build_health_manager
@@ -35,13 +40,13 @@ logger = logging.getLogger(__name__)
 async def initialize_dependencies() -> None:
     """Prime long-lived services used by the FastAPI application."""
 
-    await ensure_client_manager()
+    await initialize_container(get_settings())
 
 
 async def cleanup_dependencies() -> None:
     """Release shared services created for FastAPI usage."""
 
-    await shutdown_client_manager()
+    await shutdown_container()
 
 
 def get_config_dependency() -> Settings:
@@ -51,29 +56,15 @@ def get_config_dependency() -> Settings:
 
 
 async def get_vector_service() -> VectorStoreService:
-    """Return the vector service instance via the client manager."""
+    """Return the vector service instance via the DI container."""
 
     try:
-        client_manager = await get_client_manager()
-        return await client_manager.get_vector_store_service()
+        return await core_get_vector_store_service()
     except Exception as exc:  # pragma: no cover - defensive
-        logger.exception("Failed to obtain vector service via ClientManager")
+        logger.exception("Failed to obtain vector service from container")
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
             detail="Vector service not available",
-        ) from exc
-
-
-async def get_client_manager() -> ClientManager:
-    """Return the initialized ClientManager singleton."""
-
-    try:
-        return await ensure_client_manager()
-    except Exception as exc:  # pragma: no cover - defensive
-        logger.exception("Failed to obtain client manager")
-        raise HTTPException(
-            status_code=HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Client manager not available",
         ) from exc
 
 
@@ -81,8 +72,7 @@ async def get_embedding_manager() -> EmbeddingManager:
     """Expose the shared embedding manager instance."""
 
     try:
-        client_manager = await ensure_client_manager()
-        return await client_manager.get_embedding_manager()
+        return await core_get_embedding_manager()
     except Exception as exc:  # pragma: no cover - defensive
         logger.exception("Failed to obtain embedding manager")
         raise HTTPException(
@@ -95,8 +85,7 @@ async def get_cache_manager() -> CacheManager:
     """Expose the cache manager maintained by the registry."""
 
     try:
-        client_manager = await ensure_client_manager()
-        return await client_manager.get_cache_manager()
+        return await core_get_cache_manager()
     except Exception as exc:  # pragma: no cover - defensive
         logger.exception("Failed to obtain cache manager")
         raise HTTPException(
@@ -121,9 +110,12 @@ def get_correlation_id_dependency(request: Request) -> str:
 async def database_session() -> AsyncGenerator[Any]:
     """Provide a database session with automatic cleanup."""
 
-    client_manager = await ensure_client_manager()
-    async with client_manager.database_session() as session:
-        yield session
+    generator = core_get_database_session()
+    try:
+        context = await generator.__anext__()
+        yield context
+    finally:
+        await generator.aclose()
 
 
 def get_request_context(request: Request) -> dict[str, Any]:
@@ -154,16 +146,8 @@ async def get_health_checker() -> HealthCheckManager:
             return _health_manager
 
         settings = get_settings()
-        qdrant_client = None
-        try:
-            client_manager = await ensure_client_manager()
-            qdrant_client = await client_manager.get_qdrant_client()
-        except Exception as exc:  # pragma: no cover - defensive
-            logger.warning("Unable to obtain Qdrant client for health checks: %s", exc)
-
         _health_manager = build_health_manager(
             settings,
-            qdrant_client=qdrant_client,
         )
         return _health_manager
 
@@ -176,7 +160,6 @@ __all__ = [
     "cleanup_dependencies",
     "database_session",
     "get_cache_manager",
-    "get_client_manager",
     "get_config_dependency",
     "get_correlation_id_dependency",
     "get_embedding_manager",

@@ -1,38 +1,40 @@
 """Service access helpers and dependency wrappers shared across entry points."""
 
-# pylint: disable=too-many-lines,no-else-return,no-else-raise,duplicate-code,cyclic-import,global-statement
-
 import asyncio
+import importlib
 import inspect
 import logging
 from collections.abc import AsyncGenerator, Callable
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from time import perf_counter
-from typing import Annotated, Any
+from typing import Annotated, Any, cast
 
 from fastapi import Depends  # type: ignore[attr-defined]
+from langchain_mcp_adapters.client import MultiServerMCPClient
 from pydantic import BaseModel, Field
 
 from src.config.loader import Settings, get_settings
 from src.config.models import CacheType
-from src.infrastructure.client_manager import (
-    ClientManager,
-    ensure_client_manager as ensure_global_client_manager,
-    get_client_manager as get_global_client_manager,
-    shutdown_client_manager as shutdown_global_client_manager,
+from src.infrastructure.container import (
+    ApplicationContainer,
+    get_container,
+    shutdown_container,
 )
+from src.services.cache.manager import CacheManager
 from src.services.circuit_breaker.decorators import (
     circuit_breaker,
     tenacity_circuit_breaker,
 )
 from src.services.circuit_breaker.provider import get_circuit_breaker_manager
-from src.services.embeddings.manager import QualityTier
+from src.services.embeddings.manager import EmbeddingManager, QualityTier
 from src.services.errors import (
     CrawlServiceError,
     EmbeddingServiceError,
     ExternalServiceError,
     NetworkError,
 )
+from src.services.health.manager import HealthCheckManager, build_health_manager
 from src.services.rag.models import RAGRequest as InternalRAGRequest
 from src.services.vector_db.service import VectorStoreService
 
@@ -43,36 +45,128 @@ logger = logging.getLogger(__name__)
 #### HELPER FUNCTIONS & DECORATORS ####
 
 
-async def _resolve_client_manager(
-    client_manager: "ClientManager | None",
-) -> "ClientManager":
-    """Return an initialized ClientManager instance."""
+def _require_container() -> ApplicationContainer:
+    """Return the initialized dependency-injector container."""
 
-    if client_manager is not None:
-        return client_manager
+    container = get_container()
+    if container is None:
+        msg = "Dependency injector container is not initialized"
+        raise RuntimeError(msg)
+    return container
 
-    return await ensure_global_client_manager()
+
+async def _ensure_initialized(service: Any, *, name: str) -> Any:
+    """Ensure a service with initialize/is_initialized is ready for use."""
+
+    if service is None:
+        msg = f"Service '{name}' is unavailable"
+        raise RuntimeError(msg)
+
+    initializer = getattr(service, "initialize", None)
+    is_initialized = getattr(service, "is_initialized", None)
+
+    try:
+        needs_init = callable(is_initialized) and not is_initialized()
+    except Exception:  # pragma: no cover - defensive
+        needs_init = False
+
+    if callable(initializer) and needs_init:
+        result = initializer()
+        if asyncio.iscoroutine(result):
+            await result
+    return service
+
+
+async def _resolve_service(
+    *,
+    name: str,
+    supplier: Callable[[ApplicationContainer], Any],
+    ensure_ready: bool = True,
+    optional: bool = False,
+) -> Any:
+    """Resolve a service from the container with optional initialization."""
+
+    container = get_container()
+    if container is None:
+        if optional:
+            return None
+        msg = f"DI container not initialized when requesting '{name}'"
+        raise RuntimeError(msg)
+
+    instance = supplier(container)
+    if instance is None:
+        if optional:
+            return None
+        msg = f"Container returned None for required service '{name}'"
+        raise RuntimeError(msg)
+
+    if ensure_ready:
+        return await _ensure_initialized(instance, name=name)
+    return instance
+
+
+_automation_router_instance: Any | None = None
+_automation_router_lock = asyncio.Lock()
+_health_manager_instance: HealthCheckManager | None = None
+_health_manager_lock = asyncio.Lock()
+
+
+def _load_automation_router_class() -> type[Any]:
+    """Import the AutomationRouter implementation."""
+
+    try:
+        module = importlib.import_module("src.services.browser.router")
+    except ModuleNotFoundError as exc:
+        msg = "Automation router module is unavailable"
+        raise RuntimeError(msg) from exc
+
+    router_cls = getattr(module, "AutomationRouter", None)
+    if router_cls is None:
+        msg = "Automation router module does not define AutomationRouter"
+        raise RuntimeError(msg)
+    return router_cls
+
+
+async def _get_health_manager() -> HealthCheckManager:
+    """Return a cached HealthCheckManager instance."""
+
+    global _health_manager_instance  # pylint: disable=global-statement
+    if _health_manager_instance is not None:
+        return _health_manager_instance
+
+    async with _health_manager_lock:
+        if _health_manager_instance is None:
+            settings = get_settings()
+            container = _require_container()
+            redis_url = getattr(settings.cache, "redis_url", None)
+            dragonfly_url = getattr(settings.cache, "dragonfly_url", None)
+            if (
+                getattr(settings.cache, "enable_dragonfly_cache", False)
+                and dragonfly_url
+            ):
+                redis_url = dragonfly_url
+
+            qdrant_client = None
+            try:
+                qdrant_client = container.qdrant_client()
+            except Exception:  # pragma: no cover - defensive
+                logger.debug(
+                    "Qdrant client unavailable for health manager", exc_info=True
+                )
+
+            manager = build_health_manager(
+                settings,
+                qdrant_client=qdrant_client,
+                redis_url=redis_url,
+            )
+            _health_manager_instance = manager
+    return _health_manager_instance
 
 
 #### CONFIGURATION DEPENDENCIES ####
 
 # Embedding Service Dependencies
 ConfigDep = Annotated[Settings, Depends(get_settings)]
-
-
-def get_client_manager() -> ClientManager:
-    """Return the initialized global ClientManager instance."""
-
-    return get_global_client_manager()
-
-
-ClientManagerDep = Annotated[ClientManager, Depends(get_client_manager)]
-
-
-async def get_ready_client_manager() -> ClientManager:
-    """Return an initialized ClientManager instance."""
-
-    return await ensure_global_client_manager()
 
 
 class EmbeddingRequest(BaseModel):
@@ -108,15 +202,21 @@ class EmbeddingResponse(BaseModel):
     recovery_timeout=30.0,
 )
 async def get_embedding_manager(
-    client_manager: ClientManager | None = None,
-) -> Any:
+    embedding_manager: EmbeddingManager | None = None,
+) -> EmbeddingManager:
     """Get initialized EmbeddingManager service."""
 
-    manager = await _resolve_client_manager(client_manager)
-    return await manager.get_embedding_manager()
+    if embedding_manager is not None:
+        return await _ensure_initialized(embedding_manager, name="embedding_manager")
+
+    resolved = await _resolve_service(
+        name="embedding_manager",
+        supplier=lambda container: container.embedding_manager(),
+    )
+    return resolved
 
 
-EmbeddingManagerDep = Annotated[Any, Depends(get_embedding_manager)]
+EmbeddingManagerDep = Annotated[EmbeddingManager, Depends(get_embedding_manager)]
 
 
 @tenacity_circuit_breaker(
@@ -152,7 +252,8 @@ async def generate_embeddings(
             generate_sparse=request.generate_sparse,
         )
 
-        return EmbeddingResponse(**result)
+        payload = cast(dict[str, Any], result)
+        return EmbeddingResponse.model_validate(payload)
     except (
         ExternalServiceError,
         NetworkError,
@@ -181,21 +282,30 @@ class CacheRequest(BaseModel):
     recovery_timeout=10.0,
 )
 async def get_cache_manager(
-    client_manager: ClientManager | None = None,
-) -> Any:
+    cache_manager: CacheManager | None = None,
+) -> CacheManager:
     """Get initialized CacheManager service."""
 
-    manager = await _resolve_client_manager(client_manager)
-    return await manager.get_cache_manager()
+    if cache_manager is not None:
+        return await _ensure_initialized(cache_manager, name="cache_manager")
+
+    resolved = await _resolve_service(
+        name="cache_manager",
+        supplier=lambda container: container.cache_manager(),
+        optional=True,
+    )
+    if resolved is None:
+        raise RuntimeError("CacheManager provider not configured")
+    return resolved
 
 
-CacheManagerDep = Annotated[Any, Depends(get_cache_manager)]
+CacheManagerDep = Annotated[CacheManager, Depends(get_cache_manager)]
 
 
 async def cache_get(
     key: str,
     cache_type: str = "crawl",
-    cache_manager: Any | None = None,
+    cache_manager: CacheManager | None = None,
 ) -> Any:
     """Get value from cache."""
     manager = cache_manager or await get_cache_manager()
@@ -217,7 +327,7 @@ async def cache_set(
     value: Any,
     cache_type: str = "crawl",
     ttl: int | None = None,
-    cache_manager: Any | None = None,
+    cache_manager: CacheManager | None = None,
 ) -> bool:
     """Set value in cache."""
     manager = cache_manager or await get_cache_manager()
@@ -237,7 +347,7 @@ async def cache_set(
 async def cache_delete(
     key: str,
     cache_type: str = "crawl",
-    cache_manager: Any | None = None,
+    cache_manager: CacheManager | None = None,
 ) -> bool:
     """Delete value from cache."""
     manager = cache_manager or await get_cache_manager()
@@ -286,11 +396,22 @@ class CrawlResponse(BaseModel):
     recovery_timeout=60.0,
 )
 async def get_crawl_manager(
-    client_manager: ClientManager | None = None,
+    crawl_manager: Any | None = None,
 ) -> Any:
     """Get initialized CrawlManager service."""
-    manager = await _resolve_client_manager(client_manager)
-    return await manager.get_crawl_manager()
+    if crawl_manager is not None:
+        return await _ensure_initialized(crawl_manager, name="browser_manager")
+
+    resolved = await _resolve_service(
+        name="browser_manager",
+        supplier=lambda container: container.browser_manager(),
+        optional=True,
+    )
+    if resolved is None:
+        raise RuntimeError(
+            "UnifiedBrowserManager is unavailable; ensure browser features are enabled"
+        )
+    return resolved
 
 
 CrawlManagerDep = Annotated[Any, Depends(get_crawl_manager)]
@@ -357,17 +478,49 @@ async def crawl_site(
 
 
 # Database Dependencies
-async def get_database_session(
-    client_manager: ClientManager | None = None,
-) -> AsyncGenerator[Any]:
+@dataclass(slots=True)
+class DatabaseSessionContext:
+    """Lightweight context exposing database-adjacent services."""
+
+    redis: Any | None
+    cache_manager: CacheManager | None
+    vector_service: VectorStoreService | None
+
+
+async def get_database_session() -> AsyncGenerator[DatabaseSessionContext]:
     """Get database session with automatic cleanup."""
 
-    manager = await _resolve_client_manager(client_manager)
-    async with manager.database_session() as session:
-        yield session
+    container = _require_container()
+
+    redis_client = None
+    try:
+        redis_client = container.redis_client()
+    except Exception:  # pragma: no cover - defensive
+        logger.debug("Redis client unavailable during database session", exc_info=True)
+
+    cache_manager = None
+    try:
+        cache_manager = await get_cache_manager()
+    except Exception:  # pragma: no cover - defensive
+        logger.debug("Cache manager unavailable during database session", exc_info=True)
+
+    vector_service = None
+    try:
+        vector_service = await get_vector_store_service()
+    except Exception:  # pragma: no cover - defensive
+        logger.debug(
+            "Vector service unavailable during database session", exc_info=True
+        )
+
+    context = DatabaseSessionContext(
+        redis=redis_client,
+        cache_manager=cache_manager,
+        vector_service=vector_service,
+    )
+    yield context
 
 
-DatabaseSessionDep = Annotated[Any, Depends(get_database_session)]
+DatabaseSessionDep = Annotated[DatabaseSessionContext, Depends(get_database_session)]
 
 
 # Vector Store Dependencies
@@ -377,11 +530,17 @@ DatabaseSessionDep = Annotated[Any, Depends(get_database_session)]
     recovery_timeout=15.0,
 )
 async def get_vector_store_service(
-    client_manager: ClientManager | None = None,
+    vector_service: VectorStoreService | None = None,
 ) -> VectorStoreService:
     """Get initialized vector store service."""
-    manager = await _resolve_client_manager(client_manager)
-    return await manager.get_vector_store_service()
+    if vector_service is not None:
+        return await _ensure_initialized(vector_service, name="vector_store_service")
+
+    resolved = await _resolve_service(
+        name="vector_store_service",
+        supplier=lambda container: container.vector_store_service(),
+    )
+    return resolved
 
 
 VectorStoreServiceDep = Annotated[VectorStoreService, Depends(get_vector_store_service)]
@@ -389,11 +548,26 @@ VectorStoreServiceDep = Annotated[VectorStoreService, Depends(get_vector_store_s
 
 # Content Intelligence Dependencies
 async def get_content_intelligence_service(
-    client_manager: ClientManager | None = None,
+    content_service: Any | None = None,
 ) -> Any:
     """Get initialized ContentIntelligenceService."""
-    manager = await _resolve_client_manager(client_manager)
-    return await manager.get_content_intelligence_service()
+    if content_service is not None:
+        return await _ensure_initialized(
+            content_service, name="content_intelligence_service"
+        )
+
+    resolved = await _resolve_service(
+        name="content_intelligence_service",
+        supplier=lambda container: container.content_intelligence_service(),
+        optional=True,
+    )
+    if resolved is None:
+        msg = (
+            "ContentIntelligenceService unavailable; ensure optional dependency is "
+            "installed or feature enabled."
+        )
+        raise RuntimeError(msg)
+    return resolved
 
 
 ContentIntelligenceServiceDep = Annotated[
@@ -436,18 +610,48 @@ class RAGResponse(BaseModel):
     recovery_timeout=30.0,
 )
 async def get_rag_generator(
-    config: ConfigDep,
-    client_manager: ClientManagerDep,
+    rag_generator: Any | None = None,
 ) -> Any:
     """Get initialized RAGGenerator service."""
 
-    del config
+    if rag_generator is not None:
+        return await _ensure_initialized(rag_generator, name="rag_generator")
 
-    generator = await client_manager.get_rag_generator()
-    return generator
+    resolved = await _resolve_service(
+        name="rag_generator",
+        supplier=lambda container: container.rag_generator(),
+        optional=True,
+    )
+    if resolved is None:
+        msg = (
+            "RAGGenerator unavailable; ensure optional RAG dependencies are installed "
+            "and configured."
+        )
+        raise RuntimeError(msg)
+    return resolved
 
 
 RAGGeneratorDep = Annotated[Any, Depends(get_rag_generator)]
+
+
+async def get_mcp_client(
+    client: MultiServerMCPClient | None = None,
+) -> MultiServerMCPClient:
+    """Resolve the shared MultiServerMCPClient instance."""
+
+    if client is not None:
+        return client
+
+    resolved = await _resolve_service(
+        name="mcp_client",
+        supplier=lambda container: container.mcp_client(),
+        ensure_ready=False,
+        optional=True,
+    )
+    if resolved is None:
+        msg = "MCP client integration is disabled"
+        raise RuntimeError(msg)
+    return resolved
 
 
 def _convert_to_internal_rag_request(request: RAGRequest) -> InternalRAGRequest:
@@ -523,10 +727,7 @@ async def generate_rag_answer(
     """Generate contextual answer from search results using RAG."""
 
     try:
-        generator = rag_generator
-        if generator is None:
-            manager_instance = await _resolve_client_manager(None)
-            generator = await get_rag_generator(get_settings(), manager_instance)
+        generator = rag_generator or await get_rag_generator()
 
         internal_request = _convert_to_internal_rag_request(request)
         result = await generator.generate_answer(internal_request)
@@ -560,10 +761,7 @@ async def get_rag_metrics(
     """Get RAG service performance metrics."""
 
     try:
-        generator = rag_generator
-        if generator is None:
-            manager_instance = await _resolve_client_manager(None)
-            generator = await get_rag_generator(get_settings(), manager_instance)
+        generator = rag_generator or await get_rag_generator()
 
         metrics = generator.get_metrics()
         # Convert RAGServiceMetrics to dict if it's a Pydantic model
@@ -581,10 +779,7 @@ async def clear_rag_cache(
     """Clear RAG answer cache."""
 
     try:
-        generator = rag_generator
-        if generator is None:
-            manager_instance = await _resolve_client_manager(None)
-            generator = await get_rag_generator(get_settings(), manager_instance)
+        generator = rag_generator or await get_rag_generator()
 
         generator.clear_cache()
         # RAGGenerator.clear_cache is a no-op (no cache to purge)
@@ -598,23 +793,43 @@ async def clear_rag_cache(
 
 
 # Browser Automation Dependencies
-async def get_browser_automation_router(
-    client_manager: ClientManagerDep,
-) -> Any:
+async def get_browser_automation_router(router: Any | None = None) -> Any:
     """Get initialized BrowserAutomationRouter service."""
 
-    return await client_manager.get_browser_automation_router()
+    if router is not None:
+        return await _ensure_initialized(router, name="automation_router")
+
+    global _automation_router_instance  # pylint: disable=global-statement
+    if _automation_router_instance is not None:
+        return await _ensure_initialized(
+            _automation_router_instance,
+            name="automation_router",
+        )
+
+    async with _automation_router_lock:
+        if _automation_router_instance is None:
+            router_cls = _load_automation_router_class()
+            router_instance = router_cls(get_settings())
+            await _ensure_initialized(router_instance, name="automation_router")
+            _automation_router_instance = router_instance
+    return _automation_router_instance
 
 
 BrowserAutomationRouterDep = Annotated[Any, Depends(get_browser_automation_router)]
 
 
 # Project Storage Dependencies
-async def get_project_storage(
-    client_manager: ClientManagerDep,
-) -> Any:
+async def get_project_storage(storage: Any | None = None) -> Any:
     """Get initialized ProjectStorage service."""
-    return await client_manager.get_project_storage()
+
+    if storage is not None:
+        return await _ensure_initialized(storage, name="project_storage")
+
+    resolved = await _resolve_service(
+        name="project_storage",
+        supplier=lambda container: container.project_storage(),
+    )
+    return resolved
 
 
 ProjectStorageDep = Annotated[Any, Depends(get_project_storage)]
@@ -748,15 +963,13 @@ async def get_service_health() -> dict[str, Any]:
     """Get health status of all services."""
 
     try:
-        client_manager = get_client_manager()
-        health_status = await client_manager.get_health_status()
-
-        # Add circuit breaker status
+        manager = await _get_health_manager()
+        health_summary = await manager.get_overall_health()
         circuit_status = await get_circuit_breaker_status()
 
         return {
             "status": "healthy",
-            "services": health_status,
+            "services": health_summary,
             "circuit_breakers": circuit_status,
             "timestamp": datetime.now(tz=UTC).isoformat(),
         }
@@ -775,8 +988,6 @@ async def get_service_metrics() -> dict[str, Any]:
     """Get performance metrics for all services."""
 
     try:
-        client_manager = get_client_manager()
-
         # Collect metrics from various services
         metrics = {
             "embedding_service": {},
@@ -786,7 +997,7 @@ async def get_service_metrics() -> dict[str, Any]:
 
         # Get cache metrics if available
         try:
-            cache_manager = await get_cache_manager(client_manager)
+            cache_manager = await get_cache_manager()
             cache_stats = await cache_manager.get_performance_stats()
             metrics["cache_service"] = cache_stats
         except (ConnectionError, TimeoutError, ValueError) as e:
@@ -794,12 +1005,24 @@ async def get_service_metrics() -> dict[str, Any]:
 
         # Get crawl metrics if available
         try:
-            crawl_manager = await get_crawl_manager(client_manager)
+            crawl_manager = await get_crawl_manager()
             if crawl_manager:
                 crawl_metrics = crawl_manager.get_tier_metrics()  # type: ignore[attr-defined]
                 metrics["crawl_service"] = crawl_metrics
         except (ConnectionError, TimeoutError, ValueError) as e:
             logger.debug("Crawl metrics unavailable", exc_info=e)
+
+        # Embedding usage stats
+        try:
+            embedding_manager = await get_embedding_manager()
+            usage_stats = getattr(embedding_manager, "usage_stats", None)
+            if usage_stats is not None:
+                if hasattr(usage_stats, "model_dump"):
+                    metrics["embedding_service"] = usage_stats.model_dump()
+                elif isinstance(usage_stats, dict):
+                    metrics["embedding_service"] = usage_stats
+        except (ConnectionError, TimeoutError, ValueError) as e:
+            logger.debug("Embedding metrics unavailable", exc_info=e)
 
     except Exception as e:
         logger.exception("Metrics collection failed")
@@ -812,7 +1035,7 @@ async def get_service_metrics() -> dict[str, Any]:
 async def cleanup_services() -> None:
     """Cleanup all services and release resources."""
     try:
-        await shutdown_global_client_manager()
+        await shutdown_container()
         logger.info("All services cleaned up successfully")
     except (ConnectionError, OSError, PermissionError):
         logger.exception("Service cleanup failed")
