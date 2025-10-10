@@ -201,38 +201,9 @@ def _build_search_response(
     raw_results: Sequence[Any] | None = payload.get("results")
     records: list[SearchRecord] = []
     if raw_results:
-        for item in raw_results:
-            try:
-                records.append(SearchRecord.from_payload(item))
-            except (TypeError, ValidationError):
-                collection_hint = payload.get("collection")
-                if collection_hint is None:
-                    collection_hint = getattr(item, "collection", None)
-                item_payload = getattr(item, "payload", None)
-                if collection_hint is None and isinstance(item_payload, Mapping):
-                    collection_hint = item_payload.get(
-                        "collection"
-                    ) or item_payload.get("_collection")
-                try:
-                    records.append(
-                        SearchRecord.from_vector_match(
-                            item,
-                            collection_name=str(collection_hint or "default"),
-                        )
-                    )
-                except (TypeError, ValidationError):
-                    logger.debug(
-                        "Unexpected search result type %s; "
-                        "coercing to canonical record",
-                        type(item).__name__,
-                    )
-                    records.append(
-                        SearchRecord(
-                            id=str(uuid4()),
-                            content=str(item),
-                            score=0.0,
-                        )
-                    )
+        records = SearchRecord.parse_list(
+            raw_results, default_collection=payload.get("collection")
+        )
 
     tools_used: Sequence[str] | None = payload.get("tools_used")
     reasoning: Sequence[str] | None = payload.get("reasoning")

@@ -702,24 +702,9 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
         raw_documents = state.get("retrieved_documents", [])
         results: list[SearchRecord] = []
         if raw_documents:
-            try:
-                results = SearchRecord.parse_list(raw_documents)
-            except (TypeError, ValidationError):
-                for doc in raw_documents:
-                    try:
-                        results.append(SearchRecord.from_payload(doc))
-                    except (TypeError, ValidationError):
-                        logger.debug(
-                            "Failed to normalise retrieved document of type %s",
-                            type(doc).__name__,
-                        )
-                        results.append(
-                            SearchRecord(
-                                id=str(uuid4()),
-                                content=str(doc),
-                                score=0.0,
-                            )
-                        )
+            results = SearchRecord.parse_list(
+                raw_documents, default_collection=state.get("collection")
+            )
         tools_used = [output["tool_name"] for output in state.get("tool_outputs", [])]
         return GraphSearchOutcome(
             success=state.get("success", True),
