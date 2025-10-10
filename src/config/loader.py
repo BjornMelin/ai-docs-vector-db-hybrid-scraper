@@ -8,19 +8,28 @@ import json
 from pathlib import Path
 from typing import Any
 
-from pydantic import Field, ValidationError, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import (  # pyright: ignore[reportMissingImports]
+    Field,
+    ValidationError,
+    model_validator,
+)
+from pydantic_settings import (  # pyright: ignore[reportMissingImports]
+    BaseSettings,
+    SettingsConfigDict,
+)
 
-from src.architecture.modes import ApplicationMode
+from src.architecture.modes import (  # pyright: ignore[reportMissingImports]
+    ApplicationMode,
+)
 
 from .models import (
     AgenticConfig,
     AutomationRouterConfig,
     BrowserUseConfig,
     CacheConfig,
-    CircuitBreakerConfig,
     ChunkingConfig,
     ChunkingStrategy,
+    CircuitBreakerConfig,
     Crawl4AIConfig,
     CrawlProvider,
     DatabaseConfig,
