@@ -34,6 +34,18 @@ class _TelemetryState:
 _STATE = _TelemetryState()
 
 
+def _has_explicit_instrumentation_preferences(observed: Any) -> bool:
+    """Detect whether instrumentation toggles were explicitly provided."""
+
+    preference_fields = {"instrument_fastapi", "instrument_httpx"}
+
+    fields_set = getattr(observed, "model_fields_set", None)
+    if fields_set is not None and preference_fields.intersection(fields_set):
+        return True
+
+    return any(hasattr(observed, field) for field in preference_fields)
+
+
 def _from_settings(settings: Settings) -> ObservabilityConfig:
     """Create an :class:`ObservabilityConfig` from application settings."""
 
@@ -48,9 +60,11 @@ def _from_settings(settings: Settings) -> ObservabilityConfig:
     ):
         instrumentations.append("logging")
 
-    instrumentation_tuple = (
-        tuple(dict.fromkeys(instrumentations)) or DEFAULT_INSTRUMENTATIONS
-    )
+    instrumentation_tuple = tuple(dict.fromkeys(instrumentations))
+    if not instrumentation_tuple and not _has_explicit_instrumentation_preferences(
+        observed
+    ):
+        instrumentation_tuple = DEFAULT_INSTRUMENTATIONS
 
     environment = getattr(settings, "environment", "development")
     environment_value = getattr(environment, "value", environment)

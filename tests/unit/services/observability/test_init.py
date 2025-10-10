@@ -143,6 +143,36 @@ class TestInitializeObservability:
         instrumentation = tuple(configure.call_args.args[0])
         assert instrumentation == ("fastapi", "logging")
 
+    def test_settings_respect_disabled_instrumentations(self) -> None:
+        """Explicitly disabled instrumentations should not be re-enabled."""
+
+        settings = SimpleNamespace(
+            app_name="Test Application",
+            version="9.9.9",
+            environment="development",
+            observability=SimpleNamespace(
+                enabled=True,
+                instrument_fastapi=False,
+                instrument_httpx=False,
+                track_ai_operations=False,
+                track_costs=False,
+            ),
+        )
+
+        resource_mock = MagicMock()
+        resource_mock.create.return_value = MagicMock()
+
+        with (
+            patch.object(init_module, "_configure_instrumentations") as configure,
+            patch.dict(
+                "sys.modules",
+                _otel_modules(resource_factory=resource_mock),
+            ),
+        ):
+            assert initialize_observability(settings) is True
+
+        configure.assert_called_once_with(())
+
     def test_reinitialisation_is_idempotent(self) -> None:
         """Confirm repeated initialisation calls keep state stable."""
 
