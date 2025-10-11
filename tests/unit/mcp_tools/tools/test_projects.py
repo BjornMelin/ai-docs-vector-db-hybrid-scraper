@@ -8,10 +8,10 @@ from unittest.mock import AsyncMock, MagicMock, Mock
 import pytest
 
 from src.config.models import SearchStrategy
+from src.contracts.retrieval import SearchRecord
 from src.mcp_tools.models.requests import ProjectRequest
 from src.mcp_tools.models.responses import ProjectInfo
 from src.mcp_tools.tools.projects import register_tools
-from src.services.vector_db.types import VectorMatch
 
 
 @pytest.fixture
@@ -187,7 +187,7 @@ async def test_search_project_uses_hybrid(
         "collection": "project_proj",
     }
     mock_vector_service.search_documents.return_value = [
-        VectorMatch(id="doc", score=0.8, payload={"content": "body"})
+        SearchRecord(id="doc", score=0.8, content="body")
     ]
 
     results = await register["search_project"](

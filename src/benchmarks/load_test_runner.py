@@ -16,7 +16,7 @@ import httpx
 from pydantic import BaseModel, Field
 
 from src.config import Settings
-from src.models.vector_search import HybridSearchRequest
+from src.models.search import SearchRequest
 
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 class HybridSearchService(Protocol):
     """Protocol describing the minimal hybrid search surface required here."""
 
-    async def hybrid_search(self, request: HybridSearchRequest) -> Any:
+    async def hybrid_search(self, request: SearchRequest) -> Any:
         """Execute a hybrid search request."""
 
 
@@ -116,7 +116,7 @@ class LoadTestUser:  # pylint: disable=too-many-instance-attributes
         self,
         user_id: int,
         search_service: HybridSearchService,
-        test_queries: list[HybridSearchRequest],
+        test_queries: list[SearchRequest],
         config: LoadTestConfig,
     ):
         """Initialize load test user.
@@ -182,7 +182,7 @@ class LoadTestUser:  # pylint: disable=too-many-instance-attributes
             "session_duration": session_duration,
         }
 
-    def _prepare_query(self) -> HybridSearchRequest:
+    def _prepare_query(self) -> SearchRequest:
         """Return a cloned query with load-test specific identifiers."""
 
         query = random.choice(  # noqa: S311 - non-crypto random for load testing
@@ -192,7 +192,7 @@ class LoadTestUser:  # pylint: disable=too-many-instance-attributes
         query.session_id = f"load_test_session_{self.user_id}_{int(time.time())}"
         return query
 
-    async def _execute_request(self, query: HybridSearchRequest) -> None:
+    async def _execute_request(self, query: SearchRequest) -> None:
         """Execute a request and record results, including retries when enabled."""
 
         try:
@@ -204,7 +204,7 @@ class LoadTestUser:  # pylint: disable=too-many-instance-attributes
         else:
             self._record_success(response_time_ms)
 
-    async def _perform_request(self, query: HybridSearchRequest) -> float:
+    async def _perform_request(self, query: SearchRequest) -> float:
         """Perform a single request and return the latency in milliseconds."""
 
         start_time = time.perf_counter()
@@ -228,7 +228,7 @@ class LoadTestUser:  # pylint: disable=too-many-instance-attributes
         self.errors.append("timeout")
         logger.debug("User %s: Request timeout", self.user_id)
 
-    async def _handle_failure(self, exc: Exception, query: HybridSearchRequest) -> None:
+    async def _handle_failure(self, exc: Exception, query: SearchRequest) -> None:
         """Handle non-timeout failures, retrying when configured."""
 
         error_type = type(exc).__name__
@@ -239,7 +239,7 @@ class LoadTestUser:  # pylint: disable=too-many-instance-attributes
         if self.config.retry_on_failure and self.active:
             await self._retry_request(query)
 
-    async def _retry_request(self, query: HybridSearchRequest) -> None:
+    async def _retry_request(self, query: SearchRequest) -> None:
         """Retry a failed request with exponential backoff."""
 
         for retry in range(self.config.max_retries):
@@ -291,7 +291,7 @@ class LoadTestRunner:
     async def run_load_test(
         self,
         search_service: HybridSearchService,
-        test_queries: list[HybridSearchRequest],
+        test_queries: list[SearchRequest],
         load_settings: LoadTestConfig,
     ) -> LoadTestMetrics:
         """Run comprehensive load test.
@@ -522,7 +522,7 @@ class LoadTestRunner:
     async def run_stress_test(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         self,
         search_service: HybridSearchService,
-        test_queries: list[HybridSearchRequest],
+        test_queries: list[SearchRequest],
         max_users: int = 1000,
         step_size: int = 50,
         step_duration: int = 30,
@@ -581,7 +581,7 @@ class LoadTestRunner:
     async def run_endurance_test(
         self,
         search_service: HybridSearchService,
-        test_queries: list[HybridSearchRequest],
+        test_queries: list[SearchRequest],
         duration_hours: float = 1.0,
         concurrent_users: int = 50,
     ) -> LoadTestMetrics:

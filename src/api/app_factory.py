@@ -27,7 +27,7 @@ from src.services.dependencies import (
     get_vector_store_service as core_get_vector_store_service,
 )
 from src.services.fastapi.dependencies import HealthCheckerDep
-from src.services.fastapi.middleware.manager import apply_defaults, apply_named_stack
+from src.services.fastapi.middleware.manager import apply_defaults
 from src.services.observability.health_manager import HealthStatus
 
 
@@ -159,8 +159,11 @@ def _install_application_routes(app: FastAPI) -> None:
     for key, module_path in required_modules.items():
         try:
             module = import_module(module_path)
-            router = getattr(module, "router")
-        except (ImportError, AttributeError) as exc:  # pragma: no cover - optional import failure or missing router
+            router = module.router
+        except (
+            ImportError,
+            AttributeError,
+        ) as exc:  # pragma: no cover - optional import failure or missing router
             missing.append(f"{module_path} ({exc})")
             continue
 

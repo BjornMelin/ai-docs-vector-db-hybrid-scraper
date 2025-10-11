@@ -7,11 +7,11 @@ from typing import Any, cast
 
 import pytest
 
+from src.contracts.retrieval import SearchRecord
 from src.models.search import SearchRequest
 from src.services.query_processing.orchestrator import SearchOrchestrator
 from src.services.rag import RAGConfig as ServiceRAGConfig
 from src.services.vector_db.service import VectorStoreService
-from src.services.vector_db.types import VectorMatch
 
 
 class VectorServiceStub:
@@ -38,22 +38,27 @@ class VectorServiceStub:
         collection: str,
         query: str,
         **kwargs: Any,
-    ) -> list[VectorMatch]:
+    ) -> list[SearchRecord]:
         assert collection == self._collection
         assert kwargs.get("group_by") == "doc_id"
-        match = VectorMatch(
+        record = SearchRecord(
             id="doc-1",
             score=0.9,
             raw_score=0.9,
-            payload={
+            content=f"Snippet for {query}",
+            title="Example",
+            metadata={
                 "content": f"Snippet for {query}",
                 "title": "Example",
                 "doc_id": "doc-1",
                 "_grouping": {"applied": True, "group_id": "doc-1", "rank": 1},
             },
             collection=self._collection,
+            group_id="doc-1",
+            group_rank=1,
+            grouping_applied=True,
         )
-        return [match]
+        return [record]
 
     async def list_collections(self) -> list[str]:
         return [self._collection]

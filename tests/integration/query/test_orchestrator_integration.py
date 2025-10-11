@@ -7,6 +7,7 @@ from typing import cast
 
 import pytest
 
+from src.contracts.retrieval import SearchRecord
 from src.models.search import SearchRequest
 from src.services.query_processing.orchestrator import (
     SearchOrchestrator,
@@ -14,7 +15,6 @@ from src.services.query_processing.orchestrator import (
 )
 from src.services.rag.langgraph_pipeline import LangGraphRAGPipeline
 from src.services.vector_db.service import VectorStoreService
-from src.services.vector_db.types import VectorMatch
 
 
 class _StubVectorService:
@@ -86,23 +86,27 @@ async def test_orchestrator_generates_rag_answer_with_stub_pipeline() -> None:
     """SearchOrchestrator should delegate to LangGraph pipeline when enabled."""
 
     matches = [
-        VectorMatch(
+        SearchRecord(
             id="doc-1",
             score=0.92,
-            payload={
+            content="LangGraph integrates retrieval and generation flows.",
+            title="LangGraph Overview",
+            metadata={
                 "content": "LangGraph integrates retrieval and generation flows.",
-                "title": "LangGraph Overview",
                 "doc_id": "doc-1",
             },
+            collection="docs",
         ),
-        VectorMatch(
+        SearchRecord(
             id="doc-2",
             score=0.84,
-            payload={
+            content="FastAPI can front a LangGraph RAG workflow.",
+            title="FastAPI & LangGraph",
+            metadata={
                 "content": "FastAPI can front a LangGraph RAG workflow.",
-                "title": "FastAPI & LangGraph",
                 "doc_id": "doc-2",
             },
+            collection="docs",
         ),
     ]
     stub_vector_service = _StubVectorService(matches, collection="docs")
@@ -148,10 +152,13 @@ async def test_orchestrator_handles_missing_rag_result() -> None:
     """Orchestrator should return search-only response when pipeline yields nothing."""
 
     matches = [
-        VectorMatch(
+        SearchRecord(
             id="doc-1",
             score=0.9,
-            payload={"content": "Doc content", "title": "Doc title"},
+            content="Doc content",
+            title="Doc title",
+            metadata={"content": "Doc content"},
+            collection="docs",
         )
     ]
     stub_vector_service = _StubVectorService(matches, collection="docs")

@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 
 from src.benchmarks.performance_profiler import AdvancedHybridSearchService
 from src.config import Settings
-from src.models.vector_search import HybridSearchRequest
+from src.models.search import SearchRequest
 
 
 logger = logging.getLogger(__name__)
@@ -63,7 +63,7 @@ class ComponentBenchmarks:
     async def run_all_component_benchmarks(
         self,
         search_service: AdvancedHybridSearchService,
-        test_queries: Sequence[HybridSearchRequest],
+        test_queries: Sequence[SearchRequest],
     ) -> dict[str, ComponentBenchmarkResult]:
         """Run benchmarks for all components.
 
@@ -119,7 +119,7 @@ class ComponentBenchmarks:
     async def benchmark_query_classifier(  # pylint: disable=too-many-locals
         self,
         query_classifier: Any,
-        test_queries: Sequence[HybridSearchRequest],
+        test_queries: Sequence[SearchRequest],
     ) -> ComponentBenchmarkResult:
         """Benchmark query classifier performance."""
         queries = list(test_queries)
@@ -168,7 +168,7 @@ class ComponentBenchmarks:
         self,
         model_selector: Any,
         query_classifier: Any,
-        test_queries: Sequence[HybridSearchRequest],
+        test_queries: Sequence[SearchRequest],
     ) -> ComponentBenchmarkResult:
         """Benchmark model selector performance."""
         queries = list(test_queries)
@@ -221,7 +221,7 @@ class ComponentBenchmarks:
         self,
         fusion_tuner: Any,
         query_classifier: Any,
-        test_queries: Sequence[HybridSearchRequest],
+        test_queries: Sequence[SearchRequest],
     ) -> ComponentBenchmarkResult:
         """Benchmark adaptive fusion tuner performance."""
         queries = list(test_queries)
@@ -275,7 +275,7 @@ class ComponentBenchmarks:
     async def benchmark_splade_provider(  # pylint: disable=too-many-locals
         self,
         splade_provider: Any,
-        test_queries: Sequence[HybridSearchRequest],
+        test_queries: Sequence[SearchRequest],
     ) -> ComponentBenchmarkResult:
         """Benchmark SPLADE provider performance."""
         queries = list(test_queries)
@@ -324,7 +324,7 @@ class ComponentBenchmarks:
     async def benchmark_end_to_end_search(  # pylint: disable=too-many-locals
         self,
         search_service: AdvancedHybridSearchService,
-        test_queries: Sequence[HybridSearchRequest],
+        test_queries: Sequence[SearchRequest],
     ) -> ComponentBenchmarkResult:
         """Benchmark end-to-end search performance."""
         queries = list(test_queries)
@@ -383,7 +383,7 @@ class ComponentBenchmarks:
     async def benchmark_cache_performance(
         self,
         search_service: AdvancedHybridSearchService,
-        test_queries: Sequence[HybridSearchRequest],
+        test_queries: Sequence[SearchRequest],
     ) -> dict[str, float]:
         """Benchmark cache performance specifically."""
         cache_metrics: dict[str, float] = {}
@@ -438,7 +438,7 @@ class ComponentBenchmarks:
     async def benchmark_concurrent_component_access(
         self,
         search_service: AdvancedHybridSearchService,
-        test_queries: Sequence[HybridSearchRequest],
+        test_queries: Sequence[SearchRequest],
     ) -> dict[str, ComponentBenchmarkResult]:
         """Benchmark components under concurrent access."""
         concurrent_results: dict[str, ComponentBenchmarkResult] = {}

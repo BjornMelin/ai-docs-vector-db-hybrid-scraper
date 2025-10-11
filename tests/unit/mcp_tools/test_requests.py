@@ -8,6 +8,7 @@ from src.config.models import (
     FusionAlgorithm,
     SearchAccuracy,
     SearchStrategy,
+    VectorType,
 )
 from src.mcp_tools.models.requests import (
     BatchRequest,
@@ -38,6 +39,57 @@ def test_search_request_enforces_limit_bounds(limit):
     """SearchRequest.limit must stay within the documented bounds."""
     with pytest.raises(ValidationError):
         SearchRequest(query="test", limit=limit, offset=0)
+
+
+def test_search_request_rejects_malicious_filters() -> None:
+    """Filter keys and values should be sanitized for injection patterns."""
+
+    with pytest.raises(ValidationError):
+        SearchRequest(query="danger", filters={"$illegal": "ok"})
+
+    with pytest.raises(ValidationError):
+        SearchRequest(query="danger", filters={"status": "DROP TABLE"})
+
+    with pytest.raises(ValidationError):
+        SearchRequest(query="danger", filters={"tags": [str(i) for i in range(101)]})
+
+
+def test_search_request_validates_vectors() -> None:
+    """Dense and sparse vectors must respect dimensional constraints."""
+
+    with pytest.raises(ValidationError):
+        SearchRequest(query="vector", query_vector=[])
+
+    with pytest.raises(ValidationError):
+        SearchRequest(
+            query="vector",
+            query_vector=[0.1, 0.2],
+            force_dimension=3,
+        )
+
+    with pytest.raises(ValidationError):
+        SearchRequest(
+            query="vector",
+            vector_type=VectorType.SPARSE,
+        )
+
+    with pytest.raises(ValidationError):
+        SearchRequest(
+            query="vector",
+            vector_type=VectorType.SPARSE,
+            sparse_vector={-1: 0.5},
+        )
+
+
+def test_search_request_validates_strategy_alignment() -> None:
+    """Search strategy and vector type combinations must remain consistent."""
+
+    with pytest.raises(ValidationError):
+        SearchRequest(
+            query="strategy",
+            search_strategy=SearchStrategy.SPARSE,
+            vector_type=VectorType.DENSE,
+        )
 
 
 @pytest.mark.parametrize(
