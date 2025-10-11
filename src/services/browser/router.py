@@ -536,7 +536,7 @@ class AutomationRouter:  # pylint: disable=too-many-instance-attributes
                 "firecrawl",
                 "lightweight",
             ]
-        elif analysis["js_required"] and analysis["domain_complexity"] == "high":
+        elif analysis["js_required"] and analysis["domain_complexity"] in {"high", "medium"}:
             preferred = [
                 "playwright",
                 "crawl4ai",
