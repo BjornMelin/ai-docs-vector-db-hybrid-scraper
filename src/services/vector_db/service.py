@@ -772,6 +772,9 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
                 }
                 metadata["doc_id"] = group_id
                 record.metadata = metadata
+                record.group_id = group_id
+                record.group_rank = group_rank
+                record.grouping_applied = False
                 limited_records.append(record)
             if len(limited_records) >= limit:
                 break
@@ -798,6 +801,9 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
             group_info["applied"] = grouping_applied
             metadata["_grouping"] = group_info
             record.metadata = metadata
+            record.group_id = group_info["group_id"]
+            record.group_rank = rank
+            record.grouping_applied = grouping_applied
         return records
 
     def _normalize_scores(
