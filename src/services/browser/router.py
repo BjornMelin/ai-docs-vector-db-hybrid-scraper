@@ -27,7 +27,7 @@ import logging
 import math
 import time
 from dataclasses import dataclass
-from typing import Any, Final, Literal, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, cast
 from urllib.parse import urlparse
 
 
@@ -51,10 +51,19 @@ from .lightweight_scraper import LightweightScraper
 from .playwright_adapter import PlaywrightAdapter
 
 
+if TYPE_CHECKING:  # pragma: no cover - typing aid
+    from .crawl4ai_adapter import Crawl4AIAdapter as Crawl4AIAdapterType
+else:  # pragma: no cover - runtime fallback
+    Crawl4AIAdapterType = Any
+
 try:  # pragma: no cover - optional dependency
-    from .crawl4ai_adapter import Crawl4AIAdapter
+    from .crawl4ai_adapter import Crawl4AIAdapter as _RuntimeCrawl4AIAdapter
 except ImportError:  # pragma: no cover - optional dependency
-    Crawl4AIAdapter = None  # type: ignore[assignment]
+    _RuntimeCrawl4AIAdapter = None
+
+Crawl4AIAdapter: type[Crawl4AIAdapterType] | None = (
+    None if _RuntimeCrawl4AIAdapter is None else _RuntimeCrawl4AIAdapter
+)
 
 
 try:  # pragma: no cover - import guard
@@ -536,7 +545,10 @@ class AutomationRouter:  # pylint: disable=too-many-instance-attributes
                 "firecrawl",
                 "lightweight",
             ]
-        elif analysis["js_required"] and analysis["domain_complexity"] in {"high", "medium"}:
+        elif analysis["js_required"] and analysis["domain_complexity"] in {
+            "high",
+            "medium",
+        }:
             preferred = [
                 "playwright",
                 "crawl4ai",
@@ -597,7 +609,7 @@ class AutomationRouter:  # pylint: disable=too-many-instance-attributes
 def _resolve_router_config(settings: Settings) -> AutomationRouterConfig:
     """Resolve router configuration from settings."""
 
-    candidate = getattr(settings, "automation_router", AutomationRouterConfig())
+    candidate: Any = getattr(settings, "automation_router", AutomationRouterConfig())
     if isinstance(candidate, AutomationRouterConfig):
         return candidate
     if hasattr(candidate, "model_dump"):
@@ -616,7 +628,9 @@ def _resolve_router_config(settings: Settings) -> AutomationRouterConfig:
     return AutomationRouterConfig()
 
 
-def _create_crawl4ai_adapter(settings: Settings) -> Crawl4AIAdapter | None:
+def _create_crawl4ai_adapter(
+    settings: Settings,
+) -> Crawl4AIAdapterType | None:
     """Instantiate the Crawl4AI adapter when available."""
 
     if Crawl4AIAdapter is None:
@@ -625,7 +639,7 @@ def _create_crawl4ai_adapter(settings: Settings) -> Crawl4AIAdapter | None:
     if crawl4ai_config is None:
         logger.warning("Crawl4AI settings missing; adapter disabled")
         return None
-    return Crawl4AIAdapter(crawl4ai_config)
+    return cast(Crawl4AIAdapterType, Crawl4AIAdapter)(crawl4ai_config)
 
 
 def _create_firecrawl_adapter(settings: Settings) -> FirecrawlAdapter:
@@ -633,7 +647,7 @@ def _create_firecrawl_adapter(settings: Settings) -> FirecrawlAdapter:
 
     firecrawl_settings = getattr(settings, "firecrawl", object())
     adapter_config = FirecrawlAdapterConfig(
-        api_key=getattr(firecrawl_settings, "api_key", ""),
+        api_key=(getattr(firecrawl_settings, "api_key", "") or ""),
         api_url=getattr(firecrawl_settings, "api_url", None),
     )
     return FirecrawlAdapter(adapter_config)
@@ -659,6 +673,12 @@ def _create_browser_use_adapter(settings: Settings) -> BrowserUseAdapter:
     return BrowserUseAdapter(browser_use_settings)
 
 
+def _create_lightweight_scraper(settings: Settings) -> LightweightScraper:
+    """Instantiate the lightweight scraper with the active settings."""
+
+    return LightweightScraper(settings)
+
+
 class _AutomationRouterContainer(containers.DeclarativeContainer):  # type: ignore
     """Dependency-injector container for automation router components."""
 
@@ -669,7 +689,7 @@ class _AutomationRouterContainer(containers.DeclarativeContainer):  # type: igno
         settings=settings,
     )
     lightweight_scraper = providers.Singleton(
-        LightweightScraper,
+        _create_lightweight_scraper,
         settings=settings,
     )
     crawl4ai_adapter = providers.Singleton(
