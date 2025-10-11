@@ -86,6 +86,12 @@ jobs:
           python-version: "3.12"
           cache-suffix: "-lint"
 
+      - name: Install Ruff
+        run: uv tool install ruff
+
+      - name: Verify Ruff installation
+        run: uv tool list
+
       - name: Ruff format (check)
         run: uv run ruff format --check .
 
