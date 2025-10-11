@@ -10,11 +10,20 @@ import logging
 import os
 import random
 import time
-from typing import Any, ClassVar
+from typing import Any
 
-from locust import HttpUser, TaskSet, between, events, task
-from locust.env import Environment
-from locust.log import setup_logging
+import pytest
+
+
+try:
+    from locust import HttpUser, TaskSet, between, events, task
+    from locust.env import Environment
+    from locust.log import setup_logging
+except Exception as exc:  # pragma: no cover - optional load testing deps
+    pytest.skip(
+        f"Locust load testing dependencies unavailable: {exc}",
+        allow_module_level=True,
+    )
 
 
 logger = logging.getLogger(__name__)
@@ -23,8 +32,8 @@ logger = logging.getLogger(__name__)
 class VectorDBUserBehavior(TaskSet):
     """User behavior scenarios for vector database operations."""
 
-    def on_start(self):
-        """Initialize user session."""
+    def __init__(self, parent):
+        super().__init__(parent)
         self.test_documents = [
             "https://docs.python.org/3/tutorial/index.html",
             "https://fastapi.tiangolo.com/tutorial/",
@@ -42,7 +51,16 @@ class VectorDBUserBehavior(TaskSet):
             "vector database optimization",
             "embedding generation performance",
         ]
-        self.collections = ["default", "documentation", "tutorials", "api_reference"]
+        self.collections = [
+            "default",
+            "documentation",
+            "tutorials",
+            "api_reference",
+        ]
+
+    def on_start(self):
+        """Initialize user session."""
+        logger.debug("VectorDBUserBehavior session initialized")
 
     @task(3)
     def search_documents(self):
@@ -168,7 +186,6 @@ class VectorDBUserBehavior(TaskSet):
 class VectorDBUser(HttpUser):
     """Simulated user for vector database load testing."""
 
-    tasks: ClassVar[list[type]] = [VectorDBUserBehavior]
     wait_time = between(1, 3)  # Wait 1-3 seconds between tasks
 
     def on_start(self):
@@ -188,6 +205,9 @@ class VectorDBUser(HttpUser):
                 "User-Agent": "VectorDB-LoadTest/1.0",
             }
         )
+
+
+VectorDBUser.tasks = [VectorDBUserBehavior]
 
 
 class PerformanceMetricsCollector:
