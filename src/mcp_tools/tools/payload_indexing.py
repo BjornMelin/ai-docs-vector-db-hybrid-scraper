@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from collections.abc import Mapping
 from datetime import UTC, datetime
@@ -19,7 +18,6 @@ from src.mcp_tools.models.responses import (
     ReindexCollectionResponse,
 )
 from src.security.ml_security import MLSecurityValidator
-from src.services.dependencies import get_vector_store_service
 from src.services.vector_db.service import VectorStoreService
 
 
@@ -33,21 +31,6 @@ _INDEX_DEFINITIONS: dict[str, models.PayloadSchemaType] = {
     "word_count": models.PayloadSchemaType.INTEGER,
     "crawl_timestamp": models.PayloadSchemaType.DATETIME,
 }
-
-
-async def _resolve_vector_service(
-    vector_service: VectorStoreService | None = None,
-) -> VectorStoreService:
-    """Return an initialized vector service instance."""
-
-    service = vector_service or await get_vector_store_service()
-    if hasattr(service, "is_initialized") and not service.is_initialized():
-        initializer = getattr(service, "initialize", None)
-        if callable(initializer):
-            result = initializer()
-            if asyncio.iscoroutine(result):
-                await result
-    return service
 
 
 def _record_to_dict(record: SearchRecord) -> dict[str, Any]:
@@ -111,7 +94,8 @@ def _normalise_summary(
 
 def register_tools(
     mcp,
-    vector_service: VectorStoreService | None = None,
+    *,
+    vector_service: VectorStoreService,
 ) -> None:
     """Register payload indexing helpers with the MCP server."""
 
@@ -129,7 +113,7 @@ def register_tools(
         )
 
         safe_name = validator.validate_collection_name(collection_name)
-        service = await _resolve_vector_service(vector_service)
+        service = vector_service
         collections = await service.list_collections()
         if safe_name not in collections:
             msg = f"Collection '{safe_name}' not found"
@@ -149,7 +133,7 @@ def register_tools(
         """List existing payload indexes for a collection."""
 
         safe_name = validator.validate_collection_name(collection_name)
-        service = await _resolve_vector_service(vector_service)
+        service = vector_service
         summary = await service.get_payload_index_summary(safe_name)
         count = summary["indexed_fields_count"]
         await ctx.info(f"Collection {safe_name} exposes {count} payload indexes")
@@ -169,7 +153,7 @@ def register_tools(
         )
 
         safe_name = validator.validate_collection_name(collection_name)
-        service = await _resolve_vector_service(vector_service)
+        service = vector_service
 
         before = await service.get_payload_index_summary(safe_name)
         await service.drop_payload_indexes(safe_name, _INDEX_DEFINITIONS.keys())
@@ -208,7 +192,7 @@ def register_tools(
         safe_name = validator.validate_collection_name(collection_name)
         clean_query = validator.validate_query_string(query)
 
-        service = await _resolve_vector_service(vector_service)
+        service = vector_service
 
         start = perf_counter()
         matches = await service.search_documents(

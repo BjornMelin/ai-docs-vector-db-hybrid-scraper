@@ -21,7 +21,7 @@ class SearchService:
         self,
         name: str = "search-service",
         *,
-        vector_service: VectorStoreService | None = None,
+        vector_service: VectorStoreService,
     ):
         self.mcp = FastMCP(
             name,

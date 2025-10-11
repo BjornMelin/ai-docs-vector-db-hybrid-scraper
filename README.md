@@ -154,6 +154,10 @@ flowchart LR
 
 - FastAPI routes (`/api/v1/search`, `/api/v1/documents`, `/api/v1/collections`) expose the core ingestion and retrieval capabilities.
 - The FastMCP server (`src/unified_mcp_server.py`) registers search, document, embedding, scraping, analytics, cache, and content intelligence tool modules (`src/mcp_tools/`).
+  MCP tooling now expects dependencies to be supplied explicitly—services resolve
+  once from the dependency-injector container during startup and are passed into
+  `register_tools()` and service constructors instead of relying on runtime
+  service-locator helpers.
 - Developer CLI (`scripts/dev.py`) manages services, testing profiles, benchmarks, linting, and type checking.
 - Example notebooks and scripts under `examples/` demonstrate agentic RAG flows and advanced search orchestration.
 

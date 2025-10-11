@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from collections.abc import Awaitable, Callable
 from typing import cast
@@ -11,7 +10,6 @@ from fastmcp import Context
 
 from src.mcp_tools.models.responses import CollectionInfo, CollectionOperationResponse
 from src.services.cache.manager import CacheManager
-from src.services.dependencies import get_cache_manager, get_vector_store_service
 from src.services.vector_db.service import VectorStoreService
 
 
@@ -30,42 +28,11 @@ def _resolve_delete_callable(
     return cast(Callable[[str], Awaitable[None]], delete_method)
 
 
-async def _resolve_vector_service(
-    vector_service: VectorStoreService | None = None,
-) -> VectorStoreService:
-    """Return an initialized vector service instance."""
-
-    if vector_service is not None:
-        if (
-            hasattr(vector_service, "is_initialized")
-            and not vector_service.is_initialized()
-        ):
-            initializer = getattr(vector_service, "initialize", None)
-            if callable(initializer):
-                result = initializer()
-                if asyncio.iscoroutine(result):
-                    await result
-        return vector_service
-    return await get_vector_store_service()
-
-
-async def _resolve_cache_manager(
-    cache_manager: CacheManager | None = None,
-) -> CacheManager:
-    """Return the cache manager instance."""
-
-    if cache_manager is not None:
-        return cache_manager
-    resolved = await get_cache_manager()
-    if not isinstance(resolved, CacheManager):
-        raise RuntimeError("Resolved cache manager does not match CacheManager type")
-    return resolved
-
-
 def register_tools(  # pylint: disable=too-many-statements
     mcp,
-    vector_service: VectorStoreService | None = None,
-    cache_manager: CacheManager | None = None,
+    *,
+    vector_service: VectorStoreService,
+    cache_manager: CacheManager,
 ) -> None:
     """Register collection management tools with the MCP server."""
 
@@ -80,7 +47,7 @@ def register_tools(  # pylint: disable=too-many-statements
             await ctx.info("Retrieving list of all collections")
 
         try:
-            service = await _resolve_vector_service(vector_service)
+            service = vector_service
             collections = await service.list_collections()
             collection_info: list[CollectionInfo] = []
 
@@ -161,8 +128,8 @@ def register_tools(  # pylint: disable=too-many-statements
             await ctx.info(f"Starting deletion of collection: {collection_name}")
 
         try:
-            service = await _resolve_vector_service(vector_service)
-            cache = await _resolve_cache_manager(cache_manager)
+            service = vector_service
+            cache = cache_manager
 
             delete_callable = _resolve_delete_callable(service)
             await delete_callable(collection_name)
@@ -203,7 +170,7 @@ def register_tools(  # pylint: disable=too-many-statements
             await ctx.info(f"Starting optimization of collection: {collection_name}")
 
         try:
-            service = await _resolve_vector_service(vector_service)
+            service = vector_service
             # Get current collection info
             stats = await service.collection_stats(collection_name)
             vectors_meta = stats.get("vectors", {}) if isinstance(stats, dict) else {}

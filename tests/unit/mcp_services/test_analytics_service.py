@@ -28,8 +28,9 @@ def test_initializes_with_vector_service() -> None:
 async def test_get_service_info_returns_expected_payload() -> None:
     """Service info should surface declared capabilities and status."""
 
+    vector_service = Mock()
     with patch("src.mcp_services.analytics_service.analytics.register_tools"):
-        service = AnalyticsService()
+        service = AnalyticsService(vector_service=vector_service)
 
     info = await service.get_service_info()
 
@@ -48,8 +49,9 @@ async def test_get_service_info_returns_expected_payload() -> None:
 def test_get_mcp_server_exposes_fastmcp_instance() -> None:
     """The getter should return the configured FastMCP server."""
 
+    vector_service = Mock()
     with patch("src.mcp_services.analytics_service.analytics.register_tools"):
-        service = AnalyticsService("analytics-test")
+        service = AnalyticsService("analytics-test", vector_service=vector_service)
 
     server = service.get_mcp_server()
     assert server.name == "analytics-test"

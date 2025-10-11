@@ -11,7 +11,6 @@ from fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
 from src.config.loader import Settings, get_settings
-from src.services.dependencies import get_rag_generator
 from src.services.rag.generator import RAGGenerator
 from src.services.rag.models import RAGRequest, RAGResult
 
@@ -69,15 +68,6 @@ class RAGMetricsResponse(BaseModel):
     )
 
 
-async def _resolve_rag_generator(generator: RAGGenerator | None = None) -> RAGGenerator:
-    """Return the RAG generator instance."""
-
-    resolved = await get_rag_generator(generator)
-    if not isinstance(resolved, RAGGenerator):
-        raise RuntimeError("RAG generator is unavailable")
-    return resolved
-
-
 def _ensure_rag_enabled(config: Settings) -> None:
     """Validate that RAG is enabled in the active configuration."""
 
@@ -120,7 +110,8 @@ def _build_rag_answer_response(result: RAGResult) -> RAGAnswerResponse:
 
 def register_tools(
     app: FastMCP,
-    rag_generator_override: RAGGenerator | None = None,
+    *,
+    rag_generator: RAGGenerator,
 ) -> None:
     """Register RAG tools with FastMCP app."""
 
@@ -143,10 +134,8 @@ def register_tools(
         _ensure_rag_enabled(config)
 
         try:
-            generator = await _resolve_rag_generator(rag_generator_override)
-
             rag_request = _build_rag_service_request(request)
-            result = await generator.generate_answer(rag_request)
+            result = await rag_generator.generate_answer(rag_request)
 
             return _build_rag_answer_response(result)
 
@@ -174,8 +163,7 @@ def register_tools(
         _ensure_rag_enabled(config)
 
         try:
-            generator = await _resolve_rag_generator(rag_generator_override)
-            service_metrics = generator.get_metrics()
+            service_metrics = rag_generator.get_metrics()
             return RAGMetricsResponse(
                 generation_count=service_metrics.generation_count,
                 avg_generation_time_ms=service_metrics.avg_generation_time_ms,
@@ -218,7 +206,7 @@ def register_tools(
             return results
 
         try:
-            await _resolve_rag_generator(rag_generator_override)
+            await rag_generator.validate_configuration()
             results["connectivity_test"] = True
         except Exception as e:  # pragma: no cover - runtime safety
             results["error"] = str(e)

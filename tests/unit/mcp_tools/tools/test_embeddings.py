@@ -134,7 +134,7 @@ class TestEmbeddingsTools:
             return func
 
         mock_mcp.tool.return_value = capture_tool
-        register_tools(mock_mcp, mock_client_manager)
+        register_tools(mock_mcp, embedding_manager=mock_client_manager)
 
         generate_embeddings = registered_tools["generate_embeddings"]
 
@@ -173,7 +173,7 @@ class TestEmbeddingsTools:
             return func
 
         mock_mcp.tool.return_value = capture_tool
-        register_tools(mock_mcp, mock_client_manager)
+        register_tools(mock_mcp, embedding_manager=mock_client_manager)
 
         generate_embeddings = registered_tools["generate_embeddings"]
 
@@ -222,7 +222,7 @@ class TestEmbeddingsTools:
             None,
             raising=False,
         )
-        register_tools(mock_mcp, mock_client_manager)
+        register_tools(mock_mcp, embedding_manager=mock_client_manager)
 
         list_embedding_providers = registered_tools["list_embedding_providers"]
 
@@ -254,7 +254,7 @@ class TestEmbeddingsTools:
             return func
 
         mock_mcp.tool.return_value = capture_tool
-        register_tools(mock_mcp, mock_client_manager)
+        register_tools(mock_mcp, embedding_manager=mock_client_manager)
 
         generate_embeddings = registered_tools["generate_embeddings"]
 
@@ -281,7 +281,7 @@ class TestEmbeddingsTools:
             return func
 
         mock_mcp.tool.return_value = capture_tool
-        register_tools(mock_mcp, mock_client_manager)
+        register_tools(mock_mcp, embedding_manager=mock_client_manager)
 
         generate_embeddings = registered_tools["generate_embeddings"]
 
@@ -343,7 +343,7 @@ class TestEmbeddingsTools:
             return func
 
         mock_mcp.tool.return_value = capture_tool
-        register_tools(mock_mcp, mock_client_manager)
+        register_tools(mock_mcp, embedding_manager=mock_client_manager)
 
         generate_embeddings = registered_tools["generate_embeddings"]
         list_embedding_providers = registered_tools["list_embedding_providers"]
@@ -362,7 +362,7 @@ class TestEmbeddingsTools:
         """Test that embedding tools are properly registered."""
 
         mock_mcp = MagicMock()
-        register_tools(mock_mcp, mock_client_manager)
+        register_tools(mock_mcp, embedding_manager=mock_client_manager)
 
         # Should have registered 2 tools
         assert mock_mcp.tool.call_count == 2
@@ -381,7 +381,7 @@ class TestEmbeddingsTools:
             return func
 
         mock_mcp.tool.return_value = capture_tool
-        register_tools(mock_mcp, mock_client_manager)
+        register_tools(mock_mcp, embedding_manager=mock_client_manager)
 
         generate_embeddings = registered_tools["generate_embeddings"]
         list_embedding_providers = registered_tools["list_embedding_providers"]
@@ -408,7 +408,7 @@ class TestEmbeddingsTools:
             return func
 
         mock_mcp.tool.return_value = capture_tool
-        register_tools(mock_mcp, mock_client_manager)
+        register_tools(mock_mcp, embedding_manager=mock_client_manager)
 
         generate_embeddings = registered_tools["generate_embeddings"]
 
@@ -433,7 +433,7 @@ class TestEmbeddingsTools:
             return func
 
         mock_mcp.tool.return_value = capture_tool
-        register_tools(mock_mcp, mock_client_manager)
+        register_tools(mock_mcp, embedding_manager=mock_client_manager)
 
         generate_embeddings = registered_tools["generate_embeddings"]
 

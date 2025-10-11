@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from dataclasses import dataclass
 from typing import Any, cast
 
 from fastmcp import FastMCP
@@ -23,40 +22,30 @@ from .system_service import SystemService
 logger = logging.getLogger(__name__)
 
 
-@dataclass(slots=True)
-class OrchestratorDependencies:
-    """Container for optional orchestrator dependency overrides."""
-
-    search_service: SearchService | None = None
-    document_service: DocumentService | None = None
-    analytics_service: AnalyticsService | None = None
-    system_service: SystemService | None = None
-    graph_runner: GraphRunner | None = None
-    discovery: DynamicToolDiscovery | None = None
-
-
 class OrchestratorService:  # pylint: disable=too-many-instance-attributes
     """FastMCP service coordinating domain-specific MCP tools."""
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self,
         name: str = "orchestrator-service",
         *,
-        dependencies: OrchestratorDependencies | None = None,
+        search_service: SearchService,
+        document_service: DocumentService,
+        analytics_service: AnalyticsService,
+        system_service: SystemService,
+        graph_runner: GraphRunner | None = None,
+        discovery: DynamicToolDiscovery | None = None,
     ) -> None:
         instructions = (
             "Coordinate domain tools, surface orchestration telemetry, and expose "
             "LangGraph-based workflows for multi-service requests."
         )
         self.mcp = FastMCP(name, instructions=instructions)
-        deps = dependencies or OrchestratorDependencies()
-        self.search_service = deps.search_service or SearchService()
-        self.document_service = deps.document_service or DocumentService()
-        self.analytics_service = deps.analytics_service or AnalyticsService()
-        self.system_service = deps.system_service or SystemService()
-
-        discovery = deps.discovery
-        graph_runner = deps.graph_runner
+        self.search_service = search_service
+        self.document_service = document_service
+        self.analytics_service = analytics_service
+        self.system_service = system_service
         if discovery is None or graph_runner is None:
             discovery, _, _, graph_runner = GraphRunner.build_components(
                 discovery=discovery

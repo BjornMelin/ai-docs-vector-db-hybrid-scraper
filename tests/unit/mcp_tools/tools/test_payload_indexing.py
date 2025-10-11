@@ -116,7 +116,7 @@ async def test_tool_registration(mock_client_manager):
 
     mock_mcp.tool.return_value = capture
 
-    register_tools(mock_mcp, mock_client_manager)
+    register_tools(mock_mcp, vector_service=mock_client_manager)
 
     assert {
         "create_payload_indexes",
@@ -136,7 +136,7 @@ async def test_create_payload_indexes(
     registered = {}
     mock_mcp.tool.return_value = lambda func: registered.setdefault(func.__name__, func)
 
-    register_tools(mock_mcp, mock_client_manager)
+    register_tools(mock_mcp, vector_service=mock_client_manager)
 
     response = await registered["create_payload_indexes"](
         collection_name="test_collection",
@@ -168,7 +168,7 @@ async def test_create_payload_indexes_missing_collection(
     registered = {}
     mock_mcp.tool.return_value = lambda func: registered.setdefault(func.__name__, func)
 
-    register_tools(mock_mcp, mock_client_manager)
+    register_tools(mock_mcp, vector_service=mock_client_manager)
 
     with pytest.raises(ValueError, match="Collection 'test_collection' not found"):
         await registered["create_payload_indexes"](
@@ -185,7 +185,7 @@ async def test_list_payload_indexes(mock_client_manager, mock_context):
     registered = {}
     mock_mcp.tool.return_value = lambda func: registered.setdefault(func.__name__, func)
 
-    register_tools(mock_mcp, mock_client_manager)
+    register_tools(mock_mcp, vector_service=mock_client_manager)
 
     response = await registered["list_payload_indexes"](
         collection_name="test_collection", ctx=mock_context
@@ -207,7 +207,7 @@ async def test_reindex_collection(
     registered = {}
     mock_mcp.tool.return_value = lambda func: registered.setdefault(func.__name__, func)
 
-    register_tools(mock_mcp, mock_client_manager)
+    register_tools(mock_mcp, vector_service=mock_client_manager)
 
     response = await registered["reindex_collection"](
         collection_name="test_collection", ctx=mock_context
@@ -228,7 +228,7 @@ async def test_benchmark_filtered_search(mock_client_manager, mock_context):
     registered = {}
     mock_mcp.tool.return_value = lambda func: registered.setdefault(func.__name__, func)
 
-    register_tools(mock_mcp, mock_client_manager)
+    register_tools(mock_mcp, vector_service=mock_client_manager)
 
     response = await registered["benchmark_filtered_search"](
         collection_name="test_collection",

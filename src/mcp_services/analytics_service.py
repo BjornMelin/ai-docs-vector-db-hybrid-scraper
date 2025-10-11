@@ -20,7 +20,8 @@ class AnalyticsService:
     def __init__(
         self,
         name: str = "analytics-service",
-        vector_service: VectorStoreService | None = None,
+        *,
+        vector_service: VectorStoreService,
     ):
         """Initialize the analytics service with MCP tools."""
 

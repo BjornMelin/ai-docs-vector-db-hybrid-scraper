@@ -8,28 +8,15 @@ from fastmcp import Context
 
 from src.mcp_tools.models.responses import CacheClearResponse, CacheStatsResponse
 from src.services.cache.manager import CacheManager
-from src.services.dependencies import get_cache_manager
 
 
 logger = logging.getLogger(__name__)
 
 
-async def _resolve_cache_manager(
-    cache_manager: CacheManager | None = None,
-) -> CacheManager:
-    """Resolve the cache manager, ensuring it is initialized."""
-
-    if cache_manager is not None:
-        return cache_manager
-    resolved = await get_cache_manager()
-    if not isinstance(resolved, CacheManager):
-        raise RuntimeError("Resolved cache manager has unexpected type")
-    return resolved
-
-
 def register_tools(
     mcp,
-    cache_manager: CacheManager | None = None,
+    *,
+    cache_manager: CacheManager,
 ) -> None:
     """Register cache management tools with the MCP server."""
 
@@ -48,7 +35,7 @@ def register_tools(
                 await ctx.info("Starting full cache clear")
 
         try:
-            manager = await _resolve_cache_manager(cache_manager)
+            manager = cache_manager
             if pattern:
                 cleared = await manager.clear_pattern(pattern)
                 if ctx:
@@ -83,7 +70,7 @@ def register_tools(
             await ctx.info("Retrieving cache statistics")
 
         try:
-            manager = await _resolve_cache_manager(cache_manager)
+            manager = cache_manager
             stats = await manager.get_stats()
 
             hit_rate_value = stats.get("hit_rate")

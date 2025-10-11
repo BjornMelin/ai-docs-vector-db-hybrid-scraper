@@ -51,7 +51,7 @@ def mock_rag_generator() -> SimpleNamespace:
             total_generation_time_ms=250.0,
         )
     )
-    generator.cleanup = AsyncMock()
+    generator.validate_configuration = AsyncMock()
     return generator
 
 
@@ -73,16 +73,9 @@ def registered_tools(
 
     mock_app.tool = lambda *args, **kwargs: capture
 
-    async def _resolve(override: Any | None = None) -> Any:
-        if override is None:
-            raise RuntimeError("Generator required for test")
-        return override
-
-    monkeypatch.setattr(rag_module, "_resolve_rag_generator", _resolve)
-
     rag_module.register_tools(
         cast(FastMCP[Any], mock_app),
-        rag_generator_override=cast(RAGGenerator, mock_rag_generator),
+        rag_generator=cast(RAGGenerator, mock_rag_generator),
     )
     return registry
 
@@ -157,6 +150,6 @@ async def test_test_rag_configuration_confirms_connectivity(
 
     results = await registered_tools["test_rag_configuration"]()
 
-    mock_rag_generator.cleanup.assert_not_called()
+    mock_rag_generator.validate_configuration.assert_awaited_once()
     assert results["rag_enabled"] is True
     assert results["connectivity_test"] is True

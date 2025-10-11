@@ -19,18 +19,18 @@ from . import tools
 logger = logging.getLogger(__name__)
 
 
-async def register_all_tools(
+async def register_all_tools(  # pylint: disable=too-many-arguments
     mcp: FastMCP,
     *,
-    vector_service: VectorStoreService | None = None,
-    cache_manager: CacheManager | None = None,
-    crawl_manager: Any | None = None,
-    content_intelligence_service: Any | None = None,
-    project_storage: ProjectStorage | None = None,
-    embedding_manager: EmbeddingManager | None = None,
-    health_manager: HealthCheckManager | None = None,
+    vector_service: VectorStoreService,
+    cache_manager: CacheManager,
+    crawl_manager: Any,
+    content_intelligence_service: Any,
+    project_storage: ProjectStorage,
+    embedding_manager: EmbeddingManager,
+    health_manager: HealthCheckManager,
 ) -> None:
-    """Register the full MCP tool suite with dependency overrides."""
+    """Register the full MCP tool suite with explicit dependencies."""
 
     logger.debug("Registering MCP tool modules")
     tools.retrieval.register_tools(mcp, vector_service=vector_service)

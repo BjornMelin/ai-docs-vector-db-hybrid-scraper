@@ -15,12 +15,6 @@ from src.mcp_tools.models.requests import BatchRequest, DocumentRequest
 from src.mcp_tools.models.responses import AddDocumentResponse, DocumentBatchResponse
 from src.security.ml_security import MLSecurityValidator
 from src.services.cache.manager import CacheManager
-from src.services.dependencies import (
-    get_cache_manager,
-    get_content_intelligence_service,
-    get_crawl_manager,
-    get_vector_store_service,
-)
 from src.services.vector_db.service import VectorStoreService
 from src.services.vector_db.types import CollectionSchema, TextDocument
 
@@ -45,32 +39,6 @@ def _raise_scrape_error(url: str) -> None:
 
     msg = f"Failed to scrape {url}"
     raise ValueError(msg)
-
-
-async def _resolve_vector_service(
-    vector_service: VectorStoreService | None = None,
-) -> VectorStoreService:
-    """Return an initialized VectorStoreService instance."""
-
-    service = vector_service or await get_vector_store_service()
-    if hasattr(service, "is_initialized") and not service.is_initialized():
-        initializer = getattr(service, "initialize", None)
-        if callable(initializer):
-            result = initializer()
-            if asyncio.iscoroutine(result):
-                await result
-    return service
-
-
-async def _resolve_cache_manager(
-    cache_manager: CacheManager | None = None,
-) -> CacheManager:
-    """Return the cache manager instance, resolving from the container when needed."""
-
-    resolved = await get_cache_manager(cache_manager)
-    if not isinstance(resolved, CacheManager):
-        raise RuntimeError("Resolved cache manager has unexpected type")
-    return resolved
 
 
 async def _run_content_intelligence(
@@ -123,13 +91,19 @@ async def _scrape_document(
     doc_id: str,
     ctx: Context,
     *,
-    crawl_manager: Any | None = None,
+    crawl_manager: Any,
     content_service: Any | None = None,
 ) -> tuple[dict[str, Any], Any | None]:
     """Scrape the target URL and optionally enrich the content."""
 
-    resolved_crawl_manager = await get_crawl_manager(crawl_manager)
-    resolved_crawl_manager = cast(Any, resolved_crawl_manager)
+    if crawl_manager is None:
+        msg = (
+            "UnifiedBrowserManager is unavailable; ensure browser features are enabled"
+        )
+        await ctx.error(msg)
+        raise RuntimeError(msg)
+
+    resolved_crawl_manager = cast(Any, crawl_manager)
 
     await ctx.debug(f"Scraping URL for document {doc_id} via UnifiedBrowserManager")
     crawl_result = await resolved_crawl_manager.scrape_url(request.url)
@@ -142,15 +116,6 @@ async def _scrape_document(
         _raise_scrape_error(request.url)
 
     content_intelligence = content_service
-    try:
-        content_intelligence = await get_content_intelligence_service(
-            content_intelligence
-        )
-    except Exception as exc:  # pragma: no cover - optional component
-        logger.info(
-            "Content intelligence unavailable for %s: %s", doc_id, exc, exc_info=exc
-        )
-        content_intelligence = None
     enriched_content = await _run_content_intelligence(
         content_intelligence,
         crawl_result,
@@ -324,10 +289,11 @@ def _build_ingestion_response(
 
 def register_tools(
     mcp,
-    vector_service: VectorStoreService | None = None,
-    cache_manager: CacheManager | None = None,
-    crawl_manager: Any | None = None,
-    content_intelligence_service: Any | None = None,
+    *,
+    vector_service: VectorStoreService,
+    cache_manager: CacheManager,
+    crawl_manager: Any,
+    content_intelligence_service: Any,
 ) -> None:
     """Register document management tools with the MCP server."""
 
@@ -344,8 +310,8 @@ def register_tools(
         await ctx.info(f"Processing document {doc_id}: {request.url}")
 
         try:
-            service = await _resolve_vector_service(vector_service)
-            resolved_cache = await _resolve_cache_manager(cache_manager)
+            service = vector_service
+            resolved_cache = cache_manager
 
             request.url = MLSecurityValidator.from_unified_config().validate_url(
                 request.url
