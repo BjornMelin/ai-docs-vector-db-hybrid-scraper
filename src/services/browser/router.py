@@ -659,32 +659,32 @@ def _create_browser_use_adapter(settings: Settings) -> BrowserUseAdapter:
     return BrowserUseAdapter(browser_use_settings)
 
 
-class _AutomationRouterContainer(containers.DeclarativeContainer):
+class _AutomationRouterContainer(containers.DeclarativeContainer):  # type: ignore
     """Dependency-injector container for automation router components."""
 
     settings = providers.Dependency(instance_of=Settings)
 
-    router_config = providers.Singleton(  # pylint: disable=c-extension-no-member
+    router_config = providers.Singleton(
         _resolve_router_config,
         settings=settings,
     )
-    lightweight_scraper = providers.Singleton(  # pylint: disable=c-extension-no-member
+    lightweight_scraper = providers.Singleton(
         LightweightScraper,
         settings=settings,
     )
-    crawl4ai_adapter = providers.Singleton(  # pylint: disable=c-extension-no-member
+    crawl4ai_adapter = providers.Singleton(
         _create_crawl4ai_adapter,
         settings=settings,
     )
-    playwright_adapter = providers.Singleton(  # pylint: disable=c-extension-no-member
+    playwright_adapter = providers.Singleton(
         _create_playwright_adapter,
         settings=settings,
     )
-    browser_use_adapter = providers.Singleton(  # pylint: disable=c-extension-no-member
+    browser_use_adapter = providers.Singleton(
         _create_browser_use_adapter,
         settings=settings,
     )
-    firecrawl_adapter = providers.Singleton(  # pylint: disable=c-extension-no-member
+    firecrawl_adapter = providers.Singleton(
         _create_firecrawl_adapter,
         settings=settings,
     )
