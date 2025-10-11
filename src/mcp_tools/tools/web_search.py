@@ -13,9 +13,7 @@ from src.security.ml_security import MLSecurityValidator
 
 
 if TYPE_CHECKING:  # pragma: no cover - import only for type checking
-    from tavily import (
-        TavilyClient as _TavilyClient,  # pyright: ignore[reportMissingImports]
-    )
+    from tavily import TavilyClient as _TavilyClient  # type: ignore
 else:  # pragma: no cover - runtime uses dynamic import instead
     _TavilyClient = Any
 
@@ -118,7 +116,7 @@ def register_tools(mcp) -> None:
 
             return results
 
-        except Exception as exc:  # pragma: no cover - defensive runtime guard
+        except Exception as exc:
             logger.exception("Web search failed")
             if ctx:
                 await ctx.error(f"Search error: {exc}")
@@ -178,7 +176,7 @@ def register_tools(mcp) -> None:
 
             return results
 
-        except Exception as exc:  # pragma: no cover - defensive runtime guard
+        except Exception as exc:
             logger.exception("Advanced search failed")
             if ctx:
                 await ctx.error(f"Advanced search error: {exc}")
