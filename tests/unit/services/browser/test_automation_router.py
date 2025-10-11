@@ -222,7 +222,7 @@ def test_choose_tiers_for_hard_domain(
 
     tiers = router._choose_tiers(ScrapeRequest(url="https://docs.github.com/start"))  # type: ignore[attr-defined]
 
-    assert tiers[0] == "firecrawl"
+    assert tiers[:3] == ["firecrawl", "playwright", "browser_use"]
 
 
 def test_choose_tiers_with_interaction(
@@ -236,8 +236,7 @@ def test_choose_tiers_with_interaction(
         ScrapeRequest(url="https://example.com/form", interaction_required=True)
     )
 
-    assert tiers[0] == "playwright"
-    assert "browser_use" in tiers
+    assert tiers[:3] == ["playwright", "browser_use", "crawl4ai"]
 
 
 def test_choose_tiers_forced_tier(
@@ -252,3 +251,45 @@ def test_choose_tiers_forced_tier(
     )
 
     assert tiers == ["playwright"]
+
+
+def test_choose_tiers_static_domain(
+    router_with_stubs: tuple[AutomationRouter, dict[str, Any]],
+) -> None:
+    """Static domains should prioritize lightweight tiers."""
+
+    router, _ = router_with_stubs
+
+    tiers = router._choose_tiers(  # type: ignore[attr-defined]
+        ScrapeRequest(url="https://docs.example.com/guide")
+    )
+
+    assert tiers[:3] == ["lightweight", "crawl4ai", "playwright"]
+
+
+def test_choose_tiers_dynamic_domain(
+    router_with_stubs: tuple[AutomationRouter, dict[str, Any]],
+) -> None:
+    """Dynamic domains should escalate to scripted automation."""
+
+    router, _ = router_with_stubs
+
+    tiers = router._choose_tiers(  # type: ignore[attr-defined]
+        ScrapeRequest(url="https://app.example.com/dashboard")
+    )
+
+    assert tiers[:3] == ["playwright", "crawl4ai", "browser_use"]
+
+
+def test_choose_tiers_anti_bot_keyword(
+    router_with_stubs: tuple[AutomationRouter, dict[str, Any]],
+) -> None:
+    """Anti-bot indicators should escalate to resilient cloud tiers."""
+
+    router, _ = router_with_stubs
+
+    tiers = router._choose_tiers(  # type: ignore[attr-defined]
+        ScrapeRequest(url="https://secure.cloudflare-protected.example.com/login")
+    )
+
+    assert tiers[0] == "firecrawl"
