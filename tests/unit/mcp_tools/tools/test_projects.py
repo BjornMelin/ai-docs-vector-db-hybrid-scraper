@@ -48,6 +48,7 @@ def mock_client_manager(mock_vector_service: Mock, monkeypatch) -> Mock:
     manager.get_project_storage = AsyncMock(return_value=storage)
     manager.storage_dependency = storage_dependency
     manager.get_vector_store_service = AsyncMock(return_value=mock_vector_service)
+    manager.project_storage = storage
     return manager
 
 
@@ -59,7 +60,7 @@ def project_storage(mock_client_manager: Mock) -> Mock:
 
 
 @pytest.fixture
-def register(mock_client_manager: Mock) -> dict[str, Callable]:
+def register(mock_vector_service: Mock, project_storage: Mock) -> dict[str, Callable]:
     """Register project tools and expose them for tests."""
 
     mock_mcp = MagicMock()
@@ -70,7 +71,11 @@ def register(mock_client_manager: Mock) -> dict[str, Callable]:
         return func
 
     mock_mcp.tool.return_value = capture
-    register_tools(mock_mcp, mock_client_manager)
+    register_tools(
+        mock_mcp,
+        vector_service=mock_vector_service,
+        project_storage=project_storage,
+    )
     return registered_tools
 
 

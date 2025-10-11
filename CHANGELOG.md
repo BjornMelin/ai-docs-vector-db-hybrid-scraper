@@ -35,6 +35,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Refactor
 
+- **[MCP]:** Enforced explicit dependency injection for MCP tools and services,
+  removing service locator helpers and requiring startup wiring to supply all
+  shared managers.
 - Removed dual-mode architecture. Single unified app with feature flags.
 - **[Core]:** Unified dependency lifecycle under the dependency-injector
   container, deleting the legacy `ClientManager` pattern and introducing shared

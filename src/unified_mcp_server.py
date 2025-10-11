@@ -20,6 +20,7 @@ from src.infrastructure.bootstrap import container_session
 from src.mcp_tools.tool_registry import register_all_tools
 from src.services.logging_config import configure_logging
 from src.services.observability.health_manager import (
+    HealthCheckConfig,
     HealthCheckManager,
     build_health_manager,
 )
@@ -30,16 +31,28 @@ _MONITORING_STATE: dict[int, HealthCheckManager] = {}
 
 
 def initialize_monitoring_system(
-    config: Any,
+    settings: Any,
     qdrant_client: Any,
     redis_url: str | None,
 ) -> HealthCheckManager | None:
     """Set up the health monitoring system using application configuration."""
 
-    if not getattr(config.monitoring, "enabled", False):
+    monitoring_config = getattr(settings, "monitoring", None)
+    monitoring_enabled = bool(getattr(monitoring_config, "enabled", True))
+
+    if not monitoring_enabled:
         return None
+
+    base_config = HealthCheckConfig.from_unified_config(settings)
+    health_checks_enabled = bool(
+        getattr(monitoring_config, "enable_health_checks", monitoring_enabled)
+    )
+
+    if not health_checks_enabled:
+        return HealthCheckManager(base_config)
+
     return build_health_manager(
-        config,
+        settings,
         qdrant_client=qdrant_client,
         redis_url=redis_url,
     )
@@ -77,7 +90,6 @@ async def managed_lifespan(server: FastMCP[Any]) -> AsyncIterator[None]:  # pyli
     config = get_settings()
     configure_logging(settings=config)
     monitoring_tasks: list[asyncio.Task[Any]] = []
-    health_manager = None
     validate_configuration()
     logger.info("Initializing AI Documentation Vector DB MCP Server...")
 
@@ -101,16 +113,29 @@ async def managed_lifespan(server: FastMCP[Any]) -> AsyncIterator[None]:  # pyli
                 config, qdrant_client, redis_url
             )
 
-            if health_manager:
-                manager_config = getattr(health_manager, "config", None)
-                health_checks_enabled = bool(
-                    getattr(config.monitoring, "enable_health_checks", False)
-                ) and bool(getattr(manager_config, "enabled", False))
+            monitoring_config = getattr(config, "monitoring", None)
+            monitoring_enabled = bool(getattr(monitoring_config, "enabled", True))
+            health_checks_requested = monitoring_enabled and bool(
+                getattr(
+                    monitoring_config,
+                    "enable_health_checks",
+                    monitoring_enabled,
+                )
+            )
 
-                if health_checks_enabled:
+            if health_manager is None:
+                logger.info(
+                    "Monitoring disabled via configuration; skipping "
+                    "health manager registration"
+                )
+            else:
+                manager_config = getattr(health_manager, "config", None)
+                health_checks_enabled = bool(getattr(manager_config, "enabled", False))
+
+                if health_checks_requested and health_checks_enabled:
                     setup_fastmcp_monitoring(server, config, health_manager)
 
-                    interval = config.monitoring.system_metrics_interval
+                    interval = getattr(monitoring_config, "system_metrics_interval", 60)
                     health_check_task = asyncio.create_task(
                         run_periodic_health_checks(
                             health_manager, interval_seconds=float(interval)

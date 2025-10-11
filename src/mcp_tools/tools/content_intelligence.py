@@ -20,19 +20,9 @@ from src.services.content_intelligence.models import (
     ContentType,
     QualityScore,
 )
-from src.services.dependencies import get_content_intelligence_service
 
 
 logger = logging.getLogger(__name__)
-
-
-async def _resolve_content_service(service: Any | None = None) -> Any | None:
-    """Return the content intelligence service when available."""
-
-    try:
-        return await get_content_intelligence_service(service)
-    except RuntimeError:
-        return None
 
 
 class ContentAnalysisToolPayload(BaseModel):
@@ -96,7 +86,8 @@ class ContentMetadataToolPayload(BaseModel):
 
 def register_tools(  # pylint: disable=too-many-statements
     mcp,
-    content_service: Any | None = None,
+    *,
+    content_service: Any,
 ) -> None:
     """Register content intelligence tools with the MCP server."""
 
@@ -124,8 +115,7 @@ def register_tools(  # pylint: disable=too-many-statements
                 f"{analysis_request.url}"
             )
 
-            # Get Content Intelligence Service
-            service = await _resolve_content_service(content_service)
+            service = content_service
 
             if not service:
                 await ctx.error("Content Intelligence Service not available")
@@ -186,8 +176,7 @@ def register_tools(  # pylint: disable=too-many-statements
         try:
             await ctx.info(f"Classifying content type for URL: {payload.url}")
 
-            # Get Content Intelligence Service
-            service = await _resolve_content_service(content_service)
+            service = content_service
 
             if not service:
                 await ctx.error("Content Intelligence Service not available")
@@ -248,7 +237,7 @@ def register_tools(  # pylint: disable=too-many-statements
             await ctx.info("Assessing content quality")
 
             # Get Content Intelligence Service
-            service = await _resolve_content_service(content_service)
+            service = content_service
 
             if not service:
                 await ctx.error("Content Intelligence Service not available")
@@ -311,7 +300,7 @@ def register_tools(  # pylint: disable=too-many-statements
             await ctx.info(f"Extracting metadata for URL: {payload.url}")
 
             # Get Content Intelligence Service
-            service = await _resolve_content_service(content_service)
+            service = content_service
 
             if not service:
                 await ctx.error("Content Intelligence Service not available")
@@ -378,7 +367,7 @@ def register_tools(  # pylint: disable=too-many-statements
                 await ctx.info(f"Generating adaptation recommendations for: {url}")
 
             # Get Content Intelligence Service
-            service = await _resolve_content_service(content_service)
+            service = content_service
 
             if not service:
                 if ctx:
@@ -428,7 +417,7 @@ def register_tools(  # pylint: disable=too-many-statements
                 await ctx.info("Retrieving Content Intelligence Service metrics")
 
             # Get Content Intelligence Service
-            service = await _resolve_content_service(content_service)
+            service = content_service
 
             if not service:
                 if ctx:

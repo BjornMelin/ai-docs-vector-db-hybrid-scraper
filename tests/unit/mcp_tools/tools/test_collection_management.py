@@ -41,6 +41,8 @@ class TestCollectionsTools:
         mock_manager.get_vector_store_service = AsyncMock(return_value=mock_vector)
         mock_manager.get_cache_manager = AsyncMock(return_value=mock_cache)
         mock_manager.cache_mock = mock_cache
+        mock_manager.cache_manager = mock_cache
+        mock_manager.vector_service = mock_vector
 
         return mock_manager
 
@@ -66,7 +68,11 @@ class TestCollectionsTools:
             return func
 
         mock_mcp.tool.return_value = capture_tool
-        register_tools(mock_mcp, mock_client_manager)
+        register_tools(
+            mock_mcp,
+            vector_service=mock_client_manager,
+            cache_manager=mock_client_manager.cache_manager,
+        )
 
         list_collections = registered_tools["list_collections"]
 
@@ -95,7 +101,11 @@ class TestCollectionsTools:
             return func
 
         mock_mcp.tool.return_value = capture_tool
-        register_tools(mock_mcp, mock_client_manager)
+        register_tools(
+            mock_mcp,
+            vector_service=mock_client_manager,
+            cache_manager=mock_client_manager.cache_manager,
+        )
 
         optimize_collection = registered_tools["optimize_collection"]
 
@@ -120,7 +130,11 @@ class TestCollectionsTools:
             return func
 
         mock_mcp.tool.return_value = capture_tool
-        register_tools(mock_mcp, mock_client_manager)
+        register_tools(
+            mock_mcp,
+            vector_service=mock_client_manager,
+            cache_manager=mock_client_manager.cache_manager,
+        )
 
         delete_collection = registered_tools["delete_collection"]
         mock_vector = await mock_client_manager.get_vector_store_service()
@@ -157,7 +171,11 @@ class TestCollectionsTools:
             return func
 
         mock_mcp.tool.return_value = capture_tool
-        register_tools(mock_mcp, mock_client_manager)
+        register_tools(
+            mock_mcp,
+            vector_service=mock_client_manager,
+            cache_manager=mock_client_manager.cache_manager,
+        )
 
         delete_collection = registered_tools["delete_collection"]
 
@@ -188,7 +206,11 @@ class TestCollectionsTools:
             return func
 
         mock_mcp.tool.return_value = capture_tool
-        register_tools(mock_mcp, mock_client_manager)
+        register_tools(
+            mock_mcp,
+            vector_service=mock_client_manager,
+            cache_manager=mock_client_manager.cache_manager,
+        )
 
         list_collections = registered_tools["list_collections"]
 
@@ -235,7 +257,11 @@ class TestCollectionsTools:
             return func
 
         mock_mcp.tool.return_value = capture_tool
-        register_tools(mock_mcp, mock_client_manager)
+        register_tools(
+            mock_mcp,
+            vector_service=mock_client_manager,
+            cache_manager=mock_client_manager.cache_manager,
+        )
 
         # Test each tool has logging
         tools_to_test = [
@@ -259,7 +285,11 @@ class TestCollectionsTools:
         """Test that collection tools are properly registered."""
 
         mock_mcp = MagicMock()
-        register_tools(mock_mcp, mock_client_manager)
+        register_tools(
+            mock_mcp,
+            vector_service=mock_client_manager,
+            cache_manager=mock_client_manager.cache_manager,
+        )
 
         # Should have registered 3 tools
         assert mock_mcp.tool.call_count == 3

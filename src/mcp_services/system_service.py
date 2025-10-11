@@ -33,9 +33,9 @@ class SystemService:
         self,
         name: str = "system-service",
         *,
-        vector_service: VectorStoreService | None = None,
-        embedding_manager: EmbeddingManager | None = None,
-        health_manager: HealthCheckManager | None = None,
+        vector_service: VectorStoreService,
+        embedding_manager: EmbeddingManager,
+        health_manager: HealthCheckManager,
     ):
         """Initialize the system service.
 
@@ -57,7 +57,7 @@ class SystemService:
             """,
         )
         system_health.register_tools(self.mcp, health_manager=health_manager)
-        configuration.register_tools(self.mcp)
+        configuration.register_tools(self.mcp, vector_service=vector_service)
         cost_estimation.register_tools(self.mcp)
         embeddings.register_tools(self.mcp, embedding_manager=embedding_manager)
         logger.info("System tools registered")

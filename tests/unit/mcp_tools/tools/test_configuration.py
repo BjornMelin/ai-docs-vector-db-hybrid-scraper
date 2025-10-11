@@ -85,7 +85,7 @@ class TestConfigurationTools:
     ) -> None:
         """Global configuration export should mask sensitive keys."""
 
-        configuration_module.register_tools(mock_mcp, MagicMock())
+        configuration_module.register_tools(mock_mcp, vector_service=MagicMock())
         get_config_tool = mock_mcp._registered["get_settings"]
 
         result = await get_config_tool(ctx=None)
@@ -104,7 +104,7 @@ class TestConfigurationTools:
     ) -> None:
         """Requesting an explicit key should return sanitized data."""
 
-        configuration_module.register_tools(mock_mcp, MagicMock())
+        configuration_module.register_tools(mock_mcp, vector_service=MagicMock())
         get_config_tool = mock_mcp._registered["get_settings"]
 
         response = await get_config_tool(key="misc_setting", ctx=None)
@@ -124,7 +124,10 @@ class TestConfigurationTools:
         """Validation should surface provider and grouping warnings."""
 
         client_manager = MagicMock()
-        configuration_module.register_tools(mock_mcp, client_manager)
+        configuration_module.register_tools(
+            mock_mcp,
+            vector_service=client_manager,
+        )
         validate_tool = mock_mcp._registered["validate_config"]
 
         result = await validate_tool(ctx=None)
@@ -140,5 +143,5 @@ class TestConfigurationTools:
     def test_tools_registered(self, mock_mcp: MagicMock, patched_get_config) -> None:
         """Registering configuration tools should expose two MCP endpoints."""
 
-        configuration_module.register_tools(mock_mcp, MagicMock())
+        configuration_module.register_tools(mock_mcp, vector_service=MagicMock())
         assert set(mock_mcp._registered.keys()) == {"get_settings", "validate_config"}

@@ -212,3 +212,43 @@ async def test_register_all_tools_logs_summary(
     await tool_registry.register_all_tools(fake_mcp, **stub_services)
 
     assert "Registered MCP tools" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_register_all_tools_skips_system_health_when_disabled(
+    monkeypatch: pytest.MonkeyPatch,
+    fake_mcp: MagicMock,
+    stub_services: dict[str, Any],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """System health tools should be skipped when no manager is provided."""
+
+    services = {**stub_services, "health_manager": None}
+
+    for module in [
+        tool_registry.tools.retrieval,
+        tool_registry.tools.documents,
+        tool_registry.tools.embeddings,
+        tool_registry.tools.lightweight_scrape,
+        tool_registry.tools.collection_management,
+        tool_registry.tools.projects,
+        tool_registry.tools.payload_indexing,
+        tool_registry.tools.analytics,
+        tool_registry.tools.cache,
+        tool_registry.tools.content_intelligence,
+        tool_registry.tools.web_search,
+        tool_registry.tools.cost_estimation,
+    ]:
+        monkeypatch.setattr(module, "register_tools", lambda *args, **kwargs: None)
+
+    system_health_mock = MagicMock()
+    monkeypatch.setattr(
+        tool_registry.tools.system_health, "register_tools", system_health_mock
+    )
+
+    caplog.set_level("INFO", tool_registry.__name__)
+
+    await tool_registry.register_all_tools(fake_mcp, **services)
+
+    system_health_mock.assert_not_called()
+    assert "Skipping system health tool registration" in caplog.text

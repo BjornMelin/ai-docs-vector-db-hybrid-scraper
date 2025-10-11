@@ -19,18 +19,18 @@ from . import tools
 logger = logging.getLogger(__name__)
 
 
-async def register_all_tools(
+async def register_all_tools(  # pylint: disable=too-many-arguments
     mcp: FastMCP,
     *,
-    vector_service: VectorStoreService | None = None,
-    cache_manager: CacheManager | None = None,
-    crawl_manager: Any | None = None,
-    content_intelligence_service: Any | None = None,
-    project_storage: ProjectStorage | None = None,
-    embedding_manager: EmbeddingManager | None = None,
-    health_manager: HealthCheckManager | None = None,
+    vector_service: VectorStoreService,
+    cache_manager: CacheManager,
+    crawl_manager: Any,
+    content_intelligence_service: Any,
+    project_storage: ProjectStorage,
+    embedding_manager: EmbeddingManager,
+    health_manager: HealthCheckManager | None,
 ) -> None:
-    """Register the full MCP tool suite with dependency overrides."""
+    """Register the full MCP tool suite with explicit dependencies."""
 
     logger.debug("Registering MCP tool modules")
     tools.retrieval.register_tools(mcp, vector_service=vector_service)
@@ -60,7 +60,10 @@ async def register_all_tools(
         mcp,
         content_service=content_intelligence_service,
     )
-    tools.system_health.register_tools(mcp, health_manager=health_manager)
+    if health_manager is not None:
+        tools.system_health.register_tools(mcp, health_manager=health_manager)
+    else:
+        logger.info("Skipping system health tool registration; monitoring disabled")
     tools.web_search.register_tools(mcp)
     tools.cost_estimation.register_tools(mcp)
     logger.info("Registered MCP tools")

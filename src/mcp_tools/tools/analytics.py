@@ -15,32 +15,12 @@ from src.mcp_tools.models.responses import (
     SystemHealthResponse,
     SystemHealthServiceStatus,
 )
-from src.services.dependencies import get_vector_store_service
 from src.services.vector_db.service import VectorStoreService
 
 
 logger = logging.getLogger(__name__)
 _ESTIMATE_DIMENSIONS = 1536
 _BYTES_PER_FLOAT32 = 4
-
-
-async def _resolve_vector_service(
-    vector_service: VectorStoreService | None = None,
-) -> VectorStoreService:
-    """Return an initialized vector service, resolving from container when needed."""
-
-    if vector_service is not None:
-        if (
-            hasattr(vector_service, "is_initialized")
-            and not vector_service.is_initialized()
-        ):
-            initializer = getattr(vector_service, "initialize", None)
-            if callable(initializer):
-                result = initializer()
-                if asyncio.iscoroutine(result):
-                    await result
-        return vector_service
-    return await get_vector_store_service()
 
 
 def _timestamp() -> str:
@@ -66,14 +46,14 @@ def _normalize_stats(stats: Any) -> dict[str, Any]:
 
 def register_tools(
     mcp,
-    vector_service: VectorStoreService | None = None,
+    *,
+    vector_service: VectorStoreService,
 ) -> None:
     """Register analytics tools.
 
     Args:
         mcp: FastMCP server instance used for tool registration.
-        vector_service: Optional pre-resolved vector service. When omitted, the
-            service is resolved from the dependency-injector container.
+        vector_service: Injected vector store service used by analytics tools.
     """
 
     @mcp.tool()
@@ -82,7 +62,7 @@ def register_tools(
     ) -> AnalyticsResponse:
         """Return lightweight analytics for vector collections."""
 
-        service = await _resolve_vector_service(vector_service)
+        service = vector_service
         collections = (
             [request.collection]
             if request.collection
@@ -138,7 +118,7 @@ def register_tools(
         overall_status = "healthy"
 
         try:
-            service = await _resolve_vector_service(vector_service)
+            service = vector_service
             await service.list_collections()
             if ctx:
                 await ctx.info("Vector store service responded successfully")

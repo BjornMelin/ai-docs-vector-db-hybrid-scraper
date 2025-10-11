@@ -25,16 +25,17 @@ logger = logging.getLogger(__name__)
 class DocumentService:
     """Document ingestion and management."""
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self,
         name: str = "document-service",
         *,
-        vector_service: VectorStoreService | None = None,
-        cache_manager: CacheManager | None = None,
-        crawl_manager: Any | None = None,
-        content_intelligence_service: Any | None = None,
-        project_storage: ProjectStorage | None = None,
-    ):
+        vector_service: VectorStoreService,
+        cache_manager: CacheManager,
+        crawl_manager: Any,
+        content_intelligence_service: Any,
+        project_storage: ProjectStorage,
+    ) -> None:
         self.mcp = FastMCP(
             name,
             instructions=(

@@ -12,7 +12,7 @@ from typing import Any, cast
 from fastmcp import Context
 
 from src.config.loader import Settings, get_settings as load_unified_config
-from src.services.dependencies import get_vector_store_service
+from src.services.vector_db.service import VectorStoreService
 
 
 logger = logging.getLogger(__name__)
@@ -80,6 +80,7 @@ def _collect_provider_warnings(config: Settings) -> list[str]:
 
 async def _grouping_support_status(
     config: Settings,
+    vector_service: VectorStoreService,
 ) -> tuple[list[str], bool | None]:
     """Check QueryPointGroups readiness and emit warnings if required."""
 
@@ -87,7 +88,7 @@ async def _grouping_support_status(
     if not getattr(qdrant_settings, "enable_grouping", False):
         return [], None
 
-    grouping_supported = await _probe_grouping_support()
+    grouping_supported = await _probe_grouping_support(vector_service)
     if grouping_supported is False:
         return [
             "QueryPointGroups requested but backend lacks support; grouping will "
@@ -139,11 +140,12 @@ def _resolve_key(config: Settings, key: str) -> Any:
     return current
 
 
-async def _probe_grouping_support() -> bool | None:
+async def _probe_grouping_support(
+    vector_service: VectorStoreService,
+) -> bool | None:
     """Detect whether the active vector service supports QueryPointGroups."""
 
     try:
-        vector_service = await get_vector_store_service()
         server_side_probe = getattr(
             vector_service, "supports_server_side_grouping", None
         )
@@ -166,7 +168,11 @@ async def _probe_grouping_support() -> bool | None:
     return None
 
 
-def register_tools(mcp):
+def register_tools(
+    mcp,
+    *,
+    vector_service: VectorStoreService,
+):
     """Register configuration management tools."""
 
     config_loader = load_unified_config
@@ -216,7 +222,8 @@ def register_tools(mcp):
             issues: list[str] = []
             warnings = _collect_provider_warnings(config)
             grouping_warnings, grouping_supported = await _grouping_support_status(
-                config
+                config,
+                vector_service,
             )
             warnings.extend(grouping_warnings)
 

@@ -1,4 +1,6 @@
-"""Tests for system health MCP tools."""
+"""System health tool tests covering injected dependencies."""
+
+# pylint: disable=duplicate-code  # Shared expectation payloads across service tests
 
 from __future__ import annotations
 
@@ -107,37 +109,6 @@ async def test_get_process_info_returns_check_metadata(
     assert response["resource_snapshot"] == resource_snapshot
     health_manager.check_single.assert_awaited_once_with("system_resources")
     mock_context.info.assert_awaited()
-
-
-@pytest.mark.asyncio()
-async def test_get_system_health_reports_manager_failure(
-    mocker: MockerFixture,
-    mock_context,
-) -> None:
-    """Errors retrieving the health manager should surface through the context."""
-
-    mock_mcp = mocker.MagicMock()
-    tools: dict[str, Callable[..., Any]] = {}
-
-    def capture(func: Callable[..., Any]) -> Callable[..., Any]:
-        tools[func.__name__] = func
-        return func
-
-    mock_mcp.tool.return_value = capture
-
-    mocker.patch(
-        "src.mcp_tools.tools.system_health._get_health_manager",
-        side_effect=RuntimeError("not configured"),
-    )
-
-    register_tools(mock_mcp)
-
-    result = await tools["get_system_health"](mock_context)
-
-    assert result["status"] == HealthStatus.UNKNOWN.value
-    mock_context.error.assert_awaited_once_with(
-        "Health manager unavailable: not configured"
-    )
 
 
 @pytest.mark.asyncio()

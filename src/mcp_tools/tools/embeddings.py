@@ -16,7 +16,6 @@ from src.mcp_tools.models.responses import (
     EmbeddingProviderInfo,
 )
 from src.mcp_tools.utils.provider_metadata import normalize_provider_catalog
-from src.services.dependencies import get_embedding_manager
 
 
 logger = logging.getLogger(__name__)
@@ -34,15 +33,10 @@ _PROVIDER_CACHE_TTL = timedelta(seconds=300)
 _PROVIDER_CACHE = _ProviderCacheState()
 
 
-async def _resolve_embedding_manager(embedding_manager: Any | None = None) -> Any:
-    """Return the embedding manager instance."""
-
-    return await get_embedding_manager(embedding_manager)
-
-
 def register_tools(
     mcp,
-    embedding_manager: Any | None = None,
+    *,
+    embedding_manager: Any,
 ) -> None:
     """Register embedding management tools with the MCP server."""
 
@@ -63,8 +57,7 @@ def register_tools(
             )
 
         try:
-            # Get embedding manager from DI container or override
-            manager = await _resolve_embedding_manager(embedding_manager)
+            manager = embedding_manager
 
             if ctx:
                 await ctx.debug(
@@ -140,7 +133,7 @@ def register_tools(
 
         try:
             # Get embedding manager from DI container or override
-            manager = await _resolve_embedding_manager(embedding_manager)
+            manager = embedding_manager
 
             providers = _get_normalized_providers(manager)
 

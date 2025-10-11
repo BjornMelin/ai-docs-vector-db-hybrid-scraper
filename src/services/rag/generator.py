@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 import logging
 import time
 from collections.abc import Iterable, Sequence
@@ -69,6 +70,13 @@ class RAGGenerator(BaseService):
         """Return the generator configuration."""
 
         return self._config
+
+    @config.setter
+    def config(self, value: RAGConfig | None) -> None:
+        """Allow the parent class to assign configuration during initialization."""
+
+        if value is not None:
+            self._config = value
 
     @property
     def retriever(self) -> BaseRetriever:
@@ -192,6 +200,31 @@ class RAGGenerator(BaseService):
             generation_time_ms=latency_ms,
             metrics=metrics,
         )
+
+    async def validate_configuration(self) -> None:
+        """Validate generator configuration and retriever wiring."""
+
+        if not self._config.model.strip():
+            msg = "RAG model identifier must be configured"
+            raise ValueError(msg)
+
+        if self._config.retriever_top_k <= 0:
+            msg = "Retriever top_k must be greater than zero"
+            raise ValueError(msg)
+
+        if self._config.max_tokens is not None and self._config.max_tokens <= 0:
+            msg = "Maximum token limit must be greater than zero"
+            raise ValueError(msg)
+
+        retriever = self._retriever
+        ainvoke = getattr(retriever, "ainvoke", None)
+        if ainvoke is None or not callable(ainvoke):
+            msg = "Retriever must expose an asynchronous 'ainvoke' method"
+            raise TypeError(msg)
+
+        if not inspect.iscoroutinefunction(ainvoke):
+            msg = "Retriever 'ainvoke' must be defined as a coroutine"
+            raise TypeError(msg)
 
     def get_metrics(self) -> RAGServiceMetrics:
         """Return aggregated generation metrics for observability endpoints."""
