@@ -28,7 +28,7 @@ async def register_all_tools(  # pylint: disable=too-many-arguments
     content_intelligence_service: Any,
     project_storage: ProjectStorage,
     embedding_manager: EmbeddingManager,
-    health_manager: HealthCheckManager,
+    health_manager: HealthCheckManager | None,
 ) -> None:
     """Register the full MCP tool suite with explicit dependencies."""
 
@@ -60,7 +60,10 @@ async def register_all_tools(  # pylint: disable=too-many-arguments
         mcp,
         content_service=content_intelligence_service,
     )
-    tools.system_health.register_tools(mcp, health_manager=health_manager)
+    if health_manager is not None:
+        tools.system_health.register_tools(mcp, health_manager=health_manager)
+    else:
+        logger.info("Skipping system health tool registration; monitoring disabled")
     tools.web_search.register_tools(mcp)
     tools.cost_estimation.register_tools(mcp)
     logger.info("Registered MCP tools")
