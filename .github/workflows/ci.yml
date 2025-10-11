@@ -86,17 +86,44 @@ jobs:
           python-version: "3.12"
           cache-suffix: "-lint"
 
-      - name: Install Ruff
-        run: uv tool install ruff
+      - name: Ensure Ruff is available
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+          ruff_version="$(python - <<'PY'
+import pathlib
+import tomllib
+
+lock_path = pathlib.Path('uv.lock')
+if not lock_path.exists():
+    raise SystemExit('uv.lock is required to determine the Ruff version.')
+
+data = tomllib.loads(lock_path.read_text())
+for package in data.get('package', []):
+    if package.get('name') == 'ruff':
+        print(package['version'])
+        break
+else:
+    raise SystemExit('Failed to locate Ruff in uv.lock')
+PY
+)"
+
+          if ! command -v ruff >/dev/null 2>&1 || ! ruff --version | grep -Fq "$ruff_version"; then
+            uv tool install --quiet "ruff==${ruff_version}"
+          fi
+
+          ruff --version
 
       - name: Verify Ruff installation
         run: uv tool list
 
       - name: Ruff format (check)
-        run: uv run ruff format --check .
+        run: ruff format --check .
 
       - name: Ruff lint
-        run: uv run ruff check .
+        run: ruff check .
 
       - name: Pylint
         run: uv run pylint --fail-under=9.5 src scripts
