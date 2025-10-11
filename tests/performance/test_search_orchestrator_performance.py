@@ -8,6 +8,7 @@ from typing import cast
 
 import pytest
 
+from src.contracts.retrieval import SearchRecord
 from src.models.search import SearchRequest
 from src.services.query_processing.orchestrator import (
     SearchOrchestrator,
@@ -15,13 +16,12 @@ from src.services.query_processing.orchestrator import (
 )
 from src.services.rag import LangGraphRAGPipeline
 from src.services.vector_db.service import VectorStoreService
-from src.services.vector_db.types import VectorMatch
 
 
 class _StubVectorService:
     """Vector service returning deterministic matches for concurrency tests."""
 
-    def __init__(self, matches: list[VectorMatch], collection: str) -> None:
+    def __init__(self, matches: list[SearchRecord], collection: str) -> None:
         self._matches = matches
         self._collection = collection
 
@@ -38,7 +38,7 @@ class _StubVectorService:
         *,
         limit: int = 10,
         **_: object,
-    ) -> list[VectorMatch]:
+    ) -> list[SearchRecord]:
         assert collection == self._collection
         assert isinstance(query, str)
         return self._matches[:limit]
@@ -66,10 +66,12 @@ async def test_orchestrator_handles_parallel_queries() -> None:
     """The orchestrator should sustain high concurrency with stubbed pipeline."""
 
     matches = [
-        VectorMatch(
+        SearchRecord(
             id=f"doc-{i}",
             score=0.9,
-            payload={"content": f"Document {i}", "title": f"Title {i}"},
+            content=f"Document {i}",
+            title=f"Title {i}",
+            metadata={"content": f"Document {i}"},
         )
         for i in range(5)
     ]

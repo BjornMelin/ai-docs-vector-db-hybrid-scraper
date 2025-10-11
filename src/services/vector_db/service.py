@@ -30,7 +30,7 @@ from .payload_schema import (
     PayloadValidationError,
     ensure_canonical_payload,
 )
-from .types import CollectionSchema, TextDocument, VectorMatch, VectorRecord
+from .types import CollectionSchema, TextDocument, VectorRecord
 
 
 logger = logging.getLogger(__name__)
@@ -431,7 +431,7 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         """Execute a dense similarity search with optional grouping."""
 
         vector = await self.embed_query(query)
-        matches, grouping_applied = await self._query_with_optional_grouping(
+        records, grouping_applied = await self._query_with_optional_grouping(
             collection,
             vector,
             limit=limit,
@@ -440,16 +440,12 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
             filters=filters,
             overfetch_multiplier=overfetch_multiplier,
         )
-        matches = self._annotate_grouping_metadata(
-            matches,
+        records = self._annotate_grouping_metadata(
+            records,
             group_by=group_by,
             grouping_applied=grouping_applied,
         )
-        matches = self._normalize_scores(matches, enabled=normalize_scores)
-        return self._matches_to_records(
-            matches,
-            default_collection=collection,
-        )
+        return self._normalize_scores(records, enabled=normalize_scores)
 
     async def search_vector(
         self,
@@ -461,7 +457,7 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
     ) -> list[SearchRecord]:
         """Perform a similarity search using a precomputed vector."""
 
-        matches, _ = await self._query_with_optional_grouping(
+        records, _ = await self._query_with_optional_grouping(
             collection,
             vector,
             limit=limit,
@@ -470,10 +466,7 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
             filters=filters,
             overfetch_multiplier=None,
         )
-        return self._matches_to_records(
-            matches,
-            default_collection=collection,
-        )
+        return records
 
     async def hybrid_search(
         self,
@@ -524,21 +517,10 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
             with_payload=True,
             with_vectors=False,
         )
-        matches: list[VectorMatch] = []
-        for point in result.points:
-            matches.append(
-                VectorMatch(
-                    id=str(point.id),
-                    score=point.score,
-                    payload=point.payload,
-                    raw_score=point.score,
-                    collection=collection,
-                )
-            )
-        return self._matches_to_records(
-            matches,
-            default_collection=collection,
-        )
+        return [
+            _scored_point_to_record(collection, point)
+            for point in getattr(result, "points", []) or []
+        ]
 
     async def recommend(
         self,
@@ -571,21 +553,7 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
             recommend_kwargs.pop("query_filter")
 
         results = await client.recommend(**recommend_kwargs)
-        matches: list[VectorMatch] = []
-        for point in results:
-            matches.append(
-                VectorMatch(
-                    id=str(point.id),
-                    score=point.score,
-                    payload=point.payload,
-                    raw_score=point.score,
-                    collection=collection,
-                )
-            )
-        return self._matches_to_records(
-            matches,
-            default_collection=collection,
-        )
+        return [_scored_point_to_record(collection, point) for point in results]
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -636,7 +604,7 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         group_size: int,
         filters: Mapping[str, Any] | None,
         overfetch_multiplier: float | None,
-    ) -> tuple[list[VectorMatch], bool]:  # pylint: disable=too-many-arguments,too-many-locals
+    ) -> tuple[list[SearchRecord], bool]:  # pylint: disable=too-many-arguments,too-many-locals
         """Query with optional grouping support."""
 
         cfg = self._require_qdrant_config()
@@ -645,7 +613,7 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         )
 
         if grouping_enabled and group_by:
-            matches, applied = await self._query_with_server_grouping(
+            records, applied = await self._query_with_server_grouping(
                 collection,
                 vector,
                 group_by=group_by,
@@ -660,7 +628,7 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
                         "qdrant.grouping.collection": collection,
                     }
                 )
-                return matches, True
+                return records, True
             set_span_attributes(
                 {
                     "qdrant.grouping.status": "fallback",
@@ -681,19 +649,19 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
             store.similarity_search_with_score_by_vector,
             **to_thread_kwargs,
         )
-        matches = [
-            _document_to_match(collection, document, score)
+        records = [
+            _document_to_record(collection, document, score)
             for document, score in documents_with_scores
         ]
 
         if grouping_enabled and group_by:
-            matches = self._group_client_side(
-                matches,
+            records = self._group_client_side(
+                records,
                 group_by=group_by,
                 group_size=group_size,
                 limit=limit,
             )
-            return matches, False
+            return records, False
 
         set_span_attributes(
             {
@@ -701,7 +669,7 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
                 "qdrant.grouping.collection": collection,
             }
         )
-        return matches[:limit], False
+        return records[:limit], False
 
     async def _query_with_server_grouping(
         self,
@@ -712,7 +680,7 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         group_size: int,
         limit: int,
         filters: Mapping[str, Any] | None,
-    ) -> tuple[list[VectorMatch], bool]:  # pylint: disable=too-many-arguments
+    ) -> tuple[list[SearchRecord], bool]:  # pylint: disable=too-many-arguments
         """Query with server-side grouping."""
 
         client = self._require_async_client()
@@ -736,7 +704,7 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         except Exception:  # pragma: no cover - driver-specific fallbacks
             return [], False
 
-        matches: list[VectorMatch] = []
+        records: list[SearchRecord] = []
         for group in getattr(response, "groups", []) or []:
             hits = getattr(group, "hits", [])
             if not hits:
@@ -747,36 +715,44 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
                 "applied": True,
                 "group_id": getattr(group, "id", None),
             }
-            matches.append(
-                VectorMatch(
-                    id=str(hit.id),
-                    score=hit.score,
-                    payload=payload,
-                    raw_score=hit.score,
-                    collection=collection,
+            records.append(
+                SearchRecord.from_payload(
+                    {
+                        "id": str(hit.id),
+                        "content": (
+                            payload.get("content")
+                            or payload.get("page_content")
+                            or payload.get("text")
+                            or ""
+                        ),
+                        "score": float(hit.score),
+                        "raw_score": float(hit.score),
+                        "metadata": payload,
+                        "collection": collection,
+                    }
                 )
             )
-        return matches, bool(matches)
+        return records, bool(records)
 
     def _group_client_side(
         self,
-        matches: list[VectorMatch],
+        records: list[SearchRecord],
         *,
         group_by: str,
         group_size: int,
         limit: int,
-    ) -> list[VectorMatch]:
+    ) -> list[SearchRecord]:
         """Group matches client-side."""
 
-        groups: dict[str, list[VectorMatch]] = {}
-        for match in matches:
-            payload: dict[str, Any] = dict(match.payload or {})
-            group_id = payload.get(group_by) or payload.get("doc_id")
+        groups: dict[str, list[SearchRecord]] = {}
+        for record in records:
+            metadata: dict[str, Any] = dict(record.metadata or {})
+            group_id = metadata.get(group_by) or metadata.get("doc_id")
             if group_id is None:
-                group_id = match.id
-            payload["doc_id"] = group_id
-            match.payload = payload
-            groups.setdefault(str(group_id), []).append(match)
+                group_id = record.id
+            metadata["doc_id"] = group_id
+            record.metadata = metadata
+            groups.setdefault(str(group_id), []).append(record)
 
         ordered_groups = sorted(
             groups.items(),
@@ -784,60 +760,60 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
             reverse=True,
         )
 
-        limited_matches: list[VectorMatch] = []
+        limited_records: list[SearchRecord] = []
         for _, group_matches in ordered_groups:
-            for group_rank, match in enumerate(group_matches[:group_size], start=1):
-                payload = dict(match.payload or {})
-                group_id = payload.get(group_by) or payload.get("doc_id") or match.id
-                payload["_grouping"] = {
+            for group_rank, record in enumerate(group_matches[:group_size], start=1):
+                metadata = dict(record.metadata or {})
+                group_id = metadata.get(group_by) or metadata.get("doc_id") or record.id
+                metadata["_grouping"] = {
                     "applied": False,
                     "group_id": group_id,
                     "rank": group_rank,
                 }
-                payload["doc_id"] = group_id
-                match.payload = payload
-                limited_matches.append(match)
-            if len(limited_matches) >= limit:
+                metadata["doc_id"] = group_id
+                record.metadata = metadata
+                limited_records.append(record)
+            if len(limited_records) >= limit:
                 break
-        return limited_matches
+        return limited_records
 
     def _annotate_grouping_metadata(
         self,
-        matches: list[VectorMatch],
+        records: list[SearchRecord],
         *,
         group_by: str | None,
         grouping_applied: bool,
-    ) -> list[VectorMatch]:
+    ) -> list[SearchRecord]:
         """Annotate matches with grouping metadata."""
 
         if not group_by:
-            return matches
-        for rank, match in enumerate(matches, start=1):
-            payload: dict[str, Any] = dict(match.payload or {})
-            group_info: dict[str, Any] = dict(payload.get("_grouping") or {})
+            return records
+        for rank, record in enumerate(records, start=1):
+            metadata: dict[str, Any] = dict(record.metadata or {})
+            group_info: dict[str, Any] = dict(metadata.get("_grouping") or {})
             group_info["group_id"] = (
-                payload.get(group_by) or payload.get("doc_id") or match.id
+                metadata.get(group_by) or metadata.get("doc_id") or record.id
             )
             group_info["rank"] = rank
             group_info["applied"] = grouping_applied
-            payload["_grouping"] = group_info
-            match.payload = payload
-        return matches
+            metadata["_grouping"] = group_info
+            record.metadata = metadata
+        return records
 
     def _normalize_scores(
-        self, matches: list[VectorMatch], *, enabled: bool | None
-    ) -> list[VectorMatch]:  # pylint: disable=too-many-branches,too-many-return-statements
+        self, records: list[SearchRecord], *, enabled: bool | None
+    ) -> list[SearchRecord]:  # pylint: disable=too-many-branches,too-many-return-statements
         """Normalize match scores."""
 
-        if not matches:
-            return matches
+        if not records:
+            return records
 
-        for match in matches:
-            if match.raw_score is None:
-                match.raw_score = float(match.score)
+        for record in records:
+            if record.raw_score is None:
+                record.raw_score = float(record.score)
 
         if not enabled:
-            return matches
+            return records
 
         query_cfg: QueryProcessingConfig | None = getattr(
             self.config, "query_processing", None
@@ -848,9 +824,9 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
             else ScoreNormalizationStrategy.MIN_MAX
         )
         if strategy == ScoreNormalizationStrategy.NONE:
-            return matches
+            return records
 
-        scores = [float(match.raw_score or match.score) for match in matches]
+        scores = [float(record.raw_score or record.score) for record in records]
         epsilon = max(
             float(
                 (query_cfg.score_normalization_epsilon if query_cfg else 1e-6) or 1e-6
@@ -863,46 +839,31 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
             maximum = max(scores)
             span = maximum - minimum
             if span < epsilon:
-                for match in matches:
-                    match.score = 1.0
-                    match.normalized_score = 1.0
-                return matches
-            for match in matches:
-                normalized = ((match.raw_score or match.score) - minimum) / span
-                match.score = normalized
-                match.normalized_score = normalized
-            return matches
+                for record in records:
+                    record.score = 1.0
+                    record.normalized_score = 1.0
+                return records
+            for record in records:
+                normalized = ((record.raw_score or record.score) - minimum) / span
+                record.score = normalized
+                record.normalized_score = normalized
+            return records
 
         if strategy == ScoreNormalizationStrategy.Z_SCORE:
             mean = statistics.fmean(scores)
             std_dev = statistics.pstdev(scores) if len(scores) > 1 else 0.0
             if std_dev < epsilon:
-                for match in matches:
-                    match.score = 0.0
-                    match.normalized_score = 0.0
-                return matches
-            for match in matches:
-                normalized = ((match.raw_score or match.score) - mean) / std_dev
-                match.score = normalized
-                match.normalized_score = normalized
-            return matches
+                for record in records:
+                    record.score = 0.0
+                    record.normalized_score = 0.0
+                return records
+            for record in records:
+                normalized = ((record.raw_score or record.score) - mean) / std_dev
+                record.score = normalized
+                record.normalized_score = normalized
+            return records
 
-        return matches
-
-    def _matches_to_records(
-        self,
-        matches: Sequence[VectorMatch],
-        *,
-        default_collection: str,
-    ) -> list[SearchRecord]:
-        """Convert internal vector matches into canonical search records."""
-        return [
-            SearchRecord.from_vector_match(
-                match,
-                collection_name=default_collection,
-            )
-            for match in matches
-        ]
+        return records
 
     def _build_sync_client(self, cfg: Any) -> QdrantClient:
         """Build the synchronous Qdrant client."""
@@ -923,28 +884,56 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
 # Helper utilities
 
 
-def _document_to_match(
+def _document_to_record(
     collection: str,
     document: Document,
     score: float,
-) -> VectorMatch:
-    """Convert a document to a vector match."""
+) -> SearchRecord:
+    """Convert a LangChain document into a canonical search record."""
 
-    payload: dict[str, Any] = dict(document.metadata or {})
-    payload.setdefault("page_content", document.page_content)
+    metadata: dict[str, Any] = dict(document.metadata or {})
+    metadata.setdefault("page_content", document.page_content)
     identifier = (
-        payload.get("point_id")
-        or payload.get("doc_id")
+        metadata.get("point_id")
+        or metadata.get("doc_id")
         or getattr(document, "id", None)
         or uuid4().hex
     )
-    return VectorMatch(
-        id=str(identifier),
-        score=score,
-        payload=payload,
-        raw_score=score,
-        collection=collection,
-    )
+    record_payload = {
+        "id": str(identifier),
+        "content": (
+            metadata.get("content")
+            or metadata.get("page_content")
+            or document.page_content
+            or ""
+        ),
+        "score": float(score),
+        "raw_score": float(score),
+        "metadata": metadata,
+        "collection": collection,
+    }
+    return SearchRecord.from_payload(record_payload)
+
+
+def _scored_point_to_record(collection: str, point: Any) -> SearchRecord:
+    """Convert a Qdrant scored point into a canonical search record."""
+
+    payload: dict[str, Any] = dict(getattr(point, "payload", {}) or {})
+    score = float(getattr(point, "score", 0.0) or 0.0)
+    record_payload = {
+        "id": str(getattr(point, "id", uuid4())),
+        "content": (
+            payload.get("content")
+            or payload.get("page_content")
+            or payload.get("text")
+            or ""
+        ),
+        "score": score,
+        "raw_score": score,
+        "metadata": payload or None,
+        "collection": collection,
+    }
+    return SearchRecord.from_payload(record_payload)
 
 
 def _serialize_collection_info(info: Any) -> Mapping[str, Any]:

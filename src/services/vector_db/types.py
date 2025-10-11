@@ -33,16 +33,3 @@ class VectorRecord:
     vector: Sequence[float]
     payload: Mapping[str, object] | None = None
     sparse_vector: Mapping[int, float] | None = None
-
-
-@dataclass(slots=True)
-class VectorMatch:
-    """Normalized representation of a vector search result."""
-
-    id: str
-    score: float
-    payload: Mapping[str, object] | None
-    vector: Sequence[float] | None = None
-    raw_score: float | None = None
-    collection: str | None = None
-    normalized_score: float | None = None

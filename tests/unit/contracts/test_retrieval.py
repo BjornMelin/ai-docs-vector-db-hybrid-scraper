@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 from src.contracts.retrieval import SearchRecord
-from src.services.vector_db.types import VectorMatch
 
 
 def test_from_vector_match_normalizes_payload() -> None:
     """Ensure ``SearchRecord.from_vector_match`` maps vector matches correctly."""
 
-    match = VectorMatch(
+    match = SimpleNamespace(
         id="123",
         score=0.42,
         raw_score=0.84,
@@ -46,7 +47,7 @@ def test_from_vector_match_normalizes_payload() -> None:
 def test_from_vector_match_prefers_normalized_score() -> None:
     """Normalized score should override raw score when present."""
 
-    match = VectorMatch(
+    match = SimpleNamespace(
         id="abc",
         score=0.2,
         raw_score=0.2,
@@ -66,7 +67,7 @@ def test_from_vector_match_prefers_normalized_score() -> None:
 def test_from_vector_match_coerces_numeric_types() -> None:
     """Integer-like values should coerce to floats for scoring fields."""
 
-    match = VectorMatch(
+    match = SimpleNamespace(
         id="num",
         score=1,
         raw_score=None,

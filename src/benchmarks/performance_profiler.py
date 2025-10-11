@@ -14,7 +14,7 @@ from typing import Any, Protocol
 import psutil
 from pydantic import BaseModel, Field
 
-from src.models.vector_search import HybridSearchRequest
+from src.models.search import SearchRequest
 
 
 logger = logging.getLogger(__name__)
@@ -48,7 +48,7 @@ class AdvancedHybridSearchService(Protocol):
     adaptive_fusion_tuner: AdaptiveFusionTunerProtocol
     splade_provider: SpladeProviderProtocol
 
-    async def hybrid_search(self, request: HybridSearchRequest) -> Any:
+    async def hybrid_search(self, request: SearchRequest) -> Any:
         """Execute a hybrid search request."""
 
 
@@ -132,7 +132,7 @@ class PerformanceProfiler:  # pylint: disable=too-many-instance-attributes
     async def profile_search_service(
         self,
         search_service: AdvancedHybridSearchService,
-        test_queries: list[HybridSearchRequest],
+        test_queries: list[SearchRequest],
     ) -> dict[str, Any]:
         """Profile search service performance during query execution.
 
@@ -190,7 +190,7 @@ class PerformanceProfiler:  # pylint: disable=too-many-instance-attributes
     async def _execute_profiled_queries(
         self,
         search_service: AdvancedHybridSearchService,
-        test_queries: list[HybridSearchRequest],
+        test_queries: list[SearchRequest],
     ) -> None:
         """Execute queries while profiling is active."""
 

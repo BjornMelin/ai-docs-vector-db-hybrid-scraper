@@ -7,6 +7,7 @@ from typing import cast
 
 import pytest
 
+from src.contracts.retrieval import SearchRecord
 from src.models.search import SearchRequest
 from src.services.query_processing.orchestrator import (
     SearchOrchestrator,
@@ -23,13 +24,12 @@ from src.services.rag import (
     SourceAttribution,
 )
 from src.services.vector_db.service import VectorStoreService
-from src.services.vector_db.types import VectorMatch
 
 
 class _StubVectorService:
     """Deterministic vector service used for end-to-end smoke tests."""
 
-    def __init__(self, matches: list[VectorMatch], collection: str) -> None:
+    def __init__(self, matches: list[SearchRecord], collection: str) -> None:
         self._matches = matches
         self._collection = collection
         self._initialized = False
@@ -50,7 +50,7 @@ class _StubVectorService:
         *,
         limit: int = 10,
         **_: object,
-    ) -> list[VectorMatch]:
+    ) -> list[SearchRecord]:
         assert collection == self._collection
         assert isinstance(query, str)
         return self._matches[:limit]
@@ -112,15 +112,17 @@ async def test_end_to_end_query_generates_answer() -> None:
     """Full orchestrator run should return an answer with confidence metadata."""
 
     matches = [
-        VectorMatch(
+        SearchRecord(
             id="doc-1",
             score=0.97,
-            payload={
+            content="LangGraph orchestrates retrieval and generation stages.",
+            title="LangGraph Overview",
+            url="https://example.com/langgraph",
+            metadata={
                 "content": "LangGraph orchestrates retrieval and generation stages.",
-                "title": "LangGraph Overview",
-                "url": "https://example.com/langgraph",
                 "score": 0.97,
             },
+            collection="docs",
         )
     ]
 

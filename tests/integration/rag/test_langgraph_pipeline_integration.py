@@ -7,6 +7,7 @@ from typing import cast
 
 import pytest
 
+from src.contracts.retrieval import SearchRecord
 from src.models.search import SearchRequest
 from src.services.rag import (
     AnswerMetrics,
@@ -19,13 +20,12 @@ from src.services.rag import (
     SourceAttribution,
 )
 from src.services.vector_db.service import VectorStoreService
-from src.services.vector_db.types import VectorMatch
 
 
 class _StubVectorService:
     """Minimal vector service stub returning predefined matches."""
 
-    def __init__(self, matches: Sequence[VectorMatch], collection: str) -> None:
+    def __init__(self, matches: Sequence[SearchRecord], collection: str) -> None:
         self._matches = list(matches)
         self._collection = collection
         self._initialized = False
@@ -50,7 +50,7 @@ class _StubVectorService:
         group_size: int | None = None,
         overfetch_multiplier: float | None = None,
         normalize_scores: bool | None = None,
-    ) -> list[VectorMatch]:
+    ) -> list[SearchRecord]:
         assert collection == self._collection
         assert isinstance(query, str)
         return list(self._matches)[:limit]
@@ -116,23 +116,27 @@ async def test_pipeline_generates_answer_from_vector_matches() -> None:
     """LangGraph pipeline should orchestrate retrieval and generation."""
 
     matches = [
-        VectorMatch(
+        SearchRecord(
             id="doc-1",
             score=0.91,
-            payload={
+            content="FastAPI integrates with Pydantic for validation.",
+            title="FastAPI Validation",
+            url="https://example.com/fastapi",
+            metadata={
                 "content": "FastAPI integrates with Pydantic for validation.",
-                "title": "FastAPI Validation",
-                "url": "https://example.com/fastapi",
             },
+            collection="docs",
         ),
-        VectorMatch(
+        SearchRecord(
             id="doc-2",
             score=0.88,
-            payload={
+            content="LangGraph orchestrates retrieval and generation stages.",
+            title="LangGraph Overview",
+            url="https://example.com/langgraph",
+            metadata={
                 "content": "LangGraph orchestrates retrieval and generation stages.",
-                "title": "LangGraph Overview",
-                "url": "https://example.com/langgraph",
             },
+            collection="docs",
         ),
     ]
     stub_vector_service = _StubVectorService(matches, collection="docs")

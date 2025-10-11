@@ -14,12 +14,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from src.config import Settings
-from src.models.vector_search import (
-    FusionConfig,
-    HybridSearchRequest,
-    SecureSearchParamsModel,
-    SecureVectorModel,
-)
+from src.models.search import SearchRequest
 
 from .benchmark_reporter import BenchmarkReporter
 from .component_benchmarks import ComponentBenchmarks
@@ -148,7 +143,7 @@ class HybridSearchBenchmark:  # pylint: disable=too-many-instance-attributes
         # Test data
         self.test_queries = self._generate_test_queries()
 
-    def _generate_test_queries(self) -> list[HybridSearchRequest]:
+    def _generate_test_queries(self) -> list[SearchRequest]:
         """Generate realistic test queries for benchmarking."""
         test_data = [
             # Code queries
@@ -201,16 +196,13 @@ class HybridSearchBenchmark:  # pylint: disable=too-many-instance-attributes
 
         queries = []
         for query_text, _query_category in test_data:
-            request = HybridSearchRequest(
+            request = SearchRequest(
                 query=query_text,
-                collection_name="benchmark_collection",
-                query_vector=SecureVectorModel(values=[0.1, 0.2, 0.3]),
-                search_params=SecureSearchParamsModel(limit=10),
-                fusion_config=FusionConfig(),
-                enable_query_classification=True,
-                enable_model_selection=True,
+                collection="benchmark_collection",
+                limit=10,
+                query_vector=[0.1, 0.2, 0.3],
+                enable_reranking=True,
                 enable_adaptive_fusion=True,
-                enable_splade=True,
                 user_id=f"benchmark_user_{hash(query_text) % 1000}",
                 session_id=f"benchmark_session_{int(time.time())}",
             )
