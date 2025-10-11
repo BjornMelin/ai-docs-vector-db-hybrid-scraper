@@ -6,10 +6,12 @@ all search operations across the entire codebase.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-from typing import Any
+import math
+import re
+from collections.abc import Mapping, Sequence
+from typing import Any, ClassVar
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from src.config.models import (
     FusionAlgorithm,
@@ -111,7 +113,7 @@ class SearchRequest(BaseModel):
     query_vector: list[float] | None = Field(
         default=None, description="Vector representation for similarity search"
     )
-    sparse_vector: dict[str, Any] | None = Field(
+    sparse_vector: dict[int, float] | None = Field(
         default=None, description="Sparse vector for hybrid search"
     )
     vector_type: VectorType = Field(
@@ -248,7 +250,235 @@ class SearchRequest(BaseModel):
         default=True, description="Optimize filter evaluation order"
     )
 
-    model_config = {"extra": "forbid"}
+    model_config = ConfigDict(
+        extra="forbid",
+        str_strip_whitespace=True,
+        str_max_length=5000,
+        validate_assignment=True,
+    )
+
+    _FILTER_KEY_PATTERN: ClassVar[re.Pattern[str]] = re.compile(
+        r"^[a-zA-Z_][a-zA-Z0-9_.]*$"
+    )
+    _DANGEROUS_FILTER_PATTERNS: ClassVar[tuple[str, ...]] = (
+        ";",
+        "--",
+        "/*",
+        "*/",
+        "xp_",
+        "sp_",
+        "drop",
+        "delete",
+        "insert",
+        "update",
+    )
+    _MAX_FILTER_KEYS: ClassVar[int] = 50
+    _MAX_FILTER_DEPTH: ClassVar[int] = 10
+    _MAX_FILTER_LIST_ITEMS: ClassVar[int] = 100
+    _MAX_FILTER_STRING_LENGTH: ClassVar[int] = 500
+    _MAX_VECTOR_DIMENSION: ClassVar[int] = 4096
+    _MAX_SPARSE_INDEX: ClassVar[int] = 100_000
+    _VECTOR_VALUE_RANGE: ClassVar[tuple[float, float]] = (-1e6, 1e6)
+
+    @field_validator(
+        "filters",
+        "metadata_filters",
+        "temporal_filters",
+        "content_filters",
+        mode="after",
+    )
+    @classmethod
+    def _validate_filter_mapping(
+        cls, value: dict[str, Any] | None
+    ) -> dict[str, Any] | None:
+        """Validate filter mappings to prevent injection and DoS attacks."""
+
+        if value is None:
+            return None
+
+        if not isinstance(value, Mapping):
+            msg = "Filters must be supplied as a mapping"
+            raise TypeError(msg)
+
+        if len(value) > cls._MAX_FILTER_KEYS:
+            msg = f"Too many filter keys supplied (max {cls._MAX_FILTER_KEYS})"
+            raise ValueError(msg)
+
+        validated: dict[str, Any] = {}
+        for raw_key, raw_val in value.items():
+            key = cls._ensure_valid_filter_key(raw_key)
+            validated[key] = cls._validate_filter_value(raw_val)
+        return validated
+
+    @field_validator("exclude_filters", mode="after")
+    @classmethod
+    def _validate_exclude_filters(
+        cls, value: list[dict[str, Any]] | None
+    ) -> list[dict[str, Any]] | None:
+        """Validate exclude filter payloads."""
+
+        if value is None:
+            return None
+
+        if len(value) > cls._MAX_FILTER_KEYS:
+            msg = f"Too many exclude filters supplied (max {cls._MAX_FILTER_KEYS})"
+            raise ValueError(msg)
+
+        validated: list[dict[str, Any]] = []
+        for item in value:
+            if not isinstance(item, Mapping):
+                msg = "Exclude filters must be mappings"
+                raise TypeError(msg)
+            validated.append(cls._validate_filter_mapping(dict(item)) or {})
+        return validated
+
+    @field_validator("filter_groups", mode="after")
+    @classmethod
+    def _validate_filter_groups(
+        cls, value: list[dict[str, Any]] | None
+    ) -> list[dict[str, Any]] | None:
+        """Validate nested filter groups with depth and size limits."""
+
+        if value is None:
+            return None
+
+        if len(value) > cls._MAX_FILTER_KEYS:
+            msg = f"Too many filter groups supplied (max {cls._MAX_FILTER_KEYS})"
+            raise ValueError(msg)
+
+        for group in value:
+            cls._validate_filter_group(group, depth=0)
+        return value
+
+    @field_validator("query_vector", mode="after")
+    @classmethod
+    def _validate_query_vector(cls, value: list[float] | None) -> list[float] | None:
+        """Validate dense query vectors for bounds and numeric stability."""
+
+        if value is None:
+            return None
+
+        if not isinstance(value, Sequence) or isinstance(value, str | bytes):
+            msg = "query_vector must be a sequence of floats"
+            raise TypeError(msg)
+
+        if not value:
+            msg = "query_vector cannot be empty"
+            raise ValueError(msg)
+
+        if len(value) > cls._MAX_VECTOR_DIMENSION:
+            msg = (
+                "query_vector exceeds maximum allowed dimension "
+                f"({cls._MAX_VECTOR_DIMENSION})"
+            )
+            raise ValueError(msg)
+
+        validated: list[float] = []
+        for index, item in enumerate(value):
+            try:
+                float_val = float(item)
+            except (TypeError, ValueError) as exc:
+                msg = f"Invalid vector value at index {index}: {item!r}"
+                raise ValueError(msg) from exc
+            if not math.isfinite(float_val):
+                msg = f"Non-finite vector value at index {index}"
+                raise ValueError(msg)
+            minimum, maximum = cls._VECTOR_VALUE_RANGE
+            if float_val < minimum or float_val > maximum:
+                msg = (
+                    "Vector value out of allowed range "
+                    f"[{minimum}, {maximum}] at index {index}"
+                )
+                raise ValueError(msg)
+            validated.append(float_val)
+        return validated
+
+    @field_validator("sparse_vector", mode="after")
+    @classmethod
+    def _validate_sparse_vector(
+        cls, value: dict[int, float] | None
+    ) -> dict[int, float] | None:
+        """Validate sparse vector representations."""
+
+        if value is None:
+            return None
+
+        if not isinstance(value, Mapping):
+            msg = "sparse_vector must be a mapping of indices to weights"
+            raise TypeError(msg)
+
+        if not value:
+            msg = "sparse_vector cannot be empty"
+            raise ValueError(msg)
+
+        if len(value) > cls._MAX_VECTOR_DIMENSION:
+            msg = (
+                "sparse_vector exceeds maximum allowed dimension "
+                f"({cls._MAX_VECTOR_DIMENSION})"
+            )
+            raise ValueError(msg)
+
+        validated: dict[int, float] = {}
+        for raw_index, raw_weight in value.items():
+            try:
+                index = int(raw_index)
+            except (TypeError, ValueError) as exc:
+                msg = f"Sparse vector index must be an integer: {raw_index!r}"
+                raise ValueError(msg) from exc
+            if index < 0 or index >= cls._MAX_SPARSE_INDEX:
+                msg = (
+                    "Sparse vector index out of bounds: "
+                    f"{index} (max {cls._MAX_SPARSE_INDEX - 1})"
+                )
+                raise ValueError(msg)
+            try:
+                weight = float(raw_weight)
+            except (TypeError, ValueError) as exc:
+                msg = f"Sparse vector weight must be numeric: {raw_weight!r}"
+                raise ValueError(msg) from exc
+            if not math.isfinite(weight):
+                msg = f"Sparse vector weight not finite for index {index}"
+                raise ValueError(msg)
+            validated[index] = weight
+        return validated
+
+    @model_validator(mode="after")
+    def _validate_strategy(self) -> SearchRequest:
+        """Cross-field validation for strategy, vector type, and dimensions."""
+
+        if (
+            self.vector_type in {VectorType.SPARSE, VectorType.HYBRID}
+            and not self.sparse_vector
+        ):
+            msg = f"sparse_vector is required when vector_type is {self.vector_type}"
+            raise ValueError(msg)
+
+        if (
+            self.search_strategy == SearchStrategy.SPARSE
+            and self.vector_type == VectorType.DENSE
+        ):
+            msg = "Sparse search_strategy requires a sparse-compatible vector_type"
+            raise ValueError(msg)
+
+        if (
+            self.search_strategy == SearchStrategy.DENSE
+            and self.vector_type == VectorType.SPARSE
+        ):
+            msg = "Dense search_strategy cannot be paired with sparse-only vector_type"
+            raise ValueError(msg)
+
+        if (
+            self.force_dimension is not None
+            and self.query_vector is not None
+            and len(self.query_vector) != self.force_dimension
+        ):
+            msg = (
+                "query_vector dimension does not match force_dimension "
+                f"({self.force_dimension})"
+            )
+            raise ValueError(msg)
+
+        return self
 
     @classmethod
     def from_input(
@@ -288,6 +518,89 @@ class SearchRequest(BaseModel):
 
         msg = f"Unsupported search request payload type: {type(payload)!r}"
         raise TypeError(msg)
+
+    @classmethod
+    def _ensure_valid_filter_key(cls, key: Any) -> str:
+        """Validate a filter key name."""
+
+        if not isinstance(key, str):
+            msg = "Filter keys must be strings"
+            raise TypeError(msg)
+
+        if not cls._FILTER_KEY_PATTERN.match(key):
+            msg = f"Invalid filter key: {key!r}"
+            raise ValueError(msg)
+
+        return key
+
+    @classmethod
+    def _validate_filter_value(cls, value: Any) -> Any:
+        """Validate an individual filter value."""
+
+        if value is None:
+            return value
+
+        if isinstance(value, str):
+            if len(value) > cls._MAX_FILTER_STRING_LENGTH:
+                msg = "Filter string value too long"
+                raise ValueError(msg)
+            lowered = value.lower()
+            for pattern in cls._DANGEROUS_FILTER_PATTERNS:
+                if pattern in lowered:
+                    msg = "Potentially dangerous pattern in filter value"
+                    raise ValueError(msg)
+            return value
+
+        if isinstance(value, Sequence) and not isinstance(value, str | bytes):
+            if len(value) > cls._MAX_FILTER_LIST_ITEMS:
+                msg = "Filter list contains too many items"
+                raise ValueError(msg)
+            for item in value:
+                cls._validate_filter_value(item)
+            return list(value)
+
+        if isinstance(value, Mapping):
+            return cls._validate_filter_mapping(dict(value)) or {}
+
+        return value
+
+    @classmethod
+    def _validate_filter_group(cls, group: Mapping[str, Any], *, depth: int) -> None:
+        """Validate nested filter group structure."""
+
+        if not isinstance(group, Mapping):
+            msg = "Filter groups must be mappings"
+            raise TypeError(msg)
+
+        if depth > cls._MAX_FILTER_DEPTH:
+            msg = "Filter group nesting too deep"
+            raise ValueError(msg)
+
+        operator = group.get("operator")
+        if operator not in {"and", "or", "not"}:
+            msg = "Filter group operator must be 'and', 'or', or 'not'"
+            raise ValueError(msg)
+
+        filters = group.get("filters")
+        if not isinstance(filters, Sequence) or isinstance(filters, str | bytes):
+            msg = "Filter group must contain a list of filters"
+            raise ValueError(msg)
+        if len(filters) == 0:
+            msg = "Filter group cannot be empty"
+            raise ValueError(msg)
+        if len(filters) > cls._MAX_FILTER_KEYS:
+            msg = "Filter group contains too many filters"
+            raise ValueError(msg)
+
+        for item in filters:
+            if isinstance(item, Mapping):
+                if "filters" in item:
+                    cls._validate_filter_group(item, depth=depth + 1)
+                else:
+                    cls._validate_filter_mapping(dict(item))
+            else:
+                msg = "Filter group entries must be mappings"
+                raise TypeError(msg)
 
 
 __all__ = ["SearchRequest"]

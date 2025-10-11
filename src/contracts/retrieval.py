@@ -4,17 +4,13 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Iterable, Mapping
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 
 logger = logging.getLogger(__name__)
-
-
-if TYPE_CHECKING:  # pragma: no cover - import cycles avoided at runtime
-    from src.services.vector_db.types import VectorMatch
 
 
 class SearchRecord(BaseModel):
@@ -184,7 +180,7 @@ class SearchRecord(BaseModel):
     @classmethod
     def from_vector_match(
         cls,
-        match: VectorMatch,
+        match: Any,
         *,
         collection_name: str,
     ) -> SearchRecord:

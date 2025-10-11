@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Generator
-from types import SimpleNamespace
 
 import pytest
 from fastapi import FastAPI, status

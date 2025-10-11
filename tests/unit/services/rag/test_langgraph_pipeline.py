@@ -29,7 +29,6 @@ from src.services.rag import (
 )
 from src.services.rag.langgraph_pipeline import _StaticDocumentRetriever
 from src.services.vector_db.service import VectorStoreService
-from src.services.vector_db.types import VectorMatch
 
 
 pytest.importorskip("langgraph")
@@ -38,7 +37,7 @@ pytest.importorskip("langgraph")
 class VectorServiceFake:
     """Vector service stub returning deterministic matches."""
 
-    def __init__(self, matches: list[VectorMatch]) -> None:
+    def __init__(self, matches: list[SearchRecord]) -> None:
         self._matches = matches
         self._initialized = False
         self.config = SimpleNamespace(
@@ -60,10 +59,7 @@ class VectorServiceFake:
         query: str,
         **_: Any,
     ) -> list[SearchRecord]:
-        return [
-            SearchRecord.from_vector_match(match, collection_name=collection)
-            for match in self._matches
-        ]
+        return list(self._matches)
 
     async def list_collections(self) -> list[str]:  # pragma: no cover
         return ["docs"]
@@ -146,17 +142,23 @@ def dummy_generator_factory(
 
 @pytest.mark.asyncio
 async def test_pipeline_returns_answer_with_retriever_results() -> None:
-    match = VectorMatch(
+    match = SearchRecord(
         id="doc-1",
         score=0.9,
         raw_score=0.9,
-        payload={
+        content="LangGraph overview",
+        title="LangGraph",
+        url="https://example.test/langgraph",
+        metadata={
             "content": "LangGraph overview",
             "title": "LangGraph",
             "url": "https://example.test/langgraph",
             "_grouping": {"applied": True, "group_id": "doc-1", "rank": 1},
         },
         collection="docs",
+        group_id="doc-1",
+        group_rank=1,
+        grouping_applied=True,
     )
     service = VectorServiceFake([match])
     pipeline = LangGraphRAGPipeline(
@@ -269,17 +271,23 @@ def test_rag_tracing_callback_records_token_usage() -> None:
 
 @pytest.mark.asyncio
 async def test_pipeline_returns_generation_payload(monkeypatch) -> None:
-    match = VectorMatch(
+    match = SearchRecord(
         id="doc-1",
         score=0.9,
         raw_score=0.9,
-        payload={
+        content="LangGraph overview",
+        title="LangGraph",
+        url="https://example.test/langgraph",
+        metadata={
             "content": "LangGraph overview",
             "title": "LangGraph",
             "url": "https://example.test/langgraph",
             "_grouping": {"applied": True, "group_id": "doc-1", "rank": 1},
         },
         collection="docs",
+        group_id="doc-1",
+        group_rank=1,
+        grouping_applied=True,
     )
     service = VectorServiceFake([match])
     pipeline = LangGraphRAGPipeline(
@@ -330,17 +338,23 @@ async def test_pipeline_populates_retriever_compression_stats(monkeypatch) -> No
         fake_maybe_compress,
     )
 
-    match = VectorMatch(
+    match = SearchRecord(
         id="doc-1",
         score=0.9,
         raw_score=0.9,
-        payload={
+        content="LangGraph overview",
+        title="LangGraph",
+        url="https://example.test/langgraph",
+        metadata={
             "content": "LangGraph overview",
             "title": "LangGraph",
             "url": "https://example.test/langgraph",
             "_grouping": {"applied": True, "group_id": "doc-1", "rank": 1},
         },
         collection="docs",
+        group_id="doc-1",
+        group_rank=1,
+        grouping_applied=True,
     )
     service = VectorServiceFake([match])
     pipeline = LangGraphRAGPipeline(

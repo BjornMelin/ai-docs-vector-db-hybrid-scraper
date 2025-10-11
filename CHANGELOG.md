@@ -43,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   models so `Settings` remains the canonical source of configuration values.
 - **[API]:** Removed the duplicated `/api/routers/simple` module and unified all endpoints to use the canonical `SearchRequest` and `SearchRecord` data models.
 - **[Models]:** Consolidated all search-related request and response models into canonical `SearchRequest` and `SearchRecord` contracts, removing significant code duplication.
+- **[Search]:** Centralized `SearchRequest` validation, removed `src/models/vector_search.py`, and ensured vector store operations emit `SearchRecord` instances directly.
 - **[Core]:** Removed custom rate-limiting implementation in favor of the
   `slowapi` library, centralizing all rate-limiting logic at the middleware
   layer.

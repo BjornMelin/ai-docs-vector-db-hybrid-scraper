@@ -138,9 +138,7 @@ def test_cors_disables_credentials_for_wildcard_origins(
     """Wildcard origins should disable credentials to satisfy Starlette constraints."""
 
     monkeypatch.delenv("CORS_ALLOWED_ORIGINS", raising=False)
-    refresh_settings(
-        settings=load_settings(environment=Environment.DEVELOPMENT)
-    )
+    refresh_settings(settings=load_settings(environment=Environment.DEVELOPMENT))
 
     try:
         app = app_factory.create_app()
