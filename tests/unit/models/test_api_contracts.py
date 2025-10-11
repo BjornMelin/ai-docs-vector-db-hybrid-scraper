@@ -5,12 +5,12 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
+from src.models import SearchRequest
 from src.models.document_processing import (
     ContentFilter,
     DocumentMetadata,
     ProcessedDocument,
 )
-from src.models.search import SearchRequest
 
 
 class TestSearchRequest:

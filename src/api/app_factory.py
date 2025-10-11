@@ -1,5 +1,7 @@
 """Mode-aware FastAPI application factory with profile-driven composition."""
 
+from __future__ import annotations
+
 import asyncio
 import logging
 from collections.abc import Awaitable, Callable
@@ -8,6 +10,7 @@ from datetime import UTC, datetime
 from importlib import import_module
 from typing import Any
 
+from dependency_injector import containers
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -401,14 +404,16 @@ def get_app_mode(app: FastAPI) -> ApplicationMode:
     return app.state.mode  # type: ignore[attr-defined]
 
 
-def get_app_container(app: FastAPI) -> ApplicationContainer:
+def get_app_container(
+    app: FastAPI,
+) -> ApplicationContainer | containers.DynamicContainer:
     """Get the dependency-injector container from a FastAPI application."""
 
     container = getattr(app.state, "container", None)
     if container is None:
         msg = "DI container is not attached to application state"
         raise RuntimeError(msg)
-    if not isinstance(container, ApplicationContainer):
+    if not isinstance(container, (ApplicationContainer, containers.DynamicContainer)):
         msg = "Application state container is not an ApplicationContainer instance"
         raise TypeError(msg)
     return container

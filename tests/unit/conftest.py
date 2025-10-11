@@ -1,10 +1,29 @@
 """Shared fixtures and helpers for MCP unit tests."""
 
 from collections.abc import Callable
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 from typing import Any
 
 import pytest
+
+from tests.unit.stub_factories import register_rag_dependency_stubs  # type: ignore
+
+
+register_rag_dependency_stubs()
+
+
+_OPTIONAL_MODULES: dict[str, ModuleType] = {}
+
+
+def require_optional_dependency(module_name: str) -> ModuleType:
+    """Skip tests when an optional dependency is unavailable."""
+
+    module = _OPTIONAL_MODULES.get(module_name)
+    if module is not None:
+        return module
+    module = pytest.importorskip(module_name)
+    _OPTIONAL_MODULES[module_name] = module
+    return module
 
 
 @pytest.fixture(name="build_unified_mcp_config")

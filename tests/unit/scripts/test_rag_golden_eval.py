@@ -8,8 +8,11 @@ from typing import Any
 
 import pytest
 
-from scripts.eval.dataset_validator import DatasetValidationError, validate_dataset
-from scripts.eval.rag_golden_eval import (
+from scripts.eval.dataset_validator import (  # type: ignore[import]
+    DatasetValidationError,
+    validate_dataset,
+)
+from scripts.eval.rag_golden_eval import (  # type: ignore[import]
     EvaluationReport,
     ExampleMetrics,
     GoldenExample,
@@ -188,7 +191,7 @@ async def test_evaluate_examples_and_aggregation() -> None:
     assert aggregates["ragas_avg"]["faithfulness"] == pytest.approx(0.75)
 
     report = _render_report(
-        EvaluationReport(results=results, aggregates=aggregates, telemetry={})
+        EvaluationReport(results=results, aggregates=aggregates),
     )
     assert len(report["results"]) == 2
     assert report["aggregates"]["examples"] == 2
@@ -319,7 +322,7 @@ max_latency_ms: 1500.5
 def test_enforce_thresholds_returns_empty_list_when_no_thresholds() -> None:
     """No configured thresholds should produce no failures."""
 
-    assert _enforce_thresholds({"similarity_avg": 1.0}, {}) == []
+    assert not _enforce_thresholds({"similarity_avg": 1.0}, {})
 
 
 def test_load_cost_controls_coerces_integer(

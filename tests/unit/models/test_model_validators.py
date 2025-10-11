@@ -207,8 +207,8 @@ class TestValidateRateLimitConfig:
         config = {
             "openai": "invalid",  # Should be dict
         }
-        with pytest.raises(ValueError) as exc_info:
-            validate_rate_limit_config(config)
+        with pytest.raises(TypeError) as exc_info:
+            validate_rate_limit_config(config)  # type: ignore[arg-type]
         assert "must be a dictionary" in str(exc_info.value)
 
     def test_non_positive_max_calls(self):

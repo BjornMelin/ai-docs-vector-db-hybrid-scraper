@@ -40,7 +40,7 @@ class ConcreteEmbeddingProvider(EmbeddingProvider):
         self.cleanup_called = True
 
     async def generate_embeddings(
-        self, texts: list[str], _batch_size: int | None = None
+        self, texts: list[str], batch_size: int | None = None
     ) -> list[list[float]]:
         """Generate test embeddings."""
         if self.embedding_error:
@@ -82,7 +82,7 @@ class TestEmbeddingProviderInterface:
     def test_cannot_instantiate_abstract_class(self):
         """Test that EmbeddingProvider cannot be directly instantiated."""
         with pytest.raises(TypeError):
-            EmbeddingProvider("test-model")
+            EmbeddingProvider("test-model")  # type: ignore[abstract]  # pylint: disable=abstract-class-instantiated
 
     def test_abstract_method_signatures(self):
         """Test that abstract methods have correct signatures."""
@@ -140,7 +140,7 @@ class TestConcreteEmbeddingProvider:
     async def test_provider_initialize_error(self):
         """Test provider initialization with error."""
         provider = ConcreteEmbeddingProvider()
-        provider.init_error = ValueError("Init failed")
+        provider.init_error = ValueError("Init failed")  # type: ignore[attr-defined]
 
         with pytest.raises(ValueError, match="Init failed"):
             await provider.initialize()
@@ -158,7 +158,7 @@ class TestConcreteEmbeddingProvider:
     async def test_provider_cleanup_error(self):
         """Test provider cleanup with error."""
         provider = ConcreteEmbeddingProvider()
-        provider.cleanup_error = RuntimeError("Cleanup failed")
+        provider.cleanup_error = RuntimeError("Cleanup failed")  # type: ignore[attr-defined]
 
         with pytest.raises(RuntimeError, match="Cleanup failed"):
             await provider.cleanup()
@@ -200,7 +200,7 @@ class TestConcreteEmbeddingProvider:
     async def test_generate_embeddings_error(self):
         """Test embedding generation with error."""
         provider = ConcreteEmbeddingProvider()
-        provider.embedding_error = EmbeddingServiceError("Embedding failed")
+        provider.embedding_error = EmbeddingServiceError("Embedding failed")  # type: ignore[attr-defined]
 
         with pytest.raises(EmbeddingServiceError, match="Embedding failed"):
             await provider.generate_embeddings(["test"])
@@ -299,8 +299,8 @@ class TestProviderErrorHandling:
     async def test_init_cleanup_error_isolation(self):
         """Test that init and cleanup errors are isolated."""
         provider = ConcreteEmbeddingProvider()
-        provider.init_error = ValueError("Init failed")
-        provider.cleanup_error = RuntimeError("Cleanup failed")
+        provider.init_error = ValueError("Init failed")  # type: ignore[attr-defined]
+        provider.cleanup_error = RuntimeError("Cleanup failed")  # type: ignore[attr-defined]
 
         # Init error
         with pytest.raises(ValueError, match="Init failed"):
@@ -314,7 +314,7 @@ class TestProviderErrorHandling:
     async def test_embedding_generation_after_init_error(self):
         """Test embedding generation after initialization error."""
         provider = ConcreteEmbeddingProvider()
-        provider.init_error = ValueError("Init failed")
+        provider.init_error = ValueError("Init failed")  # type: ignore[attr-defined]
 
         # Init fails
         with pytest.raises(ValueError):
@@ -328,7 +328,7 @@ class TestProviderErrorHandling:
     async def test_cleanup_after_embedding_error(self):
         """Test cleanup after embedding generation error."""
         provider = ConcreteEmbeddingProvider()
-        provider.embedding_error = EmbeddingServiceError("Embedding failed")
+        provider.embedding_error = EmbeddingServiceError("Embedding failed")  # type: ignore[attr-defined]
 
         # Embedding fails
         with pytest.raises(EmbeddingServiceError):
@@ -401,7 +401,7 @@ class TestProviderIntegration:
         provider = ConcreteEmbeddingProvider()
 
         # Set up intermittent error
-        provider.embedding_error = EmbeddingServiceError("Temporary error")
+        provider.embedding_error = EmbeddingServiceError("Temporary error")  # type: ignore[attr-defined]
 
         # First call fails
         with pytest.raises(EmbeddingServiceError):

@@ -6,7 +6,7 @@ import asyncio
 import logging
 from dataclasses import dataclass
 from time import perf_counter
-from typing import Any
+from typing import Any, cast
 
 from crawl4ai import AsyncWebCrawler, CacheMode
 from crawl4ai.models import CrawlResult
@@ -20,7 +20,7 @@ except ImportError:  # pragma: no cover - Playwright not installed in tests
 from src.config.models import Crawl4AIConfig
 from src.services.base import BaseService
 from src.services.crawling import crawl_page
-from src.services.crawling.c4a_presets import (
+from src.services.crawling.c4a_presets import (  # type: ignore[import]
     BrowserOptions,
     base_run_config,
     memory_dispatcher,
@@ -29,14 +29,17 @@ from src.services.crawling.c4a_presets import (
 from src.services.errors import CrawlServiceError
 
 
+PlaywrightException = cast(type[Exception], PlaywrightError)
+
+
 logger = logging.getLogger(__name__)
 
-RECOVERABLE_ERRORS = (
+RECOVERABLE_ERRORS: tuple[type[Exception], ...] = (
     RuntimeError,
     ValueError,
     TimeoutError,
     OSError,
-    PlaywrightError,
+    PlaywrightException,
     CrawlServiceError,
 )
 
@@ -108,7 +111,8 @@ class Crawl4AIAdapter(BaseService):
             await self._crawler.start()
             self._mark_initialized()
             logger.info("Crawl4AI adapter initialized with shared crawler")
-        except RECOVERABLE_ERRORS as exc:  # pragma: no cover - defensive trace
+        # pylint: disable=catching-non-exception
+        except RECOVERABLE_ERRORS as exc:  # pragma: no cover - defensive path
             self._crawler = None
             msg = "Failed to initialize Crawl4AI adapter"
             raise CrawlServiceError(msg) from exc
@@ -178,7 +182,8 @@ class Crawl4AIAdapter(BaseService):
             else:
                 self._metrics.failed_requests += 1
             return payload
-        except RECOVERABLE_ERRORS as exc:  # pragma: no cover - defensive trace
+        # pylint: disable=catching-non-exception
+        except RECOVERABLE_ERRORS as exc:  # pragma: no cover - defensive path
             logger.exception("Crawl4AI adapter error for %s", url)
             self._metrics.failed_requests += 1
             return {
@@ -230,7 +235,8 @@ class Crawl4AIAdapter(BaseService):
                 dispatcher=self._dispatcher,
                 crawler=self._crawler,
             )
-        except RECOVERABLE_ERRORS as exc:  # pragma: no cover - defensive trace
+        # pylint: disable=catching-non-exception
+        except RECOVERABLE_ERRORS as exc:  # pragma: no cover - defensive path
             logger.exception("Bulk crawl failed for %d URLs", len(urls))
             failure_payload = {
                 "success": False,
@@ -337,7 +343,8 @@ class Crawl4AIAdapter(BaseService):
                 "message": "Health check timed out",
                 "response_time_ms": 10000,
             }
-        except RECOVERABLE_ERRORS as exc:  # pragma: no cover - defensive trace
+        # pylint: disable=catching-non-exception
+        except RECOVERABLE_ERRORS as exc:  # pragma: no cover - defensive path
             return {
                 "healthy": False,
                 "status": "error",

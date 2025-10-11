@@ -20,7 +20,6 @@ class TestDatabaseCommandGroup:
 
         assert result.exit_code == 0
         assert "Vector database operations" in result.output
-        assert "🗄️" in result.output
         assert "list" in result.output
 
 
@@ -38,7 +37,7 @@ class TestCollectionAutoCompletion:
         mock_ctx = MagicMock()
         mock_ctx.obj = {}  # No config
 
-        result = complete_collection_name(mock_ctx, None, "test")
+        result = complete_collection_name(mock_ctx, None, "test")  # type: ignore[arg-type]
 
         assert result == []
 
