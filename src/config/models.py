@@ -3,9 +3,22 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Literal, Self
+from typing import Any, Literal, Self, cast
 
-from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    HttpUrl,
+    field_validator,
+    model_validator,
+)
+
+from src.models.validators import (
+    validate_model_benchmark_consistency,
+    validate_scoring_weights,
+    validate_vector_dimensions,
+)
 
 
 #### Enumerations ####
@@ -678,8 +691,105 @@ class ChunkingConfig(BaseModel):
         return self
 
 
+class SmartSelectionConfig(BaseModel):
+    """Scoring weights and heuristics for smart embedding selection."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    quality_weight: float = Field(..., ge=0.0, le=1.0, description="Quality weight")
+    speed_weight: float = Field(..., ge=0.0, le=1.0, description="Speed weight")
+    cost_weight: float = Field(..., ge=0.0, le=1.0, description="Cost weight")
+    quality_best_threshold: float = Field(
+        default=85.0, ge=0.0, le=100.0, description="Threshold for best quality tier"
+    )
+    quality_balanced_threshold: float = Field(
+        default=60.0,
+        ge=0.0,
+        le=100.0,
+        description="Threshold for balanced quality tier",
+    )
+    budget_warning_threshold: float = Field(
+        default=0.8, ge=0.0, le=1.0, description="Budget warning threshold"
+    )
+    budget_critical_threshold: float | None = Field(
+        default=0.95,
+        ge=0.0,
+        le=1.0,
+        description="Budget critical threshold triggering circuit breaker",
+    )
+    short_text_threshold: int = Field(
+        default=100, ge=0, description="Short text classification threshold"
+    )
+    long_text_threshold: int = Field(
+        default=1500, ge=0, description="Long text classification threshold"
+    )
+    speed_balanced_threshold: int = Field(
+        default=200, ge=0, description="Latency threshold for balanced scoring"
+    )
+    cost_expensive_threshold: float = Field(
+        default=0.1,
+        ge=0.0,
+        description="Cost threshold after which embeddings are treated as expensive",
+    )
+    cost_cheap_threshold: float = Field(
+        default=0.05,
+        ge=0.0,
+        description="Cost threshold below which embeddings are considered cheap",
+    )
+    chars_per_token: int = Field(
+        default=4, gt=0, description="Estimated characters per token ratio"
+    )
+    code_keywords: list[str] = Field(
+        default_factory=lambda: ["def", "class", "import", "function", "var"],
+        description="Keywords indicating code-like text",
+    )
+
+    @model_validator(mode="after")
+    def validate_weights(self) -> SmartSelectionConfig:
+        """Ensure scoring weights sum to ~1.0."""
+
+        validate_scoring_weights(
+            self.quality_weight, self.speed_weight, self.cost_weight
+        )
+        return self
+
+
+class ModelBenchmark(BaseModel):
+    """Benchmark metadata describing latency, quality, and cost."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    model_name: str = Field(..., min_length=1, description="Embedding model name")
+    provider: str = Field(..., min_length=1, description="Provider identifier")
+    avg_latency_ms: float = Field(
+        ..., gt=0.0, description="Average latency in milliseconds"
+    )
+    quality_score: float = Field(
+        ..., ge=0.0, le=100.0, description="Quality score on a 0-100 scale"
+    )
+    tokens_per_second: int = Field(
+        ..., ge=0, description="Throughput measured in tokens per second"
+    )
+    cost_per_million_tokens: float = Field(
+        ..., ge=0.0, description="Cost per million tokens in USD"
+    )
+    max_context_length: int = Field(
+        ..., gt=0, description="Maximum supported context length"
+    )
+    embedding_dimensions: int = Field(..., gt=0, description="Embedding dimensionality")
+
+    @field_validator("embedding_dimensions")
+    @classmethod
+    def validate_dimensions(cls, value: int) -> int:
+        """Validate embedding dimensions stay within expected bounds."""
+
+        return validate_vector_dimensions(value)
+
+
 class EmbeddingConfig(BaseModel):
-    """Embedding configuration including search strategy."""
+    """Embedding configuration including selection strategy and benchmarks."""
+
+    model_config = ConfigDict(extra="ignore")
 
     provider: EmbeddingProvider = Field(
         default=EmbeddingProvider.FASTEMBED, description="Embedding provider"
@@ -694,6 +804,27 @@ class EmbeddingConfig(BaseModel):
     enable_quantization: bool = Field(
         default=True, description="Enable embedding quantization"
     )
+    smart_selection: SmartSelectionConfig | None = Field(
+        default=None, description="Smart selection configuration", exclude=True
+    )
+    model_benchmarks: dict[str, ModelBenchmark] = Field(
+        default_factory=dict,
+        description="Per-model benchmarks used for smart selection",
+        exclude=True,
+    )
+
+    @model_validator(mode="after")
+    def validate_benchmark_keys(self) -> EmbeddingConfig:
+        """Ensure benchmark keys align with underlying models."""
+
+        raw_benchmarks = getattr(self, "model_benchmarks", {}) or {}
+        if not isinstance(raw_benchmarks, dict):
+            msg = "model_benchmarks must be a dictionary keyed by model identifiers"
+            raise ValueError(msg)
+        benchmarks = cast(dict[str, ModelBenchmark], raw_benchmarks)
+        for key, benchmark in benchmarks.items():
+            validate_model_benchmark_consistency(key, benchmark.model_name)
+        return self
 
 
 class HyDEConfig(BaseModel):
