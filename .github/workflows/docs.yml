@@ -53,7 +53,10 @@ jobs:
         run: uv --version
 
       - name: Install documentation dependencies
-        run: uv sync --frozen --extra docs pytest
+        run: uv sync --frozen --extra docs
+
+      - name: Install pytest dependency
+        run: uv pip install 'pytest>=8.4.2,<9.0.0'
 
       - name: Run documentation checks
         run: uv run python scripts/dev.py validate --check-docs --strict
