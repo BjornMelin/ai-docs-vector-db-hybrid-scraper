@@ -73,7 +73,7 @@ class RAGGenerator(BaseService):
 
     @config.setter
     def config(self, value: RAGConfig | None) -> None:
-        """Allow BaseService to assign configuration during initialization."""
+        """Allow the parent class to assign configuration during initialization."""
 
         if value is not None:
             self._config = value

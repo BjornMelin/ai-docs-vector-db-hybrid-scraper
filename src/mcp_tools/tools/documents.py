@@ -91,7 +91,7 @@ async def _scrape_document(
     doc_id: str,
     ctx: Context,
     *,
-    crawl_manager: Any,
+    crawl_manager: Any | None,
     content_service: Any | None = None,
 ) -> tuple[dict[str, Any], Any | None]:
     """Scrape the target URL and optionally enrich the content."""

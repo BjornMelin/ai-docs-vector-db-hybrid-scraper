@@ -45,7 +45,7 @@ def initialize_monitoring_system(
 
     base_config = HealthCheckConfig.from_unified_config(settings)
     health_checks_enabled = bool(
-        getattr(monitoring_config, "enable_health_checks", False)
+        getattr(monitoring_config, "enable_health_checks", monitoring_enabled)
     )
 
     if not health_checks_enabled:
@@ -114,8 +114,13 @@ async def managed_lifespan(server: FastMCP[Any]) -> AsyncIterator[None]:  # pyli
             )
 
             monitoring_config = getattr(config, "monitoring", None)
-            health_checks_requested = bool(
-                getattr(monitoring_config, "enable_health_checks", False)
+            monitoring_enabled = bool(getattr(monitoring_config, "enabled", True))
+            health_checks_requested = monitoring_enabled and bool(
+                getattr(
+                    monitoring_config,
+                    "enable_health_checks",
+                    monitoring_enabled,
+                )
             )
 
             if health_manager is None:
@@ -130,9 +135,7 @@ async def managed_lifespan(server: FastMCP[Any]) -> AsyncIterator[None]:  # pyli
                 if health_checks_requested and health_checks_enabled:
                     setup_fastmcp_monitoring(server, config, health_manager)
 
-                    interval = getattr(
-                        monitoring_config, "system_metrics_interval", 60
-                    )
+                    interval = getattr(monitoring_config, "system_metrics_interval", 60)
                     health_check_task = asyncio.create_task(
                         run_periodic_health_checks(
                             health_manager, interval_seconds=float(interval)

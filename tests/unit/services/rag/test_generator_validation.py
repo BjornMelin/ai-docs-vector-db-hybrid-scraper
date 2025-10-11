@@ -20,7 +20,7 @@ class _AsyncRetriever:
 class _SyncRetriever:
     """Retriever stub missing the asynchronous ``ainvoke`` contract."""
 
-    def ainvoke(self, query: str, /) -> list[str]:  # pragma: no cover - invalid stub
+    def ainvoke(self, query: str, /) -> list[str]:
         return [query]
 
 
