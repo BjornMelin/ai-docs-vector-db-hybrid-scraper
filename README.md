@@ -131,7 +131,8 @@ flowchart LR
 
 ### Crawling & Ingestion
 
-- UnifiedBrowserManager selects the right automation tier and tracks quality metrics.
+- AutomationRouter centralizes tier analysis while UnifiedBrowserManager delegates
+  multi-tier scraping and tracks quality metrics.
 - Firecrawl and Crawl4AI adapters plus browser-use / Playwright integrations cover static and dynamic sites.
 - `src/crawl4ai_bulk_embedder.py` streams bulk ingestion, chunking, and embedding into Qdrant with resumable state and progress reporting.
 - `docs/users/web-scraping.md` and `docs/users/examples-and-recipes.md` include tier selection guidance and code samples.

@@ -405,7 +405,7 @@ async def test_forced_browser_use_passes_task_and_instructions(
     [
         (
             {"url": "https://docs.example"},
-            ["lightweight", "crawl4ai", "firecrawl", "playwright", "browser_use"],
+            ["lightweight", "crawl4ai", "playwright", "browser_use", "firecrawl"],
         ),
         (
             {"url": "https://docs.example", "interaction_required": True},
@@ -579,6 +579,6 @@ async def test_crawl_service_error_from_provider_triggers_fallback(
 
     response = await router.scrape(ScrapeRequest(url="https://error.test"))
 
-    assert response["provider"] == "firecrawl"
+    assert response["provider"] == "playwright"
     metrics = router.get_metrics_snapshot()
     assert metrics["crawl4ai"]["failure"] == 1
