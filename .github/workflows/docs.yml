@@ -45,6 +45,7 @@ jobs:
         run: |
           if ! command -v uv >/dev/null 2>&1; then
             curl -LsSf https://astral.sh/uv/install.sh | sh
+            export PATH="$HOME/.local/bin:$PATH"
             echo "$HOME/.local/bin" >> $GITHUB_PATH
           fi
 
@@ -53,6 +54,9 @@ jobs:
 
       - name: Install documentation dependencies
         run: uv sync --frozen --extra docs
+
+      - name: Install pytest dependency
+        run: uv pip install 'pytest>=8.4.2,<9.0.0'
 
       - name: Run documentation checks
         run: uv run python scripts/dev.py validate --check-docs --strict
