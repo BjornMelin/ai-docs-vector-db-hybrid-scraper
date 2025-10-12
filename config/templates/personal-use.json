@@ -4,17 +4,14 @@
 
   "cache": {
     "enable_caching": true,
-    "enable_local_cache": true,
     "enable_dragonfly_cache": true,
     "dragonfly_url": "redis://localhost:6379",
-    "local_max_size": 200,
-    "local_max_memory_mb": 25.0,
     "redis_pool_size": 3,
     "cache_ttl_seconds": {
       "embeddings": 86400,
-      "crawl": 7200,
-      "search": 14400,
-      "hyde": 7200
+      "collections": 7200,
+      "search_results": 14400,
+      "queries": 7200
     }
   },
 

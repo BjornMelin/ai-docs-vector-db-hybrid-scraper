@@ -36,14 +36,6 @@ src.infrastructure.clients.qdrant\_client module
    :show-inheritance:
    :undoc-members:
 
-src.infrastructure.clients.redis\_client module
------------------------------------------------
-
-.. automodule:: src.infrastructure.clients.redis_client
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 Module contents
 ---------------
 

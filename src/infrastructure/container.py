@@ -1,4 +1,4 @@
-"""Dependency injection container for the application."""
+"""Dependency injection container wiring for the AI Docs services."""
 
 import asyncio
 import importlib
@@ -18,7 +18,7 @@ from langchain_mcp_adapters.sessions import Connection
 from openai import AsyncOpenAI
 from qdrant_client import AsyncQdrantClient
 
-from src.config.models import MCPClientConfig, MCPServerConfig, MCPTransport
+from src.config.models import CacheType, MCPClientConfig, MCPServerConfig, MCPTransport
 from src.services.cache.manager import CacheManager
 from src.services.circuit_breaker import CircuitBreakerManager
 from src.services.core.project_storage import ProjectStorage
@@ -67,16 +67,16 @@ def _create_qdrant_client(config: Any) -> AsyncQdrantClient:
         return AsyncQdrantClient(url="http://localhost:6333")
 
 
-def _create_redis_client(config: Any) -> redis.Redis:
-    """Create Redis client with configuration."""
+def _create_dragonfly_client(config: Any) -> redis.Redis:
+    """Create a Redis-compatible Dragonfly client from configuration."""
 
     try:
         cache_config = getattr(config, "cache", None)
         url = getattr(cache_config, "dragonfly_url", None) or "redis://localhost:6379"
         pool_size = getattr(cache_config, "redis_pool_size", None) or 20
         return redis.from_url(url, max_connections=pool_size, decode_responses=True)
-    except (AttributeError, TypeError, ValueError) as e:
-        logger.warning("Failed to create Redis client with config: %s", e)
+    except (AttributeError, TypeError, ValueError) as exc:
+        logger.warning("Failed to create Dragonfly client with config: %s", exc)
         return redis.from_url(
             "redis://localhost:6379", max_connections=20, decode_responses=True
         )
@@ -127,53 +127,40 @@ def _create_cache_manager(config: Any) -> CacheManager:
     """Instantiate the CacheManager from application configuration."""
 
     cache_config = getattr(config, "cache", None)
-    dragonfly_url = None
-    enable_local_cache = False
-    enable_distributed_cache = False
-    local_max_size = 1000
-    local_max_memory_mb = 512
-    local_ttl_seconds = 300
-    distributed_ttl_seconds = {}
-    memory_threshold = None
+    dragonfly_url = "redis://localhost:6379"
+    enable_distributed_cache = True
+    ttl_overrides: dict[CacheType, int] = {}
 
     if cache_config is not None:
-        dragonfly_url = getattr(cache_config, "dragonfly_url", None)
-        redis_url = getattr(cache_config, "redis_url", None)
-        dragonfly_url = dragonfly_url or redis_url or "redis://localhost:6379"
-        enable_local_cache = bool(getattr(cache_config, "enable_local_cache", False))
-        enable_distributed_cache = bool(
-            getattr(cache_config, "enable_dragonfly_cache", False)
-        )
-        local_max_size = int(getattr(cache_config, "local_max_size", local_max_size))
-        local_max_memory_mb = float(
-            getattr(cache_config, "local_max_memory_mb", local_max_memory_mb)
-        )
-        local_ttl_seconds = int(
-            getattr(cache_config, "local_ttl_seconds", local_ttl_seconds)
-        )
-        distributed_ttl_seconds = getattr(
-            cache_config,
-            "cache_ttl_seconds",
-            distributed_ttl_seconds,
-        )
-        memory_threshold = getattr(
-            cache_config, "memory_pressure_threshold", memory_threshold
-        )
-    else:
-        dragonfly_url = "redis://localhost:6379"
+        dragonfly_url = getattr(cache_config, "dragonfly_url", dragonfly_url)
+        enable_caching = bool(getattr(cache_config, "enable_caching", True))
+        enable_dragonfly = bool(getattr(cache_config, "enable_dragonfly_cache", True))
+        enable_distributed_cache = enable_caching and enable_dragonfly
 
-    cache_root = Path(getattr(config, "cache_dir", Path("cache")))
+        ttl_overrides = {
+            CacheType.EMBEDDINGS: int(getattr(cache_config, "ttl_embeddings", 86400)),
+            CacheType.SEARCH: int(getattr(cache_config, "ttl_search_results", 3600)),
+            CacheType.CRAWL: int(getattr(cache_config, "ttl_crawl", 3600)),
+            CacheType.QUERIES: int(getattr(cache_config, "ttl_queries", 7200)),
+        }
+
+        # Allow arbitrary overrides via cache_ttl_seconds mapping.
+        raw_overrides = getattr(cache_config, "cache_ttl_seconds", {})
+        override_map = {
+            "embeddings": CacheType.EMBEDDINGS,
+            "search_results": CacheType.SEARCH,
+            "collections": CacheType.CRAWL,
+            "queries": CacheType.QUERIES,
+        }
+        for name, ttl in raw_overrides.items():
+            cache_type = override_map.get(name)
+            if cache_type is not None:
+                ttl_overrides[cache_type] = int(ttl)
 
     return CacheManager(
         dragonfly_url=dragonfly_url,
-        enable_local_cache=enable_local_cache,
         enable_distributed_cache=enable_distributed_cache,
-        local_max_size=local_max_size,
-        local_max_memory_mb=local_max_memory_mb,
-        local_ttl_seconds=local_ttl_seconds,
-        distributed_ttl_seconds=distributed_ttl_seconds,
-        local_cache_path=cache_root / "embeddings",
-        memory_pressure_threshold=memory_threshold,
+        distributed_ttl_seconds=ttl_overrides,
     )
 
 
@@ -207,12 +194,11 @@ def _create_circuit_breaker_manager(config: Any) -> CircuitBreakerManager | None
     """Instantiate the CircuitBreakerManager if purgatory is available."""
 
     cache_config = getattr(config, "cache", None)
-    redis_url = None
+    redis_url = "redis://localhost:6379"
     if cache_config is not None:
-        redis_url = getattr(cache_config, "redis_url", None) or getattr(
-            cache_config, "dragonfly_url", None
-        )
-    redis_url = redis_url or "redis://localhost:6379"
+        candidate = getattr(cache_config, "dragonfly_url", None)
+        if candidate:
+            redis_url = candidate
 
     try:
         return CircuitBreakerManager(
@@ -522,8 +508,8 @@ class ApplicationContainer(containers.DeclarativeContainer):  # pylint: disable=
         config=config,
     )
 
-    redis_client = providers.Singleton(  # pylint: disable=c-extension-no-member
-        _create_redis_client,
+    dragonfly_client = providers.Singleton(  # pylint: disable=c-extension-no-member
+        _create_dragonfly_client,
         config=config,
     )
 
@@ -546,11 +532,6 @@ class ApplicationContainer(containers.DeclarativeContainer):  # pylint: disable=
     qdrant_provider = providers.Singleton(
         "src.infrastructure.clients.qdrant_client.QdrantClientProvider",
         qdrant_client=qdrant_client,
-    )
-
-    redis_provider = providers.Singleton(
-        "src.infrastructure.clients.redis_client.RedisClientProvider",
-        redis_client=redis_client,
     )
 
     firecrawl_provider = providers.Singleton(
@@ -754,12 +735,6 @@ def inject_qdrant_provider():
     return Provide[ApplicationContainer.qdrant_provider]
 
 
-def inject_redis_provider():
-    """Inject Redis client provider dependency."""
-
-    return Provide[ApplicationContainer.redis_provider]
-
-
 def inject_firecrawl_provider():
     """Inject Firecrawl client provider dependency."""
 
@@ -826,7 +801,7 @@ def inject_rag_generator():
     return Provide[ApplicationContainer.rag_generator]
 
 
-# Legacy raw client injection (for backward compatibility)
+# Raw client injection helpers
 def inject_openai() -> AsyncOpenAI:
     """Inject raw OpenAI client dependency."""
 
@@ -839,10 +814,10 @@ def inject_qdrant() -> AsyncQdrantClient:
     return Provide[ApplicationContainer.qdrant_client]
 
 
-def inject_redis() -> redis.Redis:
-    """Inject raw Redis client dependency."""
+def inject_dragonfly_client() -> redis.Redis:
+    """Inject raw Dragonfly cache client dependency."""
 
-    return Provide[ApplicationContainer.redis_client]
+    return Provide[ApplicationContainer.dragonfly_client]
 
 
 def inject_firecrawl() -> AsyncFirecrawlApp:

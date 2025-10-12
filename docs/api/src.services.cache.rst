@@ -36,14 +36,6 @@ src.services.cache.embedding\_cache module
    :show-inheritance:
    :undoc-members:
 
-src.services.cache.persistent_cache module
-------------------------------------------
-
-.. automodule:: src.services.cache.persistent_cache
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 src.services.cache.manager module
 ---------------------------------
 
@@ -76,10 +68,10 @@ src.services.cache.search\_cache module
    :show-inheritance:
    :undoc-members:
 
-src.services.cache.warming module
----------------------------------
+src.services.cache.warmup module
+--------------------------------
 
-.. automodule:: src.services.cache.warming
+.. automodule:: src.services.cache.warmup
    :members:
    :show-inheritance:
    :undoc-members:

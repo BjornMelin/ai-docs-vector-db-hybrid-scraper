@@ -93,9 +93,8 @@ class CacheType(str, Enum):
     SEARCH = "search"
     CRAWL = "crawl"
     HYDE = "hyde"
-    LOCAL = "local"
-    REDIS = "redis"
-    HYBRID = "hybrid"
+    QUERIES = "queries"
+    DRAGONFLY = "dragonfly"
 
 
 class DocumentStatus(str, Enum):
@@ -243,20 +242,23 @@ class MCPClientConfig(BaseModel):
 
 
 class CacheConfig(BaseModel):
-    """Cache configuration for local and distributed layers."""
+    """Cache configuration for the Dragonfly-backed distributed cache."""
 
     enable_caching: bool = Field(default=True, description="Enable caching globally")
-    enable_local_cache: bool = Field(
+    enable_dragonfly_cache: bool = Field(
         default=True,
-        description=("Enable persistent on-disk cache used for warm restarts."),
+        description="Enable the Dragonfly (Redis-compatible) distributed cache",
     )
-    enable_redis_cache: bool = Field(default=True, description="Enable Redis cache")
-    redis_url: str = Field(
-        default="redis://localhost:6379", description="Redis connection URL"
+    dragonfly_url: str = Field(
+        default="redis://localhost:6379",
+        description="Connection URL for Dragonfly",
     )
-    redis_password: str | None = Field(default=None, description="Redis password")
-    redis_database: int = Field(
-        default=0, ge=0, le=15, description="Redis database number"
+    dragonfly_password: str | None = Field(
+        default=None,
+        description="Password for Dragonfly when authentication is enabled",
+    )
+    dragonfly_database: int = Field(
+        default=0, ge=0, le=15, description="Logical database index"
     )
     ttl_embeddings: int = Field(
         default=86400, gt=0, description="Embedding cache TTL in seconds"
@@ -275,14 +277,6 @@ class CacheConfig(BaseModel):
             "not supported)."
         ),
     )
-    local_max_size: int = Field(
-        default=1000,
-        gt=0,
-        description="Maximum cached items persisted on disk before eviction",
-    )
-    local_max_memory_mb: int = Field(
-        default=100, gt=0, description="Local cache memory budget in megabytes"
-    )
     cache_ttl_seconds: dict[str, int] = Field(
         default_factory=lambda: {
             "search_results": 3600,
@@ -290,12 +284,6 @@ class CacheConfig(BaseModel):
             "collections": 7200,
         },
         description="TTL overrides per cache type",
-    )
-    memory_pressure_threshold: float | None = Field(
-        default=None,
-        ge=0.0,
-        le=1.0,
-        description="Optional ratio of memory usage that triggers evictions",
     )
 
 

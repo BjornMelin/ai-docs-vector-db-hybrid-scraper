@@ -15,7 +15,7 @@ except ImportError:
     CacheManager = None  # type: ignore[assignment]
 
 from src.config.loader import Settings
-from src.config.models import EmbeddingConfig as SettingsEmbeddingConfig
+from src.config.models import CacheType, EmbeddingConfig as SettingsEmbeddingConfig
 from src.services.errors import EmbeddingServiceError
 
 from ..base import EmbeddingProvider
@@ -84,24 +84,29 @@ class EmbeddingManager:
                 if dragonfly_url_config
                 else "redis://localhost:6379"
             )
-            enable_local_cache = getattr(config.cache, "enable_local_cache", False)
-            enable_distributed_cache = getattr(
-                config.cache, "enable_dragonfly_cache", False
-            )
-            local_max_size = getattr(config.cache, "local_max_size", 1000)
-            local_max_memory_mb = getattr(config.cache, "local_max_memory_mb", 512)
-            cache_ttl_seconds = getattr(config.cache, "cache_ttl_seconds", {})
-            cache_root = Path(getattr(config, "cache_dir", Path("cache")))
-            memory_threshold = getattr(config.cache, "memory_pressure_threshold", None)
+            enable_dragonfly = getattr(config.cache, "enable_dragonfly_cache", True)
+            ttl_overrides = {
+                CacheType.EMBEDDINGS: getattr(config.cache, "ttl_embeddings", 86400),
+                CacheType.SEARCH: getattr(config.cache, "ttl_search_results", 3600),
+                CacheType.CRAWL: getattr(config.cache, "ttl_crawl", 3600),
+                CacheType.QUERIES: getattr(config.cache, "ttl_queries", 7200),
+            }
+            extra_overrides = getattr(config.cache, "cache_ttl_seconds", {})
+            mapping = {
+                "embeddings": CacheType.EMBEDDINGS,
+                "search_results": CacheType.SEARCH,
+                "collections": CacheType.CRAWL,
+                "queries": CacheType.QUERIES,
+            }
+            for key, ttl in extra_overrides.items():
+                cache_type = mapping.get(key)
+                if cache_type is not None:
+                    ttl_overrides[cache_type] = int(ttl)
+
             generated_cache_manager = CacheManager(
                 dragonfly_url=dragonfly_url,
-                enable_local_cache=enable_local_cache,
-                enable_distributed_cache=enable_distributed_cache,
-                local_max_size=local_max_size,
-                local_max_memory_mb=local_max_memory_mb,
-                distributed_ttl_seconds=cache_ttl_seconds,
-                local_cache_path=cache_root / "embeddings",
-                memory_pressure_threshold=memory_threshold,
+                enable_distributed_cache=enable_dragonfly,
+                distributed_ttl_seconds=ttl_overrides,
             )
             self.cache_manager = cast(CacheManagerType, generated_cache_manager)
 

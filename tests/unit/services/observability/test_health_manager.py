@@ -6,10 +6,12 @@ import asyncio
 from types import SimpleNamespace
 
 import pytest
+from fakeredis import aioredis as fakeredis_aioredis
 from pytest_mock import MockerFixture
 
 from src.config.models import CrawlProvider, EmbeddingProvider
 from src.services.observability.health_manager import (
+    DragonflyHealthCheck,
     HealthCheck,
     HealthCheckConfig,
     HealthCheckManager,
@@ -25,7 +27,10 @@ def configured_settings(config_factory):
 
     return config_factory(
         qdrant={"url": "http://localhost:6333", "api_key": "test", "timeout": 5.0},
-        cache={"enable_redis_cache": True, "redis_url": "redis://localhost:6379/0"},
+        cache={
+            "enable_dragonfly_cache": True,
+            "dragonfly_url": "redis://localhost:6379/0",
+        },
         embedding_provider=EmbeddingProvider.OPENAI,
         crawl_provider=CrawlProvider.FIRECRAWL,
         openai={"api_key": "sk-test"},
@@ -104,8 +109,8 @@ def test_build_health_manager_includes_expected_checks(
         return_value=SimpleNamespace(name="qdrant"),
     )
     mocker.patch(
-        "src.services.observability.health_manager.RedisHealthCheck",
-        return_value=SimpleNamespace(name="redis"),
+        "src.services.observability.health_manager.DragonflyHealthCheck",
+        return_value=SimpleNamespace(name="dragonfly"),
     )
     mocker.patch(
         "src.services.observability.health_manager.OpenAIHealthCheck",
@@ -120,7 +125,7 @@ def test_build_health_manager_includes_expected_checks(
     manager = build_health_manager(configured_settings)
     check_names = {check.name for check in manager._health_checks}
 
-    expected_checks = {"openai", "firecrawl", "qdrant", "redis"}
+    expected_checks = {"openai", "firecrawl", "qdrant", "dragonfly"}
 
     assert expected_checks.issubset(check_names)
 
@@ -131,7 +136,7 @@ def test_build_health_manager_skips_openai_when_disabled(config_factory) -> None
     settings = config_factory(
         embedding_provider=EmbeddingProvider.FASTEMBED,
         crawl_provider=CrawlProvider.CRAWL4AI,
-        cache={"enable_redis_cache": False},
+        cache={"enable_dragonfly_cache": False},
         qdrant={"url": "http://localhost:6333", "timeout": 5.0},
         browser={"firecrawl": {}},
     )
@@ -140,3 +145,57 @@ def test_build_health_manager_skips_openai_when_disabled(config_factory) -> None
 
     assert "openai" not in check_names
     assert "firecrawl" not in check_names
+
+
+@pytest.mark.asyncio()
+async def test_dragonfly_health_check_reports_metadata(
+    mocker: MockerFixture,
+) -> None:
+    """Dragonfly health check should report version and client metrics."""
+
+    fake_client = fakeredis_aioredis.FakeRedis(decode_responses=True)
+    mocker.patch(
+        "src.services.observability.health_manager.redis.from_url",
+        return_value=fake_client,
+    )
+    ping_future: asyncio.Future[bool] = asyncio.Future()
+    ping_future.set_result(True)
+    mocker.patch.object(fake_client, "ping", return_value=ping_future)
+    info_future: asyncio.Future[dict[str, int | str]] = asyncio.Future()
+    info_future.set_result(
+        {
+            "redis_version": "7.2",
+            "connected_clients": 5,
+            "used_memory_human": "2M",
+        }
+    )
+    mocker.patch.object(fake_client, "info", return_value=info_future)
+
+    check = DragonflyHealthCheck("redis://fakeredis")
+    result = await check.check()
+
+    assert result.status is HealthStatus.HEALTHY
+    assert result.metadata["engine_version"] == "7.2"
+    await fake_client.aclose()
+
+
+@pytest.mark.asyncio()
+async def test_dragonfly_health_check_handles_ping_failure(
+    mocker: MockerFixture,
+) -> None:
+    """Dragonfly health check should mark the service unhealthy when ping fails."""
+
+    fake_client = fakeredis_aioredis.FakeRedis(decode_responses=True)
+    mocker.patch(
+        "src.services.observability.health_manager.redis.from_url",
+        return_value=fake_client,
+    )
+    ping_future: asyncio.Future[bool] = asyncio.Future()
+    ping_future.set_result(False)
+    mocker.patch.object(fake_client, "ping", return_value=ping_future)
+
+    check = DragonflyHealthCheck("redis://fakeredis")
+    result = await check.check()
+
+    assert result.status is HealthStatus.UNHEALTHY
+    await fake_client.aclose()

@@ -42,7 +42,7 @@ def mock_config():
 
     config.cache = MagicMock()
     config.cache.enabled = True
-    config.cache.redis_url = "redis://localhost:6379"
+    config.cache.dragonfly_url = "redis://localhost:6379"
 
     config.browser = MagicMock()
     config.browser.automation_enabled = True
@@ -124,7 +124,7 @@ openai:
 
 cache:
   enabled: true
-  redis_url: redis://localhost:6379
+  dragonfly_url: redis://localhost:6379
 
 browser:
   automation_enabled: true

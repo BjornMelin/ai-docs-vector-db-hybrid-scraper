@@ -152,6 +152,7 @@ def _install_application_routes(app: FastAPI) -> None:
     required_modules = {
         "search": "src.api.routers.v1.search",
         "documents": "src.api.routers.v1.documents",
+        "cache": "src.api.routers.v1.cache",
     }
     routers: dict[str, Any] = {}
     missing: list[str] = []
@@ -176,6 +177,8 @@ def _install_application_routes(app: FastAPI) -> None:
         app.include_router(routers["search"], prefix="/api/v1", tags=["search"])
     if "documents" in routers:
         app.include_router(routers["documents"], prefix="/api/v1", tags=["documents"])
+    if "cache" in routers:
+        app.include_router(routers["cache"], prefix="/api/v1", tags=["cache"])
 
     if routers:
         logger.debug("Configured application routes: %s", ", ".join(sorted(routers)))
@@ -290,17 +293,17 @@ def _build_app_lifespan(settings: Settings):
     return lifespan
 
 
-async def _ping_redis() -> None:
+async def _ping_dragonfly() -> None:
     container = get_container()
     if container is None:
         return
     try:
-        redis_client = container.redis_client()
-        ping_result = redis_client.ping()
+        dragonfly_client = container.dragonfly_client()
+        ping_result = dragonfly_client.ping()
         if asyncio.iscoroutine(ping_result):
             await ping_result
     except Exception:  # pragma: no cover - optional dependency not available
-        logger.debug("Redis ping failed during startup", exc_info=True)
+        logger.debug("Dragonfly ping failed during startup", exc_info=True)
 
 
 async def _init_qdrant_client() -> None:
@@ -343,7 +346,7 @@ async def _ensure_database_ready(settings: Settings) -> None:
         return
 
     await core_get_cache_manager()
-    await _ping_redis()
+    await _ping_dragonfly()
 
 
 async def _initialize_services(settings: Settings) -> None:
@@ -358,6 +361,7 @@ async def _initialize_services(settings: Settings) -> None:
 
     if _cache_initialization_enabled(settings):
         service_initializers["cache_manager"] = core_get_cache_manager
+        service_initializers["dragonfly_client"] = _ping_dragonfly
     else:
         logger.debug("Skipping cache initialization; caching disabled in configuration")
 
