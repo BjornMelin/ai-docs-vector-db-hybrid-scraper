@@ -179,7 +179,7 @@ class EmbeddingPipeline:
         model_name = (
             self._config.openai.model
             if provider_key == "openai"
-            else self._config.fastembed.model
+            else self._config.fastembed.dense_model
         )
         cached_embedding = await embedding_cache.get_embedding(
             text=texts[0],

@@ -95,7 +95,7 @@ async def _evaluate(  # pylint: disable=too-many-locals
             return
 
         fastembed_config = getattr(vector_service.config, "fastembed", None)
-        model_name = getattr(fastembed_config, "model", None)
+        model_name = getattr(fastembed_config, "dense_model", None)
         embeddings = FastEmbedEmbeddings(
             model_name=cast(str, model_name or "BAAI/bge-small-en-v1.5")
         )

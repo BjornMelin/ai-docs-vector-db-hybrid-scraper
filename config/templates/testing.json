@@ -16,7 +16,7 @@
     "max_retries": 1
   },
   "fastembed": {
-    "model": "BAAI/bge-small-en-v1.5",
+    "dense_model": "BAAI/bge-small-en-v1.5",
     "batch_size": 8
   },
   "crawl4ai": {

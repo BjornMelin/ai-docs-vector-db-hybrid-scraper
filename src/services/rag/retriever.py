@@ -183,7 +183,7 @@ class VectorServiceRetriever(BaseRetriever):
             return None
 
         fastembed_config = getattr(self._vector_service.config, "fastembed", None)
-        model_name = getattr(fastembed_config, "model", None)
+        model_name = getattr(fastembed_config, "dense_model", None)
         embeddings = FastEmbedEmbeddings(
             model_name=cast(str, model_name or "BAAI/bge-small-en-v1.5")
         )

@@ -199,7 +199,7 @@ class ProviderRegistry:
 
     async def _initialize_fastembed(self) -> None:
         try:
-            model = self._config.fastembed.model
+            model = self._config.fastembed.dense_model
         except AttributeError as exc:  # pragma: no cover - defensive
             raise EmbeddingServiceError("FastEmbed configuration missing") from exc
 
