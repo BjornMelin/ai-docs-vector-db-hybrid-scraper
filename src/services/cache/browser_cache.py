@@ -11,6 +11,8 @@ import time
 from typing import Any
 from urllib.parse import urlparse
 
+from src.services.browser.models import ProviderKind
+
 from .base import CacheInterface
 from .persistent_cache import PersistentCacheManager
 
@@ -27,7 +29,7 @@ class BrowserCacheEntry:
         url: str,
         content: str,
         metadata: dict[str, Any],
-        tier_used: str,
+        provider: ProviderKind | str,
         timestamp: float | None = None,
     ) -> None:
         """Initialize cache entry.
@@ -36,14 +38,16 @@ class BrowserCacheEntry:
             url: Source URL
             content: Scraped content
             metadata: Page metadata
-            tier_used: Which tier was used for scraping
+            provider: Which provider fulfilled the scrape
             timestamp: When the content was scraped
         """
 
         self.url = url
         self.content = content
         self.metadata = metadata
-        self.tier_used = tier_used
+        self.provider = (
+            provider if isinstance(provider, ProviderKind) else ProviderKind(provider)
+        )
         self.timestamp = timestamp or time.time()
 
     def to_dict(self) -> dict[str, Any]:
@@ -53,7 +57,7 @@ class BrowserCacheEntry:
             "url": self.url,
             "content": self.content,
             "metadata": self.metadata,
-            "tier_used": self.tier_used,
+            "provider": self.provider.value,
             "timestamp": self.timestamp,
         }
 
@@ -65,7 +69,7 @@ class BrowserCacheEntry:
             url=data["url"],
             content=data["content"],
             metadata=data.get("metadata", {}),
-            tier_used=data.get("tier_used", "unknown"),
+            provider=data.get("provider", ProviderKind.LIGHTWEIGHT.value),
             timestamp=data.get("timestamp", time.time()),
         )
 
@@ -109,7 +113,7 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
             "evictions": 0,
         }
 
-    def _generate_cache_key(self, url: str, tier: str | None = None) -> str:
+    def _generate_cache_key(self, url: str, provider: str | None = None) -> str:
         """Generate cache key from URL and tier.
 
         Args:
@@ -129,8 +133,8 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
 
         # Include tier in key if specified
         key_parts = [normalized_url]
-        if tier:
-            key_parts.append(f"tier:{tier}")
+        if provider:
+            key_parts.append(f"provider:{provider}")
 
         # Generate hash for consistent key length (using SHA256 for security)
         key_string = "|".join(key_parts)
@@ -138,7 +142,7 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
 
         return f"browser:{key_hash}:{parsed.netloc}"
 
-    def generate_cache_key(self, url: str, tier: str | None = None) -> str:
+    def generate_cache_key(self, url: str, provider: str | None = None) -> str:
         """Generate cache key from URL and tier (public interface).
 
         Args:
@@ -149,7 +153,7 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
             Cache key string
         """
 
-        return self._generate_cache_key(url, tier)
+        return self._generate_cache_key(url, provider)
 
     def _determine_ttl(self, url: str, content_length: int) -> int:
         """Determine appropriate TTL based on URL and content.
@@ -461,21 +465,24 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
     async def get_or_fetch(
         self,
         url: str,
-        tier: str | None,
+        provider: str | ProviderKind | None,
         fetch_func,
     ) -> tuple[BrowserCacheEntry, bool]:
         """Get from cache or fetch if not cached.
 
         Args:
             url: URL to get/fetch
-            tier: Tier to use
+            provider: Provider to use for cache key differentiation
             fetch_func: Async function to fetch content
 
         Returns:
             Tuple of (cache entry, was_cached)
         """
         # Generate cache key
-        cache_key = self._generate_cache_key(url, tier)
+        provider_key = (
+            provider.value if isinstance(provider, ProviderKind) else provider
+        )
+        cache_key = self._generate_cache_key(url, provider_key)
 
         # Try cache first
         cached_entry = await self.get(cache_key)
@@ -483,7 +490,7 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
             logger.info(
                 "Browser cache hit for %s (tier: %s, age: %.1fs)",
                 url,
-                cached_entry.tier_used,
+                cached_entry.provider.value,
                 time.time() - cached_entry.timestamp,
             )
             return cached_entry, True
@@ -499,7 +506,10 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
                 url=url,
                 content=result.get("content", ""),
                 metadata=result.get("metadata", {}),
-                tier_used=result.get("tier_used", tier or "unknown"),
+                provider=result.get(
+                    "provider",
+                    provider_key or ProviderKind.LIGHTWEIGHT.value,
+                ),
             )
 
             # Cache the result

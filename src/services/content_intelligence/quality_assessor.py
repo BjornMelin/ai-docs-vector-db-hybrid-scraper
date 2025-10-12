@@ -348,10 +348,17 @@ class QualityAssessor:
                 base_confidence = (base_confidence + quality_score) / 2
 
             # Check for tier/method used
-            tier_used = extraction_metadata.get("tier_used", "")
-            if tier_used in ["crawl4ai", "playwright"]:
+            provider_raw = extraction_metadata.get(
+                "provider"
+            ) or extraction_metadata.get("tier_used", "")
+            provider = (
+                provider_raw.value
+                if hasattr(provider_raw, "value")
+                else str(provider_raw)
+            )
+            if provider in ["crawl4ai", "playwright"]:
                 base_confidence += 0.05
-            elif tier_used == "lightweight":
+            elif provider == "lightweight":
                 base_confidence -= 0.1
 
         # Check for content completeness indicators

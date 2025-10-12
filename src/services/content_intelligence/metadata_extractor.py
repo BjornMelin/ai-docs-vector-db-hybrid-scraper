@@ -360,10 +360,19 @@ class MetadataExtractor:
 
         # Set extraction method from metadata
         if extraction_metadata:
-            metadata.extraction_method = extraction_metadata.get("tier_used", "unknown")
+            provider_value = extraction_metadata.get(
+                "provider"
+            ) or extraction_metadata.get("tier_used")
+            if isinstance(provider_value, str):
+                metadata.extraction_method = provider_value
+            elif provider_value is not None and hasattr(provider_value, "value"):
+                metadata.extraction_method = getattr(provider_value, "value", "unknown")
+            else:
+                metadata.extraction_method = "unknown"
+
             metadata.page_load_time_ms = extraction_metadata.get(
-                "automation_time_ms", 0.0
-            )
+                "elapsed_ms"
+            ) or extraction_metadata.get("automation_time_ms", 0.0)
 
         # Parse URL for additional context
         parsed_url = urlparse(url)
