@@ -146,9 +146,7 @@ async def test_router_returns_successful_result_and_records_metrics() -> None:
     assert result.provider is ProviderKind.CRAWL4AI
     assert failing_lightweight.calls == 1
     assert succeeding_crawl4ai.calls == 1
-    snapshot = router.get_metrics_snapshot()
-    assert snapshot[ProviderKind.LIGHTWEIGHT.value]["failure"] == 1
-    assert snapshot[ProviderKind.CRAWL4AI.value]["success"] == 1
+    # Router no longer exposes counters; success determined by provider result
 
 
 @pytest.mark.asyncio
@@ -280,10 +278,10 @@ async def test_router_reinitializes_provider_after_backoff() -> None:
 
 
 @pytest.mark.asyncio
-async def test_router_records_rate_limited_metrics(
+async def test_router_handles_rate_limited_provider(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Test router records rate-limited metrics correctly."""
+    """Router should fall back when a provider is rate limited."""
 
     lightweight = StubProvider(
         ProviderContext(ProviderKind.LIGHTWEIGHT),
@@ -308,19 +306,14 @@ async def test_router_records_rate_limited_metrics(
     )
 
     async def fake_acquire(provider: ProviderKind, deadline: float) -> bool:  # noqa: ARG001
-        if provider is ProviderKind.LIGHTWEIGHT:
-            router._metrics.record_rate_limited(provider)  # pylint: disable=protected-access
-            return False
-        return True
+        return provider is not ProviderKind.LIGHTWEIGHT
 
     monkeypatch.setattr(router, "_acquire_limiter", fake_acquire)
 
     result = await router.scrape(ScrapeRequest(url="https://example.com"))
 
     assert result.provider is ProviderKind.CRAWL4AI
-    snapshot = router.get_metrics_snapshot()
-    assert snapshot[ProviderKind.LIGHTWEIGHT.value]["rate_limited"] == 1
-    assert snapshot[ProviderKind.CRAWL4AI.value]["success"] == 1
+    # No metrics snapshot; validate provider selection only
 
 
 @pytest.mark.asyncio

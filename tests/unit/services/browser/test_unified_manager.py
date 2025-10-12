@@ -41,9 +41,6 @@ class StubRouter:
             elapsed_ms=None,
         )
 
-    def get_metrics_snapshot(self) -> dict[str, dict[str, int]]:
-        return {"lightweight": {"success": 1}}
-
     def get_provider(self, kind):  # pragma: no cover - manager doesn't call in test
         return None
 

@@ -100,19 +100,12 @@ Environment overrides follow the nested naming convention, e.g.
 
 ## Observability
 
-`telemetry.py` exposes a `MetricsRecorder` for in-memory counters. Each provider
-updates the recorder with `record_success`, `record_failure`, and
-`record_rate_limited`. Structured logging stays local to the provider modules.
-Providers that fail initialization are temporarily quarantined and retried
-after `RouterSettings.unavailable_retry_seconds` elapses.
-
-Expose higher-level metrics via:
-
-```python
-router = BrowserRouter(...)
-await router.initialize()
-metrics = router.get_metrics_snapshot()
-```
+Provider metrics flow through `src/services/browser/runtime.py`, which wraps
+each operation with Prometheus counters and histograms (labels: provider,
+operation, outcome, error_class). The router no longer stores in-process
+counters; scrape results and Prometheus exports are the single source of truth.
+Providers that fail initialization are quarantined and retried after
+`RouterSettings.unavailable_retry_seconds` elapses.
 
 ## Public API Surface
 

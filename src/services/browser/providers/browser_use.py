@@ -11,6 +11,7 @@ from src.config.browser import BrowserUseSettings
 from src.services.browser.errors import BrowserProviderError
 from src.services.browser.models import BrowserResult, ProviderKind, ScrapeRequest
 
+from ..runtime import execute_with_retry
 from .base import BrowserProvider, ProviderContext
 
 
@@ -117,7 +118,15 @@ class BrowserUseProvider(BrowserProvider):
         )
         try:
             timeout_seconds = (request.timeout_ms or self._settings.timeout_ms) / 1000
-            result = await asyncio.wait_for(agent.run(), timeout=timeout_seconds)
+
+            async def _call() -> dict | str:
+                return await asyncio.wait_for(agent.run(), timeout=timeout_seconds)
+
+            result = await execute_with_retry(
+                provider=self.kind,
+                operation="agent_run",
+                func=_call,
+            )
         except TimeoutError:
             return BrowserResult.failure(
                 url=request.url,

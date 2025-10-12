@@ -143,10 +143,5 @@ class UnifiedBrowserManager:
             )
         return await firecrawl.crawl_site(url, limit=max_pages)
 
-    def get_metrics(self) -> dict[str, dict[str, int]]:
-        """Expose router telemetry."""
-
-        return self._router.get_metrics_snapshot()
-
 
 __all__ = ["UnifiedBrowserManager"]

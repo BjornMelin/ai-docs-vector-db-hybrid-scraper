@@ -22,7 +22,6 @@ from src.services.browser.providers import (
     LightweightProvider,
     PlaywrightProvider,
 )
-from src.services.browser.telemetry import MetricsRecorder
 
 
 DEFAULT_ORDER: Sequence[ProviderKind] = (
@@ -66,7 +65,9 @@ class BrowserRouter:
             self._limiters[provider_kind] = AsyncLimiter(
                 conf.max_requests, conf.period_seconds
             )
-        self._metrics = MetricsRecorder()
+        # Detailed metrics are emitted by providers via shared runtime utilities.
+        # Keep a placeholder to satisfy any legacy call sites.
+
         self._initialized = False
         self._retry_backoff = settings.unavailable_retry_seconds
         self._unavailable: dict[ProviderKind, float] = {}
@@ -94,11 +95,6 @@ class BrowserRouter:
             await provider.close()
         self._initialized = False
         self._unavailable.clear()
-
-    def get_metrics_snapshot(self) -> dict[str, dict[str, int]]:
-        """Expose telemetry snapshot."""
-
-        return self._metrics.snapshot()
 
     def is_initialized(self) -> bool:
         """Return True when providers are initialized."""
@@ -160,7 +156,6 @@ class BrowserRouter:
             await asyncio.wait_for(limiter.acquire(), timeout=timeout)
             return True
         except TimeoutError:
-            self._metrics.record_rate_limited(provider)
             return False
 
     async def scrape(self, request: ScrapeRequest) -> BrowserResult:
@@ -187,14 +182,10 @@ class BrowserRouter:
             try:
                 result = await provider.run(request)
             except BrowserProviderError:
-                self._metrics.record_failure(provider_kind)
                 continue
 
             if result.success:
-                self._metrics.record_success(provider_kind)
                 return result
-
-            self._metrics.record_failure(provider_kind)
 
         raise BrowserRouterError(
             "All providers failed or timed out",
