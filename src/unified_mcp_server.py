@@ -297,10 +297,9 @@ def validate_configuration() -> None:
             "OpenAI API key is required when the OpenAI embedding provider is enabled"
         )
 
-    if (
-        config.crawl_provider == CrawlProvider.FIRECRAWL
-        and not config.firecrawl.api_key
-    ):
+    firecrawl_settings = getattr(config.browser, "firecrawl", None)
+    firecrawl_api_key = getattr(firecrawl_settings, "api_key", None)
+    if config.crawl_provider == CrawlProvider.FIRECRAWL and not firecrawl_api_key:
         warnings.append(
             "Firecrawl API key not set - premium crawling features will be unavailable"
         )
