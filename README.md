@@ -146,9 +146,9 @@ flowchart LR
 
 ### Caching
 
-- The unified `CacheManager` (`src/services/cache/manager.py`) fronts all L1/L2 storage, hashing keys and enforcing TTL policies for Dragonfly/Redis and the local persistent tier.
-- Specialized helpers such as the HyDE cache now depend on `CacheManager`, ensuring a single entry point for embeddings, search results, and warm-up flows.
-- Configure cache URLs, prefixes, and TTLs via the cache models in `src/config/models.py`; the manager automatically wires Prometheus metrics when enabled.
+- The unified `CacheManager` (`src/services/cache/manager.py`) fronts the Dragonfly cache, hashing keys and enforcing TTL policies across embeddings, search, HyDE, and browser flows.
+- Specialized helpers such as the HyDE cache depend on `CacheManager`, ensuring a single entry point for embeddings, search results, and warm-up flows.
+- Configure Dragonfly URLs and TTLs via the cache models in `src/config/models.py`; the manager automatically wires Prometheus metrics when enabled.
 
 ### Interfaces & Tooling
 

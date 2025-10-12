@@ -1,4 +1,4 @@
-"""Firecrawl cloud provider implementation."""
+"""Firecrawl provider integration leveraging the official SDK."""
 
 from __future__ import annotations
 

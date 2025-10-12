@@ -75,17 +75,15 @@ class TestCacheConfigProperties:
 
         # Verify basic constraints
         assert isinstance(cache_data["enable_caching"], bool)
-        assert isinstance(cache_data["enable_local_cache"], bool)
-        assert isinstance(cache_data["enable_redis_cache"], bool)
-        assert cache_data["local_max_size"] > 0
-        assert cache_data["local_max_memory_mb"] > 0
+        assert isinstance(cache_data["enable_dragonfly_cache"], bool)
+        assert cache_data["dragonfly_database"] >= 0
         assert cache_data["ttl_embeddings"] > 0
         assert cache_data["ttl_crawl"] > 0
         assert cache_data["ttl_queries"] > 0
         assert cache_data["ttl_search_results"] > 0
 
         # Verify Redis URL format
-        assert cache_data["redis_url"].startswith("redis://")
+        assert cache_data["dragonfly_url"].startswith("redis://")
 
         # Verify cache TTL structure
         ttl_map = cache_data["cache_ttl_seconds"]
@@ -99,12 +97,6 @@ class TestCacheConfigProperties:
     @given(st.integers(max_value=0))
     def test_cache_config_negative_values_rejected(self, negative_value: int):
         """Test that negative values are rejected for positive-only fields."""
-        with pytest.raises(ValidationError):
-            CacheConfig(local_max_size=negative_value)
-
-        with pytest.raises(ValidationError):
-            CacheConfig(local_max_memory_mb=negative_value)
-
         with pytest.raises(ValidationError):
             CacheConfig(ttl_embeddings=negative_value)
 
@@ -127,8 +119,7 @@ class TestCacheConfigProperties:
     @example(
         {
             "enable_caching": False,
-            "enable_local_cache": False,
-            "enable_redis_cache": False,
+            "enable_dragonfly_cache": False,
         }
     )
     @given(cache_configurations())
@@ -716,7 +707,7 @@ class TestConfigPropertyInvariants:
 
         # URL formats
         assert settings_data["qdrant"]["url"].startswith(("http://", "https://"))
-        assert settings_data["cache"]["redis_url"].startswith("redis://")
+        assert settings_data["cache"]["dragonfly_url"].startswith("redis://")
 
         # Documentation site URLs
         for site in config.documentation_sites:
@@ -766,14 +757,13 @@ class TestConfigMutationTesting:
             "openai": {"api_key": None},
             "cache": {
                 "enable_caching": True,
-                "enable_local_cache": True,
-                "enable_redis_cache": True,
-                "local_max_size": 1000,
+                "enable_dragonfly_cache": True,
+                "dragonfly_url": "redis://localhost:6379",
+                "dragonfly_database": 0,
                 "ttl_embeddings": 3600,
                 "ttl_crawl": 1200,
                 "ttl_queries": 1800,
                 "ttl_search_results": 900,
-                "redis_url": "redis://localhost:6379",
             },
             "chunking": {
                 "chunk_size": 1600,
@@ -796,7 +786,9 @@ class TestConfigMutationTesting:
         )
 
         if mutation_type == "negative_cache_size":
-            base_config["cache"]["local_max_size"] = data.draw(st.integers(max_value=0))
+            base_config["cache"]["dragonfly_database"] = data.draw(
+                st.integers(max_value=-1)
+            )
             with pytest.raises(ValidationError):
                 Settings(**base_config)
 

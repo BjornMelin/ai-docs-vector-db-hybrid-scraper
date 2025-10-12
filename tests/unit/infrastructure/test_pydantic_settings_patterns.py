@@ -137,7 +137,7 @@ def test_config_nested_credentials_and_urls(tmp_path: Path) -> None:
             "openai": {"api_key": "sk-live"},
             "firecrawl": {"api_key": "fc-live"},
             "qdrant": {"api_key": "qd-live", "url": "http://qdrant:6333"},
-            "cache": {"redis_url": "redis://redis:6379/1"},
+            "cache": {"dragonfly_url": "redis://redis:6379/1"},
             "data_dir": overrides["data_dir"],
             "cache_dir": overrides["cache_dir"],
             "logs_dir": overrides["logs_dir"],
@@ -149,7 +149,7 @@ def test_config_nested_credentials_and_urls(tmp_path: Path) -> None:
     assert snapshot["firecrawl"]["api_key"] == "fc-live"
     assert snapshot["qdrant"]["api_key"] == "qd-live"
     assert snapshot["qdrant"]["url"] == "http://qdrant:6333"
-    assert snapshot["cache"]["redis_url"] == "redis://redis:6379/1"
+    assert snapshot["cache"]["dragonfly_url"] == "redis://redis:6379/1"
 
 
 def test_config_feature_flags_and_helpers(tmp_path: Path) -> None:

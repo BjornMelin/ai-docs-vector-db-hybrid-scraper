@@ -164,9 +164,9 @@ def _show_config_table(config_obj: Settings):
     # Cache settings
     cache = getattr(config_obj, "cache", None)
     cache_settings = [
-        f"Local Cache: {getattr(cache, 'enable_local_cache', False)}",
-        f"Redis Cache: {getattr(cache, 'enable_redis_cache', False)}",
-        f"Redis URL: {getattr(cache, 'redis_url', 'n/a')}",
+        f"Caching Enabled: {getattr(cache, 'enable_caching', False)}",
+        f"Dragonfly Cache: {getattr(cache, 'enable_dragonfly_cache', False)}",
+        f"Dragonfly URL: {getattr(cache, 'dragonfly_url', 'n/a')}",
     ]
     table.add_row("Cache", "\n".join(cache_settings))
 

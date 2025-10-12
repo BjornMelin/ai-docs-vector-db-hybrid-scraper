@@ -1,582 +1,297 @@
-"""DragonflyDB cache implementation with advanced performance optimizations."""
+"""Dragonfly-backed cache implementation using the async redis client."""
 
-import inspect
+from __future__ import annotations
+
 import json
 import logging
-import zlib
-from collections.abc import Awaitable, Callable
-from typing import Any, cast
+from typing import Any
 
 import redis.asyncio as redis
-from redis.asyncio.retry import Retry
-from redis.backoff import ExponentialBackoff
-from redis.exceptions import (
-    ConnectionError as RedisConnectionError,
-    RedisError,
-    TimeoutError as RedisTimeoutError,
-)
+from redis.exceptions import RedisError
 
+from src.services.cache.base import CacheInterface
 from src.services.observability.tracing import trace_function
-
-from .base import CacheInterface
 
 
 logger = logging.getLogger(__name__)
 
-RedisClientFactory = Callable[[], redis.Redis | Awaitable[redis.Redis]]
-AsyncCloser = Callable[[], Awaitable[Any]]
-SyncCloser = Callable[[], Any]
 
-
-class DragonflyCache(CacheInterface[Any]):  # pylint: disable=too-many-instance-attributes
-    """High-performance cache using DragonflyDB with Redis compatibility."""
+class DragonflyCache(CacheInterface[Any]):
+    """Async cache implementation backed by a Dragonfly deployment."""
 
     def __init__(
         self,
         redis_url: str = "redis://localhost:6379",
-        default_ttl: int | None = 3600,  # 1 hour
-        max_connections: int = 50,
-        socket_timeout: float = 5.0,
-        socket_connect_timeout: float = 5.0,
-        socket_keepalive: bool = True,
-        retry_on_timeout: bool = True,
-        max_retries: int = 3,
-        key_prefix: str = "",
-        enable_compression: bool = True,
-        compression_threshold: int = 1024,  # bytes
         *,
-        connection_pool: redis.ConnectionPool | None = None,
+        default_ttl: int | None = 3600,
+        key_prefix: str = "",
+        max_connections: int = 50,
         client: redis.Redis | None = None,
-        client_factory: RedisClientFactory | None = None,
-    ):  # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
-        """Initialize DragonflyDB cache with optimizations.
+    ) -> None:
+        """Initialise the cache wrapper around the redis-py asyncio client.
 
         Args:
-            redis_url: DragonflyDB connection URL (Redis-compatible)
-            default_ttl: Default TTL in seconds
-            max_connections: Maximum connections in pool (DragonflyDB scales better)
-            socket_timeout: Socket timeout in seconds
-            socket_connect_timeout: Connection timeout in seconds
-            socket_keepalive: Enable socket keepalive
-            retry_on_timeout: Enable retry on timeout
-            max_retries: Maximum retry attempts
-            key_prefix: Prefix for all keys
-            enable_compression: Enable value compression
-            compression_threshold: Minimum size for compression
+            redis_url: Connection string for the Dragonfly server.
+            default_ttl: Default expiry in seconds applied to entries.
+            key_prefix: Prefix appended to every key stored in Dragonfly.
+            max_connections: Size of the connection pool when the client is
+                instantiated by this cache wrapper.
+            client: Optional preconfigured redis client instance. When
+                provided the cache will not manage the client's lifecycle.
         """
 
         self.redis_url = redis_url
         self.default_ttl = default_ttl
         self.key_prefix = key_prefix
-        self.enable_compression = enable_compression
-        self.compression_threshold = compression_threshold
         self.max_connections = max_connections
+        self.compression_enabled = False
 
-        # Configure retry strategy with exponential backoff
-        retry_strategy = None
-        if retry_on_timeout:
-            retry_strategy = Retry(
-                backoff=ExponentialBackoff(base=0.1, cap=1.0),
-                retries=max_retries,
-                supported_errors=(RedisConnectionError, RedisTimeoutError),
-            )
-
-        self.pool: redis.ConnectionPool | None = connection_pool
-        self._owns_pool = False
-
-        if self.pool is None and client is None and client_factory is None:
-            self.pool = redis.ConnectionPool.from_url(
+        if client is None:
+            self._client = redis.Redis.from_url(
                 redis_url,
                 max_connections=max_connections,
-                socket_timeout=socket_timeout,
-                socket_connect_timeout=socket_connect_timeout,
-                socket_keepalive=socket_keepalive,
-                retry=retry_strategy,
-                decode_responses=False,  # Handle encoding/decoding manually
+                decode_responses=False,
             )
-            self._owns_pool = True
-
-        if client_factory is None and client is None:
-
-            def _default_factory() -> redis.Redis:
-                if self.pool is None:
-                    raise RuntimeError("Redis connection pool is not configured")
-                return redis.Redis(connection_pool=self.pool)
-
-            client_factory = _default_factory
-
-        self._client_factory: RedisClientFactory | None = client_factory
-        self._client: redis.Redis | None = client
+            self._owns_client = True
+        else:
+            self._client = client
+            self._owns_client = False
+            pool = getattr(client, "connection_pool", None)
+            if pool is not None:
+                self.max_connections = getattr(
+                    pool, "max_connections", self.max_connections
+                )
 
     @property
-    async def client(self) -> redis.Redis:
-        """Get DragonflyDB client with lazy initialization."""
+    def client(self) -> redis.Redis:
+        """Return the underlying async redis client."""
 
-        if self._client is None:
-            if self._client_factory is None:
-                raise RuntimeError("No Redis client factory configured")
-            candidate = self._client_factory()
-            if inspect.isawaitable(candidate):
-                candidate = await candidate  # type: ignore[assignment]
-            self._client = candidate
-            await self._client.ping()
-            logger.info("DragonflyDB cache connection established")
         return self._client
 
-    def _make_key(self, key: str) -> str:
-        """Create full key with prefix."""
+    def _format_key(self, key: str) -> str:
+        """Apply the configured prefix to ``key`` when present."""
 
         return f"{self.key_prefix}{key}" if self.key_prefix else key
 
     def _serialize(self, value: Any) -> bytes:
-        """Serialize value for storage with optional compression."""
+        """Serialise ``value`` to bytes using JSON encoding."""
 
-        # Convert to JSON string then encode
-        json_str = json.dumps(value, separators=(",", ":"), ensure_ascii=False)
-        data = json_str.encode("utf-8")
+        return json.dumps(value, separators=(",", ":"), ensure_ascii=False).encode(
+            "utf-8"
+        )
 
-        # Compress if enabled and above threshold
-        if self.enable_compression and len(data) > self.compression_threshold:
-            # Use compression with DragonflyDB optimization
-            # DragonflyDB handles zstd natively, but we'll use zlib for compatibility
-            data = b"Z:" + zlib.compress(data, level=6)
+    def _deserialize(self, payload: bytes) -> Any:
+        """Deserialize cached payload back into a Python object."""
 
-        return data
+        return json.loads(payload.decode("utf-8"))
 
-    def _deserialize(self, data: bytes) -> Any:
-        """Deserialize value from storage."""
+    async def initialize(self) -> None:
+        """Verify connectivity with the backing Dragonfly instance."""
 
-        if not data:
-            return None
-
-        # Check for compression marker
-        if self.enable_compression and data.startswith(b"Z:"):
-            data = zlib.decompress(data[2:])
-
-        # Decode and parse JSON
-        json_str = data.decode("utf-8")
-        return json.loads(json_str)
+        try:
+            await self.client.ping()
+        except RedisError as exc:  # pragma: no cover - network dependant
+            logger.error("Failed to initialise Dragonfly cache: %s", exc)
+            raise
 
     @trace_function("cache.dragonfly.get")
     async def get(self, key: str) -> Any | None:
-        """Get value from DragonflyDB."""
-
-        return await self._execute_get(key)
-
-    async def _execute_get(self, key: str) -> Any | None:
-        """Execute the actual get operation."""
+        """Return cached value for ``key`` or ``None`` when missing."""
 
         try:
-            client = await self.client
-            full_key = self._make_key(key)
-            data = await client.get(full_key)
-
-            if data is None:
-                return None
-
-            return self._deserialize(data)
-
-        except RedisError as e:
-            logger.error("DragonflyDB get error for key %s: %s", key, e)
+            result = await self.client.get(self._format_key(key))
+        except RedisError as exc:
+            logger.error("Dragonfly get failed for key %s: %s", key, exc)
             return None
 
+        if result is None:
+            return None
+        return self._deserialize(result)
+
     @trace_function("cache.dragonfly.set")
-    # pylint: disable=too-many-arguments,too-many-positional-arguments
-    async def set(
-        self,
-        key: str,
-        value: Any,
-        ttl: int | None = None,
-        nx: bool = False,
-        xx: bool = False,
-    ) -> bool:
-        """Set value in DragonflyDB with TTL and conditional options."""
+    async def set(self, key: str, value: Any, ttl: int | None = None) -> bool:
+        """Store ``value`` under ``key`` with an optional TTL."""
 
-        return await self._execute_set(key, value, ttl, nx, xx)
-
-    # pylint: disable=too-many-arguments,too-many-positional-arguments
-    async def _execute_set(
-        self,
-        key: str,
-        value: Any,
-        ttl: int | None = None,
-        nx: bool = False,
-        xx: bool = False,
-    ) -> bool:
-        """Execute the actual set operation."""
+        expiry = ttl if ttl is not None else self.default_ttl
+        try:
+            payload = self._serialize(value)
+        except (TypeError, ValueError) as exc:
+            logger.error("Failed serialising cache payload for %s: %s", key, exc)
+            return False
 
         try:
-            client = await self.client
-            full_key = self._make_key(key)
-            data = self._serialize(value)
-
-            # Use default TTL if not specified
-            if ttl is None:
-                ttl = self.default_ttl
-
-            # Set with conditional flags
-            result = await client.set(
-                full_key,
-                data,
-                ex=ttl,  # TTL in seconds
-                nx=nx,  # Only set if not exists
-                xx=xx,  # Only set if exists
+            return bool(
+                await self.client.set(self._format_key(key), payload, ex=expiry)
             )
-
-            return bool(result)
-
-        except RedisError as e:
-            logger.error("DragonflyDB set error for key %s: %s", key, e)
+        except RedisError as exc:
+            logger.error("Dragonfly set failed for key %s: %s", key, exc)
             return False
 
     async def delete(self, key: str) -> bool:
-        """Delete value from DragonflyDB."""
+        """Delete ``key`` from the distributed cache."""
 
         try:
-            client = await self.client
-            full_key = self._make_key(key)
-            result = await client.delete(full_key)
-            return bool(result)
-
-        except RedisError as e:
-            logger.error("DragonflyDB delete error for key %s: %s", key, e)
+            return bool(await self.client.delete(self._format_key(key)))
+        except RedisError as exc:
+            logger.error("Dragonfly delete failed for key %s: %s", key, exc)
             return False
 
     async def exists(self, key: str) -> bool:
-        """Check if key exists in DragonflyDB."""
+        """Return whether ``key`` exists in Dragonfly."""
 
         try:
-            client = await self.client
-            full_key = self._make_key(key)
-            result = await client.exists(full_key)
-            return bool(result)
-
-        except RedisError as e:
-            logger.error("DragonflyDB exists error for key %s: %s", key, e)
+            return bool(await self.client.exists(self._format_key(key)))
+        except RedisError:
             return False
 
     async def clear(self) -> int:
-        """Clear cache entries with prefix."""
+        """Remove all keys managed by this cache instance."""
 
-        try:
-            client = await self.client
-
-            if self.key_prefix:
-                # Use SCAN to find all keys with prefix
-                pattern = f"{self.key_prefix}*"
-                count = 0
-
-                async for key in client.scan_iter(match=pattern, count=100):
-                    await client.delete(key)
-                    count += 1
-
-                return count
-            # Flush entire database (use with caution!)
-            await client.flushdb()
-            return -1  # Unknown count
-
-        except RedisError as e:
-            logger.error("DragonflyDB clear error: %s", e)
-            return 0
+        pattern = f"{self.key_prefix}*" if self.key_prefix else None
+        return await self.clear_pattern(pattern or "*")
 
     async def clear_pattern(self, pattern: str) -> int:
-        """Clear cache entries matching a Redis pattern."""
+        """Remove keys matching ``pattern`` within Dragonfly."""
+
+        deleted = 0
+        full_pattern = pattern
+        if self.key_prefix and not pattern.startswith(self.key_prefix):
+            full_pattern = f"{self.key_prefix}{pattern}"
 
         try:
-            client = await self.client
-            count = 0
-            async for key in client.scan_iter(match=pattern, count=100):
-                await client.delete(key)
-                count += 1
-            return count
-        except RedisError as e:
-            logger.error("DragonflyDB clear_pattern error for %s: %s", pattern, e)
-            return 0
+            async for key in self.client.scan_iter(match=full_pattern, count=200):
+                await self.client.delete(key)
+                deleted += 1
+        except RedisError as exc:
+            logger.error("Dragonfly clear_pattern failed for %s: %s", pattern, exc)
+            return deleted
 
-    async def size(self) -> int:
-        """Get approximate cache size."""
+        return deleted
 
-        try:
-            client = await self.client
+    async def scan_keys(self, pattern: str, count: int = 200) -> list[str]:
+        """Return keys matching ``pattern`` without deleting them."""
 
-            if self.key_prefix:
-                # Count keys with prefix
-                pattern = f"{self.key_prefix}*"
-                count = 0
-
-                async for _ in client.scan_iter(match=pattern, count=100):
-                    count += 1
-
-                return count
-            # Get total database size
-            info = await client.info("keyspace")
-            # Parse db0 keys count
-            db_info = info.get("db0", {})
-            if isinstance(db_info, dict):
-                return db_info.get("keys", 0)
-            return 0
-
-        except RedisError as e:
-            logger.error("DragonflyDB size error: %s", e)
-            return 0
-
-    async def initialize(self) -> None:
-        """Initialize DragonflyDB connection and verify connectivity."""
+        keys: list[str] = []
+        full_pattern = pattern
+        if self.key_prefix and not pattern.startswith(self.key_prefix):
+            full_pattern = f"{self.key_prefix}{pattern}"
 
         try:
-            client = await self.client
-            # Test connection
-            await client.ping()
-            logger.info("DragonflyDB cache initialized successfully")
-        except Exception as e:
-            logger.error("Failed to initialize DragonflyDB cache: %s", e)
-            raise
-
-    async def close(self) -> None:
-        """Close DragonflyDB connections."""
-        if self._client:
-            client = self._client
-            aclose = getattr(client, "aclose", None)
-            if callable(aclose):
-                async_closer = cast(AsyncCloser, aclose)
-                await async_closer()  # pylint: disable=not-callable
-            else:
-                close_method = getattr(client, "close", None)
-                if callable(close_method):
-                    close_callable = cast(SyncCloser, close_method)
-                    close_result = close_callable()  # pylint: disable=not-callable
-                    if inspect.isawaitable(close_result):
-                        await close_result
-            self._client = None
-
-        if self._owns_pool and self.pool is not None:
-            pool = self.pool
-            pool_aclose = getattr(pool, "aclose", None)
-            if callable(pool_aclose):
-                pool_async_closer = cast(AsyncCloser, pool_aclose)
-                await pool_async_closer()  # pylint: disable=not-callable
-
-    # Batch operations using DragonflyDB's superior pipeline performance
-    async def get_many(self, keys: list[str]) -> dict[str, Any | None]:
-        """Get multiple values using optimized pipeline."""
-
-        try:
-            client = await self.client
-            results = {}
-
-            # DragonflyDB handles pipelines more efficiently than Redis
-            async with client.pipeline(transaction=False) as pipe:
-                # Queue all get operations
-                for key in keys:
-                    full_key = self._make_key(key)
-                    pipe.get(full_key)
-
-                # Execute pipeline - DragonflyDB's superior performance shines here
-                values = await pipe.execute()
-
-                # Process results
-                for key, data in zip(keys, values, strict=False):
-                    if data is not None:
-                        results[key] = self._deserialize(data)
-                    else:
-                        results[key] = None
-
-            return results
-
-        except RedisError as e:
-            logger.error("DragonflyDB get_many error: %s", e)
-            # Return None for all keys on error
-            return dict.fromkeys(keys)
-
-    async def set_many(
-        self,
-        items: dict[str, Any],
-        ttl: int | None = None,
-    ) -> dict[str, bool]:
-        """Set multiple values using optimized pipeline."""
-
-        try:
-            client = await self.client
-            results = {}
-
-            if ttl is None:
-                ttl = self.default_ttl
-
-            # Use DragonflyDB's enhanced pipeline performance
-            async with client.pipeline(transaction=False) as pipe:
-                # Queue all set operations
-                for key, value in items.items():
-                    full_key = self._make_key(key)
-                    data = self._serialize(value)
-
-                    if ttl is not None:
-                        pipe.setex(full_key, ttl, data)
-                    else:
-                        pipe.set(full_key, data)
-
-                # Execute pipeline
-                responses = await pipe.execute()
-
-                # All SET operations return True on success
-                for key, response in zip(items.keys(), responses, strict=False):
-                    results[key] = bool(response)
-
-            return results
-
-        except RedisError as e:
-            logger.error("DragonflyDB set_many error: %s", e)
-            # Return False for all keys on error
-            return dict.fromkeys(items, False)
-
-    async def delete_many(self, keys: list[str]) -> dict[str, bool]:
-        """Delete multiple values efficiently."""
-
-        try:
-            client = await self.client
-            results = {}
-
-            # Convert to full keys
-            full_keys = [self._make_key(key) for key in keys]
-
-            # DragonflyDB handles bulk deletes very efficiently
-            deleted_count = await client.delete(*full_keys)
-
-            # For exact results, we'd need individual checks
-            # For performance, assume uniform success/failure
-            if deleted_count == len(keys):
-                # All keys deleted
-                results = dict.fromkeys(keys, True)
-            elif deleted_count == 0:
-                # No keys deleted
-                results = dict.fromkeys(keys, False)
-            else:
-                # Mixed results - need individual checks for accuracy
-                for key in keys:
-                    full_key = self._make_key(key)
-                    exists = await client.exists(full_key)
-                    results[key] = not bool(exists)
-
-            return results
-
-        except RedisError as e:
-            logger.error("DragonflyDB delete_many error: %s", e)
-            # Return False for all keys on error
-            return dict.fromkeys(keys, False)
-
-    # DragonflyDB-specific optimized methods
-    async def mget(self, keys: list[str]) -> list[Any | None]:
-        """Get multiple values efficiently using MGET."""
-
-        try:
-            client = await self.client
-            full_keys = [self._make_key(key) for key in keys]
-
-            # DragonflyDB's MGET performance is superior to Redis
-            values = await client.mget(full_keys)
-
-            results = []
-            for value in values:
-                if value is not None:
-                    results.append(self._deserialize(value))
-                else:
-                    results.append(None)
-
-            return results
-
-        except RedisError as e:
-            logger.error("DragonflyDB mget error: %s", e)
-            return [None] * len(keys)
-
-    async def mset(self, mapping: dict[str, Any], ttl: int | None = None) -> bool:
-        """Set multiple values efficiently using MSET + EXPIRE."""
-
-        try:
-            client = await self.client
-
-            # Serialize values
-            serialized = {}
-            for key, value in mapping.items():
-                full_key = self._make_key(key)
-                serialized[full_key] = self._serialize(value)
-
-            # Use pipeline for atomic operation
-            async with client.pipeline() as pipe:
-                pipe.mset(serialized)
-
-                # Set TTL if provided
-                if ttl:
-                    for full_key in serialized:
-                        pipe.expire(full_key, ttl)
-
-                await pipe.execute()
-
-            return True
-
-        except RedisError as e:
-            logger.error("DragonflyDB mset error: %s", e)
-            return False
-
-    async def ttl(self, key: str) -> int:
-        """Get remaining TTL for a key in seconds."""
-
-        try:
-            client = await self.client
-            full_key = self._make_key(key)
-            ttl = await client.ttl(full_key)
-            return max(0, ttl)  # -1 means no TTL, -2 means key doesn't exist
-
-        except RedisError as e:
-            logger.error("DragonflyDB ttl error for key %s: %s", key, e)
-            return 0
-
-    async def expire(self, key: str, ttl: int) -> bool:
-        """Set new TTL for existing key."""
-
-        try:
-            client = await self.client
-            full_key = self._make_key(key)
-            result = await client.expire(full_key, ttl)
-            return bool(result)
-
-        except RedisError as e:
-            logger.error("DragonflyDB expire error for key %s: %s", key, e)
-            return False
-
-    async def scan_keys(self, pattern: str, count: int = 100) -> list[str]:
-        """Scan keys matching pattern (DragonflyDB optimized)."""
-
-        try:
-            client = await self.client
-            full_pattern = f"{self.key_prefix}{pattern}" if self.key_prefix else pattern
-
-            keys = []
-            async for key in client.scan_iter(match=full_pattern, count=count):
-                # Remove prefix from returned keys
-                processed_key = key
-                if self.key_prefix and key.startswith(self.key_prefix.encode()):
-                    processed_key = key[len(self.key_prefix) :]
-                keys.append(
-                    processed_key.decode("utf-8")
-                    if isinstance(processed_key, bytes)
-                    else processed_key
-                )
-
-            return keys
-
-        except RedisError as e:
-            logger.error("DragonflyDB scan_keys error: %s", e)
+            async for key in self.client.scan_iter(match=full_pattern, count=count):
+                decoded = key.decode("utf-8") if isinstance(key, bytes) else key
+                if self.key_prefix and decoded.startswith(self.key_prefix):
+                    decoded = decoded[len(self.key_prefix) :]
+                keys.append(decoded)
+        except RedisError as exc:
+            logger.error("Dragonfly scan_keys failed for %s: %s", pattern, exc)
             return []
 
-    async def get_memory_usage(self, key: str) -> int:
-        """Get memory usage of a key (DragonflyDB feature)."""
+        return keys
+
+    async def size(self) -> int:
+        """Return an approximate count of cached entries."""
 
         try:
-            client = await self.client
-            full_key = self._make_key(key)
-            # DragonflyDB supports MEMORY USAGE command
-            usage = await client.memory_usage(full_key)
-            return usage or 0
-
-        except (RedisError, AttributeError) as e:
-            logger.debug("DragonflyDB memory_usage error for key %s: %s", key, e)
+            if self.key_prefix:
+                count = 0
+                async for _ in self.client.scan_iter(
+                    match=f"{self.key_prefix}*", count=200
+                ):
+                    count += 1
+                return count
+            return int(await self.client.dbsize())
+        except RedisError as exc:
+            logger.error("Dragonfly size probe failed: %s", exc)
             return 0
+
+    async def ttl(self, key: str) -> int:
+        """Return remaining TTL for ``key`` in seconds."""
+
+        try:
+            ttl_value = await self.client.ttl(self._format_key(key))
+        except RedisError as exc:
+            logger.error("Dragonfly ttl lookup failed for %s: %s", key, exc)
+            return 0
+        return max(0, int(ttl_value))
+
+    async def expire(self, key: str, ttl: int) -> bool:
+        """Apply a TTL to an existing key."""
+
+        try:
+            return bool(await self.client.expire(self._format_key(key), ttl))
+        except RedisError as exc:
+            logger.error("Dragonfly expire failed for %s: %s", key, exc)
+            return False
+
+    async def mget(self, keys: list[str]) -> list[Any | None]:
+        """Fetch multiple keys at once using MGET."""
+
+        try:
+            full_keys = [self._format_key(key) for key in keys]
+            results = await self.client.mget(full_keys)
+        except RedisError as exc:
+            logger.error("Dragonfly mget failed for %s keys: %s", len(keys), exc)
+            return [None] * len(keys)
+
+        payloads: list[Any | None] = []
+        for value in results:
+            if value is None:
+                payloads.append(None)
+            else:
+                payloads.append(self._deserialize(value))
+        return payloads
+
+    async def mset(self, mapping: dict[str, Any], ttl: int | None = None) -> bool:
+        """Store multiple keys atomically, optionally applying a TTL."""
+
+        if not mapping:
+            return True
+
+        serialised: dict[str, bytes] = {}
+        try:
+            for key, value in mapping.items():
+                serialised[self._format_key(key)] = self._serialize(value)
+        except (TypeError, ValueError) as exc:
+            logger.error("Dragonfly mset serialisation failed: %s", exc)
+            return False
+
+        try:
+            if ttl is None:
+                await self.client.mset(serialised)
+            else:
+                pipeline = self.client.pipeline(transaction=True)
+                for key, payload in serialised.items():
+                    pipeline.set(key, payload, ex=ttl)
+                await pipeline.execute()
+            return True
+        except RedisError as exc:
+            logger.error("Dragonfly mset failed: %s", exc)
+            return False
+
+    async def delete_many(self, keys: list[str]) -> dict[str, bool]:
+        """Delete multiple keys in a single pipelined operation."""
+
+        if not keys:
+            return {}
+
+        formatted_keys = [self._format_key(key) for key in keys]
+        pipeline = self.client.pipeline(transaction=True)
+        for key in formatted_keys:
+            pipeline.delete(key)
+
+        try:
+            results = await pipeline.execute()
+        except RedisError as exc:
+            logger.error("Dragonfly delete_many failed: %s", exc)
+            return dict.fromkeys(keys, False)
+
+        return {
+            original: bool(deleted)
+            for original, deleted in zip(keys, results, strict=False)
+        }
+
+    async def close(self) -> None:
+        """Close the underlying client when this instance owns it."""
+
+        if self._owns_client:
+            await self.client.aclose()

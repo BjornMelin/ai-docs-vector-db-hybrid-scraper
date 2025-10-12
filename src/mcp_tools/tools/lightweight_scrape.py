@@ -1,4 +1,4 @@
-"""Lightweight HTTP scraping tool for MCP server."""
+"""Lightweight scraping helpers exposed via the MCP tool interface."""
 
 import logging
 import re

@@ -1,33 +1,30 @@
 # Cache and Performance
 
-This guide covers the two-tier caching system, GPU acceleration notes, and
+This guide covers the Dragonfly caching layer, GPU acceleration notes, and
 performance checkpoints for the retrieval stack.
 
-## 1. Persistent Cache
+## 1. Distributed Cache
 
-The platform ships with a local persistent cache (`PersistentCacheManager`) and a
-Dragonfly-backed distributed cache (`DragonflyCache`).
+The platform now relies exclusively on Dragonfly (`DragonflyCache`) for all
+runtime caching. Specialised helpers (embeddings, search results, browser cache)
+share the same high-performance backend.
 
 ### Architecture
 
-- **Local layer** – Stores payloads under a hashed directory structure (SHA-256
-  truncated to 16 hex characters) to avoid leaking raw keys and to prevent
-  directory fan-out. Safe to delete by namespace without disturbing neighbours.
-- **Distributed layer** – DragonflyDB handles shared caches with optional
-  compression. Specialised caches (embeddings, search results) reuse this layer
-  for read-through performance.
+- **Dragonfly layer** – Handles all cache storage with optional compression,
+  connection pooling, and SCAN-based invalidation.
 - **Shared helpers** – `_bulk_delete.delete_in_batches` performs batched
   invalidation and keeps deletion metrics consistent.
 
 ### Key Helpers
 
-- `embedding_key(text, model, provider, dimensions=None)` – normalises and hashes
-  embedding requests.
-- `search_key(query, filters=None)` – serialises filters with sorted keys before
-  hashing for deterministic lookups.
+- `build_embedding_cache_key(text, model, provider, dimensions=None)` –
+  normalises and hashes embedding requests.
+- `build_search_cache_key(query, filters=None)` – serialises filters with sorted
+  keys before hashing for deterministic lookups.
 
-Refer to tests in `tests/unit/services/cache/` for coverage of hashing, deletion,
-negative caching, and batch invalidation.
+Refer to tests in `tests/services/cache/` for coverage of hashing, deletion, and
+batch invalidation.
 
 ### Configuration
 
@@ -35,16 +32,16 @@ Configured through `CacheConfig` (`src/config/models.py`):
 
 | Setting | Description |
 | --- | --- |
-| `enable_local_cache` | Enable/disable the on-disk layer. |
-| `local_max_size`, `local_max_memory_mb` | Bound the persistent layer; exceeding the threshold triggers LRU eviction. |
-| `ttl_search_results` | Governs populated and empty search result entries. |
-| `cache_ttl_seconds` | Per-cache overrides; empty results reuse the search slot. |
-| `memory_pressure_threshold` | Triggers eviction when local cache usage grows too high. |
+| `enable_caching` | Global kill switch for caching. |
+| `enable_dragonfly_cache` | Enable or disable the Dragonfly layer. |
+| `dragonfly_url` | Connection string for Dragonfly. |
+| `ttl_embeddings`, `ttl_crawl`, `ttl_queries`, `ttl_search_results` | Default TTLs for common cache groups. |
+| `cache_ttl_seconds` | Optional per-cache overrides keyed by `embeddings`, `collections`, `search_results`, or `queries`. |
 
 Operational notes:
 
-- Default path is `cache/local`; override via `PersistentCacheManager(local_cache_path=...)`.
-- Directories are hardened to `0700` on POSIX hosts.
+- Dragonfly keys are automatically prefixed; pattern clearing uses
+  `<cache-type>:*` expressions.
 - Deletion helpers swallow missing-key errors for idempotency.
 
 ## 2. GPU Acceleration (Optional)

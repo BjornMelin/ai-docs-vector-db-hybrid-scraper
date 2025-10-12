@@ -64,7 +64,6 @@ async def test_lifespan_initializes_and_cleans_up(
         log_level=SimpleNamespace(value="INFO"),
         cache=SimpleNamespace(
             enable_dragonfly_cache=False,
-            enable_local_cache=False,
             dragonfly_url=None,
         ),
         monitoring=SimpleNamespace(
@@ -138,7 +137,6 @@ async def test_lifespan_enables_monitoring_when_configured(
         log_level=SimpleNamespace(value="INFO"),
         cache=SimpleNamespace(
             enable_dragonfly_cache=False,
-            enable_local_cache=True,
             dragonfly_url=None,
         ),
         monitoring=SimpleNamespace(

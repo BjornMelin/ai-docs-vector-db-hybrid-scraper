@@ -5,7 +5,7 @@ from typing import Any
 
 from ._bulk_delete import delete_in_batches
 from .dragonfly_cache import DragonflyCache
-from .persistent_cache import PersistentCacheManager
+from .key_utils import build_embedding_cache_key
 
 
 logger = logging.getLogger(__name__)
@@ -49,7 +49,7 @@ class EmbeddingCache:
         Returns:
             Cached embedding vector or None if not found
         """
-        key = PersistentCacheManager.embedding_key(text, model, provider, dimensions)
+        key = build_embedding_cache_key(text, model, provider, dimensions)
 
         try:
             cached = await self.cache.get(key)
@@ -95,7 +95,7 @@ class EmbeddingCache:
         Returns:
             Success status
         """
-        key = PersistentCacheManager.embedding_key(text, model, provider, dimensions)
+        key = build_embedding_cache_key(text, model, provider, dimensions)
         cache_ttl = ttl or self.default_ttl
 
         try:
@@ -140,9 +140,9 @@ class EmbeddingCache:
                 exposes multiple sizes for the same model.
 
         Returns:
-            Deterministic cache key compatible with ``PersistentCacheManager``.
+            Deterministic cache key derived from canonical hashing utility.
         """
-        return PersistentCacheManager.embedding_key(text, model, provider, dimensions)
+        return build_embedding_cache_key(text, model, provider, dimensions)
 
     async def get_batch_embeddings(
         self,
@@ -169,7 +169,7 @@ class EmbeddingCache:
 
         # Generate cache keys
         keys = [
-            PersistentCacheManager.embedding_key(text, model, provider, dimensions)
+            build_embedding_cache_key(text, model, provider, dimensions)
             for text in texts
         ]
 
@@ -259,9 +259,7 @@ class EmbeddingCache:
                     )
                     continue
 
-                key = PersistentCacheManager.embedding_key(
-                    text, model, provider, dimensions
-                )
+                key = build_embedding_cache_key(text, model, provider, dimensions)
                 mapping[key] = [float(x) for x in embedding]
 
             if not mapping:
@@ -311,9 +309,7 @@ class EmbeddingCache:
 
             # Check which queries are not cached
             for query in common_queries:
-                key = PersistentCacheManager.embedding_key(
-                    query, model, provider, dimensions
-                )
+                key = build_embedding_cache_key(query, model, provider, dimensions)
                 exists = await self.cache.exists(key)
                 if not exists:
                     missing_texts.append(query)

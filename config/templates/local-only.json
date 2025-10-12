@@ -6,10 +6,12 @@
   "crawl_provider": "crawl4ai",
   "cache": {
     "enable_caching": true,
-    "enable_local_cache": true,
     "enable_dragonfly_cache": false,
-    "local_max_size": 2000,
-    "local_max_memory_mb": 200.0
+    "dragonfly_url": "redis://localhost:6379",
+    "ttl_embeddings": 86400,
+    "ttl_crawl": 3600,
+    "ttl_queries": 7200,
+    "ttl_search_results": 3600
   },
   "qdrant": {
     "url": "http://localhost:6333",

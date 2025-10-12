@@ -6,7 +6,6 @@
   "crawl_provider": "crawl4ai",
   "cache": {
     "enable_caching": false,
-    "enable_local_cache": false,
     "enable_dragonfly_cache": false
   },
   "qdrant": {

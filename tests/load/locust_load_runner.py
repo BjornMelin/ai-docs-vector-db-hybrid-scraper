@@ -464,18 +464,17 @@ class AdminUser(HttpUser):
     @task(1)
     def cache_operations(self):
         """Perform cache operations."""
-        operation = random.choice(["get_cache_metrics", "clear_cache", "warm_cache"])  # noqa: S311
-
+        sample_queries = random.sample(self.search_queries, k=3)  # noqa: S311
         with self.client.post(
-            f"/{operation}",
-            json={"cache_type": random.choice(["search", "embedding"])},  # noqa: S311
+            "/api/v1/cache/warm",
+            json={"embedding_queries": sample_queries},
             catch_response=True,
-            name=operation,
+            name="cache_warm",
         ) as response:
             if response.status_code in [200, 202]:
                 response.success()
             else:
-                response.failure("{operation} failed")
+                response.failure("cache warm request failed")
 
 
 @dataclass(slots=True)

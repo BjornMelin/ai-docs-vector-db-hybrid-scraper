@@ -38,6 +38,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **[MCP]:** Enforced explicit dependency injection for MCP tools and services,
   removing service locator helpers and requiring startup wiring to supply all
   shared managers.
+- **[Cache]:** Standardised the Dragonfly-only cache stack, replacing Redis
+  wrappers, reintroducing cache warmup utilities, and updating health checks and
+  docs to reflect the streamlined architecture.
 - Removed dual-mode architecture. Single unified app with feature flags.
 - **[Core]:** Unified dependency lifecycle under the dependency-injector
   container, deleting the legacy `ClientManager` pattern and introducing shared
@@ -70,6 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Test Suite Overhaul:** Deleted test suites corresponding to removed modules and modernized remaining tests to align with the refactored implementation, ensuring full test coverage and correctness.
 - **[Health]:** Centralized all system health checking logic into the `HealthCheckManager`, and refactored the `system_health` MCP tool to use this central service.
 - **[Cache]:** Consolidated all caching logic to use the central `CacheManager`. Removed the redundant `PerformanceCache` and refactored `HyDECache` to be a client of the main cache service.
+- **[Cache]:** Removed the custom file-based persistent cache (`PersistentCacheManager`) and simplified the `CacheManager` to rely exclusively on the distributed `DragonflyCache` (Redis) for all caching needs.
 - Centralized tier selection inside `AutomationRouter`, reducing MCP crawling
   tools to thin facades over the unified routing service.
 

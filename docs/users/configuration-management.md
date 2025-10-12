@@ -209,12 +209,12 @@ Templates can be customized during application:
   },
   "cache": {
     "enable_caching": true,
-    "enable_local_cache": true,
     "enable_dragonfly_cache": false,
     "cache_ttl_seconds": {
       "embeddings": 300,
-      "crawl": 300,
-      "search": 300
+      "collections": 300,
+      "search_results": 300,
+      "queries": 300
     }
   },
   "security": {
@@ -246,8 +246,9 @@ Templates can be customized during application:
     "dragonfly_url": "redis://dragonfly:6379",
     "cache_ttl_seconds": {
       "embeddings": 86400,
-      "crawl": 3600,
-      "search": 7200
+      "collections": 3600,
+      "search_results": 7200,
+      "queries": 7200
     }
   },
   "security": {
