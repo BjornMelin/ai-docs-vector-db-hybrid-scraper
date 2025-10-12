@@ -14,6 +14,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 from click.testing import CliRunner
+from langchain_core.documents import Document
 
 from src.config import Settings
 from src.crawl4ai_bulk_embedder import (
@@ -463,27 +464,13 @@ class TestProcessingPipeline:
         embedder.vector_service = AsyncMock()
         embedder.vector_service.upsert_vectors = AsyncMock()
 
-        chunk_dicts = [
-            {
-                "content": "Chunk 1",
-                "start_pos": 0,
-                "end_pos": 100,
-                "chunk_type": "text",
-                "has_code": False,
-            },
-            {
-                "content": "Chunk 2",
-                "start_pos": 100,
-                "end_pos": 200,
-                "chunk_type": "text",
-                "has_code": False,
-            },
+        chunk_documents = [
+            Document(page_content="Chunk 1", metadata={"start_index": 0}),
+            Document(page_content="Chunk 2", metadata={"start_index": 100}),
         ]
 
-        with patch("src.crawl4ai_bulk_embedder.DocumentChunker") as chunker_cls:
-            chunker = MagicMock()
-            chunker.chunk_content.return_value = chunk_dicts
-            chunker_cls.return_value = chunker
+        with patch("src.crawl4ai_bulk_embedder.split_into_documents") as chunker_fn:
+            chunker_fn.return_value = chunk_documents
 
             result = await embedder.process_url("https://example.com/test")
 
@@ -545,10 +532,8 @@ class TestProcessingPipeline:
             }
         )
 
-        with patch("src.crawl4ai_bulk_embedder.DocumentChunker") as chunker_cls:
-            chunker = MagicMock()
-            chunker.chunk_content.return_value = []
-            chunker_cls.return_value = chunker
+        with patch("src.crawl4ai_bulk_embedder.split_into_documents") as chunker_fn:
+            chunker_fn.return_value = []
 
             result = await embedder.process_url("https://example.com/short")
 

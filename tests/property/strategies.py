@@ -240,39 +240,11 @@ def chunk_configurations(draw) -> dict[str, Any]:
     """Generate valid chunking configurations with proper constraints."""
     chunk_size = draw(st.integers(min_value=100, max_value=5000))
     chunk_overlap = draw(st.integers(min_value=0, max_value=chunk_size - 1))
-    min_chunk_size = draw(st.integers(min_value=1, max_value=chunk_size))
-    max_chunk_size = draw(st.integers(min_value=chunk_size, max_value=10000))
 
     return {
         "chunk_size": chunk_size,
         "chunk_overlap": chunk_overlap,
-        "min_chunk_size": min_chunk_size,
-        "max_chunk_size": max_chunk_size,
         "strategy": draw(st.sampled_from(list(ChunkingStrategy))),
-        "enable_ast_chunking": draw(st.booleans()),
-        "preserve_code_blocks": draw(st.booleans()),
-        "detect_language": draw(st.booleans()),
-        "max_function_chunk_size": draw(
-            st.integers(min_value=chunk_size, max_value=10000)
-        ),
-        "supported_languages": draw(
-            st.lists(
-                st.sampled_from(
-                    [
-                        "python",
-                        "javascript",
-                        "typescript",
-                        "markdown",
-                        "java",
-                        "go",
-                        "rust",
-                    ]
-                ),
-                min_size=1,
-                max_size=10,
-                unique=True,
-            )
-        ),
     }
 
 
@@ -542,9 +514,8 @@ def invalid_chunk_configurations(draw) -> dict[str, Any]:
         st.sampled_from(
             [
                 "overlap_too_large",
-                "min_chunk_too_large",
-                "max_chunk_too_small",
-                "negative_values",
+                "non_positive_size",
+                "negative_overlap",
             ]
         )
     )
@@ -556,27 +527,17 @@ def invalid_chunk_configurations(draw) -> dict[str, Any]:
         return {
             "chunk_size": chunk_size,
             "chunk_overlap": chunk_overlap,
-            "min_chunk_size": 100,
-            "max_chunk_size": chunk_size + 1000,
+            "strategy": draw(st.sampled_from(list(ChunkingStrategy))),
         }
-    if violation_type == "min_chunk_too_large":
+    if violation_type == "non_positive_size":
         return {
-            "chunk_size": chunk_size,
-            "chunk_overlap": 100,
-            "min_chunk_size": chunk_size + 100,
-            "max_chunk_size": chunk_size + 1000,
+            "chunk_size": draw(st.integers(max_value=0)),
+            "chunk_overlap": draw(st.integers(min_value=0, max_value=100)),
+            "strategy": draw(st.sampled_from(list(ChunkingStrategy))),
         }
-    if violation_type == "max_chunk_too_small":
-        return {
-            "chunk_size": chunk_size,
-            "chunk_overlap": 100,
-            "min_chunk_size": 100,
-            "max_chunk_size": chunk_size - 100,
-        }
-    # negative_values
+    # negative_overlap
     return {
-        "chunk_size": draw(st.integers(max_value=0)),
+        "chunk_size": chunk_size,
         "chunk_overlap": draw(st.integers(max_value=-1)),
-        "min_chunk_size": draw(st.integers(max_value=0)),
-        "max_chunk_size": draw(st.integers(max_value=0)),
+        "strategy": draw(st.sampled_from(list(ChunkingStrategy))),
     }

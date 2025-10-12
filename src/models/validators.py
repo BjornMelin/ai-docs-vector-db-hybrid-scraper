@@ -9,6 +9,7 @@ import re
 from pydantic import Field
 
 
+# pylint: disable-next=too-many-arguments,too-many-positional-arguments
 def validate_api_key_common(
     value: str | None,
     prefix: str,
@@ -16,7 +17,7 @@ def validate_api_key_common(
     min_length: int = 10,
     max_length: int = 200,
     allowed_chars: str = r"[A-Za-z0-9-]+",
-) -> str | None:  # pylint: disable=too-many-arguments
+) -> str | None:
     """Common API key validation logic for all services.
 
     Args:
@@ -140,7 +141,7 @@ def validate_rate_limit_config(
         required_keys = {"max_calls", "time_window"}
         if not required_keys.issubset(limits.keys()):
             msg = (
-                f"Rat   e limits for provider '{provider}' must contain "
+                f"Rate limits for provider '{provider}' must contain "
                 f"keys: {required_keys}, got: {set(limits.keys())}"
             )
             raise ValueError(msg)
@@ -156,26 +157,17 @@ def validate_rate_limit_config(
     return value
 
 
-def validate_chunk_sizes(
-    chunk_size: int, chunk_overlap: int, min_chunk_size: int, max_chunk_size: int
-) -> None:
-    """Validate chunk size relationships.
+def validate_chunk_parameters(chunk_size: int, chunk_overlap: int) -> None:
+    """Validate chunking parameters for LangChain splitters."""
 
-    Args:
-        chunk_size: Target chunk size
-        chunk_overlap: Overlap between chunks
-        min_chunk_size: Minimum allowed chunk size
-        max_chunk_size: Maximum allowed chunk size
-    """
-
+    if chunk_size <= 0:
+        msg = "chunk_size must be positive"
+        raise ValueError(msg)
+    if chunk_overlap < 0:
+        msg = "chunk_overlap must be non-negative"
+        raise ValueError(msg)
     if chunk_overlap >= chunk_size:
         msg = "chunk_overlap must be less than chunk_size"
-        raise ValueError(msg)
-    if min_chunk_size >= max_chunk_size:
-        msg = "min_chunk_size must be less than max_chunk_size"
-        raise ValueError(msg)
-    if chunk_size > max_chunk_size:
-        msg = "chunk_size cannot exceed max_chunk_size"
         raise ValueError(msg)
 
 
@@ -400,7 +392,7 @@ __all__ = [
     "url_validator",
     "validate_api_key_common",
     "validate_cache_ttl",
-    "validate_chunk_sizes",
+    "validate_chunk_parameters",
     "validate_collection_name",
     "validate_embedding_model_name",
     "validate_model_benchmark_consistency",

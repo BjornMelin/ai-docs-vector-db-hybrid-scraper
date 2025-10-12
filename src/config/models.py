@@ -68,7 +68,6 @@ class ChunkingStrategy(str, Enum):
 
     BASIC = "basic"
     ENHANCED = "enhanced"
-    AST_AWARE = "ast_aware"
 
 
 class SearchStrategy(str, Enum):
@@ -416,40 +415,16 @@ class ChunkingConfig(BaseModel):
         gt=0,
         description="Target chunk size to preserve context fidelity",
     )
-    max_chunk_size: int = Field(default=3000, gt=0, description="Maximum chunk size")
-    min_chunk_size: int = Field(default=100, gt=0, description="Minimum chunk size")
     chunk_overlap: int = Field(
         default=320,
         ge=0,
         description="Overlap between chunks to maintain coherence across boundaries",
-    )
-    enable_ast_chunking: bool = Field(
-        default=True, description="Enable AST-aware chunking"
-    )
-    preserve_code_blocks: bool = Field(
-        default=True, description="Preserve code block integrity"
-    )
-    detect_language: bool = Field(
-        default=True, description="Auto-detect programming language"
-    )
-    max_function_chunk_size: int = Field(
-        default=2000, gt=0, description="Maximum chunk size for functions"
-    )
-    supported_languages: list[str] = Field(
-        default_factory=lambda: ["python", "javascript", "typescript", "markdown"],
-        description="Languages with specialised chunking support",
     )
 
     @model_validator(mode="after")
     def validate_chunk_sizes(self) -> Self:
         if self.chunk_overlap >= self.chunk_size:
             msg = "chunk_overlap must be less than chunk_size"
-            raise ValueError(msg)
-        if self.min_chunk_size > self.chunk_size:
-            msg = "min_chunk_size must be <= chunk_size"
-            raise ValueError(msg)
-        if self.max_chunk_size < self.chunk_size:
-            msg = "max_chunk_size must be >= chunk_size"
             raise ValueError(msg)
         return self
 

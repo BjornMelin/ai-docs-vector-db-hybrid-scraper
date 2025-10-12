@@ -279,22 +279,10 @@ class TestChunkingConfigProperties:
 
         # Verify constraint relationships
         assert chunk_data["chunk_overlap"] < chunk_data["chunk_size"]
-        assert chunk_data["min_chunk_size"] <= chunk_data["chunk_size"]
-        assert chunk_data["max_chunk_size"] >= chunk_data["chunk_size"]
-        assert chunk_data["max_function_chunk_size"] >= chunk_data["chunk_size"]
 
         # Verify positive values
         assert chunk_data["chunk_size"] > 0
         assert chunk_data["chunk_overlap"] >= 0
-        assert chunk_data["min_chunk_size"] > 0
-        assert chunk_data["max_chunk_size"] > 0
-
-        # Verify supported languages
-        languages = chunk_data["supported_languages"]
-        assert len(languages) > 0
-        for lang in languages:
-            assert isinstance(lang, str)
-            assert len(lang) > 0
 
     @given(invalid_chunk_configurations())
     def test_chunking_config_constraint_violations(
@@ -307,11 +295,10 @@ class TestChunkingConfigProperties:
     @given(st.integers(min_value=100, max_value=3000))
     def test_chunking_overlap_constraint(self, chunk_size: int):
         """Test chunk overlap constraint is enforced."""
-        # Valid: overlap < chunk_size, ensuring max_chunk_size constraint is met
+        # Valid: overlap < chunk_size
         config = ChunkingConfig(
             chunk_size=chunk_size,
             chunk_overlap=chunk_size - 1,
-            max_chunk_size=max(chunk_size, 3000),  # Ensure max_chunk_size >= chunk_size
         )
         assert config.chunk_overlap < config.chunk_size
 
@@ -322,33 +309,7 @@ class TestChunkingConfigProperties:
             ChunkingConfig(
                 chunk_size=chunk_size,
                 chunk_overlap=chunk_size,
-                max_chunk_size=max(chunk_size, 3000),
             )
-
-    @given(
-        st.lists(
-            st.sampled_from(
-                [
-                    "python",
-                    "javascript",
-                    "typescript",
-                    "markdown",
-                    "java",
-                    "go",
-                    "rust",
-                    "c++",
-                    "swift",
-                ]
-            ),
-            min_size=1,
-            max_size=15,
-            unique=True,
-        )
-    )
-    def test_supported_languages_property(self, languages: list[str]):
-        """Test that any valid list of languages is accepted."""
-        config = ChunkingConfig(supported_languages=languages)
-        assert config.supported_languages == languages
 
 
 class TestCircuitBreakerConfigProperties:
@@ -707,8 +668,7 @@ class TestConfigPropertyInvariants:
 
         chunk_data = settings_data["chunking"]
         assert chunk_data["chunk_size"] > 0
-        assert chunk_data["min_chunk_size"] > 0
-        assert chunk_data["max_chunk_size"] > 0
+        assert chunk_data["chunk_overlap"] >= 0
 
     @given(complete_configurations())
     def test_config_invariant_chunk_relationships(self, config_data: dict[str, Any]):
@@ -726,8 +686,6 @@ class TestConfigPropertyInvariants:
 
         # Chunk size relationships
         assert chunk_data["chunk_overlap"] < chunk_data["chunk_size"]
-        assert chunk_data["min_chunk_size"] <= chunk_data["chunk_size"]
-        assert chunk_data["max_chunk_size"] >= chunk_data["chunk_size"]
 
     @given(complete_configurations())
     def test_config_invariant_url_formats(self, config_data: dict[str, Any]):
@@ -807,8 +765,6 @@ class TestConfigMutationTesting:
             "chunking": {
                 "chunk_size": 1600,
                 "chunk_overlap": 320,
-                "min_chunk_size": 100,
-                "max_chunk_size": 3000,
             },
         }
 

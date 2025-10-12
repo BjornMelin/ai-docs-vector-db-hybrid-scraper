@@ -44,8 +44,7 @@
   "chunking": {
     "strategy": "enhanced",
     "chunk_size": 1600,
-    "chunk_overlap": 200,
-    "preserve_function_boundaries": true
+    "chunk_overlap": 200
   },
   "performance": {
     "max_concurrent_requests": 20,
