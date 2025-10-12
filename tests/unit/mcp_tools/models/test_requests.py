@@ -160,13 +160,13 @@ class TestDocumentRequest:
         request = DocumentRequest(
             url="https://docs.example.com/api",
             collection="api_docs",
-            chunk_strategy=ChunkingStrategy.AST_AWARE,
+            chunk_strategy=ChunkingStrategy.BASIC,
             chunk_size=2000,
             chunk_overlap=300,
             extract_metadata=False,
         )
         assert request.collection == "api_docs"
-        assert request.chunk_strategy == ChunkingStrategy.AST_AWARE
+        assert request.chunk_strategy == ChunkingStrategy.BASIC
         assert request.chunk_size == 2000
         assert request.extract_metadata is False
 
