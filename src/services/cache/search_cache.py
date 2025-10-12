@@ -1,11 +1,11 @@
-"""Specialized cache for search results with invalidation."""
+"""Search result caching utilities backed by Dragonfly."""
 
 import logging
 from typing import Any
 
 from ._bulk_delete import delete_in_batches
 from .dragonfly_cache import DragonflyCache
-from .persistent_cache import PersistentCacheManager
+from .key_utils import build_search_cache_key
 
 
 logger = logging.getLogger(__name__)
@@ -26,8 +26,8 @@ class SearchResultCache:
         """Initialize search result cache.
 
         Args:
-            cache: DragonflyDB cache instance
-            default_ttl: Default TTL in seconds (1 hour for search results)
+            cache: DragonflyDB cache instance.
+            default_ttl: Default TTL in seconds (1 hour for search results).
         """
         self.cache = cache
         self.default_ttl = default_ttl
@@ -45,15 +45,15 @@ class SearchResultCache:
         """Get cached search results.
 
         Args:
-            query: Search query text
-            collection_name: Qdrant collection name
-            filters: Search filters
-            limit: Number of results
-            search_type: Type of search (dense, sparse, hybrid)
-            params: Additional search parameters
+            query: Search query text.
+            collection_name: Qdrant collection name.
+            filters: Search filters.
+            limit: Number of results.
+            search_type: Type of search (dense, sparse, hybrid).
+            params: Additional search parameters.
 
         Returns:
-            Cached search results or None if not found
+            Cached search results or None if not found.
         """
         key = self._build_search_key(
             query, collection_name, filters, limit, search_type, params or {}
@@ -88,17 +88,17 @@ class SearchResultCache:
         """Cache search results with TTL adjustment.
 
         Args:
-            query: Search query text
-            results: Search results to cache
-            collection_name: Qdrant collection name
-            filters: Search filters
-            limit: Number of results
-            search_type: Type of search
-            ttl: Custom TTL (uses popularity-adjusted default if None)
-            params: Additional search parameters
+            query: Search query text.
+            results: Search results to cache.
+            collection_name: Qdrant collection name.
+            filters: Search filters.
+            limit: Number of results.
+            search_type: Type of search.
+            ttl: Custom TTL (uses popularity-adjusted default if None).
+            params: Additional search parameters.
 
         Returns:
-            Success status
+            ``True`` when the cache write succeeded, otherwise ``False``.
         """
         key = self._build_search_key(
             query, collection_name, filters, limit, search_type, params or {}
@@ -148,10 +148,10 @@ class SearchResultCache:
         Useful when collection data is updated.
 
         Args:
-            collection_name: Collection name to invalidate
+            collection_name: Collection name to invalidate.
 
         Returns:
-            Number of entries invalidated
+            Number of entries invalidated.
         """
         try:
             pattern = f"search:{collection_name}:*"
@@ -177,15 +177,14 @@ class SearchResultCache:
         """Invalidate cached searches matching a query pattern.
 
         Args:
-            query_pattern: Query pattern to match (supports wildcards)
+            query_pattern: Query pattern to match (supports wildcards).
 
         Returns:
-            Number of entries invalidated
+            Number of entries invalidated.
         """
         try:
             # Create hash pattern for query matching
-            base_key = PersistentCacheManager.search_key(query_pattern)
-            digest = base_key.partition(":")[2]
+            digest = build_search_cache_key(query_pattern).partition(":")[2]
             pattern = f"search:*:{digest}*"
 
             keys = await self.cache.scan_keys(pattern)
@@ -211,10 +210,10 @@ class SearchResultCache:
         """Get most popular queries with their hit counts.
 
         Args:
-            limit: Number of top queries to return
+            limit: Number of top queries to return.
 
         Returns:
-            List of (query, count) tuples sorted by popularity
+            List of (query, count) tuples sorted by popularity.
         """
         try:
             pattern = "popular:*"
@@ -247,7 +246,7 @@ class SearchResultCache:
         """Clean up expired popularity counters.
 
         Returns:
-            Number of expired entries cleaned up
+            Number of expired entries cleaned up.
         """
         try:
             pattern = "popular:*"
@@ -276,7 +275,7 @@ class SearchResultCache:
         """Get search cache statistics.
 
         Returns:
-            Dictionary with cache statistics
+            Dictionary with cache statistics.
         """
         try:
             # Count search result keys
@@ -338,8 +337,7 @@ class SearchResultCache:
             "search_type": search_type,
             "params": params or {},
         }
-        base_key = PersistentCacheManager.search_key(query, payload)
-        digest = base_key.partition(":")[2]
+        digest = build_search_cache_key(query, payload).partition(":")[2]
         return f"search:{collection_name}:{digest}"
 
     def _get_search_key(
@@ -361,13 +359,13 @@ class SearchResultCache:
         """Get query popularity count.
 
         Args:
-            query: Query text
+            query: Query text.
 
         Returns:
-            Number of times query was accessed
+            Number of times query was accessed.
         """
         try:
-            digest = PersistentCacheManager.search_key(query)
+            digest = build_search_cache_key(query)
             key = f"popular:{digest.partition(':')[2]}"
             count = await self.cache.get(key)
             return int(count) if count else 0
@@ -380,14 +378,14 @@ class SearchResultCache:
         """Track query popularity for cache optimization.
 
         Args:
-            query: Query text
+            query: Query text.
         """
         try:
-            digest = PersistentCacheManager.search_key(query)
+            digest = build_search_cache_key(query)
             key = f"popular:{digest.partition(':')[2]}"
 
             # Use atomic increment
-            client = await self.cache.client
+            client = self.cache.client
             current = await client.incr(key)
 
             # Set TTL on first increment (reset daily)

@@ -1,4 +1,4 @@
-"""Firecrawl cloud provider implementation."""
+"""Firecrawl provider integration leveraging the official SDK."""
 
 from __future__ import annotations
 
@@ -78,7 +78,7 @@ class FirecrawlProvider(BrowserProvider):
             meta = metadata.get("firecrawl")
             if isinstance(meta, dict):
                 formats = meta.get("formats")
-                if isinstance(formats, (list, tuple)):
+                if isinstance(formats, list | tuple):
                     meta_formats = [str(fmt) for fmt in formats]
         return meta_formats or list(self._settings.default_formats)
 
@@ -94,7 +94,7 @@ class FirecrawlProvider(BrowserProvider):
         metadata_timeout: float | None = None
         if isinstance(provider_meta, dict):
             meta_formats = provider_meta.get("formats")
-            if isinstance(meta_formats, (list, tuple)):
+            if isinstance(meta_formats, list | tuple):
                 custom_formats = [str(fmt) for fmt in meta_formats]
             for key, value in provider_meta.items():
                 if key == "formats":

@@ -33,7 +33,7 @@ _MONITORING_STATE: dict[int, HealthCheckManager] = {}
 def initialize_monitoring_system(
     settings: Any,
     qdrant_client: Any,
-    redis_url: str | None,
+    dragonfly_url: str | None,
 ) -> HealthCheckManager | None:
     """Set up the health monitoring system using application configuration."""
 
@@ -54,7 +54,7 @@ def initialize_monitoring_system(
     return build_health_manager(
         settings,
         qdrant_client=qdrant_client,
-        redis_url=redis_url,
+        dragonfly_url=dragonfly_url,
     )
 
 
@@ -103,14 +103,14 @@ async def managed_lifespan(server: FastMCP[Any]) -> AsyncIterator[None]:  # pyli
                 getattr(cache_config, "enable_dragonfly_cache", False)
             )
             dragonfly_url_value = getattr(cache_config, "dragonfly_url", None)
-            redis_url = (
+            dragonfly_url = (
                 str(dragonfly_url_value)
                 if enable_dragonfly and dragonfly_url_value
                 else None
             )
 
             health_manager = initialize_monitoring_system(
-                config, qdrant_client, redis_url
+                config, qdrant_client, dragonfly_url
             )
 
             monitoring_config = getattr(config, "monitoring", None)

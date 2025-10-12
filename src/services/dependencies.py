@@ -182,13 +182,9 @@ async def _get_health_manager() -> HealthCheckManager:
         if _health_manager_instance is None:
             settings = get_settings()
             container = _require_container()
-            redis_url = getattr(settings.cache, "redis_url", None)
-            dragonfly_url = getattr(settings.cache, "dragonfly_url", None)
-            if (
-                getattr(settings.cache, "enable_dragonfly_cache", False)
-                and dragonfly_url
-            ):
-                redis_url = dragonfly_url
+            dragonfly_url = None
+            if getattr(settings.cache, "enable_dragonfly_cache", False):
+                dragonfly_url = getattr(settings.cache, "dragonfly_url", None)
 
             qdrant_client = None
             try:
@@ -201,7 +197,7 @@ async def _get_health_manager() -> HealthCheckManager:
             manager = build_health_manager(
                 settings,
                 qdrant_client=qdrant_client,
-                redis_url=redis_url,
+                dragonfly_url=dragonfly_url,
             )
             _health_manager_instance = manager
     return _health_manager_instance
@@ -593,7 +589,7 @@ async def crawl_site(
 class DatabaseSessionContext:
     """Lightweight context exposing database-adjacent services."""
 
-    redis: Any | None
+    dragonfly: Any | None
     cache_manager: CacheManager | None
     vector_service: VectorStoreService | None
 
@@ -603,11 +599,13 @@ async def get_database_session() -> AsyncGenerator[DatabaseSessionContext]:
 
     container = _require_container()
 
-    redis_client = None
+    dragonfly_client = None
     try:
-        redis_client = container.redis_client()
+        dragonfly_client = container.dragonfly_client()
     except Exception:  # pragma: no cover - defensive
-        logger.debug("Redis client unavailable during database session", exc_info=True)
+        logger.debug(
+            "Dragonfly client unavailable during database session", exc_info=True
+        )
 
     cache_manager = None
     try:
@@ -624,7 +622,7 @@ async def get_database_session() -> AsyncGenerator[DatabaseSessionContext]:
         )
 
     context = DatabaseSessionContext(
-        redis=redis_client,
+        dragonfly=dragonfly_client,
         cache_manager=cache_manager,
         vector_service=vector_service,
     )

@@ -34,7 +34,6 @@ def fixture_build_unified_mcp_config() -> Callable[..., SimpleNamespace]:
             qdrant=SimpleNamespace(url=qdrant_url),
             cache=SimpleNamespace(
                 enable_dragonfly_cache=False,
-                enable_local_cache=False,
                 dragonfly_url=None,
             ),
             monitoring=SimpleNamespace(

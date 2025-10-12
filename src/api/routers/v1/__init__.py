@@ -1,6 +1,6 @@
 """Version 1 API routers."""
 
-from . import documents, search
+from . import cache, documents, search
 
 
-__all__ = ["documents", "search"]
+__all__ = ["cache", "documents", "search"]

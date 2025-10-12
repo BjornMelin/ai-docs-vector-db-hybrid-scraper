@@ -1,4 +1,4 @@
-"""Centralized health monitoring for application dependencies."""
+"""Health check orchestration for core infrastructure dependencies."""
 
 from __future__ import annotations
 
@@ -49,8 +49,8 @@ class HealthCheckConfig(BaseModel):
     qdrant_url: str | None = Field(
         default=None, description="Qdrant URL for health checks"
     )
-    redis_url: str | None = Field(
-        default=None, description="Redis URL for health checks"
+    dragonfly_url: str | None = Field(
+        default=None, description="Dragonfly URL for health checks"
     )
 
     @classmethod
@@ -64,19 +64,12 @@ class HealthCheckConfig(BaseModel):
             Parsed health check configuration.
         """
 
-        redis_enabled = bool(
-            getattr(settings.cache, "enable_redis_cache", False)
-            or getattr(settings.cache, "enable_dragonfly_cache", False)
+        dragonfly_enabled = bool(
+            getattr(settings.cache, "enable_dragonfly_cache", False)
         )
-        redis_url: str | None = None
-        if redis_enabled:
-            redis_url = getattr(settings.cache, "redis_url", None)
+        dragonfly_url: str | None = None
+        if dragonfly_enabled:
             dragonfly_url = getattr(settings.cache, "dragonfly_url", None)
-            if (
-                getattr(settings.cache, "enable_dragonfly_cache", False)
-                and dragonfly_url
-            ):
-                redis_url = dragonfly_url
 
         return cls(
             enabled=settings.monitoring.enable_health_checks,
@@ -84,7 +77,7 @@ class HealthCheckConfig(BaseModel):
             timeout=settings.monitoring.health_check_timeout,
             max_retries=3,
             qdrant_url=settings.qdrant.url,
-            redis_url=redis_url,
+            dragonfly_url=dragonfly_url,
         )
 
 
@@ -235,38 +228,38 @@ class QdrantHealthCheck(HealthCheck):
         )
 
 
-class RedisHealthCheck(HealthCheck):
-    """Health check for Redis or Dragonfly cache backends."""
+class DragonflyHealthCheck(HealthCheck):
+    """Health check for Dragonfly cache backends."""
 
     def __init__(
         self,
-        redis_url: str,
+        dragonfly_url: str,
         *,
-        name: str = "redis",
+        name: str = "dragonfly",
         timeout_seconds: float = 5.0,
     ) -> None:
-        """Initialize the Redis health probe."""
+        """Initialize the Dragonfly health probe."""
 
         super().__init__(name, timeout_seconds)
-        self._redis_url = redis_url
+        self._dragonfly_url = dragonfly_url
 
     async def check(self) -> HealthCheckResult:
         """Ping the cache service and gather key metrics."""
 
-        return await self._execute_with_timeout(self._perform_redis_check())
+        return await self._execute_with_timeout(self._perform_dragonfly_check())
 
-    async def _perform_redis_check(self) -> HealthCheckResult:
-        """Execute the Redis health probe."""
+    async def _perform_dragonfly_check(self) -> HealthCheckResult:
+        """Execute the Dragonfly health probe."""
 
         redis_client = None
         try:
-            redis_client = redis.from_url(self._redis_url)
+            redis_client = redis.from_url(self._dragonfly_url)
             pong = await redis_client.ping()
             if not pong:
                 return HealthCheckResult(
                     name=self.name,
                     status=HealthStatus.UNHEALTHY,
-                    message="Redis ping failed",
+                    message="Dragonfly ping failed",
                     duration_ms=0.0,
                 )
             info = await redis_client.info()
@@ -274,14 +267,14 @@ class RedisHealthCheck(HealthCheck):
             return HealthCheckResult(
                 name=self.name,
                 status=HealthStatus.UNHEALTHY,
-                message=f"Redis connection failed: {exc!s}",
+                message=f"Dragonfly connection failed: {exc!s}",
                 duration_ms=0.0,
             )
         except (RedisError, ConnectionError, TimeoutError, ValueError) as exc:
             return HealthCheckResult(
                 name=self.name,
                 status=HealthStatus.UNHEALTHY,
-                message=f"Redis health check error: {exc!s}",
+                message=f"Dragonfly health check error: {exc!s}",
                 duration_ms=0.0,
             )
         finally:
@@ -289,14 +282,14 @@ class RedisHealthCheck(HealthCheck):
                 await redis_client.aclose()
 
         metadata = {
-            "redis_version": info.get("redis_version", "unknown"),
+            "engine_version": info.get("redis_version", "unknown"),
             "connected_clients": info.get("connected_clients", 0),
             "used_memory_human": info.get("used_memory_human", "unknown"),
         }
         return HealthCheckResult(
             name=self.name,
             status=HealthStatus.HEALTHY,
-            message="Redis server is responding",
+            message="Dragonfly server is responding",
             duration_ms=0.0,
             metadata=metadata,
         )
@@ -651,14 +644,14 @@ def build_health_manager(
     settings: Settings,
     *,
     qdrant_client: AsyncQdrantClient | None = None,
-    redis_url: str | None = None,
+    dragonfly_url: str | None = None,
 ) -> HealthCheckManager:
     """Create a health manager configured for application settings.
 
     Args:
         settings: Loaded application configuration.
         qdrant_client: Optional pre-configured Qdrant client instance.
-        redis_url: Optional override for the Redis connection URL.
+        dragonfly_url: Optional override for the Dragonfly connection URL.
 
     Returns:
         Initialized health check manager with configured probes.
@@ -694,11 +687,11 @@ def build_health_manager(
                 timeout_seconds=settings.monitoring.health_check_timeout,
             )
         )
-    redis_source = redis_url or config.redis_url
-    if redis_source:
+    dragonfly_source = dragonfly_url or config.dragonfly_url
+    if dragonfly_source:
         manager.add_health_check(
-            RedisHealthCheck(
-                redis_source,
+            DragonflyHealthCheck(
+                dragonfly_source,
                 timeout_seconds=settings.monitoring.health_check_timeout,
             )
         )
@@ -760,7 +753,7 @@ __all__ = [
     "HTTPHealthCheck",
     "OpenAIHealthCheck",
     "QdrantHealthCheck",
-    "RedisHealthCheck",
+    "DragonflyHealthCheck",
     "SystemResourceHealthCheck",
     "build_health_manager",
 ]

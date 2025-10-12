@@ -322,34 +322,24 @@ def cache_configurations(draw) -> dict[str, Any]:
     """Generate valid cache configurations."""
     return {
         "enable_caching": draw(st.booleans()),
-        "enable_local_cache": draw(st.booleans()),
-        "enable_redis_cache": draw(st.booleans()),
-        "redis_url": draw(redis_urls()),
-        "redis_password": draw(st.one_of(st.none(), st.text(min_size=8, max_size=32))),
-        "redis_database": draw(st.integers(min_value=0, max_value=15)),
-        "local_max_size": draw(positive_integers(min_value=10, max_value=10000)),
-        "local_max_memory_mb": draw(positive_integers(min_value=10, max_value=1000)),
+        "enable_dragonfly_cache": draw(st.booleans()),
+        "dragonfly_url": draw(redis_urls()),
+        "dragonfly_password": draw(
+            st.one_of(st.none(), st.text(min_size=8, max_size=32))
+        ),
+        "dragonfly_database": draw(st.integers(min_value=0, max_value=15)),
         "ttl_embeddings": draw(positive_integers(min_value=60, max_value=86400)),
         "ttl_crawl": draw(positive_integers(min_value=60, max_value=86400)),
         "ttl_queries": draw(positive_integers(min_value=60, max_value=86400)),
         "ttl_search_results": draw(positive_integers(min_value=60, max_value=86400)),
         "cache_ttl_seconds": draw(
             st.dictionaries(
-                keys=st.sampled_from(["search_results", "embeddings", "collections"]),
+                keys=st.sampled_from(
+                    ["search_results", "embeddings", "collections", "queries"]
+                ),
                 values=st.integers(min_value=60, max_value=86400),
                 min_size=1,
                 max_size=10,
-            )
-        ),
-        "memory_pressure_threshold": draw(
-            st.one_of(
-                st.none(),
-                st.floats(
-                    min_value=0.0,
-                    max_value=1.0,
-                    allow_nan=False,
-                    allow_infinity=False,
-                ),
             )
         ),
     }
