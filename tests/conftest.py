@@ -28,6 +28,7 @@ _ALLOWED_SKIP_PREFIXES: tuple[str, ...] = (
     "need --runslow option to run",
     "respx is not installed",
     "Sparse embeddings unavailable",
+    "need RUN_LOAD_TESTS=1 to run load tests",
 )
 
 
