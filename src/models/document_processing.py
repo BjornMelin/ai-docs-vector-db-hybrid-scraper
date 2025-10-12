@@ -172,11 +172,11 @@ class DocumentBatch(BaseModel):
 
 
 # Export all models
-__all__ = [
+__all__: tuple[str, ...] = (
     "ContentFilter",
     "DocumentBatch",
     "DocumentMetadata",
     "ProcessedDocument",
     "ScrapingStats",
     "VectorMetrics",
-]
+)
