@@ -475,11 +475,19 @@ def complete_configurations(draw) -> dict[str, Any]:
 
     # Add provider-specific configurations
     if crawl_provider == CrawlProvider.FIRECRAWL:
-        config["firecrawl"] = {
-            "api_key": None,  # Will be set in test if needed
-            "api_url": "https://api.firecrawl.dev",
-            "timeout": 30.0,
-        }
+        config.setdefault("browser", {})
+
+    config.setdefault(
+        "browser",
+        {
+            "lightweight": {},
+            "crawl4ai": {},
+            "playwright": {},
+            "browser_use": {},
+            "firecrawl": {},
+            "router": {},
+        },
+    )
 
     return config
 

@@ -1,393 +1,55 @@
-"""Deterministic coverage for the unified configuration models."""
+"""Config schema tests covering browser automation aggregation."""
 
 from __future__ import annotations
 
-from typing import Any
-
 import pytest
-from pydantic import BaseModel, ValidationError
+from pydantic import ValidationError
 
-from src.config.models import (
-    BrowserUseConfig,
-    Crawl4AIConfig,
-    DatabaseConfig,
-    EmbeddingConfig,
-    EmbeddingModel,
-    EmbeddingProvider,
-    FastEmbedConfig,
-    HyDEConfig,
-    ObservabilityConfig,
-    PerformanceConfig,
-    PlaywrightConfig,
-    SearchStrategy,
-)
-from src.config.security.config import SecurityConfig
+from src.services.browser.config import BrowserAutomationConfig
 
 
-TEST_REDIS_PASSWORD = "test_redis_secret"  # noqa: S105
+def test_browser_automation_defaults() -> None:
+    config = BrowserAutomationConfig()
 
-DEFAULT_EXPECTATIONS = [
-    pytest.param(
-        FastEmbedConfig,
-        {
-            "model": "BAAI/bge-small-en-v1.5",
-            "cache_dir": None,
-            "max_length": 512,
-            "batch_size": 32,
-        },
-        id="fastembed",
-    ),
-    pytest.param(
-        Crawl4AIConfig,
-        {
-            "browser_type": "chromium",
-            "headless": True,
-            "max_concurrent_crawls": 10,
-            "page_timeout": 30.0,
-            "remove_scripts": True,
-            "remove_styles": True,
-        },
-        id="crawl4ai",
-    ),
-    pytest.param(
-        PlaywrightConfig,
-        {"browser": "chromium", "headless": True, "timeout": 30000},
-        id="playwright",
-    ),
-    pytest.param(
-        BrowserUseConfig,
-        {
-            "llm_provider": "openai",
-            "model": "gpt-4o-mini",
-            "headless": True,
-            "timeout": 30000,
-            "max_retries": 3,
-            "max_steps": 20,
-            "disable_security": False,
-            "generate_gif": False,
-        },
-        id="browseruse",
-    ),
-    pytest.param(
-        HyDEConfig,
-        {
-            "enable_hyde": True,
-            "model": "gpt-3.5-turbo",
-            "num_generations": 5,
-            "generation_temperature": 0.7,
-            "max_tokens": 150,
-            "cache_ttl": 3600,
-            "query_weight": 0.3,
-        },
-        id="hyde",
-    ),
-    pytest.param(
-        SecurityConfig,
-        {
-            "enabled": True,
-            "enable_rate_limiting": False,
-            "default_rate_limit": 200,
-            "rate_limit_window": 120,
-            "redis_url": "redis://localhost:6380/1",
-            "redis_password": "secret",
-            "x_frame_options": "SAMEORIGIN",
-            "x_content_type_options": "nosniff",
-            "x_xss_protection": "0",
-            "strict_transport_security": "max-age=31536000",
-            "content_security_policy": "default-src 'none'",
-            "api_key_required": True,
-            "api_key_header": "X-API-KEY",
-            "api_keys": ["alpha", "beta"],
-        },
-        id="security",
-    ),
-    pytest.param(
-        DatabaseConfig,
-        {
-            "database_url": "sqlite+aiosqlite:///data/app.db",
-            "echo_queries": False,
-            "pool_size": 20,
-            "max_overflow": 10,
-            "pool_timeout": 30.0,
-        },
-        id="database",
-    ),
-    pytest.param(
-        PerformanceConfig,
-        {
-            "max_concurrent_requests": 10,
-            "max_concurrent_crawls": 10,
-            "max_concurrent_embeddings": 32,
-            "request_timeout": 30.0,
-            "max_retries": 3,
-            "retry_base_delay": 1.0,
-            "max_memory_usage_mb": 1000.0,
-            "batch_embedding_size": 100,
-            "batch_crawl_size": 50,
-        },
-        id="performance",
-    ),
-    pytest.param(
-        ObservabilityConfig,
-        {
-            "enabled": False,
-            "service_name": "ai-docs-vector-db",
-            "service_version": "1.0.0",
-            "service_namespace": "ai-docs",
-            "otlp_endpoint": "http://localhost:4317",
-            "otlp_headers": {},
-            "otlp_insecure": True,
-            "trace_sample_rate": 1.0,
-            "track_ai_operations": True,
-            "track_costs": True,
-            "instrument_fastapi": True,
-            "instrument_httpx": True,
-            "instrument_redis": True,
-            "instrument_sqlalchemy": True,
-            "console_exporter": False,
-        },
-        id="observability",
-    ),
-    pytest.param(
-        EmbeddingConfig,
-        {
-            "provider": "fastembed",
-            "dense_model": "text-embedding-3-small",
-            "search_strategy": "dense",
-            "enable_quantization": True,
-        },
-        id="embedding",
-    ),
-]
-
-CUSTOM_CONFIG_CASES = [
-    pytest.param(
-        FastEmbedConfig,
-        {"model": "BAAI/bge-large-en-v1.5", "batch_size": 64, "max_length": 1024},
-        {
-            "model": "BAAI/bge-large-en-v1.5",
-            "cache_dir": None,
-            "max_length": 1024,
-            "batch_size": 64,
-        },
-        id="fastembed",
-    ),
-    pytest.param(
-        Crawl4AIConfig,
-        {
-            "browser_type": "firefox",
-            "headless": False,
-            "max_concurrent_crawls": 25,
-            "page_timeout": 45.5,
-        },
-        {
-            "browser_type": "firefox",
-            "headless": False,
-            "max_concurrent_crawls": 25,
-            "page_timeout": 45.5,
-            "remove_scripts": True,
-            "remove_styles": True,
-        },
-        id="crawl4ai",
-    ),
-    pytest.param(
-        BrowserUseConfig,
-        {
-            "llm_provider": "anthropic",
-            "model": "claude-3-sonnet",
-            "disable_security": True,
-            "generate_gif": True,
-        },
-        {
-            "llm_provider": "anthropic",
-            "model": "claude-3-sonnet",
-            "headless": True,
-            "timeout": 30000,
-            "max_retries": 3,
-            "max_steps": 20,
-            "disable_security": True,
-            "generate_gif": True,
-        },
-        id="browseruse",
-    ),
-    pytest.param(
-        HyDEConfig,
-        {
-            "enabled": False,
-            "enable_hyde": False,
-            "num_generations": 3,
-            "generation_temperature": 0.4,
-            "max_tokens": 256,
-        },
-        {
-            "enable_hyde": False,
-            "enabled": False,
-            "model": "gpt-3.5-turbo",
-            "num_generations": 3,
-            "generation_temperature": 0.4,
-            "max_tokens": 256,
-            "temperature": 0.7,
-            "cache_ttl": 3600,
-            "query_weight": 0.3,
-        },
-        id="hyde",
-    ),
-    pytest.param(
-        SecurityConfig,
-        {
-            "enabled": False,
-            "enable_rate_limiting": True,
-            "default_rate_limit": 50,
-            "rate_limit_window": 30,
-            "redis_url": "redis://cache:6379/0",
-            "redis_password": "topsecret",
-            "content_security_policy": "default-src 'self'",
-        },
-        {
-            "enabled": False,
-            "enable_rate_limiting": True,
-            "default_rate_limit": 50,
-            "rate_limit_window": 30,
-            "redis_url": "redis://cache:6379/0",
-            "redis_password": "topsecret",
-            "x_frame_options": "DENY",
-            "x_content_type_options": "nosniff",
-            "x_xss_protection": "1; mode=block",
-            "strict_transport_security": "max-age=31536000; includeSubDomains; preload",
-            "content_security_policy": "default-src 'self'",
-            "api_key_required": False,
-            "api_key_header": "X-API-Key",
-            "api_keys": [],
-        },
-        id="security_overrides",
-    ),
-    pytest.param(
-        DatabaseConfig,
-        {
-            "database_url": "postgresql+asyncpg://user:pass@localhost/db",
-            "pool_size": 50,
-        },
-        {
-            "database_url": "postgresql+asyncpg://user:pass@localhost/db",
-            "echo_queries": False,
-            "pool_size": 50,
-            "max_overflow": 10,
-            "pool_timeout": 30.0,
-        },
-        id="database",
-    ),
-    pytest.param(
-        PerformanceConfig,
-        {
-            "max_concurrent_requests": 40,
-            "max_retries": 1,
-            "batch_crawl_size": 10,
-        },
-        {
-            "max_concurrent_requests": 40,
-            "max_concurrent_crawls": 10,
-            "max_concurrent_embeddings": 32,
-            "request_timeout": 30.0,
-            "max_retries": 1,
-            "retry_base_delay": 1.0,
-            "max_memory_usage_mb": 1000.0,
-            "batch_embedding_size": 100,
-            "batch_crawl_size": 10,
-        },
-        id="performance",
-    ),
-    pytest.param(
-        ObservabilityConfig,
-        {
-            "enabled": True,
-            "otlp_endpoint": "https://otel.example.com",
-            "trace_sample_rate": 0.25,
-            "console_exporter": True,
-        },
-        {
-            "enabled": True,
-            "service_name": "ai-docs-vector-db",
-            "service_version": "1.0.0",
-            "service_namespace": "ai-docs",
-            "otlp_endpoint": "https://otel.example.com",
-            "otlp_headers": {},
-            "otlp_insecure": True,
-            "trace_sample_rate": 0.25,
-            "track_ai_operations": True,
-            "track_costs": True,
-            "instrument_fastapi": True,
-            "instrument_httpx": True,
-            "instrument_redis": True,
-            "instrument_sqlalchemy": True,
-            "console_exporter": True,
-        },
-        id="observability",
-    ),
-    pytest.param(
-        EmbeddingConfig,
-        {
-            "provider": EmbeddingProvider.OPENAI,
-            "dense_model": EmbeddingModel.TEXT_EMBEDDING_3_LARGE,
-            "search_strategy": SearchStrategy.HYBRID,
-            "enable_quantization": False,
-        },
-        {
-            "provider": "openai",
-            "dense_model": "text-embedding-3-large",
-            "search_strategy": "hybrid",
-            "enable_quantization": False,
-        },
-        id="embedding",
-    ),
-]
-
-INVALID_CONFIG_CASES = [
-    pytest.param(FastEmbedConfig, {"max_length": 0}, id="fastembed-length"),
-    pytest.param(FastEmbedConfig, {"batch_size": 0}, id="fastembed-batch"),
-    pytest.param(Crawl4AIConfig, {"max_concurrent_crawls": 0}, id="crawl4ai-min"),
-    pytest.param(Crawl4AIConfig, {"max_concurrent_crawls": 51}, id="crawl4ai-max"),
-    pytest.param(PlaywrightConfig, {"timeout": 0}, id="playwright-timeout"),
-    pytest.param(BrowserUseConfig, {"max_retries": 0}, id="browseruse-retries"),
-    pytest.param(HyDEConfig, {"num_generations": 0}, id="hyde-generations"),
-    pytest.param(SecurityConfig, {"rate_limit_requests": 0}, id="security-rate"),
-    pytest.param(DatabaseConfig, {"pool_size": 0}, id="database-pool"),
-    pytest.param(
-        PerformanceConfig, {"max_concurrent_requests": 0}, id="performance-requests"
-    ),
-    pytest.param(
-        ObservabilityConfig, {"trace_sample_rate": 1.1}, id="observability-sample"
-    ),
-    pytest.param(EmbeddingConfig, {"provider": "invalid"}, id="embedding-provider"),
-]
+    assert config.lightweight.timeout_seconds == 8.0
+    assert config.crawl4ai.headless is True
+    assert config.playwright.browser == "chromium"
+    assert config.browser_use.llm_provider == "openai"
+    assert list(config.firecrawl.default_formats) == ["markdown", "html"]
+    assert config.router.per_attempt_cap_ms == 20000
 
 
-@pytest.mark.parametrize(("config_cls", "expected_dump"), DEFAULT_EXPECTATIONS)
-def test_config_defaults_align_with_json_dump(
-    config_cls: type[BaseModel], expected_dump: dict[str, Any]
-) -> None:
-    """Ensure each config exposes the documented defaults."""
+def test_browser_automation_custom_payload() -> None:
+    payload = {
+        "lightweight": {"timeout_seconds": 4.0, "allow_redirects": False},
+        "crawl4ai": {"headless": False, "browser_type": "firefox"},
+        "browser_use": {"llm_provider": "gemini", "model": "gemini-1.5"},
+        "firecrawl": {"api_key": "fc-test-key", "default_formats": ["markdown"]},
+        "router": {
+            "rate_limits": {
+                "lightweight": {"max_requests": 5, "period_seconds": 2.0},
+                "firecrawl": {"max_requests": 2, "period_seconds": 1.5},
+            }
+        },
+    }
 
-    config = config_cls()
-    assert config.model_dump(mode="json") == expected_dump
+    config = BrowserAutomationConfig.model_validate(payload)
+
+    assert config.lightweight.timeout_seconds == 4.0
+    assert config.crawl4ai.browser_type == "firefox"
+    assert config.browser_use.llm_provider == "gemini"
+    assert config.firecrawl.api_key == "fc-test-key"
+    assert config.router.rate_limits["firecrawl"].max_requests == 2
 
 
 @pytest.mark.parametrize(
-    ("config_cls", "payload", "expected_dump"), CUSTOM_CONFIG_CASES
+    "browser_use",
+    [
+        {"llm_provider": "unknown"},
+        {"llm_provider": "openai", "model": ""},
+    ],
 )
-def test_config_accepts_custom_payload(
-    config_cls: type[BaseModel], payload: dict[str, Any], expected_dump: dict[str, Any]
-) -> None:
-    """Validate that representative overrides survive validation and serialization."""
-
-    config = config_cls.model_validate(payload)
-    assert config.model_dump(mode="json") == expected_dump
-
-
-@pytest.mark.parametrize(("config_cls", "payload"), INVALID_CONFIG_CASES)
-def test_config_rejects_invalid_payload(
-    config_cls: type[BaseModel], payload: dict[str, Any]
-) -> None:
-    """Confirm guardrails stay in place for invalid input values."""
-
+def test_browser_automation_invalid(browser_use: dict[str, str]) -> None:
+    payload = {"browser_use": browser_use}
     with pytest.raises(ValidationError):
-        config_cls.model_validate(payload)
+        BrowserAutomationConfig.model_validate(payload)

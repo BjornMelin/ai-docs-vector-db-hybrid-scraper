@@ -19,7 +19,7 @@ class DummyConfig:
     def __init__(self) -> None:
         self.embedding_provider = SimpleNamespace(name="OPENAI")
         self.openai = SimpleNamespace(api_key=None)
-        self.firecrawl = SimpleNamespace(api_key=None)
+        self.browser = SimpleNamespace(firecrawl=SimpleNamespace(api_key=None))
         self.crawl_provider = SimpleNamespace(name="FIRECRAWL")
         self.qdrant = SimpleNamespace(url="", enable_grouping=True)
         self.misc_setting = "value"
@@ -28,6 +28,7 @@ class DummyConfig:
         return {
             "openai": {"api_key": "secret-openai"},
             "qdrant": {"api_key": "secret-qdrant"},
+            "browser": {"firecrawl": {"api_key": "secret-firecrawl"}},
             "misc_setting": self.misc_setting,
         }
 
@@ -93,6 +94,7 @@ class TestConfigurationTools:
         config_payload = result["config"]
         assert config_payload["openai"]["api_key"] == "<redacted>"
         assert config_payload["qdrant"]["api_key"] == "<redacted>"
+        assert config_payload["browser"]["firecrawl"]["api_key"] == "<redacted>"
         assert config_payload["misc_setting"] == "value"
 
     @pytest.mark.asyncio

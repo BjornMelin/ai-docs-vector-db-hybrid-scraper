@@ -30,7 +30,7 @@ def fixture_build_unified_mcp_config() -> Callable[..., SimpleNamespace]:
             get_active_providers=lambda: providers,
             openai=SimpleNamespace(api_key=openai_key),
             crawling=SimpleNamespace(providers=crawling_providers),
-            firecrawl=SimpleNamespace(api_key=firecrawl_key),
+            browser=SimpleNamespace(firecrawl=SimpleNamespace(api_key=firecrawl_key)),
             qdrant=SimpleNamespace(url=qdrant_url),
             cache=SimpleNamespace(
                 enable_dragonfly_cache=False,
