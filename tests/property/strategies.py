@@ -242,6 +242,11 @@ def chunk_configurations(draw) -> dict[str, Any]:
     chunk_overlap = draw(st.integers(min_value=0, max_value=chunk_size - 1))
     min_chunk_size = draw(st.integers(min_value=1, max_value=chunk_size))
     max_chunk_size = draw(st.integers(min_value=chunk_size, max_value=10000))
+    token_chunk_size = draw(st.integers(min_value=100, max_value=2000))
+    token_chunk_overlap = draw(
+        st.integers(min_value=0, max_value=max(token_chunk_size - 1, 0))
+    )
+    json_max_chars = draw(st.integers(min_value=max(chunk_size, 1000), max_value=50000))
 
     return {
         "chunk_size": chunk_size,
@@ -249,30 +254,16 @@ def chunk_configurations(draw) -> dict[str, Any]:
         "min_chunk_size": min_chunk_size,
         "max_chunk_size": max_chunk_size,
         "strategy": draw(st.sampled_from(list(ChunkingStrategy))),
-        "enable_ast_chunking": draw(st.booleans()),
         "preserve_code_blocks": draw(st.booleans()),
         "detect_language": draw(st.booleans()),
-        "max_function_chunk_size": draw(
-            st.integers(min_value=chunk_size, max_value=10000)
+        "token_chunk_size": token_chunk_size,
+        "token_chunk_overlap": token_chunk_overlap,
+        "token_model": draw(
+            st.sampled_from(["cl100k_base", "o200k_base", "gpt-4o-mini"])
         ),
-        "supported_languages": draw(
-            st.lists(
-                st.sampled_from(
-                    [
-                        "python",
-                        "javascript",
-                        "typescript",
-                        "markdown",
-                        "java",
-                        "go",
-                        "rust",
-                    ]
-                ),
-                min_size=1,
-                max_size=10,
-                unique=True,
-            )
-        ),
+        "json_max_chars": json_max_chars,
+        "enable_semantic_html_segmentation": draw(st.booleans()),
+        "normalize_html_text": draw(st.booleans()),
     }
 
 
@@ -525,48 +516,45 @@ def invalid_positive_integers(draw) -> int:
 @st.composite
 def invalid_chunk_configurations(draw) -> dict[str, Any]:
     """Generate invalid chunking configurations for mutation testing."""
-    chunk_size = draw(st.integers(min_value=100, max_value=5000))
+    base_config = dict(draw(chunk_configurations()))
+    chunk_size = base_config["chunk_size"]
 
-    # Generate configurations that violate constraints
     violation_type = draw(
         st.sampled_from(
             [
                 "overlap_too_large",
                 "min_chunk_too_large",
                 "max_chunk_too_small",
+                "token_overlap_too_large",
+                "json_too_small",
                 "negative_values",
             ]
         )
     )
 
     if violation_type == "overlap_too_large":
-        chunk_overlap = draw(
-            st.integers(min_value=chunk_size, max_value=chunk_size + 1000)
-        )
-        return {
-            "chunk_size": chunk_size,
-            "chunk_overlap": chunk_overlap,
-            "min_chunk_size": 100,
-            "max_chunk_size": chunk_size + 1000,
-        }
+        base_config["chunk_overlap"] = chunk_size
+        return base_config
     if violation_type == "min_chunk_too_large":
-        return {
-            "chunk_size": chunk_size,
-            "chunk_overlap": 100,
-            "min_chunk_size": chunk_size + 100,
-            "max_chunk_size": chunk_size + 1000,
-        }
+        base_config["min_chunk_size"] = chunk_size + 100
+        return base_config
     if violation_type == "max_chunk_too_small":
-        return {
-            "chunk_size": chunk_size,
-            "chunk_overlap": 100,
-            "min_chunk_size": 100,
-            "max_chunk_size": chunk_size - 100,
-        }
+        base_config["max_chunk_size"] = max(chunk_size - 100, 1)
+        return base_config
+    if violation_type == "token_overlap_too_large":
+        base_config["token_chunk_overlap"] = base_config["token_chunk_size"]
+        return base_config
+    if violation_type == "json_too_small":
+        base_config["json_max_chars"] = max(1, chunk_size - 1)
+        return base_config
     # negative_values
     return {
         "chunk_size": draw(st.integers(max_value=0)),
         "chunk_overlap": draw(st.integers(max_value=-1)),
         "min_chunk_size": draw(st.integers(max_value=0)),
         "max_chunk_size": draw(st.integers(max_value=0)),
+        "token_chunk_size": draw(st.integers(max_value=0)),
+        "token_chunk_overlap": draw(st.integers(max_value=0)),
+        "token_model": "",
+        "json_max_chars": draw(st.integers(max_value=0)),
     }

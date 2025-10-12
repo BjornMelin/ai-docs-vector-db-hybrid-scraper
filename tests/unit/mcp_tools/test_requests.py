@@ -148,3 +148,9 @@ def test_document_request_defaults_apply():
 
     assert request.collection == "documentation"
     assert request.chunk_strategy is ChunkingStrategy.ENHANCED
+    assert request.token_chunk_size == 600
+    assert request.token_chunk_overlap == 120
+    assert request.token_model == "cl100k_base"  # noqa: S105 - static model name
+    assert request.json_max_chars == 20000
+    assert request.enable_semantic_html_segmentation is True
+    assert request.normalize_html_text is True
