@@ -213,13 +213,10 @@ def test_convert_content_formats_handles_metadata(
 ) -> None:
     """Conversion helper should handle optional metadata gracefully."""
 
-    result = functions["build_response"](
-        {"content": "Hi", "metadata": metadata or {}, "url": "foo"},
-        "foo",
+    result = functions["convert_formats"](
+        metadata or {},
         ["markdown", "html"] if "html" in expected else ["markdown"],
-        elapsed_ms=1.0,
-        can_handle=True,
     )
 
     for key, value in expected.items():
-        assert result["content"][key] == value
+        assert result[key] == value

@@ -187,9 +187,7 @@ async def test_evaluate_examples_and_aggregation() -> None:
     assert aggregates["retrieval_avg"]["precision_at_k"] == pytest.approx(1.0)
     assert aggregates["ragas_avg"]["faithfulness"] == pytest.approx(0.75)
 
-    report = _render_report(
-        EvaluationReport(results=results, aggregates=aggregates, telemetry={})
-    )
+    report = _render_report(EvaluationReport(results=results, aggregates=aggregates))
     assert len(report["results"]) == 2
     assert report["aggregates"]["examples"] == 2
 
