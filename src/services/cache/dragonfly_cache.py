@@ -1,9 +1,11 @@
 """DragonflyDB cache implementation with advanced performance optimizations."""
 
+import inspect
 import json
 import logging
 import zlib
-from typing import Any
+from collections.abc import Awaitable, Callable
+from typing import Any, cast
 
 import redis.asyncio as redis
 from redis.asyncio.retry import Retry
@@ -21,8 +23,12 @@ from .base import CacheInterface
 
 logger = logging.getLogger(__name__)
 
+RedisClientFactory = Callable[[], redis.Redis | Awaitable[redis.Redis]]
+AsyncCloser = Callable[[], Awaitable[Any]]
+SyncCloser = Callable[[], Any]
 
-class DragonflyCache(CacheInterface[Any]):
+
+class DragonflyCache(CacheInterface[Any]):  # pylint: disable=too-many-instance-attributes
     """High-performance cache using DragonflyDB with Redis compatibility."""
 
     def __init__(
@@ -38,7 +44,11 @@ class DragonflyCache(CacheInterface[Any]):
         key_prefix: str = "",
         enable_compression: bool = True,
         compression_threshold: int = 1024,  # bytes
-    ):
+        *,
+        connection_pool: redis.ConnectionPool | None = None,
+        client: redis.Redis | None = None,
+        client_factory: RedisClientFactory | None = None,
+    ):  # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
         """Initialize DragonflyDB cache with optimizations.
 
         Args:
@@ -71,26 +81,44 @@ class DragonflyCache(CacheInterface[Any]):
                 supported_errors=(RedisConnectionError, RedisTimeoutError),
             )
 
-        # Create optimized connection pool for DragonflyDB
-        self.pool = redis.ConnectionPool.from_url(
-            redis_url,
-            max_connections=max_connections,
-            socket_timeout=socket_timeout,
-            socket_connect_timeout=socket_connect_timeout,
-            socket_keepalive=socket_keepalive,
-            retry=retry_strategy,
-            decode_responses=False,  # Handle encoding/decoding manually
-        )
+        self.pool: redis.ConnectionPool | None = connection_pool
+        self._owns_pool = False
 
-        self._client: redis.Redis | None = None
+        if self.pool is None and client is None and client_factory is None:
+            self.pool = redis.ConnectionPool.from_url(
+                redis_url,
+                max_connections=max_connections,
+                socket_timeout=socket_timeout,
+                socket_connect_timeout=socket_connect_timeout,
+                socket_keepalive=socket_keepalive,
+                retry=retry_strategy,
+                decode_responses=False,  # Handle encoding/decoding manually
+            )
+            self._owns_pool = True
+
+        if client_factory is None and client is None:
+
+            def _default_factory() -> redis.Redis:
+                if self.pool is None:
+                    raise RuntimeError("Redis connection pool is not configured")
+                return redis.Redis(connection_pool=self.pool)
+
+            client_factory = _default_factory
+
+        self._client_factory: RedisClientFactory | None = client_factory
+        self._client: redis.Redis | None = client
 
     @property
     async def client(self) -> redis.Redis:
         """Get DragonflyDB client with lazy initialization."""
 
         if self._client is None:
-            self._client = redis.Redis(connection_pool=self.pool)
-            # Test connection and ensure DragonflyDB is responding
+            if self._client_factory is None:
+                raise RuntimeError("No Redis client factory configured")
+            candidate = self._client_factory()
+            if inspect.isawaitable(candidate):
+                candidate = await candidate  # type: ignore[assignment]
+            self._client = candidate
             await self._client.ping()
             logger.info("DragonflyDB cache connection established")
         return self._client
@@ -153,6 +181,7 @@ class DragonflyCache(CacheInterface[Any]):
             return None
 
     @trace_function("cache.dragonfly.set")
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     async def set(
         self,
         key: str,
@@ -160,11 +189,12 @@ class DragonflyCache(CacheInterface[Any]):
         ttl: int | None = None,
         nx: bool = False,
         xx: bool = False,
-    ) -> bool:  # pylint: disable=too-many-arguments
+    ) -> bool:
         """Set value in DragonflyDB with TTL and conditional options."""
 
         return await self._execute_set(key, value, ttl, nx, xx)
 
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     async def _execute_set(
         self,
         key: str,
@@ -172,7 +202,7 @@ class DragonflyCache(CacheInterface[Any]):
         ttl: int | None = None,
         nx: bool = False,
         xx: bool = False,
-    ) -> bool:  # pylint: disable=too-many-arguments
+    ) -> bool:
         """Execute the actual set operation."""
 
         try:
@@ -305,9 +335,26 @@ class DragonflyCache(CacheInterface[Any]):
     async def close(self) -> None:
         """Close DragonflyDB connections."""
         if self._client:
-            await self._client.aclose()
+            client = self._client
+            aclose = getattr(client, "aclose", None)
+            if callable(aclose):
+                async_closer = cast(AsyncCloser, aclose)
+                await async_closer()  # pylint: disable=not-callable
+            else:
+                close_method = getattr(client, "close", None)
+                if callable(close_method):
+                    close_callable = cast(SyncCloser, close_method)
+                    close_result = close_callable()  # pylint: disable=not-callable
+                    if inspect.isawaitable(close_result):
+                        await close_result
             self._client = None
-        await self.pool.aclose()
+
+        if self._owns_pool and self.pool is not None:
+            pool = self.pool
+            pool_aclose = getattr(pool, "aclose", None)
+            if callable(pool_aclose):
+                pool_async_closer = cast(AsyncCloser, pool_aclose)
+                await pool_async_closer()  # pylint: disable=not-callable
 
     # Batch operations using DragonflyDB's superior pipeline performance
     async def get_many(self, keys: list[str]) -> dict[str, Any | None]:

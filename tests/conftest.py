@@ -18,6 +18,7 @@ pytest_plugins = [
     "tests.fixtures.test_data_observability",
     "tests.fixtures.test_utils_observability",
     "tests.fixtures.parallel_config",
+    "tests.fixtures.redis",
     "tests.fixtures.test_data",
     "tests.plugins.random_seed",
     "tests.fixtures.http_mocks",
