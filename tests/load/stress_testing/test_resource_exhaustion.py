@@ -151,9 +151,6 @@ class ResourceMonitor:
             "peak_file_descriptors": max(self.metrics.file_descriptor_count)
             if self.metrics.file_descriptor_count
             else 0,
-            "_total_network_io_mb": max(self.metrics.network_io_mb)
-            if self.metrics.network_io_mb
-            else 0,
         }
 
 
@@ -196,9 +193,10 @@ class TestResourceExhaustion:
         monitor = ResourceMonitor(interval=0.5)
         monitor.start_monitoring()
 
+        # Create progressively larger "documents" to simulate memory pressure
+        large_documents = []
+
         try:
-            # Create progressively larger "documents" to simulate memory pressure
-            large_documents = []
             memory_exhaustion_detected = False
 
             async def process_large_document(size_mb: float = 10.0, **__kwargs):
@@ -375,9 +373,10 @@ class TestResourceExhaustion:
         monitor = ResourceMonitor(interval=1.0)
         monitor.start_monitoring()
 
+        large_payload_responses = []  # Initialize before try block
+
         try:
             network_stress_detected = False
-            large_payload_responses = []
 
             async def network_intensive_operation(**_kwargs):
                 """Simulate network-intensive operations with large payloads."""
@@ -507,12 +506,12 @@ class TestResourceExhaustion:
                         pool_exhaustion_detected = True
                         logger.warning("Database connection pool exhausted")
                     raise
-                else:
-                    return {
-                        "status": "db_operation_complete",
-                        "connection": connection,
-                        "active_connections": pool.active_connections,
-                    }
+
+                return {
+                    "status": "db_operation_complete",
+                    "connection": connection,
+                    "active_connections": pool.active_connections,
+                }
 
             # Configure database stress test
             config = LoadTestConfig(
@@ -660,10 +659,12 @@ class TestResourceExhaustion:
 
     @pytest.mark.stress
     @pytest.mark.asyncio
-    async def test_cascading_resource_failure(self, load_test_runner):
+    async def test_cascading_resource_failure(self, load_test_runner):  # pylint: disable=too-many-statements
         """Test behavior when multiple resources fail simultaneously."""
         monitor = ResourceMonitor(interval=0.5)
         monitor.start_monitoring()
+
+        memory_hogs = []  # Initialize before try block
 
         try:
             # Track different failure types
@@ -675,7 +676,6 @@ class TestResourceExhaustion:
             }
 
             cascading_failure_detected = False
-            memory_hogs = []
 
             def _raise_system_overload():
                 """Helper function to raise system overload error."""
@@ -730,7 +730,7 @@ class TestResourceExhaustion:
                         logger.warning("Cascading failure detected")
                         # Simulate system instability
                         if len(active_failures) >= 3:
-                            self._raise_system_overload()
+                            _raise_system_overload()
 
                 except TimeoutError as e:
                     failure_types["cpu"] += 1
@@ -752,14 +752,14 @@ class TestResourceExhaustion:
                     else:
                         failure_types["database"] += 1
                     raise
-                else:
-                    return {
-                        "status": "multi_resource_complete",
-                        "memory_mb": memory_mb,
-                        "cpu_percent": cpu_percent,
-                        "active_failures": active_failures,
-                        "cpu_result": cpu_result,
-                    }
+
+                return {
+                    "status": "multi_resource_complete",
+                    "memory_mb": memory_mb,
+                    "cpu_percent": cpu_percent,
+                    "active_failures": active_failures,
+                    "cpu_result": cpu_result,
+                }
 
             # Configure multi-resource stress test
             config = LoadTestConfig(
@@ -807,24 +807,3 @@ class TestResourceExhaustion:
             # Clean up memory
             memory_hogs.clear()
             gc.collect()
-
-
-@pytest.fixture
-def resource_monitor():
-    """Provide resource monitor for stress tests."""
-    monitor = ResourceMonitor(interval=0.5)
-    monitor.start_monitoring()
-    yield monitor
-    monitor.stop_monitoring()
-
-
-@pytest.fixture
-def resource_constraints():
-    """Provide common resource constraints for testing."""
-    return ResourceConstraints(
-        max_memory_mb=1024,
-        max_cpu_percent=80.0,
-        max_connections=20,
-        max_file_descriptors=100,
-        timeout_seconds=30,
-    )

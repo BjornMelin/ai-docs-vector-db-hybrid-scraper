@@ -250,7 +250,6 @@ class TestConcurrentUsersLoad:
         assert len(results) == 5
 
         # Verify burst patterns show expected behavior
-        results[0]["success_rate"]
         burst_1_success_rate = results[1]["success_rate"]
 
         # Burst should show some impact (success rate might be lower)

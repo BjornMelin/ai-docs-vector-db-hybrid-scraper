@@ -98,7 +98,6 @@ class TestBreakingPointAnalysis:
 
                 # Analyze results to find breaking point
                 stable_results = [r for r in test_results if r["system_stable"]]
-                [r for r in test_results if not r["system_stable"]]
 
                 if stable_results:
                     max_stable_rps = max(r["actual_rps"] for r in stable_results)
@@ -361,7 +360,8 @@ class TestBreakingPointAnalysis:
                     # Calculate degradation factor
                     degradation_factor = (
                         (avg_response_time / baseline_response_time)
-                        if baseline_response_time > 0
+                        if baseline_response_time is not None
+                        and baseline_response_time > 0
                         else 1
                     )
 

@@ -54,7 +54,7 @@ class TestScalabilityLoad:
         # Track scaling metrics
         scaling_metrics = []
 
-        @env.events.stats_reset.add_listener
+        @env.events.stats_reset.add_listener  # pyright: ignore[reportAttributeAccessIssue] # stats_reset is a custom event added to the Events class in the load testing framework for tracking stats resets
         def collect_scaling_metrics(**__kwargs):
             """Collect metrics at each scaling stage."""
             stats = env.stats
@@ -951,7 +951,6 @@ class TestScalabilityLoad:
             return {"read_scaling_effectiveness": 0, "connection_pool_efficiency": 0}
 
         read_metrics = [m for m in performance_metrics if m["query_type"] == "read"]
-        [m for m in performance_metrics if m["query_type"] == "write"]
 
         # Analyze read scaling effectiveness
         read_scaling_effectiveness = 1.0
