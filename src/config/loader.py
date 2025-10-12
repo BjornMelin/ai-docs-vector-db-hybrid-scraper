@@ -200,7 +200,9 @@ class Settings(BaseSettings):
     def get_effective_search_strategy(self) -> SearchStrategy:
         """Return the configured search strategy."""
 
-        return getattr(self.embedding, "search_strategy", SearchStrategy.DENSE)
+        if hasattr(self.embedding, "retrieval_mode"):
+            return self.embedding.retrieval_mode
+        return SearchStrategy.DENSE
 
     def get_feature_flags(self) -> dict[str, bool]:
         """Return the active feature flags for the unified application."""

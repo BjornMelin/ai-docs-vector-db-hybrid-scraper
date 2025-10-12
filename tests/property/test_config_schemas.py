@@ -281,20 +281,16 @@ class TestChunkingConfigProperties:
         assert chunk_data["chunk_overlap"] < chunk_data["chunk_size"]
         assert chunk_data["min_chunk_size"] <= chunk_data["chunk_size"]
         assert chunk_data["max_chunk_size"] >= chunk_data["chunk_size"]
-        assert chunk_data["max_function_chunk_size"] >= chunk_data["chunk_size"]
+        assert chunk_data["token_chunk_overlap"] < chunk_data["token_chunk_size"]
+        assert chunk_data["json_max_chars"] >= chunk_data["chunk_size"]
 
         # Verify positive values
         assert chunk_data["chunk_size"] > 0
         assert chunk_data["chunk_overlap"] >= 0
         assert chunk_data["min_chunk_size"] > 0
         assert chunk_data["max_chunk_size"] > 0
-
-        # Verify supported languages
-        languages = chunk_data["supported_languages"]
-        assert len(languages) > 0
-        for lang in languages:
-            assert isinstance(lang, str)
-            assert len(lang) > 0
+        assert chunk_data["token_chunk_size"] > 0
+        assert chunk_data["json_max_chars"] > 0
 
     @given(invalid_chunk_configurations())
     def test_chunking_config_constraint_violations(
@@ -324,31 +320,6 @@ class TestChunkingConfigProperties:
                 chunk_overlap=chunk_size,
                 max_chunk_size=max(chunk_size, 3000),
             )
-
-    @given(
-        st.lists(
-            st.sampled_from(
-                [
-                    "python",
-                    "javascript",
-                    "typescript",
-                    "markdown",
-                    "java",
-                    "go",
-                    "rust",
-                    "c++",
-                    "swift",
-                ]
-            ),
-            min_size=1,
-            max_size=15,
-            unique=True,
-        )
-    )
-    def test_supported_languages_property(self, languages: list[str]):
-        """Test that any valid list of languages is accepted."""
-        config = ChunkingConfig(supported_languages=languages)
-        assert config.supported_languages == languages
 
 
 class TestCircuitBreakerConfigProperties:

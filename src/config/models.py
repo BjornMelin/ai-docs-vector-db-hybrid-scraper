@@ -68,7 +68,6 @@ class ChunkingStrategy(str, Enum):
 
     BASIC = "basic"
     ENHANCED = "enhanced"
-    AST_AWARE = "ast_aware"
 
 
 class SearchStrategy(str, Enum):
@@ -397,12 +396,34 @@ class OpenAIConfig(BaseModel):
 class FastEmbedConfig(BaseModel):
     """FastEmbed local embeddings configuration."""
 
-    model: str = Field(
-        default="BAAI/bge-small-en-v1.5", description="FastEmbed model name"
+    dense_model: str = Field(
+        default="BAAI/bge-small-en-v1.5",
+        min_length=3,
+        description="FastEmbed dense model identifier",
+    )
+    sparse_model: str | None = Field(
+        default="qdrant/bm25",
+        description="Optional sparse model identifier for hybrid retrieval",
+    )
+    retrieval_mode: SearchStrategy = Field(
+        default=SearchStrategy.DENSE,
+        description="Retrieval mode when using FastEmbed locally",
     )
     cache_dir: str | None = Field(default=None, description="Model cache directory")
     max_length: int = Field(default=512, gt=0, description="Max token length")
     batch_size: int = Field(default=32, gt=0, description="Batch size for processing")
+
+    @property
+    def model(self) -> str:
+        """Maintain backward compatible access to the dense model name."""
+
+        return self.dense_model
+
+    @model.setter
+    def model(self, value: str) -> None:
+        """Allow legacy assignments to update the dense model."""
+
+        self.dense_model = value
 
 
 class ChunkingConfig(BaseModel):
@@ -423,21 +444,39 @@ class ChunkingConfig(BaseModel):
         ge=0,
         description="Overlap between chunks to maintain coherence across boundaries",
     )
-    enable_ast_chunking: bool = Field(
-        default=True, description="Enable AST-aware chunking"
-    )
     preserve_code_blocks: bool = Field(
         default=True, description="Preserve code block integrity"
     )
     detect_language: bool = Field(
         default=True, description="Auto-detect programming language"
     )
-    max_function_chunk_size: int = Field(
-        default=2000, gt=0, description="Maximum chunk size for functions"
+    token_chunk_size: int = Field(
+        default=600,
+        gt=0,
+        description="Token-based chunk size used by Tiktoken-enabled splitters",
     )
-    supported_languages: list[str] = Field(
-        default_factory=lambda: ["python", "javascript", "typescript", "markdown"],
-        description="Languages with specialised chunking support",
+    token_chunk_overlap: int = Field(
+        default=120,
+        ge=0,
+        description="Token overlap applied when using token-aware splitters",
+    )
+    token_model: str = Field(
+        default="cl100k_base",
+        min_length=3,
+        description="Tiktoken encoder key used for token-aware chunking",
+    )
+    json_max_chars: int = Field(
+        default=20000,
+        gt=0,
+        description="Maximum character count for JSON segments before re-chunking",
+    )
+    enable_semantic_html_segmentation: bool = Field(
+        default=True,
+        description="Use BeautifulSoup + lxml to respect semantic HTML boundaries",
+    )
+    normalize_html_text: bool = Field(
+        default=True,
+        description="Normalize HTML whitespace and inline artifacts prior to chunking",
     )
 
     @model_validator(mode="after")
@@ -451,25 +490,57 @@ class ChunkingConfig(BaseModel):
         if self.max_chunk_size < self.chunk_size:
             msg = "max_chunk_size must be >= chunk_size"
             raise ValueError(msg)
+        if self.token_chunk_overlap >= self.token_chunk_size:
+            msg = "token_chunk_overlap must be less than token_chunk_size"
+            raise ValueError(msg)
+        if self.json_max_chars < self.chunk_size:
+            msg = "json_max_chars must be >= chunk_size to avoid truncation"
+            raise ValueError(msg)
         return self
 
 
 class EmbeddingConfig(BaseModel):
-    """Embedding configuration including search strategy."""
+    """Embedding configuration including retrieval mode."""
+
+    @model_validator(mode="before")
+    @classmethod
+    def alias_search_strategy(cls, values: Any) -> Any:
+        if (
+            isinstance(values, dict)
+            and "search_strategy" in values
+            and "retrieval_mode" not in values
+        ):
+            values["retrieval_mode"] = values["search_strategy"]
+        return values
 
     provider: EmbeddingProvider = Field(
         default=EmbeddingProvider.FASTEMBED, description="Embedding provider"
     )
-    dense_model: EmbeddingModel = Field(
-        default=EmbeddingModel.TEXT_EMBEDDING_3_SMALL,
-        description="Dense embedding model",
+    dense_model: str = Field(
+        default=EmbeddingModel.TEXT_EMBEDDING_3_SMALL.value,
+        min_length=3,
+        description="Dense embedding model identifier",
     )
-    search_strategy: SearchStrategy = Field(
-        default=SearchStrategy.DENSE, description="Search strategy"
+    sparse_model: str | None = Field(
+        default="qdrant/bm25",
+        description="Sparse embedding model identifier for hybrid retrieval",
+    )
+    retrieval_mode: SearchStrategy = Field(
+        default=SearchStrategy.DENSE, description="Retrieval mode"
     )
     enable_quantization: bool = Field(
         default=True, description="Enable embedding quantization"
     )
+
+    @model_validator(mode="after")
+    def validate_sparse_requirements(self) -> Self:
+        if (
+            self.retrieval_mode in (SearchStrategy.SPARSE, SearchStrategy.HYBRID)
+            and not self.sparse_model
+        ):
+            msg = "Sparse or hybrid retrieval requires a sparse_model to be configured"
+            raise ValueError(msg)
+        return self
 
 
 class HyDEConfig(BaseModel):

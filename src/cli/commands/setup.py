@@ -288,11 +288,44 @@ class ConfigurationWizard:
             try:
                 chunk_size_int = int(chunk_size)
                 if chunk_size_int > 0:
-                    customizations.setdefault("text_processing", {})["chunk_size"] = (
-                        chunk_size_int
+                    text_processing = customizations.setdefault("text_processing", {})
+                    text_processing["chunk_size"] = chunk_size_int
+                    chunk_overlap = questionary.text(
+                        "Chunk overlap (characters):", default="200"
+                    ).ask()
+                    token_chunk_size = questionary.text(
+                        "Token chunk size (Tiktoken):", default="600"
+                    ).ask()
+                    token_chunk_overlap = questionary.text(
+                        "Token chunk overlap (Tiktoken):", default="120"
+                    ).ask()
+                    token_model = questionary.text(
+                        "Token model (tiktoken encoding):", default="cl100k_base"
+                    ).ask()
+                    json_max_chars = questionary.text(
+                        "JSON max chars before re-chunking:", default="20000"
+                    ).ask()
+                    text_processing["chunk_overlap"] = int(chunk_overlap or 200)
+                    text_processing["token_chunk_size"] = int(token_chunk_size or 600)
+                    text_processing["token_chunk_overlap"] = int(
+                        token_chunk_overlap or 120
                     )
+                    text_processing["token_model"] = token_model or "cl100k_base"
+                    text_processing["json_max_chars"] = int(json_max_chars or 20000)
+                    if questionary.confirm(
+                        "Enable semantic HTML segmentation?", default=True
+                    ).ask():
+                        text_processing["enable_semantic_html_segmentation"] = True
+                    else:
+                        text_processing["enable_semantic_html_segmentation"] = False
+                    if questionary.confirm(
+                        "Normalize HTML text before chunking?", default=True
+                    ).ask():
+                        text_processing["normalize_html_text"] = True
+                    else:
+                        text_processing["normalize_html_text"] = False
             except ValueError:
-                self.console.print("[red]Invalid chunk size[/red]")
+                self.console.print("[red]Invalid chunking configuration[/red]")
 
         return customizations
 

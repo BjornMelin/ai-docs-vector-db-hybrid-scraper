@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 from typing import Any
-from unittest.mock import patch
 
 import pytest
 
 from src.chunking import DocumentChunker
-from src.config.models import ChunkingConfig, ChunkingStrategy
+from src.config.models import ChunkingConfig
 
 
 @pytest.fixture()
@@ -67,23 +66,32 @@ def test_chunk_content_respects_window_and_overlap(
     assert all(overlap > 0 for overlap in overlaps)
 
 
-def test_ast_strategy_gracefully_falls_back() -> None:
-    """AST chunking falls back to semantic mode when parsers are unavailable."""
+def test_html_segmentation_controls() -> None:
+    """HTML segmentation can be toggled via configuration."""
+    html = """
+    <html><body>
+        <section><h1>Title</h1><p>Paragraph A</p></section>
+        <section><h2>Sub</h2><p>Paragraph B</p></section>
+    </body></html>
+    """
     config = ChunkingConfig(
-        strategy=ChunkingStrategy.AST_AWARE,
-        enable_ast_chunking=True,
-        supported_languages=["python"],
+        chunk_size=200,
+        chunk_overlap=20,
+        enable_semantic_html_segmentation=True,
     )
+    chunker = DocumentChunker(config)
+    segmented = chunker.chunk_content(html)
 
-    with (
-        patch("src.chunking.TREE_SITTER_AVAILABLE", False),
-        patch("src.chunking.Parser", None),
-        patch("src.chunking.Language", None),
-    ):
-        chunker = DocumentChunker(config)
+    assert segmented
+    assert segmented[0]["content"].strip().startswith("Title")
 
-    result = chunker.chunk_content(
-        "def fallback() -> None:\n    return None", url="test.py"
+    config_no_html = ChunkingConfig(
+        chunk_size=200,
+        chunk_overlap=20,
+        enable_semantic_html_segmentation=False,
     )
-    assert result
-    assert all(isinstance(chunk, dict) for chunk in result)
+    chunker_no_html = DocumentChunker(config_no_html)
+    raw_segments = chunker_no_html.chunk_content(html)
+
+    assert raw_segments
+    assert len(segmented) <= len(raw_segments)
