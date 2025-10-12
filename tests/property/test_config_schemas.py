@@ -13,6 +13,11 @@ from hypothesis import assume, example, given, note, strategies as st
 from pydantic import HttpUrl, ValidationError
 
 from src.config import Settings
+from src.config.browser import (
+    BrowserAutomationConfig,
+    FirecrawlSettings,
+    RouterSettings,
+)
 from src.config.models import (
     CacheConfig,
     ChunkingConfig,
@@ -29,7 +34,6 @@ from src.config.models import (
     QdrantConfig,
     RAGConfig,
 )
-from src.services.browser.config import BrowserAutomationConfig, FirecrawlSettings
 
 from .strategies import (
     cache_configurations,
@@ -50,6 +54,13 @@ from .strategies import (
     qdrant_configurations,
     rag_configurations,
 )
+
+
+def test_router_settings_retry_backoff_positive() -> None:
+    """Router settings should default to a positive retry window."""
+
+    settings = RouterSettings()
+    assert settings.unavailable_retry_seconds >= 1.0
 
 
 class TestCacheConfigProperties:

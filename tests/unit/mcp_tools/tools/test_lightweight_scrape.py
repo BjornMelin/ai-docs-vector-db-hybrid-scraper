@@ -101,7 +101,7 @@ async def test_successful_scrape_returns_expected_payload(
             "raw_html": "<h1>Heading</h1><p>Body</p>",
             "description": "Test description",
         },
-        "tier_used": "lightweight",
+        "provider": "lightweight",
         "quality_score": 0.9,
         "url": "https://example.com/page",
     }
@@ -113,14 +113,14 @@ async def test_successful_scrape_returns_expected_payload(
     )
 
     crawl_manager.scrape_url.assert_awaited_once_with(
-        url="https://example.com/page", tier="lightweight"
+        url="https://example.com/page", preferred_provider="lightweight"
     )
 
     assert response["success"] is True
     assert response["content"]["markdown"] == "# Heading\n\nBody"
     assert response["metadata"]["title"] == "Sample Page"
     assert response["metadata"]["url"] == "https://example.com/page"
-    assert response["performance"]["tier"] == "lightweight"
+    assert response["performance"]["provider"] == "lightweight"
     assert response["performance"]["suitable_for_tier"] is True
 
 
@@ -182,6 +182,7 @@ async def test_scrape_failure_raises_error(
         "success": False,
         "error": "boom",
         "failed_tiers": ["lightweight"],
+        "provider": "lightweight",
     }
 
     with pytest.raises(CrawlServiceError):

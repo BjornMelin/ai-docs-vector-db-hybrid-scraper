@@ -18,7 +18,7 @@ from pydantic_settings import (  # pyright: ignore[reportMissingImports]
     SettingsConfigDict,
 )
 
-from src.services.browser.config import BrowserAutomationConfig
+from src.config.browser import BrowserAutomationConfig
 
 from .models import (
     AgenticConfig,

@@ -64,7 +64,8 @@ async def test_unified_manager_uses_router(monkeypatch):
     await manager.initialize()
     payload = await manager.scrape_url("https://example.com")
 
-    assert payload["success"] is True
-    assert payload["tier_used"] == ProviderKind.LIGHTWEIGHT.value
+    assert isinstance(payload, BrowserResult)
+    assert payload.success is True
+    assert payload.provider is ProviderKind.LIGHTWEIGHT
     await manager.cleanup()
     assert manager.is_initialized() is False
