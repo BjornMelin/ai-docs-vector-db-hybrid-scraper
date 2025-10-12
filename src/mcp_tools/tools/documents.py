@@ -187,7 +187,7 @@ def _build_text_documents(
             "title": base_title,
             "chunk_index": index,
             "total_chunks": total_chunks,
-            "tier_used": crawl_result.get("tier_used", "unknown"),
+            "provider": crawl_result.get("provider", "unknown"),
             "quality_score": crawl_result.get("quality_score", 0.0),
             **chunk.get("metadata", {}),
         }
