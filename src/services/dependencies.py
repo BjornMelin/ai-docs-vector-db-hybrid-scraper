@@ -1,7 +1,8 @@
 """Service access helpers and dependency wrappers shared across entry points."""
 
+# pylint: disable=too-many-lines  # Central dependency wiring spans multiple service domains.
+
 import asyncio
-import importlib
 import inspect
 import logging
 from collections.abc import AsyncGenerator, Callable
@@ -11,7 +12,9 @@ from time import perf_counter
 from typing import Annotated, Any, cast
 
 from fastapi import Depends  # type: ignore[attr-defined]
-from langchain_mcp_adapters.client import MultiServerMCPClient
+from langchain_mcp_adapters.client import (  # pyright: ignore[reportMissingTypeStubs]
+    MultiServerMCPClient,
+)
 from pydantic import BaseModel, Field
 
 from src.config.loader import Settings, get_settings
@@ -21,6 +24,16 @@ from src.infrastructure.container import (
     get_container,
     shutdown_container,
 )
+from src.services.browser.models import BrowserResult, ProviderKind
+from src.services.browser.providers import (
+    BrowserUseProvider,
+    Crawl4AIProvider,
+    FirecrawlProvider,
+    LightweightProvider,
+    PlaywrightProvider,
+)
+from src.services.browser.providers.base import ProviderContext
+from src.services.browser.router import BrowserRouter
 from src.services.cache.manager import CacheManager
 from src.services.circuit_breaker.decorators import (
     circuit_breaker,
@@ -80,6 +93,33 @@ async def _ensure_initialized(service: Any, *, name: str) -> Any:
     return service
 
 
+def _build_browser_router(settings: Settings) -> BrowserRouter:
+    browser_cfg = settings.browser
+    lightweight = LightweightProvider(
+        ProviderContext(ProviderKind.LIGHTWEIGHT), browser_cfg.lightweight
+    )
+    crawl4ai = Crawl4AIProvider(
+        ProviderContext(ProviderKind.CRAWL4AI), browser_cfg.crawl4ai
+    )
+    playwright = PlaywrightProvider(
+        ProviderContext(ProviderKind.PLAYWRIGHT), browser_cfg.playwright
+    )
+    browser_use = BrowserUseProvider(
+        ProviderContext(ProviderKind.BROWSER_USE), browser_cfg.browser_use
+    )
+    firecrawl = FirecrawlProvider(
+        ProviderContext(ProviderKind.FIRECRAWL), browser_cfg.firecrawl
+    )
+    return BrowserRouter(
+        settings=browser_cfg.router,
+        lightweight=lightweight,
+        crawl4ai=crawl4ai,
+        playwright=playwright,
+        browser_use=browser_use,
+        firecrawl=firecrawl,
+    )
+
+
 async def _resolve_service(
     *,
     name: str,
@@ -108,7 +148,7 @@ async def _resolve_service(
     return instance
 
 
-_automation_router_instance: Any | None = None
+_automation_router_instance: BrowserRouter | None = None
 _automation_router_lock = asyncio.Lock()
 _health_manager_instance: HealthCheckManager | None = None
 _health_manager_lock = asyncio.Lock()
@@ -129,22 +169,6 @@ def reset_dependency_singletons() -> None:
 
     _automation_router_instance = None
     _health_manager_instance = None
-
-
-def _load_automation_router_class() -> type[Any]:
-    """Import the AutomationRouter implementation."""
-
-    try:
-        module = importlib.import_module("src.services.browser.router")
-    except ModuleNotFoundError as exc:
-        msg = "Automation router module is unavailable"
-        raise RuntimeError(msg) from exc
-
-    router_cls = getattr(module, "AutomationRouter", None)
-    if router_cls is None:
-        msg = "Automation router module does not define AutomationRouter"
-        raise RuntimeError(msg)
-    return router_cls
 
 
 async def _get_health_manager() -> HealthCheckManager:
@@ -395,19 +419,85 @@ class CrawlRequest(BaseModel):
 
 
 class CrawlResponse(BaseModel):
-    """Pydantic model for crawling responses."""
+    """Serializable view of a BrowserResult."""
 
     success: bool
-    content: str = ""
+    provider: ProviderKind
     url: str
     title: str = ""
+    content: str = ""
+    html: str = ""
     metadata: dict[str, Any] = Field(default_factory=dict)
-    tier_used: str = "none"
-    automation_time_ms: float = 0
-    quality_score: float = 0.0
+    links: dict[str, Any] | None = None
+    assets: dict[str, Any] | None = None
+    elapsed_ms: int | None = None
     error: str | None = None
-    fallback_attempted: bool = False
-    failed_tiers: list[str] = Field(default_factory=list)
+
+    @classmethod
+    def from_result(cls, result: BrowserResult) -> "CrawlResponse":
+        metadata = dict(result.metadata)
+        links = dict(result.links) if result.links is not None else None
+        assets = dict(result.assets) if result.assets is not None else None
+        return cls(
+            success=result.success,
+            provider=result.provider,
+            url=result.url,
+            title=result.title,
+            content=result.content,
+            html=result.html,
+            metadata=metadata,
+            links=links,
+            assets=assets,
+            elapsed_ms=result.elapsed_ms,
+            error=metadata.get("error"),
+        )
+
+
+def _normalize_crawl_payload(result: Any) -> CrawlResponse:
+    """Convert mixed crawl outputs into the canonical response model."""
+
+    if isinstance(result, BrowserResult):
+        return CrawlResponse.from_result(result)
+    if isinstance(result, CrawlResponse):
+        return result
+    if isinstance(result, dict):
+        provider_raw = result.get("provider") or result.get("tier_used")
+        provider: ProviderKind
+        if isinstance(provider_raw, ProviderKind):
+            provider = provider_raw
+        else:
+            try:
+                provider = (
+                    ProviderKind(provider_raw)
+                    if isinstance(provider_raw, str)
+                    else ProviderKind.LIGHTWEIGHT
+                )
+            except ValueError:
+                provider = ProviderKind.LIGHTWEIGHT
+
+        metadata_obj = result.get("metadata")
+        metadata = dict(metadata_obj) if isinstance(metadata_obj, dict) else {}
+        links_obj = result.get("links")
+        links = dict(links_obj) if isinstance(links_obj, dict) else None
+        assets_obj = result.get("assets")
+        assets = dict(assets_obj) if isinstance(assets_obj, dict) else None
+        error_obj = result.get("error")
+        error = str(error_obj) if error_obj not in (None, "") else None
+
+        return CrawlResponse(
+            success=bool(result.get("success")),
+            provider=provider,
+            url=str(result.get("url", "")),
+            title=str(result.get("title", "")),
+            content=str(result.get("content", "")),
+            html=str(result.get("html", "")),
+            metadata=metadata,
+            links=links,
+            assets=assets,
+            elapsed_ms=result.get("elapsed_ms"),
+            error=error,
+        )
+    raise TypeError(f"Unsupported crawl payload type: {type(result)!r}")
 
 
 @circuit_breaker(
@@ -451,6 +541,7 @@ async def scrape_url(
 ) -> CrawlResponse:
     """Scrape URL with provider selection."""
 
+    result: Any
     try:
         manager = crawl_manager
         if manager is None:
@@ -469,8 +560,8 @@ async def scrape_url(
         logger.exception("URL scraping failed for %s", request.url)
         msg = f"Failed to scrape URL: {e}"
         raise CrawlServiceError(msg) from e
-    else:
-        return CrawlResponse(**result)
+
+    return _normalize_crawl_payload(result)
 
 
 async def crawl_site(
@@ -493,8 +584,8 @@ async def crawl_site(
         logger.exception("Site crawling failed for %s", request.url)
         msg = f"Failed to crawl site: {e}"
         raise CrawlServiceError(msg) from e
-    else:
-        return result
+
+    return result
 
 
 # Database Dependencies
@@ -813,29 +904,33 @@ async def clear_rag_cache(
 
 
 # Browser Automation Dependencies
-async def get_browser_automation_router(router: Any | None = None) -> Any:
-    """Get initialized BrowserAutomationRouter service."""
+async def get_browser_automation_router(
+    router: BrowserRouter | None = None,
+) -> BrowserRouter:
+    """Return an initialized BrowserRouter instance."""
 
     if router is not None:
-        return await _ensure_initialized(router, name="automation_router")
+        return await _ensure_initialized(router, name="browser_router")
 
     global _automation_router_instance  # pylint: disable=global-statement
     if _automation_router_instance is not None:
         return await _ensure_initialized(
             _automation_router_instance,
-            name="automation_router",
+            name="browser_router",
         )
 
     async with _automation_router_lock:
         if _automation_router_instance is None:
-            router_cls = _load_automation_router_class()
-            router_instance = router_cls(get_settings())
-            await _ensure_initialized(router_instance, name="automation_router")
+            settings = get_settings()
+            router_instance = _build_browser_router(settings)
+            await _ensure_initialized(router_instance, name="browser_router")
             _automation_router_instance = router_instance
     return _automation_router_instance
 
 
-BrowserAutomationRouterDep = Annotated[Any, Depends(get_browser_automation_router)]
+BrowserAutomationRouterDep = Annotated[
+    BrowserRouter, Depends(get_browser_automation_router)
+]
 
 
 # Project Storage Dependencies
@@ -1007,13 +1102,14 @@ async def get_service_health() -> dict[str, Any]:
 async def get_service_metrics() -> dict[str, Any]:
     """Get performance metrics for all services."""
 
+    metrics: dict[str, Any] = {
+        "embedding_service": {},
+        "cache_service": {},
+        "crawl_service": {},
+    }
+
     try:
         # Collect metrics from various services
-        metrics = {
-            "embedding_service": {},
-            "cache_service": {},
-            "crawl_service": {},
-        }
 
         # Get cache metrics if available
         try:
@@ -1047,8 +1143,8 @@ async def get_service_metrics() -> dict[str, Any]:
     except Exception as e:
         logger.exception("Metrics collection failed")
         return {"error": str(e)}
-    else:
-        return metrics
+
+    return metrics
 
 
 # Cleanup Function
@@ -1076,45 +1172,47 @@ class BulkCrawlRequest(BaseModel):
 async def bulk_scrape_urls(
     request: BulkCrawlRequest,
     crawl_manager: CrawlManagerDep,
-) -> list[dict[str, Any]]:
+) -> list[CrawlResponse]:
     """Scrape multiple URLs concurrently (consolidated implementation)."""
 
     try:
         # Try built-in bulk_scrape if available
         if hasattr(crawl_manager, "bulk_scrape"):
-            return await crawl_manager.bulk_scrape(
+            raw_results = await crawl_manager.bulk_scrape(
                 urls=request.urls,
                 preferred_provider=request.preferred_provider,
                 max_concurrent=request.max_concurrent,
             )
+            return [_normalize_crawl_payload(result) for result in raw_results]
 
         # Fallback: individual scraping with semaphore
         semaphore = asyncio.Semaphore(request.max_concurrent)
 
-        async def scrape_with_semaphore(url: str) -> dict[str, Any]:
+        async def scrape_with_semaphore(url: str) -> CrawlResponse:
             async with semaphore:
-                return await crawl_manager.scrape_url(url, request.preferred_provider)
+                result = await crawl_manager.scrape_url(url, request.preferred_provider)
+                return _normalize_crawl_payload(result)
 
         results = await asyncio.gather(
             *[scrape_with_semaphore(url) for url in request.urls],
             return_exceptions=True,
         )
 
-        # Convert exceptions to error dicts
-        processed: list[dict[str, Any]] = []
+        # Convert exceptions to error responses
+        processed: list[CrawlResponse] = []
         for i, result in enumerate(results):
             if isinstance(result, Exception):
                 processed.append(
-                    {
-                        "success": False,
-                        "error": f"Scraping failed: {result}",
-                        "url": request.urls[i],
-                        "content": "",
-                        "metadata": {},
-                    }
+                    CrawlResponse(
+                        success=False,
+                        provider=ProviderKind.LIGHTWEIGHT,
+                        url=request.urls[i],
+                        metadata={"error": str(result)},
+                        error=f"Scraping failed: {result}",
+                    )
                 )
             else:
-                processed.append(result)  # type: ignore[arg-type]
+                processed.append(cast(CrawlResponse, result))
         return processed
     except Exception as e:
         logger.exception("Bulk scraping failed")
@@ -1178,6 +1276,7 @@ async def track_operation_performance(
     """Track performance of an operation."""
 
     start_time = perf_counter()
+    result: Any
 
     try:
         result_or_awaitable = operation_func(*args, **kwargs)
@@ -1193,8 +1292,8 @@ async def track_operation_performance(
         duration_ms = (perf_counter() - start_time) * 1000
         logger.exception("Operation %s failed in %.2fms", operation_name, duration_ms)
         raise
-    else:
-        return result
+
+    return result
 
 
 # Direct Embedding Operations (extending existing embedding dependencies)
@@ -1301,8 +1400,8 @@ async def analyze_text_characteristics(
             "requires_high_quality": False,
             "error": str(e),
         }
-    else:
-        return analysis_result
+
+    return analysis_result
 
 
 async def get_embedding_usage_report(
