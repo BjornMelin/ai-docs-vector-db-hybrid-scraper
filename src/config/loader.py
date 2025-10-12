@@ -18,15 +18,14 @@ from pydantic_settings import (  # pyright: ignore[reportMissingImports]
     SettingsConfigDict,
 )
 
+from src.services.browser.config import BrowserAutomationConfig
+
 from .models import (
     AgenticConfig,
-    AutomationRouterConfig,
-    BrowserUseConfig,
     CacheConfig,
     ChunkingConfig,
     ChunkingStrategy,
     CircuitBreakerConfig,
-    Crawl4AIConfig,
     CrawlProvider,
     DatabaseConfig,
     DeploymentConfig,
@@ -35,7 +34,6 @@ from .models import (
     EmbeddingProvider,
     Environment,
     FastEmbedConfig,
-    FirecrawlConfig,
     HyDEConfig,
     LogLevel,
     MCPClientConfig,
@@ -43,7 +41,6 @@ from .models import (
     ObservabilityConfig,
     OpenAIConfig,
     PerformanceConfig,
-    PlaywrightConfig,
     QdrantConfig,
     QueryProcessingConfig,
     RAGConfig,
@@ -118,21 +115,9 @@ class Settings(BaseSettings):
     fastembed: FastEmbedConfig = Field(
         default_factory=FastEmbedConfig, description="FastEmbed configuration"
     )
-    firecrawl: FirecrawlConfig = Field(
-        default_factory=FirecrawlConfig, description="Firecrawl configuration"
-    )
-    crawl4ai: Crawl4AIConfig = Field(
-        default_factory=Crawl4AIConfig, description="Crawl4AI configuration"
-    )
-    playwright: PlaywrightConfig = Field(
-        default_factory=PlaywrightConfig, description="Playwright configuration"
-    )
-    automation_router: AutomationRouterConfig = Field(
-        default_factory=AutomationRouterConfig,
-        description="Automation router configuration",
-    )
-    browser_use: BrowserUseConfig = Field(
-        default_factory=BrowserUseConfig, description="browser-use configuration"
+    browser: BrowserAutomationConfig = Field(
+        default_factory=BrowserAutomationConfig,
+        description="Browser automation configuration",
     )
     mcp_client: MCPClientConfig = Field(
         default_factory=MCPClientConfig,  # type: ignore[call-arg]
@@ -186,7 +171,8 @@ class Settings(BaseSettings):
         if self.environment == Environment.TESTING:
             return self
         openai_api_key = getattr(self.openai, "api_key", None)
-        firecrawl_api_key = getattr(self.firecrawl, "api_key", None)
+        firecrawl_settings = getattr(self.browser, "firecrawl", None)
+        firecrawl_api_key = getattr(firecrawl_settings, "api_key", None)
 
         if self.embedding_provider is EmbeddingProvider.OPENAI and not openai_api_key:
             msg = "OpenAI API key required when using OpenAI embedding provider"
