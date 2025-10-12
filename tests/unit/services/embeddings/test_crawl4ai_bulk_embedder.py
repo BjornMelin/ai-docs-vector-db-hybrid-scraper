@@ -82,7 +82,9 @@ def mock_config() -> MagicMock:
 
     config = MagicMock(spec=Settings)
     config.openai = MagicMock(dimensions=1536, model="text-embedding-3-small")
-    config.fastembed = MagicMock(generate_sparse=True, model="BAAI/bge-small-en-v1.5")
+    config.fastembed = MagicMock(
+        generate_sparse=True, dense_model="BAAI/bge-small-en-v1.5"
+    )
     config.chunking = MagicMock(chunk_size=1000, chunk_overlap=200)
     return config
 
