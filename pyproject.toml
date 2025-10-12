@@ -208,7 +208,7 @@ web = [
 
 # All optional dependencies
 all = [
-    "ai-docs-vector-db-hybrid-scraper[dev,contract,accessibility,browser,llm,observability,parsing,dataframe,docs,gpu,eval,server,web]",
+    "ai-docs-vector-db-hybrid-scraper[dev,contract,accessibility,llm,observability,parsing,dataframe,docs,gpu,eval,server,web]",
 ]
 
 [project.urls]
