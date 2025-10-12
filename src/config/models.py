@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Literal, Self
+from typing import Any, Self
 
 from pydantic import (  # pyright: ignore[reportMissingImports]
     BaseModel,
@@ -405,249 +405,6 @@ class FastEmbedConfig(BaseModel):
     batch_size: int = Field(default=32, gt=0, description="Batch size for processing")
 
 
-class FirecrawlConfig(BaseModel):
-    """Firecrawl API configuration."""
-
-    api_key: str | None = Field(default=None, description="Firecrawl API key")
-    api_url: str = Field(
-        default="https://api.firecrawl.dev", description="Firecrawl API URL"
-    )
-    api_base: str = Field(
-        default="https://api.firecrawl.dev", description="Alias for API base URL"
-    )
-    timeout: float = Field(default=30.0, gt=0, description="Request timeout seconds")
-
-    @field_validator("api_key", mode="before")
-    @classmethod
-    def validate_api_key(cls, value: str | None) -> str | None:
-        if value and not value.startswith("fc-"):
-            msg = "Firecrawl API key must start with 'fc-'"
-            raise ValueError(msg)
-        return value
-
-
-class Crawl4AIConfig(BaseModel):
-    """Crawl4AI provider configuration."""
-
-    browser_type: str = Field(default="chromium", description="Playwright browser type")
-    headless: bool = Field(default=True, description="Run browser headless")
-    max_concurrent_crawls: int = Field(
-        default=10, gt=0, le=50, description="Max concurrent crawl tasks"
-    )
-    page_timeout: float = Field(default=30.0, gt=0, description="Page load timeout")
-    remove_scripts: bool = Field(default=True, description="Remove script tags")
-    remove_styles: bool = Field(default=True, description="Remove style tags")
-
-
-class PlaywrightProxySettings(BaseModel):
-    """Proxy configuration injected into Playwright browser contexts."""
-
-    server: str = Field(..., description="Proxy server URL, including scheme.")
-    username: str | None = Field(
-        default=None, description="Proxy authentication username"
-    )
-    password: str | None = Field(
-        default=None, description="Proxy authentication password"
-    )
-    bypass: str | None = Field(
-        default=None,
-        description="Comma separated hostnames that should bypass the proxy",
-    )
-
-    def to_playwright_dict(self) -> dict[str, str]:
-        """Return the dictionary signature expected by Playwright."""
-
-        proxy: dict[str, str] = {"server": self.server}
-        if self.username:
-            proxy["username"] = self.username
-        if self.password:
-            proxy["password"] = self.password
-        if self.bypass:
-            proxy["bypass"] = self.bypass
-        return proxy
-
-
-class PlaywrightCaptchaSettings(BaseModel):
-    """CAPTCHA solving configuration using CapMonster Cloud."""
-
-    provider: Literal["capmonster"] = Field(
-        default="capmonster", description="Captcha solving provider identifier"
-    )
-    api_key: str = Field(..., description="CapMonster Cloud API key")
-    captcha_type: Literal["recaptcha_v2", "hcaptcha", "turnstile"] = Field(
-        default="recaptcha_v2",
-        description="Captcha type solved through CapMonster",
-    )
-    iframe_selector: str = Field(
-        default="iframe[src*='captcha']",
-        description="CSS selector pointing at the captcha iframe",
-    )
-    response_input_selector: str = Field(
-        default="textarea[name='g-recaptcha-response']",
-        description="Selector used to inject the solved token",
-    )
-
-
-class PlaywrightTierConfig(BaseModel):
-    """Configuration describing a single anti-bot execution tier."""
-
-    name: str = Field(default="baseline", description="Identifier for the tier")
-    use_undetected_browser: bool = Field(
-        default=False,
-        description="Whether to launch the Rebrowser patched Playwright runtime",
-    )
-    enable_stealth: bool = Field(
-        default=True,
-        description="Apply tf_playwright_stealth transformations for the tier",
-    )
-    proxy: PlaywrightProxySettings | None = Field(
-        default=None, description="Proxy configuration applied to this tier"
-    )
-    captcha: PlaywrightCaptchaSettings | None = Field(
-        default=None, description="Captcha solving configuration"
-    )
-    max_attempts: int = Field(
-        default=1, gt=0, description="Maximum navigation attempts for the tier"
-    )
-    challenge_status_codes: list[int] = Field(
-        default_factory=lambda: [403, 429],
-        description="HTTP status codes that should trigger escalation",
-    )
-    challenge_keywords: list[str] = Field(
-        default_factory=lambda: ["captcha", "verify you are human"],
-        description="Body snippets that indicate bot-detection challenges",
-    )
-
-
-class PlaywrightConfig(BaseModel):
-    """Playwright browser configuration for automation clients."""
-
-    browser: str = Field(default="chromium", description="Browser type")
-    headless: bool = Field(default=True, description="Run in headless mode")
-    timeout: int = Field(default=30000, gt=0, description="Timeout in milliseconds")
-    viewport: dict[str, int | float | bool] = Field(
-        default_factory=lambda: {"width": 1920, "height": 1080},
-        description="Viewport size (width/height) applied to new browser contexts",
-    )
-    user_agent: str = Field(
-        default=(
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-            "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-        ),
-        description="User-Agent header injected into new browser contexts",
-    )
-    enable_stealth: bool = Field(
-        default=True,
-        description="Global default for applying tf_playwright_stealth",
-    )
-    tiers: list[PlaywrightTierConfig] = Field(
-        default_factory=list,
-        description="Ordered anti-bot tiers executed until success",
-    )
-
-    @field_validator("viewport")
-    @classmethod
-    def validate_viewport(
-        cls, value: dict[str, int | float | bool]
-    ) -> dict[str, int | float | bool]:
-        required_keys = {"width", "height"}
-        missing = required_keys.difference(value)
-        if missing:
-            missing_keys = ", ".join(sorted(missing))
-            msg = f"Viewport must include keys: {missing_keys}"
-            raise ValueError(msg)
-
-        clean_value = dict(value)
-        for key in required_keys:
-            dimension = clean_value[key]
-            if not isinstance(dimension, int) or dimension <= 0:
-                msg = f"Viewport {key} must be a positive integer"
-                raise ValueError(msg)
-            clean_value[key] = int(dimension)
-
-        return clean_value
-
-    @field_validator("user_agent")
-    @classmethod
-    def validate_user_agent(cls, value: str) -> str:
-        if not value or not value.strip():
-            msg = "User agent must be a non-empty string"
-            raise ValueError(msg)
-        return value.strip()
-
-    @model_validator(mode="after")
-    def default_tier_injection(self) -> Self:
-        if not self.tiers:
-            self.tiers = [
-                PlaywrightTierConfig(
-                    name="baseline",
-                    use_undetected_browser=False,
-                    enable_stealth=self.enable_stealth,
-                )
-            ]
-        return self
-
-
-class AutomationRouterConfig(BaseModel):
-    """Configuration for the multi-tier automation router."""
-
-    rate_limits: dict[str, int] = Field(
-        default_factory=lambda: {
-            "lightweight": 10,
-            "crawl4ai": 5,
-            "playwright": 2,
-            "browser_use": 1,
-            "firecrawl": 5,
-        },
-        description="Per-tier request-per-second limits.",
-    )
-    limiter_period_seconds: float = Field(
-        default=1.0,
-        gt=0,
-        description="Time window applied to rate limit buckets (seconds).",
-    )
-    hard_domains: list[str] = Field(
-        default_factory=lambda: ["linkedin.com", "x.com", "medium.com"],
-        description="Domains that should escalate to resilient tiers first.",
-    )
-    per_attempt_cap_ms: int = Field(
-        default=15000,
-        ge=500,
-        description="Upper bound on a single provider attempt in milliseconds.",
-    )
-    min_attempt_ms: int = Field(
-        default=500,
-        ge=0,
-        description=(
-            "Minimum remaining budget (milliseconds) required before invoking a tier."
-        ),
-    )
-    limiter_acquire_timeout_ms: int = Field(
-        default=1000,
-        ge=0,
-        description="Maximum time to wait when acquiring a rate limiter slot.",
-    )
-
-
-class BrowserUseConfig(BaseModel):
-    """Browser-use automation configuration."""
-
-    llm_provider: str = Field(default="openai", description="LLM provider")
-    model: str = Field(
-        default="gpt-4o-mini", description="Model used for browser automation"
-    )
-    headless: bool = Field(default=True, description="Run headless automations")
-    timeout: int = Field(default=30000, gt=0, description="Timeout in milliseconds")
-    max_retries: int = Field(default=3, ge=1, le=10, description="Maximum retries")
-    max_steps: int = Field(
-        default=20, ge=1, le=100, description="Maximum automation steps"
-    )
-    disable_security: bool = Field(
-        default=False, description="Disable security features"
-    )
-    generate_gif: bool = Field(default=False, description="Generate GIF recordings")
-
-
 class ChunkingConfig(BaseModel):
     """Document chunking configuration."""
 
@@ -1016,13 +773,11 @@ class DocumentationSite(BaseModel):
 
 
 __all__ = [
-    "BrowserUseConfig",
     "CacheConfig",
     "CacheType",
     "ChunkingConfig",
     "ChunkingStrategy",
     "CircuitBreakerConfig",
-    "Crawl4AIConfig",
     "CrawlProvider",
     "DatabaseConfig",
     "DeploymentConfig",
@@ -1035,7 +790,6 @@ __all__ = [
     "Environment",
     "AgenticConfig",
     "FastEmbedConfig",
-    "FirecrawlConfig",
     "FusionAlgorithm",
     "HyDEConfig",
     "LogLevel",
@@ -1047,7 +801,6 @@ __all__ = [
     "ObservabilityConfig",
     "OpenAIConfig",
     "PerformanceConfig",
-    "PlaywrightConfig",
     "QdrantConfig",
     "QueryComplexity",
     "QueryType",

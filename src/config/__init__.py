@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from src.services.browser.config import BrowserAutomationConfig
+
 from .loader import (
     Settings,
     ensure_runtime_directories,
@@ -12,13 +14,11 @@ from .loader import (
 )
 from .models import (
     AgenticConfig,
-    BrowserUseConfig,
     CacheConfig,
     CacheType,
     ChunkingConfig,
     ChunkingStrategy,
     CircuitBreakerConfig,
-    Crawl4AIConfig,
     CrawlProvider,
     DatabaseConfig,
     DeploymentConfig,
@@ -30,7 +30,6 @@ from .models import (
     EmbeddingProvider,
     Environment,
     FastEmbedConfig,
-    FirecrawlConfig,
     FusionAlgorithm,
     HyDEConfig,
     LogLevel,
@@ -42,10 +41,6 @@ from .models import (
     ObservabilityConfig,
     OpenAIConfig,
     PerformanceConfig,
-    PlaywrightCaptchaSettings,
-    PlaywrightConfig,
-    PlaywrightProxySettings,
-    PlaywrightTierConfig,
     QdrantConfig,
     QueryComplexity,
     QueryProcessingConfig,
@@ -68,13 +63,12 @@ __all__ = [
     "refresh_settings",
     "validate_settings_payload",
     "AgenticConfig",
-    "BrowserUseConfig",
+    "BrowserAutomationConfig",
     "CacheConfig",
     "CacheType",
     "ChunkingConfig",
     "ChunkingStrategy",
     "CircuitBreakerConfig",
-    "Crawl4AIConfig",
     "CrawlProvider",
     "DatabaseConfig",
     "DeploymentConfig",
@@ -86,7 +80,6 @@ __all__ = [
     "EmbeddingProvider",
     "Environment",
     "FastEmbedConfig",
-    "FirecrawlConfig",
     "FusionAlgorithm",
     "HyDEConfig",
     "LogLevel",
@@ -98,10 +91,6 @@ __all__ = [
     "ObservabilityConfig",
     "OpenAIConfig",
     "PerformanceConfig",
-    "PlaywrightCaptchaSettings",
-    "PlaywrightConfig",
-    "PlaywrightProxySettings",
-    "PlaywrightTierConfig",
     "QdrantConfig",
     "QueryProcessingConfig",
     "QueryComplexity",

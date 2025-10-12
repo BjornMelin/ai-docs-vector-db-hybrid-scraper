@@ -54,7 +54,8 @@ def _collect_provider_warnings(config: Settings) -> list[str]:
     embedding_provider = getattr(config, "embedding_provider", None)
     openai_settings = getattr(config, "openai", None)
     openai_api_key = getattr(openai_settings, "api_key", None)
-    firecrawl_settings = getattr(config, "firecrawl", None)
+    browser_settings = getattr(config, "browser", None)
+    firecrawl_settings = getattr(browser_settings, "firecrawl", None)
     firecrawl_api_key = getattr(firecrawl_settings, "api_key", None)
     crawl_provider = getattr(config, "crawl_provider", None)
 
