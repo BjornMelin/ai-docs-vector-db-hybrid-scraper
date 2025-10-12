@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from importlib import import_module
 from typing import Any
 
-from src.services.browser.config import BrowserUseSettings
+from src.config.browser import BrowserUseSettings
 from src.services.browser.errors import BrowserProviderError
 from src.services.browser.models import BrowserResult, ProviderKind, ScrapeRequest
 

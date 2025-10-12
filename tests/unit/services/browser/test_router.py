@@ -260,7 +260,7 @@ async def test_router_reinitializes_provider_after_backoff() -> None:
         responses=[True, False],
     )
     router = _build_router(
-        settings=RouterSettings(unavailable_retry_seconds=0.01),
+        settings=RouterSettings(unavailable_retry_seconds=0.1),
         overrides={
             ProviderKind.LIGHTWEIGHT: recovering_lightweight,
             ProviderKind.CRAWL4AI: backup_crawl4ai,
@@ -273,7 +273,7 @@ async def test_router_reinitializes_provider_after_backoff() -> None:
     assert first.provider is ProviderKind.CRAWL4AI
     assert recovering_lightweight.calls == 0
 
-    await asyncio.sleep(0.02)
+    await asyncio.sleep(0.15)
     second = await router.scrape(ScrapeRequest(url="https://example.com/second"))
     assert second.provider is ProviderKind.LIGHTWEIGHT
     assert recovering_lightweight.calls == 1

@@ -71,7 +71,7 @@ def _convert_content_formats(
             content_dict["html"] = raw_html
         elif fmt == "text":
             # Strip markdown formatting for plain text
-            text_content = re.sub(r"[*_`#\[\]()]", "", content)
+            text_content = re.sub(r"[*_`#\[\]()]", "", content).strip()
             content_dict["text"] = text_content
 
     return content_dict

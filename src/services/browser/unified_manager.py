@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Any
 
+from src.config.browser import BrowserAutomationConfig
 from src.config.loader import Settings
-from src.services.browser.config import BrowserAutomationConfig
 from src.services.browser.errors import BrowserRouterError
 from src.services.browser.models import BrowserResult, ProviderKind, ScrapeRequest
 from src.services.browser.providers import (
@@ -73,7 +73,9 @@ class UnifiedBrowserManager:
         metadata: Mapping[str, Any] | None = None,
         require_interaction: bool = False,
         timeout_ms: int | None = None,
-    ) -> dict[str, Any]:
+        actions: Sequence[Mapping[str, Any]] | None = None,
+        instructions: Sequence[Mapping[str, Any]] | None = None,
+    ) -> BrowserResult:
         # pylint: disable=too-many-arguments
         """Scrape a single URL using the router.
 
@@ -83,9 +85,11 @@ class UnifiedBrowserManager:
             metadata: Optional metadata forwarded to providers.
             require_interaction: Whether scripted interaction is required.
             timeout_ms: Optional deadline override.
+            actions: Optional scripted actions forwarded to interactive providers.
+            instructions: Optional instruction payload for agentic providers.
 
         Returns:
-            Normalized payload produced by the winning provider.
+            BrowserResult produced by the winning provider.
         """
 
         provider = None
@@ -103,9 +107,10 @@ class UnifiedBrowserManager:
             metadata=metadata or {},
             require_interaction=require_interaction,
             timeout_ms=timeout_ms,
+            actions=actions,
+            instructions=instructions,
         )
-        result = await self._router.scrape(request)
-        return self._to_payload(result)
+        return await self._router.scrape(request)
 
     async def crawl_site(
         self,
@@ -142,26 +147,6 @@ class UnifiedBrowserManager:
         """Expose router telemetry."""
 
         return self._router.get_metrics_snapshot()
-
-    @staticmethod
-    def _to_payload(result: BrowserResult) -> dict[str, Any]:
-        """Convert a BrowserResult into the legacy payload schema."""
-
-        payload = {
-            "success": result.success,
-            "tier_used": result.provider.value,
-            "provider": result.provider.value,
-            "url": result.url,
-            "title": result.title,
-            "content": result.content,
-            "html": result.html,
-            "metadata": dict(result.metadata),
-        }
-        if result.links is not None:
-            payload["links"] = result.links
-        if result.assets is not None:
-            payload["assets"] = result.assets
-        return payload
 
 
 __all__ = ["UnifiedBrowserManager"]
