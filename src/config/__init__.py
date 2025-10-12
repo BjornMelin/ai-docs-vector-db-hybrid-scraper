@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from src.services.browser.config import BrowserAutomationConfig
+from src.config.browser import BrowserAutomationConfig
 
 from .loader import (
     Settings,

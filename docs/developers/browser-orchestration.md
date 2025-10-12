@@ -22,14 +22,14 @@ patterns you need when extending or operating the stack.
 ## Module Layout
 
 ```
+src/config/browser.py      # BrowserAutomationConfig + per-provider Pydantic models
 src/services/browser/
-├── __init__.py
-├── config.py            # Pydantic settings (BrowserAutomationConfig + per-provider)
-├── errors.py            # BrowserProviderError, BrowserRouterError
-├── models.py            # BrowserResult, ScrapeRequest, ProviderKind
-├── providers/           # Provider implementations and base protocol
-├── router.py            # BrowserRouter orchestrating tier selection
-└── telemetry.py         # Lightweight metrics recorder
+├── __init__.py           # Public API exports (BrowserRouter, BrowserResult, …)
+├── errors.py             # BrowserProviderError, BrowserRouterError
+├── models.py             # BrowserResult, ScrapeRequest, ProviderKind
+├── providers/            # Provider implementations and base protocol
+├── router.py             # BrowserRouter orchestrating tier selection
+└── telemetry.py          # Lightweight metrics recorder
 ```
 
 ## Provider Contract
@@ -72,8 +72,8 @@ and `assets`, and an `elapsed_ms` measurement.
 
 ## Configuration
 
-`Settings.browser` exposes a single `BrowserAutomationConfig` object containing
-all provider settings. Example usage:
+`Settings.browser` exposes a single `BrowserAutomationConfig` (defined in
+`src/config/browser.py`) containing all provider settings. Example usage:
 
 ```python
 from src.config.loader import get_settings
@@ -83,8 +83,12 @@ router_settings = settings.browser.router
 playwright_settings = settings.browser.playwright
 ```
 
-No other modules define browser configuration—`src/services/browser/config.py`
-is the single source of truth.
+Configuration models live exclusively in `src/config/browser.py`; service
+modules consume them but never define alternatives.
+
+Environment overrides follow the nested naming convention, e.g.
+`AI_DOCS__BROWSER__FIRECRAWL__API_KEY` sets the Firecrawl credential used by
+`FirecrawlProvider` when `settings.browser.firecrawl.api_key` is empty.
 
 ## Testing Strategy
 
@@ -99,6 +103,8 @@ is the single source of truth.
 `telemetry.py` exposes a `MetricsRecorder` for in-memory counters. Each provider
 updates the recorder with `record_success`, `record_failure`, and
 `record_rate_limited`. Structured logging stays local to the provider modules.
+Providers that fail initialization are temporarily quarantined and retried
+after `RouterSettings.unavailable_retry_seconds` elapses.
 
 Expose higher-level metrics via:
 
@@ -112,8 +118,8 @@ metrics = router.get_metrics_snapshot()
 
 - `BrowserRouter.scrape(request: ScrapeRequest) -> BrowserResult`
 - `BrowserRouter.initialize()` / `BrowserRouter.cleanup()`
-- `UnifiedBrowserManager` provides a facade for callers that require
-  initialization management and crawl helpers (`scrape_url`, `crawl_site`).
+- `UnifiedBrowserManager.scrape_url(...) -> BrowserResult`
+- `UnifiedBrowserManager.crawl_site(...) -> dict[str, Any]`
 
 No legacy modules (`action_schemas`, `anti_detection`, legacy adapters) remain.
 Upstream call sites must use the providers and router described here.
