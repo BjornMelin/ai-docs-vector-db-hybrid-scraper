@@ -139,6 +139,13 @@ async def _chunk_document(
         strategy=request.chunk_strategy,
         chunk_size=request.chunk_size,
         chunk_overlap=request.chunk_overlap,
+        token_chunk_size=request.token_chunk_size,
+        token_chunk_overlap=request.token_chunk_overlap,
+        token_model=request.token_model,
+        json_max_chars=request.json_max_chars,
+        enable_semantic_html_segmentation=
+        request.enable_semantic_html_segmentation,
+        normalize_html_text=request.normalize_html_text,
     )
 
     if enriched_content and enriched_content.classification:

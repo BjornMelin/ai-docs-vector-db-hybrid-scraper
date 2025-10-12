@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from enum import Enum
 from typing import Any, Self
 
@@ -412,6 +413,18 @@ class FastEmbedConfig(BaseModel):
     cache_dir: str | None = Field(default=None, description="Model cache directory")
     max_length: int = Field(default=512, gt=0, description="Max token length")
     batch_size: int = Field(default=32, gt=0, description="Batch size for processing")
+
+    @model_validator(mode="before")
+    @classmethod
+    def alias_legacy_model(cls, data: Any) -> Any:
+        """Map legacy `model` values into the renamed dense model field."""
+
+        if isinstance(data, Mapping) and "dense_model" not in data:
+            legacy_model = data.get("model")
+            if legacy_model is not None:
+                data = dict(data)
+                data["dense_model"] = legacy_model
+        return data
 
     @property
     def model(self) -> str:
