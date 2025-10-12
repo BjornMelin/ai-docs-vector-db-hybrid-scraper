@@ -149,12 +149,6 @@ accessibility = [
     "lxml>=5.3.0,<6.1.0",
 ]
 
-# Browser automation (essential for web scraping)
-browser = [
-    "rebrowser-playwright>=1.47.0,<2.0.0",
-    "tf_playwright_stealth>=1.2.0,<2.0.0",
-]
-
 # LLM integrations (core AI functionality)
 llm = [
     "langchain-anthropic>=0.3.20,<1.0.0",
