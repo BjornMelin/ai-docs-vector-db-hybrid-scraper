@@ -12,6 +12,7 @@ import csv
 import json
 import logging
 import sys
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
@@ -21,6 +22,7 @@ import aiofiles  # type: ignore[import]
 import click  # type: ignore[import]
 import httpx  # type: ignore[import]
 from defusedxml import ElementTree  # type: ignore[import]
+from langchain_core.documents import Document
 from pydantic import BaseModel, Field  # type: ignore[import]
 from rich.console import Console  # type: ignore[import]
 from rich.progress import (  # type: ignore[import]
@@ -31,13 +33,13 @@ from rich.progress import (  # type: ignore[import]
 )
 from rich.table import Table  # type: ignore[import]
 
-from .chunking import DocumentChunker
 from .config.loader import Settings, get_settings
 from .infrastructure.bootstrap import container_session, ensure_container
 from .infrastructure.container import ApplicationContainer
 from .services.embeddings.manager import QualityTier
 from .services.errors import ServiceError
 from .services.logging_config import configure_logging
+from .services.processing.document_chunking import chunk_content as split_into_documents
 from .services.vector_db.service import VectorStoreService
 from .services.vector_db.types import CollectionSchema, VectorRecord
 
@@ -306,10 +308,17 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
     ) -> dict[str, Any]:
         """Execute the complete URL processing pipeline."""
         # Step 1: Scrape and extract content
-        scrape_result, content_to_chunk, _ = await self._scrape_and_extract(url)
+        scrape_result, content_to_chunk, metadata = await self._scrape_and_extract(url)
 
         # Step 2: Chunk the content
-        chunks = await self._chunk_content(content_to_chunk)
+        chunks = await self._chunk_content(
+            content_to_chunk,
+            metadata=metadata,
+            source_url=scrape_result.get("url", url),
+            title=scrape_result.get("title") or metadata.get("title")
+            if isinstance(metadata, Mapping)
+            else None,
+        )
 
         # Step 3: Generate embeddings
         dense_embeddings, sparse_embeddings = await self._generate_embeddings(chunks)
@@ -356,17 +365,31 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
 
         return scrape_result, content_to_chunk, metadata
 
-    async def _chunk_content(self, content_to_chunk: str) -> list[dict[str, Any]]:
-        """Chunk content using DocumentChunker."""
-        try:
-            chunker = DocumentChunker(self.config.chunking)
-        except Exception as e:
-            error_msg = f"Chunker initialization failed: {e}"
-            raise ChunkGenerationError(error_msg) from e
+    async def _chunk_content(
+        self,
+        content_to_chunk: str,
+        *,
+        metadata: Mapping[str, Any] | None = None,
+        source_url: str | None = None,
+        title: str | None = None,
+    ) -> list[Document]:
+        """Chunk content using LangChain text splitters."""
+
+        chunk_metadata: dict[str, Any] = {}
+        if metadata is not None:
+            chunk_metadata.update(dict(metadata))
+        if title:
+            chunk_metadata.setdefault("title", title)
+        if source_url:
+            chunk_metadata.setdefault("source", source_url)
 
         try:
-            chunks = chunker.chunk_content(content_to_chunk)
-        except Exception as e:
+            chunks = split_into_documents(
+                content_to_chunk,
+                config=self.config.chunking,
+                metadata=chunk_metadata,
+            )
+        except Exception as e:  # noqa: BLE001 - propagate contextual failure
             error_msg = f"Chunking failed: {e}"
             raise ChunkGenerationError(error_msg) from e
 
@@ -376,11 +399,11 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
         return chunks
 
     async def _generate_embeddings(
-        self, chunks: list[dict[str, Any]]
+        self, chunks: list[Document]
     ) -> tuple[list[Any], list[Any]]:
         """Generate embeddings for chunks."""
         try:
-            texts = [chunk["content"] for chunk in chunks]
+            texts = [chunk.page_content for chunk in chunks]
         except (KeyError, TypeError, AttributeError) as e:
             error_msg = f"Text extraction failed: {e}"
             raise RuntimeError(error_msg) from e
@@ -411,7 +434,7 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
         self,
         *,
         url: str,
-        chunks: list[dict[str, Any]],
+        chunks: list[Document],
         dense_embeddings: list[Any],
         sparse_embeddings: list[Any],
         scrape_result: dict[str, Any],
@@ -446,34 +469,42 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
         self,
         *,
         url: str,
-        chunks: list[dict[str, Any]],
+        chunks: list[Document],
         dense_embeddings: list[Any],
         sparse_embeddings: list[Any],
         scrape_result: dict[str, Any],
     ) -> list[VectorRecord]:
         """Prepare records for vector store ingestion."""
 
-        metadata = scrape_result.get("metadata", {})
+        base_metadata = scrape_result.get("metadata", {})
         records: list[VectorRecord] = []
+        total_chunks = len(chunks)
+        scraped_at = datetime.now(tz=UTC).isoformat()
         for i, (chunk, embedding) in enumerate(
             zip(chunks, dense_embeddings, strict=False)
         ):
             point_id = f"{urlparse(url).netloc}_{datetime.now(tz=UTC).timestamp()}_{i}"
 
-            payload = {
-                "url": url,
-                "title": metadata.get("title", ""),
-                "description": metadata.get("description", ""),
-                "content": chunk["content"],
-                "chunk_index": i,
-                "total_chunks": len(chunks),
-                "start_char": chunk.get("start_pos", 0),
-                "end_char": chunk.get("end_pos", 0),
-                "chunk_type": chunk.get("chunk_type", "text"),
-                "has_code": chunk.get("has_code", False),
-                "scraped_at": datetime.now(tz=UTC).isoformat(),
-                "provider": scrape_result.get("provider", "unknown"),
-            }
+            chunk_metadata = dict(base_metadata)
+            chunk_metadata.update(dict(chunk.metadata))
+            start_index = int(chunk_metadata.get("start_index", 0))
+            chunk_metadata.setdefault("url", url)
+            chunk_metadata.setdefault("title", base_metadata.get("title", ""))
+            chunk_metadata.setdefault(
+                "description", base_metadata.get("description", "")
+            )
+            chunk_metadata.setdefault("chunk_index", i)
+            chunk_metadata.setdefault("total_chunks", total_chunks)
+            chunk_metadata.setdefault("start_char", start_index)
+            chunk_metadata.setdefault("end_char", start_index + len(chunk.page_content))
+            chunk_metadata.setdefault("chunk_type", "text")
+            chunk_metadata.setdefault("has_code", False)
+            chunk_metadata.setdefault("scraped_at", scraped_at)
+            chunk_metadata.setdefault(
+                "provider", scrape_result.get("provider", "unknown")
+            )
+            chunk_metadata.setdefault("source", chunk_metadata.get("source", url))
+            chunk_metadata["content"] = chunk.page_content
 
             sparse_vector = None
             if sparse_embeddings and i < len(sparse_embeddings):
@@ -483,7 +514,7 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
                 VectorRecord(
                     id=point_id,
                     vector=list(embedding),
-                    payload=payload,
+                    payload=chunk_metadata,
                     sparse_vector=sparse_vector,
                 )
             )

@@ -30,6 +30,37 @@ class DocumentRequest(BaseModel):
     )
     chunk_size: int = Field(default=1600, ge=100, le=4000, description="Chunk size")
     chunk_overlap: int = Field(default=200, ge=0, le=500, description="Chunk overlap")
+    token_chunk_size: int = Field(
+        default=600,
+        ge=64,
+        le=4000,
+        description="Token chunk size for Tiktoken-based splitting",
+    )
+    token_chunk_overlap: int = Field(
+        default=120,
+        ge=0,
+        le=2000,
+        description="Token chunk overlap for Tiktoken-based splitting",
+    )
+    token_model: str = Field(
+        default="cl100k_base",
+        min_length=3,
+        description="Tiktoken encoding used for token-aware chunking",
+    )
+    json_max_chars: int = Field(
+        default=20000,
+        ge=1000,
+        le=100000,
+        description="Maximum character window for JSON-aware chunking",
+    )
+    enable_semantic_html_segmentation: bool = Field(
+        default=True,
+        description="Respect semantic HTML blocks during chunking",
+    )
+    normalize_html_text: bool = Field(
+        default=True,
+        description="Normalize HTML whitespace before chunking",
+    )
     extract_metadata: bool = Field(
         default=True, description="Extract document metadata"
     )
@@ -42,6 +73,39 @@ class BatchRequest(BaseModel):
     collection: str = Field(default="documentation", description="Target collection")
     chunk_strategy: ChunkingStrategy = Field(
         default=ChunkingStrategy.ENHANCED, description="Chunking strategy"
+    )
+    chunk_size: int = Field(default=1600, ge=100, le=4000, description="Chunk size")
+    chunk_overlap: int = Field(default=200, ge=0, le=500, description="Chunk overlap")
+    token_chunk_size: int = Field(
+        default=600,
+        ge=64,
+        le=4000,
+        description="Token chunk size for Tiktoken-based splitting",
+    )
+    token_chunk_overlap: int = Field(
+        default=120,
+        ge=0,
+        le=2000,
+        description="Token chunk overlap for Tiktoken-based splitting",
+    )
+    token_model: str = Field(
+        default="cl100k_base",
+        min_length=3,
+        description="Tiktoken encoding used for token-aware chunking",
+    )
+    json_max_chars: int = Field(
+        default=20000,
+        ge=1000,
+        le=100000,
+        description="Maximum character window for JSON-aware chunking",
+    )
+    enable_semantic_html_segmentation: bool = Field(
+        default=True,
+        description="Respect semantic HTML blocks during chunking",
+    )
+    normalize_html_text: bool = Field(
+        default=True,
+        description="Normalize HTML whitespace before chunking",
     )
     max_concurrent: int = Field(default=5, ge=1, le=20, description="Max concurrent")
 

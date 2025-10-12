@@ -14,7 +14,11 @@ class _ConfigStub:
     """Minimal configuration stub required by :class:`VectorStoreService`."""
 
     def __init__(self) -> None:
-        self.fastembed = SimpleNamespace(model="stub-model")
+        self.fastembed = SimpleNamespace(
+            dense_model="stub-model",
+            sparse_model="qdrant/bm25",
+            retrieval_mode="hybrid",
+        )
         self.qdrant = SimpleNamespace(enable_grouping=True)
         self.query_processing = SimpleNamespace(
             enable_score_normalization=False,

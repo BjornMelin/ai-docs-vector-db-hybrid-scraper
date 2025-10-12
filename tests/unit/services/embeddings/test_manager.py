@@ -20,7 +20,9 @@ def mock_config():
     config.openai.model = "text-embedding-3-small"
     config.openai.dimensions = 1536
     config.fastembed = MagicMock()
-    config.fastembed.model = "BAAI/bge-small-en-v1.5"
+    config.fastembed.dense_model = "BAAI/bge-small-en-v1.5"
+    config.fastembed.sparse_model = "qdrant/bm25"
+    config.fastembed.retrieval_mode = "hybrid"
     config.cache = MagicMock()
     config.cache.enable_caching = False
     config.embedding = MagicMock()

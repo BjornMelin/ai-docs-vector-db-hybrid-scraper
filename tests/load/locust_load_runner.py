@@ -204,7 +204,7 @@ class VectorDBDocumentBehavior(TaskSet):
                         ["beginner", "intermediate", "advanced"]
                     ),
                 },
-                "chunking_strategy": random.choice(["basic", "enhanced", "ast_based"]),  # noqa: S311
+                "chunking_strategy": random.choice(["basic", "enhanced"]),  # noqa: S311
                 "force_reprocess": random.choice([True, False]),  # noqa: S311
             },
             catch_response=True,

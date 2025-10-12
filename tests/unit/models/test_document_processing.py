@@ -3,14 +3,12 @@
 from datetime import UTC, datetime
 
 import pytest
+from langchain_core.documents import Document
 from pydantic import ValidationError
 
 from src.config import ChunkingConfig, ChunkingStrategy, DocumentStatus
 from src.models.document_processing import (
-    Chunk,
     ChunkType,
-    CodeBlock,
-    CodeLanguage,
     ContentFilter,
     DocumentBatch,
     DocumentMetadata,
@@ -18,23 +16,6 @@ from src.models.document_processing import (
     ScrapingStats,
     VectorMetrics,
 )
-
-
-class TestCodeLanguage:
-    """Test CodeLanguage enum."""
-
-    def test_language_values(self):
-        """Test enum values."""
-        assert CodeLanguage.PYTHON.value == "python"
-        assert CodeLanguage.JAVASCRIPT.value == "javascript"
-        assert CodeLanguage.TYPESCRIPT.value == "typescript"
-        assert CodeLanguage.MARKDOWN.value == "markdown"
-        assert CodeLanguage.UNKNOWN.value == "unknown"
-
-    def test_string_enum(self):
-        """Test that it's a string enum."""
-        assert isinstance(CodeLanguage.PYTHON, str)
-        assert CodeLanguage.PYTHON == "python"
 
 
 class TestChunkType:
@@ -49,92 +30,6 @@ class TestChunkType:
         assert ChunkType.METADATA.value == "metadata"
 
 
-class TestCodeBlock:
-    """Test CodeBlock dataclass."""
-
-    def test_required_fields(self):
-        """Test creating code block with required fields."""
-        block = CodeBlock(
-            language="python",
-            content="def hello(): pass",
-            start_pos=0,
-            end_pos=17,
-        )
-        assert block.language == "python"
-        assert block.content == "def hello(): pass"
-        assert block.start_pos == 0
-        assert block.end_pos == 17
-        assert block.fence_type == "```"  # default
-
-    def test_custom_fence_type(self):
-        """Test custom fence type."""
-        block = CodeBlock(
-            language="javascript",
-            content="console.log('test');",
-            start_pos=10,
-            end_pos=30,
-            fence_type="~~~",
-        )
-        assert block.fence_type == "~~~"
-
-
-class TestChunk:
-    """Test Chunk dataclass."""
-
-    def test_required_fields(self):
-        """Test creating chunk with required fields."""
-        chunk = Chunk(
-            content="Test content",
-            start_pos=0,
-            end_pos=12,
-            chunk_index=0,
-        )
-        assert chunk.content == "Test content"
-        assert chunk.start_pos == 0
-        assert chunk.end_pos == 12
-        assert chunk.chunk_index == 0
-
-    def test_default_values(self):
-        """Test default field values."""
-        chunk = Chunk(
-            content="Test",
-            start_pos=0,
-            end_pos=4,
-            chunk_index=0,
-        )
-        assert chunk._total_chunks == 0
-        assert chunk.char_count == 0
-        assert chunk.token_estimate == 0
-        assert chunk.chunk_type == "text"
-        assert chunk.language is None
-        assert chunk.has_code is False
-        assert chunk.metadata is None
-
-    def test_all_fields(self):
-        """Test creating chunk with all fields."""
-        metadata = {"function_name": "test_func", "class_name": "TestClass"}
-        chunk = Chunk(
-            content="def test_func(): pass",
-            start_pos=100,
-            end_pos=121,
-            chunk_index=2,
-            _total_chunks=5,
-            char_count=21,
-            token_estimate=5,
-            chunk_type="code",
-            language="python",
-            has_code=True,
-            metadata=metadata,
-        )
-        assert chunk._total_chunks == 5
-        assert chunk.char_count == 21
-        assert chunk.token_estimate == 5
-        assert chunk.chunk_type == "code"
-        assert chunk.language == "python"
-        assert chunk.has_code is True
-        assert chunk.metadata == metadata
-
-
 class TestDocumentMetadata:
     """Test DocumentMetadata model."""
 
@@ -145,7 +40,7 @@ class TestDocumentMetadata:
 
         # Missing required field
         with pytest.raises(ValidationError):
-            DocumentMetadata()
+            DocumentMetadata()  # type: ignore[call-arg]
 
     def test_default_values(self):
         """Test default field values."""
@@ -166,7 +61,7 @@ class TestDocumentMetadata:
         assert metadata.has_code is False
         assert metadata.estimated_reading_time == 0
         assert metadata.chunking_strategy == ChunkingStrategy.ENHANCED
-        assert metadata._total_chunks == 0
+        assert metadata.total_chunks == 0
         assert metadata.processing_time_ms == 0.0
 
     def test_custom_values(self):
@@ -187,8 +82,8 @@ class TestDocumentMetadata:
             char_count=3000,
             has_code=True,
             estimated_reading_time=3,
-            chunking_strategy=ChunkingStrategy.AST,
-            _total_chunks=10,
+            chunking_strategy=ChunkingStrategy.BASIC,
+            total_chunks=10,
             processing_time_ms=150.5,
         )
         assert metadata.title == "Python Tutorial"
@@ -203,14 +98,14 @@ class TestDocumentMetadata:
         assert metadata.char_count == 3000
         assert metadata.has_code is True
         assert metadata.estimated_reading_time == 3
-        assert metadata.chunking_strategy == ChunkingStrategy.AST
-        assert metadata._total_chunks == 10
+        assert metadata.chunking_strategy == ChunkingStrategy.BASIC
+        assert metadata.total_chunks == 10
         assert metadata.processing_time_ms == 150.5
 
     def test_forbids_extra_fields(self):
         """Test that extra fields are forbidden."""
         with pytest.raises(ValidationError):
-            DocumentMetadata(url="https://example.com", extra_field="not allowed")
+            DocumentMetadata(url="https://example.com", extra_field="not allowed")  # type: ignore[call-arg]
 
 
 class TestProcessedDocument:
@@ -246,8 +141,8 @@ class TestProcessedDocument:
         """Test document with chunks and vectors."""
         metadata = DocumentMetadata(url="https://example.com")
         chunks = [
-            {"content": "Chunk 1", "index": 0},
-            {"content": "Chunk 2", "index": 1},
+            Document(page_content="Chunk 1", metadata={"index": 0}),
+            Document(page_content="Chunk 2", metadata={"index": 1}),
         ]
         dense_vector = [0.1, 0.2, 0.3, 0.4]
         sparse_vector = {"indices": [0, 5, 10], "values": [0.5, 0.8, 0.2]}
@@ -262,6 +157,7 @@ class TestProcessedDocument:
             sparse_vector=sparse_vector,
         )
         assert len(doc.chunks) == 2
+        assert all(isinstance(chunk, Document) for chunk in doc.chunks)
         assert doc.status == DocumentStatus.COMPLETED
         assert doc.dense_vector == dense_vector
         assert doc.sparse_vector == sparse_vector
@@ -289,29 +185,17 @@ class TestChunkingConfig:
         assert config.chunk_size == 1600
         assert config.chunk_overlap == 320
         assert config.strategy == ChunkingStrategy.ENHANCED
-        assert config.enable_ast_chunking is True
-        assert config.preserve_function_boundaries is True
-        assert config.preserve_code_blocks is True
-        assert config.max_function_chunk_size == 3200
-        assert config.supported_languages == [
-            "python",
-            "javascript",
-            "typescript",
-            "markdown",
-        ]
-        assert config.fallback_to_text_chunking is True
-        assert config.detect_language is True
-        assert config.include_function_context is True
-        assert config.min_chunk_size == 100
-        assert config.max_chunk_size == 3000
+        assert config.token_chunk_size == 600
+        assert config.token_chunk_overlap == 120
+        assert config.token_model == "cl100k_base"  # noqa: S105 - public encoding key
+        assert config.json_max_chars == 20000
+        assert config.enable_semantic_html_segmentation is True
+        assert config.normalize_html_text is True
 
     def test_chunk_size_constraints(self):
         """Test chunk_size constraints."""
-        # Valid sizes (must be > chunk_overlap and <= max_chunk_size)
+        # Valid sizes (must be > chunk_overlap)
         ChunkingConfig(chunk_size=500, chunk_overlap=100)
-        ChunkingConfig(
-            chunk_size=2000, max_chunk_size=5000, max_function_chunk_size=5000
-        )
 
         # Invalid size
         with pytest.raises(ValidationError):
@@ -319,56 +203,17 @@ class TestChunkingConfig:
         with pytest.raises(ValidationError):
             ChunkingConfig(chunk_size=-1)
 
-        # chunk_size must be > chunk_overlap
-        with pytest.raises(ValidationError):
-            ChunkingConfig(chunk_size=100, chunk_overlap=200)
-
-        # chunk_size cannot exceed max_chunk_size
-        with pytest.raises(ValidationError):
-            ChunkingConfig(chunk_size=5000, max_chunk_size=3000)
-
     def test_chunk_overlap_constraints(self):
         """Test chunk_overlap constraints."""
         # Valid overlaps
-        ChunkingConfig(chunk_overlap=0)
-        ChunkingConfig(chunk_overlap=500)
+        ChunkingConfig(chunk_size=500, chunk_overlap=0)
+        ChunkingConfig(chunk_size=800, chunk_overlap=100)
 
         # Invalid overlap
         with pytest.raises(ValidationError):
-            ChunkingConfig(chunk_overlap=-1)
-
-    def test_max_function_chunk_size_constraints(self):
-        """Test max_function_chunk_size constraints."""
-        # Valid sizes (must be >= max_chunk_size which defaults to 3000)
-        ChunkingConfig(max_function_chunk_size=3000)
-        ChunkingConfig(max_function_chunk_size=10000)
-
-        # Invalid size
+            ChunkingConfig(chunk_size=100, chunk_overlap=100)
         with pytest.raises(ValidationError):
-            ChunkingConfig(max_function_chunk_size=0)
-
-        # max_function_chunk_size must be >= max_chunk_size
-        with pytest.raises(ValidationError):
-            ChunkingConfig(max_function_chunk_size=1000, max_chunk_size=2000)
-
-    def test_min_max_chunk_size_constraints(self):
-        """Test min_chunk_size and max_chunk_size constraints."""
-        # Valid sizes (max_function_chunk_size must be >= max_chunk_size)
-        ChunkingConfig(
-            min_chunk_size=1, max_chunk_size=5000, max_function_chunk_size=5000
-        )
-
-        # Invalid min size
-        with pytest.raises(ValidationError):
-            ChunkingConfig(min_chunk_size=0)
-
-        # Invalid max size
-        with pytest.raises(ValidationError):
-            ChunkingConfig(max_chunk_size=0)
-
-        # min_chunk_size must be < max_chunk_size
-        with pytest.raises(ValidationError):
-            ChunkingConfig(min_chunk_size=2000, max_chunk_size=1000)
+            ChunkingConfig(chunk_size=100, chunk_overlap=150)
 
     def test_custom_configuration(self):
         """Test custom configuration values."""
@@ -376,24 +221,22 @@ class TestChunkingConfig:
             chunk_size=2000,
             chunk_overlap=400,
             strategy=ChunkingStrategy.BASIC,
-            enable_ast_chunking=False,
-            preserve_function_boundaries=False,
-            preserve_code_blocks=False,
-            max_function_chunk_size=5000,
-            supported_languages=["python", "rust"],
-            fallback_to_text_chunking=False,
-            detect_language=False,
-            include_function_context=False,
-            min_chunk_size=50,
-            max_chunk_size=4000,
+            token_chunk_size=800,
+            token_chunk_overlap=200,
+            token_model="o200k_base",  # noqa: S106 - test data for encoding key
+            json_max_chars=4000,
+            enable_semantic_html_segmentation=False,
+            normalize_html_text=False,
         )
         assert config.chunk_size == 2000
         assert config.chunk_overlap == 400
         assert config.strategy == ChunkingStrategy.BASIC
-        assert config.enable_ast_chunking is False
-        assert config.supported_languages == ["python", "rust"]
-        assert config.min_chunk_size == 50
-        assert config.max_chunk_size == 4000
+        assert config.token_chunk_size == 800
+        assert config.token_chunk_overlap == 200
+        assert config.token_model == "o200k_base"  # noqa: S105 - public encoding key
+        assert config.json_max_chars == 4000
+        assert config.enable_semantic_html_segmentation is False
+        assert config.normalize_html_text is False
 
 
 class TestVectorMetrics:
@@ -402,8 +245,8 @@ class TestVectorMetrics:
     def test_default_values(self):
         """Test default field values."""
         metrics = VectorMetrics()
-        assert metrics._total_documents == 0
-        assert metrics._total_chunks == 0
+        assert metrics.total_documents == 0
+        assert metrics.total_chunks == 0
         assert metrics.successful_embeddings == 0
         assert metrics.failed_embeddings == 0
         assert metrics.processing_time == 0.0
@@ -413,16 +256,16 @@ class TestVectorMetrics:
     def test_custom_values(self):
         """Test custom metric values."""
         metrics = VectorMetrics(
-            _total_documents=100,
-            _total_chunks=500,
+            total_documents=100,
+            total_chunks=500,
             successful_embeddings=480,
             failed_embeddings=20,
             processing_time=300.5,
             tokens_processed=150000,
             avg_chunk_size=300.0,
         )
-        assert metrics._total_documents == 100
-        assert metrics._total_chunks == 500
+        assert metrics.total_documents == 100
+        assert metrics.total_chunks == 500
         assert metrics.successful_embeddings == 480
         assert metrics.failed_embeddings == 20
         assert metrics.processing_time == 300.5
@@ -436,16 +279,16 @@ class TestScrapingStats:
     def test_default_values(self):
         """Test default field values."""
         stats = ScrapingStats()
-        assert stats._total_processed == 0
+        assert stats.total_processed == 0
         assert stats.successful_embeddings == 0
         assert stats.failed_crawls == 0
-        assert stats._total_chunks == 0
+        assert stats.total_chunks == 0
         assert stats.unique_urls == 0
         assert stats.start_time is None
         assert stats.end_time is None
         assert stats.avg_processing_time == 0.0
         assert stats.docs_per_minute == 0.0
-        assert stats._total_size_mb == 0.0
+        assert stats.total_size_mb == 0.0
 
     def test_with_timing_data(self):
         """Test stats with timing data."""
@@ -453,27 +296,27 @@ class TestScrapingStats:
         end_time = datetime.now(tz=UTC)
 
         stats = ScrapingStats(
-            _total_processed=50,
+            total_processed=50,
             successful_embeddings=45,
             failed_crawls=5,
-            _total_chunks=250,
+            total_chunks=250,
             unique_urls=48,
             start_time=start_time,
             end_time=end_time,
             avg_processing_time=2.5,
             docs_per_minute=10.0,
-            _total_size_mb=125.5,
+            total_size_mb=125.5,
         )
-        assert stats._total_processed == 50
+        assert stats.total_processed == 50
         assert stats.successful_embeddings == 45
         assert stats.failed_crawls == 5
-        assert stats._total_chunks == 250
+        assert stats.total_chunks == 250
         assert stats.unique_urls == 48
         assert stats.start_time == start_time
         assert stats.end_time == end_time
         assert stats.avg_processing_time == 2.5
         assert stats.docs_per_minute == 10.0
-        assert stats._total_size_mb == 125.5
+        assert stats.total_size_mb == 125.5
 
 
 class TestContentFilter:
@@ -547,7 +390,7 @@ class TestDocumentBatch:
         assert batch.status == "pending"
         assert batch.successful_count == 0
         assert batch.failed_count == 0
-        assert batch._total_chunks == 0
+        assert batch.total_chunks == 0
         assert batch.processing_time_ms == 0.0
 
     def test_with_documents(self):
@@ -573,7 +416,7 @@ class TestDocumentBatch:
             status="completed",
             successful_count=2,
             failed_count=0,
-            _total_chunks=10,
+            total_chunks=10,
             processing_time_ms=500.0,
         )
         assert len(batch.documents) == 2
@@ -581,7 +424,7 @@ class TestDocumentBatch:
         assert batch.status == "completed"
         assert batch.successful_count == 2
         assert batch.failed_count == 0
-        assert batch._total_chunks == 10
+        assert batch.total_chunks == 10
         assert batch.processing_time_ms == 500.0
 
     def test_partial_success_batch(self):
@@ -592,7 +435,7 @@ class TestDocumentBatch:
             status="partial_success",
             successful_count=7,
             failed_count=3,
-            _total_chunks=35,
+            total_chunks=35,
             processing_time_ms=1500.0,
         )
         assert batch.successful_count == 7

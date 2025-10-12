@@ -45,7 +45,12 @@
     "strategy": "enhanced",
     "chunk_size": 1600,
     "chunk_overlap": 200,
-    "preserve_function_boundaries": true
+    "token_chunk_size": 600,
+    "token_chunk_overlap": 120,
+    "token_model": "cl100k_base",
+    "json_max_chars": 20000,
+    "enable_semantic_html_segmentation": true,
+    "normalize_html_text": true
   },
   "performance": {
     "max_concurrent_requests": 20,

@@ -72,7 +72,8 @@
   "embedding": {
     "provider": "fastembed",
     "dense_model": "BAAI/bge-small-en-v1.5",
-    "search_strategy": "dense",
+    "sparse_model": "qdrant/bm25",
+    "retrieval_mode": "hybrid",
     "enable_quantization": true,
     "enable_reranking": false,
     "rerank_top_k": 10
@@ -82,7 +83,11 @@
     "chunk_size": 1200,
     "chunk_overlap": 200,
     "strategy": "enhanced",
-    "enable_ast_chunking": true,
-    "max_chunk_size": 2000
+    "token_chunk_size": 600,
+    "token_chunk_overlap": 120,
+    "token_model": "cl100k_base",
+    "json_max_chars": 20000,
+    "enable_semantic_html_segmentation": true,
+    "normalize_html_text": true
   }
 }

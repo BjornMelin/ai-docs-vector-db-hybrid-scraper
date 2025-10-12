@@ -30,7 +30,9 @@ class TestEmbeddingManagerBenchmarks:
 
         # Mock fastembed config
         mock_fastembed = MagicMock()
-        mock_fastembed.model = "BAAI/bge-small-en-v1.5"
+        mock_fastembed.dense_model = "BAAI/bge-small-en-v1.5"
+        mock_fastembed.sparse_model = "qdrant/bm25"
+        mock_fastembed.retrieval_mode = "hybrid"
         config.fastembed = mock_fastembed
 
         # Mock embedding config

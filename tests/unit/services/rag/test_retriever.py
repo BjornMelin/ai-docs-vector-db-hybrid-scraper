@@ -128,7 +128,13 @@ async def test_compression_pipeline_filters_documents(monkeypatch) -> None:
     )
 
     vector_store = _make_vector_store_mock()
-    vector_store.config = SimpleNamespace(fastembed=SimpleNamespace(model="stub-model"))
+    vector_store.config = SimpleNamespace(
+        fastembed=SimpleNamespace(
+            dense_model="stub-model",
+            sparse_model="qdrant/bm25",
+            retrieval_mode="hybrid",
+        )
+    )
     vector_store.search_documents.return_value = [match_keep, match_drop]
 
     rag_config = RAGConfig(

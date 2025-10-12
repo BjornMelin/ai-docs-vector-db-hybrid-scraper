@@ -163,8 +163,8 @@ def test_config_feature_flags_and_helpers(tmp_path: Path) -> None:
             "enable_deployment_features": False,
             "enable_ab_testing": True,
             "observability": {"enabled": True},
-            "chunking": {"strategy": ChunkingStrategy.AST_AWARE},
-            "embedding": {"search_strategy": SearchStrategy.HYBRID},
+            "chunking": {"strategy": ChunkingStrategy.ENHANCED},
+            "embedding": {"retrieval_mode": SearchStrategy.HYBRID},
             "data_dir": overrides["data_dir"],
             "cache_dir": overrides["cache_dir"],
             "logs_dir": overrides["logs_dir"],
@@ -179,7 +179,7 @@ def test_config_feature_flags_and_helpers(tmp_path: Path) -> None:
         "a_b_testing": True,
         "comprehensive_observability": True,
     }
-    assert config.get_effective_chunking_strategy() is ChunkingStrategy.AST_AWARE
+    assert config.get_effective_chunking_strategy() is ChunkingStrategy.ENHANCED
     assert config.get_effective_search_strategy() is SearchStrategy.HYBRID
 
 

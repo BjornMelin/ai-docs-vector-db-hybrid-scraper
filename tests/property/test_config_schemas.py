@@ -279,22 +279,14 @@ class TestChunkingConfigProperties:
 
         # Verify constraint relationships
         assert chunk_data["chunk_overlap"] < chunk_data["chunk_size"]
-        assert chunk_data["min_chunk_size"] <= chunk_data["chunk_size"]
-        assert chunk_data["max_chunk_size"] >= chunk_data["chunk_size"]
-        assert chunk_data["max_function_chunk_size"] >= chunk_data["chunk_size"]
+        assert chunk_data["token_chunk_overlap"] < chunk_data["token_chunk_size"]
+        assert chunk_data["json_max_chars"] >= chunk_data["chunk_size"]
 
         # Verify positive values
         assert chunk_data["chunk_size"] > 0
         assert chunk_data["chunk_overlap"] >= 0
-        assert chunk_data["min_chunk_size"] > 0
-        assert chunk_data["max_chunk_size"] > 0
-
-        # Verify supported languages
-        languages = chunk_data["supported_languages"]
-        assert len(languages) > 0
-        for lang in languages:
-            assert isinstance(lang, str)
-            assert len(lang) > 0
+        assert chunk_data["token_chunk_size"] > 0
+        assert chunk_data["token_chunk_overlap"] >= 0
 
     @given(invalid_chunk_configurations())
     def test_chunking_config_constraint_violations(
@@ -307,11 +299,10 @@ class TestChunkingConfigProperties:
     @given(st.integers(min_value=100, max_value=3000))
     def test_chunking_overlap_constraint(self, chunk_size: int):
         """Test chunk overlap constraint is enforced."""
-        # Valid: overlap < chunk_size, ensuring max_chunk_size constraint is met
+        # Valid: overlap < chunk_size
         config = ChunkingConfig(
             chunk_size=chunk_size,
             chunk_overlap=chunk_size - 1,
-            max_chunk_size=max(chunk_size, 3000),  # Ensure max_chunk_size >= chunk_size
         )
         assert config.chunk_overlap < config.chunk_size
 
@@ -322,33 +313,39 @@ class TestChunkingConfigProperties:
             ChunkingConfig(
                 chunk_size=chunk_size,
                 chunk_overlap=chunk_size,
-                max_chunk_size=max(chunk_size, 3000),
             )
 
-    @given(
-        st.lists(
-            st.sampled_from(
-                [
-                    "python",
-                    "javascript",
-                    "typescript",
-                    "markdown",
-                    "java",
-                    "go",
-                    "rust",
-                    "c++",
-                    "swift",
-                ]
-            ),
-            min_size=1,
-            max_size=15,
-            unique=True,
+    @given(st.integers(min_value=64, max_value=4000))
+    def test_token_overlap_constraint(self, token_chunk_size: int):
+        """Token overlap must remain smaller than the token chunk size."""
+
+        config = ChunkingConfig(
+            token_chunk_size=token_chunk_size,
+            token_chunk_overlap=token_chunk_size - 1,
         )
-    )
-    def test_supported_languages_property(self, languages: list[str]):
-        """Test that any valid list of languages is accepted."""
-        config = ChunkingConfig(supported_languages=languages)
-        assert config.supported_languages == languages
+        assert config.token_chunk_overlap < config.token_chunk_size
+
+        with pytest.raises(
+            ValidationError,
+            match="token_chunk_overlap must be less than token_chunk_size",
+        ):
+            ChunkingConfig(
+                token_chunk_size=token_chunk_size,
+                token_chunk_overlap=token_chunk_size,
+            )
+
+    @given(st.integers(min_value=100, max_value=5000))
+    def test_json_window_constraint(self, chunk_size: int):
+        """JSON window must not fall below the primary chunk size."""
+
+        config = ChunkingConfig(chunk_size=chunk_size, json_max_chars=chunk_size + 100)
+        assert config.json_max_chars >= config.chunk_size
+
+        with pytest.raises(
+            ValidationError,
+            match="json_max_chars must be >= chunk_size",
+        ):
+            ChunkingConfig(chunk_size=chunk_size, json_max_chars=chunk_size - 1)
 
 
 class TestCircuitBreakerConfigProperties:
@@ -707,8 +704,7 @@ class TestConfigPropertyInvariants:
 
         chunk_data = settings_data["chunking"]
         assert chunk_data["chunk_size"] > 0
-        assert chunk_data["min_chunk_size"] > 0
-        assert chunk_data["max_chunk_size"] > 0
+        assert chunk_data["chunk_overlap"] >= 0
 
     @given(complete_configurations())
     def test_config_invariant_chunk_relationships(self, config_data: dict[str, Any]):
@@ -726,8 +722,6 @@ class TestConfigPropertyInvariants:
 
         # Chunk size relationships
         assert chunk_data["chunk_overlap"] < chunk_data["chunk_size"]
-        assert chunk_data["min_chunk_size"] <= chunk_data["chunk_size"]
-        assert chunk_data["max_chunk_size"] >= chunk_data["chunk_size"]
 
     @given(complete_configurations())
     def test_config_invariant_url_formats(self, config_data: dict[str, Any]):
@@ -807,8 +801,6 @@ class TestConfigMutationTesting:
             "chunking": {
                 "chunk_size": 1600,
                 "chunk_overlap": 320,
-                "min_chunk_size": 100,
-                "max_chunk_size": 3000,
             },
         }
 

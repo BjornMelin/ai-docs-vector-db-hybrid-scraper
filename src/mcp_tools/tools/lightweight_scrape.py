@@ -124,7 +124,7 @@ async def _handle_scrape_failure(
     error_value = result.get("error", "Unknown error")
     error_msg = str(error_value)
     failed_tiers_value = result.get("failed_tiers")
-    if isinstance(failed_tiers_value, (list, tuple, set)):
+    if isinstance(failed_tiers_value, list | tuple | set):
         failed_tiers = list(failed_tiers_value)
     elif failed_tiers_value is not None:
         failed_tiers = [str(failed_tiers_value)]

@@ -17,10 +17,15 @@ from langchain_qdrant import QdrantVectorStore, RetrievalMode
 from qdrant_client import AsyncQdrantClient, QdrantClient, models
 
 from src.config.loader import Settings
-from src.config.models import QueryProcessingConfig, ScoreNormalizationStrategy
+from src.config.models import (
+    EmbeddingProvider as EmbeddingProviderEnum,
+    QueryProcessingConfig,
+    ScoreNormalizationStrategy,
+    SearchStrategy,
+)
 from src.contracts.retrieval import SearchRecord
 from src.services.base import BaseService
-from src.services.embeddings.base import EmbeddingProvider
+from src.services.embeddings.base import EmbeddingProvider as BaseEmbeddingProvider
 from src.services.embeddings.fastembed_provider import FastEmbedProvider
 from src.services.errors import EmbeddingServiceError
 from src.services.observability.tracing import set_span_attributes
@@ -36,6 +41,13 @@ from .types import CollectionSchema, TextDocument, VectorRecord
 logger = logging.getLogger(__name__)
 
 
+_RETRIEVAL_MODE_MAP: dict[SearchStrategy, RetrievalMode] = {
+    SearchStrategy.DENSE: RetrievalMode.DENSE,
+    SearchStrategy.SPARSE: RetrievalMode.SPARSE,
+    SearchStrategy.HYBRID: RetrievalMode.HYBRID,
+}
+
+
 class VectorStoreService(BaseService):  # pylint: disable=too-many-public-methods
     """High-level vector store wrapper using LangChain's QdrantVectorStore."""
 
@@ -44,22 +56,30 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         *,
         config: Settings,
         async_qdrant_client: AsyncQdrantClient,
-        embeddings_provider: EmbeddingProvider | None = None,
+        embeddings_provider: BaseEmbeddingProvider | None = None,
     ) -> None:
         """Initialize the VectorStoreService."""
 
         super().__init__(config)
         self.collection_name: str | None = None
-        self._embeddings = (
-            embeddings_provider
-            if embeddings_provider is not None
-            else FastEmbedProvider(
-                model_name=getattr(config.fastembed, "model", "BAAI/bge-small-en-v1.5")
+        fastembed_cfg = getattr(config, "fastembed", None)
+        if embeddings_provider is not None:
+            self._embeddings = embeddings_provider
+        else:
+            dense_model = getattr(
+                fastembed_cfg,
+                "dense_model",
+                getattr(fastembed_cfg, "model", "BAAI/bge-small-en-v1.5"),
             )
-        )
+            sparse_model = getattr(fastembed_cfg, "sparse_model", None)
+            self._embeddings = FastEmbedProvider(
+                model_name=dense_model,
+                sparse_model=sparse_model,
+            )
         self._async_client: AsyncQdrantClient | None = async_qdrant_client
         self._sync_client: QdrantClient | None = None
         self._vector_store: QdrantVectorStore | None = None
+        self._retrieval_mode: SearchStrategy = self._resolve_retrieval_mode()
 
     async def initialize(self) -> None:
         """Initialize Qdrant clients and embeddings."""
@@ -70,12 +90,29 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         await self._embeddings.initialize()
         cfg = self._require_qdrant_config()
         adapter = self._require_embedding_adapter()
+        retrieval_mode = _RETRIEVAL_MODE_MAP.get(
+            self._retrieval_mode, RetrievalMode.DENSE
+        )
+        sparse_embedding = None
+        if self._retrieval_mode in {SearchStrategy.SPARSE, SearchStrategy.HYBRID}:
+            sparse_model = self._determine_sparse_model()
+            if sparse_model:
+                try:
+                    from langchain_qdrant import FastEmbedSparse
+                except ModuleNotFoundError as exc:  # pragma: no cover - import guard
+                    msg = (
+                        "langchain-qdrant extras are required for sparse retrieval; "
+                        "install with `uv add langchain-qdrant[fastembed]`"
+                    )
+                    raise EmbeddingServiceError(msg) from exc
+                sparse_embedding = FastEmbedSparse(model_name=sparse_model)
         self._sync_client = self._build_sync_client(cfg)
         self._vector_store = QdrantVectorStore(
             client=self._sync_client,
             collection_name=cfg.collection_name,
             embedding=adapter,
-            retrieval_mode=RetrievalMode.DENSE,
+            retrieval_mode=retrieval_mode,
+            sparse_embedding=sparse_embedding,
         )
         self._mark_initialized()
         logger.info("VectorStoreService initialized via LangChain QdrantVectorStore")
@@ -593,6 +630,31 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
             msg = "Embedding provider does not expose LangChain embeddings"
             raise EmbeddingServiceError(msg)
         return adapter
+
+    def _resolve_retrieval_mode(self) -> SearchStrategy:
+        """Determine the retrieval mode based on settings and provider."""
+
+        embedding_cfg = getattr(self.config, "embedding", None)
+        fastembed_cfg = getattr(self.config, "fastembed", None)
+        default_mode = getattr(embedding_cfg, "retrieval_mode", SearchStrategy.DENSE)
+        provider = getattr(
+            self.config, "embedding_provider", EmbeddingProviderEnum.FASTEMBED
+        )
+        if provider is EmbeddingProviderEnum.FASTEMBED:
+            return getattr(fastembed_cfg, "retrieval_mode", default_mode)
+        return default_mode
+
+    def _determine_sparse_model(self) -> str | None:
+        """Select the sparse model when hybrid or sparse retrieval is requested."""
+
+        provider = getattr(
+            self.config, "embedding_provider", EmbeddingProviderEnum.FASTEMBED
+        )
+        if provider is EmbeddingProviderEnum.FASTEMBED:
+            return getattr(
+                getattr(self.config, "fastembed", None), "sparse_model", None
+            )
+        return getattr(getattr(self.config, "embedding", None), "sparse_model", None)
 
     async def _query_with_optional_grouping(
         self,
