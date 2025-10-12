@@ -237,47 +237,25 @@ class TestValidateChunkSizes:
 
     def test_valid_sizes(self):
         """Test valid chunk size configurations."""
-        # Valid configuration
-        validate_chunk_sizes(
-            chunk_size=1000,
-            chunk_overlap=200,
-            min_chunk_size=100,
-            max_chunk_size=2000,
-        )
-        # No exception should be raised
+        validate_chunk_sizes(chunk_size=1000, chunk_overlap=200)
 
     def test_overlap_too_large(self):
         """Test that overlap >= chunk_size is rejected."""
         with pytest.raises(ValueError) as exc_info:
-            validate_chunk_sizes(
-                chunk_size=1000,
-                chunk_overlap=1000,  # Equal to chunk_size
-                min_chunk_size=100,
-                max_chunk_size=2000,
-            )
+            validate_chunk_sizes(chunk_size=1000, chunk_overlap=1000)
         assert "chunk_overlap must be less than chunk_size" in str(exc_info.value)
 
-    def test_min_greater_than_max(self):
-        """Test that min >= max is rejected."""
+    def test_negative_chunk_size(self):
+        """Test that non-positive chunk_size is rejected."""
         with pytest.raises(ValueError) as exc_info:
-            validate_chunk_sizes(
-                chunk_size=1000,
-                chunk_overlap=200,
-                min_chunk_size=2000,  # Greater than max
-                max_chunk_size=1500,
-            )
-        assert "min_chunk_size must be less than max_chunk_size" in str(exc_info.value)
+            validate_chunk_sizes(chunk_size=0, chunk_overlap=200)
+        assert "chunk_size must be positive" in str(exc_info.value)
 
-    def test_chunk_size_exceeds_max(self):
-        """Test that chunk_size > max_chunk_size is rejected."""
+    def test_negative_overlap(self):
+        """Test that negative chunk_overlap is rejected."""
         with pytest.raises(ValueError) as exc_info:
-            validate_chunk_sizes(
-                chunk_size=2000,
-                chunk_overlap=200,
-                min_chunk_size=100,
-                max_chunk_size=1500,  # Less than chunk_size
-            )
-        assert "chunk_size cannot exceed max_chunk_size" in str(exc_info.value)
+            validate_chunk_sizes(chunk_size=200, chunk_overlap=-1)
+        assert "chunk_overlap must be non-negative" in str(exc_info.value)
 
 
 class TestValidateScoringWeights:

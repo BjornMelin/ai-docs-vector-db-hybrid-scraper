@@ -4,62 +4,12 @@ This module contains all models related to document processing, chunking,
 and content representation in the vector database system.
 """
 
-from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.config import ChunkingStrategy, DocumentStatus
-
-
-class CodeLanguage(str, Enum):
-    """Supported programming languages for AST parsing."""
-
-    PYTHON = "python"
-    JAVASCRIPT = "javascript"
-    TYPESCRIPT = "typescript"
-    MARKDOWN = "markdown"
-    UNKNOWN = "unknown"
-
-
-class ChunkType(str, Enum):
-    """Types of content chunks."""
-
-    TEXT = "text"
-    CODE = "code"
-    MIXED = "mixed"
-    HEADER = "header"
-    METADATA = "metadata"
-
-
-@dataclass
-class CodeBlock:
-    """Represents a code block found in content."""
-
-    language: str
-    content: str
-    start_pos: int
-    end_pos: int
-    fence_type: str = "```"  # Could be ``` or ~~~
-
-
-@dataclass
-class Chunk:
-    """Enhanced chunk with metadata for document processing."""
-
-    content: str
-    start_pos: int
-    end_pos: int
-    chunk_index: int
-    total_chunks: int = 0  # Updated after all chunks created
-    char_count: int = 0
-    token_estimate: int = 0  # Rough estimate: chars / 4
-    chunk_type: str = "text"  # text, code, mixed
-    language: str | None = None
-    has_code: bool = False
-    metadata: dict[str, Any] | None = None
 
 
 class DocumentMetadata(BaseModel):
@@ -223,10 +173,6 @@ class DocumentBatch(BaseModel):
 
 # Export all models
 __all__ = [
-    "Chunk",
-    "ChunkType",
-    "CodeBlock",
-    "CodeLanguage",
     "ContentFilter",
     "DocumentBatch",
     "DocumentMetadata",
