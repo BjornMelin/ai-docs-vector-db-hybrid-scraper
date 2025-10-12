@@ -1,70 +1,84 @@
-"""Contract tests for the unified service lifecycle."""
+"""Lifecycle tests for service abstractions and browser router."""
 
 from __future__ import annotations
 
+from typing import cast
+
 import pytest
 
-from src.architecture.service_factory import BaseService as FactoryBaseService
-from src.config.models import Crawl4AIConfig
+from src.config.browser import RateLimitConfig, RouterSettings
 from src.services.base import BaseService
-from src.services.browser.crawl4ai_adapter import Crawl4AIAdapter
-from src.services.lifecycle import ServiceLifecycle
+from src.services.browser.models import BrowserResult, ProviderKind, ScrapeRequest
+from src.services.browser.providers import (
+    BrowserUseProvider,
+    Crawl4AIProvider,
+    FirecrawlProvider,
+    LightweightProvider,
+    PlaywrightProvider,
+)
+from src.services.browser.providers.base import BrowserProvider, ProviderContext
+from src.services.browser.router import BrowserRouter
 
 
 class DummyService(BaseService):
-    """Minimal BaseService implementation for lifecycle validation."""
+    """Minimal concrete implementation used for lifecycle assertions."""
 
     def __init__(self) -> None:
+        """Initialize dummy counters."""
+
         super().__init__(config=None)
         self.init_calls = 0
         self.cleanup_calls = 0
 
     async def initialize(self) -> None:
+        """Simulate resource initialization and mark service ready."""
+
         self.init_calls += 1
         self._mark_initialized()
 
     async def cleanup(self) -> None:
+        """Simulate resource cleanup and mark service uninitialized."""
+
         self.cleanup_calls += 1
         self._mark_uninitialized()
 
-    async def health_check(self):  # type: ignore[override]
-        return {"ok": True}
 
+class DummyProvider(BrowserProvider):
+    """No-op provider used to exercise router lifecycle behaviour."""
 
-class DummyFactoryService(FactoryBaseService):
-    """Minimal factory BaseService implementation."""
+    kind = ProviderKind.LIGHTWEIGHT
 
     def __init__(self) -> None:
-        super().__init__()
-        self.init_calls = 0
-        self.cleanup_calls = 0
+        super().__init__(ProviderContext(self.kind))
+        self._initialized = False
 
     async def initialize(self) -> None:
-        self.init_calls += 1
-        self._mark_initialized()
+        """Mark the provider as initialized."""
 
-    async def cleanup(self) -> None:
-        self.cleanup_calls += 1
-        self._mark_cleanup()
+        self._initialized = True
 
-    def get_service_name(self) -> str:
-        return "dummy_factory_service"
+    async def close(self) -> None:
+        """Mark the provider as uninitialized."""
 
-    async def health_check(self):  # type: ignore[override]
-        return {"ok": True}
+        self._initialized = False
+
+    async def scrape(
+        self, request: ScrapeRequest
+    ) -> BrowserResult:  # pragma: no cover - not used
+        """Raise to highlight this helper should not be invoked in tests."""
+
+        raise NotImplementedError from None
 
 
 @pytest.mark.asyncio
-async def test_base_service_lifecycle_marks_initialized() -> None:
-    """BaseService should reflect initialized state through lifecycle helpers."""
+async def test_base_service_lifecycle() -> None:
+    """Ensure BaseService lifecycle flags toggle during initialize/cleanup."""
 
     service = DummyService()
-    assert isinstance(service, ServiceLifecycle)
     assert not service.is_initialized()
 
     await service.initialize()
     assert service.is_initialized()
-    assert service.init_calls == 1
 
     await service.cleanup()
     assert not service.is_initialized()
@@ -72,44 +86,26 @@ async def test_base_service_lifecycle_marks_initialized() -> None:
 
 
 @pytest.mark.asyncio
-async def test_factory_service_lifecycle_marks_initialized() -> None:
-    """Factory BaseService should also follow unified lifecycle semantics."""
+async def test_browser_router_lifecycle_marks_initialized() -> None:
+    """Validate browser router propagates lifecycle markers to providers."""
 
-    service = DummyFactoryService()
-    assert isinstance(service, ServiceLifecycle)
-    assert not service.is_initialized()
-
-    await service.initialize()
-    assert service.is_initialized()
-
-    await service.cleanup()
-    assert not service.is_initialized()
-
-
-@pytest.mark.asyncio
-async def test_crawl4ai_adapter_implements_service_lifecycle(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Crawl4AIAdapter should comply with ServiceLifecycle protocol."""
-
-    async def start(self) -> None:  # type: ignore[no-self-use]
-        return None
-
-    async def close(self) -> None:  # type: ignore[no-self-use]
-        return None
-
-    crawler_mock = type("_Crawler", (), {"start": start, "close": close})
-    monkeypatch.setattr(
-        "src.services.browser.crawl4ai_adapter.AsyncWebCrawler",
-        lambda config: crawler_mock(),
+    provider = DummyProvider()
+    router = BrowserRouter(
+        settings=RouterSettings(
+            rate_limits={
+                "lightweight": RateLimitConfig(max_requests=1, period_seconds=1.0)
+            }
+        ),
+        lightweight=cast(LightweightProvider, provider),
+        crawl4ai=cast(Crawl4AIProvider, provider),
+        playwright=cast(PlaywrightProvider, provider),
+        browser_use=cast(BrowserUseProvider, provider),
+        firecrawl=cast(FirecrawlProvider, provider),
     )
 
-    adapter = Crawl4AIAdapter(Crawl4AIConfig())
-    assert isinstance(adapter, ServiceLifecycle)
-    assert not adapter.is_initialized()
+    assert not router.is_initialized()
+    await router.initialize()
+    assert router.is_initialized()
 
-    await adapter.initialize()
-    assert adapter.is_initialized()
-
-    await adapter.cleanup()
-    assert not adapter.is_initialized()
+    await router.cleanup()
+    assert not router.is_initialized()

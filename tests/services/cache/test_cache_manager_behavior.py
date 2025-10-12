@@ -5,8 +5,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
 
+import pytest
+
 from src.services.cache._bulk_delete import delete_in_batches
 from src.services.cache.base import CacheInterface
+from src.services.cache.dragonfly_cache import DragonflyCache
 from src.services.cache.manager import CacheManager, CacheType
 from src.services.cache.persistent_cache import cache_path_for_key
 
@@ -31,7 +34,6 @@ def test_cache_manager_delete_removes_hashed_local_entry(tmp_path: Path) -> None
         enable_local_cache=True,
         enable_distributed_cache=False,
         enable_specialized_caches=False,
-        enable_metrics=False,
         local_cache_path=tmp_path,
     )
 
@@ -52,28 +54,18 @@ def test_cache_manager_delete_removes_hashed_local_entry(tmp_path: Path) -> None
     run(manager.close())
 
 
-def test_specialized_cache_defaults_to_safe_ttl(monkeypatch) -> None:
+@pytest.mark.asyncio
+async def test_specialized_cache_defaults_to_safe_ttl(
+    fakeredis_cache: DragonflyCache,
+) -> None:
     """Embedding caches fall back to safe defaults but honor explicit TTLs."""
-
-    class StubDistributedCache:
-        def __init__(self, **_kwargs):
-            self.enable_compression = True
-            self.redis_url = "mock://redis"
-
-        async def close(self) -> None:  # pragma: no cover - simple stub
-            return None
-
-    monkeypatch.setattr(
-        "src.services.cache.manager.DragonflyCache",
-        StubDistributedCache,
-    )
 
     manager = CacheManager(
         enable_local_cache=False,
         enable_distributed_cache=True,
         enable_specialized_caches=True,
-        enable_metrics=False,
         distributed_ttl_seconds={CacheType.EMBEDDINGS: 120},
+        distributed_cache=fakeredis_cache,
     )
 
     assert manager.embedding_cache is not None
@@ -81,14 +73,21 @@ def test_specialized_cache_defaults_to_safe_ttl(monkeypatch) -> None:
     assert manager.embedding_cache.default_ttl == 3600
     assert manager.search_cache.default_ttl == 3600
 
-    run(manager.close())
+    await manager.close()
+
+
+@pytest.mark.asyncio
+async def test_specialized_cache_explicit_ttl_overrides(
+    fakeredis_cache: DragonflyCache,
+) -> None:
+    """Explicit distributed TTL overrides the default specialized caches."""
 
     manager_with_explicit_ttl = CacheManager(
         enable_local_cache=False,
         enable_distributed_cache=True,
         enable_specialized_caches=True,
-        enable_metrics=False,
         distributed_ttl_seconds={CacheType.REDIS: 7200},
+        distributed_cache=fakeredis_cache,
     )
 
     assert manager_with_explicit_ttl.embedding_cache is not None
@@ -96,7 +95,7 @@ def test_specialized_cache_defaults_to_safe_ttl(monkeypatch) -> None:
     assert manager_with_explicit_ttl.embedding_cache.default_ttl == 7200
     assert manager_with_explicit_ttl.search_cache.default_ttl == 7200
 
-    run(manager_with_explicit_ttl.close())
+    await manager_with_explicit_ttl.close()
 
 
 def test_delete_in_batches_counts_successful_deletions() -> None:
@@ -129,7 +128,6 @@ def test_set_with_zero_ttl_evicts_entry(tmp_path: Path) -> None:
         enable_local_cache=True,
         enable_distributed_cache=False,
         enable_specialized_caches=False,
-        enable_metrics=False,
         local_cache_path=tmp_path,
     )
 
@@ -173,7 +171,6 @@ def test_clear_specific_cache_type_removes_local_and_distributed(
         enable_local_cache=True,
         enable_distributed_cache=False,
         enable_specialized_caches=False,
-        enable_metrics=False,
         local_cache_path=tmp_path,
     )
 

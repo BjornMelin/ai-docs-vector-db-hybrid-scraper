@@ -155,7 +155,7 @@ class TestQualityAssessor:
             "Comprehensive documentation with examples, tutorials, and updated "
             "references that users can follow easily."
         )
-        metadata = {"success": True, "quality_score": 0.8, "tier_used": "crawl4ai"}
+        metadata = {"success": True, "quality_score": 0.8, "provider": "crawl4ai"}
 
         score = await quality_assessor.assess_quality(
             content=content,

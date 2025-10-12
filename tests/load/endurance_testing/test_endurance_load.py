@@ -55,7 +55,7 @@ class TestEnduranceLoad:
         time_series_metrics = []
         memory_samples = []
 
-        @env.events.stats_reset.add_listener
+        @env.events.stats_reset.add_listener  # pyright: ignore[reportAttributeAccessIssue]
         def collect_time_series_metrics(**__kwargs):
             """Collect metrics at regular intervals."""
 

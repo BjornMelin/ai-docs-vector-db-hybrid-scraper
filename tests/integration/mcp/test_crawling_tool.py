@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src.mcp_tools.tools import crawling as crawling_module
-from src.services.browser.unified_manager import UnifiedScrapingRequest
+from src.services.browser.models import BrowserResult, ProviderKind
 
 
 ToolCallable = Callable[..., Awaitable[dict[str, Any]]]
@@ -38,7 +38,15 @@ async def test_enhanced_crawl_delegates_to_router() -> None:
     mcp = StubMCP()
     manager = MagicMock()
     manager.scrape_url = AsyncMock(
-        return_value={"success": True, "provider": "playwright"}
+        return_value=BrowserResult(
+            success=True,
+            url="https://app.example.com/dashboard",
+            title="",
+            content="",
+            html="",
+            metadata={},
+            provider=ProviderKind.PLAYWRIGHT,
+        )
     )
 
     crawling_module.register_tools(mcp, crawl_manager=manager)
@@ -55,13 +63,12 @@ async def test_enhanced_crawl_delegates_to_router() -> None:
     )
 
     manager.scrape_url.assert_awaited_once()
-    args, _ = manager.scrape_url.await_args
-    request = args[0]
-    assert isinstance(request, UnifiedScrapingRequest)
-    assert request.tier == "playwright"
-    assert request.interaction_required is True
-    assert request.timeout == 1234
-    assert request.custom_actions == [{"action": "click"}]
+    _, kwargs = manager.scrape_url.await_args
+    assert kwargs["url"] == "https://app.example.com/dashboard"
+    assert kwargs["preferred_provider"] == "playwright"
+    assert kwargs["require_interaction"] is True
+    assert kwargs["timeout_ms"] == 1234
+    assert kwargs["actions"] == [{"action": "click"}]
     assert result["provider"] == "playwright"
 
 

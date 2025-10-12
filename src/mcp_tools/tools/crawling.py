@@ -8,7 +8,6 @@ from urllib.parse import urlparse
 
 from fastmcp import Context
 
-from src.services.browser.unified_manager import UnifiedScrapingRequest
 from src.services.dependencies import get_crawl_manager
 
 
@@ -45,19 +44,14 @@ def register_tools(mcp, crawl_manager: Any | None = None) -> None:
 
         manager = await get_crawl_manager(crawl_manager)
 
-        request_kwargs: dict[str, Any] = {
-            "url": validated_url,
-            "tier": tier or "auto",
-            "interaction_required": interaction_required,
-            "custom_actions": custom_actions,
-        }
-        if timeout_ms is not None:
-            request_kwargs["timeout"] = timeout_ms
-
-        unified_request = UnifiedScrapingRequest(**request_kwargs)
-
         try:
-            result = await manager.scrape_url(unified_request)
+            result = await manager.scrape_url(
+                url=validated_url,
+                preferred_provider=tier,
+                require_interaction=interaction_required,
+                timeout_ms=timeout_ms,
+                actions=custom_actions,
+            )
         except Exception as exc:  # noqa: BLE001 - log and re-raise for MCP
             logger.exception("Enhanced crawl failed for %s", validated_url)
             if ctx:
@@ -65,9 +59,21 @@ def register_tools(mcp, crawl_manager: Any | None = None) -> None:
             raise
 
         if ctx:
-            provider = result.get("provider")
-            await ctx.debug(f"Unified router selected tier: {provider}")
-        return result
+            await ctx.debug(
+                f"Unified router selected provider: {result.provider.value}",
+            )
+        return {
+            "success": result.success,
+            "provider": result.provider.value,
+            "url": result.url,
+            "title": result.title,
+            "content": result.content,
+            "html": result.html,
+            "metadata": dict(result.metadata),
+            "links": result.links,
+            "assets": result.assets,
+            "elapsed_ms": result.elapsed_ms,
+        }
 
     @mcp.tool()
     async def get_crawling_capabilities() -> dict[str, Any]:

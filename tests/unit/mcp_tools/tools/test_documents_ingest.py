@@ -111,7 +111,7 @@ def documents_env(monkeypatch) -> SimpleNamespace:  # pylint: disable=too-many-l
         "title": "Example Title",
         "metadata": {"title": "Example Title"},
         "url": "https://example.com/doc",
-        "tier_used": "tier-1",
+        "provider": "tier-1",
         "quality_score": 0.78,
     }
     crawl_manager = Mock()

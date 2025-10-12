@@ -101,7 +101,7 @@ async def test_successful_scrape_returns_expected_payload(
             "raw_html": "<h1>Heading</h1><p>Body</p>",
             "description": "Test description",
         },
-        "tier_used": "lightweight",
+        "provider": "lightweight",
         "quality_score": 0.9,
         "url": "https://example.com/page",
     }
@@ -113,14 +113,14 @@ async def test_successful_scrape_returns_expected_payload(
     )
 
     crawl_manager.scrape_url.assert_awaited_once_with(
-        url="https://example.com/page", tier="lightweight"
+        url="https://example.com/page", preferred_provider="lightweight"
     )
 
     assert response["success"] is True
     assert response["content"]["markdown"] == "# Heading\n\nBody"
     assert response["metadata"]["title"] == "Sample Page"
     assert response["metadata"]["url"] == "https://example.com/page"
-    assert response["performance"]["tier"] == "lightweight"
+    assert response["performance"]["provider"] == "lightweight"
     assert response["performance"]["suitable_for_tier"] is True
 
 
@@ -182,6 +182,7 @@ async def test_scrape_failure_raises_error(
         "success": False,
         "error": "boom",
         "failed_tiers": ["lightweight"],
+        "provider": "lightweight",
     }
 
     with pytest.raises(CrawlServiceError):
@@ -212,13 +213,10 @@ def test_convert_content_formats_handles_metadata(
 ) -> None:
     """Conversion helper should handle optional metadata gracefully."""
 
-    result = functions["build_response"](
-        {"content": "Hi", "metadata": metadata or {}, "url": "foo"},
-        "foo",
+    result = functions["convert_formats"](
+        metadata or {},
         ["markdown", "html"] if "html" in expected else ["markdown"],
-        elapsed_ms=1.0,
-        can_handle=True,
     )
 
     for key, value in expected.items():
-        assert result["content"][key] == value
+        assert result[key] == value

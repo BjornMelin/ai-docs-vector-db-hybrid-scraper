@@ -102,7 +102,7 @@ class TestSpikeLoad:
         # Track performance between spikes
         inter_spike_metrics = []
 
-        @env.events.stats_reset.add_listener
+        @env.events.stats_reset.add_listener  # pyright: ignore[reportAttributeAccessIssue] # stats_reset is a custom event added to the Events class in the load testing framework for tracking stats resets
         def track_inter_spike_performance(**__kwargs):
             """Track performance between spikes."""
             stats = env.stats
@@ -269,8 +269,6 @@ class TestSpikeLoad:
                     )
                     msg = "Circuit breaker is OPEN"
                     raise TestError(msg)
-                    msg = "Circuit breaker is OPEN"
-                    raise TestError(msg)
 
                 try:
                     # Simulate higher failure rate during spikes
@@ -290,20 +288,19 @@ class TestSpikeLoad:
                         self.events.append({"timestamp": current_time, "event": "OPEN"})
 
                     raise
-                else:
-                    # Success
-                    if self.state == "HALF_OPEN":
-                        self.success_count += 1
-                        if self.success_count >= self.success_threshold:
-                            self.state = "CLOSED"
-                            self.failure_count = 0
-                            self.success_count = 0
-                            self.events.append(
-                                {"timestamp": current_time, "event": "CLOSED"}
-                            )
+                # Success
+                if self.state == "HALF_OPEN":
+                    self.success_count += 1
+                    if self.success_count >= self.success_threshold:
+                        self.state = "CLOSED"
+                        self.failure_count = 0
+                        self.success_count = 0
+                        self.events.append(
+                            {"timestamp": current_time, "event": "CLOSED"}
+                        )
 
-                    await asyncio.sleep(0.05)  # Simulate processing time
-                    return {"status": "success", "circuit_state": self.state}
+                await asyncio.sleep(0.05)  # Simulate processing time
+                return {"status": "success", "circuit_state": self.state}
 
             def _raise_service_unavailable(self) -> None:
                 """Raise a service unavailable error."""

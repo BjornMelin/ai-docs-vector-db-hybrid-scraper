@@ -58,6 +58,7 @@ graph LR
     - [Developer Hub](developers/index.md)
     - [Setup & Configuration](developers/setup-and-configuration.md)
     - [Architecture & Orchestration](developers/architecture-and-orchestration.md)
+    - [Browser Orchestration](developers/browser-orchestration.md)
     - [Agentic Orchestration](developers/agentic-orchestration.md)
     - [Cache & Performance](developers/cache-and-performance.md)
     - [GPU Acceleration](developers/gpu-acceleration.md)

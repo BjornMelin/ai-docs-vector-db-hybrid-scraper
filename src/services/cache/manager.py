@@ -52,6 +52,7 @@ class CacheManager:
         enable_specialized_caches: bool = True,
         local_cache_path: Path | None = None,
         memory_pressure_threshold: float | None = None,
+        distributed_cache: DragonflyCache | None = None,
     ):
         """Initialize simplified cache manager with DragonflyDB.
 
@@ -96,6 +97,7 @@ class CacheManager:
             self._embedding_cache,
             self._search_cache,
         ) = self._build_distributed_cache_layers(
+            override_cache=distributed_cache,
             enable_distributed_cache=enable_distributed_cache,
             enable_specialized_caches=enable_specialized_caches,
             dragonfly_url=dragonfly_url,
@@ -140,6 +142,7 @@ class CacheManager:
     def _build_distributed_cache_layers(
         self,
         *,
+        override_cache: DragonflyCache | None,
         enable_distributed_cache: bool,
         enable_specialized_caches: bool,
         dragonfly_url: str,
@@ -156,13 +159,16 @@ class CacheManager:
         search_cache: SearchResultCache | None = None
 
         if enable_distributed_cache:
-            distributed_cache = DragonflyCache(
-                redis_url=dragonfly_url,
-                key_prefix=key_prefix,
-                max_connections=50,
-                enable_compression=True,
-                compression_threshold=1024,
-            )
+            if override_cache is not None:
+                distributed_cache = override_cache
+            else:
+                distributed_cache = DragonflyCache(
+                    redis_url=dragonfly_url,
+                    key_prefix=key_prefix,
+                    max_connections=50,
+                    enable_compression=True,
+                    compression_threshold=1024,
+                )
 
             if enable_specialized_caches:
                 redis_ttl = self.distributed_ttl_seconds.get(CacheType.REDIS, 3600)
@@ -307,7 +313,8 @@ class CacheManager:
             return None
 
         try:
-            value = await self._distributed_cache.get(cache_key)
+            distributed_key = self._strip_prefix(cache_key)
+            value = await self._distributed_cache.get(distributed_key)
         except (ConnectionError, OSError, PermissionError) as e:
             logger.error("Distributed cache get error for key %s: %s", cache_key, e)
             return None
@@ -422,8 +429,9 @@ class CacheManager:
         if not self._distributed_cache:
             return True
         try:
+            distributed_key = self._strip_prefix(cache_key)
             return await self._distributed_cache.set(
-                cache_key, value, ttl=effective_ttl
+                distributed_key, value, ttl=effective_ttl
             )
         except (ConnectionError, OSError, PermissionError) as e:
             logger.error("Distributed cache set error for key %s: %s", cache_key, e)
@@ -461,7 +469,8 @@ class CacheManager:
         if not self._distributed_cache:
             return True
         try:
-            return await self._distributed_cache.delete(cache_key)
+            distributed_key = self._strip_prefix(cache_key)
+            return await self._distributed_cache.delete(distributed_key)
         except (ConnectionError, RuntimeError, TimeoutError) as e:
             logger.error("Distributed cache delete error for key %s: %s", cache_key, e)
             return False
@@ -504,15 +513,21 @@ class CacheManager:
 
     async def _clear_specific_cache_type(self, cache_type: CacheType) -> bool:
         """Clear specific cache type by pattern."""
-        pattern = f"{self.key_prefix}{cache_type.value}:*"
+        distributed_cache = self._distributed_cache
+        if isinstance(distributed_cache, DragonflyCache):
+            pattern = f"{cache_type.value}:*"
+            log_pattern = f"{self.key_prefix}{cache_type.value}:*"
+        else:
+            pattern = f"{self.key_prefix}{cache_type.value}:*"
+            log_pattern = pattern
 
-        if not self._distributed_cache:
+        if not distributed_cache:
             return True
 
         try:
-            keys = await self._distributed_cache.scan_keys(pattern)
+            keys = await distributed_cache.scan_keys(pattern)
         except (ConnectionError, RuntimeError, TimeoutError) as e:
-            logger.error("Cache scan error for pattern %s: %s", pattern, e)
+            logger.error("Cache scan error for pattern %s: %s", log_pattern, e)
             return False
 
         return await self._clear_keys_from_both_caches(keys, cache_type)
@@ -691,6 +706,13 @@ class CacheManager:
         # Create content-based hash for consistent keys (using SHA256 for security)
         key_hash = hashlib.sha256(key.encode()).hexdigest()[:16]
         return f"{self.key_prefix}{cache_type.value}:{key_hash}"
+
+    def _strip_prefix(self, cache_key: str) -> str:
+        """Remove the configured key prefix for distributed cache operations."""
+
+        if self.key_prefix and cache_key.startswith(self.key_prefix):
+            return cache_key[len(self.key_prefix) :]
+        return cache_key
 
     async def get_performance_stats(self) -> dict[str, object]:
         """Return lightweight performance stats for enabled cache layers."""

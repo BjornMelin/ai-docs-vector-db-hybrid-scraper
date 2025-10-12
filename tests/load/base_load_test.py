@@ -15,6 +15,12 @@ from typing import Any
 import pytest
 
 
+if os.getenv("RUN_LOAD_TESTS") != "1":  # pragma: no cover - optional suite gate
+    pytest.skip(
+        "need RUN_LOAD_TESTS=1 to run load tests",
+        allow_module_level=True,
+    )
+
 try:
     from locust import HttpUser, TaskSet, between, events, task
     from locust.env import Environment

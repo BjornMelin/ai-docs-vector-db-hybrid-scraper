@@ -10,8 +10,6 @@ from pytest_mock import MockerFixture
 
 from src.config.models import CrawlProvider, EmbeddingProvider
 from src.services.observability.health_manager import (
-    HAS_QDRANT_CLIENT,
-    HAS_REDIS,
     HealthCheck,
     HealthCheckConfig,
     HealthCheckManager,
@@ -31,7 +29,12 @@ def configured_settings(config_factory):
         embedding_provider=EmbeddingProvider.OPENAI,
         crawl_provider=CrawlProvider.FIRECRAWL,
         openai={"api_key": "sk-test"},
-        firecrawl={"api_key": "fc-test"},
+        browser={
+            "firecrawl": {
+                "api_key": "fc-test",
+                "api_url": "https://api.firecrawl.dev",
+            }
+        },
     )
 
 
@@ -117,11 +120,7 @@ def test_build_health_manager_includes_expected_checks(
     manager = build_health_manager(configured_settings)
     check_names = {check.name for check in manager._health_checks}
 
-    expected_checks = {"openai", "firecrawl"}
-    if HAS_QDRANT_CLIENT:
-        expected_checks.add("qdrant")
-    if HAS_REDIS:
-        expected_checks.add("redis")
+    expected_checks = {"openai", "firecrawl", "qdrant", "redis"}
 
     assert expected_checks.issubset(check_names)
 
@@ -134,6 +133,7 @@ def test_build_health_manager_skips_openai_when_disabled(config_factory) -> None
         crawl_provider=CrawlProvider.CRAWL4AI,
         cache={"enable_redis_cache": False},
         qdrant={"url": "http://localhost:6333", "timeout": 5.0},
+        browser={"firecrawl": {}},
     )
     manager = build_health_manager(settings)
     check_names = {check.name for check in manager._health_checks}

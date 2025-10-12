@@ -8,6 +8,7 @@ from typing import Any, Literal
 
 from fastmcp import Context
 
+from src.services.browser.models import ProviderKind
 from src.services.dependencies import get_crawl_manager
 from src.services.errors import CrawlServiceError
 
@@ -70,7 +71,7 @@ def _convert_content_formats(
             content_dict["html"] = raw_html
         elif fmt == "text":
             # Strip markdown formatting for plain text
-            text_content = re.sub(r"[*_`#\[\]()]", "", content)
+            text_content = re.sub(r"[*_`#\[\]()]", "", content).strip()
             content_dict["text"] = text_content
 
     return content_dict
@@ -89,6 +90,12 @@ def _build_success_response(
     metadata_dict = dict(metadata) if isinstance(metadata, Mapping) else {}
     content = str(result.get("content", ""))
     content_dict = _convert_content_formats(content, formats, result)
+    provider_raw = result.get("provider", ProviderKind.LIGHTWEIGHT.value)
+    provider = (
+        provider_raw.value
+        if isinstance(provider_raw, ProviderKind)
+        else str(provider_raw)
+    )
 
     return {
         "success": True,
@@ -96,13 +103,13 @@ def _build_success_response(
         "metadata": {
             "title": result.get("title", ""),
             "url": result.get("url", url),
-            "tier_used": result.get("tier_used", "lightweight"),
+            "provider": provider,
             "quality_score": result.get("quality_score", 0.0),
             **metadata_dict,
         },
         "performance": {
             "elapsed_ms": elapsed_ms,
-            "tier": result.get("tier_used", "lightweight"),
+            "provider": provider,
             "suitable_for_tier": can_handle,
             "fallback_attempted": result.get("fallback_attempted", False),
         },
@@ -116,12 +123,13 @@ async def _handle_scrape_failure(
 
     error_value = result.get("error", "Unknown error")
     error_msg = str(error_value)
-    failed_tiers_value = result.get("failed_tiers", [])
-    failed_tiers = (
-        list(failed_tiers_value)
-        if isinstance(failed_tiers_value, list | tuple | set)
-        else [str(failed_tiers_value)]
-    )
+    failed_tiers_value = result.get("failed_tiers")
+    if isinstance(failed_tiers_value, (list, tuple, set)):
+        failed_tiers = list(failed_tiers_value)
+    elif failed_tiers_value is not None:
+        failed_tiers = [str(failed_tiers_value)]
+    else:
+        failed_tiers = []
 
     if ctx:
         await ctx.error(f"Failed to scrape {url}: {error_msg}")
@@ -208,15 +216,23 @@ def register_tools(
             start_time = time.time()
 
             # Force lightweight tier by specifying preferred_provider
-            result = await manager.scrape_url(url=url, tier="lightweight")
+            result = await manager.scrape_url(
+                url=url, preferred_provider=ProviderKind.LIGHTWEIGHT.value
+            )
 
             elapsed_ms = (time.time() - start_time) * 1000
 
             if result.get("success"):
                 if ctx:
+                    provider_raw = result.get("provider", "unknown")
+                    provider_display = (
+                        provider_raw.value
+                        if isinstance(provider_raw, ProviderKind)
+                        else str(provider_raw)
+                    )
                     await ctx.info(
                         f"Successfully scraped {url} in {elapsed_ms:.0f}ms using "
-                        f"{result.get('tier_used', 'unknown')} tier"
+                        f"{provider_display} provider"
                     )
                 return _build_success_response(
                     result, url, validated_formats, elapsed_ms, can_handle

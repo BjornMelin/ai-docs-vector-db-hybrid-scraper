@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import time
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
@@ -11,75 +12,16 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
+import aiohttp
+from httpx import HTTPError as HTTPXError
+from openai import AsyncOpenAI, OpenAIError as OpenAIAPIError
 from pydantic import BaseModel, Field
+from qdrant_client import AsyncQdrantClient
+from qdrant_client.http.exceptions import UnexpectedResponse
+from redis import asyncio as redis
+from redis.exceptions import ConnectionError as RedisConnectionError, RedisError
 
-
-try:  # pragma: no cover - optional dependency import
-    import aiohttp
-
-    HAS_AIOHTTP = True
-except ImportError:  # pragma: no cover - fallback when aiohttp unavailable
-    aiohttp = None  # type: ignore[assignment]
-    HAS_AIOHTTP = False
-
-try:  # pragma: no cover - optional dependency import
-    import httpx
-
-    HTTPXError = httpx.HTTPError
-    HAS_HTTPX = True
-except ImportError:  # pragma: no cover - fallback when httpx unavailable
-    httpx = None  # type: ignore[assignment]
-    HAS_HTTPX = False
-
-    class HTTPXError(Exception):
-        """Fallback HTTPX error type when httpx is not installed."""
-
-
-try:  # pragma: no cover - optional dependency import
-    import redis.asyncio as redis
-
-    RedisConnectionError = redis.ConnectionError
-    RedisError = redis.RedisError
-    HAS_REDIS = True
-except ImportError:  # pragma: no cover - fallback when redis unavailable
-    redis = None  # type: ignore[assignment]
-    HAS_REDIS = False
-
-    class RedisConnectionError(ConnectionError):
-        """Fallback Redis connection error."""
-
-    class RedisError(RuntimeError):
-        """Fallback Redis error."""
-
-
-try:  # pragma: no cover - optional dependency import
-    from openai import AsyncOpenAI, OpenAIError as OpenAIAPIError
-
-    HAS_OPENAI_CLIENT = True
-except ImportError:  # pragma: no cover - fallback when OpenAI client unavailable
-    AsyncOpenAI = None  # type: ignore[assignment]
-    HAS_OPENAI_CLIENT = False
-
-    class OpenAIAPIError(RuntimeError):
-        """Fallback OpenAI error."""
-
-
-try:  # pragma: no cover - optional dependency import
-    from qdrant_client import AsyncQdrantClient
-    from qdrant_client.http.exceptions import UnexpectedResponse
-
-    HAS_QDRANT_CLIENT = True
-except ImportError:  # pragma: no cover - fallback when qdrant client unavailable
-    AsyncQdrantClient = Any  # type: ignore[assignment]
-    HAS_QDRANT_CLIENT = False
-
-    class UnexpectedResponseError(RuntimeError):
-        """Fallback Qdrant unexpected response error."""
-
-    UnexpectedResponse = UnexpectedResponseError
-
-
-from src.config.models import CrawlProvider, EmbeddingProvider
+from src.config.models import EmbeddingProvider
 
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
@@ -89,7 +31,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
 try:  # pragma: no cover - optional dependency
     import psutil
 except ImportError:  # pragma: no cover - graceful fallback
-    psutil = None
+    psutil = None  # type: ignore[assignment]
 
 
 logger = logging.getLogger(__name__)
@@ -316,14 +258,6 @@ class RedisHealthCheck(HealthCheck):
     async def _perform_redis_check(self) -> HealthCheckResult:
         """Execute the Redis health probe."""
 
-        if not HAS_REDIS:
-            return HealthCheckResult(
-                name=self.name,
-                status=HealthStatus.SKIPPED,
-                message="redis.asyncio is not installed; skipping Redis check",
-                duration_ms=0.0,
-            )
-
         redis_client = None
         try:
             redis_client = redis.from_url(self._redis_url)
@@ -391,14 +325,6 @@ class OpenAIHealthCheck(HealthCheck):
     async def _perform_openai_check(self) -> HealthCheckResult:
         """Execute the OpenAI health probe."""
 
-        if not HAS_OPENAI_CLIENT:
-            return HealthCheckResult(
-                name=self.name,
-                status=HealthStatus.SKIPPED,
-                message="OpenAI client library is not installed; skipping check",
-                duration_ms=0.0,
-            )
-
         try:
             models = await self._client.models.list()
         except OpenAIAPIError as exc:
@@ -457,14 +383,6 @@ class HTTPHealthCheck(HealthCheck):
     async def _perform_http_check(self) -> HealthCheckResult:
         """Execute the HTTP health probe."""
 
-        if not HAS_AIOHTTP:
-            return HealthCheckResult(
-                name=self.name,
-                status=HealthStatus.SKIPPED,
-                message="aiohttp is not installed; skipping HTTP check",
-                duration_ms=0.0,
-            )
-
         timeout = aiohttp.ClientTimeout(total=self.timeout_seconds)
         try:
             async with (
@@ -517,9 +435,9 @@ class FirecrawlHealthCheck(HTTPHealthCheck):
 
     def __init__(
         self,
+        *,
         base_url: str,
         api_key: str | None,
-        *,
         timeout_seconds: float = 5.0,
     ) -> None:
         """Initialize the Firecrawl health probe."""
@@ -541,8 +459,8 @@ class FirecrawlHealthCheck(HTTPHealthCheck):
         if not self._headers:
             return HealthCheckResult(
                 name=self.name,
-                status=HealthStatus.UNHEALTHY,
-                message="Firecrawl API key missing",
+                status=HealthStatus.SKIPPED,
+                message="Firecrawl health check skipped (API key missing)",
                 duration_ms=0.0,
             )
         return await super().check()
@@ -576,18 +494,17 @@ class SystemResourceHealthCheck(HealthCheck):
     async def _perform_system_check(self) -> HealthCheckResult:
         """Execute the system resource probe."""
 
-        if psutil is None:
+        if psutil is None:  # pragma: no cover - psutil optional
             return HealthCheckResult(
                 name=self.name,
-                status=HealthStatus.DEGRADED,
-                message="psutil not available",
+                status=HealthStatus.SKIPPED,
+                message="psutil not installed; skipping system resource health check",
                 duration_ms=0.0,
-                metadata={"error": "psutil not installed"},
             )
 
-        cpu_percent = psutil.cpu_percent(interval=1)  # type: ignore[call-arg]
-        memory = psutil.virtual_memory()  # type: ignore[attr-defined]
-        disk = psutil.disk_usage("/")  # type: ignore[attr-defined]
+        cpu_percent = psutil.cpu_percent(interval=1)
+        memory = psutil.virtual_memory()
+        disk = psutil.disk_usage("/")
 
         metrics = {
             "cpu_percent": cpu_percent,
@@ -751,16 +668,21 @@ def build_health_manager(
     manager = HealthCheckManager(config)
 
     if settings.monitoring.include_system_metrics:
-        manager.add_health_check(
-            SystemResourceHealthCheck(
-                cpu_threshold=settings.monitoring.cpu_threshold,
-                memory_threshold=settings.monitoring.memory_threshold,
-                disk_threshold=settings.monitoring.disk_threshold,
-                timeout_seconds=settings.monitoring.health_check_timeout,
+        if psutil is None:
+            logger.warning(
+                "Skipping system resource health check; psutil dependency missing",
             )
-        )
+        else:
+            manager.add_health_check(
+                SystemResourceHealthCheck(
+                    cpu_threshold=settings.monitoring.cpu_threshold,
+                    memory_threshold=settings.monitoring.memory_threshold,
+                    disk_threshold=settings.monitoring.disk_threshold,
+                    timeout_seconds=settings.monitoring.health_check_timeout,
+                )
+            )
 
-    if config.qdrant_url and HAS_QDRANT_CLIENT:
+    if config.qdrant_url:
         client = qdrant_client or AsyncQdrantClient(
             url=config.qdrant_url,
             api_key=getattr(settings.qdrant, "api_key", None),
@@ -772,43 +694,21 @@ def build_health_manager(
                 timeout_seconds=settings.monitoring.health_check_timeout,
             )
         )
-    elif config.qdrant_url:
-        logger.warning(
-            "Skipping Qdrant health check because qdrant_client is not installed",
-        )
-
     redis_source = redis_url or config.redis_url
-    if redis_source and HAS_REDIS:
+    if redis_source:
         manager.add_health_check(
             RedisHealthCheck(
                 redis_source,
                 timeout_seconds=settings.monitoring.health_check_timeout,
             )
         )
-    elif redis_source:
-        logger.warning(
-            "Skipping Redis health check because redis.asyncio is not installed",
-        )
 
     if settings.embedding_provider is EmbeddingProvider.OPENAI:
         api_key = getattr(settings.openai, "api_key", None)
-        if api_key and HAS_OPENAI_CLIENT:
+        if api_key:
             manager.add_health_check(
                 OpenAIHealthCheck(
                     AsyncOpenAI(api_key=api_key),
-                    timeout_seconds=settings.monitoring.health_check_timeout,
-                )
-            )
-        elif api_key:
-            logger.warning(
-                "OpenAI API key configured but openai package not installed; "
-                "falling back to HTTP reachability probe",
-            )
-            manager.add_health_check(
-                HTTPHealthCheck(
-                    url="https://api.openai.com/v1/models",
-                    name="openai",
-                    headers={"Authorization": "Bearer"},
                     timeout_seconds=settings.monitoring.health_check_timeout,
                 )
             )
@@ -822,14 +722,21 @@ def build_health_manager(
                 )
             )
 
-    if settings.crawl_provider is CrawlProvider.FIRECRAWL:
+    firecrawl_settings = settings.browser.firecrawl
+    firecrawl_base_url = firecrawl_settings.api_url
+    if firecrawl_base_url:
+        firecrawl_api_key = firecrawl_settings.api_key or os.getenv(
+            "AI_DOCS__BROWSER__FIRECRAWL__API_KEY"
+        )
         manager.add_health_check(
             FirecrawlHealthCheck(
-                base_url=settings.firecrawl.api_url,
-                api_key=getattr(settings.firecrawl, "api_key", None),
+                base_url=str(firecrawl_base_url),
+                api_key=firecrawl_api_key,
                 timeout_seconds=settings.monitoring.health_check_timeout,
             )
         )
+    else:
+        logger.debug("Skipping Firecrawl health check; no API URL configured")
 
     for service_name, service_url in settings.monitoring.external_services.items():
         manager.add_health_check(

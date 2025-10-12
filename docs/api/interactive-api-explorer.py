@@ -109,7 +109,7 @@ def main():
     # Sidebar configuration
     with st.sidebar:
         st.header("Configuration")
-        api_url = st.text_input("API Base URL", value=API_BASE_URL)
+        _api_url = st.text_input("API Base URL", value=API_BASE_URL)
 
         if "performance_metrics" not in st.session_state:
             st.session_state.performance_metrics = []
@@ -222,7 +222,7 @@ def main():
 
             data = result["data"]
             cols = st.columns(3)
-            cols[0].metric("Tier Used", data.get("tier_used", "Unknown"))
+            cols[0].metric("Provider", data.get("provider", "Unknown"))
             cols[1].metric(
                 "Scrape Time",
                 f"{data.get('performance', {}).get('scrape_time_ms', 0)}ms",

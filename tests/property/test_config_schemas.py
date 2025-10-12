@@ -13,6 +13,11 @@ from hypothesis import assume, example, given, note, strategies as st
 from pydantic import HttpUrl, ValidationError
 
 from src.config import Settings
+from src.config.browser import (
+    BrowserAutomationConfig,
+    FirecrawlSettings,
+    RouterSettings,
+)
 from src.config.models import (
     CacheConfig,
     ChunkingConfig,
@@ -23,7 +28,6 @@ from src.config.models import (
     DocumentationSite,
     EmbeddingProvider,
     Environment,
-    FirecrawlConfig,
     LogLevel,
     OpenAIConfig,
     PerformanceConfig,
@@ -47,10 +51,16 @@ from .strategies import (
     invalid_urls,
     openai_api_keys,
     openai_configurations,
-    positive_floats,
     qdrant_configurations,
     rag_configurations,
 )
+
+
+def test_router_settings_retry_backoff_positive() -> None:
+    """Router settings should default to a positive retry window."""
+
+    settings = RouterSettings()
+    assert settings.unavailable_retry_seconds >= 1.0
 
 
 class TestCacheConfigProperties:
@@ -224,13 +234,13 @@ class TestOpenAIConfigProperties:
             OpenAIConfig(batch_size=invalid_batch_size)
 
 
-class TestFirecrawlConfigProperties:
-    """Property-based tests for FirecrawlConfig."""
+class TestFirecrawlSettings:
+    """Property-based tests for FirecrawlSettings."""
 
     @given(firecrawl_api_keys())
     def test_firecrawl_api_key_validation_success(self, valid_key: str):
         """Test that valid Firecrawl API keys are accepted."""
-        config = FirecrawlConfig(api_key=valid_key)
+        config = FirecrawlSettings(api_key=valid_key)
         assert config.api_key == valid_key
 
     @given(invalid_api_keys())
@@ -243,19 +253,19 @@ class TestFirecrawlConfigProperties:
         with pytest.raises(
             ValidationError, match="Firecrawl API key must start with 'fc-'"
         ):
-            FirecrawlConfig(api_key=invalid_key)
+            FirecrawlSettings(api_key=invalid_key)
 
     @given(http_urls())
     def test_firecrawl_api_url_validation(self, valid_url: str):
         """Test that valid URLs are accepted."""
-        config = FirecrawlConfig(api_url=valid_url)
+        config = FirecrawlSettings(api_url=cast(HttpUrl, valid_url))
         assert config.model_dump()["api_url"] == valid_url
 
-    @given(positive_floats(min_value=0.1, max_value=3600.0))
-    def test_firecrawl_timeout_validation(self, valid_timeout: float):
+    @given(st.integers(min_value=1, max_value=3600))
+    def test_firecrawl_timeout_validation(self, valid_timeout: int):
         """Test that valid timeouts are accepted."""
-        config = FirecrawlConfig(timeout=valid_timeout)
-        assert config.timeout == valid_timeout
+        config = FirecrawlSettings(timeout_seconds=valid_timeout)
+        assert config.timeout_seconds == valid_timeout
 
 
 class TestChunkingConfigProperties:
@@ -596,16 +606,20 @@ class TestCompleteConfigProperties:
             # Should fail without API key
             with pytest.raises(ValidationError, match="Firecrawl API key required"):
                 Settings(
-                    crawl_provider=provider, firecrawl=FirecrawlConfig(api_key=None)
+                    crawl_provider=provider,
+                    browser=BrowserAutomationConfig(),
                 )
 
             # Should succeed with API key
             config = Settings(
                 crawl_provider=provider,
-                firecrawl=FirecrawlConfig(api_key="fc-test-key"),
+                browser=BrowserAutomationConfig(
+                    firecrawl=FirecrawlSettings(api_key="fc-test-key")
+                ),
             )
             assert config.crawl_provider == provider
-            assert config.model_dump()["firecrawl"]["api_key"] == "fc-test-key"
+            browser_dump = config.model_dump()["browser"]
+            assert browser_dump["firecrawl"]["api_key"] == "fc-test-key"
         else:
             # Other providers should work without special keys
             config = Settings(crawl_provider=provider)
@@ -619,9 +633,9 @@ class TestCompleteConfigProperties:
             config_data["openai"]["api_key"] = "sk-test-key"
 
         if config_data.get("crawl_provider") == CrawlProvider.FIRECRAWL:
-            if "firecrawl" not in config_data:
-                config_data["firecrawl"] = {}
-            config_data["firecrawl"]["api_key"] = "fc-test-key"
+            browser_cfg = config_data.setdefault("browser", {})
+            firecrawl_cfg = browser_cfg.setdefault("firecrawl", {})
+            firecrawl_cfg["api_key"] = "fc-test-key"
 
         original_config = Settings(**config_data)
 
@@ -666,9 +680,9 @@ class TestConfigPropertyInvariants:
         if config_data.get("embedding_provider") == EmbeddingProvider.OPENAI:
             config_data["openai"]["api_key"] = "sk-test-key"
         if config_data.get("crawl_provider") == CrawlProvider.FIRECRAWL:
-            if "firecrawl" not in config_data:
-                config_data["firecrawl"] = {}
-            config_data["firecrawl"]["api_key"] = "fc-test-key"
+            browser_cfg = config_data.setdefault("browser", {})
+            firecrawl_cfg = browser_cfg.setdefault("firecrawl", {})
+            firecrawl_cfg["api_key"] = "fc-test-key"
 
         config = Settings(**config_data)
         settings_data = config.model_dump()
@@ -703,9 +717,9 @@ class TestConfigPropertyInvariants:
         if config_data.get("embedding_provider") == EmbeddingProvider.OPENAI:
             config_data["openai"]["api_key"] = "sk-test-key"
         if config_data.get("crawl_provider") == CrawlProvider.FIRECRAWL:
-            if "firecrawl" not in config_data:
-                config_data["firecrawl"] = {}
-            config_data["firecrawl"]["api_key"] = "fc-test-key"
+            browser_cfg = config_data.setdefault("browser", {})
+            firecrawl_cfg = browser_cfg.setdefault("firecrawl", {})
+            firecrawl_cfg["api_key"] = "fc-test-key"
 
         config = Settings(**config_data)
         chunk_data = config.model_dump()["chunking"]
@@ -722,9 +736,9 @@ class TestConfigPropertyInvariants:
         if config_data.get("embedding_provider") == EmbeddingProvider.OPENAI:
             config_data["openai"]["api_key"] = "sk-test-key"
         if config_data.get("crawl_provider") == CrawlProvider.FIRECRAWL:
-            if "firecrawl" not in config_data:
-                config_data["firecrawl"] = {}
-            config_data["firecrawl"]["api_key"] = "fc-test-key"
+            browser_cfg = config_data.setdefault("browser", {})
+            firecrawl_cfg = browser_cfg.setdefault("firecrawl", {})
+            firecrawl_cfg["api_key"] = "fc-test-key"
 
         config = Settings(**config_data)
         settings_data = config.model_dump()
@@ -744,9 +758,9 @@ class TestConfigPropertyInvariants:
         if config_data.get("embedding_provider") == EmbeddingProvider.OPENAI:
             config_data["openai"]["api_key"] = "sk-test-key"
         if config_data.get("crawl_provider") == CrawlProvider.FIRECRAWL:
-            if "firecrawl" not in config_data:
-                config_data["firecrawl"] = {}
-            config_data["firecrawl"]["api_key"] = "fc-test-key"
+            browser_cfg = config_data.setdefault("browser", {})
+            firecrawl_cfg = browser_cfg.setdefault("firecrawl", {})
+            firecrawl_cfg["api_key"] = "fc-test-key"
 
         config = Settings(**config_data)
 
