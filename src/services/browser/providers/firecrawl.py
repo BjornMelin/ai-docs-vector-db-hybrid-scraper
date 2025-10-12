@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 from collections.abc import Mapping, Sequence
 from typing import Any, cast
 
-from firecrawl import AsyncFirecrawl  # pyright: ignore[reportMissingTypeStubs]
+from firecrawl import AsyncFirecrawl  # type: ignore
 
 from src.config.browser import FirecrawlSettings
 from src.services.browser.errors import BrowserProviderError
@@ -14,6 +15,9 @@ from src.services.browser.models import BrowserResult, ProviderKind, ScrapeReque
 
 from ..runtime import execute_with_retry
 from .base import BrowserProvider, ProviderContext
+
+
+MIN_TIMEOUT_SECONDS = 0.001
 
 
 class FirecrawlProvider(BrowserProvider):
@@ -47,6 +51,23 @@ class FirecrawlProvider(BrowserProvider):
 
         self._client = None
 
+    def _coerce_timeout(self, raw_timeout: Any) -> float:
+        """Normalize Firecrawl timeout override to a positive float."""
+
+        try:
+            timeout = float(raw_timeout)
+        except (TypeError, ValueError) as exc:  # pragma: no cover - defensive guard
+            raise BrowserProviderError(
+                "Firecrawl timeout override must be numeric",
+                provider=self.kind.value,
+            ) from exc
+        if timeout <= 0:
+            raise BrowserProviderError(
+                "Firecrawl timeout override must be greater than zero",
+                provider=self.kind.value,
+            )
+        return timeout
+
     def _effective_formats(
         self, metadata: Mapping[str, Any] | None, request_formats: Sequence[str] | None
     ) -> list[str]:
@@ -60,6 +81,43 @@ class FirecrawlProvider(BrowserProvider):
                 if isinstance(formats, (list, tuple)):
                     meta_formats = [str(fmt) for fmt in formats]
         return meta_formats or list(self._settings.default_formats)
+
+    def _compose_scrape_options(
+        self, request: ScrapeRequest
+    ) -> tuple[list[str], dict[str, Any], float]:
+        """Build format list, provider options, and effective timeout."""
+
+        metadata = request.metadata or {}
+        provider_meta = metadata.get("firecrawl")
+        custom_formats: Sequence[str] | None = None
+        options: dict[str, Any] = {}
+        metadata_timeout: float | None = None
+        if isinstance(provider_meta, dict):
+            meta_formats = provider_meta.get("formats")
+            if isinstance(meta_formats, (list, tuple)):
+                custom_formats = [str(fmt) for fmt in meta_formats]
+            for key, value in provider_meta.items():
+                if key == "formats":
+                    continue
+                if key == "timeout":
+                    metadata_timeout = self._coerce_timeout(value)
+                    continue
+                options[key] = value
+
+        request_timeout = None
+        if request.timeout_ms is not None:
+            request_timeout = max(request.timeout_ms / 1000, 0.0)
+
+        formats = self._effective_formats(metadata, custom_formats)
+        effective_timeout = float(self._settings.timeout_seconds)
+        if metadata_timeout is not None:
+            effective_timeout = metadata_timeout
+        if request_timeout is not None:
+            effective_timeout = min(effective_timeout, request_timeout)
+        effective_timeout = max(effective_timeout, MIN_TIMEOUT_SECONDS)
+        options["timeout"] = effective_timeout
+
+        return formats, options, effective_timeout
 
     def _build_result(
         self, document: dict[str, Any], request: ScrapeRequest
@@ -96,31 +154,19 @@ class FirecrawlProvider(BrowserProvider):
         if self._client is None:  # pragma: no cover - guarded by lifecycle
             raise RuntimeError("Provider not initialized")
 
-        metadata = request.metadata or {}
-        provider_meta = metadata.get("firecrawl")
-        custom_formats: Sequence[str] | None = None
-        options: dict[str, Any] = {}
-        if isinstance(provider_meta, dict):
-            meta_formats = provider_meta.get("formats")
-            if isinstance(meta_formats, (list, tuple)):
-                custom_formats = [str(fmt) for fmt in meta_formats]
-            options.update(
-                {
-                    key: value
-                    for key, value in provider_meta.items()
-                    if key not in {"formats"}
-                }
-            )
-
-        formats = self._effective_formats(metadata, custom_formats)
-        timeout = options.pop("timeout", self._settings.timeout_seconds)
+        formats, options, effective_timeout = self._compose_scrape_options(request)
 
         client = self._client
         assert client is not None  # narrow for typing
 
         async def _call() -> Any:
-            return await client.scrape(  # type: ignore[no-any-return]
-                url=request.url, formats=formats, timeout=timeout, **options
+            return await asyncio.wait_for(
+                client.scrape(  # type: ignore[no-any-return]
+                    url=request.url,
+                    formats=formats,
+                    **options,
+                ),
+                timeout=effective_timeout,
             )
 
         document = cast(

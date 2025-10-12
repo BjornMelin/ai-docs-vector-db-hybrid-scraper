@@ -7,7 +7,7 @@ from collections import deque
 from collections.abc import Iterable
 from typing import cast
 
-import pytest
+import pytest  # pylint: disable=import-error
 
 from src.config.browser import RateLimitConfig, RouterSettings
 from src.services.browser.errors import BrowserProviderError, BrowserRouterError
@@ -22,6 +22,9 @@ from src.services.browser.providers import (
     ProviderContext,
 )
 from src.services.browser.router import BrowserRouter
+
+
+MILLISECONDS_PER_SECOND = 1000
 
 
 class StubProvider(BrowserProvider):
@@ -41,7 +44,7 @@ class StubProvider(BrowserProvider):
         super().__init__(context)
         self.kind = context.provider
         self._responses = deque(responses or [])
-        self._delay = delay_ms / 1000
+        self._delay = delay_ms / MILLISECONDS_PER_SECOND
         self._init_failures = init_failures
         self._call_log = call_log
         self.initialized = False
