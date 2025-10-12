@@ -326,7 +326,7 @@ class LangGraphRAGPipeline:
             return DocumentCompressorPipeline(transformers=[])
 
         fastembed_config = getattr(self._vector_service.config, "fastembed", None)
-        model_name = getattr(fastembed_config, "model", "BAAI/bge-small-en-v1.5")
+        model_name = getattr(fastembed_config, "dense_model", "BAAI/bge-small-en-v1.5")
         embeddings = FastEmbedEmbeddings(model_name=model_name)
         transformer = EmbeddingsFilter(
             embeddings=embeddings,

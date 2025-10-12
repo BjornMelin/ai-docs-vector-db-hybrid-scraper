@@ -20,7 +20,7 @@
     "quantization_enabled": true
   },
   "fastembed": {
-    "model": "BAAI/bge-base-en-v1.5",
+    "dense_model": "BAAI/bge-base-en-v1.5",
     "cache_dir": "./models",
     "max_length": 512,
     "batch_size": 32

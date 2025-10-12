@@ -8,6 +8,7 @@ from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
+from langchain_core.documents import Document
 
 from src.mcp_tools.models.requests import BatchRequest, DocumentRequest
 from src.mcp_tools.models.responses import AddDocumentResponse
@@ -56,17 +57,13 @@ class DummyValidator:
         return url
 
 
-class DummyChunker:
-    """Chunker stub that returns deterministic segments."""
+def _dummy_splitter(*_: Any, **__: Any) -> list[Document]:
+    """Return deterministic LangChain documents for testing."""
 
-    def __init__(self, config):
-        self.config = config
-
-    def chunk_content(self, content: str, title: str, url: str):
-        return [
-            {"content": "chunk-0", "metadata": {"section": "intro"}},
-            {"content": "chunk-1", "metadata": {"section": "body"}},
-        ]
+    return [
+        Document(page_content="chunk-0", metadata={"section": "intro"}),
+        Document(page_content="chunk-1", metadata={"section": "body"}),
+    ]
 
 
 def _make_enriched_content() -> SimpleNamespace:
@@ -129,7 +126,11 @@ def documents_env(monkeypatch) -> SimpleNamespace:  # pylint: disable=too-many-l
         "from_unified_config",
         classmethod(lambda cls: validator),
     )
-    monkeypatch.setattr(documents, "DocumentChunker", DummyChunker)
+    monkeypatch.setattr(
+        documents,
+        "split_content_into_documents",
+        _dummy_splitter,
+    )
 
     mock_mcp = MagicMock()
     registered: dict[str, Callable] = {}

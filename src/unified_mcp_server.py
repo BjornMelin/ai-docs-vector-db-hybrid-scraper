@@ -193,7 +193,7 @@ mcp = FastMCP(
     Features:
     - Hybrid search with dense+sparse vectors and reranking
     - Multi-provider embedding generation
-    - Advanced chunking strategies (Basic, Enhanced, AST-based)
+    - Advanced chunking strategies (Basic, Enhanced)
     - Project-based document management
     - Two-tier caching with metrics
     - Batch processing and enhanced streaming support

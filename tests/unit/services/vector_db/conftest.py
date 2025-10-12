@@ -145,7 +145,7 @@ def config_stub() -> Any:
     """Create a minimal config stub expected by VectorStoreService."""
 
     class _FastEmbedConfig:
-        model = "stub-model"
+        dense_model = "stub-model"
 
     class _QueryProcessingConfig:
         enable_score_normalization = False

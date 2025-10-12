@@ -8,13 +8,14 @@ from typing import Any, cast
 from uuid import uuid4
 
 from fastmcp import Context
+from langchain_core.documents import Document
 
-from src.chunking import DocumentChunker
 from src.config.models import ChunkingConfig, ChunkingStrategy
 from src.mcp_tools.models.requests import BatchRequest, DocumentRequest
 from src.mcp_tools.models.responses import AddDocumentResponse, DocumentBatchResponse
 from src.security.ml_security import MLSecurityValidator
 from src.services.cache.manager import CacheManager
+from src.services.vector_db.document_splitter import split_content_into_documents
 from src.services.vector_db.service import VectorStoreService
 from src.services.vector_db.types import CollectionSchema, TextDocument
 
@@ -132,7 +133,7 @@ async def _chunk_document(
     enriched_content: Any | None,
     doc_id: str,
     ctx: Context,
-) -> list[dict[str, Any]]:
+) -> list[Document]:
     """Chunk the scraped document using the configured strategy."""
 
     chunk_config = ChunkingConfig(
@@ -143,8 +144,7 @@ async def _chunk_document(
         token_chunk_overlap=request.token_chunk_overlap,
         token_model=request.token_model,
         json_max_chars=request.json_max_chars,
-        enable_semantic_html_segmentation=
-        request.enable_semantic_html_segmentation,
+        enable_semantic_html_segmentation=request.enable_semantic_html_segmentation,
         normalize_html_text=request.normalize_html_text,
     )
 
@@ -159,18 +159,22 @@ async def _chunk_document(
                 f"Upgraded chunking strategy to ENHANCED for {content_type} content"
             )
 
-    chunker = DocumentChunker(chunk_config)
-    chunks = chunker.chunk_content(
-        content=crawl_result["content"],
-        title=crawl_result.get("title") or crawl_result["metadata"].get("title", ""),
-        url=crawl_result.get("url", request.url),
+    base_metadata = {
+        "source": crawl_result.get("url", request.url),
+        "title": crawl_result.get("title")
+        or crawl_result.get("metadata", {}).get("title", ""),
+    }
+    documents = split_content_into_documents(
+        crawl_result["content"],
+        chunk_config,
+        metadata=base_metadata,
     )
-    await ctx.debug(f"Created {len(chunks)} chunks for document {doc_id}")
-    return chunks
+    await ctx.debug(f"Created {len(documents)} chunks for document {doc_id}")
+    return documents
 
 
 def _build_text_documents(
-    chunks: list[dict[str, Any]],
+    chunks: list[Document],
     crawl_result: dict[str, Any],
     request: DocumentRequest,
     enriched_content: Any | None,
@@ -189,21 +193,27 @@ def _build_text_documents(
     current_time = datetime.now(UTC).isoformat()
     for index, chunk in enumerate(chunks):
         payload: dict[str, Any] = {
-            "content": chunk["content"],
+            "content": chunk.page_content,
             "url": request.url,
             "title": base_title,
             "chunk_index": index,
             "total_chunks": total_chunks,
             "provider": crawl_result.get("provider", "unknown"),
             "quality_score": crawl_result.get("quality_score", 0.0),
-            **chunk.get("metadata", {}),
         }
+
+        payload.update(chunk.metadata)
 
         payload.setdefault("doc_id", doc_id)
         payload["chunk_id"] = payload.get("chunk_id", index)
         payload.setdefault("tenant", request.collection or "default")
         payload.setdefault("source", payload.get("source") or request.url)
         payload.setdefault("created_at", current_time)
+
+        start_index = payload.get("start_index")
+        if isinstance(start_index, int):
+            payload.setdefault("start_char", start_index)
+            payload.setdefault("end_char", start_index + len(chunk.page_content))
 
         if enriched_content:
             payload.update(
@@ -238,7 +248,7 @@ def _build_text_documents(
         documents.append(
             TextDocument(
                 id=str(uuid4()),
-                content=chunk["content"],
+                content=chunk.page_content,
                 metadata=payload,
             )
         )
