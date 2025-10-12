@@ -1,16 +1,13 @@
 src.services.browser package
 ============================
 
+Configuration
+-------------
+
+Browser configuration models live in :mod:`src.config.browser`.
+
 Submodules
 ----------
-
-src.services.browser.config module
-----------------------------------
-
-.. automodule:: src.services.browser.config
-   :members:
-   :show-inheritance:
-   :undoc-members:
 
 src.services.browser.errors module
 ----------------------------------
@@ -53,7 +50,7 @@ src.services.browser.telemetry module
    :undoc-members:
 
 src.services.browser.unified_manager module
---------------------------------------------
+-------------------------------------------
 
 .. automodule:: src.services.browser.unified_manager
    :members:
