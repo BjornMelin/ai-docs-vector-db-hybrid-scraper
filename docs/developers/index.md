@@ -42,6 +42,7 @@ Keep these guides bookmarked—together they answer most day-to-day questions:
 
 - **[Setup & Configuration](./setup-and-configuration.md)** – Environment prerequisites, profiles, and config loader.
 - **[Architecture & Orchestration](./architecture-and-orchestration.md)** – System design, LangGraph stack, FastMCP patterns.
+- **[Browser Orchestration](./browser-orchestration.md)** – Tiered scraping providers, router flow, configuration entry points.
 - **[Agentic Orchestration](./agentic-orchestration.md)** – LangGraph runner, tool discovery, testing guidance.
 - **[Cache & Performance](./cache-and-performance.md)** – Persistent cache internals and performance checklist.
 - **[GPU Acceleration](./gpu-acceleration.md)** – Optional CUDA/MPS setup and helper utilities.

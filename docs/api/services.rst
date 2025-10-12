@@ -7,11 +7,9 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
-   services.browser
    services.cache
    services.content_intelligence
    services.core
-   services.crawling
    services.deployment
    services.embeddings
    services.fastapi

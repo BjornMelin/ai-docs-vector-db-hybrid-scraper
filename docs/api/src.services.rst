@@ -14,7 +14,6 @@ Subpackages
    src.services.circuit_breaker
    src.services.content_intelligence
    src.services.core
-   src.services.crawling
    src.services.deployment
    src.services.embeddings
    src.services.fastapi

@@ -4,87 +4,55 @@ src.services.browser package
 Submodules
 ----------
 
-src.services.browser.action\_schemas module
--------------------------------------------
+src.services.browser.config module
+----------------------------------
 
-.. automodule:: src.services.browser.action_schemas
+.. automodule:: src.services.browser.config
    :members:
    :show-inheritance:
    :undoc-members:
 
-src.services.browser.anti\_detection module
--------------------------------------------
+src.services.browser.errors module
+----------------------------------
 
-.. automodule:: src.services.browser.anti_detection
+.. automodule:: src.services.browser.errors
    :members:
    :show-inheritance:
    :undoc-members:
 
-src.services.browser.automation\_router module
-----------------------------------------------
+src.services.browser.models module
+----------------------------------
 
-.. automodule:: src.services.browser.automation_router
+.. automodule:: src.services.browser.models
    :members:
    :show-inheritance:
    :undoc-members:
 
-src.services.browser.browser\_router module
--------------------------------------------
-
-.. automodule:: src.services.browser.browser_router
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-src.services.browser.browser\_use\_adapter module
--------------------------------------------------
-
-.. automodule:: src.services.browser.browser_use_adapter
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-src.services.browser.crawl4ai\_adapter module
----------------------------------------------
-
-.. automodule:: src.services.browser.crawl4ai_adapter
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-src.services.browser.lightweight\_scraper module
-------------------------------------------------
-
-.. automodule:: src.services.browser.lightweight_scraper
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-src.services.browser.monitoring module
+src.services.browser.providers package
 --------------------------------------
 
-.. automodule:: src.services.browser.monitoring
+.. automodule:: src.services.browser.providers
    :members:
    :show-inheritance:
    :undoc-members:
 
-src.services.browser.playwright\_adapter module
------------------------------------------------
+src.services.browser.router module
+----------------------------------
 
-.. automodule:: src.services.browser.playwright_adapter
+.. automodule:: src.services.browser.router
    :members:
    :show-inheritance:
    :undoc-members:
 
-src.services.browser.tier\_config module
-----------------------------------------
+src.services.browser.telemetry module
+-------------------------------------
 
-.. automodule:: src.services.browser.tier_config
+.. automodule:: src.services.browser.telemetry
    :members:
    :show-inheritance:
    :undoc-members:
 
-src.services.browser.unified\_manager module
+src.services.browser.unified_manager module
 --------------------------------------------
 
 .. automodule:: src.services.browser.unified_manager
