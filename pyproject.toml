@@ -192,7 +192,7 @@ gpu = [
     "torch>=2.8.0,<2.9.0",
     "torchvision>=0.23.0,<0.24.0",
     "torchaudio>=2.8.0,<2.9.0",
-    # Inference libraries
+    # Inference libraries with readily available wheels
     "transformers>=4.44.0,<5.0.0",
     "accelerate>=0.34.0,<2.0.0",
     "vllm>=0.10.0,<0.12.0",
@@ -463,11 +463,6 @@ constraint-dependencies = [
     "hatchling>=1.25.0",  # Ensure Python 3.13 compatible hatchling
 ]
 
-# Extra build dependencies for packages that need torch during build
-extra-build-dependencies = { flash-attn = [{ requirement = "torch", match-runtime = true }] }
-
-# Build environment variables for flash-attn
-extra-build-variables = { flash-attn = { FLASH_ATTENTION_SKIP_CUDA_BUILD = "TRUE" } }
 
 # ===== Dependency Groups =====
 [tool.pylint]
