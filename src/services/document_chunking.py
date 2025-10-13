@@ -243,11 +243,7 @@ class ChunkingStrategy(Protocol):
         Returns:
             List of LangChain documents produced by the strategy.
         """
-
-        msg = "ChunkingStrategy.chunk must be implemented by concrete strategies"
-        raise NotImplementedError(msg)
-
-
+        ...
 def _apply_recursive_refinement(
     documents: list[Document],
     cfg: ChunkingConfig,
