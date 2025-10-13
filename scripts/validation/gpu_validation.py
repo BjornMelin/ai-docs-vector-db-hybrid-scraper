@@ -1,9 +1,10 @@
 """GPU validation harness for transformer and CUDA stacks.
 
-The harness checks that PyTorch, xFormers, and FlashAttention are importable and
-able to execute minimal GPU workloads. By default the script fails when a CUDA
--capable device is missing; pass ``--allow-missing-gpu`` to surface a warning
-instead. Reports are emitted as JSON for archival in CI jobs.
+The harness checks that PyTorch, xFormers, FlashAttention, vLLM, bitsandbytes,
+Triton, and DeepSpeed are importable and able to execute minimal GPU workloads.
+By default the script fails when a CUDA-capable device is missing; pass
+``--allow-missing-gpu`` to surface a warning instead. Reports are emitted as
+JSON for archival in CI jobs.
 
 Usage
 -----
@@ -44,8 +45,7 @@ class ValidationReport:
     cuda_version: str | None
     device_count: int
     device_names: list[str]
-    xformers_version: str | None
-    flash_attn_version: str | None
+    library_versions: dict[str, str | None] = field(default_factory=dict)
     checks: list[CheckResult] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
@@ -177,13 +177,52 @@ def _xformers_checks(torch_module, xformers_module, require_gpu: bool) -> CheckR
         return CheckResult("xformers", "failed", str(exc))
 
 
-def _flash_attention_check(require_gpu: bool) -> CheckResult:
-    """Check if flash attention is available."""
+def _flash_attention_check(require_gpu: bool) -> tuple[CheckResult, str | None]:
+    """Check if flash attention is available and ready for use."""
 
-    module = _import_optional("flash_attn.flash_attn_interface")
-    if module is None:
-        return CheckResult("flash-attn", "warning", "flash_attn not installed")
-    return CheckResult("flash-attn", "passed", "flash_attn import succeeded")
+    flash_module = _import_optional("flash_attn")
+    interface_module = _import_optional("flash_attn.flash_attn_interface")
+    if flash_module is None:
+        status = "failed" if require_gpu else "warning"
+        return (
+            CheckResult("flash-attn", status, "flash_attn not installed"),
+            None,
+        )
+    if interface_module is None:
+        status = "failed" if require_gpu else "warning"
+        return (
+            CheckResult(
+                "flash-attn",
+                status,
+                "flash_attn.flash_attn_interface missing",
+            ),
+            getattr(flash_module, "__version__", None),
+        )
+    return (
+        CheckResult("flash-attn", "passed", "flash_attn kernels available"),
+        getattr(flash_module, "__version__", None),
+    )
+
+
+def _import_only_check(
+    name: str, module_name: str, *, require_gpu: bool
+) -> tuple[CheckResult, str | None]:
+    """Import ``module_name`` and return a check result and version metadata."""
+
+    try:
+        module = importlib.import_module(module_name)
+    except ModuleNotFoundError:
+        status = "failed" if require_gpu else "warning"
+        return CheckResult(name, status, f"{module_name} not installed"), None
+    except Exception as exc:  # pragma: no cover - surfaced in integration runs
+        status = "failed" if require_gpu else "warning"
+        detail = f"{module_name} import error [{type(exc).__name__}]: {exc}"
+        return CheckResult(name, status, detail), None
+
+    return (
+        CheckResult(name, "passed", f"{module_name} import succeeded"),
+        getattr(module, "__version__", None),
+    )
 
 
 def run_gpu_validation(
@@ -195,6 +234,7 @@ def run_gpu_validation(
     """Execute the GPU validation harness and return a structured report."""
 
     checks: list[CheckResult] = []
+    library_versions: dict[str, str | None] = {}
 
     try:
         torch_module = torch_module or importlib.import_module("torch")
@@ -207,8 +247,7 @@ def run_gpu_validation(
             cuda_version=None,
             device_count=0,
             device_names=[],
-            xformers_version=None,
-            flash_attn_version=None,
+            library_versions={},
             checks=[CheckResult("torch-import", "failed", str(exc))],
         )
         return report
@@ -224,9 +263,23 @@ def run_gpu_validation(
         torch_module, xformers_module, require_gpu=require_gpu
     )
     checks.append(xformers_check)
+    library_versions["xformers"] = (
+        getattr(xformers_module, "__version__", None) if xformers_module else None
+    )
 
-    flash_check = _flash_attention_check(require_gpu=require_gpu)
+    flash_check, flash_version = _flash_attention_check(require_gpu=require_gpu)
     checks.append(flash_check)
+    library_versions["flash_attn"] = flash_version
+
+    for name, module_name in (
+        ("vllm", "vllm"),
+        ("bitsandbytes", "bitsandbytes"),
+        ("triton", "triton"),
+        ("deepspeed", "deepspeed"),
+    ):
+        check, version = _import_only_check(name, module_name, require_gpu=require_gpu)
+        checks.append(check)
+        library_versions[name] = version
 
     if any(check.status == "failed" for check in checks):
         status = "failed"
@@ -234,8 +287,6 @@ def run_gpu_validation(
         status = "warning"
     else:
         status = "passed"
-
-    flash_attn_pkg = _import_optional("flash_attn")
 
     report = ValidationReport(
         status=status,
@@ -245,12 +296,7 @@ def run_gpu_validation(
         cuda_version=metadata.get("cuda_version"),
         device_count=metadata.get("device_count", 0),
         device_names=metadata.get("device_names", []),
-        xformers_version=getattr(xformers_module, "__version__", None)
-        if xformers_module
-        else None,
-        flash_attn_version=getattr(flash_attn_pkg, "__version__", None)
-        if flash_attn_pkg
-        else None,
+        library_versions=library_versions,
         checks=checks,
     )
     return report

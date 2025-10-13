@@ -44,7 +44,7 @@ cd ai-docs-vector-db-hybrid-scraper
 
 # Install with uv (recommended)
 pip install uv
-uv sync
+uv sync --all-extras
 
 # Alternative: Standard pip installation
 pip install -e ".[dev]"

@@ -102,7 +102,13 @@ def test_gpu_validation_fails_without_gpu() -> None:
         xformers_module=None,
     )
     assert report.status == "failed"
-    assert any(check.name == "torch-cuda" for check in report.checks)
+    checks = {check.name: check for check in report.checks}
+    assert checks["torch-cuda"].status == "failed"
+    assert checks["flash-attn"].status == "failed"
+    assert checks["vllm"].status == "failed"
+    assert checks["bitsandbytes"].status == "failed"
+    assert checks["triton"].status == "failed"
+    assert checks["deepspeed"].status == "failed"
 
 
 def test_gpu_validation_warns_when_allowing_missing_gpu(
@@ -127,11 +133,35 @@ def test_gpu_validation_warns_when_allowing_missing_gpu(
         xformers_module=None,
     )
     assert report.status == "warning"
-    assert any(check.status == "warning" for check in report.checks)
+    checks = {check.name: check for check in report.checks}
+    assert checks["torch-cuda"].status == "warning"
+    assert checks["flash-attn"].status == "warning"
+    assert checks["vllm"].status == "warning"
+    assert checks["bitsandbytes"].status == "warning"
+    assert checks["triton"].status == "warning"
+    assert checks["deepspeed"].status == "warning"
 
 
 def test_gpu_validation_succeeds_with_fake_gpu(monkeypatch: pytest.MonkeyPatch) -> None:
     """The harness should pass when torch and xformers operations succeed."""
+
+    fake_modules = {
+        "flash_attn": types.SimpleNamespace(__version__="2.6.0"),
+        "flash_attn.flash_attn_interface": object(),
+        "vllm": types.SimpleNamespace(__version__="0.11.0"),
+        "bitsandbytes": types.SimpleNamespace(__version__="0.44.0"),
+        "triton": types.SimpleNamespace(__version__="3.0.0"),
+        "deepspeed": types.SimpleNamespace(__version__="0.14.0"),
+    }
+
+    original_import = gpu_validation.importlib.import_module
+
+    def _fake_import(name: str, package: str | None = None):
+        if name in fake_modules:
+            return fake_modules[name]
+        return original_import(name, package)  # type: ignore[call-arg]
+
+    monkeypatch.setattr(gpu_validation.importlib, "import_module", _fake_import)
 
     report = gpu_validation.run_gpu_validation(
         require_gpu=True,
@@ -139,6 +169,15 @@ def test_gpu_validation_succeeds_with_fake_gpu(monkeypatch: pytest.MonkeyPatch) 
         xformers_module=_FakeXformers(),
     )
     assert report.status == "passed"
-    assert any(
-        check.name == "xformers" and check.status == "passed" for check in report.checks
-    )
+    checks = {check.name: check for check in report.checks}
+    assert checks["xformers"].status == "passed"
+    assert checks["flash-attn"].status == "passed"
+    assert checks["vllm"].status == "passed"
+    assert checks["bitsandbytes"].status == "passed"
+    assert checks["triton"].status == "passed"
+    assert checks["deepspeed"].status == "passed"
+    assert report.library_versions["flash_attn"] == "2.6.0"
+    assert report.library_versions["vllm"] == "0.11.0"
+    assert report.library_versions["bitsandbytes"] == "0.44.0"
+    assert report.library_versions["triton"] == "3.0.0"
+    assert report.library_versions["deepspeed"] == "0.14.0"
