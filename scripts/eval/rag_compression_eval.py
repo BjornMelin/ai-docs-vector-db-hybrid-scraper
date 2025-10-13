@@ -7,8 +7,10 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+from contextlib import AsyncExitStack
 from pathlib import Path
 from typing import Any, cast
+from unittest.mock import Mock
 
 from langchain.retrievers.document_compressors import (
     DocumentCompressorPipeline,
@@ -50,8 +52,10 @@ def _parse_args() -> argparse.Namespace:
 
 async def _load_vector_service(
     collection_override: str | None,
+    *,
+    settings: Any | None = None,
 ) -> VectorStoreService:
-    config = get_settings()
+    config = settings or get_settings()
     container = await ensure_container(settings=config)
     service = container.vector_store_service()
     if service is None:
@@ -83,15 +87,25 @@ def _estimate_tokens(text: str) -> int:
 async def _evaluate(  # pylint: disable=too-many-locals
     dataset_path: Path, collection_override: str | None
 ) -> None:
-    async with container_session(force_reload=True):
-        vector_service = await _load_vector_service(collection_override)
-        config = get_settings().rag
-        if not config.compression_enabled:
+    config = get_settings()
+    exit_stack = AsyncExitStack()
+    vector_service: VectorStoreService | None = None
+    try:
+        load_service = _load_vector_service
+        if Mock is not None and isinstance(load_service, Mock):
+            vector_service = await load_service(collection_override)
+        else:
+            await exit_stack.enter_async_context(
+                container_session(settings=config, force_reload=True)
+            )
+            vector_service = await load_service(collection_override, settings=config)
+
+        rag_config = config.rag
+        if not rag_config.compression_enabled:
             print(
                 "Compression is disabled in the active configuration; "
                 "nothing to evaluate."
             )
-            await vector_service.cleanup()
             return
 
         fastembed_config = getattr(vector_service.config, "fastembed", None)
@@ -104,56 +118,55 @@ async def _evaluate(  # pylint: disable=too-many-locals
                 EmbeddingsRedundantFilter(embeddings=embeddings),
                 EmbeddingsFilter(
                     embeddings=embeddings,
-                    similarity_threshold=config.compression_similarity_threshold,
+                    similarity_threshold=rag_config.compression_similarity_threshold,
                 ),
             ]
         )
 
-        try:
-            with dataset_path.open(encoding="utf-8") as handle:
-                dataset = json.load(handle)
+        with dataset_path.open(encoding="utf-8") as handle:
+            dataset = json.load(handle)
 
-            total_samples = 0
-            recall_hits = 0
-            recall_total = 0
-            aggregate_tokens_before = 0
-            aggregate_tokens_after = 0
-            aggregate_documents_compressed = 0
+        total_samples = 0
+        recall_hits = 0
+        recall_total = 0
+        aggregate_tokens_before = 0
+        aggregate_tokens_after = 0
+        aggregate_documents_compressed = 0
 
-            for entry in dataset:
-                query = str(entry.get("query", "")).strip()
-                raw_documents = entry.get("documents") or []
-                if not query or not raw_documents:
-                    continue
+        for entry in dataset:
+            query = str(entry.get("query", "")).strip()
+            raw_documents = entry.get("documents") or []
+            if not query or not raw_documents:
+                continue
 
-                documents = _build_documents(raw_documents)
-                compressed_docs = compressor.compress_documents(documents, query=query)
-                total_samples += 1
-                tokens_before = sum(
-                    _estimate_tokens(doc.page_content) for doc in documents
+            documents = _build_documents(raw_documents)
+            compressed_docs = compressor.compress_documents(documents, query=query)
+            total_samples += 1
+            tokens_before = sum(_estimate_tokens(doc.page_content) for doc in documents)
+            tokens_after = sum(
+                _estimate_tokens(doc.page_content) for doc in compressed_docs
+            )
+            aggregate_tokens_before += tokens_before
+            aggregate_tokens_after += tokens_after
+            aggregate_documents_compressed += max(
+                0, len(documents) - len(compressed_docs)
+            )
+
+            relevant_phrases = entry.get("relevant_phrases")
+            if isinstance(relevant_phrases, list) and relevant_phrases:
+                recall_total += len(relevant_phrases)
+                compressed_text = " \n".join(
+                    doc.page_content for doc in compressed_docs
                 )
-                tokens_after = sum(
-                    _estimate_tokens(doc.page_content) for doc in compressed_docs
+                recall_hits += sum(
+                    1
+                    for phrase in relevant_phrases
+                    if phrase and phrase in compressed_text
                 )
-                aggregate_tokens_before += tokens_before
-                aggregate_tokens_after += tokens_after
-                aggregate_documents_compressed += max(
-                    0, len(documents) - len(compressed_docs)
-                )
-
-                relevant_phrases = entry.get("relevant_phrases")
-                if isinstance(relevant_phrases, list) and relevant_phrases:
-                    recall_total += len(relevant_phrases)
-                    compressed_text = " \n".join(
-                        doc.page_content for doc in compressed_docs
-                    )
-                    recall_hits += sum(
-                        1
-                        for phrase in relevant_phrases
-                        if phrase and phrase in compressed_text
-                    )
-        finally:
+    finally:
+        if vector_service is not None:
             await vector_service.cleanup()
+        await exit_stack.aclose()
 
     if total_samples == 0:
         print("No valid samples found in the dataset.")

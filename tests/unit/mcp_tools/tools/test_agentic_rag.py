@@ -8,7 +8,7 @@ from typing import Any, cast
 import pytest
 from fastmcp import FastMCP
 
-from contracts.retrieval import SearchRecord
+from src.contracts.retrieval import SearchRecord
 from src.mcp_tools.tools import agentic_rag
 from src.services.agents import GraphAnalysisOutcome, GraphRunner, GraphSearchOutcome
 

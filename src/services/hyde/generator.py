@@ -1,6 +1,7 @@
 """Hypothetical document generator for HyDE."""
 
 import asyncio
+import contextlib
 import hashlib
 import itertools
 import logging
@@ -17,17 +18,6 @@ from .config import HyDEConfig, HyDEPromptConfig
 
 
 logger = logging.getLogger(__name__)
-
-
-async def _close_async_openai(client: AsyncOpenAI) -> None:
-    """Best-effort async close for OpenAI clients."""
-
-    close_fn = getattr(client, "close", None)
-    if close_fn is None:
-        return
-    result = close_fn()
-    if asyncio.iscoroutine(result):
-        await result
 
 
 class GenerationResult(BaseModel):
@@ -120,10 +110,17 @@ class HypotheticalDocumentGenerator(BaseService):
         Releases LLM client reference.
         Safe to call multiple times.
         """
-        if self._llm_client is not None:
-            await _close_async_openai(self._llm_client)
+        client = self._llm_client
         self._llm_client = None
         self._initialized = False
+        if client is not None:
+            close_fn = getattr(client, "close", None)
+            if close_fn is None:
+                return
+            with contextlib.suppress(ConnectionError, RuntimeError, TimeoutError):
+                result = close_fn()
+                if asyncio.iscoroutine(result):
+                    await result
         logger.info("HyDE document generator cleaned up")
 
     async def generate_documents(
@@ -370,8 +367,26 @@ class HypotheticalDocumentGenerator(BaseService):
             )
 
             total_tokens = 0
-            if getattr(response, "usage", None) is not None:
-                total_tokens = int(getattr(response.usage, "total_tokens", 0) or 0)
+            usage = getattr(response, "usage", None)
+            if usage is not None:
+                total_tokens_value: Any | None = None
+                if isinstance(usage, dict):
+                    total_tokens_value = usage.get("total_tokens")
+                    if not total_tokens_value:
+                        total_tokens_value = (usage.get("input_tokens") or 0) + (
+                            usage.get("output_tokens") or 0
+                        )
+                else:
+                    total_tokens_value = getattr(usage, "total_tokens", None)
+                    if not total_tokens_value:
+                        input_tokens = getattr(usage, "input_tokens", 0) or 0
+                        output_tokens = getattr(usage, "output_tokens", 0) or 0
+                        total_tokens_value = input_tokens + output_tokens
+
+                try:
+                    total_tokens = int(total_tokens_value or 0)
+                except (TypeError, ValueError):
+                    total_tokens = 0
 
             return (response.output_text or "").strip(), total_tokens
 

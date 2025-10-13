@@ -149,7 +149,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):  # pylint: disable=too-many-in
         if client is None:
             return
 
-        with contextlib.suppress(Exception):
+        with contextlib.suppress(ConnectionError, RuntimeError, TimeoutError):
             await client.close()  # type: ignore[reportAttributeAccess]
 
     @trace_function()
