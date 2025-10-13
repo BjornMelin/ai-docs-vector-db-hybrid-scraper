@@ -17,9 +17,14 @@ managed services from `src/services/dependencies.py`.
 {
   "query": "vector databases",
   "collection": "documents",
-  "limit": 10
+  "limit": 10,
+  "search_strategy": "hybrid"
 }
 ```
+
+`search_strategy` accepts `dense`, `sparse`, or `hybrid`. Hybrid combines
+FastEmbed dense vectors with optional sparse payloads when the embedding config
+exposes a sparse model.
 
 Response (`SearchResponse`):
 
@@ -75,6 +80,19 @@ metadata keys so downstream services can rely on a predictable schema:
 Legacy chunk dictionaries and ad-hoc metadata fields are no longer produced nor
 accepted by caches. Cached `AddDocumentResponse` objects are serialised in-place
 and hydrated directly from JSON when read back.
+
+Chunk generation is centralised in
+`src/services/document_chunking.chunk_to_documents`, which inspects crawler
+metadata to select LangChain splitters (Markdown headers, semantic HTML,
+code-aware recursive character splitting, JSON segmentation, token-aware, or
+plain-text splitters). `ChunkingConfig` exposes chunk size/overlap, token-aware
+limits, JSON window sizes, and HTML normalisation flags; MCP and CLI requests map
+one-to-one to those fields.
+
+`VectorStoreService` persists the resulting payloads through LangChain's
+`QdrantVectorStore`. FastEmbed dense and sparse embeddings are initialised once
+and reused across ingestion surfaces so hybrid scoring is available when
+`retrieval_mode` (or request `search_strategy`) is set to `hybrid`.
 
 ### Health
 

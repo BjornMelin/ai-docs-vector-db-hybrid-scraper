@@ -55,7 +55,13 @@ Most problems have simple fixes that don't require technical expertise.
 mcp list-collections
 
 # If empty, add some documents first
-mcp add-documents --path "/path/to/documents"
+mcp add-documents \
+  --path "/path/to/documents" \
+  --chunk-size 1200 \
+  --chunk-overlap 200 \
+  --retrieval-mode "hybrid"
+# This replays the LangChain `chunk_to_documents` pipeline with smaller chunk
+# sizes so Qdrant hybrid scoring has denser coverage without hitting memory caps.
 ```
 
 #### **2. Query too specific**

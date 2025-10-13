@@ -45,6 +45,9 @@ result.
   evaluation harness, pinned versions).
 - Phase B will migrate embeddings/vector stores and replace the RAG
   orchestrator.
+- 2025-10-15 update: Bespoke chunkers were removed in favour of
+  `chunk_to_documents` (LangChain splitter matrix) and FastEmbed dense+sparse
+  hybrid retrieval via `QdrantVectorStore` now powers all ingestion surfaces.
 
 ## References
 

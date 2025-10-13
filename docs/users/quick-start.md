@@ -186,13 +186,20 @@ mcp scrape --url "https://spa-application.com" --tier="playwright" --wait-for-co
 ### Batch Processing with Performance Optimization
 
 ```bash
-# Batch document processing with intelligent chunking
-mcp add-documents-batch --path "/path/to/documents" --enable-chunking --optimize-embeddings
+# Batch document processing with LangChain chunking + FastEmbed hybrid retrieval
+mcp add-documents-batch \
+  --path "/path/to/documents" \
+  --chunk-size 1600 \
+  --chunk-overlap 200 \
+  --token-chunk-size 600 \
+  --token-model "cl100k_base" \
+  --retrieval-mode "hybrid"
 
-# Every chunk now lands in the vector store with canonical metadata fields
-# (source, uri, tenant, chunk identifiers, timestamps). Downstream search tools
-# automatically pick up these attributes for filtering without any extra
-# configuration.
+# Documents are segmented via `chunk_to_documents` (Markdown, HTML, code, JSON,
+# token-aware, or plain-text splitters) and each chunk includes canonical
+# metadata fields (source, uri, tenant, chunk identifiers, timestamps). Qdrant
+# persistence flows through LangChain's `QdrantVectorStore` so downstream search
+# tools can filter and rerank without bespoke wiring.
 
 # Project creation with dependency injection
 mcp create-project --name "my-docs" --enable-enterprise-features

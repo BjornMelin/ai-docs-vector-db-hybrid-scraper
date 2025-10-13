@@ -57,8 +57,15 @@ mcp scrape --url "https://docs.example.com/changelog" --compare-with "changelog"
 # Scrape documentation sites
 mcp scrape --url "https://docs.framework.com" --auto-index
 
-# Add local documents
-mcp add-documents --path "./company-docs" --collection "internal-knowledge"
+# Add local documents with LangChain chunking and hybrid retrieval
+# `chunk_to_documents` picks the right splitter per file and
+# LangChain's `QdrantVectorStore` stores dense+sparse FastEmbed vectors.
+mcp add-documents \
+  --path "./company-docs" \
+  --collection "internal-knowledge" \
+  --chunk-size 1600 \
+  --chunk-overlap 200 \
+  --retrieval-mode "hybrid"
 
 # Search across everything with federated search
 mcp search --query "authentication best practices" --collections "all"
@@ -256,7 +263,12 @@ mcp search --query "emerging technologies adoption rates"
 ```bash
 # Collect support documentation
 mcp scrape --url "https://support.product.com" --collection "support-kb"
-mcp add-documents --path "./support-tickets" --collection "support-kb"
+mcp add-documents \
+  --path "./support-tickets" \
+  --collection "support-kb" \
+  --token-chunk-size 800 \
+  --token-chunk-overlap 160 \
+  --retrieval-mode "hybrid"
 
 # Search for solution patterns
 mcp search --query "common customer issues solutions"

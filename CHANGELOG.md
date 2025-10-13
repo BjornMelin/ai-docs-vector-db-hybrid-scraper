@@ -86,6 +86,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CLI commands, wizard utilities, and tests now emit technical, emoji-free
   messaging aligned with the canonical `SearchRecord` workflow, ensuring
   consistent help output across CLI entry points.
+- Documentation now reflects the LangChain `chunk_to_documents` splitter matrix
+  and FastEmbed dense+sparse hybrid retrieval via `QdrantVectorStore`, replacing
+  references to bespoke chunkers or manual Qdrant ingestion flows.
 - MCP tools, fixtures, and tests now consume the unified service payload models
   (content intelligence, embeddings, retrieval, analytics, collection management,
   lightweight scrape) with optional dependency guards; CLI batch/setup helpers
