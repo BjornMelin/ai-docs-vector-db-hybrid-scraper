@@ -305,6 +305,21 @@ def qdrant_configurations(draw) -> dict[str, Any]:
         "batch_size": draw(st.integers(min_value=1, max_value=1000)),
         "prefer_grpc": draw(st.booleans()),
         "grpc_port": draw(port_numbers()),
+        "use_grpc": draw(st.booleans()),
+        "enable_grouping": draw(st.booleans()),
+        "group_by_field": draw(
+            st.text(
+                alphabet=string.ascii_lowercase + string.digits + "_",
+                min_size=1,
+                max_size=30,
+            )
+        ),
+        "group_size": draw(st.integers(min_value=1, max_value=10)),
+        "groups_limit_multiplier": draw(
+            st.floats(
+                min_value=0.1, max_value=5.0, allow_nan=False, allow_infinity=False
+            )
+        ),
     }
 
 
@@ -454,21 +469,35 @@ def complete_configurations(draw) -> dict[str, Any]:
         "logs_dir": draw(file_paths()),
     }
 
-    # Add provider-specific configurations
-    if crawl_provider == CrawlProvider.FIRECRAWL:
-        config.setdefault("browser", {})
+    browser_config: dict[str, Any] = {
+        "lightweight": {},
+        "crawl4ai": {},
+        "playwright": {},
+        "browser_use": {},
+        "firecrawl": {},
+        "router": {},
+    }
 
-    config.setdefault(
-        "browser",
-        {
-            "lightweight": {},
-            "crawl4ai": {},
-            "playwright": {},
-            "browser_use": {},
-            "firecrawl": {},
-            "router": {},
-        },
-    )
+    if crawl_provider == CrawlProvider.FIRECRAWL:
+        browser_config["firecrawl"] = {
+            "api_key": draw(firecrawl_api_keys()),
+            "api_url": draw(http_urls()),
+            "default_formats": draw(
+                st.lists(
+                    st.sampled_from(["markdown", "html", "text"]),
+                    min_size=1,
+                    max_size=3,
+                    unique=True,
+                )
+            ),
+            "timeout_seconds": draw(st.integers(min_value=30, max_value=600)),
+        }
+
+    config["browser"] = browser_config
+
+    if embedding_provider == EmbeddingProvider.OPENAI:
+        config.setdefault("openai", {})
+        config["openai"]["api_key"] = draw(openai_api_keys())
 
     return config
 

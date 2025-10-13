@@ -54,6 +54,10 @@ def fastembed_stubs(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
         "src.services.vector_db.service.FastEmbedSparseRuntime",
         _SparseEmbeddingStub,
     )
+    monkeypatch.setattr(
+        "src.services.vector_db.service.FastEmbedSparseType",
+        _SparseEmbeddingStub,
+    )
     yield
 
 
@@ -89,6 +93,7 @@ def qdrant_client_mock() -> AsyncMock:
     )
     client.scroll.return_value = ([], None)
     client.recommend.return_value = []
+    client.query_points = AsyncMock(return_value=SimpleNamespace(points=[]))
     return client
 
 
@@ -127,8 +132,34 @@ def sample_documents() -> list[TextDocument]:
     """Provide deterministic text documents for upsert tests."""
 
     return [
-        TextDocument(id="doc-1", content="alpha", metadata={"lang": "py"}),
-        TextDocument(id="doc-2", content="beta", metadata={"lang": "js"}),
+        TextDocument(
+            id="doc-1",
+            content="alpha",
+            metadata={
+                "doc_id": "doc-1",
+                "chunk_id": 0,
+                "chunk_index": 0,
+                "total_chunks": 2,
+                "tenant": "default",
+                "source": "https://example.com/alpha",
+                "uri_or_path": "https://example.com/alpha",
+                "content_hash": "hash-alpha",
+            },
+        ),
+        TextDocument(
+            id="doc-2",
+            content="beta",
+            metadata={
+                "doc_id": "doc-2",
+                "chunk_id": 1,
+                "chunk_index": 1,
+                "total_chunks": 2,
+                "tenant": "default",
+                "source": "https://example.com/beta",
+                "uri_or_path": "https://example.com/beta",
+                "content_hash": "hash-beta",
+            },
+        ),
     ]
 
 

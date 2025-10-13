@@ -58,12 +58,28 @@ class DummyValidator:
 
 
 def _dummy_splitter(*_: Any, **__: Any) -> list[Document]:
-    """Return deterministic LangChain documents for testing."""
+    """Return deterministic LangChain documents with canonical metadata."""
 
-    return [
-        Document(page_content="chunk-0", metadata={"section": "intro"}),
-        Document(page_content="chunk-1", metadata={"section": "body"}),
-    ]
+    documents: list[Document] = []
+    for index, section in enumerate(("intro", "body")):
+        chunk_hash = f"feedbeefdead{index:02d}"
+        documents.append(
+            Document(
+                page_content=f"chunk-{index}",
+                metadata={
+                    "section": section,
+                    "chunk_index": index,
+                    "chunk_id": chunk_hash,
+                    "kind": "markdown",
+                    "source": "https://example.com/doc",
+                    "uri_or_path": "https://example.com/doc",
+                    "title": "Example Title",
+                    "provider": "tier-1",
+                    "mime_type": "text/markdown",
+                },
+            )
+        )
+    return documents
 
 
 def _make_enriched_content() -> SimpleNamespace:
@@ -125,6 +141,10 @@ def documents_env(monkeypatch) -> SimpleNamespace:  # pylint: disable=too-many-l
         documents.MLSecurityValidator,
         "from_unified_config",
         classmethod(lambda cls: validator),
+    )
+    monkeypatch.setattr(
+        "src.services.document_chunking.chunk_to_documents",
+        lambda *args, **kwargs: _dummy_splitter(*args, **kwargs),
     )
     monkeypatch.setattr(documents, "chunk_to_documents", _dummy_splitter)
 
@@ -188,15 +208,25 @@ async def test_add_document_ingests_chunks(documents_env: SimpleNamespace) -> No
     assert first_document.id.endswith(":0")
     assert first_metadata["chunk_index"] == 0
     assert first_metadata["chunk_id"] == 0
+    assert first_metadata["chunk_hash"] == "feedbeefdead00"
     assert first_metadata["total_chunks"] == 2
     assert first_metadata["tenant"] == request.collection
     assert first_metadata["source"] == request.url
     assert first_metadata["uri_or_path"] == request.url
     assert first_metadata["title"] == "Example Title"
     assert first_metadata["provider"] == "tier-1"
-    assert first_metadata["quality_score"] == pytest.approx(0.78)
-    assert first_metadata["content_intelligence_analyzed"] is True
     assert first_metadata["content_type"] == "guide"
+    assert first_metadata["content_confidence"] == pytest.approx(0.92)
+    assert first_metadata["quality_overall"] == pytest.approx(0.87)
+    assert first_metadata["quality_completeness"] == pytest.approx(0.82)
+    assert first_metadata["quality_relevance"] == pytest.approx(0.91)
+    assert first_metadata["quality_confidence"] == pytest.approx(0.85)
+    assert first_metadata["ci_word_count"] == 1200
+    assert first_metadata["ci_char_count"] == 7800
+    assert first_metadata["ci_language"] == "en"
+    assert first_metadata["ci_semantic_tags"] == ["documentation"]
+    assert first_metadata["secondary_content_types"] == ["cheatsheet"]
+    assert first_metadata["content_intelligence_analyzed"] is True
     assert isinstance(first_metadata["created_at"], str)
     assert first_metadata["updated_at"] == first_metadata["created_at"]
     assert first_metadata["doc_id"]
@@ -204,6 +234,11 @@ async def test_add_document_ingests_chunks(documents_env: SimpleNamespace) -> No
     assert "lang" not in first_metadata or first_metadata["lang"] is None
 
     documents_env.cache_manager.set.assert_awaited_once()
+    cache_args = documents_env.cache_manager.set.await_args.kwargs
+    assert cache_args == {"ttl": 86400}
+    cache_key, cache_payload = documents_env.cache_manager.set.await_args.args
+    assert cache_key == "doc:https://example.com/doc"
+    assert cache_payload["url"] == request.url
     documents_env.context.info.assert_awaited()
 
 
@@ -227,6 +262,9 @@ async def test_add_document_returns_cached_result(
     assert result == cached_response
     documents_env.vector_service.ensure_collection.assert_not_called()
     documents_env.vector_service.upsert_documents.assert_not_called()
+    documents_env.cache_manager.get.assert_awaited_once_with(
+        "doc:https://example.com/doc"
+    )
 
 
 @pytest.mark.asyncio

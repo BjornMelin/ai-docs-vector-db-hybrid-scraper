@@ -1,5 +1,7 @@
 """Mock MCP tools for testing without FastMCP Context issues."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Any, Protocol
 from unittest.mock import AsyncMock

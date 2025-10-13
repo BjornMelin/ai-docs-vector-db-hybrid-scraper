@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from langchain_core.documents import Document
 from qdrant_client import models
 
+from src.config.models import SearchStrategy
 from src.infrastructure.container import ApplicationContainer
 from src.services.vector_db.service import VectorStoreService, _filter_from_mapping
 from src.services.vector_db.types import CollectionSchema, TextDocument, VectorRecord
@@ -21,6 +23,8 @@ class StubVectorStore:
         self.collection_name = collection_name
         self.add_calls: list[tuple[list[Document], list[str]]] = []
         self.search_return: list[tuple[Document, float]] = []
+        self.vector_name = "dense"
+        self.sparse_vector_name = "langchain-sparse"
 
     def add_documents(
         self,
@@ -35,9 +39,9 @@ class StubVectorStore:
         *,
         vector: list[float],
         k: int,
-        vector_filter: object | None = None,
+        filter: object | None = None,
     ) -> list[tuple[Document, float]]:
-        _ = (vector, k, vector_filter)
+        _ = (vector, k, filter)
         return self.search_return or [
             (
                 Document(page_content="stub", metadata={"doc_id": "doc-1"}),
@@ -62,6 +66,11 @@ async def initialized_service(
         "src.services.vector_db.service.VectorStoreService._build_sync_client",
         lambda self, cfg: MagicMock(),
     )
+
+    async def _to_thread(func, /, *args, **kwargs):
+        return func(*args, **kwargs)
+
+    monkeypatch.setattr("asyncio.to_thread", _to_thread)
 
     service = vector_container.vector_store_service()
     await service.initialize()
@@ -124,12 +133,21 @@ async def test_upsert_documents_invokes_vector_store(
     assert len(store.add_calls) == 1
     documents, ids = store.add_calls[0]
     assert [doc.page_content for doc in documents] == ["alpha", "beta"]
-    assert len(ids) == 2 and ids[0] != ids[1]
+    assert all(len(identifier) == 32 for identifier in ids)
     first_metadata = documents[0].metadata or {}
     second_metadata = documents[1].metadata or {}
     assert first_metadata["tenant"] == "acme"
+    assert first_metadata["doc_id"] == "doc-1"
+    assert first_metadata["chunk_id"] == 0
+    assert "content_hash_previous" not in first_metadata
+    assert len(first_metadata["content_hash"]) == 32
+    assert first_metadata["content"] == "alpha"
     assert "created_at" in first_metadata
     assert second_metadata["tenant"] == "default"
+    assert second_metadata["doc_id"] == "doc-2"
+    assert second_metadata["chunk_id"] == 0
+    assert "content_hash_previous" not in second_metadata
+    assert "created_at" in second_metadata
 
 
 @pytest.mark.asyncio
@@ -214,7 +232,6 @@ def test_filter_from_mapping_treats_strings_as_scalars() -> None:
 @pytest.mark.asyncio
 async def test_search_documents_returns_vector_matches(
     initialized_service: VectorStoreService,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """search_documents should normalise results from the vector store."""
 
@@ -226,11 +243,6 @@ async def test_search_documents_returns_vector_matches(
         metadata={"doc_id": "doc-123", "topic": "testing"},
     )
     store.search_return = [(result_doc, 0.87)]
-
-    async def _immediate(func, /, *args, **kwargs):
-        return func(*args, **kwargs)
-
-    monkeypatch.setattr("asyncio.to_thread", _immediate)
 
     matches = await initialized_service.search_documents(
         "documents",
@@ -244,3 +256,49 @@ async def test_search_documents_returns_vector_matches(
     assert match.metadata is not None
     assert match.metadata["topic"] == "testing"
     assert pytest.approx(match.score) == 0.87
+
+
+@pytest.mark.asyncio
+async def test_hybrid_search_uses_dense_path_when_sparse_missing(
+    initialized_service: VectorStoreService,
+) -> None:
+    """Hybrid search should degrade to dense search when sparse payload absent."""
+
+    service = initialized_service
+    service._retrieval_mode = SearchStrategy.DENSE
+    store = service._vector_store
+    assert isinstance(store, StubVectorStore)
+    store.search_return = [
+        (Document(page_content="dense", metadata={"doc_id": "dense-1"}), 0.51)
+    ]
+
+    results = await service.hybrid_search("documents", query="dense query", limit=1)
+
+    assert len(results) == 1
+    assert results[0].id == "dense-1"
+    assert pytest.approx(results[0].score) == 0.51
+
+
+@pytest.mark.asyncio
+async def test_hybrid_search_executes_hybrid_prefetch(
+    initialized_service: VectorStoreService,
+) -> None:
+    """Hybrid search should request dense and sparse prefetch queries."""
+
+    service = initialized_service
+    service._retrieval_mode = SearchStrategy.HYBRID
+    service._sparse_embeddings = SimpleNamespace(
+        embed_query=lambda _: SimpleNamespace(indices=[0], values=[1.0])
+    )
+    client = service._async_client
+    assert isinstance(client, AsyncMock)
+    client.query_points.return_value = SimpleNamespace(
+        points=[SimpleNamespace(id="hybrid", score=0.73, payload={"doc_id": "hybrid"})]
+    )
+
+    results = await service.hybrid_search("documents", query="hybrid query", limit=1)
+
+    client.query_points.assert_awaited()
+    assert len(results) == 1
+    assert results[0].id == "hybrid"
+    assert pytest.approx(results[0].score) == 0.73

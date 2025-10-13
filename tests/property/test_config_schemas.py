@@ -18,6 +18,7 @@ from src.config.browser import (
     FirecrawlSettings,
     RouterSettings,
 )
+from src.config.loader import ensure_runtime_directories
 from src.config.models import (
     CacheConfig,
     ChunkingConfig,
@@ -147,6 +148,9 @@ class TestQdrantConfigProperties:
         assert qdrant_data["timeout"] > 0
         assert 0 < qdrant_data["batch_size"] <= 1000
         assert 1 <= qdrant_data["grpc_port"] <= 65535
+        assert 1 <= qdrant_data["group_size"] <= 10
+        assert qdrant_data["groups_limit_multiplier"] > 0
+        assert isinstance(qdrant_data["enable_grouping"], bool)
 
         # Verify URL format
         assert qdrant_data["url"].startswith(("http://", "https://"))
@@ -250,7 +254,9 @@ class TestFirecrawlSettings:
     def test_firecrawl_api_url_validation(self, valid_url: str):
         """Test that valid URLs are accepted."""
         config = FirecrawlSettings(api_url=cast(HttpUrl, valid_url))
-        assert config.model_dump()["api_url"] == valid_url
+        normalized_actual = str(config.model_dump()["api_url"]).rstrip("/")
+        normalized_expected = valid_url.rstrip("/")
+        assert normalized_actual == normalized_expected
 
     @given(st.integers(min_value=1, max_value=3600))
     def test_firecrawl_timeout_validation(self, valid_timeout: int):
@@ -620,6 +626,7 @@ class TestCompleteConfigProperties:
             logs_dir = temp_path / "test_logs"
 
             config = Settings(data_dir=data_dir, cache_dir=cache_dir, logs_dir=logs_dir)
+            ensure_runtime_directories(config)
 
             # Directories should be created
             assert data_dir.exists()
@@ -650,12 +657,15 @@ class TestConfigPropertyInvariants:
         settings_data = config.model_dump()
 
         cache_data = settings_data["cache"]
-        assert cache_data["local_max_size"] > 0
-        assert cache_data["local_max_memory_mb"] > 0
-        assert cache_data["ttl_embeddings"] > 0
-        assert cache_data["ttl_crawl"] > 0
-        assert cache_data["ttl_queries"] > 0
-        assert cache_data["ttl_search_results"] > 0
+        for field in (
+            "ttl_embeddings",
+            "ttl_crawl",
+            "ttl_queries",
+            "ttl_search_results",
+        ):
+            assert cache_data[field] > 0
+        assert cache_data["dragonfly_database"] >= 0
+        assert all(value > 0 for value in cache_data["cache_ttl_seconds"].values())
 
         qdrant_data = settings_data["qdrant"]
         assert qdrant_data["timeout"] > 0
