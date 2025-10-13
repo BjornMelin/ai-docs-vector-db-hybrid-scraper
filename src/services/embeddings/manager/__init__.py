@@ -16,11 +16,11 @@ except ImportError:
 
 from src.config.loader import Settings
 from src.config.models import CacheType, EmbeddingConfig as SettingsEmbeddingConfig
+from src.services.embeddings.base import EmbeddingProvider
+from src.services.embeddings.fastembed_provider import FastEmbedProvider
+from src.services.embeddings.openai_provider import OpenAIEmbeddingProvider
 from src.services.errors import EmbeddingServiceError
 
-from ..base import EmbeddingProvider
-from ..fastembed_provider import FastEmbedProvider
-from ..openai_provider import OpenAIEmbeddingProvider
 from .pipeline import EmbeddingPipeline, GenerationOptions, PipelineContext
 from .providers import ProviderFactories, ProviderRegistry
 from .selection import RecommendationParams, SelectionEngine, TextAnalysis

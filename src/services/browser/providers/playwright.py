@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from typing import Any, cast
 
+import playwright_stealth  # type: ignore[import]  # pyright: ignore[reportMissingTypeStubs]
 from playwright.async_api import (
     Browser,
     BrowserContext,
@@ -18,20 +19,15 @@ from playwright.async_api import (
 from src.config.browser import CaptchaProvider, PlaywrightSettings, StealthMode
 from src.services.browser.errors import BrowserProviderError
 from src.services.browser.models import BrowserResult, ProviderKind, ScrapeRequest
+from src.services.browser.runtime import measure
 
-from ..runtime import measure
 from .base import BrowserProvider, ProviderContext
 
 
 ApplyStealthFn = Callable[[Page], Awaitable[None]]
 
-try:  # pragma: no cover - optional dependency
-    import playwright_stealth  # type: ignore[import]  # pyright: ignore[reportMissingTypeStubs]
-except ImportError:  # pragma: no cover
-    APPLY_STEALTH: ApplyStealthFn | None = None
-else:
-    maybe_apply = getattr(playwright_stealth, "stealth_async", None)
-    APPLY_STEALTH = cast(ApplyStealthFn, maybe_apply) if callable(maybe_apply) else None
+maybe_apply = getattr(playwright_stealth, "stealth_async", None)
+APPLY_STEALTH: ApplyStealthFn = cast(ApplyStealthFn, maybe_apply)
 
 
 class PlaywrightProvider(BrowserProvider):
@@ -48,14 +44,6 @@ class PlaywrightProvider(BrowserProvider):
     async def initialize(self) -> None:
         """Start Playwright and launch configured browser."""
 
-        if (
-            self._settings.stealth is StealthMode.PLAYWRIGHT_STEALTH
-            and APPLY_STEALTH is None
-        ):
-            raise BrowserProviderError(
-                "playwright-stealth is required but not installed",
-                provider=self.kind.value,
-            )
         if self._settings.stealth is StealthMode.REBROWSER:
             raise BrowserProviderError(
                 "rebrowser stealth mode is not available in this deployment",
@@ -89,6 +77,8 @@ class PlaywrightProvider(BrowserProvider):
     async def _execute_actions(
         self, page: Page, actions: Sequence[Mapping[str, Any]]
     ) -> None:
+        """Execute a series of actions on the given page."""
+
         for action in actions:
             action_type = action.get("type")
             if action_type == "click" and "selector" in action:
@@ -114,11 +104,6 @@ class PlaywrightProvider(BrowserProvider):
                 context = await self._browser.new_context()
                 page = await context.new_page()
                 if self._settings.stealth is StealthMode.PLAYWRIGHT_STEALTH:
-                    if APPLY_STEALTH is None:  # Defensive guard for runtime parity.
-                        raise BrowserProviderError(
-                            "playwright-stealth is required but not installed",
-                            provider=self.kind.value,
-                        )
                     await APPLY_STEALTH(page)  # pylint: disable=not-callable
 
                 await page.goto(request.url, wait_until="networkidle", timeout=timeout)

@@ -6,11 +6,10 @@ import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+from src.services.embeddings.base import EmbeddingProvider
+from src.services.embeddings.fastembed_provider import FastEmbedProvider
+from src.services.embeddings.openai_provider import OpenAIEmbeddingProvider
 from src.services.errors import EmbeddingServiceError
-
-from ..base import EmbeddingProvider
-from ..fastembed_provider import FastEmbedProvider
-from ..openai_provider import OpenAIEmbeddingProvider
 
 
 @dataclass

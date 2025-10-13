@@ -3,7 +3,7 @@
 ## Snapshot
 
 - **Scope:** Perform a single, atomic refactor that replaces every legacy integration with the final implementation. No feature flags, no incremental rollout, and no backward compatibility.
-- **Targets:** Direct OpenAI SDK usage, ragas ≥0.3 evaluator, NumPy 2.3.x, lxml 6.x, aiohttp 3.13.x, xformers 0.0.32.post2, Torch GPU extras, end-to-end validation harnesses, refreshed test suites, and updated documentation.
+- **Targets:** Direct OpenAI SDK usage, ragas ≥0.3 evaluator, NumPy 2.2.x, lxml 5.3.x, aiohttp 3.12.x, xformers 0.0.32.post1, Torch GPU extras, end-to-end validation harnesses, refreshed test suites, and updated documentation.
 - **Outcome:** Repository contains only the new code path; all deprecated modules, wrappers, and tests are deleted in the same change set.
 
 ## Mandates
@@ -44,8 +44,8 @@ WS3 (Validation Harnesses) ─────────────────�
 
 ### WS3 – CPU/GPU Validation Harnesses
 
-- CPU harness: verify imports and ABI for NumPy/SciPy/scikit-learn, run PCA and t-SNE on sample embeddings, confirm BLAS provider, and check clustering behaviour under NumPy 2.3.x. Reference: [NumPy 2.3.0 Release Notes](https://numpy.org/devdocs/release/2.3.0-notes.html).
-- GPU harness: probe CUDA/ROCm versions, run torch/xformers/flash-attn inference smoke tests, and capture device memory statistics. Reference: [xformers 0.0.32.post2 on PyPI](https://pypi.org/project/xformers/).
+- CPU harness: verify imports and ABI for NumPy/SciPy/scikit-learn, run PCA and spectral embedding on sample embeddings, confirm BLAS provider, and check clustering behaviour under NumPy 2.2.x. Reference: [NumPy 2.2.2 Release Notes](https://numpy.org/doc/stable/release/2.2.2-notes.html).
+- GPU harness: probe CUDA/ROCm versions, run torch/xformers/flash-attn inference smoke tests, and capture device memory statistics. Reference: [xformers 0.0.32.post1 on PyPI](https://pypi.org/project/xformers/0.0.32.post1/).
 - Wire both harnesses into a single CI workflow; the job must fail on environmental incompatibilities and publish an artifact summarising results.
 - Acceptance: harness reports stored in CI artifacts, failure blocks merge, documented command for local execution.
 
@@ -59,7 +59,8 @@ WS3 (Validation Harnesses) ─────────────────�
 
 ### WS5 – Documentation & Dependency Alignment
 
-- Update `pyproject.toml` with final versions: `openai>=2.0.0`, `ragas>=0.3.0`, `numpy>=2.3.0,<3`, `lxml>=6.0.0,<7`, `aiohttp>=3.13.0,<4`, `xformers>=0.0.32.post2`. References: [lxml 6.0.0 Changelog](https://lxml.de/changes-6.0.0.html), [aiohttp Changelog](https://docs.aiohttp.org/en/stable/changes.html).
+- Update `pyproject.toml` with final versions: `openai>=1.105.0,<2.0.0`, `ragas>=0.3.0`, `numpy>=2.2.2,<2.3.0`, `lxml>=5.3.0,<6.0.0`, `aiohttp>=3.12.15,<3.13.0`, `xformers>=0.0.32.post1,<0.0.33`. References:
+  [browser-use 0.8.0 release](https://github.com/browser-use/browser-use/releases/tag/v0.8.0), [NumPy 2.2.2 release](https://numpy.org/doc/stable/release/2.2.2-notes.html), [crawl4ai 0.7.4 PyPI](https://pypi.org/project/crawl4ai/0.7.4/), [vLLM 0.11.0 notes](https://github.com/vllm-project/vllm/releases/tag/v0.11.0).
 - Regenerate `uv.lock`, run `uv sync --all-extras`, and execute the quality gates listed below.
 - Rewrite documentation (developer guide, operator runbooks, plan) to describe only the new workflows, validation harness usage, and dependency baselines. Include compatibility notes (glibc ≥2.28 for NumPy/lxml wheels, CUDA/ROCm requirements for GPU stack).
 - Acceptance: all tooling commands succeed, documentation merged, and CHANGELOG entry summarises the aggressive rewrite.
@@ -75,14 +76,14 @@ WS3 (Validation Harnesses) ─────────────────�
 
 ## Dependency Summary
 
-| Library | Final Version Policy | Primary Reference |
-| --- | --- | --- |
-| openai | ≥2.0.0 | [GitHub: openai/openai-python](https://github.com/openai/openai-python) |
-| ragas | ≥0.3.0 | [Ragas Migration Guide](https://docs.ragas.io/en/stable/howtos/migrations/migrate_from_v01_to_v02/) |
-| numpy | ≥2.3.0,<3 | [NumPy 2.3.0 Release Notes](https://numpy.org/devdocs/release/2.3.0-notes.html) |
-| lxml | ≥6.0.0,<7 | [lxml 6.0.0 Changelog](https://lxml.de/changes-6.0.0.html) |
-| aiohttp | ≥3.13.0,<4 | [aiohttp Changelog](https://docs.aiohttp.org/en/stable/changes.html) |
-| xformers | ≥0.0.32.post2 | [xformers on PyPI](https://pypi.org/project/xformers/) |
+| Library  | Final Version Policy                           | Primary Reference                                                                                   |
+| -------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| openai   | ≥1.105.0,<2.0.0 (browser-use 0.8.0 pin)        | [browser-use 0.8.0 release](https://github.com/browser-use/browser-use/releases/tag/v0.8.0)         |
+| ragas    | ≥0.3.0                                         | [Ragas Migration Guide](https://docs.ragas.io/en/stable/howtos/migrations/migrate_from_v01_to_v02/) |
+| numpy    | ≥2.2.2,<2.3.0 (aligned with vLLM numba pin)    | [NumPy 2.2.2 release notes](https://numpy.org/doc/stable/release/2.2.2-notes.html)                  |
+| lxml     | ≥5.3.0,<6.0.0 (crawl4ai wheel constraint)      | [crawl4ai 0.7.4 PyPI](https://pypi.org/project/crawl4ai/0.7.4/)                                     |
+| aiohttp  | ≥3.12.15,<3.13.0 (browser-use compatibility)   | [browser-use 0.8.0 release](https://github.com/browser-use/browser-use/releases/tag/v0.8.0)         |
+| xformers | ≥0.0.32.post1,<0.0.33 (vLLM CUDA build matrix) | [vLLM 0.11.0 notes](https://github.com/vllm-project/vllm/releases/tag/v0.11.0)                      |
 
 ## Execution Checklist (Single PR)
 

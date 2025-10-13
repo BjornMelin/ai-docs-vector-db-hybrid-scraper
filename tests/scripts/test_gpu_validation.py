@@ -1,0 +1,144 @@
+"""Tests for the GPU validation harness."""
+
+from __future__ import annotations
+
+import types
+
+import pytest
+
+from scripts.validation import gpu_validation
+
+
+class _FakeTensor:
+    """A fake tensor class for testing purposes."""
+
+    def __init__(self, shape: tuple[int, int]):
+        self.shape = shape
+
+
+class _FakeCudaNoGpu:
+    """A fake CUDA module simulating no GPU availability."""
+
+    def is_available(self) -> bool:  # pragma: no cover - trivial
+        return False
+
+    def device_count(self) -> int:  # pragma: no cover - trivial
+        return 0
+
+
+class _FakeTorchNoGpu:
+    """A fake torch module simulating no GPU support."""
+
+    __version__ = "2.5.1"
+    version = types.SimpleNamespace(cuda=None)
+    cuda = _FakeCudaNoGpu()
+    float32 = "float32"
+    float16 = "float16"
+
+
+class _FakeCuda:
+    """A fake CUDA module simulating GPU availability."""
+
+    def is_available(self) -> bool:
+        return True
+
+    def device_count(self) -> int:
+        return 1
+
+    def get_device_name(self, index: int) -> str:
+        return f"Fake GPU {index}"
+
+    def synchronize(self) -> None:  # pragma: no cover - no-op
+        return None
+
+    def memory_allocated(self, index: int) -> int:
+        return 0
+
+    def memory_reserved(self, index: int) -> int:
+        return 0
+
+
+class _FakeTorchGpu:
+    """A fake torch module simulating GPU support."""
+
+    __version__ = "2.5.1"
+    version = types.SimpleNamespace(cuda="12.4")
+
+    def __init__(self) -> None:
+        self.cuda = _FakeCuda()
+        self.float32 = "float32"
+        self.float16 = "float16"
+
+    def device(self, name: str) -> types.SimpleNamespace:
+        return types.SimpleNamespace(type=name)
+
+    def randn(self, shape: tuple[int, int], *, device=None, dtype=None) -> _FakeTensor:
+        _ = (device, dtype)
+        return _FakeTensor(shape)
+
+    def matmul(self, lhs: _FakeTensor, rhs: _FakeTensor) -> _FakeTensor:
+        return _FakeTensor((lhs.shape[0], rhs.shape[-1]))
+
+
+class _FakeXformers:
+    """A fake xformers module for testing purposes."""
+
+    __version__ = "0.0.32.post1"
+
+    class Ops:  # pylint: disable=too-few-public-methods
+        @staticmethod
+        def memory_efficient_attention(query, key, value):  # pragma: no cover - trivial
+            return query
+
+    ops = Ops()
+
+
+def test_gpu_validation_fails_without_gpu() -> None:
+    """The harness should fail when CUDA is required but unavailable."""
+
+    report = gpu_validation.run_gpu_validation(
+        require_gpu=True,
+        torch_module=_FakeTorchNoGpu(),
+        xformers_module=None,
+    )
+    assert report.status == "failed"
+    assert any(check.name == "torch-cuda" for check in report.checks)
+
+
+def test_gpu_validation_warns_when_allowing_missing_gpu(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Opting into degraded mode should downgrade missing GPU errors to warnings."""
+
+    original_import = gpu_validation.importlib.import_module
+
+    def _fake_import(
+        name: str, package: str | None = None
+    ):  # pragma: no cover - deterministic
+        if name == "xformers":
+            raise ModuleNotFoundError("xformers missing")
+        return original_import(name, package)  # type: ignore[call-arg]
+
+    monkeypatch.setattr(gpu_validation.importlib, "import_module", _fake_import)
+
+    report = gpu_validation.run_gpu_validation(
+        require_gpu=False,
+        torch_module=_FakeTorchNoGpu(),
+        xformers_module=None,
+    )
+    assert report.status == "warning"
+    assert any(check.status == "warning" for check in report.checks)
+
+
+def test_gpu_validation_succeeds_with_fake_gpu(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The harness should pass when torch and xformers operations succeed."""
+
+    report = gpu_validation.run_gpu_validation(
+        require_gpu=True,
+        torch_module=_FakeTorchGpu(),
+        xformers_module=_FakeXformers(),
+    )
+    assert report.status == "passed"
+    assert any(
+        check.name == "xformers" and check.status == "passed" for check in report.checks
+    )

@@ -7,9 +7,9 @@ import time
 from dataclasses import dataclass
 from typing import Any, Protocol, runtime_checkable
 
+from src.services.embeddings.base import EmbeddingProvider
 from src.services.errors import EmbeddingServiceError
 
-from ..base import EmbeddingProvider
 from .providers import ProviderRegistry
 from .selection import RecommendationParams, SelectionEngine, TextAnalysis
 from .types import QualityTier
