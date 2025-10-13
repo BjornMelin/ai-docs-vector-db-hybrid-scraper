@@ -75,6 +75,7 @@ class HyDEQueryEngine(BaseService):
         self.embedding_cache_hit_count = 0
         self.generation_count = 0
         self.fallback_count = 0
+        self._hyde_embedding_dimensions: int | None = None
 
         # A/B testing support
         self.control_group_searches = 0
@@ -256,10 +257,12 @@ class HyDEQueryEngine(BaseService):
 
         # Try cache first
         if use_cache and self.embedding_cache is not None:
+            dimensions_hint = self._resolve_hyde_embedding_dimensions()
             cached_embedding = await self.embedding_cache.get_embedding(
                 text=cache_text,
                 model=self._CACHE_MODEL,
                 provider=self._CACHE_PROVIDER,
+                dimensions=dimensions_hint,
             )
             if cached_embedding is not None:
                 self.embedding_cache_hit_count += 1
@@ -288,6 +291,7 @@ class HyDEQueryEngine(BaseService):
         # Average embeddings for final HyDE vector
         embeddings_array = np.array(embeddings_result["embeddings"])
         hyde_embedding = np.mean(embeddings_array, axis=0).tolist()
+        self._hyde_embedding_dimensions = len(hyde_embedding)
 
         # Cache the result
         if use_cache and self.embedding_cache is not None:
@@ -296,10 +300,27 @@ class HyDEQueryEngine(BaseService):
                 model=self._CACHE_MODEL,
                 embedding=hyde_embedding,
                 provider=self._CACHE_PROVIDER,
+                dimensions=self._hyde_embedding_dimensions,
                 ttl=self.config.cache_ttl_seconds,
             )
 
         return hyde_embedding
+
+    def _resolve_hyde_embedding_dimensions(self) -> int | None:
+        """Infer HyDE embedding dimensionality for cache key alignment."""
+
+        if self._hyde_embedding_dimensions is not None:
+            return self._hyde_embedding_dimensions
+
+        if hasattr(self.vector_store, "embedding_dimension"):
+            try:
+                self._hyde_embedding_dimensions = self.vector_store.embedding_dimension
+            except EmbeddingServiceError:
+                return None
+            except Exception:  # pragma: no cover - defensive catch for provider quirks
+                return None
+
+        return self._hyde_embedding_dimensions
 
     def _build_embedding_cache_text(self, query: str, domain: str | None) -> str:
         """Build canonical cache text for HyDE embeddings.
@@ -527,4 +548,15 @@ class HyDEQueryEngine(BaseService):
     def total_search_time(self, value: float) -> None:
         """Persist aggregate search time."""
 
-        self._total_search_time = value
+        try:
+            normalized = float(value)
+        except (TypeError, ValueError) as exc:  # pragma: no cover - exercised via tests
+            raise ValueError("total_search_time must be a valid float") from exc
+
+        if normalized < 0:
+            raise ValueError("total_search_time must be non-negative")
+
+        if np.isnan(normalized):  # Guard against NaN silently propagating
+            raise ValueError("total_search_time must be a finite float")
+
+        self._total_search_time = normalized
