@@ -59,7 +59,7 @@ def tracer_fixture(mocker: MockerFixture) -> tuple[Any, Any, Any]:
 
 
 @pytest.fixture()
-def configure_engine(mocker: MockerFixture) -> Callable[[], Any]:
+def configure_engine(mocker: MockerFixture) -> Callable[[Callable[[], Any]], Any]:
     """Return a helper to provision async engine and session factory patches."""
 
     def _configure(session_factory: Callable[[], Any]) -> Any:
