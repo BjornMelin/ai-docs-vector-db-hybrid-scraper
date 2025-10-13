@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from src.contracts.retrieval import SearchRecord
+from src.models.search import SearchRecord
 
 
 def test_from_vector_match_normalizes_payload() -> None:

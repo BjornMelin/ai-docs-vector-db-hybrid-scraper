@@ -16,8 +16,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
-from src.contracts.retrieval import SearchRecord
-from src.models.search import SearchRequest
+from src.models.search import SearchRecord, SearchRequest
 from src.services.rag import (
     LangGraphRAGPipeline,
     RAGConfig,

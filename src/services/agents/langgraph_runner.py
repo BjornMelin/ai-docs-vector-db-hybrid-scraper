@@ -19,7 +19,7 @@ from langgraph.graph import END, StateGraph
 from opentelemetry import trace
 
 from src.config.loader import get_settings
-from src.contracts.retrieval import SearchRecord
+from src.models.search import SearchRecord
 from src.services.agents.dynamic_tool_discovery import (
     DynamicToolDiscovery,
     ToolCapability,

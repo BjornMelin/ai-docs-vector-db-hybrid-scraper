@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 
 from src.api.dependencies import get_vector_service_dependency
 from src.api.routers.v1 import documents as documents_router, search as search_router
-from src.contracts.retrieval import SearchRecord
+from src.models.search import SearchRecord
 
 
 @pytest.fixture()

@@ -11,7 +11,7 @@ from uuid import uuid4
 from fastmcp import FastMCP
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from src.contracts.retrieval import SearchRecord
+from src.models.search import SearchRecord
 from src.services.agents import (
     GraphAnalysisOutcome,
     GraphRunner,

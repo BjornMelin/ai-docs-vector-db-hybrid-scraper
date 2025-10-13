@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from src.contracts.retrieval import SearchRecord
+from src.models.search import SearchRecord
 
 
 class FakeMCP:

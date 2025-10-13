@@ -11,8 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from src.api.dependencies import get_vector_service_dependency
 from src.api.routers.v1.service_helpers import execute_service_call
-from src.contracts.retrieval import SearchRecord, SearchResponse
-from src.models.search import SearchRequest
+from src.models.search import SearchRecord, SearchResponse, SearchRequest
 from src.services.vector_db.service import VectorStoreService
 
 

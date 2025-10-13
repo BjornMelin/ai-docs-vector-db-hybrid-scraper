@@ -11,7 +11,7 @@ from langchain_core.callbacks.manager import AsyncCallbackManagerForRetrieverRun
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 
-from src.contracts.retrieval import SearchRecord
+from src.models.search import SearchRecord
 from src.services.rag import RAGConfig, VectorServiceRetriever
 
 

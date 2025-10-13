@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock
 import pytest
 
 from src.config.models import SearchStrategy
-from src.contracts.retrieval import SearchRecord
+from src.models.search import SearchRecord
 from src.mcp_tools.models.requests import ProjectRequest
 from src.mcp_tools.models.responses import ProjectInfo
 from src.mcp_tools.tools.projects import register_tools

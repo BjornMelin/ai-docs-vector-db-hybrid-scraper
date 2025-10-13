@@ -1,6 +1,6 @@
 """MCP Server Models - Request and response models for all tools."""
 
-from src.contracts.retrieval import SearchRecord
+from src.models.search import SearchRecord
 
 from .requests import (
     AnalyticsRequest,

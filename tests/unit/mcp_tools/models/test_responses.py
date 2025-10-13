@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import ValidationError
 
-from src.contracts.retrieval import SearchRecord
+from src.models.search import SearchRecord
 from src.mcp_tools.models.responses import CrawlResult
 
 

@@ -51,7 +51,7 @@ from src.infrastructure.bootstrap import container_session, ensure_container
 
 
 if TYPE_CHECKING:
-    from src.contracts.retrieval import SearchResponse
+    from src.models.search import SearchResponse
     from src.models.search import SearchRequest
     from src.services.query_processing.orchestrator import SearchOrchestrator
 else:  # pragma: no cover - runtime typing fallback
@@ -71,12 +71,11 @@ def _load_search_components() -> tuple[type[Any], type[Any], type[Any]]:
     """Lazily import search request/response models and orchestrator."""
 
     models_module = importlib.import_module("src.models.search")
-    retrieval_module = importlib.import_module("src.contracts.retrieval")
     orchestrator_module = importlib.import_module(
         "src.services.query_processing.orchestrator"
     )
     request_cls = models_module.SearchRequest
-    response_cls = retrieval_module.SearchResponse
+    response_cls = models_module.SearchResponse
     orchestrator_cls = orchestrator_module.SearchOrchestrator
     return (request_cls, response_cls, orchestrator_cls)
 

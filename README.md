@@ -283,7 +283,7 @@ All search endpoints accept the canonical [`SearchRequest`](src/models/search.py
 }
 ```
 
-Responses are emitted as [`SearchResponse`](src/contracts/retrieval.py) payloads containing canonical [`SearchRecord`](src/contracts/retrieval.py) entries. Example response payload:
+Responses are emitted as [`SearchResponse`](src/models/search.py) payloads containing canonical [`SearchRecord`](src/models/search.py) entries. Example response payload:
 
 ```json
 {

@@ -105,7 +105,7 @@ Example payload:
 
 ## 2. Search Response Contract
 
-`src.contracts.retrieval.SearchResponse` is the canonical DTO returned by both
+`src.models.search.SearchResponse` is the canonical DTO returned by both
 FastAPI routes and MCP tooling.
 
 Fields:

@@ -7,8 +7,7 @@ from typing import cast
 
 import pytest
 
-from src.contracts.retrieval import SearchRecord
-from src.models.search import SearchRequest
+from src.models.search import SearchRecord, SearchRequest
 from src.services.query_processing.orchestrator import (
     SearchOrchestrator,
     ServiceRAGConfig,

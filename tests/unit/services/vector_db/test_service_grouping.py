@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from src.config.models import SearchStrategy
-from src.contracts.retrieval import SearchRecord
+from src.models.search import SearchRecord
 from src.services.vector_db.service import VectorStoreService
 
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass
 
-from src.contracts.retrieval import SearchRecord
+from src.models.search import SearchRecord
 from src.services.vector_db.service import VectorStoreService
 
 

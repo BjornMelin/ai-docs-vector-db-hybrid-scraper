@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from click.testing import CliRunner
 
-from src.contracts.retrieval import SearchRecord
+from src.models.search import SearchRecord
 from src.manage_vector_db import (
     CollectionCreationError,
     CollectionDeletionError,

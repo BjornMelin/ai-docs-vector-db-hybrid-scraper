@@ -5,7 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.contracts.retrieval import SearchRecord
+from src.models.search import SearchRecord
 from src.services.content_intelligence.models import ContentType as _ContentType
 
 

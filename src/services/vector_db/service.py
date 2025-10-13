@@ -23,7 +23,7 @@ from src.config.models import (
     ScoreNormalizationStrategy,
     SearchStrategy,
 )
-from src.contracts.retrieval import SearchRecord
+from src.models.search import SearchRecord
 from src.services.base import BaseService
 from src.services.errors import EmbeddingServiceError
 from src.services.observability.tracing import set_span_attributes

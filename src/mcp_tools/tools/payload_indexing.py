@@ -12,7 +12,7 @@ from uuid import uuid4
 from fastmcp import Context
 from qdrant_client import models
 
-from src.contracts.retrieval import SearchRecord
+from src.models.search import SearchRecord
 from src.mcp_tools.models.responses import (
     GenericDictResponse,
     ReindexCollectionResponse,

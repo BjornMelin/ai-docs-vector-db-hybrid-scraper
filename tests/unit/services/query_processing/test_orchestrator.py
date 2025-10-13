@@ -7,8 +7,7 @@ from typing import Any, cast
 
 import pytest
 
-from src.contracts.retrieval import SearchRecord
-from src.models.search import SearchRequest
+from src.models.search import SearchRecord, SearchRequest
 from src.services.query_processing.orchestrator import SearchOrchestrator
 from src.services.rag import RAGConfig as ServiceRAGConfig
 from src.services.vector_db.service import VectorStoreService

@@ -15,8 +15,7 @@ from src.contracts.documents import (
     DocumentRecord,
     DocumentUpsertRequest,
 )
-from src.contracts.retrieval import SearchRecord, SearchResponse
-from src.models.search import SearchRequest
+from src.models.search import SearchRecord, SearchRequest, SearchResponse
 
 
 @pytest.fixture

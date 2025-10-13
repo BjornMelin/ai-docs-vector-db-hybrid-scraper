@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 
-from src.contracts.retrieval import SearchRecord
+from src.models.search import SearchRecord
 from src.mcp_tools.tools.payload_indexing import register_tools
 
 

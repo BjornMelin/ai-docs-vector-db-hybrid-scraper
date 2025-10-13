@@ -24,7 +24,7 @@ from fastmcp import Context
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.config.models import SearchStrategy
-from src.contracts.retrieval import SearchRecord
+from src.models.search import SearchRecord
 from src.models.search import SearchRequest as CoreSearchRequest
 from src.services.vector_db.service import VectorStoreService
 

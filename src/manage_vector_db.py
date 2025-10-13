@@ -16,7 +16,7 @@ from rich.table import Table
 
 # Import unified configuration and service layer
 from src.config import get_settings, refresh_settings
-from src.contracts.retrieval import SearchRecord
+from src.models.search import SearchRecord
 from src.infrastructure.bootstrap import ensure_container
 from src.infrastructure.container import get_container, shutdown_container
 from src.services.errors import QdrantServiceError

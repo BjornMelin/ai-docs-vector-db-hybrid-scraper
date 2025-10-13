@@ -12,7 +12,7 @@ Search request model
 Retrieval contracts
 -------------------
 
-.. automodule:: src.contracts.retrieval
+.. automodule:: src.models.search
    :members:
    :show-inheritance:
    :undoc-members:
