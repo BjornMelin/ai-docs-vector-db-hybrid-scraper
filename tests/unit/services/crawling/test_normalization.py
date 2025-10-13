@@ -2,75 +2,10 @@
 
 from __future__ import annotations
 
-import sys
-from dataclasses import dataclass
-from enum import Enum
-from importlib import import_module
-from types import ModuleType
-from typing import Any, cast
-
 import pytest
 
-
-class ProviderKind(str, Enum):
-    """Minimal provider enum for browser results."""
-
-    CRAWL4AI = "crawl4ai"
-
-
-@dataclass(slots=True)
-class BrowserResult:
-    """Lightweight BrowserResult stub mirroring the production shape."""
-
-    success: bool
-    url: str
-    title: str
-    content: str
-    html: str
-    metadata: dict[str, object]
-    provider: ProviderKind
-
-
-def _load_normalization() -> ModuleType:
-    """Load the normalization module with lightweight browser stubs."""
-
-    module_name = "src.services.crawling.normalization"
-
-    browser_pkg = ModuleType("src.services.browser")
-    browser_pkg.__path__ = []  # type: ignore[attr-defined]
-    models_module = ModuleType("src.services.browser.models")
-    models_module.BrowserResult = BrowserResult  # type: ignore[attr-defined]
-    models_module.ProviderKind = ProviderKind  # type: ignore[attr-defined]
-
-    backups: dict[str, ModuleType] = {}
-    injected_modules: dict[str, ModuleType] = {
-        "src": ModuleType("src"),
-        "src.services": ModuleType("src.services"),
-        "src.services.browser": browser_pkg,
-        "src.services.browser.models": models_module,
-    }
-
-    sys.modules.pop(module_name, None)
-    for name, module in injected_modules.items():
-        if name in sys.modules:
-            backups[name] = sys.modules[name]  # type: ignore[assignment]
-        sys.modules[name] = module
-
-    try:
-        return import_module(module_name)
-    finally:
-        for name in injected_modules:
-            if name in backups:
-                sys.modules[name] = backups[name]
-            else:
-                sys.modules.pop(name, None)
-
-
-@pytest.fixture(scope="module")
-def normalization_module() -> ModuleType:
-    """Provide the normalization module with browser stubs injected."""
-
-    return _load_normalization()
+from src.services.browser.models import BrowserResult, ProviderKind
+from src.services.crawling import normalization as normalization_module
 
 
 @pytest.fixture()
@@ -94,10 +29,9 @@ def sample_browser_result() -> BrowserResult:
 
 def test_normalize_crawler_output_from_browser_result(
     sample_browser_result: BrowserResult,
-    normalization_module: ModuleType,
 ) -> None:
     payload = normalization_module.normalize_crawler_output(
-        cast(Any, sample_browser_result),
+        sample_browser_result,
         fallback_url="https://fallback.local",
     )
 
@@ -110,9 +44,7 @@ def test_normalize_crawler_output_from_browser_result(
     assert payload["raw_html"] == "<p>hello</p>"
 
 
-def test_normalize_crawler_output_from_mapping(
-    normalization_module: ModuleType,
-) -> None:
+def test_normalize_crawler_output_from_mapping() -> None:
     payload = normalization_module.normalize_crawler_output(
         {
             "title": "Mapped",
@@ -131,10 +63,9 @@ def test_normalize_crawler_output_from_mapping(
 
 def test_resolve_chunk_inputs_prefers_structured_content(
     sample_browser_result: BrowserResult,
-    normalization_module: ModuleType,
 ) -> None:
     payload = normalization_module.normalize_crawler_output(
-        cast(Any, sample_browser_result),
+        sample_browser_result,
         fallback_url="https://fallback.local",
     )
 
@@ -150,9 +81,7 @@ def test_resolve_chunk_inputs_prefers_structured_content(
     assert kind == "markdown"
 
 
-def test_resolve_chunk_inputs_raises_when_missing_content(
-    normalization_module: ModuleType,
-) -> None:
+def test_resolve_chunk_inputs_raises_when_missing_content() -> None:
     payload = {"metadata": {"title": "Missing"}}
 
     with pytest.raises(ValueError):
@@ -161,9 +90,7 @@ def test_resolve_chunk_inputs_raises_when_missing_content(
         )
 
 
-def test_resolve_chunk_inputs_falls_back_to_raw_html(
-    normalization_module: ModuleType,
-) -> None:
+def test_resolve_chunk_inputs_falls_back_to_raw_html() -> None:
     payload = {
         "url": "https://example.com/page",
         "metadata": {"title": "Sample"},
