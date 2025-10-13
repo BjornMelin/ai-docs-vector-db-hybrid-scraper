@@ -84,7 +84,9 @@ def test_code_strategy_respects_language_hint(monkeypatch: pytest.MonkeyPatch) -
             ) -> list[Document]:
                 return [Document(page_content=texts[0], metadata=metadatas[0])]
 
-        _ = chunk_size, chunk_overlap, add_start_index
+        _ = chunk_size
+        _ = chunk_overlap
+        _ = add_start_index
         return _StubSplitter()
 
     monkeypatch.setattr(
