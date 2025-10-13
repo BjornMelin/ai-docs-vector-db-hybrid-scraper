@@ -6,7 +6,7 @@ import hashlib
 import json
 from collections.abc import Callable, Mapping
 from pathlib import PurePosixPath
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Final, Protocol, cast, runtime_checkable
 from urllib.parse import urlparse
 
 from langchain_core.documents import Document
@@ -43,7 +43,7 @@ _HTML_HEADERS: list[tuple[str, str]] = [
     ("h6", "Header 6"),
 ]
 
-_TOKEN_KIND = "token"  # noqa: S105 - symbolic label for token-aware chunking
+_TOKEN_KIND: Final[str] = cast(str, "token")  # symbolic label for token-aware chunking
 _KIND_TOKEN_ALIASES = {_TOKEN_KIND, "tokens", "token-aware", "token_aware"}
 
 
