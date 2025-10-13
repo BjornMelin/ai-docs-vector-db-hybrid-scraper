@@ -15,6 +15,13 @@ from src.services.browser.providers.base import ProviderContext
 from src.services.browser.providers.firecrawl import FirecrawlProvider
 
 
+async def _passthrough_retry(**kwargs: Any) -> Any:
+    """Invoke the supplied callable immediately, emulating execute_with_retry."""
+
+    func = kwargs["func"]
+    return await func()
+
+
 class _StubAsyncFirecrawl:
     """Test double simulating AsyncFirecrawl while ignoring connection kwargs."""
 
@@ -67,7 +74,16 @@ async def test_firecrawl_scrape_and_search(monkeypatch: pytest.MonkeyPatch) -> N
 
     # Patch AsyncFirecrawl class used by provider
     monkeypatch.setattr(
-        firecrawl_module, "AsyncFirecrawl", _StubAsyncFirecrawl, raising=True
+        firecrawl_module, "AsyncFirecrawlApp", _StubAsyncFirecrawl, raising=True
+    )
+    calls: list[dict[str, Any]] = []
+
+    async def fake_execute_with_retry(**kwargs: Any) -> Any:
+        calls.append(kwargs)
+        return await _passthrough_retry(**kwargs)
+
+    monkeypatch.setattr(
+        firecrawl_module, "execute_with_retry", fake_execute_with_retry, raising=True
     )
 
     settings = FirecrawlSettings(api_key="fc-test")
@@ -86,6 +102,8 @@ async def test_firecrawl_scrape_and_search(monkeypatch: pytest.MonkeyPatch) -> N
     finally:
         await provider.close()
 
+    assert [call["operation"] for call in calls] == ["scrape", "search"]
+
 
 @pytest.mark.asyncio
 async def test_firecrawl_scrape_respects_request_timeout(
@@ -94,7 +112,10 @@ async def test_firecrawl_scrape_respects_request_timeout(
     """Provider should forward request timeout in seconds to Firecrawl SDK."""
 
     monkeypatch.setattr(
-        firecrawl_module, "AsyncFirecrawl", _StubAsyncFirecrawl, raising=True
+        firecrawl_module, "AsyncFirecrawlApp", _StubAsyncFirecrawl, raising=True
+    )
+    monkeypatch.setattr(
+        firecrawl_module, "execute_with_retry", _passthrough_retry, raising=True
     )
 
     settings = FirecrawlSettings(api_key="fc-test")
@@ -120,7 +141,10 @@ async def test_firecrawl_scrape_prefers_smaller_metadata_timeout(
     """Metadata timeout should be clamped by router request budget."""
 
     monkeypatch.setattr(
-        firecrawl_module, "AsyncFirecrawl", _StubAsyncFirecrawl, raising=True
+        firecrawl_module, "AsyncFirecrawlApp", _StubAsyncFirecrawl, raising=True
+    )
+    monkeypatch.setattr(
+        firecrawl_module, "execute_with_retry", _passthrough_retry, raising=True
     )
 
     settings = FirecrawlSettings(api_key="fc-test")
@@ -150,7 +174,10 @@ async def test_firecrawl_scrape_rejects_invalid_metadata_timeout(
     """Non-numeric metadata timeout should raise a provider error."""
 
     monkeypatch.setattr(
-        firecrawl_module, "AsyncFirecrawl", _StubAsyncFirecrawl, raising=True
+        firecrawl_module, "AsyncFirecrawlApp", _StubAsyncFirecrawl, raising=True
+    )
+    monkeypatch.setattr(
+        firecrawl_module, "execute_with_retry", _passthrough_retry, raising=True
     )
 
     settings = FirecrawlSettings(api_key="fc-test")

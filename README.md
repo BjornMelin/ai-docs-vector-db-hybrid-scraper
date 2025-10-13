@@ -112,6 +112,11 @@ flowchart LR
     health --> observability
 ```
 
+The observability surface relies entirely on the OpenTelemetry and Prometheus
+stack: FastAPI and MCP emit spans and metrics that flow into the collector,
+with Grafana dashboards consuming those native feeds. No bespoke analytics
+dashboards or visualization engines ship with the application.
+
 ## Core Components
 
 ### Infrastructure Orchestration
@@ -224,8 +229,9 @@ search.[^qdrant-hybrid]
 - `/metrics` endpoints are exposed through
   `prometheus-fastapi-instrumentator`, while OpenTelemetry spans capture
   embedding, cache, database, and RAG pipeline telemetry; the database
-  manager emits `db.query.duration` histograms for each session. See
-  `docs/observability/embeddings_telemetry.md` and
+  manager emits `db.query.duration` histograms for each session. All
+  analytics are powered by these native observability feeds instead of
+  custom dashboards. See `docs/observability/embeddings_telemetry.md` and
   `docs/operators/monitoring.md` for configuration details.
 - Health probes for system resources, Qdrant, Redis, RAG configuration, and application metadata are centrally coordinated by the `HealthCheckManager` (`src/services/observability/health_manager.py`), ensuring MCP tools and FastAPI dependencies share the same health state.
 - A single `GET /health` endpoint on the FastAPI and FastMCP servers reports the aggregated system status; per-service health endpoints have been removed.
