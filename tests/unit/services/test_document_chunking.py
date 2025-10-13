@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 
 import pytest
+from langchain_core._api.beta_decorator import LangChainBetaWarning
 from langchain_core.documents import Document
 
 from src.config.models import ChunkingConfig
@@ -46,7 +47,10 @@ def test_markdown_splitter_preserves_header_hierarchy() -> None:
 
     assert len(documents) >= 1
     assert all(isinstance(doc, Document) for doc in documents)
-    assert documents[0].metadata["kind"] == "markdown"
+    first_metadata = documents[0].metadata
+    assert first_metadata["kind"] == "markdown"
+    assert isinstance(first_metadata["chunk_id"], str)
+    assert len(first_metadata["chunk_id"]) == 16
     headers = {
         key: value
         for key, value in documents[0].metadata.items()
@@ -62,18 +66,21 @@ def test_html_semantic_splitter_respects_sections() -> None:
         "<h2>Details</h2><p>Second paragraph.</p></body></html>"
     )
 
-    documents = chunk_to_documents(
-        html,
-        {"uri_or_path": "page.html", "mime_type": "text/html"},
-        "html",
-        config,
-    )
+    with pytest.warns(LangChainBetaWarning):
+        documents = chunk_to_documents(
+            html,
+            {"uri_or_path": "page.html", "mime_type": "text/html"},
+            "html",
+            config,
+        )
 
     assert len(documents) >= 2
     first, second = documents[:2]
     assert first.metadata["chunk_index"] == 0
+    assert isinstance(first.metadata["chunk_id"], str)
+    assert len(first.metadata["chunk_id"]) == 16
     assert second.metadata["chunk_index"] == 1
-    assert "Intro" in first.page_content.lower()
+    assert "intro" in first.page_content.lower()
     assert "second" in second.page_content.lower()
 
 
@@ -92,6 +99,8 @@ def test_code_language_inferred_from_extension() -> None:
     metadata = documents[0].metadata
     assert metadata["kind"] == "code"
     assert metadata["language"] == "python"
+    assert isinstance(metadata["chunk_id"], str)
+    assert len(metadata["chunk_id"]) == 16
 
 
 def test_json_splitter_creates_structured_chunks() -> None:
@@ -122,6 +131,7 @@ def test_json_splitter_creates_structured_chunks() -> None:
 
     assert len(documents) >= 2
     assert all(doc.metadata["kind"] == "json" for doc in documents)
+    assert all(len(doc.metadata["chunk_id"]) == 16 for doc in documents)
     assert any("Ada" in doc.page_content for doc in documents)
 
 
@@ -140,6 +150,25 @@ def test_token_splitter_respects_token_configuration() -> None:
     assert documents[0].metadata["kind"] == "token"
     assert documents[0].metadata["chunk_index"] == 0
     assert documents[1].metadata["chunk_index"] == 1
+
+
+def test_metadata_token_hint_triggers_token_splitter() -> None:
+    config = _make_config(token_chunk_size=12, token_chunk_overlap=2)
+    text = "This document should be split using token aware logic." * 2
+
+    documents = chunk_to_documents(
+        text,
+        {"chunking_mode": "token", "uri_or_path": "https://example.com/tokens"},
+        "auto",
+        config,
+    )
+
+    assert len(documents) >= 2
+    kinds = {doc.metadata["kind"] for doc in documents}
+    assert kinds == {"token"}
+    assert all(
+        doc.metadata["chunk_index"] == index for index, doc in enumerate(documents)
+    )
 
 
 @pytest.mark.parametrize(

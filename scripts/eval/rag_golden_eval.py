@@ -233,7 +233,7 @@ class RagasEvaluator:
         def _extract(value: Any) -> float | None:
             if value is None:
                 return None
-            if isinstance(value, (int, float)):
+            if isinstance(value, int | float):
                 return float(value)
             if hasattr(value, "score"):
                 candidate = value.score

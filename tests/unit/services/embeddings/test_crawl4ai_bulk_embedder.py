@@ -484,8 +484,24 @@ class TestProcessingPipeline:
         embedder.vector_service.upsert_documents = AsyncMock()
 
         chunk_documents = [
-            Document(page_content="Chunk 1", metadata={"start_index": 0}),
-            Document(page_content="Chunk 2", metadata={"start_index": 100}),
+            Document(
+                page_content="Chunk 1",
+                metadata={
+                    "start_index": 0,
+                    "chunk_id": "feedfacecafebeef",
+                    "chunk_index": 0,
+                    "kind": "markdown",
+                },
+            ),
+            Document(
+                page_content="Chunk 2",
+                metadata={
+                    "start_index": 100,
+                    "chunk_id": "feedfacecafebeed",
+                    "chunk_index": 1,
+                    "kind": "markdown",
+                },
+            ),
         ]
 
         with patch(
@@ -506,6 +522,10 @@ class TestProcessingPipeline:
         assert first_metadata["uri_or_path"] == "https://example.com/test"
         assert first_metadata["chunk_index"] == 0
         assert first_metadata["chunk_id"] == 0
+        assert first_metadata["chunk_hash"] == "feedfacecafebeef"
+        assert first_metadata["total_chunks"] == 2
+        assert first_metadata["tenant"] == embedder.collection_name
+        assert first_metadata["doc_id"].startswith("https://example.com/test")
 
     @pytest.mark.asyncio
     async def test_process_url_failure(
