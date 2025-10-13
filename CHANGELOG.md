@@ -37,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Refactor
 
+- **[Chunking]:** Refactored the document chunking service to use a Strategy pattern, making it more modular and easier to extend with new document types.
 - Updated core embeddings and browser providers to use absolute imports, enforced OpenAI client cleanup semantics, and banned legacy SDK surfaces via new Ruff tidy-import rules.
 - Realigned pinned dependencies (OpenAI, NumPy, SciPy, lxml, aiohttp, xformers) to the maximum versions compatible with browser-use, crawl4ai, and vLLM, regenerating `uv.lock` under the new matrix.
 - **[MCP]:** Enforced explicit dependency injection for MCP tools and services,

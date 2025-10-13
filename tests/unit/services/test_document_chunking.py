@@ -3,13 +3,20 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
+from typing import Any
 
 import pytest
 from langchain_core._api.beta_decorator import LangChainBetaWarning
 from langchain_core.documents import Document
+from langchain_text_splitters import Language
 
 from src.config.models import ChunkingConfig
 from src.services.document_chunking import (
+    CodeChunkingStrategy,
+    JsonChunkingStrategy,
+    PlainTextChunkingStrategy,
+    TokenAwareChunkingStrategy,
     chunk_to_documents,
     infer_document_kind,
     infer_extension,
@@ -24,9 +31,79 @@ def _make_config(**overrides: int | bool | str) -> ChunkingConfig:
         "token_chunk_size": 40,
         "token_chunk_overlap": 5,
         "json_max_chars": 400,
+        "min_chunk_size": 20,
+        "max_chunk_size": 800,
     }
     base_kwargs.update(overrides)
     return ChunkingConfig(**base_kwargs)  # type: ignore[arg-type]
+
+
+def test_plain_text_strategy_chunks_multiple_sections() -> None:
+    strategy = PlainTextChunkingStrategy()
+    cfg = _make_config(chunk_size=20, chunk_overlap=0)
+    raw = "First paragraph.\n\nSecond paragraph continues with more text."
+
+    documents = strategy.chunk(raw, cfg, None)
+
+    assert len(documents) >= 2
+    assert all("start_index" in doc.metadata for doc in documents)
+
+
+def test_token_strategy_chunks_using_token_window() -> None:
+    strategy = TokenAwareChunkingStrategy()
+    cfg = _make_config(token_chunk_size=5, token_chunk_overlap=0)
+    raw = " ".join(f"token{i}" for i in range(12))
+
+    documents = strategy.chunk(raw, cfg, None)
+
+    assert len(documents) >= 2
+    assert all(doc.metadata == {} for doc in documents)
+
+
+def test_code_strategy_respects_language_hint(monkeypatch: pytest.MonkeyPatch) -> None:
+    strategy = CodeChunkingStrategy()
+    cfg = _make_config()
+    captured: dict[str, Language] = {}
+
+    def fake_from_language(
+        *,
+        language: Language,
+        chunk_size: int,
+        chunk_overlap: int,
+        add_start_index: bool,
+    ) -> Any:
+        captured.update({"language": language})
+
+        class _StubSplitter:
+            """Stub splitter returning a single document for testing."""
+
+            def create_documents(
+                self,
+                texts: list[str],
+                metadatas: list[Mapping[str, Any]],
+            ) -> list[Document]:
+                return [Document(page_content=texts[0], metadata=metadatas[0])]
+
+        _ = chunk_size, chunk_overlap, add_start_index
+        return _StubSplitter()
+
+    monkeypatch.setattr(
+        "src.services.document_chunking.RecursiveCharacterTextSplitter.from_language",
+        fake_from_language,
+    )
+
+    documents = strategy.chunk("print('hello world')", cfg, {"language": "python"})
+
+    assert captured["language"] == Language.PYTHON
+    assert len(documents) == 1
+
+
+def test_json_strategy_raises_on_invalid_payload() -> None:
+    strategy = JsonChunkingStrategy()
+    cfg = _make_config()
+
+    with pytest.raises(ValueError):
+        strategy.chunk("not-json", cfg, None)
 
 
 def test_markdown_splitter_preserves_header_hierarchy() -> None:
