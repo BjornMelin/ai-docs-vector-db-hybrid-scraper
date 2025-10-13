@@ -7,7 +7,13 @@ import os
 from collections.abc import Mapping, Sequence
 from typing import Any, cast
 
-from firecrawl import AsyncFirecrawl  # type: ignore
+
+try:
+    from firecrawl import AsyncFirecrawlApp  # type: ignore[attr-defined]
+except ImportError:  # pragma: no cover - compat fallback
+    from firecrawl import (  # type: ignore[attr-defined]
+        AsyncFirecrawl as AsyncFirecrawlApp,
+    )
 
 from src.config.browser import FirecrawlSettings
 from src.services.browser.errors import BrowserProviderError
@@ -28,7 +34,7 @@ class FirecrawlProvider(BrowserProvider):
     def __init__(self, context: ProviderContext, settings: FirecrawlSettings) -> None:
         super().__init__(context)
         self._settings = settings
-        self._client: AsyncFirecrawl | None = None
+        self._client: AsyncFirecrawlApp | None = None
 
     async def initialize(self) -> None:
         """Instantiate the AsyncFirecrawl client."""
@@ -44,7 +50,7 @@ class FirecrawlProvider(BrowserProvider):
         kwargs: dict[str, Any] = {"api_key": api_key}
         if self._settings.api_url:
             kwargs["api_url"] = str(self._settings.api_url)
-        self._client = AsyncFirecrawl(**kwargs)
+        self._client = AsyncFirecrawlApp(**kwargs)
 
     async def close(self) -> None:
         """Firecrawl client does not expose a close hook."""
