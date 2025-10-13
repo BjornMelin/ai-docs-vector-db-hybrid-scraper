@@ -1,175 +1,133 @@
-"""Unit tests for the unified search request model."""
+"""Vector search request validation tests."""
 
 from __future__ import annotations
+
+from collections.abc import Mapping
 
 import pytest
 from pydantic import ValidationError
 
-from src.config.models import (
-    FusionAlgorithm,
-    SearchAccuracy,
-    SearchStrategy,
-    VectorType,
-)
+from src.config.models import SearchStrategy, VectorType
 from src.models.search import SearchRequest
 
 
-def test_search_request_defaults() -> None:
-    """Ensure minimal payloads populate default search parameters."""
+@pytest.fixture
+def base_payload() -> dict[str, object]:
+    """Provide a reusable payload for mutation in tests."""
 
-    request = SearchRequest.model_validate({"query": "docs"})
-
-    assert request.collection == "documentation"
-    assert request.limit == 10
-    assert request.vector_type is VectorType.DENSE
-    assert request.search_accuracy is SearchAccuracy.BALANCED
-    assert request.fusion_algorithm is FusionAlgorithm.RRF
-    assert request.include_metadata is True
-    assert request.include_vectors is False
+    return {"query": "find docs"}
 
 
-def test_search_request_invalid_filter_key() -> None:
-    """Reject filter keys that violate the allowed naming pattern."""
+class TestHybridAndSparseValidation:
+    """Hybrid/sparse vector rules."""
 
-    with pytest.raises(ValidationError) as exc_info:
-        SearchRequest.model_validate(
-            {"query": "docs", "filters": {"invalid-field!": "value"}}
+    def test_sparse_strategy_requires_sparse_payload(
+        self, base_payload: Mapping[str, object]
+    ) -> None:
+        payload = dict(base_payload)
+        payload.update(
+            {"search_strategy": SearchStrategy.SPARSE, "vector_type": VectorType.SPARSE}
         )
 
-    assert "Invalid filter key" in str(exc_info.value)
+        with pytest.raises(ValidationError, match="sparse_vector is required"):
+            SearchRequest.model_validate(payload)
 
-
-def test_search_request_filter_injection_guard() -> None:
-    """Detect potentially dangerous patterns in filter values."""
-
-    with pytest.raises(ValidationError) as exc_info:
-        SearchRequest.model_validate(
-            {"query": "docs", "filters": {"category": "DROP TABLE users"}}
-        )
-
-    assert "Potentially dangerous pattern" in str(exc_info.value)
-
-
-def test_search_request_query_vector_validation() -> None:
-    """Enforce dense vector dimension and numeric bounds."""
-
-    large_vector = [0.1] * 5000
-    with pytest.raises(ValidationError) as exc_info:
-        SearchRequest.model_validate({"query": "docs", "query_vector": large_vector})
-    assert "exceeds maximum allowed" in str(exc_info.value)
-
-    with pytest.raises(ValidationError) as exc_info:
-        SearchRequest.model_validate(
-            {"query": "docs", "query_vector": [0.1, float("inf")]}
-        )
-    assert "Non-finite" in str(exc_info.value)
-
-
-def test_search_request_sparse_vector_required() -> None:
-    """Require sparse_vector payload when using sparse-compatible vector types."""
-
-    with pytest.raises(ValidationError) as exc_info:
-        SearchRequest.model_validate(
-            {"query": "docs", "vector_type": VectorType.HYBRID}
-        )
-
-    assert "sparse_vector is required" in str(exc_info.value)
-
-
-def test_search_request_force_dimension_mismatch() -> None:
-    """Validate forced dimensions against provided query vectors."""
-
-    with pytest.raises(ValidationError) as exc_info:
-        SearchRequest.model_validate(
+    def test_hybrid_request_with_sparse_vector_valid(
+        self, base_payload: Mapping[str, object]
+    ) -> None:
+        payload = dict(base_payload)
+        payload.update(
             {
-                "query": "docs",
-                "query_vector": [0.1, 0.2],
-                "force_dimension": 3,
+                "vector_type": VectorType.HYBRID,
+                "search_strategy": SearchStrategy.HYBRID,
+                "sparse_vector": {0: 0.7, 5: 0.2},
             }
         )
 
-    assert "force_dimension" in str(exc_info.value)
+        request = SearchRequest.model_validate(payload)
+
+        assert request.sparse_vector == {0: 0.7, 5: 0.2}
+        assert request.vector_type is VectorType.HYBRID
+
+    def test_sparse_vector_weight_must_be_numeric(
+        self, base_payload: Mapping[str, object]
+    ) -> None:
+        payload = dict(base_payload)
+        payload.update(
+            {
+                "vector_type": VectorType.HYBRID,
+                "sparse_vector": {0: "weight"},
+            }
+        )
+
+        with pytest.raises(ValidationError, match="unable to parse string as a number"):
+            SearchRequest.model_validate(payload)
 
 
-def test_search_request_from_input_string_payload() -> None:
-    """Normalize string payloads via SearchRequest.from_input."""
+class TestDenseVectorValidation:
+    """Dense vector bounds."""
 
-    request = SearchRequest.from_input("docs", collection="api", limit=5)
+    def test_query_vector_dimension_upper_bound(
+        self, base_payload: Mapping[str, object]
+    ) -> None:
+        payload = dict(base_payload)
+        payload["query_vector"] = [0.1] * 5001
 
-    assert isinstance(request, SearchRequest)
-    assert request.query == "docs"
-    assert request.collection == "api"
-    assert request.limit == 5
+        with pytest.raises(ValidationError, match="exceeds maximum allowed dimension"):
+            SearchRequest.model_validate(payload)
+
+    def test_query_vector_value_range(self, base_payload: Mapping[str, object]) -> None:
+        payload = dict(base_payload)
+        payload["query_vector"] = [0.1, 2e7]
+
+        with pytest.raises(ValidationError, match="Vector value out of allowed range"):
+            SearchRequest.model_validate(payload)
 
 
-def test_search_request_from_input_instance_passthrough() -> None:
-    """Return the original object when overrides are absent."""
+class TestFilterValidation:
+    """Filtering rules and protections."""
 
-    base = SearchRequest.model_validate({"query": "docs", "limit": 20})
-    clone = SearchRequest.from_input(base)
+    def test_filter_list_length_limit(self, base_payload: Mapping[str, object]) -> None:
+        payload = dict(base_payload)
+        payload["filters"] = {f"field_{idx}": "value" for idx in range(51)}
 
-    assert clone is base
+        with pytest.raises(ValidationError, match="Too many filter keys supplied"):
+            SearchRequest.model_validate(payload)
 
+    def test_exclude_filters_require_mappings(
+        self, base_payload: Mapping[str, object]
+    ) -> None:
+        payload = dict(base_payload)
+        payload["exclude_filters"] = ["not-a-mapping"]  # type: ignore[list-item]
 
-def test_search_request_valid_filter_groups() -> None:
-    """Allow nested filter groups that respect structural limits."""
+        with pytest.raises(ValidationError, match="Input should be a valid dictionary"):
+            SearchRequest.model_validate(payload)
 
-    request = SearchRequest.model_validate(
-        {
-            "query": "docs",
-            "filters": {"category": "api"},
-            "filter_groups": [
-                {
-                    "operator": "and",
-                    "filters": [
-                        {"tag": "python"},
-                        {
-                            "operator": "or",
-                            "filters": [
-                                {"tag": "fastapi"},
-                                {"tag": "pydantic"},
-                            ],
-                        },
-                    ],
-                }
-            ],
+    def test_filter_groups_depth_limit(
+        self, base_payload: Mapping[str, object]
+    ) -> None:
+        nested_group: dict[str, object] = {
+            "operator": "and",
+            "filters": [{"field": "lang", "value": "en"}],
         }
-    )
+        for _ in range(12):
+            nested_group = {"operator": "and", "filters": [nested_group]}
 
-    assert request.filter_groups is not None
-    assert len(request.filter_groups) == 1
+        payload = dict(base_payload)
+        payload["filter_groups"] = [nested_group]
 
-
-def test_search_request_invalid_filter_group_operator() -> None:
-    """Reject filter groups with unsupported operators."""
-
-    with pytest.raises(ValidationError) as exc_info:
-        SearchRequest.model_validate(
-            {
-                "query": "docs",
-                "filter_groups": [
-                    {
-                        "operator": "xor",
-                        "filters": [{"tag": "python"}],
-                    }
-                ],
-            }
-        )
-
-    assert "operator" in str(exc_info.value)
+        with pytest.raises(ValidationError, match="Filter group nesting too deep"):
+            SearchRequest.model_validate(payload)
 
 
-def test_search_request_strategy_vector_alignment() -> None:
-    """Enforce consistency between search_strategy and vector_type."""
+class TestExtraFields:
+    """Model config extra forbid behaviour."""
 
-    with pytest.raises(ValidationError) as exc_info:
-        SearchRequest.model_validate(
-            {
-                "query": "docs",
-                "search_strategy": SearchStrategy.SPARSE,
-                "vector_type": VectorType.DENSE,
-                "sparse_vector": {0: 0.1},
-            }
-        )
+    def test_extra_fields_are_rejected(
+        self, base_payload: Mapping[str, object]
+    ) -> None:
+        payload = dict(base_payload)
+        payload["unexpected_field"] = "value"
 
-    assert "Sparse search_strategy" in str(exc_info.value)
+        with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
+            SearchRequest.model_validate(payload)

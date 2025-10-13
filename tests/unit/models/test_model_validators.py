@@ -1,10 +1,20 @@
-"""Unit tests for validators module."""
+"""Unit tests for :mod:`src.models.validators`."""
+
+from __future__ import annotations
+
+from typing import Annotated, Any
 
 import pytest
+from pydantic import TypeAdapter
 
 from src.models.validators import (
+    collection_name_field,
     firecrawl_api_key_validator,
+    non_negative_int,
     openai_api_key_validator,
+    percentage,
+    port_number,
+    positive_int,
     url_validator,
     validate_api_key_common,
     validate_cache_ttl,
@@ -21,469 +31,202 @@ from src.models.validators import (
 )
 
 
-class TestValidateApiKeyCommon:
-    """Test validate_api_key_common function."""
+class TestApiKeyValidation:
+    """Shared API key validation helpers."""
 
-    def test_none_value(self):
-        """Test that None is returned as-is."""
-        result = validate_api_key_common(None, "sk-", "OpenAI")
-        assert result is None
+    def test_none_is_returned(self) -> None:
+        assert validate_api_key_common(None, "sk-", "OpenAI") is None
 
-    def test_empty_string(self):
-        """Test that empty string returns None."""
-        result = validate_api_key_common("", "sk-", "OpenAI")
-        assert result is None
+    def test_empty_or_whitespace_collapses_to_none(self) -> None:
+        assert validate_api_key_common("", "sk-", "OpenAI") is None
+        assert validate_api_key_common("   ", "sk-", "OpenAI") is None
 
-        result = validate_api_key_common("   ", "sk-", "OpenAI")
-        assert result is None
-
-    def test_valid_api_key(self):
-        """Test valid API key validation."""
+    def test_valid_key_round_trip(self) -> None:
         key = "sk-1234567890abcdef"
-        result = validate_api_key_common(key, "sk-", "OpenAI")
-        assert result == key
+        assert validate_api_key_common(key, "sk-", "OpenAI") == key
 
-    def test_non_ascii_characters(self):
-        """Test that non-ASCII characters are rejected."""
-        with pytest.raises(ValueError) as exc_info:
+    def test_non_ascii_rejected(self) -> None:
+        with pytest.raises(ValueError, match="contains non-ASCII characters"):
             validate_api_key_common("sk-test™", "sk-", "OpenAI")
-        assert "non-ASCII characters" in str(exc_info.value)
 
-    def test_wrong_prefix(self):
-        """Test that wrong prefix is rejected."""
-        with pytest.raises(ValueError) as exc_info:
-            validate_api_key_common("fc-1234567890", "sk-", "OpenAI")
-        assert "must start with 'sk-'" in str(exc_info.value)
+    def test_wrong_prefix_rejected(self) -> None:
+        with pytest.raises(ValueError, match="must start with 'sk-'"):
+            validate_api_key_common("fc-123456", "sk-", "OpenAI")
 
-    def test_too_short(self):
-        """Test that too short keys are rejected."""
-        with pytest.raises(ValueError) as exc_info:
-            validate_api_key_common("sk-123", "sk-", "OpenAI", min_length=10)
-        assert "too short" in str(exc_info.value)
+    def test_too_short_rejected_when_not_test_key(self) -> None:
+        with pytest.raises(ValueError, match="appears to be too short"):
+            validate_api_key_common("sk-123", "sk-", "OpenAI")
 
-    def test_too_long(self):
-        """Test that too long keys are rejected."""
-        long_key = "sk-" + "a" * 200
-        with pytest.raises(ValueError) as exc_info:
-            validate_api_key_common(long_key, "sk-", "OpenAI", max_length=100)
-        assert "too long" in str(exc_info.value)
+    def test_test_keys_skip_length_enforcement(self) -> None:
+        assert validate_api_key_common("sk-test-1", "sk-", "OpenAI") == "sk-test-1"
 
-    def test_invalid_characters(self):
-        """Test that invalid characters are rejected."""
-        with pytest.raises(ValueError) as exc_info:
-            validate_api_key_common("sk-test!@#", "sk-", "OpenAI")
-        assert "invalid characters" in str(exc_info.value)
+    def test_too_long_rejected(self) -> None:
+        long_value = "sk-" + "x" * 300
+        with pytest.raises(ValueError, match="appears to be too long"):
+            validate_api_key_common(long_value, "sk-", "OpenAI")
 
-    def test_custom_allowed_chars(self):
-        """Test custom allowed characters pattern."""
-        # Default pattern allows alphanumeric and hyphen
-        key1 = "sk-abc123-def456"
-        result = validate_api_key_common(key1, "sk-", "OpenAI")
-        assert result == key1
+    def test_invalid_characters_rejected(self) -> None:
+        with pytest.raises(ValueError, match="contains invalid characters"):
+            validate_api_key_common("sk-not_allowed!", "sk-", "OpenAI")
 
-        # Custom pattern allows underscores
-        key2 = "fc-abc_123_def"
-        result = validate_api_key_common(
-            key2, "fc-", "Firecrawl", allowed_chars=r"[A-Za-z0-9_-]+"
-        )
-        assert result == key2
 
+class TestDecoratorValidators:
+    """High-level decorator helpers."""
 
-class TestValidateUrlFormat:
-    """Test validate_url_format function."""
-
-    def test_valid_http_url(self):
-        """Test valid HTTP URL."""
-        url = "http://example.com"
-        result = validate_url_format(url)
-        assert result == url
-
-    def test_valid_https_url(self):
-        """Test valid HTTPS URL."""
-        url = "https://example.com"
-        result = validate_url_format(url)
-        assert result == url
-
-    def test_trailing_slash_removed(self):
-        """Test that trailing slash is removed."""
-        result = validate_url_format("https://example.com/")
-        assert result == "https://example.com"
-
-        result = validate_url_format("https://example.com//")
-        assert result == "https://example.com"
-
-    def test_invalid_protocol(self):
-        """Test that non-HTTP(S) protocols are rejected."""
-        with pytest.raises(ValueError) as exc_info:
-            validate_url_format("ftp://example.com")
-        assert "must start with http:// or https://" in str(exc_info.value)
-
-        with pytest.raises(ValueError):
-            validate_url_format("example.com")
-
-
-class TestValidatePositiveInt:
-    """Test validate_positive_int function."""
-
-    def test_positive_values(self):
-        """Test positive integer values."""
-        assert validate_positive_int(1) == 1
-        assert validate_positive_int(100) == 100
-        assert validate_positive_int(999999) == 999999
-
-    def test_zero_rejected(self):
-        """Test that zero is rejected."""
-        with pytest.raises(ValueError) as exc_info:
-            validate_positive_int(0)
-        assert "must be positive" in str(exc_info.value)
-
-    def test_negative_rejected(self):
-        """Test that negative values are rejected."""
-        with pytest.raises(ValueError):
-            validate_positive_int(-1)
-        with pytest.raises(ValueError):
-            validate_positive_int(-100)
-
-    def test_custom_field_name(self):
-        """Test custom field name in error message."""
-        with pytest.raises(ValueError) as exc_info:
-            validate_positive_int(0, field_name="chunk_size")
-        assert "chunk_size must be positive" in str(exc_info.value)
-
-
-class TestValidatePercentage:
-    """Test validate_percentage function."""
-
-    def test_valid_percentages(self):
-        """Test valid percentage values."""
-        assert validate_percentage(0.0) == 0.0
-        assert validate_percentage(0.5) == 0.5
-        assert validate_percentage(1.0) == 1.0
-        assert validate_percentage(0.75) == 0.75
-
-    def test_below_zero_rejected(self):
-        """Test that negative values are rejected."""
-        with pytest.raises(ValueError) as exc_info:
-            validate_percentage(-0.1)
-        assert "must be between 0.0 and 1.0" in str(exc_info.value)
-
-    def test_above_one_rejected(self):
-        """Test that values above 1.0 are rejected."""
-        with pytest.raises(ValueError):
-            validate_percentage(1.1)
-        with pytest.raises(ValueError):
-            validate_percentage(2.0)
-
-    def test_custom_field_name(self):
-        """Test custom field name in error message."""
-        with pytest.raises(ValueError) as exc_info:
-            validate_percentage(1.5, field_name="confidence_score")
-        assert "confidence_score must be between 0.0 and 1.0" in str(exc_info.value)
-
-
-class TestValidateRateLimitConfig:
-    """Test validate_rate_limit_config function."""
-
-    def test_valid_config(self):
-        """Test valid rate limit configuration."""
-        config = {
-            "openai": {"max_calls": 100, "time_window": 60},
-            "firecrawl": {"max_calls": 50, "time_window": 30},
-        }
-        result = validate_rate_limit_config(config)
-        assert result == config
-
-    def test_missing_required_keys(self):
-        """Test that missing required keys are rejected."""
-        config = {
-            "openai": {"max_calls": 100},  # Missing time_window
-        }
-        with pytest.raises(ValueError) as exc_info:
-            validate_rate_limit_config(config)
-        assert "must contain keys" in str(exc_info.value)
-
-    def test_non_dict_limits(self):
-        """Test that non-dict limits are rejected."""
-        config = {
-            "openai": "invalid",  # Should be dict
-        }
-        with pytest.raises(ValueError) as exc_info:
-            validate_rate_limit_config(config)
-        assert "must be a dictionary" in str(exc_info.value)
-
-    def test_non_positive_max_calls(self):
-        """Test that non-positive max_calls is rejected."""
-        config = {
-            "openai": {"max_calls": 0, "time_window": 60},
-        }
-        with pytest.raises(ValueError) as exc_info:
-            validate_rate_limit_config(config)
-        assert "max_calls for provider 'openai' must be positive" in str(exc_info.value)
-
-    def test_non_positive_time_window(self):
-        """Test that non-positive time_window is rejected."""
-        config = {
-            "openai": {"max_calls": 100, "time_window": 0},
-        }
-        with pytest.raises(ValueError) as exc_info:
-            validate_rate_limit_config(config)
-        assert "time_window for provider 'openai' must be positive" in str(
-            exc_info.value
-        )
-
-
-class TestValidateChunkSizes:
-    """Test validate_chunk_sizes function."""
-
-    def test_valid_sizes(self):
-        """Test valid chunk size configurations."""
-        validate_chunk_sizes(chunk_size=1000, chunk_overlap=200)
-
-    def test_overlap_too_large(self):
-        """Test that overlap >= chunk_size is rejected."""
-        with pytest.raises(ValueError) as exc_info:
-            validate_chunk_sizes(chunk_size=1000, chunk_overlap=1000)
-        assert "chunk_overlap must be less than chunk_size" in str(exc_info.value)
-
-    def test_negative_chunk_size(self):
-        """Test that non-positive chunk_size is rejected."""
-        with pytest.raises(ValueError) as exc_info:
-            validate_chunk_sizes(chunk_size=0, chunk_overlap=200)
-        assert "chunk_size must be positive" in str(exc_info.value)
-
-    def test_negative_overlap(self):
-        """Test that negative chunk_overlap is rejected."""
-        with pytest.raises(ValueError) as exc_info:
-            validate_chunk_sizes(chunk_size=200, chunk_overlap=-1)
-        assert "chunk_overlap must be non-negative" in str(exc_info.value)
-
-
-class TestValidateScoringWeights:
-    """Test validate_scoring_weights function."""
-
-    def test_valid_weights(self):
-        """Test valid weight combinations."""
-        # Exact 1.0
-        validate_scoring_weights(0.5, 0.3, 0.2)
-        validate_scoring_weights(0.33, 0.33, 0.34)
-        validate_scoring_weights(1.0, 0.0, 0.0)
-
-    def test_small_floating_point_error_allowed(self):
-        """Test that small floating point errors are allowed."""
-        # Total = 0.999
-        validate_scoring_weights(0.333, 0.333, 0.333)
-        # Total = 1.001
-        validate_scoring_weights(0.334, 0.333, 0.334)
-
-    def test_weights_not_summing_to_one(self):
-        """Test that weights not summing to 1.0 are rejected."""
-        with pytest.raises(ValueError) as exc_info:
-            validate_scoring_weights(0.5, 0.5, 0.5)  # Sum = 1.5
-        assert "must sum to 1.0" in str(exc_info.value)
-        assert "got 1.5" in str(exc_info.value)
-
-        with pytest.raises(ValueError):
-            validate_scoring_weights(0.2, 0.2, 0.2)  # Sum = 0.6
-
-
-class TestValidateVectorDimensions:
-    """Test validate_vector_dimensions function."""
-
-    def test_common_dimensions(self):
-        """Test common vector dimensions."""
-        for dim in [128, 256, 384, 512, 768, 1024, 1536, 2048, 3072, 4096]:
-            assert validate_vector_dimensions(dim) == dim
-
-    def test_uncommon_dimensions_allowed(self):
-        """Test that uncommon dimensions are still allowed."""
-        assert validate_vector_dimensions(100) == 100
-        assert validate_vector_dimensions(500) == 500
-        assert validate_vector_dimensions(1500) == 1500
-
-    def test_non_positive_rejected(self):
-        """Test that non-positive dimensions are rejected."""
-        with pytest.raises(ValueError) as exc_info:
-            validate_vector_dimensions(0)
-        assert "must be positive" in str(exc_info.value)
-
-        with pytest.raises(ValueError):
-            validate_vector_dimensions(-1)
-
-    def test_too_large_rejected(self):
-        """Test that very large dimensions are rejected."""
-        with pytest.raises(ValueError) as exc_info:
-            validate_vector_dimensions(10001)
-        assert "too large" in str(exc_info.value)
-
-    def test_with_model_name(self):
-        """Test validation with model name context."""
-        assert validate_vector_dimensions(384, "all-MiniLM-L6-v2") == 384
-
-
-class TestValidateModelBenchmarkConsistency:
-    """Test validate_model_benchmark_consistency function."""
-
-    def test_matching_key_and_name(self):
-        """Test that matching key and name pass validation."""
-        key = "text-embedding-ada-002"
-        model_name = "text-embedding-ada-002"
-        result = validate_model_benchmark_consistency(key, model_name)
-        assert result == key
-
-    def test_mismatched_key_and_name(self):
-        """Test that mismatched key and name are rejected."""
-        key = "ada-002"
-        model_name = "text-embedding-ada-002"
-        with pytest.raises(ValueError) as exc_info:
-            validate_model_benchmark_consistency(key, model_name)
-        assert "does not match" in str(exc_info.value)
-        assert key in str(exc_info.value)
-        assert model_name in str(exc_info.value)
-
-
-class TestValidateCollectionNameField:
-    """Test validate_collection_name function."""
-
-    def test_valid_names(self):
-        """Test valid collection names."""
-        assert validate_collection_name("documents") == "documents"
-        assert validate_collection_name("test_collection") == "test_collection"
-        assert validate_collection_name("my-collection-123") == "my-collection-123"
-        assert validate_collection_name("AB") == "AB"  # Minimum length
-
-    def test_empty_name(self):
-        """Test that empty name is rejected."""
-        with pytest.raises(ValueError) as exc_info:
-            validate_collection_name("")
-        assert "cannot be empty" in str(exc_info.value)
-
-    def test_invalid_characters(self):
-        """Test that invalid characters are rejected."""
-        with pytest.raises(ValueError) as exc_info:
-            validate_collection_name("my collection")  # Space
-        assert "can only contain alphanumeric" in str(exc_info.value)
-
-        with pytest.raises(ValueError):
-            validate_collection_name("my.collection")  # Dot
-        with pytest.raises(ValueError):
-            validate_collection_name("my@collection")  # At sign
-
-    def test_too_short(self):
-        """Test that too short names are rejected."""
-        with pytest.raises(ValueError) as exc_info:
-            validate_collection_name("a")
-        assert "at least 2 characters" in str(exc_info.value)
-
-    def test_too_long(self):
-        """Test that too long names are rejected."""
-        long_name = "a" * 65
-        with pytest.raises(ValueError) as exc_info:
-            validate_collection_name(long_name)
-        assert "cannot exceed 64 characters" in str(exc_info.value)
-
-
-class TestValidateEmbeddingModelName:
-    """Test validate_embedding_model_name function."""
-
-    def test_valid_names(self):
-        """Test valid model names."""
-        assert (
-            validate_embedding_model_name("text-embedding-ada-002")
-            == "text-embedding-ada-002"
-        )
-        assert validate_embedding_model_name("all-MiniLM-L6-v2") == "all-MiniLM-L6-v2"
-        assert (
-            validate_embedding_model_name("model/name:version") == "model/name:version"
-        )
-
-    def test_empty_name(self):
-        """Test that empty name is rejected."""
-        with pytest.raises(ValueError) as exc_info:
-            validate_embedding_model_name("")
-        assert "cannot be empty" in str(exc_info.value)
-
-    def test_too_long(self):
-        """Test that too long names are rejected."""
-        long_name = "a" * 201
-        with pytest.raises(ValueError) as exc_info:
-            validate_embedding_model_name(long_name)
-        assert "too long" in str(exc_info.value)
-
-    def test_invalid_characters(self):
-        """Test that potentially dangerous characters are rejected."""
-        for char in ["<", ">", "|", "&", ";"]:
-            with pytest.raises(ValueError) as exc_info:
-                validate_embedding_model_name(f"model{char}name")
-            assert "invalid characters" in str(exc_info.value)
-
-    def test_with_provider_context(self):
-        """Test validation with provider context."""
-        result = validate_embedding_model_name("ada-002", provider="openai")
-        assert result == "ada-002"
-
-
-class TestValidateCacheTtl:
-    """Test validate_cache_ttl function."""
-
-    def test_valid_ttl(self):
-        """Test valid TTL values."""
-        assert validate_cache_ttl(300) == 300
-        assert validate_cache_ttl(3600) == 3600
-        assert validate_cache_ttl(86400) == 86400
-
-    def test_custom_bounds(self):
-        """Test custom min/max bounds."""
-        assert validate_cache_ttl(10, min_ttl=10, max_ttl=100) == 10
-        assert validate_cache_ttl(100, min_ttl=10, max_ttl=100) == 100
-
-    def test_below_minimum(self):
-        """Test that values below minimum are rejected."""
-        with pytest.raises(ValueError) as exc_info:
-            validate_cache_ttl(30)  # Default min is 60
-        assert "at least 60 seconds" in str(exc_info.value)
-
-    def test_above_max(self):
-        """Test that values above maximum are rejected."""
-        with pytest.raises(ValueError) as exc_info:
-            validate_cache_ttl(100000)  # Default max is 86400
-        assert "cannot exceed 86400 seconds" in str(exc_info.value)
-
-
-class TestValidatorDecorators:
-    """Test validator decorator functions."""
-
-    def test_openai_api_key_validator(self):
-        """Test OpenAI API key validator."""
-        # Valid key
+    def test_openai_api_key_validator(self) -> None:
         key = "sk-1234567890abcdefghijklmnop"
-        result = openai_api_key_validator(key)
-        assert result == key
-
-        # Invalid prefix
-        with pytest.raises(ValueError) as exc_info:
-            openai_api_key_validator("fc-1234567890")
-        assert "OpenAI" in str(exc_info.value)
-
-        # None value
+        assert openai_api_key_validator(key) == key
+        with pytest.raises(ValueError, match="OpenAI API key must start"):
+            openai_api_key_validator("fc-123")
         assert openai_api_key_validator(None) is None
 
-    def test_firecrawl_api_key_validator(self):
-        """Test Firecrawl API key validator."""
-        # Valid key
-        key = "fc-abc123_def-456"
-        result = firecrawl_api_key_validator(key)
-        assert result == key
+    def test_firecrawl_api_key_validator(self) -> None:
+        key = "fc-abc_123-xyz"
+        assert firecrawl_api_key_validator(key) == key
+        with pytest.raises(ValueError, match="Firecrawl API key must start"):
+            firecrawl_api_key_validator("sk-123")
 
-        # Invalid prefix
-        with pytest.raises(ValueError) as exc_info:
-            firecrawl_api_key_validator("sk-1234567890")
-        assert "Firecrawl" in str(exc_info.value)
+    def test_url_validator_delegates(self) -> None:
+        assert url_validator("https://example.com") == "https://example.com"
+        with pytest.raises(ValueError, match="must start with http:// or https://"):
+            url_validator("ftp://example.com")
 
-    def test_url_validator_decorator(self):
-        """Test URL validator decorator."""
-        url = "https://example.com"
-        result = url_validator(url)
-        assert result == url
 
+class TestSimpleValidators:
+    """Scalar validators."""
+
+    def test_validate_url_format_trims_slashes(self) -> None:
+        assert validate_url_format("https://example.com/") == "https://example.com"
+
+    def test_validate_positive_int(self) -> None:
+        assert validate_positive_int(5, field_name="chunks") == 5
+        with pytest.raises(ValueError, match="chunks must be positive"):
+            validate_positive_int(0, field_name="chunks")
+
+    def test_validate_percentage(self) -> None:
+        assert validate_percentage(0.25, field_name="confidence") == 0.25
+        with pytest.raises(ValueError, match="confidence must be between 0.0 and 1.0"):
+            validate_percentage(1.5, field_name="confidence")
+
+    def test_validate_cache_ttl_bounds(self) -> None:
+        assert validate_cache_ttl(600) == 600
+        with pytest.raises(ValueError, match="at least 60 seconds"):
+            validate_cache_ttl(10)
+        with pytest.raises(ValueError, match="cannot exceed 86400 seconds"):
+            validate_cache_ttl(100_000)
+
+
+class TestRateLimitConfig:
+    """Rate limit configuration validation."""
+
+    def test_valid_config_passes(self) -> None:
+        payload = {"openai": {"max_calls": 100, "time_window": 60}}
+        assert validate_rate_limit_config(payload) == payload
+
+    def test_limits_must_be_mapping(self) -> None:
+        with pytest.raises(TypeError, match="must be a dictionary"):
+            validate_rate_limit_config({"openai": "invalid"})  # type: ignore[arg-type]
+
+    def test_required_keys_present(self) -> None:
+        with pytest.raises(ValueError, match="must contain"):
+            validate_rate_limit_config({"openai": {"max_calls": 1}})
+
+    def test_positive_numbers_enforced(self) -> None:
+        with pytest.raises(
+            ValueError, match="max_calls for provider 'openai' must be positive"
+        ):
+            validate_rate_limit_config({"openai": {"max_calls": 0, "time_window": 60}})
+        with pytest.raises(
+            ValueError, match="time_window for provider 'openai' must be positive"
+        ):
+            validate_rate_limit_config({"openai": {"max_calls": 1, "time_window": 0}})
+
+
+class TestChunkAndWeightValidators:
+    """Chunk sizing and scoring weight checks."""
+
+    def test_validate_chunk_sizes(self) -> None:
+        validate_chunk_sizes(500, 100)
+        with pytest.raises(ValueError, match="chunk_size must be positive"):
+            validate_chunk_sizes(0, 10)
+        with pytest.raises(ValueError, match="chunk_overlap must be non-negative"):
+            validate_chunk_sizes(200, -1)
+        with pytest.raises(
+            ValueError, match="chunk_overlap must be less than chunk_size"
+        ):
+            validate_chunk_sizes(100, 100)
+
+    def test_validate_scoring_weights(self) -> None:
+        validate_scoring_weights(0.6, 0.3, 0.1)
+        with pytest.raises(
+            ValueError, match="Scoring weights must sum to 1.0, got 1.5"
+        ):
+            validate_scoring_weights(0.5, 0.5, 0.5)
+        with pytest.raises(ValueError, match="Scoring weights must sum to 1.0"):
+            validate_scoring_weights(0.2, 0.2, 0.2)
+
+
+class TestVectorAndEmbeddingValidators:
+    """Vector dimension and embedding model checks."""
+
+    @pytest.mark.parametrize("dimension", [128, 384, 4096])
+    def test_common_dimensions_allowed(self, dimension: int) -> None:
+        assert validate_vector_dimensions(dimension) == dimension
+
+    def test_dimension_bounds(self) -> None:
+        with pytest.raises(ValueError, match="Vector dimensions must be positive"):
+            validate_vector_dimensions(0)
+        with pytest.raises(ValueError, match="Vector dimensions too large: 10001"):
+            validate_vector_dimensions(10_001)
+
+    def test_model_benchmark_consistency(self) -> None:
+        assert (
+            validate_model_benchmark_consistency(
+                "text-embedding-ada-002", "text-embedding-ada-002"
+            )
+            == "text-embedding-ada-002"
+        )
+        with pytest.raises(ValueError, match="does not match"):
+            validate_model_benchmark_consistency("ada-002", "text-embedding-ada-002")
+
+    def test_collection_name_rules(self) -> None:
+        assert validate_collection_name("docs-01") == "docs-01"
+        with pytest.raises(ValueError, match="cannot be empty"):
+            validate_collection_name("")
+        with pytest.raises(ValueError, match="can only contain alphanumeric"):
+            validate_collection_name("invalid name")
+        with pytest.raises(ValueError, match="must be at least 2 characters"):
+            validate_collection_name("a")
+        with pytest.raises(ValueError, match="cannot exceed 64 characters"):
+            validate_collection_name("x" * 65)
+
+    def test_embedding_model_name_rules(self) -> None:
+        assert validate_embedding_model_name("all-MiniLM-L6-v2") == "all-MiniLM-L6-v2"
+        with pytest.raises(ValueError, match="Model name cannot be empty"):
+            validate_embedding_model_name("")
+        with pytest.raises(ValueError, match="Model name is too long"):
+            validate_embedding_model_name("x" * 201)
+        with pytest.raises(ValueError, match="Model name contains invalid characters"):
+            validate_embedding_model_name("bad|name")
+
+
+class TestFieldFactories:
+    """Ensure field helpers enforce constraints at runtime."""
+
+    @pytest.mark.parametrize(
+        ("annotation", "valid", "invalid"),
+        [
+            (Annotated[int, positive_int()], 5, 0),
+            (Annotated[int, non_negative_int()], 0, -1),
+            (Annotated[int, port_number()], 8080, 0),
+            (Annotated[float, percentage()], 0.5, 1.5),
+            (Annotated[str, collection_name_field()], "docs-01", "bad name"),
+        ],
+    )
+    def test_field_factories_validate_values(
+        self, annotation: Any, valid: Any, invalid: Any
+    ) -> None:
+        adapter = TypeAdapter(annotation)
+        assert adapter.validate_python(valid) == valid
         with pytest.raises(ValueError):
-            url_validator("not-a-url")
+            adapter.validate_python(invalid)
