@@ -28,7 +28,7 @@ class StubVectorStore:
         ids: list[str] | None = None,
         **_: object,
     ) -> None:
-        self.add_calls.append((list(documents), list(ids or [])))
+        self.add_calls.append((documents, list(ids or [])))
 
     def similarity_search_with_score_by_vector(
         self,

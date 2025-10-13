@@ -304,6 +304,11 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
             CollectionSchema(
                 name=collection,
                 vector_size=self.embedding_dimension,
+                requires_sparse=(
+                    self._sparse_embeddings is not None
+                    and self._retrieval_mode
+                    in {SearchStrategy.SPARSE, SearchStrategy.HYBRID}
+                ),
             )
         )
 

@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator, Sequence
+from collections.abc import AsyncIterator, Iterator, Sequence
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock
@@ -162,7 +162,7 @@ def config_stub() -> Any:
 @pytest.fixture
 async def initialized_vector_store_service(
     vector_container: ApplicationContainer,
-) -> Iterator[VectorStoreService]:
+) -> AsyncIterator[VectorStoreService]:
     """Initialize VectorStoreService for tests and ensure cleanup."""
 
     service = await initialize_vector_store_service(vector_container)
