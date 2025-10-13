@@ -296,7 +296,6 @@ class HyDEQueryEngine(BaseService):
                 model=self._CACHE_MODEL,
                 embedding=hyde_embedding,
                 provider=self._CACHE_PROVIDER,
-                dimensions=len(hyde_embedding),
                 ttl=self.config.cache_ttl_seconds,
             )
 
