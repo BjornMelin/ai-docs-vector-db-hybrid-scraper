@@ -127,12 +127,6 @@ class BrowserUseProvider(BrowserProvider):
                 operation="agent_run",
                 func=_call,
             )
-        except TimeoutError:
-            return BrowserResult.failure(
-                url=request.url,
-                provider=self.kind,
-                error="browser-use task timed out",
-            )
         finally:
             await browser.close()
 
