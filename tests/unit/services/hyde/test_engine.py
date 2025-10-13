@@ -247,9 +247,7 @@ class TestHyDEQueryEngine:
         hyde_mock = AsyncMock(return_value=[0.4, 0.5, 0.6])
         engine._get_or_generate_hyde_embedding = hyde_mock
         search_vector_mock = cast(AsyncMock, mock_vector_store.search_vector)
-        search_vector_mock.return_value = [
-            _vector_match(doc_id="doc1", score=0.8)
-        ]
+        search_vector_mock.return_value = [_vector_match(doc_id="doc1", score=0.8)]
 
         results = await engine.enhanced_search("test query", limit=5)
 
