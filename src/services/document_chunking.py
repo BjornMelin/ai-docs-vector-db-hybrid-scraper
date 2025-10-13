@@ -43,7 +43,8 @@ _HTML_HEADERS: list[tuple[str, str]] = [
     ("h6", "Header 6"),
 ]
 
-_KIND_TOKEN_ALIASES = {"token", "tokens", "token-aware", "token_aware"}
+_TOKEN_KIND = "token"  # noqa: S105 - symbolic label for token-aware chunking
+_KIND_TOKEN_ALIASES = {_TOKEN_KIND, "tokens", "token-aware", "token_aware"}
 
 
 _EXTENSION_LANGUAGE_MAP: dict[str, Language] = {
@@ -145,18 +146,7 @@ def infer_language(
     return language.value if language else None
 
 
-def infer_document_kind(
-    metadata: Mapping[str, Any] | None, default: str = "text"
-) -> str:
-    """Infer a logical document kind from crawler metadata."""
-
-    if metadata is None:
-        return default
-
-    candidate = metadata.get("kind") or metadata.get("content_kind")
-    if isinstance(candidate, str) and candidate:
-        return candidate.lower()
-
+def _infer_kind_from_mime(metadata: Mapping[str, Any]) -> str | None:
     mime_type = (
         metadata.get("mime_type")
         or metadata.get("content_type")
@@ -164,9 +154,11 @@ def infer_document_kind(
     )
     if isinstance(mime_type, str):
         lowered = mime_type.split(";")[0].strip().lower()
-        if lowered in _MIME_KIND_MAP:
-            return _MIME_KIND_MAP[lowered]
+        return _MIME_KIND_MAP.get(lowered)
+    return None
 
+
+def _infer_kind_from_extension(metadata: Mapping[str, Any]) -> str | None:
     extension = metadata.get("extension") or infer_extension(
         metadata.get("uri_or_path") or metadata.get("url")
     )
@@ -180,11 +172,43 @@ def infer_document_kind(
             return "json"
         if lowered in _EXTENSION_LANGUAGE_MAP:
             return "code"
+    return None
 
-    if metadata.get("token_aware") or metadata.get("chunking_mode") == "token":
-        return "token"
 
-    return default
+def _infer_kind_from_token_hint(metadata: Mapping[str, Any]) -> str | None:
+    token_hint = metadata.get("token_aware") or metadata.get("chunking_mode")
+    if isinstance(token_hint, str):
+        hint_value = token_hint.strip().lower()
+        if hint_value in _KIND_TOKEN_ALIASES:
+            return _TOKEN_KIND
+    elif token_hint is True:
+        return _TOKEN_KIND
+    return None
+
+
+def infer_document_kind(
+    metadata: Mapping[str, Any] | None, default: str = "text"
+) -> str:
+    """Infer a logical document kind from crawler metadata."""
+
+    if metadata is None:
+        return default
+
+    candidate = metadata.get("kind") or metadata.get("content_kind")
+    inferred_kind: str | None = None
+    if isinstance(candidate, str) and candidate:
+        inferred_kind = candidate.lower()
+
+    if inferred_kind is None:
+        inferred_kind = _infer_kind_from_mime(metadata)
+
+    if inferred_kind is None:
+        inferred_kind = _infer_kind_from_extension(metadata)
+
+    if inferred_kind is None:
+        inferred_kind = _infer_kind_from_token_hint(metadata)
+
+    return inferred_kind or default
 
 
 def _normalize_kind(kind: str | None, metadata: Mapping[str, Any] | None) -> str:

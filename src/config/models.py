@@ -413,18 +413,10 @@ class ChunkingConfig(BaseModel):
         gt=0,
         description="Target chunk size to preserve context fidelity",
     )
-    max_chunk_size: int = Field(default=3000, gt=0, description="Maximum chunk size")
-    min_chunk_size: int = Field(default=100, gt=0, description="Minimum chunk size")
     chunk_overlap: int = Field(
         default=320,
         ge=0,
         description="Overlap between chunks to maintain coherence across boundaries",
-    )
-    preserve_code_blocks: bool = Field(
-        default=True, description="Preserve code block integrity"
-    )
-    detect_language: bool = Field(
-        default=True, description="Auto-detect programming language"
     )
     token_chunk_size: int = Field(
         default=600,
@@ -459,12 +451,6 @@ class ChunkingConfig(BaseModel):
     def validate_chunk_sizes(self) -> Self:
         if self.chunk_overlap >= self.chunk_size:
             msg = "chunk_overlap must be less than chunk_size"
-            raise ValueError(msg)
-        if self.min_chunk_size > self.chunk_size:
-            msg = "min_chunk_size must be <= chunk_size"
-            raise ValueError(msg)
-        if self.max_chunk_size < self.chunk_size:
-            msg = "max_chunk_size must be >= chunk_size"
             raise ValueError(msg)
         if self.token_chunk_overlap >= self.token_chunk_size:
             msg = "token_chunk_overlap must be less than token_chunk_size"

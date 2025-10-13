@@ -240,8 +240,6 @@ def chunk_configurations(draw) -> dict[str, Any]:
     """Generate valid chunking configurations with proper constraints."""
     chunk_size = draw(st.integers(min_value=100, max_value=5000))
     chunk_overlap = draw(st.integers(min_value=0, max_value=chunk_size - 1))
-    min_chunk_size = draw(st.integers(min_value=1, max_value=chunk_size))
-    max_chunk_size = draw(st.integers(min_value=chunk_size, max_value=10000))
     token_chunk_size = draw(st.integers(min_value=100, max_value=2000))
     token_chunk_overlap = draw(
         st.integers(min_value=0, max_value=max(token_chunk_size - 1, 0))
@@ -251,11 +249,7 @@ def chunk_configurations(draw) -> dict[str, Any]:
     return {
         "chunk_size": chunk_size,
         "chunk_overlap": chunk_overlap,
-        "min_chunk_size": min_chunk_size,
-        "max_chunk_size": max_chunk_size,
         "strategy": draw(st.sampled_from(list(ChunkingStrategy))),
-        "preserve_code_blocks": draw(st.booleans()),
-        "detect_language": draw(st.booleans()),
         "token_chunk_size": token_chunk_size,
         "token_chunk_overlap": token_chunk_overlap,
         "token_model": draw(
@@ -552,8 +546,6 @@ def invalid_chunk_configurations(draw) -> dict[str, Any]:
         st.sampled_from(
             [
                 "overlap_too_large",
-                "min_chunk_too_large",
-                "max_chunk_too_small",
                 "token_overlap_too_large",
                 "json_too_small",
                 "negative_values",
@@ -563,12 +555,6 @@ def invalid_chunk_configurations(draw) -> dict[str, Any]:
 
     if violation_type == "overlap_too_large":
         base_config["chunk_overlap"] = chunk_size
-        return base_config
-    if violation_type == "min_chunk_too_large":
-        base_config["min_chunk_size"] = chunk_size + 100
-        return base_config
-    if violation_type == "max_chunk_too_small":
-        base_config["max_chunk_size"] = max(chunk_size - 100, 1)
         return base_config
     if violation_type == "token_overlap_too_large":
         base_config["token_chunk_overlap"] = base_config["token_chunk_size"]
@@ -580,8 +566,6 @@ def invalid_chunk_configurations(draw) -> dict[str, Any]:
     return {
         "chunk_size": draw(st.integers(max_value=0)),
         "chunk_overlap": draw(st.integers(max_value=-1)),
-        "min_chunk_size": draw(st.integers(max_value=0)),
-        "max_chunk_size": draw(st.integers(max_value=0)),
         "token_chunk_size": draw(st.integers(max_value=0)),
         "token_chunk_overlap": draw(st.integers(max_value=0)),
         "token_model": "",
