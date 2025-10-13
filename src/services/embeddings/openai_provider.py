@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 def _raise_openai_api_key_not_configured() -> None:
     """Raise EmbeddingServiceError for missing OpenAI API key."""
+
     msg = "OpenAI API key not configured"
     raise EmbeddingServiceError(msg)
 
@@ -44,7 +45,7 @@ class TokenSummary(TypedDict):
     total_tokens: int
 
 
-class OpenAIEmbeddingProvider(EmbeddingProvider):
+class OpenAIEmbeddingProvider(EmbeddingProvider):  # pylint: disable=too-many-instance-attributes
     """OpenAI embedding provider with batch processing."""
 
     _model_configs: ClassVar[dict[str, ModelConfig]] = {
@@ -73,7 +74,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         *,
         max_retries: int = 3,
         timeout: float | None = None,
-    ):
+    ):  # pylint: disable=too-many-arguments
         """Initialize OpenAI provider.
 
         Args:
@@ -139,8 +140,17 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
 
     async def cleanup(self) -> None:
         """Cleanup OpenAI client by clearing the cached instance."""
+
+        client = self._client
         self._client = None
         self._initialized = False
+        self._token_encoder = None
+
+        if client is None:
+            return
+
+        with contextlib.suppress(Exception):
+            await client.close()  # type: ignore[reportAttributeAccess]
 
     @trace_function()
     async def generate_embeddings(
