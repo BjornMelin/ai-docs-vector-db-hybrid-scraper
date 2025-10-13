@@ -7,8 +7,10 @@ import os
 import signal
 import sys
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
+from starlette import status
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 from starlette.routing import Route
@@ -16,6 +18,10 @@ from starlette.routing import Route
 from src.config.loader import get_settings
 from src.services.fastapi.middleware.manager import apply_defaults, apply_named_stack
 from src.services.logging_config import configure_logging
+from src.services.observability.health_manager import (
+    HealthStatus,
+    build_health_manager,
+)
 
 
 try:
@@ -39,19 +45,30 @@ class ProductionMCPServer:
     """
 
     def __init__(self, config=None):
-        """Initialize production MCP server."""
+        """Initialize production MCP server.
+
+        Args:
+            config: Optional pre-loaded application settings. When omitted the
+                factory loads configuration via :func:`get_settings`.
+        """
         self.config = config or get_settings()
         self._middleware_names: list[str] = ["rate_limiting"]
         self._mcp_server: FastMCP | None = None
         self._app: Starlette | None = None
         self._shutdown_event = asyncio.Event()
+        self._health_manager = build_health_manager(self.config)
 
         # Setup signal handlers for graceful shutdown
         signal.signal(signal.SIGINT, self._signal_handler)
         signal.signal(signal.SIGTERM, self._signal_handler)
 
     def _signal_handler(self, signum: int, _frame) -> None:
-        """Handle shutdown signals gracefully."""
+        """Handle shutdown signals gracefully.
+
+        Args:
+            signum: Numeric identifier for the received signal.
+            _frame: Current execution frame supplied by the interpreter.
+        """
         logger.info("Received signal %d, initiating graceful shutdown...", signum)
         # Store task reference to avoid RUF006 warning
         task = asyncio.create_task(self.shutdown())
@@ -60,7 +77,14 @@ class ProductionMCPServer:
 
     @asynccontextmanager
     async def lifespan(self, _app: Starlette):
-        """Application lifespan manager with startup/shutdown."""
+        """Application lifespan manager with startup/shutdown.
+
+        Args:
+            _app: Starlette application instance invoking the context manager.
+
+        Yields:
+            None. Control resumes once the application is ready to serve.
+        """
         try:
             # Startup
             logger.info("Starting production MCP server...")
@@ -94,7 +118,7 @@ class ProductionMCPServer:
         logger.info("Production MCP server startup complete")
 
     async def shutdown(self) -> None:
-        """Cleanup server components."""
+        """Clean up server components."""
         try:
             self._shutdown_event.set()
 
@@ -107,21 +131,49 @@ class ProductionMCPServer:
 
         logger.info("Production MCP server shutdown complete")
 
-    async def health_check(self, _request) -> JSONResponse:
-        """Health check endpoint."""
-        return JSONResponse(
-            {
-                "status": "healthy",
-                "version": self.config.version,
-                "environment": self.config.environment.value,
-            }
-        )
-
     def create_app(self) -> Starlette:
-        """Create Starlette application with middleware."""
+        """Create Starlette application with middleware.
+
+        Returns:
+            Configured Starlette application exposing the health endpoint.
+        """
+
         # Routes
+        async def health_endpoint(_request) -> JSONResponse:
+            """Return aggregated health information for the MCP surface.
+
+            Args:
+                _request: Incoming Starlette request (unused).
+
+            Returns:
+                JSONResponse describing aggregated system health.
+            """
+
+            await self._health_manager.check_all()
+            summary = self._health_manager.get_health_summary()
+            overall_status = summary.get("overall_status", HealthStatus.UNKNOWN.value)
+            status_code = status.HTTP_200_OK
+            if overall_status == HealthStatus.UNHEALTHY.value:
+                status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+
+            timestamp_value = summary.get("timestamp")
+            if timestamp_value is None:
+                timestamp_value = datetime.now(UTC).timestamp()
+
+            payload = {
+                "status": overall_status,
+                "healthy_count": summary.get("healthy_count", 0),
+                "total_count": summary.get("total_count", 0),
+                "timestamp": datetime.fromtimestamp(
+                    float(timestamp_value), tz=UTC
+                ).isoformat(),
+                "checks": summary.get("checks", {}),
+            }
+
+            return JSONResponse(payload, status_code=status_code)
+
         routes = [
-            Route("/health", self.health_check, methods=["GET"]),
+            Route("/health", health_endpoint, methods=["GET"]),
         ]
 
         # Create app with lifespan
@@ -143,7 +195,18 @@ class ProductionMCPServer:
         host: str = "127.0.0.1",
         port: int = 8000,
     ) -> None:
-        """Run the production server asynchronously."""
+        """Run the production server asynchronously.
+
+        Args:
+            host: Interface on which the server should listen.
+            port: TCP port exposed for clients.
+
+        Raises:
+            ImportError: If ``uvicorn`` is not installed.
+            OSError: If the server cannot bind to the requested address.
+            PermissionError: When insufficient permissions prevent binding.
+            RuntimeError: Raised by the underlying server during execution.
+        """
         try:
             if uvicorn is None:
                 msg = "uvicorn not available"
@@ -170,7 +233,14 @@ class ProductionMCPServer:
 
 
 def create_production_server(config=None) -> ProductionMCPServer:
-    """Create a production-enhanced MCP server."""
+    """Create a production-enhanced MCP server.
+
+    Args:
+        config: Optional pre-loaded application settings instance.
+
+    Returns:
+        ProductionMCPServer configured with middleware defaults.
+    """
     return ProductionMCPServer(config or get_settings())
 
 
@@ -179,13 +249,23 @@ async def run_production_server_async(
     host: str = "127.0.0.1",
     port: int = 8000,
 ) -> None:
-    """Run production server with enhanced middleware stack."""
+    """Run production server with enhanced middleware stack.
+
+    Args:
+        config: Optional pre-loaded application settings instance.
+        host: Interface on which the server should listen.
+        port: TCP port exposed for clients.
+    """
     server = create_production_server(config)
     await server.run_async(host, port)
 
 
 def main() -> None:
-    """Main entry point for production server."""
+    """Main entry point for production server.
+
+    Raises:
+        SystemExit: When the server terminates due to unrecoverable errors.
+    """
     # Load configuration
     config = get_settings()
 

@@ -37,6 +37,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Refactor
 
+- **[Browser]:** Unified runtime logic for all browser providers, centralizing retry,
+  timeout, and error handling in `src/services/browser/runtime.py`.
+- **[Analytics]:** Removed the custom `SearchAnalyticsDashboard` and
+  `VectorVisualizationEngine` services, consolidating all monitoring and
+  analytics responsibilities into the standard OpenTelemetry-based
+  observability stack.
 - Updated core embeddings and browser providers to use absolute imports, enforced OpenAI client cleanup semantics, and banned legacy SDK surfaces via new Ruff tidy-import rules.
 - Realigned pinned dependencies (OpenAI, NumPy, SciPy, lxml, aiohttp, xformers) to the maximum versions compatible with browser-use, crawl4ai, and vLLM, regenerating `uv.lock` under the new matrix.
 - **[MCP]:** Enforced explicit dependency injection for MCP tools and services,
@@ -65,6 +71,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **[Observability]:** Completed the unification of monitoring systems by deleting the legacy `src/services/monitoring` package and updating all application entry points to use the modern `initialize_observability` lifecycle function.
 - **[Observability]:** Eliminated the bespoke Prometheus `MetricsRegistry` and middleware. All `/metrics` exposure now flows through `prometheus-fastapi-instrumentator` while application telemetry is captured via OpenTelemetry tracing utilities.
 - **[Observability]:** Replaced database query monitors with OpenTelemetry spans and the `db.query.duration` histogram, and relocated the shared `HealthCheckManager` under `services/observability` for unified health wiring.
+- **[Health]:** Centralized all system health checking logic into the `HealthCheckManager`, removing redundant per-service health endpoints.
 - **[Architecture]:** Unified circuit breaker implementation by refactoring
   `TimeoutMiddleware` to use the shared `CircuitBreakerManager`, ensuring a
   global state for all breakers.
