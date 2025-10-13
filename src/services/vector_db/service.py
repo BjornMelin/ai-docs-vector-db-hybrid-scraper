@@ -1,5 +1,5 @@
 """Vector store service implemented on top of LangChain's Qdrant integration."""
-# pylint: disable=too-many-arguments,too-many-return-statements,too-many-branches,too-many-locals
+# pylint: disable=too-many-arguments,too-many-return-statements,too-many-branches,too-many-locals,too-many-lines
 
 from __future__ import annotations
 
@@ -9,24 +9,22 @@ import statistics
 from collections.abc import Iterable, Mapping, Sequence
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 from uuid import uuid4
 
+from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
 from langchain_core.documents import Document
 from langchain_qdrant import QdrantVectorStore, RetrievalMode
 from qdrant_client import AsyncQdrantClient, QdrantClient, models
 
 from src.config.loader import Settings
 from src.config.models import (
-    EmbeddingProvider as EmbeddingProviderEnum,
     QueryProcessingConfig,
     ScoreNormalizationStrategy,
     SearchStrategy,
 )
 from src.contracts.retrieval import SearchRecord
 from src.services.base import BaseService
-from src.services.embeddings.base import EmbeddingProvider as BaseEmbeddingProvider
-from src.services.embeddings.fastembed_provider import FastEmbedProvider
 from src.services.errors import EmbeddingServiceError
 from src.services.observability.tracing import set_span_attributes
 
@@ -41,6 +39,17 @@ from .types import CollectionSchema, TextDocument, VectorRecord
 logger = logging.getLogger(__name__)
 
 
+if TYPE_CHECKING:  # pragma: no cover - typing aid
+    from langchain_qdrant import FastEmbedSparse as FastEmbedSparseType
+else:  # pragma: no cover - runtime fallback
+    FastEmbedSparseType = Any
+
+try:  # pragma: no cover - optional sparse dependency
+    from langchain_qdrant import FastEmbedSparse as FastEmbedSparseRuntime
+except ModuleNotFoundError:  # pragma: no cover - defer sparse usage checks
+    FastEmbedSparseRuntime = None  # type: ignore[assignment]
+
+
 _RETRIEVAL_MODE_MAP: dict[SearchStrategy, RetrievalMode] = {
     SearchStrategy.DENSE: RetrievalMode.DENSE,
     SearchStrategy.SPARSE: RetrievalMode.SPARSE,
@@ -48,7 +57,7 @@ _RETRIEVAL_MODE_MAP: dict[SearchStrategy, RetrievalMode] = {
 }
 
 
-class VectorStoreService(BaseService):  # pylint: disable=too-many-public-methods
+class VectorStoreService(BaseService):  # pylint: disable=too-many-public-methods,too-many-instance-attributes
     """High-level vector store wrapper using LangChain's QdrantVectorStore."""
 
     def __init__(
@@ -56,27 +65,19 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         *,
         config: Settings,
         async_qdrant_client: AsyncQdrantClient,
-        embeddings_provider: BaseEmbeddingProvider | None = None,
     ) -> None:
         """Initialize the VectorStoreService."""
 
         super().__init__(config)
         self.collection_name: str | None = None
-        fastembed_cfg = getattr(config, "fastembed", None)
-        if embeddings_provider is not None:
-            self._embeddings = embeddings_provider
-        else:
-            dense_model = getattr(
-                fastembed_cfg, "dense_model", "BAAI/bge-small-en-v1.5"
-            )
-            sparse_model = getattr(fastembed_cfg, "sparse_model", None)
-            self._embeddings = FastEmbedProvider(
-                model_name=dense_model,
-                sparse_model=sparse_model,
-            )
         self._async_client: AsyncQdrantClient | None = async_qdrant_client
         self._sync_client: QdrantClient | None = None
         self._vector_store: QdrantVectorStore | None = None
+        self._dense_embeddings: FastEmbedEmbeddings | None = None
+        self._sparse_embeddings: FastEmbedSparseType | None = None
+        self._embedding_dimension: int | None = None
+        self._dense_model_name = self._resolve_dense_model()
+        self._sparse_model_name = self._resolve_sparse_model()
         self._retrieval_mode: SearchStrategy = self._resolve_retrieval_mode()
 
     async def initialize(self) -> None:
@@ -85,30 +86,35 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         if self.is_initialized():
             return
 
-        await self._embeddings.initialize()
         cfg = self._require_qdrant_config()
-        adapter = self._require_embedding_adapter()
+        dense_embedding = FastEmbedEmbeddings(model_name=self._dense_model_name)
+        probe_vector = await asyncio.to_thread(dense_embedding.embed_query, "__probe__")
+        self._embedding_dimension = len(probe_vector)
+        sparse_embedding: FastEmbedSparseType | None = None
+        if self._retrieval_mode in {SearchStrategy.SPARSE, SearchStrategy.HYBRID}:
+            if not self._sparse_model_name:
+                msg = "Sparse or hybrid retrieval requires a sparse embedding model"
+                raise EmbeddingServiceError(msg)
+            if FastEmbedSparseRuntime is None:
+                msg = (
+                    "langchain-qdrant extras are required for sparse retrieval; "
+                    "install with `uv add langchain-qdrant[fastembed]`"
+                )
+                raise EmbeddingServiceError(msg)
+            sparse_embedding = FastEmbedSparseRuntime(
+                model_name=self._sparse_model_name
+            )
+        self._dense_embeddings = dense_embedding
+        self._sparse_embeddings = sparse_embedding
         retrieval_mode = _RETRIEVAL_MODE_MAP.get(
             self._retrieval_mode, RetrievalMode.DENSE
         )
-        sparse_embedding = None
-        if self._retrieval_mode in {SearchStrategy.SPARSE, SearchStrategy.HYBRID}:
-            sparse_model = self._determine_sparse_model()
-            if sparse_model:
-                try:
-                    from langchain_qdrant import FastEmbedSparse
-                except ModuleNotFoundError as exc:  # pragma: no cover - import guard
-                    msg = (
-                        "langchain-qdrant extras are required for sparse retrieval; "
-                        "install with `uv add langchain-qdrant[fastembed]`"
-                    )
-                    raise EmbeddingServiceError(msg) from exc
-                sparse_embedding = FastEmbedSparse(model_name=sparse_model)
         self._sync_client = self._build_sync_client(cfg)
+        self.collection_name = getattr(cfg, "collection_name", None)
         self._vector_store = QdrantVectorStore(
             client=self._sync_client,
             collection_name=cfg.collection_name,
-            embedding=adapter,
+            embedding=self._dense_embeddings,
             retrieval_mode=retrieval_mode,
             sparse_embedding=sparse_embedding,
         )
@@ -121,14 +127,19 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         self._vector_store = None
         self._sync_client = None
         self._async_client = None
-        await self._embeddings.cleanup()
+        self._dense_embeddings = None
+        self._sparse_embeddings = None
+        self._embedding_dimension = None
         self._mark_uninitialized()
 
     @property
     def embedding_dimension(self) -> int:
         """Return the dimensionality of the dense embeddings."""
 
-        return self._embeddings.embedding_dimension
+        if self._embedding_dimension is None:
+            msg = "FastEmbed embeddings have not been initialized"
+            raise EmbeddingServiceError(msg)
+        return self._embedding_dimension
 
     async def ensure_collection(self, schema: CollectionSchema) -> None:
         """Ensure a collection with the supplied schema exists."""
@@ -136,14 +147,25 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         client = self._require_async_client()
         if await client.collection_exists(schema.name):
             return
-        vectors_config = models.VectorParams(
-            size=schema.vector_size,
+        dense_name = getattr(self._vector_store, "vector_name", "") or ""
+        dense_params = models.VectorParams(
+            size=self.embedding_dimension,
             distance=_distance_from_string(schema.distance),
         )
+        if dense_name:
+            vectors_config: models.VectorParams | dict[str, models.VectorParams] = {
+                dense_name: dense_params
+            }
+        else:
+            vectors_config = dense_params
         sparse_config = None
         if schema.requires_sparse:
+            sparse_name = (
+                getattr(self._vector_store, "sparse_vector_name", "langchain-sparse")
+                or "langchain-sparse"
+            )
             sparse_config = {
-                "default": models.SparseVectorParams(
+                sparse_name: models.SparseVectorParams(
                     index=models.SparseIndexParams(),
                 )
             }
@@ -269,7 +291,7 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
     async def upsert_documents(
         self,
         collection: str,
-        documents: Sequence[TextDocument],
+        documents: Sequence[TextDocument | Document],
         *,
         batch_size: int | None = None,
     ) -> None:
@@ -286,9 +308,34 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         )
 
         store = self._require_vector_store(collection)
-        texts = [document.content for document in documents]
-        canonical_payloads: list[CanonicalPayload] = []
+        normalized_documents: list[TextDocument] = []
         for document in documents:
+            if isinstance(document, Document):
+                metadata = dict(document.metadata or {})
+                identifier = str(
+                    metadata.get("doc_id")
+                    or metadata.get("id")
+                    or getattr(document, "id", uuid4().hex)
+                )
+                normalized_documents.append(
+                    TextDocument(
+                        id=identifier,
+                        content=document.page_content,
+                        metadata=metadata,
+                    )
+                )
+            else:
+                normalized_documents.append(
+                    TextDocument(
+                        id=document.id,
+                        content=document.content,
+                        metadata=dict(document.metadata or {}),
+                    )
+                )
+
+        langchain_documents: list[Document] = []
+        canonical_payloads: list[CanonicalPayload] = []
+        for document in normalized_documents:
             try:
                 payload = ensure_canonical_payload(
                     document.metadata,
@@ -299,14 +346,17 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
                 msg = f"Invalid payload for document '{document.id}': {exc}"
                 raise EmbeddingServiceError(msg) from exc
             canonical_payloads.append(payload)
+            metadata = dict(payload.payload)
+            content = metadata.get("content", document.content)
+            langchain_documents.append(
+                Document(page_content=content, metadata=metadata)
+            )
 
         ids = [payload.point_id for payload in canonical_payloads]
-        metadatas = [payload.payload for payload in canonical_payloads]
 
         await asyncio.to_thread(
-            store.add_texts,
-            texts=texts,
-            metadatas=metadatas,
+            store.add_documents,
+            documents=langchain_documents,
             ids=ids,
         )
 
@@ -436,7 +486,13 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         """Generate an embedding for the supplied query."""
 
         try:
-            [embedding] = await self._embeddings.generate_embeddings([query])
+            if self._dense_embeddings is None:
+                msg = "FastEmbed embeddings have not been initialized"
+                raise EmbeddingServiceError(msg)
+            embedding = await asyncio.to_thread(
+                self._dense_embeddings.embed_query,
+                query,
+            )
         except Exception as exc:  # pragma: no cover - provider-specific failures
             msg = f"Failed to embed query: {exc}"
             raise EmbeddingServiceError(msg) from exc
@@ -446,7 +502,13 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         """Generate embeddings for documents."""
 
         try:
-            return await self._embeddings.generate_embeddings(list(texts))
+            if self._dense_embeddings is None:
+                msg = "FastEmbed embeddings have not been initialized"
+                raise EmbeddingServiceError(msg)
+            return await asyncio.to_thread(
+                self._dense_embeddings.embed_documents,
+                list(texts),
+            )
         except Exception as exc:  # pragma: no cover - provider-specific failures
             msg = f"Failed to embed documents: {exc}"
             raise EmbeddingServiceError(msg) from exc
@@ -506,47 +568,104 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
     async def hybrid_search(
         self,
         collection: str,
-        dense_vector: Sequence[float],
-        sparse_vector: Mapping[int, float] | None = None,
+        query: str | None = None,
         *,
+        dense_vector: Sequence[float] | None = None,
+        sparse_vector: Mapping[int, float] | None = None,
         limit: int = 10,
         filters: Mapping[str, Any] | None = None,
     ) -> list[SearchRecord]:  # pylint: disable=too-many-arguments
-        """Perform a hybrid search when sparse vectors are supplied."""
+        """Perform a hybrid search over dense and sparse representations."""
 
-        if not sparse_vector:
+        dense_payload = dense_vector
+        sparse_payload_mapping = sparse_vector
+        mode = self._retrieval_mode
+
+        if query is not None:
+            if mode in {SearchStrategy.DENSE, SearchStrategy.HYBRID}:
+                dense_payload = await self.embed_query(query)
+            if mode in {SearchStrategy.SPARSE, SearchStrategy.HYBRID} and (
+                self._sparse_embeddings is not None
+            ):
+                sparse_payload = await asyncio.to_thread(
+                    self._sparse_embeddings.embed_query,
+                    query,
+                )
+                sparse_payload_mapping = dict(
+                    zip(sparse_payload.indices, sparse_payload.values, strict=False)
+                )
+
+        if mode is SearchStrategy.DENSE:
+            if dense_payload is None:
+                msg = "Dense retrieval requires a query or dense vector"
+                raise EmbeddingServiceError(msg)
             return await self.search_vector(
                 collection,
-                dense_vector,
+                dense_payload,
                 limit=limit,
                 filters=filters,
             )
 
         client = self._require_async_client()
+        store = self._require_vector_store(collection)
         query_filter = _filter_from_mapping(filters)
+        sparse_name = getattr(store, "sparse_vector_name", "langchain-sparse")
+
+        if mode is SearchStrategy.SPARSE:
+            if not sparse_payload_mapping:
+                msg = "Sparse retrieval requires a sparse vector"
+                raise EmbeddingServiceError(msg)
+            sparse_query = models.SparseVector(
+                indices=list(sparse_payload_mapping.keys()),
+                values=list(sparse_payload_mapping.values()),
+            )
+            result = await client.query_points(
+                collection_name=collection,
+                query=sparse_query,
+                using=sparse_name or "langchain-sparse",
+                query_filter=query_filter,
+                limit=limit,
+                with_payload=True,
+                with_vectors=False,
+            )
+            return [
+                _scored_point_to_record(collection, point)
+                for point in getattr(result, "points", []) or []
+            ]
+
+        if dense_payload is None:
+            msg = "Hybrid retrieval requires a dense vector"
+            raise EmbeddingServiceError(msg)
+        if not sparse_payload_mapping:
+            return await self.search_vector(
+                collection,
+                dense_payload,
+                limit=limit,
+                filters=filters,
+            )
+
         sparse_query = models.SparseVector(
-            indices=list(sparse_vector.keys()),
-            values=list(sparse_vector.values()),
+            indices=list(sparse_payload_mapping.keys()),
+            values=list(sparse_payload_mapping.values()),
         )
-        dense_prefetch: dict[str, Any] = {
-            "query": list(dense_vector),
-            "using": "default",
-            "limit": max(limit, 20),
-        }
-        sparse_prefetch: dict[str, Any] = {
-            "query": sparse_query,
-            "using": "sparse",
-            "limit": max(limit, 20),
-        }
-        if query_filter is not None:
-            dense_prefetch["filter"] = query_filter
-            sparse_prefetch["filter"] = query_filter
+        dense_name = getattr(store, "vector_name", "") or None
+        prefetch = [
+            models.Prefetch(
+                query=list(dense_payload),
+                using=dense_name,
+                filter=query_filter,
+                limit=limit,
+            ),
+            models.Prefetch(
+                query=sparse_query,
+                using=sparse_name or "langchain-sparse",
+                filter=query_filter,
+                limit=limit,
+            ),
+        ]
         result = await client.query_points(
             collection_name=collection,
-            prefetch=[
-                models.Prefetch(**dense_prefetch),
-                models.Prefetch(**sparse_prefetch),
-            ],
+            prefetch=prefetch,
             query=models.FusionQuery(fusion=models.Fusion.RRF),
             limit=limit,
             with_payload=True,
@@ -620,39 +739,37 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
             raise EmbeddingServiceError(msg)
         return cfg
 
-    def _require_embedding_adapter(self) -> Any:
-        """Return the LangChain embedding adapter."""
-
-        adapter = getattr(self._embeddings, "langchain_embeddings", None)
-        if adapter is None:
-            msg = "Embedding provider does not expose LangChain embeddings"
-            raise EmbeddingServiceError(msg)
-        return adapter
-
     def _resolve_retrieval_mode(self) -> SearchStrategy:
         """Determine the retrieval mode based on settings and provider."""
 
         embedding_cfg = getattr(self.config, "embedding", None)
+        mode = getattr(embedding_cfg, "retrieval_mode", None)
+        if isinstance(mode, SearchStrategy):
+            return mode
+        if hasattr(self.config, "get_effective_search_strategy"):
+            return cast(SearchStrategy, self.config.get_effective_search_strategy())
+        return SearchStrategy.DENSE
+
+    def _resolve_dense_model(self) -> str:
+        """Return the configured dense embedding model identifier."""
+
+        embedding_cfg = getattr(self.config, "embedding", None)
+        candidate = getattr(embedding_cfg, "dense_model", None)
+        if isinstance(candidate, str) and candidate:
+            return candidate
         fastembed_cfg = getattr(self.config, "fastembed", None)
-        default_mode = getattr(embedding_cfg, "retrieval_mode", SearchStrategy.DENSE)
-        provider = getattr(
-            self.config, "embedding_provider", EmbeddingProviderEnum.FASTEMBED
-        )
-        if provider is EmbeddingProviderEnum.FASTEMBED:
-            return getattr(fastembed_cfg, "retrieval_mode", default_mode)
-        return default_mode
+        return str(getattr(fastembed_cfg, "dense_model", "BAAI/bge-small-en-v1.5"))
 
-    def _determine_sparse_model(self) -> str | None:
-        """Select the sparse model when hybrid or sparse retrieval is requested."""
+    def _resolve_sparse_model(self) -> str | None:
+        """Return the configured sparse embedding model identifier, if any."""
 
-        provider = getattr(
-            self.config, "embedding_provider", EmbeddingProviderEnum.FASTEMBED
-        )
-        if provider is EmbeddingProviderEnum.FASTEMBED:
-            return getattr(
-                getattr(self.config, "fastembed", None), "sparse_model", None
-            )
-        return getattr(getattr(self.config, "embedding", None), "sparse_model", None)
+        embedding_cfg = getattr(self.config, "embedding", None)
+        candidate = getattr(embedding_cfg, "sparse_model", None)
+        if isinstance(candidate, str) and candidate:
+            return candidate
+        fastembed_cfg = getattr(self.config, "fastembed", None)
+        fallback = getattr(fastembed_cfg, "sparse_model", None)
+        return str(fallback) if isinstance(fallback, str) and fallback else None
 
     async def _query_with_optional_grouping(
         self,
