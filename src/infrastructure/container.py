@@ -664,17 +664,6 @@ class ContainerManager:
             await self.container.shutdown_resources()  # pyright: ignore[reportGeneralTypeIssues]
             self.container = None
             self._initialized = False
-            try:
-                from src.services.dependencies import (  # pylint: disable=import-outside-toplevel
-                    reset_dependency_singletons,
-                )
-            except ImportError:  # pragma: no cover - defensive guard
-                logger.debug(
-                    "Service dependency singletons could not be reset",
-                    exc_info=True,
-                )
-            else:
-                reset_dependency_singletons()
             logger.info("Dependency injection container shutdown")
 
     def _config_to_dict(self, config: Any) -> dict:

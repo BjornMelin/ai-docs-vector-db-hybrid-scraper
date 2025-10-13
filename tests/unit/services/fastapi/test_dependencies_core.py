@@ -1,123 +1,82 @@
-"""Tests for FastAPI dependency helpers."""
+"""Unit tests verifying FastAPI dependency resolution through the centralized service resolver."""
 
 from __future__ import annotations
 
-from typing import Any, cast
-from unittest.mock import MagicMock
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from fastapi import FastAPI, HTTPException
+from fastapi import HTTPException
 
-from src.services import dependencies as service_dependencies
-from src.services.dependencies import (
-    CacheManager,
-    EmbeddingManagerDep,
-    EmbeddingRequest,
-    EmbeddingServiceError,
-)
+from src.services import service_resolver
 from src.services.fastapi import dependencies as fastapi_dependencies
-from src.services.fastapi.dependencies import HealthCheckManager
+from src.services.fastapi.dependencies import (
+    DatabaseSessionContext,
+    HealthCheckManager,
+)
 
 
-class _RecordingEmbeddingManager:
-    """Capture requests passed into the dependencies wrapper."""
+class _InitialisableService:
+    """Simple service stub that tracks initialization calls."""
 
-    def __init__(self, *, fail: bool = False) -> None:
-        self.fail = fail
-        self.calls: list[dict[str, Any]] = []
+    def __init__(self) -> None:
+        self.initialized = False
 
-    async def generate_embeddings(self, **kwargs: Any) -> dict[str, Any]:
-        """Record invocation arguments and optionally simulate failure."""
+    def initialize(self) -> None:
+        self.initialized = True
 
-        self.calls.append(kwargs)
-        if self.fail:  # pragma: no cover - failure exercised in dedicated test
-            raise RuntimeError("generation failed")
-
-        return {
-            "embeddings": [[0.1, 0.2]],
-            "provider": "fastembed",
-            "model": "test-model",
-            "cost": 0.0,
-            "latency_ms": 5.0,
-            "tokens": 16,
-            "reasoning": "test",
-            "quality_tier": "balanced",
-            "cache_hit": False,
-        }
+    def is_initialized(self) -> bool:
+        return self.initialized
 
 
 @pytest.mark.asyncio()
-async def test_generate_embeddings_dependency_success() -> None:
-    """Ensure the embedding dependency returns a serialisable response."""
+async def test_get_vector_service_uses_container(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Vector service should be resolved from the application container."""
 
-    manager = cast(EmbeddingManagerDep, _RecordingEmbeddingManager())
-    request = EmbeddingRequest(
-        texts=["hello world"],
-        quality_tier="balanced",
-        provider_name="fastembed",
-        max_cost=1.0,
-        speed_priority=True,
-        auto_select=True,
-        generate_sparse=False,
-    )
+    service = _InitialisableService()
 
-    response = await service_dependencies.generate_embeddings(request, manager)
+    class _Container:
+        def vector_store_service(self) -> _InitialisableService:
+            return service
 
-    assert response.provider == "fastembed"
-    assert response.embeddings and response.embeddings[0] == [0.1, 0.2]
-    assert cast(_RecordingEmbeddingManager, manager).calls[0]["texts"] == [
-        "hello world"
-    ]
-    assert (
-        cast(_RecordingEmbeddingManager, manager).calls[0]["quality_tier"].value
-        == "balanced"
-    )
+    monkeypatch.setattr(service_resolver, "get_container", _Container)
+
+    resolved = await fastapi_dependencies.get_vector_service()
+
+    assert resolved is service
+    assert service.initialized is True
 
 
 @pytest.mark.asyncio()
-async def test_generate_embeddings_dependency_failure() -> None:
-    """Verify the dependency wraps underlying failures with service errors."""
+async def test_get_vector_service_maps_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Vector service resolution failures should surface as HTTP 503 errors."""
 
-    manager = cast(EmbeddingManagerDep, _RecordingEmbeddingManager(fail=True))
-    request = EmbeddingRequest(texts=["oops"])
+    class _Container:
+        def vector_store_service(self) -> _InitialisableService:
+            raise RuntimeError("boom")
 
-    with pytest.raises(EmbeddingServiceError):
-        await service_dependencies.generate_embeddings(request, manager)
-
-
-@pytest.mark.asyncio()
-async def test_get_embedding_manager_maps_failure_to_503(monkeypatch: Any) -> None:
-    """Ensure embedding manager failures convert to HTTP 503."""
-
-    async def _ensure_failure(*_args: Any, **_kwargs: Any) -> None:
-        raise RuntimeError("registry failure")
-
-    monkeypatch.setattr(
-        fastapi_dependencies,
-        "core_get_embedding_manager",
-        _ensure_failure,
-        raising=True,
-    )
+    monkeypatch.setattr(service_resolver, "get_container", _Container)
 
     with pytest.raises(HTTPException) as err:
-        await fastapi_dependencies.get_embedding_manager()
+        await fastapi_dependencies.get_vector_service()
 
     assert err.value.status_code == 503
-    assert "Embedding manager not available" in err.value.detail
+    assert "Vector service not available" in err.value.detail
 
 
 @pytest.mark.asyncio()
-async def test_get_cache_manager_maps_failure_to_503(monkeypatch: Any) -> None:
-    """Ensure cache manager failures convert to HTTP 503."""
+async def test_get_cache_manager_maps_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Cache manager failures should raise HTTP 503 errors."""
 
-    async def _ensure_failure(*_args: Any, **_kwargs: Any) -> None:
-        raise RuntimeError("registry failure")
+    async def _fail() -> None:
+        raise RuntimeError("cache failure")
 
     monkeypatch.setattr(
         fastapi_dependencies,
-        "core_get_cache_manager",
-        _ensure_failure,
-        raising=True,
+        "resolve_cache_manager",
+        AsyncMock(side_effect=_fail),
     )
 
     with pytest.raises(HTTPException) as err:
@@ -128,28 +87,88 @@ async def test_get_cache_manager_maps_failure_to_503(monkeypatch: Any) -> None:
 
 
 @pytest.mark.asyncio()
-async def test_get_vector_service_maps_failure_to_503(monkeypatch: Any) -> None:
-    """Ensure vector service dependencies map failures to HTTP 503."""
+async def test_database_session_provides_context(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Database session should expose cache, vector, and dragonfly clients."""
 
-    async def _client_manager_failure() -> Any:
-        raise RuntimeError("client manager failure")
+    class _Dragonfly:
+        def __init__(self) -> None:
+            self.closed = False
 
+        async def close(self) -> None:
+            self.closed = True
+
+    dragonfly = _Dragonfly()
+
+    class _Container:
+        def dragonfly_client(self) -> _Dragonfly:
+            return dragonfly
+
+    monkeypatch.setattr(fastapi_dependencies, "get_container", _Container)
     monkeypatch.setattr(
         fastapi_dependencies,
-        "core_get_vector_store_service",
-        _client_manager_failure,
-        raising=True,
+        "resolve_cache_manager",
+        AsyncMock(return_value="cache"),
+    )
+    monkeypatch.setattr(
+        fastapi_dependencies,
+        "resolve_vector_store_service",
+        AsyncMock(return_value="vector"),
     )
 
-    with pytest.raises(HTTPException) as err:
-        await fastapi_dependencies.get_vector_service()
+    async with fastapi_dependencies.database_session() as context:
+        assert isinstance(context, DatabaseSessionContext)
+        assert context.cache_manager == "cache"
+        assert context.vector_service == "vector"
+        assert context.dragonfly is dragonfly
 
-    assert err.value.status_code == 503
-    assert "Vector service not available" in err.value.detail
+    assert dragonfly.closed is True
 
 
 @pytest.mark.asyncio()
-async def test_get_health_checker_returns_singleton(monkeypatch: Any) -> None:
+async def test_database_session_requires_container(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Missing container should surface as HTTP 503."""
+
+    def _get_none_container() -> None:
+        return None
+
+    monkeypatch.setattr(fastapi_dependencies, "get_container", _get_none_container)
+
+    with pytest.raises(HTTPException) as err:
+        async with fastapi_dependencies.database_session():
+            pass
+
+    assert err.value.status_code == 503
+    assert "Service container unavailable" in err.value.detail
+
+
+@pytest.mark.asyncio()
+async def test_get_rag_generator_maps_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    """RAG generator errors should map to HTTP 503."""
+
+    async def _fail() -> None:
+        raise RuntimeError("rag failure")
+
+    monkeypatch.setattr(
+        fastapi_dependencies,
+        "resolve_rag_generator",
+        AsyncMock(side_effect=_fail),
+    )
+
+    with pytest.raises(HTTPException) as err:
+        await fastapi_dependencies.get_rag_generator()
+
+    assert err.value.status_code == 503
+    assert "RAG generator not available" in err.value.detail
+
+
+@pytest.mark.asyncio()
+async def test_get_health_checker_returns_singleton(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """`get_health_checker` should memoise the constructed manager."""
 
     manager = MagicMock(spec=HealthCheckManager)
@@ -157,7 +176,12 @@ async def test_get_health_checker_returns_singleton(monkeypatch: Any) -> None:
     monkeypatch.setattr(
         fastapi_dependencies, "build_health_manager", build_mock, raising=True
     )
-    monkeypatch.setattr(fastapi_dependencies, "get_settings", object(), raising=True)
+    monkeypatch.setattr(
+        fastapi_dependencies,
+        "get_settings",
+        MagicMock(return_value=SimpleNamespace()),
+        raising=True,
+    )
     monkeypatch.setattr(fastapi_dependencies, "_health_manager", None, raising=False)
 
     first = await fastapi_dependencies.get_health_checker()
@@ -169,48 +193,30 @@ async def test_get_health_checker_returns_singleton(monkeypatch: Any) -> None:
 
 
 @pytest.mark.asyncio()
-async def test_get_health_checker_handles_client_errors(monkeypatch: Any) -> None:
-    """The health checker should still be constructed when client lookup fails."""
+async def test_get_health_checker_handles_reinitialization(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Subsequent calls should reuse cached manager even after failure."""
 
     manager = MagicMock(spec=HealthCheckManager)
+
+    def _build_manager(*_args: object, **_kwargs: object) -> HealthCheckManager:
+        return manager
 
     monkeypatch.setattr(
         fastapi_dependencies,
         "build_health_manager",
-        lambda *_args, **_kwargs: manager,
+        _build_manager,
         raising=True,
     )
-    monkeypatch.setattr(fastapi_dependencies, "get_settings", object(), raising=True)
+    monkeypatch.setattr(
+        fastapi_dependencies,
+        "get_settings",
+        MagicMock(return_value=SimpleNamespace()),
+        raising=True,
+    )
     monkeypatch.setattr(fastapi_dependencies, "_health_manager", None, raising=False)
 
     result = await fastapi_dependencies.get_health_checker()
 
     assert result is manager
-
-
-@pytest.fixture(autouse=True)
-def reset_cache_singleton() -> None:
-    """Ensure cache manager singletons do not leak between tests."""
-
-    service_dependencies.clear_cache_manager_singleton()
-    service_dependencies.clear_embedding_manager_singleton()
-    yield
-    service_dependencies.clear_cache_manager_singleton()
-    service_dependencies.clear_embedding_manager_singleton()
-
-
-@pytest.mark.asyncio()
-async def test_install_cache_manager_override() -> None:
-    """install_cache_manager_override should expose the provided factory."""
-
-    app = FastAPI()
-    manager = MagicMock(spec=CacheManager)
-
-    service_dependencies.install_cache_manager_override(app, lambda: manager)
-
-    override = app.dependency_overrides[service_dependencies.get_cache_manager]
-    resolved = await override()
-    assert resolved is manager
-
-    service_dependencies.remove_cache_manager_override(app)
-    assert service_dependencies.get_cache_manager not in app.dependency_overrides

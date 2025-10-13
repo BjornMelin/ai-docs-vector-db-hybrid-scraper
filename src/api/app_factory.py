@@ -20,15 +20,15 @@ from starlette import status
 from src.api.lifespan import container_lifespan
 from src.config.loader import Settings, get_settings
 from src.infrastructure.container import ApplicationContainer, get_container
-from src.services.dependencies import (
-    get_cache_manager as core_get_cache_manager,
-    get_content_intelligence_service as core_get_content_intelligence_service,
-    get_embedding_manager as core_get_embedding_manager,
-    get_vector_store_service as core_get_vector_store_service,
-)
 from src.services.fastapi.dependencies import HealthCheckerDep
 from src.services.fastapi.middleware.manager import apply_defaults
 from src.services.observability.health_manager import HealthStatus
+from src.services.service_resolver import (
+    get_cache_manager as resolve_cache_manager,
+    get_content_intelligence_service as resolve_content_intelligence_service,
+    get_embedding_manager as resolve_embedding_manager,
+    get_vector_store_service as resolve_vector_store_service,
+)
 
 
 try:
@@ -48,7 +48,11 @@ LOCAL_DEV_CORS_ORIGINS = [
 
 
 def create_app() -> FastAPI:
-    """Create a FastAPI application using the cached settings."""
+    """Create a FastAPI application using the cached settings.
+
+    Returns:
+        FastAPI: Configured FastAPI application instance.
+    """
 
     settings = get_settings()
     app = FastAPI(
@@ -73,13 +77,27 @@ def create_app() -> FastAPI:
 
 
 def _parse_allowed_origins(raw_value: str) -> list[str]:
-    """Return a normalized list of origins extracted from a raw string."""
+    """Return a normalized list of origins extracted from a raw string.
+
+    Args:
+        raw_value: Comma separated list of allowed origins.
+
+    Returns:
+        list[str]: Normalised origins with surrounding whitespace removed.
+    """
 
     return [origin.strip() for origin in raw_value.split(",") if origin.strip()]
 
 
 def _resolve_allowed_cors_origins(settings: Settings) -> list[str]:
-    """Determine the active CORS allow-list from configuration sources."""
+    """Determine the active CORS allow-list from configuration sources.
+
+    Args:
+        settings: Application settings used to resolve origin values.
+
+    Returns:
+        list[str]: List of allowed origins for CORS policy.
+    """
 
     env_value = os.getenv("CORS_ALLOWED_ORIGINS")
     if env_value:
@@ -106,7 +124,12 @@ def _resolve_allowed_cors_origins(settings: Settings) -> list[str]:
 
 
 def _configure_cors(app: FastAPI, *, settings: Settings) -> None:
-    """Attach a configurable CORS policy with secure defaults."""
+    """Attach a configurable CORS policy with secure defaults.
+
+    Args:
+        app: FastAPI application being configured.
+        settings: Settings instance providing CORS configuration.
+    """
 
     allowed_origins = _resolve_allowed_cors_origins(settings)
     allow_all = "*" in allowed_origins
@@ -131,13 +154,22 @@ def _configure_cors(app: FastAPI, *, settings: Settings) -> None:
 
 
 def _apply_middleware(app: FastAPI) -> None:
-    """Install the default middleware stack."""
+    """Install the default middleware stack.
+
+    Args:
+        app: FastAPI application receiving middleware defaults.
+    """
 
     apply_defaults(app)
 
 
 def _configure_routes(app: FastAPI, settings: Settings) -> None:
-    """Register application and utility routes."""
+    """Register application and utility routes.
+
+    Args:
+        app: FastAPI application where routes are registered.
+        settings: Application settings used for configuration.
+    """
 
     if config_router:
         app.include_router(config_router, prefix="/api/v1")
@@ -147,7 +179,11 @@ def _configure_routes(app: FastAPI, settings: Settings) -> None:
 
 
 def _install_application_routes(app: FastAPI) -> None:
-    """Mount the canonical application routers."""
+    """Mount the canonical application routers.
+
+    Args:
+        app: FastAPI application receiving the routers.
+    """
 
     required_modules = {
         "search": "src.api.routers.v1.search",
@@ -187,7 +223,12 @@ def _install_application_routes(app: FastAPI) -> None:
 
 
 def _configure_common_routes(app: FastAPI, settings: Settings) -> None:
-    """Configure informational endpoints for the service."""
+    """Configure informational endpoints for the service.
+
+    Args:
+        app: FastAPI application where the routes are registered.
+        settings: Application settings providing metadata for responses.
+    """
 
     @app.get("/")
     async def root() -> JSONResponse:
@@ -292,7 +333,14 @@ def _configure_common_routes(app: FastAPI, settings: Settings) -> None:
 
 
 def _build_app_lifespan(settings: Settings):
-    """Return a lifespan context manager for FastAPI startup and shutdown."""
+    """Return a lifespan context manager for FastAPI startup and shutdown.
+
+    Args:
+        settings: Application settings used during startup initialisation.
+
+    Returns:
+        Callable[..., Any]: Async context manager controlling app lifespan.
+    """
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -313,6 +361,8 @@ def _build_app_lifespan(settings: Settings):
 
 
 async def _ping_dragonfly() -> None:
+    """Perform a best-effort ping to the Dragonfly cache."""
+
     container = get_container()
     if container is None:
         return
@@ -326,6 +376,8 @@ async def _ping_dragonfly() -> None:
 
 
 async def _init_qdrant_client() -> None:
+    """Perform a lightweight readiness check against the Qdrant client."""
+
     container = get_container()
     if container is None:
         return
@@ -341,7 +393,14 @@ async def _init_qdrant_client() -> None:
 
 
 def _cache_initialization_enabled(settings: Settings) -> bool:
-    """Return True when cache-related services should initialize."""
+    """Return ``True`` when cache-related services should initialize.
+
+    Args:
+        settings: Application settings containing cache configuration.
+
+    Returns:
+        bool: ``True`` when cache initialisation should be performed.
+    """
 
     cache_config = getattr(settings, "cache", None)
     if cache_config is None:
@@ -350,7 +409,11 @@ def _cache_initialization_enabled(settings: Settings) -> bool:
 
 
 def _content_intelligence_available() -> bool:
-    """Return True when the optional content intelligence module is importable."""
+    """Return ``True`` when the optional content intelligence module is importable.
+
+    Returns:
+        bool: ``True`` if the module is available in the environment.
+    """
 
     return (
         importlib.util.find_spec("src.services.content_intelligence.service")
@@ -359,34 +422,44 @@ def _content_intelligence_available() -> bool:
 
 
 async def _ensure_database_ready(settings: Settings) -> None:
-    await core_get_vector_store_service()
+    """Ensure vector and cache backends are warmed up for usage.
+
+    Args:
+        settings: Application settings controlling cache initialisation.
+    """
+
+    await resolve_vector_store_service()
 
     if not _cache_initialization_enabled(settings):
         return
 
-    await core_get_cache_manager()
+    await resolve_cache_manager()
     await _ping_dragonfly()
 
 
 async def _initialize_services(settings: Settings) -> None:
-    """Initialize critical services required for the application."""
+    """Initialize critical services required for the application.
+
+    Args:
+        settings: Application settings used to drive service initialisation.
+    """
 
     service_initializers: dict[str, Callable[[], Awaitable[Any]]] = {
-        "embedding_service": core_get_embedding_manager,
-        "vector_db_service": core_get_vector_store_service,
+        "embedding_service": resolve_embedding_manager,
+        "vector_db_service": resolve_vector_store_service,
         "qdrant_client": _init_qdrant_client,
         "database_ready": lambda: _ensure_database_ready(settings),
     }
 
     if _cache_initialization_enabled(settings):
-        service_initializers["cache_manager"] = core_get_cache_manager
+        service_initializers["cache_manager"] = resolve_cache_manager
         service_initializers["dragonfly_client"] = _ping_dragonfly
     else:
         logger.debug("Skipping cache initialization; caching disabled in configuration")
 
     if _content_intelligence_available():
         service_initializers["content_intelligence"] = (
-            core_get_content_intelligence_service
+            resolve_content_intelligence_service
         )
     else:
         logger.debug("Content intelligence module unavailable; skipping initializer")

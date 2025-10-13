@@ -12,7 +12,6 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src import unified_mcp_server
-from src.services import dependencies as service_dependencies
 
 
 def _lifespan_context() -> AbstractAsyncContextManager[None]:
@@ -216,8 +215,4 @@ async def test_lifespan_enables_monitoring_when_configured(
 def reset_cache_singleton() -> Generator[None, None, None]:
     """Ensure global cache manager state is clean for each test."""
 
-    service_dependencies.clear_cache_manager_singleton()
-    service_dependencies.clear_embedding_manager_singleton()
     yield
-    service_dependencies.clear_cache_manager_singleton()
-    service_dependencies.clear_embedding_manager_singleton()

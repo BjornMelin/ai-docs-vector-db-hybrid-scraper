@@ -9,7 +9,7 @@ are initialised.
 ## 1. REST Endpoints (`/api/v1/*`)
 
 All endpoints are defined in `src/api/routers/v1/` and backed by container
-managed services from `src/services/dependencies.py`.
+managed services from `src/services/service_resolver.py`.
 
 ### POST `/api/v1/search`
 

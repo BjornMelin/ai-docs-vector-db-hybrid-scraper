@@ -11,9 +11,8 @@ from fastapi.exceptions import HTTPException
 from fastapi.routing import APIRouter
 from starlette import status
 
-from src.services.dependencies import (
-    ConfigDep,
-    RAGGeneratorDep,
+from src.services.fastapi.dependencies import ConfigDep, RAGGeneratorDep
+from src.services.rag.api import (
     RAGRequest,
     RAGResponse,
     clear_rag_cache,

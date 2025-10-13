@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 
 from fastmcp import Context
 
-from src.services.dependencies import get_crawl_manager
+from src.services.service_resolver import get_crawl_manager
 
 
 logger = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ def register_tools(mcp, crawl_manager: Any | None = None) -> None:
     """Register crawling tools with the MCP server."""
 
     @mcp.tool()
-    async def enhanced_5_tier_crawl(  # pylint: disable=too-many-arguments
+    async def enhanced_5_tier_crawl(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         url: str,
         tier: str | None = None,
         interaction_required: bool = False,
@@ -42,7 +42,7 @@ def register_tools(mcp, crawl_manager: Any | None = None) -> None:
         if ctx:
             await ctx.info(f"Dispatching crawl request for {validated_url}")
 
-        manager = await get_crawl_manager(crawl_manager)
+        manager = crawl_manager or await get_crawl_manager()
 
         try:
             result = await manager.scrape_url(

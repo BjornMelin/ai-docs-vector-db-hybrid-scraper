@@ -463,6 +463,11 @@ constraint-dependencies = [
     "hatchling>=1.25.0",  # Ensure Python 3.13 compatible hatchling
 ]
 
+[tool.uv.extra-build-dependencies]
+flash-attn = [
+    { requirement = "torch", match-runtime = true },
+]
+
 
 # ===== Dependency Groups =====
 [tool.pylint]
