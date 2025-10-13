@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from pathlib import PurePosixPath
-from typing import Any
+from typing import Any, Final, Protocol, cast, runtime_checkable
 from urllib.parse import urlparse
 
 from langchain_core.documents import Document
@@ -43,7 +43,8 @@ _HTML_HEADERS: list[tuple[str, str]] = [
     ("h6", "Header 6"),
 ]
 
-_KIND_TOKEN_ALIASES = {"token", "tokens", "token-aware", "token_aware"}
+_TOKEN_KIND: Final[str] = cast(str, "token")  # symbolic label for token-aware chunking
+_KIND_TOKEN_ALIASES = {_TOKEN_KIND, "tokens", "token-aware", "token_aware"}
 
 
 _EXTENSION_LANGUAGE_MAP: dict[str, Language] = {
@@ -145,18 +146,16 @@ def infer_language(
     return language.value if language else None
 
 
-def infer_document_kind(
-    metadata: Mapping[str, Any] | None, default: str = "text"
-) -> str:
-    """Infer a logical document kind from crawler metadata."""
-
-    if metadata is None:
-        return default
-
+def _infer_kind_from_candidate(metadata: Mapping[str, Any]) -> str | None:
     candidate = metadata.get("kind") or metadata.get("content_kind")
-    if isinstance(candidate, str) and candidate:
-        return candidate.lower()
+    if isinstance(candidate, str):
+        cleaned = candidate.strip().lower()
+        if cleaned:
+            return cleaned
+    return None
 
+
+def _infer_kind_from_mime(metadata: Mapping[str, Any]) -> str | None:
     mime_type = (
         metadata.get("mime_type")
         or metadata.get("content_type")
@@ -164,12 +163,20 @@ def infer_document_kind(
     )
     if isinstance(mime_type, str):
         lowered = mime_type.split(";")[0].strip().lower()
-        if lowered in _MIME_KIND_MAP:
-            return _MIME_KIND_MAP[lowered]
+        return _MIME_KIND_MAP.get(lowered)
+    return None
 
-    extension = metadata.get("extension") or infer_extension(
-        metadata.get("uri_or_path") or metadata.get("url")
-    )
+
+def _infer_kind_from_extension(metadata: Mapping[str, Any]) -> str | None:
+    extension: Any = metadata.get("extension")
+    if not isinstance(extension, str) or not extension:
+        uri_or_path = (
+            metadata.get("uri_or_path")
+            or metadata.get("uri")
+            or metadata.get("path")
+            or metadata.get("url")
+        )
+        extension = infer_extension(uri_or_path)
     if isinstance(extension, str):
         lowered = extension.lower()
         if lowered in {"md", "markdown"}:
@@ -180,9 +187,51 @@ def infer_document_kind(
             return "json"
         if lowered in _EXTENSION_LANGUAGE_MAP:
             return "code"
+    return None
 
-    if metadata.get("token_aware") or metadata.get("chunking_mode") == "token":
-        return "token"
+
+def _infer_kind_from_token_hint(metadata: Mapping[str, Any]) -> str | None:
+    token_hint = metadata.get("token_aware")
+    if isinstance(token_hint, str):
+        hint_value = token_hint.strip().lower()
+        if hint_value in _KIND_TOKEN_ALIASES:
+            return _TOKEN_KIND
+    elif token_hint:
+        return _TOKEN_KIND
+
+    chunking_mode = metadata.get("chunking_mode")
+    if isinstance(chunking_mode, str):
+        mode_value = chunking_mode.strip().lower()
+        if mode_value in _KIND_TOKEN_ALIASES or mode_value == _TOKEN_KIND:
+            return _TOKEN_KIND
+    elif chunking_mode:
+        return _TOKEN_KIND
+    return None
+
+
+_INFER_STRATEGIES: tuple[
+    Callable[[Mapping[str, Any]], str | None],
+    ...,
+] = (
+    _infer_kind_from_candidate,
+    _infer_kind_from_mime,
+    _infer_kind_from_extension,
+    _infer_kind_from_token_hint,
+)
+
+
+def infer_document_kind(
+    metadata: Mapping[str, Any] | None, default: str = "text"
+) -> str:
+    """Infer a logical document kind from crawler metadata."""
+
+    if metadata is None:
+        return default
+
+    for strategy in _INFER_STRATEGIES:
+        inferred_kind = strategy(metadata)
+        if inferred_kind:
+            return inferred_kind
 
     return default
 
@@ -196,6 +245,29 @@ def _normalize_kind(kind: str | None, metadata: Mapping[str, Any] | None) -> str
             return "token"
         return lowered
     return infer_document_kind(metadata)
+
+
+@runtime_checkable
+class ChunkingStrategy(Protocol):
+    """Interface for chunking raw content into LangChain documents."""
+
+    def chunk(
+        self,
+        raw: str,
+        cfg: ChunkingConfig,
+        metadata: Mapping[str, Any] | None,
+    ) -> list[Document]:
+        """Split raw content into LangChain documents.
+
+        Args:
+            raw: Raw content to split into chunks.
+            cfg: Chunking configuration parameters.
+            metadata: Optional metadata describing the content being chunked.
+
+        Returns:
+            List of LangChain documents produced by the strategy.
+        """
+        ...  # pylint: disable=unnecessary-ellipsis
 
 
 def _apply_recursive_refinement(
@@ -213,80 +285,220 @@ def _apply_recursive_refinement(
     return recursive.split_documents(documents)
 
 
-def _split_plain_text(raw: str, cfg: ChunkingConfig) -> list[Document]:
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=cfg.chunk_size,
-        chunk_overlap=cfg.chunk_overlap,
-        add_start_index=True,
-        separators=["\n\n", "\n", " ", ""],
-    )
-    return splitter.create_documents([raw], metadatas=[{}])
+class PlainTextChunkingStrategy:
+    """Chunk plain text inputs using a recursive character splitter."""
 
+    def chunk(
+        self,
+        raw: str,
+        cfg: ChunkingConfig,
+        metadata: Mapping[str, Any] | None,
+    ) -> list[Document]:
+        """Split plain text content into LangChain documents.
 
-def _split_token_aware(raw: str, cfg: ChunkingConfig) -> list[Document]:
-    splitter = TokenTextSplitter.from_tiktoken_encoder(
-        encoding_name=cfg.token_model,
-        chunk_size=cfg.token_chunk_size,
-        chunk_overlap=cfg.token_chunk_overlap,
-    )
-    chunks = splitter.split_text(raw)
-    return [Document(page_content=chunk, metadata={}) for chunk in chunks]
+        Args:
+            raw: Raw plain text to split.
+            cfg: Chunking configuration parameters.
+            metadata: Optional metadata describing the content being chunked.
 
+        Returns:
+            List of documents representing the chunked text.
+        """
 
-def _split_markdown(raw: str, cfg: ChunkingConfig) -> list[Document]:
-    header_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=_MARKDOWN_HEADERS)
-    documents = header_splitter.split_text(raw)
-    return _apply_recursive_refinement(documents, cfg)
-
-
-def _split_html(raw: str, cfg: ChunkingConfig) -> list[Document]:
-    if cfg.enable_semantic_html_segmentation:
-        splitter = HTMLSemanticPreservingSplitter(
-            headers_to_split_on=_HTML_HEADERS,
-            max_chunk_size=cfg.chunk_size,
+        _ = metadata
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=cfg.chunk_size,
             chunk_overlap=cfg.chunk_overlap,
-            normalize_text=cfg.normalize_html_text,
+            add_start_index=True,
+            separators=["\n\n", "\n", " ", ""],
         )
-        documents = splitter.split_text(raw)
-    else:
-        if cfg.normalize_html_text:
-            splitter = HTMLHeaderTextSplitter(headers_to_split_on=_HTML_HEADERS)
+        return splitter.create_documents([raw], metadatas=[{}])
+
+
+class TokenAwareChunkingStrategy:
+    """Chunk content based on token counts using Tiktoken-aware splitting."""
+
+    def chunk(
+        self,
+        raw: str,
+        cfg: ChunkingConfig,
+        metadata: Mapping[str, Any] | None,
+    ) -> list[Document]:
+        """Split content into token-aware LangChain documents.
+
+        Args:
+            raw: Raw content to split using token awareness.
+            cfg: Chunking configuration parameters.
+            metadata: Optional metadata describing the content being chunked.
+
+        Returns:
+            List of documents chunked using token-aware logic.
+        """
+
+        _ = metadata
+        splitter = TokenTextSplitter.from_tiktoken_encoder(
+            encoding_name=cfg.token_model,
+            chunk_size=cfg.token_chunk_size,
+            chunk_overlap=cfg.token_chunk_overlap,
+        )
+        chunks = splitter.split_text(raw)
+        return [Document(page_content=chunk, metadata={}) for chunk in chunks]
+
+
+class MarkdownChunkingStrategy:
+    """Chunk Markdown documents while preserving header hierarchy."""
+
+    def chunk(
+        self,
+        raw: str,
+        cfg: ChunkingConfig,
+        metadata: Mapping[str, Any] | None,
+    ) -> list[Document]:
+        """Split Markdown content into LangChain documents.
+
+        Args:
+            raw: Raw Markdown text to split.
+            cfg: Chunking configuration parameters.
+            metadata: Optional metadata describing the content being chunked.
+
+        Returns:
+            List of documents representing Markdown sections.
+        """
+
+        _ = metadata
+        header_splitter = MarkdownHeaderTextSplitter(
+            headers_to_split_on=_MARKDOWN_HEADERS
+        )
+        documents = header_splitter.split_text(raw)
+        return _apply_recursive_refinement(documents, cfg)
+
+
+class HtmlChunkingStrategy:
+    """Chunk HTML documents with optional semantic segmentation."""
+
+    def chunk(
+        self,
+        raw: str,
+        cfg: ChunkingConfig,
+        metadata: Mapping[str, Any] | None,
+    ) -> list[Document]:
+        """Split HTML content into LangChain documents.
+
+        Args:
+            raw: Raw HTML markup to split.
+            cfg: Chunking configuration parameters.
+            metadata: Optional metadata describing the content being chunked.
+
+        Returns:
+            List of documents representing HTML sections.
+        """
+
+        _ = metadata
+        if cfg.enable_semantic_html_segmentation:
+            splitter = HTMLSemanticPreservingSplitter(
+                headers_to_split_on=_HTML_HEADERS,
+                max_chunk_size=cfg.chunk_size,
+                chunk_overlap=cfg.chunk_overlap,
+                normalize_text=cfg.normalize_html_text,
+            )
+            documents = splitter.split_text(raw)
         else:
-            splitter = HTMLSectionSplitter(headers_to_split_on=_HTML_HEADERS)
-        documents = splitter.split_text(raw)
-    return _apply_recursive_refinement(documents, cfg)
+            if cfg.normalize_html_text:
+                splitter = HTMLHeaderTextSplitter(headers_to_split_on=_HTML_HEADERS)
+            else:
+                splitter = HTMLSectionSplitter(headers_to_split_on=_HTML_HEADERS)
+            documents = splitter.split_text(raw)
+        return _apply_recursive_refinement(documents, cfg)
 
 
-def _split_code(
-    raw: str, cfg: ChunkingConfig, metadata: Mapping[str, Any] | None
-) -> list[Document]:
-    extension = metadata.get("extension") if metadata else None
-    language_name = metadata.get("language") if metadata else None
-    language = _coerce_language(language_name) or _EXTENSION_LANGUAGE_MAP.get(
-        extension or "", None
-    )
-    if language is None:
-        language = Language.MARKDOWN
+class CodeChunkingStrategy:
+    """Chunk source code using language-aware recursive splitting."""
 
-    splitter = RecursiveCharacterTextSplitter.from_language(
-        language=language,
-        chunk_size=cfg.chunk_size,
-        chunk_overlap=cfg.chunk_overlap,
-        add_start_index=True,
-    )
-    return splitter.create_documents([raw], metadatas=[{}])
+    def chunk(
+        self,
+        raw: str,
+        cfg: ChunkingConfig,
+        metadata: Mapping[str, Any] | None,
+    ) -> list[Document]:
+        """Split source code into LangChain documents.
+
+        Args:
+            raw: Raw source code to split.
+            cfg: Chunking configuration parameters.
+            metadata: Optional metadata describing the content being chunked.
+
+        Returns:
+            List of documents representing source code segments.
+        """
+
+        metadata = metadata or {}
+        extension = metadata.get("extension")
+        language_name = (
+            metadata.get("language")
+            or metadata.get("programming_language")
+            or metadata.get("lang")
+        )
+        language = _coerce_language(language_name) or _EXTENSION_LANGUAGE_MAP.get(
+            extension or "",
+            None,
+        )
+        if language is None:
+            language = Language.MARKDOWN
+
+        splitter = RecursiveCharacterTextSplitter.from_language(
+            language=language,
+            chunk_size=cfg.chunk_size,
+            chunk_overlap=cfg.chunk_overlap,
+            add_start_index=True,
+        )
+        return splitter.create_documents([raw], metadatas=[{}])
 
 
-def _split_json(raw: str, cfg: ChunkingConfig) -> list[Document]:
-    try:
-        json_payload = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        msg = "Invalid JSON payload supplied to chunker"
-        raise ValueError(msg) from exc
+class JsonChunkingStrategy:
+    """Chunk JSON payloads using the LangChain recursive JSON splitter."""
 
-    splitter = RecursiveJsonSplitter(max_chunk_size=cfg.json_max_chars)
-    chunks = splitter.split_text(json_payload)
-    return [Document(page_content=chunk, metadata={}) for chunk in chunks]
+    def chunk(
+        self,
+        raw: str,
+        cfg: ChunkingConfig,
+        metadata: Mapping[str, Any] | None,
+    ) -> list[Document]:
+        """Split JSON content into LangChain documents.
+
+        Args:
+            raw: Raw JSON string to split.
+            cfg: Chunking configuration parameters.
+            metadata: Optional metadata describing the content being chunked.
+
+        Returns:
+            List of documents representing JSON segments.
+
+        Raises:
+            ValueError: If the supplied JSON cannot be decoded.
+        """
+
+        _ = metadata
+        try:
+            json_payload = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            msg = "Invalid JSON payload supplied to chunker"
+            raise ValueError(msg) from exc
+
+        splitter = RecursiveJsonSplitter(max_chunk_size=cfg.json_max_chars)
+        chunks = splitter.split_text(json_payload)
+        return [Document(page_content=chunk, metadata={}) for chunk in chunks]
+
+
+_STRATEGY_REGISTRY: dict[str, ChunkingStrategy] = {
+    "text": PlainTextChunkingStrategy(),
+    "token": TokenAwareChunkingStrategy(),
+    "markdown": MarkdownChunkingStrategy(),
+    "html": HtmlChunkingStrategy(),
+    "code": CodeChunkingStrategy(),
+    "json": JsonChunkingStrategy(),
+}
+
+_DEFAULT_STRATEGY_KEY = "text"
 
 
 def _build_base_metadata(meta: Mapping[str, Any] | None) -> dict[str, Any]:
@@ -337,7 +549,13 @@ def _merge_metadata(
             metadata.update(document.metadata)
         metadata["kind"] = kind
         metadata["chunk_index"] = index
-        chunk_key = f"{base_identifier}:{index}".encode("utf-8", "ignore")
+        content_digest = hashlib.blake2s(
+            document.page_content.encode("utf-8", "ignore"),
+            digest_size=8,
+        ).hexdigest()
+        chunk_key = f"{base_identifier}:{index}:{content_digest}".encode(
+            "utf-8", "ignore"
+        )
         metadata["chunk_id"] = hashlib.blake2s(chunk_key, digest_size=8).hexdigest()
         merged.append(Document(page_content=document.page_content, metadata=metadata))
     return merged
@@ -355,20 +573,17 @@ def chunk_to_documents(
         return []
 
     base_metadata = _build_base_metadata(meta)
-    normalized_kind = _normalize_kind(kind, {**base_metadata, **(meta or {})})
+    metadata_context: dict[str, Any] = dict(base_metadata)
+    if meta:
+        metadata_context.update(meta)
 
-    if normalized_kind == "token":
-        documents = _split_token_aware(raw, cfg)
-    elif normalized_kind == "markdown":
-        documents = _split_markdown(raw, cfg)
-    elif normalized_kind == "html":
-        documents = _split_html(raw, cfg)
-    elif normalized_kind == "code":
-        documents = _split_code(raw, cfg, base_metadata)
-    elif normalized_kind == "json":
-        documents = _split_json(raw, cfg)
-    else:
-        documents = _split_plain_text(raw, cfg)
+    normalized_kind = _normalize_kind(kind, metadata_context)
+    strategy = _STRATEGY_REGISTRY.get(normalized_kind)
+    if strategy is None:
+        normalized_kind = _DEFAULT_STRATEGY_KEY
+        strategy = _STRATEGY_REGISTRY[normalized_kind]
+
+    documents = strategy.chunk(raw, cfg, metadata_context)
 
     return _merge_metadata(documents, base_metadata, normalized_kind)
 

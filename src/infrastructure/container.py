@@ -20,10 +20,18 @@ from langchain_mcp_adapters.sessions import Connection  # type: ignore
 from qdrant_client import AsyncQdrantClient
 
 from src.config.models import CacheType, MCPClientConfig, MCPServerConfig, MCPTransport
+from src.services.cache.embedding_cache import EmbeddingCache
 from src.services.cache.manager import CacheManager
+from src.services.cache.search_cache import SearchResultCache
 from src.services.circuit_breaker import CircuitBreakerManager
 from src.services.core.project_storage import ProjectStorage
 from src.services.embeddings.manager import EmbeddingManager
+from src.services.hyde.config import (
+    HyDEConfig as ServiceHyDEConfig,
+    HyDEMetricsConfig,
+    HyDEPromptConfig,
+)
+from src.services.hyde.engine import HyDEQueryEngine
 from src.services.vector_db.service import VectorStoreService
 
 
@@ -172,6 +180,38 @@ def _create_vector_store_service(
     return VectorStoreService(
         config=config,
         async_qdrant_client=async_qdrant_client,
+    )
+
+
+def _create_hyde_query_engine(
+    config: Any,
+    embedding_manager: EmbeddingManager,
+    vector_store: VectorStoreService,
+    embedding_cache: EmbeddingCache | None,
+    search_cache: SearchResultCache | None,
+) -> HyDEQueryEngine:
+    """Build a HyDEQueryEngine wired to shared cache services."""
+
+    hyde_config_source = getattr(config, "hyde", None)
+    hyde_config = (
+        ServiceHyDEConfig.from_unified_config(hyde_config_source)
+        if hyde_config_source is not None
+        else ServiceHyDEConfig()
+    )
+    prompt_config = HyDEPromptConfig()
+    metrics_config = HyDEMetricsConfig()
+    openai_config = getattr(config, "openai", None)
+    openai_api_key = getattr(openai_config, "api_key", None)
+
+    return HyDEQueryEngine(
+        config=hyde_config,
+        prompt_config=prompt_config,
+        metrics_config=metrics_config,
+        embedding_manager=embedding_manager,
+        vector_store=vector_store,
+        embedding_cache=embedding_cache,
+        search_cache=search_cache,
+        openai_api_key=openai_api_key,
     )
 
 
@@ -534,6 +574,15 @@ class ApplicationContainer(DeclarativeContainer):
         async_qdrant_client=qdrant_client,
     )
 
+    hyde_query_engine = Singleton(
+        _create_hyde_query_engine,
+        config=config,
+        embedding_manager=embedding_manager,
+        vector_store=vector_store_service,
+        embedding_cache=cache_manager.provided.embedding_cache,
+        search_cache=cache_manager.provided.search_cache,
+    )
+
     circuit_breaker_manager = Singleton(
         _create_circuit_breaker_manager,
         config=config,
@@ -724,6 +773,12 @@ def inject_vector_store_service():
     """Inject vector store service dependency."""
 
     return Provide[ApplicationContainer.vector_store_service]
+
+
+def inject_hyde_query_engine():
+    """Inject HyDE query engine dependency."""
+
+    return Provide[ApplicationContainer.hyde_query_engine]
 
 
 def inject_circuit_breaker_manager():

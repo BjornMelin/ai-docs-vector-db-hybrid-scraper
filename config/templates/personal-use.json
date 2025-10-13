@@ -78,7 +78,6 @@
   "chunking": {
     "chunk_size": 1200,
     "chunk_overlap": 200,
-    "strategy": "enhanced",
-    "max_chunk_size": 2000
+    "strategy": "enhanced"
   }
 }

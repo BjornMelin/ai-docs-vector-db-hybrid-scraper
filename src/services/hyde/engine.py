@@ -11,11 +11,12 @@ from typing import Any, cast
 import numpy as np
 
 from src.services.base import BaseService
+from src.services.cache.embedding_cache import EmbeddingCache
+from src.services.cache.search_cache import SearchResultCache
 from src.services.embeddings.manager import EmbeddingManager
 from src.services.errors import EmbeddingServiceError, QdrantServiceError
 from src.services.vector_db.service import VectorStoreService
 
-from .cache import CacheEntryContext, HyDECache, SearchResultPayload
 from .config import HyDEConfig, HyDEMetricsConfig, HyDEPromptConfig
 from .generator import HypotheticalDocumentGenerator
 
@@ -26,6 +27,9 @@ logger = logging.getLogger(__name__)
 class HyDEQueryEngine(BaseService):
     """HyDE search engine with vector store integration."""
 
+    _CACHE_PROVIDER = "hyde"
+    _CACHE_MODEL = "hyde-embedding"
+
     def __init__(
         self,
         config: HyDEConfig,
@@ -33,19 +37,21 @@ class HyDEQueryEngine(BaseService):
         metrics_config: HyDEMetricsConfig,
         embedding_manager: EmbeddingManager,
         vector_store: VectorStoreService,
-        cache_manager: Any,
+        embedding_cache: EmbeddingCache | None,
+        search_cache: SearchResultCache | None,
         openai_api_key: str | None,
-    ):
+    ) -> None:
         """Initialize HyDE query engine.
 
         Args:
-            config: HyDE configuration
-            prompt_config: Prompt configuration
-            metrics_config: Metrics configuration
-            embedding_manager: Embedding service manager
-            vector_store: Vector service for search
-            cache_manager: Cache manager (DragonflyDB)
-            openai_api_key: OpenAI API key for document generation
+            config: HyDE configuration.
+            prompt_config: Prompt configuration.
+            metrics_config: Metrics configuration.
+            embedding_manager: Embedding service manager.
+            vector_store: Vector search client.
+            embedding_cache: Shared embedding cache used for HyDE vectors.
+            search_cache: Shared search cache for HyDE result pages.
+            openai_api_key: OpenAI API key for document generation.
 
         """
         super().__init__(None)
@@ -54,19 +60,22 @@ class HyDEQueryEngine(BaseService):
         self.metrics_config = metrics_config
         self.embedding_manager = embedding_manager
         self.vector_store = vector_store
+        self.embedding_cache = embedding_cache
+        self.search_cache = search_cache
 
         # Initialize components
         self.generator = HypotheticalDocumentGenerator(
             config, prompt_config, openai_api_key
         )
-        self.cache = HyDECache(config, cache_manager)
 
         # Performance tracking
         self.search_count = 0
         self._total_search_time = 0.0
         self.cache_hit_count = 0
+        self.embedding_cache_hit_count = 0
         self.generation_count = 0
         self.fallback_count = 0
+        self._hyde_embedding_dimensions: int | None = None
 
         # A/B testing support
         self.control_group_searches = 0
@@ -81,7 +90,6 @@ class HyDEQueryEngine(BaseService):
             # Initialize components in parallel
             await asyncio.gather(
                 self.generator.initialize(),
-                self.cache.initialize(),
                 self.embedding_manager.initialize()
                 if hasattr(self.embedding_manager, "initialize")
                 else asyncio.sleep(0),
@@ -99,9 +107,7 @@ class HyDEQueryEngine(BaseService):
 
     async def cleanup(self) -> None:
         """Cleanup all components."""
-        await asyncio.gather(
-            self.generator.cleanup(), self.cache.cleanup(), return_exceptions=True
-        )
+        await asyncio.gather(self.generator.cleanup(), return_exceptions=True)
         self._initialized = False
         logger.info("HyDE query engine cleaned up")
 
@@ -158,10 +164,22 @@ class HyDEQueryEngine(BaseService):
                     )
                 self.treatment_group_searches += 1
 
+            cache_enabled = use_cache and self.config.enable_caching
+
             # Check cache first if enabled
-            if use_cache:
-                cached_results = await self._get_cached_results(
-                    query, collection_name, limit, filters, search_accuracy, domain
+            if cache_enabled and self.search_cache is not None:
+                cache_params = {
+                    "search_accuracy": search_accuracy,
+                    "domain": domain,
+                    "hyde_enabled": True,
+                }
+                cached_results = await self.search_cache.get_search_results(
+                    query=query,
+                    collection_name=collection_name,
+                    filters=filters,
+                    limit=limit,
+                    search_type="hyde",
+                    params=cache_params,
                 )
                 if cached_results is not None:
                     self.cache_hit_count += 1
@@ -170,7 +188,7 @@ class HyDEQueryEngine(BaseService):
 
             # Generate or retrieve HyDE embedding
             hyde_embedding = await self._get_or_generate_hyde_embedding(
-                query, domain, use_cache
+                query, domain, cache_enabled
             )
 
             # Generate original query embedding
@@ -192,15 +210,20 @@ class HyDEQueryEngine(BaseService):
                 results = await self._apply_reranking(query, results)
 
             # Cache results if enabled
-            if use_cache:
-                await self._cache_search_results(
-                    query,
-                    collection_name,
-                    limit,
-                    filters,
-                    search_accuracy,
-                    domain,
-                    results,
+            if cache_enabled and self.search_cache is not None:
+                cache_params = {
+                    "search_accuracy": search_accuracy,
+                    "domain": domain,
+                    "hyde_enabled": True,
+                }
+                await self.search_cache.set_search_results(
+                    query=query,
+                    results=results,
+                    collection_name=collection_name,
+                    filters=filters,
+                    limit=limit,
+                    search_type="hyde",
+                    params=cache_params,
                 )
 
             search_time = time.time() - start_time
@@ -229,10 +252,20 @@ class HyDEQueryEngine(BaseService):
         self, query: str, domain: str | None, use_cache: bool
     ) -> list[float]:
         """Get HyDE embedding from cache or generate new one."""
+
+        cache_text = self._build_embedding_cache_text(query, domain)
+
         # Try cache first
-        if use_cache:
-            cached_embedding = await self.cache.get_hyde_embedding(query, domain)
+        if use_cache and self.embedding_cache is not None:
+            dimensions_hint = self._resolve_hyde_embedding_dimensions()
+            cached_embedding = await self.embedding_cache.get_embedding(
+                text=cache_text,
+                model=self._CACHE_MODEL,
+                provider=self._CACHE_PROVIDER,
+                dimensions=dimensions_hint,
+            )
             if cached_embedding is not None:
+                self.embedding_cache_hit_count += 1
                 return cached_embedding
 
         # Generate hypothetical documents
@@ -258,25 +291,50 @@ class HyDEQueryEngine(BaseService):
         # Average embeddings for final HyDE vector
         embeddings_array = np.array(embeddings_result["embeddings"])
         hyde_embedding = np.mean(embeddings_array, axis=0).tolist()
+        self._hyde_embedding_dimensions = len(hyde_embedding)
 
         # Cache the result
-        if use_cache:
-            await self.cache.set_hyde_embedding(
-                query=query,
+        if use_cache and self.embedding_cache is not None:
+            await self.embedding_cache.set_embedding(
+                text=cache_text,
+                model=self._CACHE_MODEL,
                 embedding=hyde_embedding,
-                hypothetical_docs=generation_result.documents,
-                context=CacheEntryContext(
-                    domain=domain,
-                    generation_metadata={
-                        "generation_time": generation_result.generation_time,
-                        "tokens_used": generation_result.tokens_used,
-                        "diversity_score": generation_result.diversity_score,
-                        "model": self.config.generation_model,
-                    },
-                ),
+                provider=self._CACHE_PROVIDER,
+                dimensions=self._hyde_embedding_dimensions,
+                ttl=self.config.cache_ttl_seconds,
             )
 
         return hyde_embedding
+
+    def _resolve_hyde_embedding_dimensions(self) -> int | None:
+        """Infer HyDE embedding dimensionality for cache key alignment."""
+
+        if self._hyde_embedding_dimensions is not None:
+            return self._hyde_embedding_dimensions
+
+        if hasattr(self.vector_store, "embedding_dimension"):
+            try:
+                self._hyde_embedding_dimensions = self.vector_store.embedding_dimension
+            except EmbeddingServiceError:
+                return None
+            except Exception:  # pragma: no cover - defensive catch for provider quirks
+                return None
+
+        return self._hyde_embedding_dimensions
+
+    def _build_embedding_cache_text(self, query: str, domain: str | None) -> str:
+        """Build canonical cache text for HyDE embeddings.
+
+        Args:
+            query: Original search query.
+            domain: Optional domain classifier.
+
+        Returns:
+            Deterministic text payload used as embedding cache key.
+        """
+
+        domain_part = domain or "general"
+        return f"{query}||domain::{domain_part}"
 
     async def _generate_query_embedding(self, query: str) -> list[float]:
         """Generate embedding for the original query."""
@@ -402,56 +460,6 @@ class HyDEQueryEngine(BaseService):
             msg = "Both HyDE and fallback search failed"
             raise EmbeddingServiceError(msg) from e
 
-    async def _get_cached_results(
-        self,
-        query: str,
-        collection_name: str,
-        limit: int,
-        filters: dict[str, Any] | None,
-        search_accuracy: str,
-        domain: str | None,
-    ) -> list[dict[str, Any]] | None:
-        """Get cached search results."""
-        search_params = {
-            "limit": limit,
-            "filters": filters,
-            "search_accuracy": search_accuracy,
-            "domain": domain,
-            "hyde_enabled": True,
-        }
-
-        return await self.cache.get_search_results(
-            query, collection_name, search_params
-        )
-
-    async def _cache_search_results(
-        self,
-        query: str,
-        collection_name: str,
-        limit: int,
-        filters: dict[str, Any] | None,
-        search_accuracy: str,
-        domain: str | None,
-        results: list[dict[str, Any]],
-    ) -> None:
-        """Cache search results."""
-        search_params = {
-            "limit": limit,
-            "filters": filters,
-            "search_accuracy": search_accuracy,
-            "domain": domain,
-            "hyde_enabled": True,
-        }
-
-        payload = SearchResultPayload(
-            results=results,
-            metadata={"result_count": len(results), "cached_at": time.time()},
-        )
-
-        await self.cache.set_search_results(
-            query, collection_name, search_params, payload
-        )
-
     async def _should_use_hyde_for_ab_test(self, query: str) -> bool:
         """Determine if query should use HyDE for A/B testing."""
         # Simple hash-based assignment for consistent user experience
@@ -464,16 +472,19 @@ class HyDEQueryEngine(BaseService):
         return (query_hash % 100) >= (threshold * 100)
 
     def get_performance_metrics(self) -> dict[str, Any]:
-        """Get performance metrics."""
-        # Basic metrics
+        """Get aggregated performance metrics for the HyDE engine."""
+
         avg_search_time = (
             self.total_search_time / self.search_count if self.search_count > 0 else 0.0
         )
-
-        cache_hit_rate = (
+        result_cache_hit_rate = (
             self.cache_hit_count / self.search_count if self.search_count > 0 else 0.0
         )
-
+        embedding_cache_hit_rate = (
+            self.embedding_cache_hit_count / self.search_count
+            if self.search_count > 0
+            else 0.0
+        )
         fallback_rate = (
             self.fallback_count / self.search_count if self.search_count > 0 else 0.0
         )
@@ -483,11 +494,18 @@ class HyDEQueryEngine(BaseService):
                 "total_searches": self.search_count,
                 "avg_search_time": avg_search_time,
                 "total_search_time": self.total_search_time,
-                "cache_hit_rate": cache_hit_rate,
+                "result_cache_hit_rate": result_cache_hit_rate,
                 "fallback_rate": fallback_rate,
             },
             "generation_metrics": self.generator.get_metrics(),
-            "cache_metrics": self.cache.get_cache_metrics(),
+            "cache_metrics": {
+                "cache_enabled": self.config.enable_caching,
+                "embedding_cache_available": self.embedding_cache is not None,
+                "result_cache_available": self.search_cache is not None,
+                "result_cache_hits": self.cache_hit_count,
+                "embedding_cache_hits": self.embedding_cache_hit_count,
+                "embedding_cache_hit_rate": embedding_cache_hit_rate,
+            },
         }
 
         # A/B testing metrics
@@ -513,10 +531,12 @@ class HyDEQueryEngine(BaseService):
         self.search_count = 0
         self.total_search_time = 0.0
         self.cache_hit_count = 0
+        self.embedding_cache_hit_count = 0
         self.generation_count = 0
         self.fallback_count = 0
         self.control_group_searches = 0
         self.treatment_group_searches = 0
+        logger.info("HyDE engine metrics reset")
 
     @property
     def total_search_time(self) -> float:
@@ -526,7 +546,17 @@ class HyDEQueryEngine(BaseService):
 
     @total_search_time.setter
     def total_search_time(self, value: float) -> None:
-        self._total_search_time = value
+        """Persist aggregate search time."""
 
-        self.cache.reset_metrics()
-        logger.info("HyDE engine metrics reset")
+        try:
+            normalized = float(value)
+        except (TypeError, ValueError) as exc:  # pragma: no cover - exercised via tests
+            raise ValueError("total_search_time must be a valid float") from exc
+
+        if normalized < 0:
+            raise ValueError("total_search_time must be non-negative")
+
+        if np.isnan(normalized):  # Guard against NaN silently propagating
+            raise ValueError("total_search_time must be a finite float")
+
+        self._total_search_time = normalized
