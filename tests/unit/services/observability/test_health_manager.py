@@ -11,12 +11,14 @@ from pytest_mock import MockerFixture
 
 from src.config.models import CrawlProvider, EmbeddingProvider
 from src.services.observability.health_manager import (
+    ApplicationMetadataHealthCheck,
     DragonflyHealthCheck,
     HealthCheck,
     HealthCheckConfig,
     HealthCheckManager,
     HealthCheckResult,
     HealthStatus,
+    RAGConfigurationHealthCheck,
     build_health_manager,
 )
 
@@ -123,9 +125,16 @@ def test_build_health_manager_includes_expected_checks(
     mocker.patch("src.services.observability.health_manager.AsyncOpenAI", autospec=True)
 
     manager = build_health_manager(configured_settings)
-    check_names = {check.name for check in manager._health_checks}
+    check_names = set(manager.list_checks())
 
-    expected_checks = {"openai", "firecrawl", "qdrant", "dragonfly"}
+    expected_checks = {
+        "openai",
+        "firecrawl",
+        "qdrant",
+        "dragonfly",
+        "application_metadata",
+        "rag_configuration",
+    }
 
     assert expected_checks.issubset(check_names)
 
@@ -141,10 +150,80 @@ def test_build_health_manager_skips_openai_when_disabled(config_factory) -> None
         browser={"firecrawl": {}},
     )
     manager = build_health_manager(settings)
-    check_names = {check.name for check in manager._health_checks}
+    check_names = set(manager.list_checks())
 
     assert "openai" not in check_names
     assert "firecrawl" not in check_names
+
+
+@pytest.mark.asyncio()
+async def test_rag_health_check_skips_when_disabled(config_factory) -> None:
+    """RAG configuration check should skip when the feature is disabled."""
+
+    settings = config_factory(rag={"enable_rag": False})
+    check = RAGConfigurationHealthCheck(settings)
+
+    result = await check.check()
+
+    assert result.status is HealthStatus.SKIPPED
+    assert not result.metadata["enabled"]
+
+
+@pytest.mark.asyncio()
+async def test_rag_health_check_flags_missing_model(config_factory) -> None:
+    """RAG configuration check should report missing required fields."""
+
+    settings = config_factory(rag={"enable_rag": True, "model": ""})
+    check = RAGConfigurationHealthCheck(settings)
+
+    result = await check.check()
+
+    assert result.status is HealthStatus.UNHEALTHY
+    assert "Missing required RAG configuration fields" in result.message
+
+
+@pytest.mark.asyncio()
+async def test_rag_health_check_reports_healthy(config_factory) -> None:
+    """RAG configuration check should report healthy when configured."""
+
+    settings = config_factory(rag={"enable_rag": True, "model": "gpt-4o"})
+    check = RAGConfigurationHealthCheck(settings)
+
+    result = await check.check()
+
+    assert result.status is HealthStatus.HEALTHY
+    assert result.metadata["enabled"]
+
+
+@pytest.mark.asyncio()
+async def test_application_metadata_health_check_degraded_without_name(
+    config_factory,
+) -> None:
+    """Application metadata check should degrade when required metadata is empty."""
+
+    settings = config_factory(app_name="")
+    check = ApplicationMetadataHealthCheck(settings)
+
+    result = await check.check()
+
+    assert result.status is HealthStatus.DEGRADED
+    assert "app_name" in result.message
+
+
+@pytest.mark.asyncio()
+async def test_application_metadata_health_check_reports_metadata(
+    config_factory,
+) -> None:
+    """Application metadata check should expose configured metadata."""
+
+    settings = config_factory(app_name="Docs App", version="1.2.3")
+    check = ApplicationMetadataHealthCheck(settings)
+
+    result = await check.check()
+
+    assert result.status is HealthStatus.HEALTHY
+    assert result.metadata["app_name"] == "Docs App"
+    assert result.metadata["version"] == "1.2.3"
 
 
 @pytest.mark.asyncio()
@@ -199,3 +278,51 @@ async def test_dragonfly_health_check_handles_ping_failure(
 
     assert result.status is HealthStatus.UNHEALTHY
     await fake_client.aclose()
+
+
+@pytest.mark.asyncio()
+async def test_health_manager_check_single_returns_result() -> None:
+    """Health manager should run a named check and track the latest result."""
+
+    config = HealthCheckConfig()
+    expected = HealthCheckResult(
+        name="single",
+        status=HealthStatus.HEALTHY,
+        message="ok",
+        duration_ms=1.0,
+    )
+    manager = HealthCheckManager(config)
+    manager.add_health_check(_StubHealthCheck("single", expected))
+
+    result = await manager.check_single("single")
+
+    assert result == expected
+    assert manager.get_last_results()["single"] == expected
+
+
+@pytest.mark.asyncio()
+async def test_health_manager_check_all_handles_exceptions() -> None:
+    """Manager should coerce unexpected exceptions into unhealthy results."""
+
+    class _FailingHealthCheck(HealthCheck):
+        """Failing health check for exception handling verification."""
+
+        def __init__(self, name: str) -> None:
+            """Initialize the failing check with a name."""
+
+            super().__init__(name)
+
+        async def check(self) -> HealthCheckResult:
+            """Raise an error to simulate probe failure."""
+
+            raise RuntimeError("boom")
+
+    config = HealthCheckConfig()
+    manager = HealthCheckManager(config)
+    manager.add_health_check(_FailingHealthCheck("failing"))
+
+    results = await manager.check_all()
+
+    failing_result = results["failing"]
+    assert failing_result.status is HealthStatus.UNHEALTHY
+    assert "boom" in failing_result.message
