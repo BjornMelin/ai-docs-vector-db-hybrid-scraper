@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import os
 from collections.abc import Mapping, Sequence
 from typing import Any, cast
@@ -160,19 +159,16 @@ class FirecrawlProvider(BrowserProvider):
         if self._client is None:  # pragma: no cover - guarded by lifecycle
             raise RuntimeError("Provider not initialized")
 
-        formats, options, effective_timeout = self._compose_scrape_options(request)
+        formats, options, _ = self._compose_scrape_options(request)
 
         client = self._client
         assert client is not None  # narrow for typing
 
         async def _call() -> Any:
-            return await asyncio.wait_for(
-                client.scrape(  # type: ignore[no-any-return]
-                    url=request.url,
-                    formats=formats,
-                    **options,
-                ),
-                timeout=effective_timeout,
+            return await client.scrape(  # type: ignore[no-any-return]
+                url=request.url,
+                formats=formats,
+                **options,
             )
 
         document = cast(

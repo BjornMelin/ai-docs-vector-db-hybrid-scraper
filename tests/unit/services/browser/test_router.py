@@ -333,3 +333,29 @@ async def test_router_raises_after_all_providers_fail() -> None:
         await router.scrape(ScrapeRequest(url="https://example.com"))
 
     assert exc_info.value.context["attempted_providers"]
+
+
+@pytest.mark.asyncio
+async def test_router_continues_after_timeout_exception() -> None:
+    """Providers raising TimeoutError should be treated as failures with fallback."""
+
+    timing_out = StubProvider(
+        ProviderContext(ProviderKind.LIGHTWEIGHT),
+        responses=[TimeoutError("budget exceeded")],
+    )
+    succeeding = StubProvider(
+        ProviderContext(ProviderKind.CRAWL4AI),
+        responses=[True],
+    )
+    router = _build_router(
+        overrides={
+            ProviderKind.LIGHTWEIGHT: timing_out,
+            ProviderKind.CRAWL4AI: succeeding,
+        }
+    )
+
+    result = await router.scrape(ScrapeRequest(url="https://example.com"))
+
+    assert result.provider is ProviderKind.CRAWL4AI
+    assert timing_out.calls == 1
+    assert succeeding.calls == 1

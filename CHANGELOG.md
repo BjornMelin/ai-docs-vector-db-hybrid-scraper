@@ -37,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Refactor
 
+- **[Browser]:** Unified runtime logic for all browser providers, centralizing retry,
+  timeout, and error handling in `src/services/browser/runtime.py`.
 - **[Analytics]:** Removed the custom `SearchAnalyticsDashboard` and
   `VectorVisualizationEngine` services, consolidating all monitoring and
   analytics responsibilities into the standard OpenTelemetry-based
