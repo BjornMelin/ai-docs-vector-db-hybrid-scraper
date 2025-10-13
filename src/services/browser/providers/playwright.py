@@ -99,7 +99,7 @@ class PlaywrightProvider(BrowserProvider):
 
         async def _run_session() -> BrowserResult:
             assert self._browser is not None
-            async with self._browser.new_context() as context:
+            async with self._browser.new_context() as context:  # pyright: ignore[reportGeneralTypeIssues]
                 page = await context.new_page()
                 if self._settings.stealth is StealthMode.PLAYWRIGHT_STEALTH:
                     await APPLY_STEALTH(page)  # pylint: disable=not-callable
@@ -141,9 +141,14 @@ class PlaywrightProvider(BrowserProvider):
                     elapsed_ms=None,
                 )
 
-        return await execute_with_retry(
-            provider=self.kind,
-            operation="session",
-            func=_run_session,
-            retry_on=(PlaywrightTimeoutError, TimeoutError),
-        )
+        # Respect caller-provided timeout by avoiding extra retry backoff.
+        execute_kwargs: dict[str, Any] = {
+            "provider": self.kind,
+            "operation": "session",
+            "func": _run_session,
+            "retry_on": (PlaywrightTimeoutError, TimeoutError),
+        }
+        if request.timeout_ms is not None:
+            execute_kwargs["attempts"] = 1
+
+        return await execute_with_retry(**execute_kwargs)
