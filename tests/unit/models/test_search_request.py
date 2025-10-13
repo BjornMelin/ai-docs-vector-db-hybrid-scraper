@@ -1,4 +1,4 @@
-"""Unit tests for :mod:`src.models.search`."""
+"""Unit tests for the canonical SearchRequest contract."""
 
 from __future__ import annotations
 
