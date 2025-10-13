@@ -63,6 +63,23 @@ def _import_optional(name: str):
         return None
 
 
+def _tensor_exception_types(torch_module) -> tuple[type[BaseException], ...]:
+    """Return tensor execution exceptions worth reporting explicitly."""
+
+    exceptions: list[type[BaseException]] = [RuntimeError]
+
+    out_of_memory = getattr(torch_module, "OutOfMemoryError", None)
+    if isinstance(out_of_memory, type):
+        exceptions.append(out_of_memory)
+
+    cuda_module = getattr(torch_module, "cuda", None)
+    cuda_error = getattr(cuda_module, "CudaError", None) if cuda_module else None
+    if isinstance(cuda_error, type):
+        exceptions.append(cuda_error)
+
+    return tuple(exceptions)
+
+
 def _torch_device_checks(
     torch_module, require_gpu: bool
 ) -> tuple[list[CheckResult], dict[str, Any]]:
@@ -104,8 +121,12 @@ def _torch_device_checks(
         if hasattr(torch_module.cuda, "synchronize"):
             torch_module.cuda.synchronize()
         checks.append(CheckResult("torch-matmul", "passed", "GPU matmul succeeded"))
+    except _tensor_exception_types(torch_module) as exc:  # pragma: no cover
+        detail = f"{type(exc).__name__}: {exc}"
+        checks.append(CheckResult("torch-matmul", "failed", detail))
     except Exception as exc:  # pragma: no cover - surfaced in tests
-        checks.append(CheckResult("torch-matmul", "failed", str(exc)))
+        detail = f"UnexpectedError[{type(exc).__name__}]: {exc}"
+        checks.append(CheckResult("torch-matmul", "failed", detail))
 
     # Capture memory statistics for observability.
     try:
