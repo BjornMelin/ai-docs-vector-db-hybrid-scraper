@@ -15,7 +15,7 @@ from src.mcp_tools.models.requests import BatchRequest, DocumentRequest
 from src.mcp_tools.models.responses import AddDocumentResponse, DocumentBatchResponse
 from src.security.ml_security import MLSecurityValidator
 from src.services.cache.manager import CacheManager
-from src.services.vector_db.document_splitter import split_content_into_documents
+from src.services.document_chunking import chunk_to_documents, infer_document_kind
 from src.services.vector_db.service import VectorStoreService
 from src.services.vector_db.types import CollectionSchema, TextDocument
 
@@ -57,10 +57,10 @@ async def _run_content_intelligence(
 
     try:
         analysis_result = await service.analyze_content(
-            content=crawl_result["content"],
+            content=crawl_result.get("content") or {},
             url=request.url,
             title=crawl_result.get("title")
-            or crawl_result["metadata"].get("title", ""),
+            or crawl_result.get("metadata", {}).get("title", ""),
             raw_html=crawl_result.get("raw_html"),
             confidence_threshold=0.7,
         )
@@ -108,11 +108,27 @@ async def _scrape_document(
 
     await ctx.debug(f"Scraping URL for document {doc_id} via UnifiedBrowserManager")
     crawl_result = await resolved_crawl_manager.scrape_url(request.url)
-    if (
-        not crawl_result
-        or not crawl_result.get("success")
-        or not crawl_result.get("content")
-    ):
+    has_chunkable_content = False
+
+    def _mark_if_chunkable(candidate: Any) -> None:
+        nonlocal has_chunkable_content
+        if has_chunkable_content or not isinstance(candidate, str):
+            return
+        if candidate.strip():
+            has_chunkable_content = True
+
+    content_field = None
+    if crawl_result:
+        content_field = crawl_result.get("content")
+        _mark_if_chunkable(crawl_result.get("raw_html"))
+        if isinstance(content_field, Mapping):
+            _mark_if_chunkable(content_field.get("html"))
+            _mark_if_chunkable(content_field.get("markdown"))
+            _mark_if_chunkable(content_field.get("text"))
+        else:
+            _mark_if_chunkable(content_field)
+
+    if not crawl_result or not crawl_result.get("success") or not has_chunkable_content:
         await ctx.error(f"Failed to scrape {request.url}")
         _raise_scrape_error(request.url)
 
@@ -159,15 +175,48 @@ async def _chunk_document(
                 f"Upgraded chunking strategy to ENHANCED for {content_type} content"
             )
 
-    base_metadata = {
+    raw_content: str | None = None
+    inferred_kind: str | None = None
+
+    def _select(value: Any, kind_hint: str | None = None) -> None:
+        nonlocal raw_content, inferred_kind
+        if raw_content or not isinstance(value, str):
+            return
+        stripped = value.strip()
+        if not stripped:
+            return
+        raw_content = value
+        inferred_kind = kind_hint
+
+    _select(crawl_result.get("raw_html"), "html")
+    content_field = crawl_result.get("content")
+    if isinstance(content_field, Mapping):
+        _select(content_field.get("html"), "html")
+        _select(content_field.get("markdown"), "markdown")
+        _select(content_field.get("text"), "text")
+    else:
+        _select(content_field)
+
+    if raw_content is None:
+        msg = "No chunkable content returned by crawler"
+        raise ValueError(msg)
+
+    metadata_payload: dict[str, Any] = {
         "source": crawl_result.get("url", request.url),
+        "uri_or_path": crawl_result.get("url", request.url),
         "title": crawl_result.get("title")
         or crawl_result.get("metadata", {}).get("title", ""),
+        "mime_type": crawl_result.get("content_type")
+        or crawl_result.get("metadata", {}).get("content_type"),
+        "metadata": crawl_result.get("metadata", {}),
     }
-    documents = split_content_into_documents(
-        crawl_result["content"],
+
+    kind = inferred_kind or infer_document_kind(metadata_payload)
+    documents = chunk_to_documents(
+        raw_content,
+        metadata_payload,
+        kind,
         chunk_config,
-        metadata=base_metadata,
     )
     await ctx.debug(f"Created {len(documents)} chunks for document {doc_id}")
     return documents
