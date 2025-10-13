@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 import inspect
-import warnings
 from collections.abc import Iterable
 
 import pytest
-from pydantic.warnings import PydanticDeprecatedSince20
 
 
 pytest_plugins = [
@@ -25,14 +23,6 @@ pytest_plugins = [
     "tests.plugins.random_seed",
     "tests.fixtures.http_mocks",
 ]
-
-warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
-warnings.filterwarnings(
-    "ignore", message="read_text is deprecated", category=DeprecationWarning
-)
-warnings.filterwarnings(
-    "ignore", message="open_text is deprecated", category=DeprecationWarning
-)
 
 _ALLOWED_SKIP_PREFIXES: tuple[str, ...] = (
     "need --runslow option to run",
