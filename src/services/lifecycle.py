@@ -4,8 +4,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-from typing import Any, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -22,10 +21,6 @@ class ServiceLifecycle(Protocol):
 
     def is_initialized(self) -> bool:
         """Return True when the service is ready to handle work."""
-        ...
-
-    async def health_check(self) -> Mapping[str, Any] | None:
-        """Report current health; return None if health data is not available."""
         ...
 
 
