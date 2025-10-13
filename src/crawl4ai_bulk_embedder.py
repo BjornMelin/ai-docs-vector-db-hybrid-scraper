@@ -332,11 +332,20 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
             msg = f"Scraping failed: {exc}"
             raise ScrapingError(msg) from exc
 
-        if not raw_result.get("success"):
-            msg = raw_result.get("error", "Scraping failed")
-            raise ScrapingError(msg)
-
         normalized = normalize_crawler_output(raw_result, fallback_url=url)
+
+        if not normalized.get("success"):
+            metadata = normalized.get("metadata")
+            error_msg: str | None = None
+            if isinstance(metadata, Mapping):
+                metadata_error = metadata.get("error")
+                if isinstance(metadata_error, str) and metadata_error.strip():
+                    error_msg = metadata_error
+            if not error_msg:
+                error_value = normalized.get("error")
+                if isinstance(error_value, str) and error_value.strip():
+                    error_msg = error_value
+            raise ScrapingError(error_msg or "Scraping failed")
 
         content_block = normalized.get("content")
         has_chunkable = False
