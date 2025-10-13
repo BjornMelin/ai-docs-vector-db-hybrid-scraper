@@ -309,6 +309,7 @@ lines-after-imports = 2
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 "openai.ChatCompletion" = { msg = "Use the Responses API via openai.OpenAI" }
+"openai.chat.completions.create" = { msg = "Use the Responses API via openai.OpenAI" }
 "ragas.dataset_schema" = { msg = "Ragas >=0.3 ships EvaluationDataset in ragas" }
 
 [tool.pyright]
