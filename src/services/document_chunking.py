@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from pathlib import PurePosixPath
 from typing import Any
 from urllib.parse import urlparse
@@ -146,6 +146,13 @@ def infer_language(
     return language.value if language else None
 
 
+def _infer_kind_from_candidate(metadata: Mapping[str, Any]) -> str | None:
+    candidate = metadata.get("kind") or metadata.get("content_kind")
+    if isinstance(candidate, str) and candidate:
+        return candidate.lower()
+    return None
+
+
 def _infer_kind_from_mime(metadata: Mapping[str, Any]) -> str | None:
     mime_type = (
         metadata.get("mime_type")
@@ -186,6 +193,17 @@ def _infer_kind_from_token_hint(metadata: Mapping[str, Any]) -> str | None:
     return None
 
 
+_INFER_STRATEGIES: tuple[
+    Callable[[Mapping[str, Any]], str | None],
+    ...,
+] = (
+    _infer_kind_from_candidate,
+    _infer_kind_from_mime,
+    _infer_kind_from_extension,
+    _infer_kind_from_token_hint,
+)
+
+
 def infer_document_kind(
     metadata: Mapping[str, Any] | None, default: str = "text"
 ) -> str:
@@ -194,21 +212,12 @@ def infer_document_kind(
     if metadata is None:
         return default
 
-    candidate = metadata.get("kind") or metadata.get("content_kind")
-    inferred_kind: str | None = None
-    if isinstance(candidate, str) and candidate:
-        inferred_kind = candidate.lower()
+    for strategy in _INFER_STRATEGIES:
+        inferred_kind = strategy(metadata)
+        if inferred_kind:
+            return inferred_kind
 
-    if inferred_kind is None:
-        inferred_kind = _infer_kind_from_mime(metadata)
-
-    if inferred_kind is None:
-        inferred_kind = _infer_kind_from_extension(metadata)
-
-    if inferred_kind is None:
-        inferred_kind = _infer_kind_from_token_hint(metadata)
-
-    return inferred_kind or default
+    return default
 
 
 def _normalize_kind(kind: str | None, metadata: Mapping[str, Any] | None) -> str:
