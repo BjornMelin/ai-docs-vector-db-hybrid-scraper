@@ -12,6 +12,7 @@ import csv
 import json
 import logging
 import sys
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
@@ -35,10 +36,10 @@ from rich.table import Table  # type: ignore[import]
 from .config.loader import Settings, get_settings
 from .infrastructure.bootstrap import container_session, ensure_container
 from .infrastructure.container import ApplicationContainer
+from .services.document_chunking import chunk_to_documents, infer_document_kind
 from .services.embeddings.manager import QualityTier
 from .services.errors import ServiceError
 from .services.logging_config import configure_logging
-from .services.vector_db.document_splitter import split_content_into_documents
 from .services.vector_db.service import VectorStoreService
 from .services.vector_db.types import CollectionSchema, VectorRecord
 
@@ -362,15 +363,48 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
     ) -> list[Document]:
         """Chunk content into LangChain documents."""
 
-        base_metadata = {
+        raw_content: str | None = None
+        kind_hint: str | None = None
+
+        def _select(value: Any, hint: str | None = None) -> None:
+            nonlocal raw_content, kind_hint
+            if raw_content or not isinstance(value, str):
+                return
+            stripped = value.strip()
+            if not stripped:
+                return
+            raw_content = value
+            kind_hint = hint
+
+        _select(scrape_result.get("raw_html"), "html")
+        structured = scrape_result.get("content")
+        if isinstance(structured, Mapping):
+            _select(structured.get("html"), "html")
+            _select(structured.get("markdown"), "markdown")
+            _select(structured.get("text"), "text")
+        else:
+            _select(structured)
+
+        if raw_content is None:
+            msg = "No chunkable content provided by crawler"
+            raise ChunkGenerationError(msg)
+
+        metadata_payload: dict[str, Any] = {
             "source": scrape_result.get("url"),
+            "uri_or_path": scrape_result.get("url"),
             "title": scrape_result.get("title")
             or scrape_result.get("metadata", {}).get("title", ""),
+            "mime_type": scrape_result.get("content_type")
+            or scrape_result.get("metadata", {}).get("content_type"),
+            "metadata": scrape_result.get("metadata", {}),
         }
 
         try:
-            chunks = split_content_into_documents(
-                content_to_chunk, self.config.chunking, metadata=base_metadata
+            chunks = chunk_to_documents(
+                raw_content,
+                metadata_payload,
+                kind_hint or infer_document_kind(metadata_payload),
+                self.config.chunking,
             )
         except Exception as exc:
             error_msg = f"Chunking failed: {exc}"
