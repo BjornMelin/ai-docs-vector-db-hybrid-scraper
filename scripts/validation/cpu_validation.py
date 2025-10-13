@@ -146,21 +146,60 @@ def run_cpu_validation() -> ValidationReport:
     sklearn_version: str | None = None
     blas_info: dict[str, Any] | None = None
 
+    def _append_linalg_failure(check_id: str, exc: Exception) -> None:
+        """Append a failure result while attempting to classify LinAlg errors."""
+
+        detail = str(exc)
+        try:
+            import numpy as _np
+        except Exception:  # pragma: no cover - import edge case
+            checks.append(CheckResult(check_id, "failed", detail))
+            return
+
+        lin_alg_error = getattr(_np.linalg, "LinAlgError", None)
+        if lin_alg_error and isinstance(exc, lin_alg_error):
+            detail = f"LinAlgError: {exc}"
+        checks.append(CheckResult(check_id, "failed", detail))
+
     try:
         numpy_check, numpy_version, blas_info = _numpy_checks()
         checks.append(numpy_check)
+    except ImportError as exc:  # pragma: no cover - exercised in tests
+        checks.append(
+            CheckResult("numpy-linear-algebra", "failed", f"ImportError: {exc}")
+        )
+    except ValueError as exc:  # pragma: no cover - exercised in tests
+        checks.append(
+            CheckResult("numpy-linear-algebra", "failed", f"ValueError: {exc}")
+        )
     except Exception as exc:  # pragma: no cover - exercised in tests
-        checks.append(CheckResult("numpy-linear-algebra", "failed", str(exc)))
+        _append_linalg_failure("numpy-linear-algebra", exc)
 
     try:
         scipy_check, scipy_version = _scipy_checks()
         checks.append(scipy_check)
+    except ImportError as exc:  # pragma: no cover - exercised in tests
+        checks.append(
+            CheckResult("scipy-linalg", "failed", f"ImportError: {exc}")
+        )
+    except ValueError as exc:  # pragma: no cover - exercised in tests
+        checks.append(
+            CheckResult("scipy-linalg", "failed", f"ValueError: {exc}")
+        )
     except Exception as exc:  # pragma: no cover - exercised in tests
-        checks.append(CheckResult("scipy-linalg", "failed", str(exc)))
+        _append_linalg_failure("scipy-linalg", exc)
 
     try:
         sklearn_checks, sklearn_version = _sklearn_checks()
         checks.extend(sklearn_checks)
+    except ImportError as exc:  # pragma: no cover - exercised in tests
+        checks.append(
+            CheckResult("sklearn-suite", "failed", f"ImportError: {exc}")
+        )
+    except ValueError as exc:  # pragma: no cover - exercised in tests
+        checks.append(
+            CheckResult("sklearn-suite", "failed", f"ValueError: {exc}")
+        )
     except Exception as exc:  # pragma: no cover - exercised in tests
         checks.append(CheckResult("sklearn-suite", "failed", str(exc)))
 
