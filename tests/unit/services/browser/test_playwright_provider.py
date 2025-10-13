@@ -99,7 +99,9 @@ async def test_playwright_scrape_returns_success_when_no_challenge(
 
 
 @pytest.mark.asyncio
-async def test_playwright_scrape_raises_on_challenge(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_playwright_scrape_raises_on_challenge(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Scrape should raise a provider error when challenge keywords are present."""
 
     monkeypatch.setattr(

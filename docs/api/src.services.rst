@@ -39,9 +39,9 @@ src.services.base module
    :show-inheritance:
    :undoc-members:
 
-src.services.dependencies module
+src.services.service_resolver module
 
-.. automodule:: src.services.dependencies
+.. automodule:: src.services.service_resolver
    :members:
    :show-inheritance:
    :undoc-members:

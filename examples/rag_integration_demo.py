@@ -28,7 +28,7 @@ if str(SRC_ROOT) not in sys.path:
 
 from src.config import Settings, get_settings
 from src.infrastructure.bootstrap import container_session, ensure_container
-from src.services.dependencies import (
+from src.services.rag.api import (
     RAGResponse,
     RAGRequest,
     clear_rag_cache,

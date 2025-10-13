@@ -124,7 +124,7 @@ new environment variables.
 
 ## 7. Service Access Patterns
 
-- **Client access**: FastAPI, MCP, and CLI layers resolve services via dependency helpers in `src/services/dependencies.py`, backed by the global `ApplicationContainer`.
+- **Client access**: FastAPI, MCP, and CLI layers resolve services via dependency helpers in `src/services/service_resolver.py` and `src/services/fastapi/dependencies.py`, backed by the global `ApplicationContainer`.
 - Avoid constructing bespoke managers; call `initialize_container()` once at startup and retrieve providers through `Provide[...]` or `get_container()`.
 - **Observability**: Metrics, traces, and health checks are configured through `src/services/observability/` and `src/services/monitoring/`. Use `ObservabilityConfig` to enable OpenTelemetry exporters and rely on `setup_prometheus` for registry bootstrap.
 - **Health checks**: The centralized `HealthCheckManager` (`src/services/monitoring/health.py`) tracks service probes and feeds `/health` endpoints. When adding new services, register probes via the manager instead of ad-hoc endpoints.

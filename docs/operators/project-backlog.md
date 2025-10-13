@@ -24,7 +24,7 @@ owns the work and the most relevant evidence. For the archival research deck see
 | ----- | --------------------------------------------- | ------------------ | ------------------------------------ |
 | INF-01 | Secrets + env alias hardening                | Platform Engineer  | `src/config/models.py`               |
 | INF-02 | Centralised FastAPI error handling           | Platform Engineer  | `src/api/app_factory.py`             |
-| INF-03 | Circuit breaker injected for outbound calls  | Platform Engineer  | `src/services/dependencies.py`       |
+| INF-03 | Circuit breaker injected for outbound calls  | Platform Engineer  | `src/services/service_resolver.py`   |
 
 ## Observability & Operations
 
