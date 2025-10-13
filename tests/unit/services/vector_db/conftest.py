@@ -1,59 +1,60 @@
-"""Shared fixtures for vector database unit tests."""
+"""Fixtures and stubs for vector store service unit tests."""
+
+# pylint: disable=c-extension-no-member
 
 from __future__ import annotations
 
 from collections.abc import AsyncIterator, Iterator, Sequence
 from types import SimpleNamespace
-from typing import Any, cast
+from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
 from dependency_injector import providers
 from qdrant_client import AsyncQdrantClient
 
-from src.config.models import QdrantConfig, ScoreNormalizationStrategy
+from src.config.models import QdrantConfig, ScoreNormalizationStrategy, SearchStrategy
 from src.infrastructure.container import ApplicationContainer
-from src.services.embeddings.base import EmbeddingProvider
 from src.services.vector_db.service import VectorStoreService
 from src.services.vector_db.types import CollectionSchema, TextDocument
 
 
-class _LangChainEmbeddingStub:
-    def __init__(self, dimension: int) -> None:
-        self._dimension = dimension
+class _DenseEmbeddingStub:
+    """Deterministic FastEmbed replacement for unit tests."""
+
+    def __init__(self, model_name: str, **_: object) -> None:  # noqa: D401
+        self.model_name = model_name
+
+    def embed_query(self, text: str) -> list[float]:  # noqa: D401, ARG002
+        return [1.0, 2.0, 3.0]
 
     def embed_documents(self, texts: Sequence[str]) -> list[list[float]]:
-        base = [float(index + 1) for index in range(self._dimension)]
-        return [base for _ in texts]
-
-    def embed_query(self, text: str) -> list[float]:  # noqa: ARG002
-        return [float(index + 1) for index in range(self._dimension)]
+        return [self.embed_query(text) for text in texts]
 
 
-class EmbeddingProviderStub:
-    """Minimal async embedding provider for tests."""
+class _SparseEmbeddingStub:
+    """Sparse FastEmbed replacement returning fixed coordinates."""
 
-    def __init__(self, dimension: int = 3) -> None:
-        self.embedding_dimension = dimension
-        self.initialized = False
-        self.cleaned_up = False
-        self._embedding = _LangChainEmbeddingStub(dimension)
+    def __init__(self, model_name: str, **_: object) -> None:  # noqa: D401
+        self.model_name = model_name
 
-    async def initialize(self) -> None:
-        self.initialized = True
-        self.cleaned_up = False
+    def embed_query(self, text: str) -> SimpleNamespace:  # noqa: D401, ARG002
+        return SimpleNamespace(indices=[0, 1], values=[1.0, 0.5])
 
-    async def cleanup(self) -> None:
-        self.cleaned_up = True
-        self.initialized = False
 
-    async def generate_embeddings(self, texts: Sequence[str]) -> list[list[float]]:
-        base_vector = [float(index + 1) for index in range(self.embedding_dimension)]
-        return [base_vector for _ in texts]
+@pytest.fixture(autouse=True)
+def fastembed_stubs(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Patch FastEmbed embedding classes with lightweight stubs."""
 
-    @property
-    def langchain_embeddings(self) -> _LangChainEmbeddingStub:
-        return self._embedding
+    monkeypatch.setattr(
+        "src.services.vector_db.service.FastEmbedEmbeddings",
+        _DenseEmbeddingStub,
+    )
+    monkeypatch.setattr(
+        "src.services.vector_db.service.FastEmbedSparseRuntime",
+        _SparseEmbeddingStub,
+    )
+    yield
 
 
 def build_vector_store_service(
@@ -72,13 +73,6 @@ async def initialize_vector_store_service(
     service = build_vector_store_service(container)
     await service.initialize()
     return service
-
-
-@pytest.fixture
-def embeddings_provider_stub() -> EmbeddingProviderStub:
-    """Provide an embedding provider stub with deterministic vectors."""
-
-    return EmbeddingProviderStub(dimension=3)
 
 
 @pytest.fixture
@@ -102,7 +96,6 @@ def qdrant_client_mock() -> AsyncMock:
 def vector_container(
     config_stub: Any,
     qdrant_client_mock: AsyncMock,
-    embeddings_provider_stub: EmbeddingProviderStub,
 ) -> Iterator[ApplicationContainer]:
     """Provide a container with overrides for vector service dependencies."""
 
@@ -113,7 +106,6 @@ def vector_container(
             VectorStoreService,
             config=config_stub,
             async_qdrant_client=qdrant_client_mock,
-            embeddings_provider=cast(EmbeddingProvider, embeddings_provider_stub),
         )
     )
     try:
@@ -146,6 +138,12 @@ def config_stub() -> Any:
 
     class _FastEmbedConfig:
         dense_model = "stub-model"
+        sparse_model = "stub-sparse"
+
+    class _EmbeddingConfig:
+        dense_model = "stub-model"
+        sparse_model = "stub-sparse"
+        retrieval_mode = SearchStrategy.DENSE
 
     class _QueryProcessingConfig:
         enable_score_normalization = False
@@ -154,6 +152,7 @@ def config_stub() -> Any:
 
     class _Config:
         fastembed = _FastEmbedConfig()
+        embedding = _EmbeddingConfig()
         qdrant = QdrantConfig(enable_grouping=False)
         query_processing = _QueryProcessingConfig()
 
@@ -162,7 +161,6 @@ def config_stub() -> Any:
 
 @pytest.fixture
 async def initialized_vector_store_service(
-    embeddings_provider_stub: EmbeddingProviderStub,
     vector_container: ApplicationContainer,
 ) -> AsyncIterator[VectorStoreService]:
     """Initialize VectorStoreService for tests and ensure cleanup."""
@@ -177,10 +175,8 @@ async def initialized_vector_store_service(
 
 
 __all__ = [
-    "EmbeddingProviderStub",
     "build_vector_store_service",
     "initialize_vector_store_service",
-    "embeddings_provider_stub",
     "qdrant_client_mock",
     "vector_container",
     "collection_schema",
