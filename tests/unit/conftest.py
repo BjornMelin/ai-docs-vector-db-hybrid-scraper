@@ -6,6 +6,8 @@ from typing import Any
 
 import pytest
 
+from src.config.models import CrawlProvider, EmbeddingProvider
+
 
 @pytest.fixture(name="build_unified_mcp_config")
 def fixture_build_unified_mcp_config() -> Callable[..., SimpleNamespace]:
@@ -23,15 +25,19 @@ def fixture_build_unified_mcp_config() -> Callable[..., SimpleNamespace]:
         qdrant_url: str | None = "http://localhost:6333",
         providers: list[str] | None = None,
         crawling_providers: list[str] | None = None,
+        embedding_provider: EmbeddingProvider = EmbeddingProvider.OPENAI,
+        crawl_provider: CrawlProvider = CrawlProvider.FIRECRAWL,
     ) -> SimpleNamespace:
         providers = providers or ["openai"]
         crawling_providers = crawling_providers or ["firecrawl"]
         return SimpleNamespace(
             get_active_providers=lambda: providers,
             openai=SimpleNamespace(api_key=openai_key),
+            embedding=SimpleNamespace(provider=embedding_provider),
             crawling=SimpleNamespace(providers=crawling_providers),
             browser=SimpleNamespace(firecrawl=SimpleNamespace(api_key=firecrawl_key)),
             qdrant=SimpleNamespace(url=qdrant_url),
+            crawl_provider=crawl_provider,
             cache=SimpleNamespace(
                 enable_dragonfly_cache=False,
                 dragonfly_url=None,
