@@ -31,10 +31,13 @@ from statistics import fmean
 from typing import TYPE_CHECKING, Any, Protocol
 
 import yaml
+from openai import AsyncOpenAI
 from ragas import EvaluationDataset
 from ragas.embeddings import OpenAIEmbeddings as RagasOpenAIEmbeddings
 from ragas.evaluation import evaluate as ragas_evaluate
-from ragas.llms.base import OpenAI as RagasOpenAI
+from ragas.llms.base import (
+    OpenAI as RagasOpenAI,  # pyright: ignore[reportPrivateImportUsage]
+)
 from ragas.metrics import (
     AnswerRelevancy,
     ContextPrecision,
@@ -157,12 +160,21 @@ class RagasEvaluator:
             client_kwargs["timeout"] = timeout
 
         self._llm = RagasOpenAI(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
+            # pyright: ignore[reportCallIssue]
             model=llm_model,
             **client_kwargs,
         )
-        self._embeddings = RagasOpenAIEmbeddings(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
-            model=embedding_model,
+        embedding_client = AsyncOpenAI(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
+            # pyright: ignore[reportCallIssue]
             api_key=api_key,
+            max_retries=max_retries,
+            timeout=timeout,
+        )
+        self._embedding_client = embedding_client
+        self._embeddings = RagasOpenAIEmbeddings(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
+            # pyright: ignore[reportCallIssue]
+            client=embedding_client,
+            model=embedding_model,
         )
 
     def evaluate(

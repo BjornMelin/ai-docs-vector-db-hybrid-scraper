@@ -19,7 +19,6 @@ from langchain_mcp_adapters.client import (  # pyright: ignore[reportMissingType
 from langchain_mcp_adapters.sessions import (  # pyright: ignore[reportMissingTypeStubs]
     Connection,
 )
-from openai import AsyncOpenAI  # pyright: ignore[reportMissingTypeStubs]
 from qdrant_client import AsyncQdrantClient
 
 from src.config.models import CacheType, MCPClientConfig, MCPServerConfig, MCPTransport
@@ -39,20 +38,6 @@ DeclarativeContainer = containers.DeclarativeContainer  # pylint: disable=c-exte
 Provider = providers.Provider  # pylint: disable=c-extension-no-member
 
 logger = logging.getLogger(__name__)
-
-
-def _create_openai_client(config: Any) -> AsyncOpenAI:
-    """Create OpenAI client with configuration."""
-
-    try:
-        openai_config = getattr(config, "openai", None)
-        api_key = getattr(openai_config, "api_key", None) or ""
-        performance_config = getattr(config, "performance", None)
-        max_retries = getattr(performance_config, "max_retries", None) or 3
-        return AsyncOpenAI(api_key=api_key, max_retries=max_retries)
-    except (AttributeError, TypeError, ValueError) as exc:
-        logger.warning("Failed to create OpenAI client with config: %s", exc)
-        return AsyncOpenAI(api_key="", max_retries=3)
 
 
 def _create_qdrant_client(config: Any) -> AsyncQdrantClient:
@@ -170,19 +155,14 @@ def _create_cache_manager(config: Any) -> CacheManager:
 
 def _create_embedding_manager(
     config: Any,
-    openai_client: AsyncOpenAI | None,
     cache_manager: CacheManager | None,
 ) -> EmbeddingManager:
     """Instantiate the EmbeddingManager with DI-provided dependencies."""
 
-    kwargs: dict[str, Any] = {
-        "config": config,
-        "cache_manager": cache_manager,
-    }
-    kwargs["openai_client"] = openai_client
-
-    # pylint: disable=unexpected-keyword-arg
-    return EmbeddingManager(**kwargs)
+    return EmbeddingManager(
+        config=config,
+        cache_manager=cache_manager,
+    )
 
 
 def _create_vector_store_service(
@@ -504,11 +484,6 @@ class ApplicationContainer(DeclarativeContainer):
     # Configuration
     config = Configuration()
 
-    openai_client = Singleton(
-        _create_openai_client,
-        config=config,
-    )
-
     qdrant_client = Singleton(
         _create_qdrant_client,
         config=config,
@@ -527,11 +502,6 @@ class ApplicationContainer(DeclarativeContainer):
     # HTTP client with session management
     http_client = Resource(
         _create_http_client,
-    )
-
-    openai_provider = Singleton(
-        "src.infrastructure.clients.openai_client.OpenAIClientProvider",
-        openai_client=openai_client,
     )
 
     qdrant_provider = Singleton(
@@ -557,7 +527,6 @@ class ApplicationContainer(DeclarativeContainer):
     embedding_manager = Singleton(
         _create_embedding_manager,
         config=config,
-        openai_client=openai_client,
         cache_manager=cache_manager,
     )
 
@@ -728,12 +697,6 @@ async def shutdown_container() -> None:
 
 
 # Dependency injection decorators and functions for easy access
-def inject_openai_provider():
-    """Inject OpenAI client provider dependency."""
-
-    return Provide[ApplicationContainer.openai_provider]
-
-
 def inject_qdrant_provider():
     """Inject Qdrant client provider dependency."""
 
@@ -804,12 +767,6 @@ def inject_rag_generator():
     """Inject RAG generator dependency."""
 
     return Provide[ApplicationContainer.rag_generator]
-
-
-def inject_openai() -> Provider[AsyncOpenAI]:
-    """Inject raw OpenAI client dependency."""
-
-    return Provide[ApplicationContainer.openai_client]
 
 
 def inject_qdrant() -> Provider[AsyncQdrantClient]:
