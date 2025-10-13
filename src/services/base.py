@@ -2,9 +2,7 @@
 
 import logging
 from abc import ABC, abstractmethod
-from collections.abc import Mapping
 from contextlib import asynccontextmanager
-from typing import Any
 
 from src.config.loader import Settings
 
@@ -36,14 +34,6 @@ class BaseService(ABC, LifecycleTracker, ServiceLifecycle):
     @abstractmethod
     async def cleanup(self) -> None:
         """Cleanup service resources."""
-
-    async def health_check(self) -> Mapping[str, Any] | None:
-        """Return health data for the service.
-
-        Subclasses may override to provide richer diagnostics.
-        """
-
-        return None
 
     @asynccontextmanager
     async def context(self):

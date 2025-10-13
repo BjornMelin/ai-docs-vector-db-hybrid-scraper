@@ -191,7 +191,11 @@ def _configure_common_routes(app: FastAPI, settings: Settings) -> None:
 
     @app.get("/")
     async def root() -> JSONResponse:
-        """Return service summary and active features."""
+        """Return service summary and active features.
+
+        Returns:
+            JSONResponse containing app metadata and enabled features.
+        """
 
         try:
             feature_flags = settings.get_feature_flags()
@@ -213,7 +217,14 @@ def _configure_common_routes(app: FastAPI, settings: Settings) -> None:
 
     @app.get("/health")
     async def health_check(checker: HealthCheckerDep) -> JSONResponse:
-        """Return aggregated health status for dependencies."""
+        """Return aggregated health status for dependencies.
+
+        Args:
+            checker: Shared :class:`HealthCheckManager` instance.
+
+        Returns:
+            JSONResponse describing aggregate dependency health.
+        """
 
         await checker.check_all()
         summary = checker.get_health_summary()
@@ -235,7 +246,11 @@ def _configure_common_routes(app: FastAPI, settings: Settings) -> None:
 
     @app.get("/info")
     async def info() -> dict[str, Any]:
-        """Return descriptive information about the API."""
+        """Return descriptive information about the API.
+
+        Returns:
+            Dictionary with descriptive metadata about the API surface.
+        """
 
         try:
             feature_flags = settings.get_feature_flags()
@@ -258,7 +273,11 @@ def _configure_common_routes(app: FastAPI, settings: Settings) -> None:
 
     @app.get("/features")
     async def features() -> JSONResponse:
-        """Expose feature flag configuration for observability."""
+        """Expose feature flag configuration for observability.
+
+        Returns:
+            JSONResponse enumerating all available feature toggles.
+        """
 
         try:
             feature_flags = settings.get_feature_flags()

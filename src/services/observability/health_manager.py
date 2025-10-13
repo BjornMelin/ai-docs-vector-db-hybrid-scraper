@@ -542,6 +542,119 @@ class SystemResourceHealthCheck(HealthCheck):
         )
 
 
+class ApplicationMetadataHealthCheck(HealthCheck):
+    """Health check exposing application metadata."""
+
+    def __init__(
+        self,
+        settings: Settings,
+        *,
+        name: str = "application_metadata",
+        timeout_seconds: float = 5.0,
+    ) -> None:
+        """Initialize the application metadata probe."""
+
+        super().__init__(name, timeout_seconds)
+        self._settings = settings
+
+    async def check(self) -> HealthCheckResult:
+        """Return basic application metadata."""
+
+        return await self._execute_with_timeout(self._collect_metadata())
+
+    async def _collect_metadata(self) -> HealthCheckResult:
+        """Collect metadata and flag missing configuration."""
+
+        metadata = {
+            "app_name": self._settings.app_name,
+            "version": self._settings.version,
+            "environment": self._settings.environment.value,
+        }
+        missing_fields = [
+            field for field, value in metadata.items() if value in {None, ""}
+        ]
+        status = HealthStatus.HEALTHY
+        message = "Application metadata available"
+        if missing_fields:
+            status = HealthStatus.DEGRADED
+            message = (
+                "Missing application metadata fields: "
+                f"{', '.join(sorted(missing_fields))}"
+            )
+
+        return HealthCheckResult(
+            name=self.name,
+            status=status,
+            message=message,
+            duration_ms=0.0,
+            metadata=metadata,
+        )
+
+
+class RAGConfigurationHealthCheck(HealthCheck):
+    """Health check validating RAG configuration."""
+
+    def __init__(
+        self,
+        settings: Settings,
+        *,
+        name: str = "rag_configuration",
+        timeout_seconds: float = 5.0,
+    ) -> None:
+        """Initialize the RAG configuration probe."""
+
+        super().__init__(name, timeout_seconds)
+        self._settings = settings
+
+    async def check(self) -> HealthCheckResult:
+        """Validate RAG configuration state."""
+
+        return await self._execute_with_timeout(self._validate_rag_settings())
+
+    async def _validate_rag_settings(self) -> HealthCheckResult:
+        """Validate configuration required to enable RAG."""
+
+        rag_settings = self._settings.rag
+        metadata = {
+            "enabled": rag_settings.enable_rag,
+            "model": rag_settings.model,
+            "include_sources": rag_settings.include_sources,
+        }
+
+        if not rag_settings.enable_rag:
+            return HealthCheckResult(
+                name=self.name,
+                status=HealthStatus.SKIPPED,
+                message="RAG is disabled via configuration",
+                duration_ms=0.0,
+                metadata=metadata,
+            )
+
+        missing_fields = [
+            field for field in ("model",) if not getattr(rag_settings, field, None)
+        ]
+
+        if missing_fields:
+            return HealthCheckResult(
+                name=self.name,
+                status=HealthStatus.UNHEALTHY,
+                message=(
+                    "Missing required RAG configuration fields: "
+                    f"{', '.join(sorted(missing_fields))}"
+                ),
+                duration_ms=0.0,
+                metadata=metadata,
+            )
+
+        return HealthCheckResult(
+            name=self.name,
+            status=HealthStatus.HEALTHY,
+            message="RAG configuration is valid",
+            duration_ms=0.0,
+            metadata=metadata,
+        )
+
+
 class HealthCheckManager:
     """Coordinator for registered health checks."""
 
@@ -553,18 +666,30 @@ class HealthCheckManager:
         self._last_results: dict[str, HealthCheckResult] = {}
 
     def add_health_check(self, health_check: HealthCheck) -> None:
-        """Register an additional health check."""
+        """Register an additional health check.
+
+        Args:
+            health_check: Health check instance to register with the manager.
+        """
 
         self._health_checks.append(health_check)
 
     def add_checks(self, checks: Iterable[HealthCheck]) -> None:
-        """Register multiple health checks at once."""
+        """Register multiple health checks at once.
+
+        Args:
+            checks: Iterable of health check instances to register.
+        """
 
         for check in checks:
             self.add_health_check(check)
 
     async def check_all(self) -> dict[str, HealthCheckResult]:
-        """Execute all registered checks concurrently."""
+        """Execute all registered checks concurrently.
+
+        Returns:
+            Mapping of health check names to their most recent results.
+        """
 
         if not self._health_checks:
             return {}
@@ -590,7 +715,15 @@ class HealthCheckManager:
         return health_results
 
     async def check_single(self, check_name: str) -> HealthCheckResult | None:
-        """Run a single health check by name."""
+        """Run a single health check by name.
+
+        Args:
+            check_name: Registered name of the health check to execute.
+
+        Returns:
+            The resulting :class:`HealthCheckResult` if the probe exists, otherwise
+            ``None``.
+        """
 
         for check in self._health_checks:
             if check.name == check_name:
@@ -600,12 +733,20 @@ class HealthCheckManager:
         return None
 
     def get_last_results(self) -> dict[str, HealthCheckResult]:
-        """Return the most recent health check results."""
+        """Return the most recent health check results.
+
+        Returns:
+            Snapshot mapping of health check names to their latest results.
+        """
 
         return self._last_results.copy()
 
     def get_overall_status(self) -> HealthStatus:
-        """Compute an aggregate health status."""
+        """Compute an aggregate health status.
+
+        Returns:
+            Aggregate status derived from the latest check results.
+        """
 
         if not self._last_results:
             return HealthStatus.UNKNOWN
@@ -622,7 +763,11 @@ class HealthCheckManager:
         return HealthStatus.UNKNOWN
 
     def get_health_summary(self) -> dict[str, Any]:
-        """Return a structured summary of recent health checks."""
+        """Return a structured summary of recent health checks.
+
+        Returns:
+            Dictionary containing aggregate status and individual check details.
+        """
 
         return {
             "overall_status": self.get_overall_status().value,
@@ -640,12 +785,20 @@ class HealthCheckManager:
         }
 
     def list_checks(self) -> tuple[str, ...]:
-        """Return the names of registered health checks."""
+        """Return the names of registered health checks.
+
+        Returns:
+            Tuple of registered health check names in insertion order.
+        """
 
         return tuple(check.name for check in self._health_checks)
 
     async def get_overall_health(self) -> dict[str, Any]:
-        """Run all checks and return the aggregated summary."""
+        """Run all checks and return the aggregated summary.
+
+        Returns:
+            Aggregated health summary produced after executing all checks.
+        """
 
         await self.check_all()
         return self.get_health_summary()
@@ -670,6 +823,19 @@ def build_health_manager(
 
     config = HealthCheckConfig.from_unified_config(settings)
     manager = HealthCheckManager(config)
+
+    manager.add_checks(
+        (
+            ApplicationMetadataHealthCheck(
+                settings,
+                timeout_seconds=settings.monitoring.health_check_timeout,
+            ),
+            RAGConfigurationHealthCheck(
+                settings,
+                timeout_seconds=settings.monitoring.health_check_timeout,
+            ),
+        )
+    )
 
     if settings.monitoring.include_system_metrics:
         if psutil is None:
@@ -756,6 +922,7 @@ def build_health_manager(
 
 
 __all__ = [
+    "ApplicationMetadataHealthCheck",
     "FirecrawlHealthCheck",
     "HealthCheck",
     "HealthCheckConfig",
@@ -765,6 +932,7 @@ __all__ = [
     "HTTPHealthCheck",
     "OpenAIHealthCheck",
     "QdrantHealthCheck",
+    "RAGConfigurationHealthCheck",
     "DragonflyHealthCheck",
     "SystemResourceHealthCheck",
     "build_health_manager",

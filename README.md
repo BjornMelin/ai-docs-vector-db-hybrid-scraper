@@ -227,7 +227,8 @@ search.[^qdrant-hybrid]
   manager emits `db.query.duration` histograms for each session. See
   `docs/observability/embeddings_telemetry.md` and
   `docs/operators/monitoring.md` for configuration details.
-- Health probes for system resources, Qdrant, Redis, and external services are centrally coordinated by the `HealthCheckManager` (`src/services/observability/health_manager.py`), ensuring MCP tools and FastAPI dependencies share the same health state.
+- Health probes for system resources, Qdrant, Redis, RAG configuration, and application metadata are centrally coordinated by the `HealthCheckManager` (`src/services/observability/health_manager.py`), ensuring MCP tools and FastAPI dependencies share the same health state.
+- A single `GET /health` endpoint on the FastAPI and FastMCP servers reports the aggregated system status; per-service health endpoints have been removed.
 - Optional Dragonfly cache, PostgreSQL, ARQ workers, and Grafana dashboards are provisioned via `docker-compose.yml` profiles.
 - Structured logging and SlowAPI-based rate limiting are configured through the middleware manager (`src/services/fastapi/middleware/manager.py`) and security helpers (`src/services/fastapi/middleware/security.py`).
 

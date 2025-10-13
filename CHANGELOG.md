@@ -65,6 +65,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **[Observability]:** Completed the unification of monitoring systems by deleting the legacy `src/services/monitoring` package and updating all application entry points to use the modern `initialize_observability` lifecycle function.
 - **[Observability]:** Eliminated the bespoke Prometheus `MetricsRegistry` and middleware. All `/metrics` exposure now flows through `prometheus-fastapi-instrumentator` while application telemetry is captured via OpenTelemetry tracing utilities.
 - **[Observability]:** Replaced database query monitors with OpenTelemetry spans and the `db.query.duration` histogram, and relocated the shared `HealthCheckManager` under `services/observability` for unified health wiring.
+- **[Health]:** Centralized all system health checking logic into the `HealthCheckManager`, removing redundant per-service health endpoints.
 - **[Architecture]:** Unified circuit breaker implementation by refactoring
   `TimeoutMiddleware` to use the shared `CircuitBreakerManager`, ensuring a
   global state for all breakers.
