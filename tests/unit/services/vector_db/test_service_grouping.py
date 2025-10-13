@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from src.config.models import SearchStrategy
 from src.contracts.retrieval import SearchRecord
 from src.services.vector_db.service import VectorStoreService
 
@@ -14,19 +15,18 @@ class _ConfigStub:
     """Minimal configuration stub required by :class:`VectorStoreService`."""
 
     def __init__(self) -> None:
-        self.fastembed = SimpleNamespace(dense_model="stub-model")
+        self.fastembed = SimpleNamespace(dense_model="stub-model", sparse_model=None)
+        self.embedding = SimpleNamespace(
+            dense_model="stub-model",
+            sparse_model=None,
+            retrieval_mode=SearchStrategy.DENSE,
+        )
         self.qdrant = SimpleNamespace(enable_grouping=True)
         self.query_processing = SimpleNamespace(
             enable_score_normalization=False,
             score_normalization_strategy="min_max",
             score_normalization_epsilon=1e-6,
         )
-
-
-class _EmbeddingStub:
-    """Embedding provider stand-in that satisfies the service contract."""
-
-    embedding_dimension = 3
 
 
 @pytest.fixture()
@@ -36,7 +36,6 @@ def vector_service() -> VectorStoreService:
     return VectorStoreService(
         config=_ConfigStub(),
         async_qdrant_client=AsyncMock(),
-        embeddings_provider=_EmbeddingStub(),
     )
 
 

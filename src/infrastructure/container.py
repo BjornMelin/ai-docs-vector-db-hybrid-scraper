@@ -1,5 +1,7 @@
 """Dependency injection container wiring for the AI Docs services."""
 
+# pylint: disable=c-extension-no-member
+
 import asyncio
 import importlib
 import logging
@@ -12,13 +14,9 @@ import aiohttp
 import redis.asyncio as redis
 from dependency_injector import containers, providers
 from dependency_injector.wiring import Provide
-from firecrawl import AsyncFirecrawlApp  # pyright: ignore[reportMissingTypeStubs]
-from langchain_mcp_adapters.client import (  # pyright: ignore[reportMissingTypeStubs]
-    MultiServerMCPClient,
-)
-from langchain_mcp_adapters.sessions import (  # pyright: ignore[reportMissingTypeStubs]
-    Connection,
-)
+from firecrawl import AsyncFirecrawlApp  # type: ignore
+from langchain_mcp_adapters.client import MultiServerMCPClient  # type: ignore
+from langchain_mcp_adapters.sessions import Connection  # type: ignore
 from qdrant_client import AsyncQdrantClient
 
 from src.config.models import CacheType, MCPClientConfig, MCPServerConfig, MCPTransport
