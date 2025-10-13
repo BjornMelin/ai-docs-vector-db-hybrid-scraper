@@ -5,6 +5,7 @@ utilities used across all models in the application.
 """
 
 import re
+from typing import Any
 
 from pydantic import Field
 
@@ -121,7 +122,7 @@ def validate_percentage(value: float, field_name: str = "value") -> float:
 
 
 def validate_rate_limit_config(
-    value: dict[str, dict[str, int]],
+    value: dict[str, Any],
 ) -> dict[str, dict[str, int]]:
     """Validate rate limit configuration structure.
 
