@@ -3,12 +3,19 @@
 from __future__ import annotations
 
 import inspect
+import sys
 from collections.abc import Iterable
+from pathlib import Path
 
 import pytest
 
 
+_STUBS_PATH = Path(__file__).resolve().parent / "stubs"
+if str(_STUBS_PATH) not in sys.path:
+    sys.path.insert(0, str(_STUBS_PATH))
+
 pytest_plugins = [
+    "pytest_asyncio",
     "tests.fixtures.async_fixtures",
     "tests.fixtures.async_isolation",
     "tests.fixtures.configuration",

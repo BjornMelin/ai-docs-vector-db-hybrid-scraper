@@ -19,17 +19,16 @@ class StubVectorStore:
 
     def __init__(self, *, collection_name: str, **_: object) -> None:  # noqa: D401
         self.collection_name = collection_name
-        self.add_calls: list[tuple[list[str], list[dict[str, object]], list[str]]] = []
+        self.add_calls: list[tuple[list[Document], list[str]]] = []
         self.search_return: list[tuple[Document, float]] = []
 
-    def add_texts(
+    def add_documents(
         self,
-        *,
-        texts: list[str],
-        metadatas: list[dict[str, object]],
-        ids: list[str],
+        documents: list[Document],
+        ids: list[str] | None = None,
+        **_: object,
     ) -> None:
-        self.add_calls.append((texts, metadatas, ids))
+        self.add_calls.append((documents, list(ids or [])))
 
     def similarity_search_with_score_by_vector(
         self,
@@ -123,11 +122,14 @@ async def test_upsert_documents_invokes_vector_store(
     await initialized_service.upsert_documents("documents", docs)
 
     assert len(store.add_calls) == 1
-    texts, metadatas, ids = store.add_calls[0]
-    assert texts == ["alpha", "beta"]
-    assert ids[0] != ids[1]
-    assert metadatas[0]["tenant"] == "acme"
-    assert "created_at" in metadatas[0]
+    documents, ids = store.add_calls[0]
+    assert [doc.page_content for doc in documents] == ["alpha", "beta"]
+    assert len(ids) == 2 and ids[0] != ids[1]
+    first_metadata = documents[0].metadata or {}
+    second_metadata = documents[1].metadata or {}
+    assert first_metadata["tenant"] == "acme"
+    assert "created_at" in first_metadata
+    assert second_metadata["tenant"] == "default"
 
 
 @pytest.mark.asyncio
