@@ -8,7 +8,6 @@ from typing import Any, cast
 import playwright_stealth  # type: ignore[import]  # pyright: ignore[reportMissingTypeStubs]
 from playwright.async_api import (
     Browser,
-    BrowserContext,
     Error as PlaywrightError,
     Page,
     Playwright,
@@ -19,7 +18,7 @@ from playwright.async_api import (
 from src.config.browser import CaptchaProvider, PlaywrightSettings, StealthMode
 from src.services.browser.errors import BrowserProviderError
 from src.services.browser.models import BrowserResult, ProviderKind, ScrapeRequest
-from src.services.browser.runtime import measure
+from src.services.browser.runtime import execute_with_retry
 
 from .base import BrowserProvider, ProviderContext
 
@@ -96,12 +95,11 @@ class PlaywrightProvider(BrowserProvider):
         if self._browser is None:  # pragma: no cover - lifecycle guard
             raise RuntimeError("Provider not initialized")
 
-        context: BrowserContext | None = None
-        page: Page | None = None
         timeout = request.timeout_ms or self._settings.timeout_ms
-        try:
-            async with measure(provider=self.kind, operation="session"):
-                context = await self._browser.new_context()
+
+        async def _run_session() -> BrowserResult:
+            assert self._browser is not None
+            async with self._browser.new_context() as context:
                 page = await context.new_page()
                 if self._settings.stealth is StealthMode.PLAYWRIGHT_STEALTH:
                     await APPLY_STEALTH(page)  # pylint: disable=not-callable
@@ -131,7 +129,7 @@ class PlaywrightProvider(BrowserProvider):
                     )
 
                 return BrowserResult(
-                    success=not challenge_detected,
+                    success=True,
                     url=page.url,
                     title=await page.title(),
                     content=text_content,
@@ -142,14 +140,10 @@ class PlaywrightProvider(BrowserProvider):
                     assets=None,
                     elapsed_ms=None,
                 )
-        except PlaywrightTimeoutError as exc:
-            return BrowserResult.failure(
-                url=request.url,
-                provider=self.kind,
-                error=str(exc),
-            )
-        finally:
-            if page:
-                await page.close()
-            if context:
-                await context.close()
+
+        return await execute_with_retry(
+            provider=self.kind,
+            operation="session",
+            func=_run_session,
+            retry_on=(PlaywrightTimeoutError, TimeoutError),
+        )
