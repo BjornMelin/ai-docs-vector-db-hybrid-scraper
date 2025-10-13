@@ -179,13 +179,9 @@ def run_cpu_validation() -> ValidationReport:
         scipy_check, scipy_version = _scipy_checks()
         checks.append(scipy_check)
     except ImportError as exc:  # pragma: no cover - exercised in tests
-        checks.append(
-            CheckResult("scipy-linalg", "failed", f"ImportError: {exc}")
-        )
+        checks.append(CheckResult("scipy-linalg", "failed", f"ImportError: {exc}"))
     except ValueError as exc:  # pragma: no cover - exercised in tests
-        checks.append(
-            CheckResult("scipy-linalg", "failed", f"ValueError: {exc}")
-        )
+        checks.append(CheckResult("scipy-linalg", "failed", f"ValueError: {exc}"))
     except Exception as exc:  # pragma: no cover - exercised in tests
         _append_linalg_failure("scipy-linalg", exc)
 
@@ -193,13 +189,9 @@ def run_cpu_validation() -> ValidationReport:
         sklearn_checks, sklearn_version = _sklearn_checks()
         checks.extend(sklearn_checks)
     except ImportError as exc:  # pragma: no cover - exercised in tests
-        checks.append(
-            CheckResult("sklearn-suite", "failed", f"ImportError: {exc}")
-        )
+        checks.append(CheckResult("sklearn-suite", "failed", f"ImportError: {exc}"))
     except ValueError as exc:  # pragma: no cover - exercised in tests
-        checks.append(
-            CheckResult("sklearn-suite", "failed", f"ValueError: {exc}")
-        )
+        checks.append(CheckResult("sklearn-suite", "failed", f"ValueError: {exc}"))
     except Exception as exc:  # pragma: no cover - exercised in tests
         checks.append(CheckResult("sklearn-suite", "failed", str(exc)))
 
