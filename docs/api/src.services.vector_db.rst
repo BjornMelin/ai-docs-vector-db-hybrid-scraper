@@ -28,6 +28,14 @@ src.services.vector\_db.collections module
    :show-inheritance:
    :undoc-members:
 
+src.services.vector\_db.document_builder module
+----------------------------------------------
+
+.. automodule:: src.services.vector_db.document_builder
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 src.services.vector\_db.documents module
 ----------------------------------------
 
