@@ -11,7 +11,7 @@ from src.services.circuit_breaker.decorators import circuit_breaker
 
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
-    from langchain_mcp_adapters.client import MultiServerMCPClient
+    from langchain_mcp_adapters.client import MultiServerMCPClient  # type: ignore
 
     from src.services.cache.manager import CacheManager
     from src.services.embeddings.manager import EmbeddingManager
