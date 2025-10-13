@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Callable, Generator
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from types import SimpleNamespace
 from typing import Any, cast
@@ -12,6 +12,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src import unified_mcp_server
+from src.services import dependencies as service_dependencies
 
 
 def _lifespan_context() -> AbstractAsyncContextManager[None]:
@@ -209,3 +210,14 @@ async def test_lifespan_enables_monitoring_when_configured(
     assert created_tasks, "Expected a monitoring task to be scheduled."
     for task in created_tasks:
         assert task.cancelled()
+
+
+@pytest.fixture(autouse=True)
+def reset_cache_singleton() -> Generator[None, None, None]:
+    """Ensure global cache manager state is clean for each test."""
+
+    service_dependencies.clear_cache_manager_singleton()
+    service_dependencies.clear_embedding_manager_singleton()
+    yield
+    service_dependencies.clear_cache_manager_singleton()
+    service_dependencies.clear_embedding_manager_singleton()

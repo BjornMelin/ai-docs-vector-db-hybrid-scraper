@@ -63,6 +63,7 @@ WS3 (Validation Harnesses) ─────────────────�
   [browser-use 0.8.0 release](https://github.com/browser-use/browser-use/releases/tag/v0.8.0), [NumPy 2.2.2 release](https://numpy.org/doc/stable/release/2.2.2-notes.html), [crawl4ai 0.7.4 PyPI](https://pypi.org/project/crawl4ai/0.7.4/), [vLLM 0.11.0 notes](https://github.com/vllm-project/vllm/releases/tag/v0.11.0).
 - Regenerate `uv.lock`, run `uv sync --all-extras`, and execute the quality gates listed below.
 - Rewrite documentation (developer guide, operator runbooks, plan) to describe only the new workflows, validation harness usage, and dependency baselines. Include compatibility notes (glibc ≥2.28 for NumPy/lxml wheels, CUDA/ROCm requirements for GPU stack).
+- Document singleton helpers (`register_cache_manager`, `clear_cache_manager_singleton`, `register_embedding_manager`, `clear_embedding_manager_singleton`) and FastAPI override utilities (`install_cache_manager_override`, `remove_cache_manager_override`) for tests and alternate runtimes.
 - Acceptance: all tooling commands succeed, documentation merged, and CHANGELOG entry summarises the aggressive rewrite.
 
 ## Quality Gates (Blocking)

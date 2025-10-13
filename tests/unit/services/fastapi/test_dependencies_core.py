@@ -6,10 +6,11 @@ from typing import Any, cast
 from unittest.mock import MagicMock
 
 import pytest
-from fastapi import HTTPException
+from fastapi import FastAPI, HTTPException
 
 from src.services import dependencies as service_dependencies
 from src.services.dependencies import (
+    CacheManager,
     EmbeddingManagerDep,
     EmbeddingRequest,
     EmbeddingServiceError,
@@ -185,3 +186,31 @@ async def test_get_health_checker_handles_client_errors(monkeypatch: Any) -> Non
     result = await fastapi_dependencies.get_health_checker()
 
     assert result is manager
+
+
+@pytest.fixture(autouse=True)
+def reset_cache_singleton() -> None:
+    """Ensure cache manager singletons do not leak between tests."""
+
+    service_dependencies.clear_cache_manager_singleton()
+    service_dependencies.clear_embedding_manager_singleton()
+    yield
+    service_dependencies.clear_cache_manager_singleton()
+    service_dependencies.clear_embedding_manager_singleton()
+
+
+@pytest.mark.asyncio()
+async def test_install_cache_manager_override() -> None:
+    """install_cache_manager_override should expose the provided factory."""
+
+    app = FastAPI()
+    manager = MagicMock(spec=CacheManager)
+
+    service_dependencies.install_cache_manager_override(app, lambda: manager)
+
+    override = app.dependency_overrides[service_dependencies.get_cache_manager]
+    resolved = await override()
+    assert resolved is manager
+
+    service_dependencies.remove_cache_manager_override(app)
+    assert service_dependencies.get_cache_manager not in app.dependency_overrides

@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from time import perf_counter
 from typing import Annotated, Any, cast
 
-from fastapi import Depends  # type: ignore[attr-defined]
+from fastapi import Depends, FastAPI  # type: ignore[attr-defined]
 from langchain_mcp_adapters.client import (  # pyright: ignore[reportMissingTypeStubs]
     MultiServerMCPClient,
 )
@@ -56,6 +56,12 @@ from src.services.vector_db.service import VectorStoreService
 
 
 logger = logging.getLogger(__name__)
+
+
+_CACHE_MANAGER_SINGLETON: CacheManager | None = None
+_CACHE_MANAGER_LOCK = asyncio.Lock()
+_EMBEDDING_MANAGER_SINGLETON: EmbeddingManager | None = None
+_EMBEDDING_MANAGER_LOCK = asyncio.Lock()
 
 
 #### HELPER FUNCTIONS & DECORATORS ####
@@ -236,24 +242,31 @@ class EmbeddingResponse(BaseModel):
     sparse_embeddings: list[dict[str, Any]] | None = None
 
 
+async def _resolve_embedding_manager() -> EmbeddingManager:
+    resolved = await _resolve_service(
+        name="embedding_manager",
+        supplier=lambda container: container.embedding_manager(),
+    )
+    return await _ensure_initialized(resolved, name="embedding_manager")
+
+
 @circuit_breaker(
     service_name="embedding_manager",
     failure_threshold=3,
     recovery_timeout=30.0,
 )
-async def get_embedding_manager(
-    embedding_manager: EmbeddingManager | None = None,
-) -> EmbeddingManager:
-    """Get initialized EmbeddingManager service."""
+async def get_embedding_manager() -> EmbeddingManager:
+    """Return a shared EmbeddingManager instance."""
 
-    if embedding_manager is not None:
-        return await _ensure_initialized(embedding_manager, name="embedding_manager")
+    global _EMBEDDING_MANAGER_SINGLETON
+    if _EMBEDDING_MANAGER_SINGLETON is not None:
+        return _EMBEDDING_MANAGER_SINGLETON
 
-    resolved = await _resolve_service(
-        name="embedding_manager",
-        supplier=lambda container: container.embedding_manager(),
-    )
-    return resolved
+    async with _EMBEDDING_MANAGER_LOCK:
+        if _EMBEDDING_MANAGER_SINGLETON is None:
+            manager = await _resolve_embedding_manager()
+            _EMBEDDING_MANAGER_SINGLETON = manager
+    return _EMBEDDING_MANAGER_SINGLETON  # type: ignore[return-value]
 
 
 EmbeddingManagerDep = Annotated[EmbeddingManager, Depends(get_embedding_manager)]
@@ -316,19 +329,7 @@ class CacheRequest(BaseModel):
     ttl: int | None = None
 
 
-@circuit_breaker(
-    service_name="cache_manager",
-    failure_threshold=2,
-    recovery_timeout=10.0,
-)
-async def get_cache_manager(
-    cache_manager: CacheManager | None = None,
-) -> CacheManager:
-    """Get initialized CacheManager service."""
-
-    if cache_manager is not None:
-        return await _ensure_initialized(cache_manager, name="cache_manager")
-
+async def _resolve_cache_manager() -> CacheManager:
     resolved = await _resolve_service(
         name="cache_manager",
         supplier=lambda container: container.cache_manager(),
@@ -336,19 +337,86 @@ async def get_cache_manager(
     )
     if resolved is None:
         raise RuntimeError("CacheManager provider not configured")
-    return resolved
+    return await _ensure_initialized(resolved, name="cache_manager")
+
+
+def _set_cache_manager_singleton(instance: CacheManager | None) -> None:
+    global _CACHE_MANAGER_SINGLETON  # pylint: disable=global-statement
+    _CACHE_MANAGER_SINGLETON = instance
+
+
+@circuit_breaker(
+    service_name="cache_manager",
+    failure_threshold=2,
+    recovery_timeout=10.0,
+)
+async def get_cache_manager() -> CacheManager:
+    """Return a process-wide CacheManager instance."""
+
+    if _CACHE_MANAGER_SINGLETON is not None:
+        return _CACHE_MANAGER_SINGLETON
+
+    async with _CACHE_MANAGER_LOCK:
+        if _CACHE_MANAGER_SINGLETON is None:
+            manager = await _resolve_cache_manager()
+            _set_cache_manager_singleton(manager)
+    return _CACHE_MANAGER_SINGLETON  # type: ignore[return-value]
 
 
 CacheManagerDep = Annotated[CacheManager, Depends(get_cache_manager)]
 
 
-async def cache_get(
-    key: str,
-    cache_type: str = "crawl",
-    cache_manager: CacheManager | None = None,
-) -> Any:
+def clear_cache_manager_singleton() -> None:
+    """Reset the cached CacheManager instance (primarily for tests)."""
+
+    _set_cache_manager_singleton(None)
+
+
+async def register_cache_manager(manager: CacheManager) -> CacheManager:
+    """Register a pre-built CacheManager for global reuse."""
+
+    initialized = await _ensure_initialized(manager, name="cache_manager")
+    _set_cache_manager_singleton(initialized)
+    return initialized
+
+
+def install_cache_manager_override(
+    app: FastAPI, factory: Callable[[], CacheManager]
+) -> None:
+    """Install a FastAPI dependency override for the cache manager."""
+
+    async def _override() -> CacheManager:
+        instance = factory()
+        return await _ensure_initialized(instance, name="cache_manager")
+
+    app.dependency_overrides[get_cache_manager] = _override
+
+
+def remove_cache_manager_override(app: FastAPI) -> None:
+    """Remove any cache manager dependency override from the given app."""
+
+    app.dependency_overrides.pop(get_cache_manager, None)
+
+
+def clear_embedding_manager_singleton() -> None:
+    """Reset the cached EmbeddingManager instance."""
+
+    global _EMBEDDING_MANAGER_SINGLETON
+    _EMBEDDING_MANAGER_SINGLETON = None
+
+
+async def register_embedding_manager(manager: EmbeddingManager) -> EmbeddingManager:
+    """Register a pre-built EmbeddingManager for reuse."""
+
+    initialized = await _ensure_initialized(manager, name="embedding_manager")
+    global _EMBEDDING_MANAGER_SINGLETON
+    _EMBEDDING_MANAGER_SINGLETON = initialized
+    return initialized
+
+
+async def cache_get(key: str, cache_type: str = "crawl") -> Any:
     """Get value from cache."""
-    manager = cache_manager or await get_cache_manager()
+    manager = await get_cache_manager()
     try:
         return await manager.get(key, CacheType(cache_type))
     except (
@@ -367,10 +435,9 @@ async def cache_set(
     value: Any,
     cache_type: str = "crawl",
     ttl: int | None = None,
-    cache_manager: CacheManager | None = None,
 ) -> bool:
     """Set value in cache."""
-    manager = cache_manager or await get_cache_manager()
+    manager = await get_cache_manager()
     try:
         return await manager.set(key, value, CacheType(cache_type), ttl)
     except (
@@ -384,13 +451,9 @@ async def cache_set(
         return False
 
 
-async def cache_delete(
-    key: str,
-    cache_type: str = "crawl",
-    cache_manager: CacheManager | None = None,
-) -> bool:
+async def cache_delete(key: str, cache_type: str = "crawl") -> bool:
     """Delete value from cache."""
-    manager = cache_manager or await get_cache_manager()
+    manager = await get_cache_manager()
     try:
         return await manager.delete(key, CacheType(cache_type))
     except (
