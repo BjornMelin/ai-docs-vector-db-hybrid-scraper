@@ -39,6 +39,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **[Browser]:** Unified runtime logic for all browser providers, centralizing retry,
   timeout, and error handling in `src/services/browser/runtime.py`.
+- **[Analytics]:** Removed the custom `SearchAnalyticsDashboard` and
+  `VectorVisualizationEngine` services, consolidating all monitoring and
+  analytics responsibilities into the standard OpenTelemetry-based
+  observability stack.
 - Updated core embeddings and browser providers to use absolute imports, enforced OpenAI client cleanup semantics, and banned legacy SDK surfaces via new Ruff tidy-import rules.
 - Realigned pinned dependencies (OpenAI, NumPy, SciPy, lxml, aiohttp, xformers) to the maximum versions compatible with browser-use, crawl4ai, and vLLM, regenerating `uv.lock` under the new matrix.
 - **[MCP]:** Enforced explicit dependency injection for MCP tools and services,
