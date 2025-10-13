@@ -1,6 +1,6 @@
 """Tests for DocumentService dependency injection."""
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -21,64 +21,52 @@ def dependency_set() -> dict[str, MagicMock]:
 
 
 def test_document_service_registers_tools(
-    monkeypatch: pytest.MonkeyPatch,
     dependency_set: dict[str, MagicMock],
 ) -> None:
     """Verify that tool modules are called with the injected dependencies."""
 
     dependencies = dependency_set
-    mock_documents = MagicMock()
-    mock_collections = MagicMock()
-    mock_projects = MagicMock()
-    mock_crawling = MagicMock()
-    mock_content = MagicMock()
+    with (
+        patch("src.mcp_tools.tools.documents.register_tools") as documents_register,
+        patch(
+            "src.mcp_tools.tools.collection_management.register_tools"
+        ) as collections_register,
+        patch("src.mcp_tools.tools.projects.register_tools") as projects_register,
+        patch("src.mcp_tools.tools.crawling.register_tools") as crawling_register,
+        patch(
+            "src.mcp_tools.tools.content_intelligence.register_tools"
+        ) as content_register,
+    ):
+        service = DocumentService(
+            vector_service=dependencies["vector_service"],
+            cache_manager=dependencies["cache_manager"],
+            crawl_manager=dependencies["crawl_manager"],
+            content_intelligence_service=dependencies["content_service"],
+            project_storage=dependencies["project_storage"],
+        )
 
-    monkeypatch.setattr(
-        "src.mcp_tools.tools.documents", "register_tools", mock_documents
-    )
-    monkeypatch.setattr(
-        "src.mcp_tools.tools.collection_management",
-        "register_tools",
-        mock_collections,
-    )
-    monkeypatch.setattr("src.mcp_tools.tools.projects", "register_tools", mock_projects)
-    monkeypatch.setattr("src.mcp_tools.tools.crawling", "register_tools", mock_crawling)
-    monkeypatch.setattr(
-        "src.mcp_tools.tools.content_intelligence",
-        "register_tools",
-        mock_content,
-    )
-
-    service = DocumentService(
-        vector_service=dependencies["vector_service"],
-        cache_manager=dependencies["cache_manager"],
-        crawl_manager=dependencies["crawl_manager"],
-        content_intelligence_service=dependencies["content_service"],
-        project_storage=dependencies["project_storage"],
-    )
-
-    mock_documents.assert_called_once_with(
+    documents_register.assert_called_once_with(
         service.mcp,
         vector_service=dependencies["vector_service"],
         cache_manager=dependencies["cache_manager"],
         crawl_manager=dependencies["crawl_manager"],
         content_intelligence_service=dependencies["content_service"],
     )
-    mock_collections.assert_called_once_with(
+    collections_register.assert_called_once_with(
         service.mcp,
         vector_service=dependencies["vector_service"],
         cache_manager=dependencies["cache_manager"],
     )
-    mock_projects.assert_called_once_with(
+    projects_register.assert_called_once_with(
         service.mcp,
         vector_service=dependencies["vector_service"],
         project_storage=dependencies["project_storage"],
     )
-    mock_crawling.assert_called_once_with(
+    crawling_register.assert_called_once_with(
         service.mcp,
         crawl_manager=dependencies["crawl_manager"],
     )
-    mock_content.assert_called_once_with(
+    content_register.assert_called_once_with(
         service.mcp,
         content_service=dependencies["content_service"],
     )
