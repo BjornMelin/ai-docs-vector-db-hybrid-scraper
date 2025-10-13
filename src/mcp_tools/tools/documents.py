@@ -1,9 +1,9 @@
 """Document management tools for MCP server."""
 
 import asyncio
+import json
 import logging
 from collections.abc import Mapping
-from datetime import UTC, datetime
 from typing import Any, cast
 from uuid import uuid4
 
@@ -15,7 +15,15 @@ from src.mcp_tools.models.requests import BatchRequest, DocumentRequest
 from src.mcp_tools.models.responses import AddDocumentResponse, DocumentBatchResponse
 from src.security.ml_security import MLSecurityValidator
 from src.services.cache.manager import CacheManager
+from src.services.crawling.normalization import (
+    normalize_crawler_output,
+    resolve_chunk_inputs,
+)
 from src.services.document_chunking import chunk_to_documents, infer_document_kind
+from src.services.vector_db.document_builder import (
+    build_params_from_crawl,
+    build_text_documents,
+)
 from src.services.vector_db.service import VectorStoreService
 from src.services.vector_db.types import CollectionSchema, TextDocument
 
@@ -28,6 +36,12 @@ def _coerce_add_document_response(value: Any) -> AddDocumentResponse | None:
 
     if isinstance(value, AddDocumentResponse):
         return value
+
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except json.JSONDecodeError:
+            return None
 
     if isinstance(value, Mapping) and all(isinstance(key, str) for key in value):
         return AddDocumentResponse(**cast(Mapping[str, Any], value))
@@ -107,28 +121,20 @@ async def _scrape_document(
     resolved_crawl_manager = cast(Any, crawl_manager)
 
     await ctx.debug(f"Scraping URL for document {doc_id} via UnifiedBrowserManager")
-    crawl_result = await resolved_crawl_manager.scrape_url(request.url)
+    raw_result = await resolved_crawl_manager.scrape_url(request.url)
+    crawl_result = normalize_crawler_output(raw_result, fallback_url=request.url)
+
     has_chunkable_content = False
+    content_block = crawl_result.get("content")
+    if isinstance(content_block, Mapping):
+        has_chunkable_content = any(
+            isinstance(content_block.get(key), str) and content_block[key].strip()
+            for key in ("markdown", "html", "text")
+        )
+    elif isinstance(content_block, str):
+        has_chunkable_content = bool(content_block.strip())
 
-    def _mark_if_chunkable(candidate: Any) -> None:
-        nonlocal has_chunkable_content
-        if has_chunkable_content or not isinstance(candidate, str):
-            return
-        if candidate.strip():
-            has_chunkable_content = True
-
-    content_field = None
-    if crawl_result:
-        content_field = crawl_result.get("content")
-        _mark_if_chunkable(crawl_result.get("raw_html"))
-        if isinstance(content_field, Mapping):
-            _mark_if_chunkable(content_field.get("html"))
-            _mark_if_chunkable(content_field.get("markdown"))
-            _mark_if_chunkable(content_field.get("text"))
-        else:
-            _mark_if_chunkable(content_field)
-
-    if not crawl_result or not crawl_result.get("success") or not has_chunkable_content:
+    if not crawl_result.get("success") or not has_chunkable_content:
         await ctx.error(f"Failed to scrape {request.url}")
         _raise_scrape_error(request.url)
 
@@ -175,47 +181,18 @@ async def _chunk_document(
                 f"Upgraded chunking strategy to ENHANCED for {content_type} content"
             )
 
-    raw_content: str | None = None
-    inferred_kind: str | None = None
+    raw_content, metadata_payload, kind_hint = resolve_chunk_inputs(
+        crawl_result,
+        fallback_url=request.url,
+    )
 
-    def _select(value: Any, kind_hint: str | None = None) -> None:
-        nonlocal raw_content, inferred_kind
-        if raw_content or not isinstance(value, str):
-            return
-        stripped = value.strip()
-        if not stripped:
-            return
-        raw_content = value
-        inferred_kind = kind_hint
-
-    _select(crawl_result.get("raw_html"), "html")
-    content_field = crawl_result.get("content")
-    if isinstance(content_field, Mapping):
-        _select(content_field.get("html"), "html")
-        _select(content_field.get("markdown"), "markdown")
-        _select(content_field.get("text"), "text")
-    else:
-        _select(content_field)
-
-    if raw_content is None:
-        msg = "No chunkable content returned by crawler"
-        raise ValueError(msg)
-
-    metadata_payload: dict[str, Any] = {
-        "source": crawl_result.get("url", request.url),
-        "uri_or_path": crawl_result.get("url", request.url),
-        "title": crawl_result.get("title")
-        or crawl_result.get("metadata", {}).get("title", ""),
-        "mime_type": crawl_result.get("content_type")
-        or crawl_result.get("metadata", {}).get("content_type"),
-        "metadata": crawl_result.get("metadata", {}),
-    }
-
-    kind = inferred_kind or infer_document_kind(metadata_payload)
     documents = chunk_to_documents(
         raw_content,
         metadata_payload,
-        kind,
+        infer_document_kind(
+            metadata_payload,
+            default=kind_hint or "text",
+        ),
         chunk_config,
     )
     await ctx.debug(f"Created {len(documents)} chunks for document {doc_id}")
@@ -235,74 +212,14 @@ def _build_text_documents(
         msg = f"No chunks generated for {request.url}"
         raise ValueError(msg)
 
-    documents: list[TextDocument] = []
-    total_chunks = len(chunks)
-    base_title = crawl_result.get("title") or crawl_result["metadata"].get("title", "")
-
-    current_time = datetime.now(UTC).isoformat()
-    for index, chunk in enumerate(chunks):
-        payload: dict[str, Any] = {
-            "content": chunk.page_content,
-            "url": request.url,
-            "title": base_title,
-            "chunk_index": index,
-            "total_chunks": total_chunks,
-            "provider": crawl_result.get("provider", "unknown"),
-            "quality_score": crawl_result.get("quality_score", 0.0),
-        }
-
-        payload.update(chunk.metadata)
-
-        payload.setdefault("doc_id", doc_id)
-        payload["chunk_id"] = payload.get("chunk_id", index)
-        payload.setdefault("tenant", request.collection or "default")
-        payload.setdefault("source", payload.get("source") or request.url)
-        payload.setdefault("created_at", current_time)
-
-        start_index = payload.get("start_index")
-        if isinstance(start_index, int):
-            payload.setdefault("start_char", start_index)
-            payload.setdefault("end_char", start_index + len(chunk.page_content))
-
-        if enriched_content:
-            payload.update(
-                {
-                    "content_type": (
-                        enriched_content.classification.primary_type.value
-                    ),
-                    "content_confidence": (
-                        enriched_content.classification.confidence_scores.get(
-                            enriched_content.classification.primary_type, 0.0
-                        )
-                    ),
-                    "quality_overall": enriched_content.quality_score.overall_score,
-                    "quality_completeness": enriched_content.quality_score.completeness,
-                    "quality_relevance": enriched_content.quality_score.relevance,
-                    "quality_confidence": enriched_content.quality_score.confidence,
-                    "ci_word_count": enriched_content.metadata.word_count,
-                    "ci_char_count": enriched_content.metadata.char_count,
-                    "ci_language": enriched_content.metadata.language,
-                    "ci_semantic_tags": enriched_content.metadata.semantic_tags,
-                    "content_intelligence_analyzed": True,
-                }
-            )
-            if enriched_content.classification.secondary_types:
-                payload["secondary_content_types"] = [
-                    content_type.value
-                    for content_type in enriched_content.classification.secondary_types
-                ]
-        else:
-            payload["content_intelligence_analyzed"] = False
-
-        documents.append(
-            TextDocument(
-                id=str(uuid4()),
-                content=chunk.page_content,
-                metadata=payload,
-            )
-        )
-
-    return documents
+    params = build_params_from_crawl(
+        crawl_result,
+        fallback_url=request.url,
+        tenant=request.collection or "default",
+        doc_id=doc_id,
+        enriched_content=enriched_content,
+    )
+    return build_text_documents(chunks, params)
 
 
 async def _persist_documents(
@@ -426,7 +343,9 @@ def register_tools(
                 enriched_content,
             )
 
-            await resolved_cache.set(cache_key, result.model_dump(), ttl=86400)
+            await resolved_cache.set(
+                cache_key, result.model_dump(mode="json"), ttl=86400
+            )
 
             message = (
                 f"Document {doc_id} processed successfully: "

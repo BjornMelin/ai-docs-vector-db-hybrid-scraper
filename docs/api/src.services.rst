@@ -12,6 +12,7 @@ Subpackages
    src.services.browser
    src.services.cache
    src.services.circuit_breaker
+   src.services.crawling
    src.services.content_intelligence
    src.services.core
    src.services.deployment
