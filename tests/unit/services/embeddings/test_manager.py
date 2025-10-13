@@ -46,15 +46,9 @@ def mock_config():
 
 
 @pytest.fixture
-def mock_openai_client():
-    """Create mock OpenAI client."""
-    return AsyncMock()
-
-
-@pytest.fixture
-async def embedding_manager(mock_config, mock_openai_client):
+async def embedding_manager(mock_config):
     """Create EmbeddingManager instance."""
-    return EmbeddingManager(config=mock_config, openai_client=mock_openai_client)
+    return EmbeddingManager(config=mock_config)
 
 
 @contextmanager
@@ -80,15 +74,10 @@ class TestEmbeddingManagerInitialization:
     """Test EmbeddingManager initialization."""
 
     @pytest.mark.asyncio
-    async def test_initialization_with_openai_client(
-        self, mock_config, mock_openai_client
-    ):
-        """Test manager initialization with provided OpenAI client."""
+    async def test_initialization_with_openai_provider(self, mock_config):
+        """Test manager initialization with OpenAI and FastEmbed providers."""
 
-        manager = EmbeddingManager(
-            config=mock_config,
-            openai_client=mock_openai_client,
-        )
+        manager = EmbeddingManager(config=mock_config)
 
         with (
             patch(
@@ -110,22 +99,14 @@ class TestEmbeddingManagerInitialization:
             assert "openai" in manager._provider_registry.providers
             assert "fastembed" in manager._provider_registry.providers
 
-            # Verify OpenAI client was passed to provider
             mock_openai_provider.assert_called_once()
-            call_kwargs = mock_openai_provider.call_args.kwargs
-            assert call_kwargs["client"] == mock_openai_client
 
     @pytest.mark.asyncio
-    async def test_initialization_without_openai_key(
-        self, mock_config, mock_openai_client
-    ):
+    async def test_initialization_without_openai_key(self, mock_config):
         """Test initialization without OpenAI API key."""
         mock_config.openai.api_key = None
 
-        manager = EmbeddingManager(
-            config=mock_config,
-            openai_client=mock_openai_client,
-        )
+        manager = EmbeddingManager(config=mock_config)
 
         with patch(
             "src.services.embeddings.manager.FastEmbedProvider"
@@ -140,16 +121,11 @@ class TestEmbeddingManagerInitialization:
             assert "fastembed" in manager._provider_registry.providers
 
     @pytest.mark.asyncio
-    async def test_initialization_no_providers_available(
-        self, mock_config, mock_openai_client
-    ):
+    async def test_initialization_no_providers_available(self, mock_config):
         """Test initialization when no providers are available."""
         mock_config.openai.api_key = None
 
-        manager = EmbeddingManager(
-            config=mock_config,
-            openai_client=mock_openai_client,
-        )
+        manager = EmbeddingManager(config=mock_config)
 
         class FailingFastEmbed:
             def __init__(self, *_args, **_kwargs):

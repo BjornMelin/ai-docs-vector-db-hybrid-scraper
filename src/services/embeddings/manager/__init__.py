@@ -29,8 +29,6 @@ from .usage import UsageRecord, UsageStats, UsageTracker
 
 
 if TYPE_CHECKING:
-    from openai import AsyncOpenAI
-
     from src.services.cache import CacheManager as CacheManagerType
     from src.services.cache.embedding_cache import EmbeddingCache
 else:  # pragma: no cover - runtime fallback for optional cache dependency
@@ -53,7 +51,6 @@ class EmbeddingManager:
         self,
         config: Settings,
         *,
-        openai_client: "AsyncOpenAI | None" = None,
         cache_manager: "CacheManagerType | None" = None,
         budget_limit: float | None = None,
     ):
@@ -61,7 +58,6 @@ class EmbeddingManager:
 
         Args:
             config: Configuration object with provider settings and selection rules.
-            openai_client: Optional preconfigured OpenAI async client.
             cache_manager: Optional externally managed CacheManager instance.
             budget_limit: Daily budget limit in USD, if set.
         """
@@ -119,7 +115,6 @@ class EmbeddingManager:
         self._selection = SelectionEngine(self._smart_config, self._benchmarks)
         self._provider_registry = ProviderRegistry(
             config=config,
-            openai_client=openai_client,
             factories=None,
         )
         pipeline_context = PipelineContext(

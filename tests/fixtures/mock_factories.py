@@ -45,19 +45,16 @@ class ExternalServiceMockFactory:
             "x-ratelimit-reset-requests": "1s",
         }
 
-        # Chat completion for HyDE
-        chat_response = MagicMock()
-        chat_response.choices = [
-            MagicMock(
-                message=MagicMock(content="Generated hypothetical document"),
-                finish_reason="stop",
-            )
-        ]
-        chat_response.usage = MagicMock(
-            prompt_tokens=50, completion_tokens=20, total_tokens=70
+        # Responses API for HyDE
+        responses_payload = MagicMock()
+        responses_payload.output_text = "Generated hypothetical document"
+        responses_payload.usage = MagicMock(
+            input_tokens=50, output_tokens=20, total_tokens=70
         )
 
-        client.chat.completions.create = AsyncMock(return_value=chat_response)
+        responses_mock = MagicMock()
+        responses_mock.create = AsyncMock(return_value=responses_payload)
+        client.responses = responses_mock
 
         return client
 

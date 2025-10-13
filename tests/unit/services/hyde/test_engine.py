@@ -104,11 +104,6 @@ class TestHyDEQueryEngine:
         return manager
 
     @pytest.fixture
-    def mock_llm_client(self):
-        """Create mock LLM client."""
-        return MagicMock()
-
-    @pytest.fixture
     def engine(
         self,
         hyde_config,
@@ -117,7 +112,6 @@ class TestHyDEQueryEngine:
         mock_embedding_manager,
         mock_vector_store,
         mock_cache_manager,
-        mock_llm_client,
     ):
         """Create HyDEQueryEngine instance."""
         engine = HyDEQueryEngine(
@@ -127,7 +121,7 @@ class TestHyDEQueryEngine:
             embedding_manager=mock_embedding_manager,
             vector_store=mock_vector_store,
             cache_manager=mock_cache_manager,
-            llm_client=mock_llm_client,
+            openai_api_key="sk-test",
         )
         return engine
 
@@ -139,7 +133,6 @@ class TestHyDEQueryEngine:
         mock_embedding_manager,
         mock_vector_store,
         mock_cache_manager,
-        mock_llm_client,
     ):
         """Test engine initialization."""
         engine = HyDEQueryEngine(
@@ -149,7 +142,7 @@ class TestHyDEQueryEngine:
             embedding_manager=mock_embedding_manager,
             vector_store=mock_vector_store,
             cache_manager=mock_cache_manager,
-            llm_client=mock_llm_client,
+            openai_api_key="sk-test",
         )
 
         assert engine.config == hyde_config

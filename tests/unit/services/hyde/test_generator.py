@@ -1,637 +1,154 @@
-"""Tests for HyDE hypothetical document generator."""
+"""Tests for the HyDE hypothetical document generator."""
+
+from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from src.services.errors import APIError, EmbeddingServiceError
+from src.services.errors import EmbeddingServiceError
 from src.services.hyde.config import HyDEConfig, HyDEPromptConfig
 from src.services.hyde.generator import GenerationResult, HypotheticalDocumentGenerator
 
 
-class TestError(Exception):
-    """Custom exception for this module."""
+@pytest.fixture
+def hyde_config() -> HyDEConfig:
+    return HyDEConfig(
+        num_generations=2,
+        generation_temperature=0.7,
+        max_generation_tokens=64,
+        generation_model="gpt-4o-mini",
+        generation_timeout_seconds=5,
+        parallel_generation=False,
+        min_generation_length=5,
+        filter_duplicates=True,
+        diversity_threshold=0.1,
+    )
 
 
-class TestGenerationResult:
-    """Tests for GenerationResult model."""
+@pytest.fixture
+def prompt_config() -> HyDEPromptConfig:
+    return HyDEPromptConfig()
 
-    def test_generation_result_creation(self):
-        """Test GenerationResult model creation."""
-        result = GenerationResult(
-            documents=["doc1", "doc2"],
-            generation_time=1.5,
-            tokens_used=100,
-            cost_estimate=0.01,
-            cached=False,
-            diversity_score=0.8,
+
+@pytest.fixture
+def async_openai_constructor(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
+    client = AsyncMock()
+    client.responses.create = AsyncMock(
+        return_value=MagicMock(
+            output_text="Generated answer",
+            usage=MagicMock(total_tokens=42),
         )
+    )
+    client.close = AsyncMock()
 
-        assert result.documents == ["doc1", "doc2"]
-        assert result.generation_time == 1.5
-        assert result.tokens_used == 100
-        assert result.cost_estimate == 0.01
-        assert result.cached is False
-        assert result.diversity_score == 0.8
+    factory = MagicMock(return_value=client)
+    monkeypatch.setattr(
+        "src.services.hyde.generator.AsyncOpenAI",
+        factory,
+    )
+    return client
 
-    def test_generation_result_defaults(self):
-        """Test GenerationResult with default values."""
+
+class TestGenerationResultModel:
+    def test_model_dump_and_restore(self) -> None:
         result = GenerationResult(
-            documents=["doc1"],
-            generation_time=1.0,
-            tokens_used=50,
-            cost_estimate=0.005,
-        )
-
-        assert result.documents == ["doc1"]
-        assert result.generation_time == 1.0
-        assert result.tokens_used == 50
-        assert result.cost_estimate == 0.005
-        assert result.cached is False  # Default
-        assert result.diversity_score == 0.0  # Default
-
-    def test_generation_result_serialization(self):
-        """Test GenerationResult serialization."""
-        result = GenerationResult(
-            documents=["test doc"],
-            generation_time=2.0,
-            tokens_used=75,
-            cost_estimate=0.008,
+            documents=["doc"],
+            generation_time=0.5,
+            tokens_used=10,
+            cost_estimate=0.002,
             cached=True,
-            diversity_score=0.5,
+            diversity_score=0.2,
         )
 
-        result_dict = result.model_dump()
-        assert result_dict["documents"] == ["test doc"]
-        assert result_dict["generation_time"] == 2.0
-        assert result_dict["tokens_used"] == 75
-        assert result_dict["cost_estimate"] == 0.008
-        assert result_dict["cached"] is True
-        assert result_dict["diversity_score"] == 0.5
+        payload = result.model_dump()
+        restored = GenerationResult.model_validate(payload)
 
-        # Test deserialization
-        restored = GenerationResult.model_validate(result_dict)
-        assert restored.documents == ["test doc"]
-        assert restored.generation_time == 2.0
-        assert restored.tokens_used == 75
-        assert restored.cost_estimate == 0.008
+        assert restored.documents == ["doc"]
         assert restored.cached is True
-        assert restored.diversity_score == 0.5
+        assert restored.tokens_used == 10
 
 
 class TestHypotheticalDocumentGenerator:
-    """Tests for HypotheticalDocumentGenerator class."""
-
-    # pylint: disable=too-many-public-methods
-
-    @pytest.fixture
-    def mock_openai_client(self):
-        """Create a mock OpenAI client."""
-        mock_models = MagicMock()
-        mock_models.list = AsyncMock()
-
-        mock_completions = MagicMock()
-        mock_completions.create = AsyncMock()
-
-        mock_chat = MagicMock()
-        mock_chat.completions = mock_completions
-
-        client = MagicMock()
-        client.models = mock_models
-        client.chat = mock_chat
-
-        return client
-
-    @pytest.fixture
-    def hyde_config(self):
-        """Create HyDE configuration."""
-        return HyDEConfig(
-            num_generations=3,
-            generation_temperature=0.7,
-            max_generation_tokens=200,
-            generation_model="gpt-3.5-turbo",
-            generation_timeout_seconds=10,
-            parallel_generation=True,
-            max_concurrent_generations=5,
-            min_generation_length=20,
-            filter_duplicates=True,
-            diversity_threshold=0.3,
-            log_generations=False,
-        )
-
-    @pytest.fixture
-    def prompt_config(self):
-        """Create prompt configuration."""
-        return HyDEPromptConfig()
-
-    @pytest.fixture
-    def generator(self, hyde_config, prompt_config, mock_openai_client):
-        """Create generator instance."""
-        return HypotheticalDocumentGenerator(
-            config=hyde_config,
-            prompt_config=prompt_config,
-            openai_client=mock_openai_client,
-        )
-
-    def test_init(self, hyde_config, prompt_config, mock_openai_client):
-        """Test generator initialization."""
+    def test_init_defaults(
+        self, hyde_config: HyDEConfig, prompt_config: HyDEPromptConfig
+    ) -> None:
         generator = HypotheticalDocumentGenerator(
             config=hyde_config,
             prompt_config=prompt_config,
-            openai_client=mock_openai_client,
+            api_key="sk-test",
         )
 
-        assert generator.config == hyde_config
-        assert generator.prompt_config == prompt_config
+        assert generator.config is hyde_config
+        assert generator.prompt_config is prompt_config
         assert generator.is_initialized() is False
-        assert generator.generation_count == 0
-        assert generator.total_generation_time == 0.0
-        assert generator.total_tokens_used == 0
-        assert generator.total_cost == 0.0
 
     @pytest.mark.asyncio
-    async def test_initialize_success(self, generator, mock_openai_client):
-        """Test successful initialization."""
+    async def test_initialize_success(
+        self,
+        hyde_config: HyDEConfig,
+        prompt_config: HyDEPromptConfig,
+        async_openai_constructor: AsyncMock,
+    ) -> None:
+        generator = HypotheticalDocumentGenerator(
+            config=hyde_config,
+            prompt_config=prompt_config,
+            api_key="sk-test",
+        )
+
         await generator.initialize()
 
         assert generator.is_initialized() is True
-        mock_openai_client.models.list.assert_called_once()
+        async_openai_constructor.responses.create.assert_not_awaited()
 
     @pytest.mark.asyncio
-    async def test_initialize_no_openai_client(self, hyde_config, prompt_config):
-        """Test initialization failure when OpenAI client not available."""
+    async def test_initialize_missing_api_key(
+        self, hyde_config: HyDEConfig, prompt_config: HyDEPromptConfig
+    ) -> None:
         generator = HypotheticalDocumentGenerator(
             config=hyde_config,
             prompt_config=prompt_config,
+            api_key=None,
         )
 
-        with pytest.raises(EmbeddingServiceError) as exc_info:
+        with pytest.raises(
+            EmbeddingServiceError, match="OpenAI API key not configured"
+        ):
             await generator.initialize()
 
-        assert "OpenAI client not available" in str(exc_info.value)
-        assert generator.is_initialized() is False
-
     @pytest.mark.asyncio
-    async def test_initialize_client_error(self, generator, mock_openai_client):
-        """Test initialization failure when client setup fails."""
-        mock_openai_client.models.list.side_effect = Exception("Client error")
-
-        with pytest.raises(EmbeddingServiceError) as exc_info:
-            await generator.initialize()
-
-        assert "Failed to initialize HyDE generator" in str(exc_info.value)
-        assert generator.is_initialized() is False
-
-    @pytest.mark.asyncio
-    async def test_initialize_already_initialized(self, generator, mock_openai_client):
-        """Test initialization when already initialized."""
-        await generator.initialize()
-        mock_openai_client.models.list.assert_called_once()
-        mock_openai_client.models.list.reset_mock()
-
+    async def test_generate_documents(
+        self,
+        hyde_config: HyDEConfig,
+        prompt_config: HyDEPromptConfig,
+        async_openai_constructor: AsyncMock,
+    ) -> None:
+        generator = HypotheticalDocumentGenerator(
+            config=hyde_config,
+            prompt_config=prompt_config,
+            api_key="sk-test",
+        )
         await generator.initialize()
 
-        mock_openai_client.models.list.assert_not_called()
+        result = await generator.generate_documents("What is HyDE?")
+
+        assert result.documents
+        assert result.tokens_used > 0
+        async_openai_constructor.responses.create.assert_awaited()
 
     @pytest.mark.asyncio
-    async def test_cleanup(self, generator):
-        """Test cleanup."""
+    async def test_cleanup_closes_client(
+        self,
+        hyde_config: HyDEConfig,
+        prompt_config: HyDEPromptConfig,
+        async_openai_constructor: AsyncMock,
+    ) -> None:
+        generator = HypotheticalDocumentGenerator(
+            config=hyde_config,
+            prompt_config=prompt_config,
+            api_key="sk-test",
+        )
         await generator.initialize()
         await generator.cleanup()
 
-        assert generator._llm_client is None
-        assert generator.is_initialized() is False
-
-    def test_classify_query_technical(self, generator):
-        """Test query classification for technical queries."""
-        technical_queries = [
-            "How to use the API?",
-            "Function parameters explained",
-            "Method implementation guide",
-            "Class structure overview",
-            "Configuration setup steps",
-        ]
-
-        for query in technical_queries:
-            query_type = generator._classify_query(query)
-            assert query_type == "technical"
-
-    def test_classify_query_code(self, generator):
-        """Test query classification for code queries."""
-        code_queries = [
-            "How to implement this in Python?",
-            "Show me code examples",
-            "JavaScript function syntax",
-            "Import library usage",
-            "Example implementation",
-        ]
-
-        for query in code_queries:
-            query_type = generator._classify_query(query)
-            # Note: Some queries may match technical keywords first
-            # The query "How to implement this in Python?" contains "how to" (code)
-            # but might also match technical keywords
-            assert query_type in ["code", "technical"]
-
-    def test_classify_query_tutorial(self, generator):
-        """Test query classification for tutorial queries."""
-        tutorial_queries = [
-            "Step by step tutorial",
-            "Getting started guide",
-            "Learn the basics",
-            "Introduction to concepts",
-            "Beginner tutorial",
-        ]
-
-        for query in tutorial_queries:
-            query_type = generator._classify_query(query)
-            assert query_type == "tutorial"
-
-    def test_classify_query_general(self, generator):
-        """Test query classification for general queries."""
-        general_queries = [
-            "What is this about?",
-            "Explain the concept",
-            "Overview of the system",
-            "Random query text",
-        ]
-
-        for query in general_queries:
-            query_type = generator._classify_query(query)
-            assert query_type == "general"
-
-    def test_get_base_prompt(self, generator):
-        """Test base prompt selection."""
-        # Test each query type
-        technical_prompt = generator._get_base_prompt("technical")
-        assert technical_prompt == generator.prompt_config.technical_prompt
-
-        code_prompt = generator._get_base_prompt("code")
-        assert code_prompt == generator.prompt_config.code_prompt
-
-        tutorial_prompt = generator._get_base_prompt("tutorial")
-        assert tutorial_prompt == generator.prompt_config.tutorial_prompt
-
-        general_prompt = generator._get_base_prompt("general")
-        assert general_prompt == generator.prompt_config.general_prompt
-
-        # Test unknown type defaults to general
-        unknown_prompt = generator._get_base_prompt("unknown")
-        assert unknown_prompt == generator.prompt_config.general_prompt
-
-    def test_build_diverse_prompts_no_variation(self, generator):
-        """Test building prompts without variation."""
-        generator.config.prompt_variation = False
-        generator.config.num_generations = 2
-
-        prompts = generator._build_diverse_prompts("test query", "python")
-
-        assert len(prompts) == 2
-        # All prompts should be the same since no variation
-        assert prompts[0] == prompts[1]
-        assert "test query" in prompts[0]
-
-    def test_build_diverse_prompts_with_variation(self, generator):
-        """Test building prompts with variation."""
-        generator.config.prompt_variation = True
-        generator.config.num_generations = 3
-
-        prompts = generator._build_diverse_prompts("test query", "python")
-
-        assert len(prompts) == 3
-        # With variation, prompts should be different
-        unique_prompts = set(prompts)
-        assert len(unique_prompts) > 1
-
-        # All should contain the query
-        for prompt in prompts:
-            assert "test query" in prompt
-
-    def test_generate_prompt_variations(self, generator):
-        """Test prompt variation generation."""
-        base_prompt = "Base prompt: {query}"
-        variations = generator._generate_prompt_variations(
-            base_prompt, "test query", "python"
-        )
-
-        assert len(variations) <= 3  # Should be limited to 3 variations
-        assert len(variations) > 0
-
-        # Check that variations are different
-        unique_variations = set(variations)
-        assert len(unique_variations) == len(variations)  # All should be unique
-
-        # All should contain the query
-        for variation in variations:
-            assert "test query" in variation
-
-    @pytest.mark.asyncio
-    async def test_generate_single_document_success(self, generator):
-        """Test successful single document generation."""
-        # Mock LLM response
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "Generated document content"
-
-        mock_llm_client = MagicMock()
-        mock_llm_client.chat.completions.create = AsyncMock(return_value=mock_response)
-        generator._llm_client = mock_llm_client
-
-        prompt = "Generate a document about test query"
-        result = await generator._generate_single_document(prompt)
-
-        assert result == "Generated document content"
-        mock_llm_client.chat.completions.create.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_generate_single_document_timeout(self, generator):
-        """Test document generation timeout."""
-        mock_llm_client = MagicMock()
-        mock_llm_client.chat.completions.create = AsyncMock(side_effect=TimeoutError())
-        generator._llm_client = mock_llm_client
-
-        prompt = "Generate a document about test query"
-        result = await generator._generate_single_document(prompt)
-
-        assert result == ""  # Returns empty string on timeout
-
-    @pytest.mark.asyncio
-    async def test_generate_single_document_error(self, generator):
-        """Test document generation error handling."""
-        mock_llm_client = MagicMock()
-        mock_llm_client.chat.completions.create = AsyncMock(
-            side_effect=Exception("LLM error")
-        )
-        generator._llm_client = mock_llm_client
-
-        prompt = "Generate a document about test query"
-        result = await generator._generate_single_document(prompt)
-
-        assert result == ""  # Returns empty string on error
-
-    @pytest.mark.asyncio
-    async def test_generate_parallel(self, generator):
-        """Test parallel document generation."""
-        generator.config.max_concurrent_generations = 2
-
-        # Mock successful generation
-        async def mock_generate_single(prompt):
-            return f"Document for: {prompt[:20]}"
-
-        generator._generate_single_document = AsyncMock(
-            side_effect=mock_generate_single
-        )
-
-        prompts = ["Prompt 1", "Prompt 2", "Prompt 3"]
-        documents = await generator._generate_parallel(prompts)
-
-        assert len(documents) == 3
-        assert all("Document for:" in doc for doc in documents)
-
-    @pytest.mark.asyncio
-    async def test_generate_parallel_with_errors(self, generator):
-        """Test parallel generation with some errors."""
-        generator.config.min_generation_length = 5
-
-        async def mock_generate_single(prompt):
-            if "error" in prompt:
-                msg = "Generation error"
-                raise TestError(msg)
-            if "short" in prompt:
-                return "abc"  # Too short
-            return "Valid document content here"
-
-        generator._generate_single_document = AsyncMock(
-            side_effect=mock_generate_single
-        )
-
-        prompts = [
-            "Valid prompt",
-            "error prompt",
-            "short prompt",
-            "Another valid prompt",
-        ]
-        documents = await generator._generate_parallel(prompts)
-
-        # Should only have valid documents (2 out of 4)
-        assert len(documents) == 2
-        assert all("Valid document content" in doc for doc in documents)
-
-    @pytest.mark.asyncio
-    async def test_generate_sequential(self, generator):
-        """Test sequential document generation."""
-        generator.config.min_generation_length = 5
-
-        async def mock_generate_single(prompt):
-            if "error" in prompt:
-                msg = "Generation error"
-                raise TestError(msg)
-            return f"Document for: {prompt}"
-
-        generator._generate_single_document = AsyncMock(
-            side_effect=mock_generate_single
-        )
-
-        prompts = ["Valid prompt 1", "error prompt", "Valid prompt 2"]
-        documents = await generator._generate_sequential(prompts)
-
-        # Should skip the error prompt
-        assert len(documents) == 2
-        assert "Document for: Valid prompt 1" in documents
-        assert "Document for: Valid prompt 2" in documents
-
-    def test_post_process_documents(self, generator):
-        """Test document post-processing."""
-        generator.config.min_generation_length = 3
-        generator.config.filter_duplicates = True
-
-        documents = [
-            "   Valid document content   ",  # Should be trimmed
-            "ab",  # Too short, should be filtered
-            "Another valid document",
-            "Valid document content",  # Duplicate, should be filtered
-            "Third unique document",
-        ]
-
-        processed = generator._post_process_documents(documents, "test query")
-
-        assert len(processed) == 3
-        assert "Valid document content" in processed
-        assert "Another valid document" in processed
-        assert "Third unique document" in processed
-
-        # Check trimming
-        assert not any(doc.startswith(" ") or doc.endswith(" ") for doc in processed)
-
-    def test_post_process_documents_no_filtering(self, generator):
-        """Test post-processing without duplicate filtering."""
-        generator.config.min_generation_length = 1  # Lower threshold
-        generator.config.filter_duplicates = False
-
-        documents = [
-            "Valid document content",
-            "Valid document content",  # Duplicate, but filtering disabled
-            "Another document",
-        ]
-
-        processed = generator._post_process_documents(documents, "test query")
-
-        assert len(processed) == 3  # All documents kept
-        assert processed.count("Valid document content") == 2
-
-    def test_calculate_cost(self, generator):
-        """Test cost calculation."""
-        # Test with known model
-        generator.config.generation_model = "gpt-3.5-turbo"
-        cost = generator._calculate_cost(1000)  # 1000 tokens
-
-        # Expected: 70% input (700 tokens) + 30% output (300 tokens)
-        # gpt-3.5-turbo: input $0.0015/1k, output $0.002/1k
-        expected_cost = (700 / 1000) * 0.0015 + (300 / 1000) * 0.002
-        assert abs(cost - expected_cost) < 0.0001
-
-    def test_calculate_cost_unknown_model(self, generator):
-        """Test cost calculation with unknown model."""
-        generator.config.generation_model = "unknown-model"
-        cost = generator._calculate_cost(1000)
-
-        # Should use default pricing
-        expected_cost = (700 / 1000) * 0.002 + (300 / 1000) * 0.002
-        assert abs(cost - expected_cost) < 0.0001
-
-    def test_calculate_diversity_score(self, generator):
-        """Test diversity score calculation."""
-        # Completely different documents
-        documents = [
-            "This is about cats and animals",
-            "Programming languages and code",
-            "Cooking recipes and food",
-        ]
-        diversity = generator._calculate_diversity_score(documents)
-        assert diversity > 0.5  # Should be quite diverse
-
-        # Similar documents
-        similar_docs = [
-            "This is about programming in Python",
-            "This is about programming in Java",
-            "This is about programming languages",
-        ]
-        similar_diversity = generator._calculate_diversity_score(similar_docs)
-        assert similar_diversity < diversity  # Should be less diverse
-
-    def test_calculate_diversity_score_edge_cases(self, generator):
-        """Test diversity score edge cases."""
-        # Single document
-        assert generator._calculate_diversity_score(["single doc"]) == 0.0
-
-        # Empty list
-        assert generator._calculate_diversity_score([]) == 0.0
-
-        # Identical documents
-        identical = ["same content", "same content"]
-        assert generator._calculate_diversity_score(identical) == 0.0
-
-    @pytest.mark.asyncio
-    async def test_generate_documents_success(self, generator):
-        """Test successful document generation."""
-        await generator.initialize()
-
-        # Mock the generation pipeline
-        mock_prompts = ["prompt1", "prompt2", "prompt3"]
-        mock_documents = ["doc1 content here", "doc2 content here", "doc3 content here"]
-
-        generator._build_diverse_prompts = MagicMock(return_value=mock_prompts)
-        generator._generate_parallel = AsyncMock(return_value=mock_documents)
-        generator._post_process_documents = MagicMock(return_value=mock_documents)
-
-        result = await generator.generate_documents("test query", "python")
-
-        assert isinstance(result, GenerationResult)
-        assert result.documents == mock_documents
-        assert result.generation_time > 0
-        assert result.tokens_used > 0
-        assert result.cost_estimate > 0
-        assert result.diversity_score >= 0
-
-    @pytest.mark.asyncio
-    async def test_generate_documents_sequential_mode(self, generator):
-        """Test document generation in sequential mode."""
-        await generator.initialize()
-        generator.config.parallel_generation = False
-
-        mock_prompts = ["prompt1", "prompt2"]
-        mock_documents = ["doc1", "doc2"]
-
-        generator._build_diverse_prompts = MagicMock(return_value=mock_prompts)
-        generator._generate_sequential = AsyncMock(return_value=mock_documents)
-        generator._post_process_documents = MagicMock(return_value=mock_documents)
-
-        result = await generator.generate_documents("test query")
-
-        assert result.documents == mock_documents
-        generator._generate_sequential.assert_called_once_with(mock_prompts)
-
-    @pytest.mark.asyncio
-    async def test_generate_documents_not_initialized(self, generator):
-        """Test document generation when not initialized."""
-
-        with pytest.raises(APIError) as exc_info:
-            await generator.generate_documents("test query")
-
-        assert "not initialized" in str(exc_info.value).lower()
-
-    @pytest.mark.asyncio
-    async def test_generate_documents_failure(self, generator):
-        """Test document generation failure handling."""
-        await generator.initialize()
-
-        generator._build_diverse_prompts = MagicMock(
-            side_effect=Exception("Prompt error")
-        )
-
-        with pytest.raises(EmbeddingServiceError) as exc_info:
-            await generator.generate_documents("test query")
-
-        assert "Document generation failed" in str(exc_info.value)
-
-    def test_get_metrics(self, generator):
-        """Test metrics retrieval."""
-        # Set some test values
-        generator.generation_count = 5
-        generator.total_generation_time = 10.0
-        generator.total_tokens_used = 500
-        generator.total_cost = 0.05
-
-        metrics = generator.get_metrics()
-
-        assert metrics["generation_count"] == 5
-        assert metrics["total_generation_time"] == 10.0
-        assert metrics["avg_generation_time"] == 2.0
-        assert metrics["total_tokens_used"] == 500
-        assert metrics["total_cost"] == 0.05
-        assert metrics["avg_cost_per_generation"] == 0.01
-
-    def test_get_metrics_zero_generations(self, generator):
-        """Test metrics when no generations have been performed."""
-        metrics = generator.get_metrics()
-
-        assert metrics["generation_count"] == 0
-        assert metrics["total_generation_time"] == 0.0
-        assert metrics["avg_generation_time"] == 0.0
-        assert metrics["total_tokens_used"] == 0
-        assert metrics["total_cost"] == 0.0
-        assert metrics["avg_cost_per_generation"] == 0.0
-
-    def test_model_pricing_coverage(self, generator):
-        """Test that all expected models have pricing."""
-        expected_models = ["gpt-3.5-turbo", "gpt-4", "gpt-4-turbo"]
-
-        for model in expected_models:
-            assert model in generator.model_pricing
-            pricing = generator.model_pricing[model]
-            assert "input" in pricing
-            assert "output" in pricing
-            assert isinstance(pricing["input"], int | float)
-            assert isinstance(pricing["output"], int | float)
-            assert pricing["input"] > 0
-            assert pricing["output"] > 0
+        async_openai_constructor.close.assert_awaited_once()

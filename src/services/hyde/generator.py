@@ -5,8 +5,9 @@ import hashlib
 import itertools
 import logging
 import time
-from typing import Any, Protocol
+from typing import Any
 
+from openai import AsyncOpenAI
 from pydantic import BaseModel
 
 from src.services.base import BaseService
@@ -15,42 +16,18 @@ from src.services.errors import EmbeddingServiceError
 from .config import HyDEConfig, HyDEPromptConfig
 
 
-# pylint: disable=unnecessary-ellipsis
-
-
-class OpenAIClientProtocol(Protocol):
-    """Protocol for OpenAI client."""
-
-    class ModelsProtocol(Protocol):
-        """Protocol for models API."""
-
-        async def list(self) -> Any:
-            """List available models."""
-            ...
-
-    class ChatProtocol(Protocol):
-        """Protocol for chat API."""
-
-        class CompletionsProtocol(Protocol):
-            """Protocol for completions API."""
-
-            async def create(self, **kwargs) -> Any:
-                """Create chat completion."""
-                ...
-
-        completions: CompletionsProtocol
-
-    models: ModelsProtocol
-    chat: ChatProtocol
-
-
 logger = logging.getLogger(__name__)
 
 
-def _raise_openai_client_not_available() -> None:
-    """Raise EmbeddingServiceError for unavailable OpenAI client."""
-    msg = "OpenAI client not available"
-    raise EmbeddingServiceError(msg)
+async def _close_async_openai(client: AsyncOpenAI) -> None:
+    """Best-effort async close for OpenAI clients."""
+
+    close_fn = getattr(client, "close", None)
+    if close_fn is None:
+        return
+    result = close_fn()
+    if asyncio.iscoroutine(result):
+        await result
 
 
 class GenerationResult(BaseModel):
@@ -71,20 +48,28 @@ class HypotheticalDocumentGenerator(BaseService):
         self,
         config: HyDEConfig,
         prompt_config: HyDEPromptConfig,
-        openai_client: OpenAIClientProtocol | None = None,
+        api_key: str | None,
+        *,
+        max_retries: int = 3,
+        timeout: float | None = None,
     ):
         """Initialize generator.
 
         Args:
             config: HyDE configuration
             prompt_config: Prompt configuration
-            openai_client: Optional OpenAI client for LLM operations
+            api_key: OpenAI API key used for Responses API calls.
+            max_retries: Retry attempts configured on the OpenAI client.
+            timeout: Optional request timeout for OpenAI requests.
 
         """
         super().__init__(None)
         self.config = config
         self.prompt_config = prompt_config
-        self._llm_client = openai_client
+        self._api_key = api_key
+        self._max_retries = max_retries
+        self._timeout = timeout
+        self._llm_client: AsyncOpenAI | None = None
 
         # Metrics tracking
         self.generation_count = 0
@@ -111,22 +96,23 @@ class HypotheticalDocumentGenerator(BaseService):
         if self._initialized:
             return
 
+        if not self._api_key:
+            msg = "OpenAI API key not configured for HyDE generator"
+            raise EmbeddingServiceError(msg)
+
+        client_kwargs: dict[str, Any] = {"api_key": self._api_key}
+        if self._max_retries is not None:
+            client_kwargs["max_retries"] = self._max_retries
+        if self._timeout is not None:
+            client_kwargs["timeout"] = self._timeout
+
         try:
-            if not self._llm_client:
-                _raise_openai_client_not_available()
-
-            # Type assertion for mypy/pyright
-            assert self._llm_client is not None
-
-            # Test LLM connection
-            await self._llm_client.models.list()
-
+            self._llm_client = AsyncOpenAI(**client_kwargs)
             self._initialized = True
             logger.info("HyDE document generator initialized")
-
-        except Exception as e:
-            msg = f"Failed to initialize HyDE generator: {e}"
-            raise EmbeddingServiceError(msg) from e
+        except Exception as exc:  # pragma: no cover - defensive
+            msg = f"Failed to initialize HyDE generator: {exc}"
+            raise EmbeddingServiceError(msg) from exc
 
     async def cleanup(self) -> None:
         """Cleanup generator resources.
@@ -134,6 +120,8 @@ class HypotheticalDocumentGenerator(BaseService):
         Releases LLM client reference.
         Safe to call multiple times.
         """
+        if self._llm_client is not None:
+            await _close_async_openai(self._llm_client)
         self._llm_client = None
         self._initialized = False
         logger.info("HyDE document generator cleaned up")
@@ -173,20 +161,26 @@ class HypotheticalDocumentGenerator(BaseService):
 
             if self.config.parallel_generation:
                 # Generate in parallel
-                documents = await self._generate_parallel(prompts)
+                generation_results = await self._generate_parallel(prompts)
             else:
                 # Generate sequentially
-                documents = await self._generate_sequential(prompts)
+                generation_results = await self._generate_sequential(prompts)
+
+            raw_documents = [text for text, _ in generation_results]
+            token_lookup = dict(generation_results)
 
             # Filter and post-process
-            documents = self._post_process_documents(documents, query)
+            documents = self._post_process_documents(raw_documents, query)
 
             generation_time = time.time() - start_time
 
             # Calculate metrics
-            total_tokens = sum(
-                len(doc.split()) * 1.3 for doc in documents
-            )  # Rough token estimate
+            total_tokens = 0
+            for doc in documents:
+                tokens = token_lookup.get(doc)
+                if tokens is None:
+                    tokens = int(len(doc.split()) * 1.3)
+                total_tokens += tokens
             cost_estimate = self._calculate_cost(total_tokens)
             diversity_score = self._calculate_diversity_score(documents)
 
@@ -320,12 +314,12 @@ class HypotheticalDocumentGenerator(BaseService):
 
         return variations
 
-    async def _generate_parallel(self, prompts: list[str]) -> list[str]:
+    async def _generate_parallel(self, prompts: list[str]) -> list[tuple[str, int]]:
         """Generate documents in parallel."""
         # Create semaphore to limit concurrent requests
         semaphore = asyncio.Semaphore(self.config.max_concurrent_generations)
 
-        async def generate_single(prompt: str) -> str:
+        async def generate_single(prompt: str) -> tuple[str, int]:
             async with semaphore:
                 return await self._generate_single_document(prompt)
 
@@ -334,53 +328,59 @@ class HypotheticalDocumentGenerator(BaseService):
         documents = await asyncio.gather(*tasks, return_exceptions=True)
 
         # Filter out exceptions and empty documents
-        return [
-            doc
-            for doc in documents
-            if isinstance(doc, str)
-            and len(doc.strip()) >= self.config.min_generation_length
-        ]
+        results: list[tuple[str, int]] = []
+        for item in documents:
+            if not isinstance(item, tuple):
+                continue
+            text, tokens = item
+            if len(text.strip()) >= self.config.min_generation_length:
+                results.append((text, tokens))
+        return results
 
-    async def _generate_sequential(self, prompts: list[str]) -> list[str]:
+    async def _generate_sequential(self, prompts: list[str]) -> list[tuple[str, int]]:
         """Generate documents sequentially."""
-        documents = []
+        documents: list[tuple[str, int]] = []
 
         for prompt in prompts:
             try:
                 document = await self._generate_single_document(prompt)
-                if len(document.strip()) >= self.config.min_generation_length:
-                    documents.append(document)
+                text, tokens = document
+                if len(text.strip()) >= self.config.min_generation_length:
+                    documents.append((text, tokens))
             except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
                 logger.warning("Failed to generate document: %s", e)
                 continue
 
         return documents
 
-    async def _generate_single_document(self, prompt: str) -> str:
+    async def _generate_single_document(self, prompt: str) -> tuple[str, int]:
         """Generate a single hypothetical document."""
         # Type assertion for mypy/pyright
         assert self._llm_client is not None
 
         try:
             response = await asyncio.wait_for(
-                self._llm_client.chat.completions.create(
+                self._llm_client.responses.create(
                     model=self.config.generation_model,
-                    messages=[{"role": "user", "content": prompt}],
                     temperature=self.config.generation_temperature,
-                    max_tokens=self.config.max_generation_tokens,
-                    timeout=30,
+                    max_output_tokens=self.config.max_generation_tokens,
+                    input=prompt,
                 ),
                 timeout=self.config.generation_timeout_seconds,
             )
 
-            return response.choices[0].message.content.strip()
+            total_tokens = 0
+            if getattr(response, "usage", None) is not None:
+                total_tokens = int(getattr(response.usage, "total_tokens", 0) or 0)
+
+            return (response.output_text or "").strip(), total_tokens
 
         except TimeoutError:
             logger.warning("Document generation timed out")
-            return ""
+            return "", 0
         except (ValueError, TypeError, UnicodeDecodeError) as e:
             logger.warning("Failed to generate document: %s", e)
-            return ""
+            return "", 0
 
     def _post_process_documents(self, documents: list[str], _query: str) -> list[str]:
         """Post-process generated documents."""

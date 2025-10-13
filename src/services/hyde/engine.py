@@ -34,7 +34,7 @@ class HyDEQueryEngine(BaseService):
         embedding_manager: EmbeddingManager,
         vector_store: VectorStoreService,
         cache_manager: Any,
-        llm_client: Any,
+        openai_api_key: str | None,
     ):
         """Initialize HyDE query engine.
 
@@ -45,7 +45,7 @@ class HyDEQueryEngine(BaseService):
             embedding_manager: Embedding service manager
             vector_store: Vector service for search
             cache_manager: Cache manager (DragonflyDB)
-            llm_client: LLM client for document generation
+            openai_api_key: OpenAI API key for document generation
 
         """
         super().__init__(None)
@@ -57,7 +57,7 @@ class HyDEQueryEngine(BaseService):
 
         # Initialize components
         self.generator = HypotheticalDocumentGenerator(
-            config, prompt_config, llm_client
+            config, prompt_config, openai_api_key
         )
         self.cache = HyDECache(config, cache_manager)
 

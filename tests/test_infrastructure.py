@@ -70,6 +70,8 @@ class TestMockFactories:
         openai_client = external_service_factory.create_openai_client()
         assert hasattr(openai_client, "embeddings")
         assert hasattr(openai_client.embeddings, "create")
+        assert hasattr(openai_client, "responses")
+        assert hasattr(openai_client.responses, "create")
 
         # Test Qdrant client creation
         qdrant_client = external_service_factory.create_qdrant_client()
