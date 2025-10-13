@@ -183,10 +183,25 @@ async def test_add_document_ingests_chunks(documents_env: SimpleNamespace) -> No
     documents_payload = upsert_args[1]
     assert len(documents_payload) == 2
     assert all(isinstance(doc, TextDocument) for doc in documents_payload)
-    first_metadata = dict(documents_payload[0].metadata or {})
+    first_document = documents_payload[0]
+    first_metadata = dict(first_document.metadata or {})
+    assert first_document.id.endswith(":0")
     assert first_metadata["chunk_index"] == 0
+    assert first_metadata["chunk_id"] == 0
+    assert first_metadata["total_chunks"] == 2
+    assert first_metadata["tenant"] == request.collection
+    assert first_metadata["source"] == request.url
+    assert first_metadata["uri_or_path"] == request.url
+    assert first_metadata["title"] == "Example Title"
+    assert first_metadata["provider"] == "tier-1"
+    assert first_metadata["quality_score"] == pytest.approx(0.78)
     assert first_metadata["content_intelligence_analyzed"] is True
     assert first_metadata["content_type"] == "guide"
+    assert isinstance(first_metadata["created_at"], str)
+    assert first_metadata["updated_at"] == first_metadata["created_at"]
+    assert first_metadata["doc_id"]
+    assert first_metadata["section"] == "intro"
+    assert "lang" not in first_metadata or first_metadata["lang"] is None
 
     documents_env.cache_manager.set.assert_awaited_once()
     documents_env.context.info.assert_awaited()
@@ -217,8 +232,13 @@ async def test_add_document_returns_cached_result(
 @pytest.mark.asyncio
 async def test_add_document_without_content_intelligence(
     documents_env: SimpleNamespace,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    documents_env.content_dependency.return_value = None
+    monkeypatch.setattr(
+        documents,
+        "_run_content_intelligence",
+        AsyncMock(return_value=None),
+    )
 
     request = DocumentRequest(url="https://example.com/doc")
     result = await documents_env.tools["add_document"](request, documents_env.context)
@@ -237,6 +257,10 @@ async def test_add_document_without_content_intelligence(
         assert metadata["chunk_id"] == index
         assert metadata["tenant"] == request.collection
         assert metadata["source"] == request.url
+        assert metadata["uri_or_path"] == request.url
+        assert metadata["chunk_index"] == index
+        assert metadata["total_chunks"] == len(text_documents)
+        assert isinstance(metadata["created_at"], str)
 
 
 @pytest.mark.asyncio

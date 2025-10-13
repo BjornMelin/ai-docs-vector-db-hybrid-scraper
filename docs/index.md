@@ -38,7 +38,8 @@ graph LR
 ```
 
 - **Ingestion** – A tiered browser manager fetches pages, extractors clean them,
-  and chunking normalises structure.
+  and chunking normalises structure into canonical metadata payloads ready for
+  hybrid embeddings.
 - **Processing** – Dense and sparse embedding providers run in parallel; HyDE
   expansion and caching keep retrieval responsive.
 - **Retrieval** – Qdrant stores vectors and payloads; the API orchestrates

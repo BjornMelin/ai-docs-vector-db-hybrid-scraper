@@ -58,6 +58,24 @@ Accepts the same query parameters as the POST variant (`query`, `collection`,
 - `GET /api/v1/documents` – Lists documents with pagination (`limit`, `offset`).
 - `GET /api/v1/collections` – Lists available collections.
 
+#### Canonical ingestion payload
+
+The ingestion surface (MCP tools, CLI pipelines, and bulk embedders) now emits
+`TextDocument` payloads constructed from LangChain `Document` chunks via
+`src.services.vector_db.document_builder`. Each chunk guarantees the same
+metadata keys so downstream services can rely on a predictable schema:
+
+- `source`, `uri_or_path`, `doc_id`, and `tenant` – provenance identifiers
+- `title`, `content_type`, `lang` – presentation metadata
+- `chunk_index`, `chunk_id`, `chunk_hash`, `total_chunks` – chunk bookkeeping
+- `created_at`, `updated_at` – ISO timestamps captured during ingestion
+- Content Intelligence enrichments when available (`content_type`,
+  `content_confidence`, `quality_*`, `ci_*` fields)
+
+Legacy chunk dictionaries and ad-hoc metadata fields are no longer produced nor
+accepted by caches. Cached `AddDocumentResponse` objects are serialised in-place
+and hydrated directly from JSON when read back.
+
 ### Health
 
 `GET /health` exposes readiness information collected by `HealthCheckManager`.

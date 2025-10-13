@@ -16,7 +16,6 @@ from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
-from urllib.parse import urlparse
 
 import aiofiles  # type: ignore[import]
 import click  # type: ignore[import]
@@ -36,12 +35,19 @@ from rich.table import Table  # type: ignore[import]
 from .config.loader import Settings, get_settings
 from .infrastructure.bootstrap import container_session, ensure_container
 from .infrastructure.container import ApplicationContainer
+from .services.crawling.normalization import (
+    normalize_crawler_output,
+    resolve_chunk_inputs,
+)
 from .services.document_chunking import chunk_to_documents, infer_document_kind
-from .services.embeddings.manager import QualityTier
 from .services.errors import ServiceError
 from .services.logging_config import configure_logging
+from .services.vector_db.document_builder import (
+    build_params_from_crawl,
+    build_text_documents,
+)
 from .services.vector_db.service import VectorStoreService
-from .services.vector_db.types import CollectionSchema, VectorRecord
+from .services.vector_db.types import CollectionSchema, TextDocument
 
 
 class ScrapingError(ServiceError):
@@ -118,7 +124,6 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
 
         # Services (initialized in async context)
         self.crawl_manager: Any | None = None
-        self.embedding_manager: Any | None = None
         self.vector_service: VectorStoreService | None = None
 
     def _load_state(self) -> ProcessingState:
@@ -170,11 +175,6 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
             self.crawl_manager = container.browser_manager()
         if self.crawl_manager is None:
             raise RuntimeError("Crawl manager unavailable")
-
-        if self.embedding_manager is None:
-            self.embedding_manager = container.embedding_manager()
-        if self.embedding_manager is None:
-            raise RuntimeError("Embedding manager unavailable")
 
         self.vector_service = container.vector_store_service()
         if self.vector_service is None:
@@ -308,121 +308,78 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
     ) -> dict[str, Any]:
         """Execute the complete URL processing pipeline."""
         # Step 1: Scrape and extract content
-        scrape_result, content_to_chunk, _ = await self._scrape_and_extract(url)
+        crawl_result = await self._scrape_and_extract(url)
 
-        # Step 2: Chunk the content
-        chunks = await self._chunk_content(content_to_chunk, scrape_result)
+        chunks = await self._chunk_content(crawl_result, url)
 
-        # Step 3: Generate embeddings
-        dense_embeddings, sparse_embeddings = await self._generate_embeddings(chunks)
+        documents = await self._generate_embeddings(url, chunks, crawl_result)
 
-        # Step 4: Prepare and store points
-        await self._store_points(
-            url=url,
-            chunks=chunks,
-            dense_embeddings=dense_embeddings,
-            sparse_embeddings=sparse_embeddings,
-            scrape_result=scrape_result,
-        )
+        await self._store_points(documents)
 
         result["success"] = True
-        result["chunks"] = len(chunks)
+        result["chunks"] = len(documents)
         return result
 
-    async def _scrape_and_extract(
-        self, url: str
-    ) -> tuple[dict[str, Any], str, dict[str, Any]]:
-        """Scrape URL and extract content for processing."""
-        scrape_result: dict[str, Any]
+    async def _scrape_and_extract(self, url: str) -> dict[str, Any]:
+        """Scrape URL and normalize the payload."""
+
         try:
             if self.crawl_manager is None:
                 raise RuntimeError("Crawl manager not initialized")
             crawl_manager = cast(Any, self.crawl_manager)
-            scrape_result = await crawl_manager.scrape_url(url=url)
+            raw_result = await crawl_manager.scrape_url(url=url)
         except (httpx.HTTPError, ValueError, ConnectionError, TimeoutError) as exc:
             msg = f"Scraping failed: {exc}"
             raise ScrapingError(msg) from exc
 
-        if not scrape_result.get("success"):
-            msg = scrape_result.get("error", "Scraping failed")
-            raise ScrapingError(msg)
+        normalized = normalize_crawler_output(raw_result, fallback_url=url)
 
-        content = scrape_result.get("content", {})
-        markdown_content = ""
-        text_content = ""
-        if isinstance(content, Mapping):
-            markdown_content = content.get("markdown", "")
-            text_content = content.get("text", "")
-        metadata = scrape_result.get("metadata", {})
+        if not normalized.get("success"):
+            metadata = normalized.get("metadata")
+            error_msg: str | None = None
+            if isinstance(metadata, Mapping):
+                metadata_error = metadata.get("error")
+                if isinstance(metadata_error, str) and metadata_error.strip():
+                    error_msg = metadata_error
+            if not error_msg:
+                error_value = normalized.get("error")
+                if isinstance(error_value, str) and error_value.strip():
+                    error_msg = error_value
+            raise ScrapingError(error_msg or "Scraping failed")
 
-        # Use markdown if available, fallback to text
-        content_to_chunk = markdown_content or text_content
-        if not content_to_chunk:
-            raw_html = scrape_result.get("raw_html")
-            html_content = None
-            if isinstance(content, Mapping):
-                html_content = content.get("html")
-            elif isinstance(content, str):
-                html_content = content
+        content_block = normalized.get("content")
+        has_chunkable = False
+        if isinstance(content_block, Mapping):
+            has_chunkable = any(
+                isinstance(content_block.get(key), str) and content_block[key].strip()
+                for key in ("markdown", "html", "text")
+            )
+        elif isinstance(content_block, str):
+            has_chunkable = bool(content_block.strip())
 
-            def _normalize(candidate: Any) -> str | None:
-                if isinstance(candidate, str) and candidate.strip():
-                    return candidate
-                return None
-
-            content_to_chunk = _normalize(raw_html) or _normalize(html_content)
-
-        if not content_to_chunk:
+        if not has_chunkable and not normalized.get("raw_html"):
             _raise_content_extraction_error()
 
-        return scrape_result, content_to_chunk, metadata
+        return normalized
 
     async def _chunk_content(
-        self, content_to_chunk: str, scrape_result: dict[str, Any]
+        self, crawl_result: dict[str, Any], url: str
     ) -> list[Document]:
-        """Chunk content into LangChain documents."""
+        """Chunk normalized content into LangChain documents."""
 
-        raw_content: str | None = None
-        kind_hint: str | None = None
-
-        def _select(value: Any, hint: str | None = None) -> None:
-            nonlocal raw_content, kind_hint
-            if raw_content or not isinstance(value, str):
-                return
-            stripped = value.strip()
-            if not stripped:
-                return
-            raw_content = value
-            kind_hint = hint
-
-        _select(scrape_result.get("raw_html"), "html")
-        structured = scrape_result.get("content")
-        if isinstance(structured, Mapping):
-            _select(structured.get("html"), "html")
-            _select(structured.get("markdown"), "markdown")
-            _select(structured.get("text"), "text")
-        else:
-            _select(structured)
-
-        if raw_content is None:
-            msg = "No chunkable content provided by crawler"
-            raise ChunkGenerationError(msg)
-
-        metadata_payload: dict[str, Any] = {
-            "source": scrape_result.get("url"),
-            "uri_or_path": scrape_result.get("url"),
-            "title": scrape_result.get("title")
-            or scrape_result.get("metadata", {}).get("title", ""),
-            "mime_type": scrape_result.get("content_type")
-            or scrape_result.get("metadata", {}).get("content_type"),
-            "metadata": scrape_result.get("metadata", {}),
-        }
+        try:
+            raw_content, metadata_payload, kind_hint = resolve_chunk_inputs(
+                crawl_result,
+                fallback_url=crawl_result.get("url", url),
+            )
+        except ValueError as exc:
+            raise ChunkGenerationError(str(exc)) from exc
 
         try:
             chunks = chunk_to_documents(
                 raw_content,
                 metadata_payload,
-                kind_hint or infer_document_kind(metadata_payload),
+                infer_document_kind(metadata_payload, default=kind_hint or "text"),
                 self.config.chunking,
             )
         except Exception as exc:
@@ -435,122 +392,45 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
         return chunks
 
     async def _generate_embeddings(
-        self, chunks: list[Document]
-    ) -> tuple[list[Any], list[Any]]:
-        """Generate embeddings for chunks."""
-        try:
-            texts = [chunk.page_content for chunk in chunks]
-        except AttributeError as e:
-            error_msg = f"Text extraction failed: {e}"
-            raise RuntimeError(error_msg) from e
-
-        try:
-            if self.embedding_manager is None:
-                raise RuntimeError("Embedding manager not initialized")
-            embedding_manager = cast(Any, self.embedding_manager)
-            generate_sparse_flag = bool(
-                getattr(self.config.fastembed, "generate_sparse", False)
-            )
-            embedding_result = await embedding_manager.generate_embeddings(
-                texts=texts,
-                quality_tier=QualityTier.BALANCED,
-                auto_select=True,
-                generate_sparse=generate_sparse_flag,
-            )
-        except (ValueError, ConnectionError, RuntimeError) as e:
-            error_msg = f"Embedding generation failed: {e}"
-            raise RuntimeError(error_msg) from e
-
-        dense_embeddings = embedding_result.get("embeddings", [])
-        sparse_embeddings = embedding_result.get("sparse_embeddings", [])
-
-        return dense_embeddings, sparse_embeddings
-
-    async def _store_points(  # pylint: disable=too-many-arguments
         self,
-        *,
         url: str,
         chunks: list[Document],
-        dense_embeddings: list[Any],
-        sparse_embeddings: list[Any],
-        scrape_result: dict[str, Any],
-    ) -> None:
-        """Prepare and store vector records in the unified vector service."""
-        try:
-            records = self._prepare_records(
-                url=url,
-                chunks=chunks,
-                dense_embeddings=dense_embeddings,
-                sparse_embeddings=sparse_embeddings,
-                scrape_result=scrape_result,
-            )
-        except (ValueError, TypeError, KeyError) as e:
-            error_msg = f"Point preparation failed: {e}"
-            raise RuntimeError(error_msg) from e
+        crawl_result: dict[str, Any],
+    ) -> list[TextDocument]:
+        """Translate chunked content into TextDocument payloads."""
+
+        metadata_block = crawl_result.get("metadata", {})
+        if not isinstance(metadata_block, Mapping):
+            metadata_block = {}
+
+        doc_id = str(metadata_block.get("doc_id") or crawl_result.get("url") or url)
+
+        params = build_params_from_crawl(
+            crawl_result,
+            fallback_url=url,
+            tenant=self.collection_name,
+            doc_id=doc_id,
+        )
+
+        return build_text_documents(chunks, params)
+
+    async def _store_points(self, documents: list[TextDocument]) -> None:
+        """Persist prepared documents using the vector service."""
+
+        if not documents:
+            return
 
         if not self.vector_service:
             raise RuntimeError("Vector store service not initialized")
 
         try:
-            await self.vector_service.upsert_vectors(
+            await self.vector_service.upsert_documents(
                 self.collection_name,
-                records,
-                batch_size=100,
+                documents,
             )
-        except (ConnectionError, ValueError, RuntimeError) as e:
-            error_msg = f"Point storage failed: {e}"
-            raise RuntimeError(error_msg) from e
-
-    def _prepare_records(  # pylint: disable=too-many-arguments
-        self,
-        *,
-        url: str,
-        chunks: list[Document],
-        dense_embeddings: list[Any],
-        sparse_embeddings: list[Any],
-        scrape_result: dict[str, Any],
-    ) -> list[VectorRecord]:
-        """Prepare records for vector store ingestion."""
-
-        metadata = scrape_result.get("metadata", {})
-        records: list[VectorRecord] = []
-        for i, (chunk, embedding) in enumerate(
-            zip(chunks, dense_embeddings, strict=False)
-        ):
-            point_id = f"{urlparse(url).netloc}_{datetime.now(tz=UTC).timestamp()}_{i}"
-
-            payload = {
-                "url": url,
-                "title": metadata.get("title", ""),
-                "description": metadata.get("description", ""),
-                "content": chunk.page_content,
-                "chunk_index": i,
-                "total_chunks": len(chunks),
-                "scraped_at": datetime.now(tz=UTC).isoformat(),
-                "provider": scrape_result.get("provider", "unknown"),
-            }
-
-            start_index = chunk.metadata.get("start_index")
-            if isinstance(start_index, int):
-                payload["start_char"] = start_index
-                payload["end_char"] = start_index + len(chunk.page_content)
-
-            payload.update(chunk.metadata)
-
-            sparse_vector = None
-            if sparse_embeddings and i < len(sparse_embeddings):
-                sparse_vector = sparse_embeddings[i]
-
-            records.append(
-                VectorRecord(
-                    id=point_id,
-                    vector=list(embedding),
-                    payload=payload,
-                    sparse_vector=sparse_vector,
-                )
-            )
-
-        return records
+        except (ConnectionError, ValueError, RuntimeError) as exc:
+            error_msg = f"Point storage failed: {exc}"
+            raise RuntimeError(error_msg) from exc
 
     async def process_urls_batch(
         self,
