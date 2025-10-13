@@ -37,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Refactor
 
+- **[Chunking]:** Refactored the document chunking service to use a Strategy pattern, making it more modular and easier to extend with new document types.
 - **[Browser]:** Unified runtime logic for all browser providers, centralizing retry,
   timeout, and error handling in `src/services/browser/runtime.py`.
 - **[Analytics]:** Removed the custom `SearchAnalyticsDashboard` and
