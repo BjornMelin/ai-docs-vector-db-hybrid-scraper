@@ -154,11 +154,14 @@ def test_gpu_validation_succeeds_with_fake_gpu(monkeypatch: pytest.MonkeyPatch) 
         "deepspeed": types.SimpleNamespace(__version__="0.14.0"),
     }
 
-    monkeypatch.setattr(
-        gpu_validation,
-        "_import_optional",
-        lambda name: fake_modules.get(name),
-    )
+    original_import = gpu_validation.importlib.import_module
+
+    def _fake_import(name: str, package: str | None = None):
+        if name in fake_modules:
+            return fake_modules[name]
+        return original_import(name, package)  # type: ignore[call-arg]
+
+    monkeypatch.setattr(gpu_validation.importlib, "import_module", _fake_import)
 
     report = gpu_validation.run_gpu_validation(
         require_gpu=True,

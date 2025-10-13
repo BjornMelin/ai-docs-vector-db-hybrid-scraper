@@ -209,10 +209,16 @@ def _import_only_check(
 ) -> tuple[CheckResult, str | None]:
     """Import ``module_name`` and return a check result and version metadata."""
 
-    module = _import_optional(module_name)
-    if module is None:
+    try:
+        module = importlib.import_module(module_name)
+    except ModuleNotFoundError:
         status = "failed" if require_gpu else "warning"
         return CheckResult(name, status, f"{module_name} not installed"), None
+    except Exception as exc:  # pragma: no cover - surfaced in integration runs
+        status = "failed" if require_gpu else "warning"
+        detail = f"{module_name} import error [{type(exc).__name__}]: {exc}"
+        return CheckResult(name, status, detail), None
+
     return (
         CheckResult(name, "passed", f"{module_name} import succeeded"),
         getattr(module, "__version__", None),
