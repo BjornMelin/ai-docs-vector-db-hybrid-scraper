@@ -154,13 +154,14 @@ def test_html_semantic_splitter_respects_sections() -> None:
         )
 
     assert len(documents) >= 2
-    first, second = documents[:2]
-    assert first.metadata["chunk_index"] == 0
-    assert isinstance(first.metadata["chunk_id"], str)
-    assert len(first.metadata["chunk_id"]) == 16
-    assert second.metadata["chunk_index"] == 1
-    assert "intro" in first.page_content.lower()
-    assert "second" in second.page_content.lower()
+    first_document = documents[0]
+    second_document = documents[1]
+    assert first_document.metadata["chunk_index"] == 0
+    assert isinstance(first_document.metadata["chunk_id"], str)
+    assert len(first_document.metadata["chunk_id"]) == 16
+    assert second_document.metadata["chunk_index"] == 1
+    assert "intro" in first_document.page_content.lower()
+    assert "second" in second_document.page_content.lower()
 
 
 def test_code_language_inferred_from_extension() -> None:
@@ -186,8 +187,6 @@ def test_json_splitter_creates_structured_chunks() -> None:
     config = _make_config(
         chunk_size=60,
         chunk_overlap=10,
-        min_chunk_size=20,
-        max_chunk_size=120,
         json_max_chars=60,
     )
     payload = json.dumps(
@@ -262,6 +261,20 @@ def test_infer_extension_handles_paths(uri: str | None, expected: str | None) ->
     assert infer_extension(uri) == expected
 
 
+def test_chunk_to_documents_fallbacks_to_text_kind() -> None:
+    config = _make_config()
+
+    documents = chunk_to_documents(
+        "fallback sample",
+        {"uri_or_path": "file.unknown"},
+        "pdf",  # unsupported kind should fallback
+        config,
+    )
+
+    assert documents
+    assert all(doc.metadata["kind"] == "text" for doc in documents)
+
+
 def test_infer_document_kind_uses_metadata_hierarchy() -> None:
     metadata = {
         "mime_type": "text/markdown",
@@ -269,6 +282,16 @@ def test_infer_document_kind_uses_metadata_hierarchy() -> None:
         "metadata": {"content_type": "text/markdown"},
     }
     assert infer_document_kind(metadata) == "markdown"
+
+
+def test_infer_document_kind_detects_token_flag() -> None:
+    metadata = {"token_aware": True}
+    assert infer_document_kind(metadata) == "token"
+
+
+def test_infer_document_kind_handles_token_alias_string() -> None:
+    metadata = {"token_aware": "Token_Aware"}
+    assert infer_document_kind(metadata) == "token"
 
 
 def test_infer_language_falls_back_to_extension() -> None:

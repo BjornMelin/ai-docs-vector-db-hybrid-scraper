@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from pathlib import PurePosixPath
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Final, Protocol, cast, runtime_checkable
 from urllib.parse import urlparse
 
 from langchain_core.documents import Document
@@ -43,7 +43,8 @@ _HTML_HEADERS: list[tuple[str, str]] = [
     ("h6", "Header 6"),
 ]
 
-_KIND_TOKEN_ALIASES = {"token", "tokens", "token-aware", "token_aware"}
+_TOKEN_KIND: Final[str] = cast(str, "token")  # symbolic label for token-aware chunking
+_KIND_TOKEN_ALIASES = {_TOKEN_KIND, "tokens", "token-aware", "token_aware"}
 
 
 _EXTENSION_LANGUAGE_MAP: dict[str, Language] = {
@@ -145,14 +146,16 @@ def infer_language(
     return language.value if language else None
 
 
-def _resolve_kind_from_candidate(metadata: Mapping[str, Any]) -> str | None:
+def _infer_kind_from_candidate(metadata: Mapping[str, Any]) -> str | None:
     candidate = metadata.get("kind") or metadata.get("content_kind")
-    if isinstance(candidate, str) and candidate:
-        return candidate.lower()
+    if isinstance(candidate, str):
+        cleaned = candidate.strip().lower()
+        if cleaned:
+            return cleaned
     return None
 
 
-def _resolve_kind_from_mime(metadata: Mapping[str, Any]) -> str | None:
+def _infer_kind_from_mime(metadata: Mapping[str, Any]) -> str | None:
     mime_type = (
         metadata.get("mime_type")
         or metadata.get("content_type")
@@ -164,12 +167,15 @@ def _resolve_kind_from_mime(metadata: Mapping[str, Any]) -> str | None:
     return None
 
 
-def _resolve_kind_from_extension(metadata: Mapping[str, Any]) -> str | None:
-    extension = metadata.get("extension")
-    if not extension:
-        uri_or_path = metadata.get("uri_or_path")
-        if not uri_or_path:
-            uri_or_path = metadata.get("url")
+def _infer_kind_from_extension(metadata: Mapping[str, Any]) -> str | None:
+    extension: Any = metadata.get("extension")
+    if not isinstance(extension, str) or not extension:
+        uri_or_path = (
+            metadata.get("uri_or_path")
+            or metadata.get("uri")
+            or metadata.get("path")
+            or metadata.get("url")
+        )
         extension = infer_extension(uri_or_path)
     if isinstance(extension, str):
         lowered = extension.lower()
@@ -184,10 +190,34 @@ def _resolve_kind_from_extension(metadata: Mapping[str, Any]) -> str | None:
     return None
 
 
-def _resolve_kind_from_token_hint(metadata: Mapping[str, Any]) -> str | None:
-    if metadata.get("token_aware") or metadata.get("chunking_mode") == "token":
-        return "token"
+def _infer_kind_from_token_hint(metadata: Mapping[str, Any]) -> str | None:
+    token_hint = metadata.get("token_aware")
+    if isinstance(token_hint, str):
+        hint_value = token_hint.strip().lower()
+        if hint_value in _KIND_TOKEN_ALIASES:
+            return _TOKEN_KIND
+    elif token_hint:
+        return _TOKEN_KIND
+
+    chunking_mode = metadata.get("chunking_mode")
+    if isinstance(chunking_mode, str):
+        mode_value = chunking_mode.strip().lower()
+        if mode_value in _KIND_TOKEN_ALIASES or mode_value == _TOKEN_KIND:
+            return _TOKEN_KIND
+    elif chunking_mode:
+        return _TOKEN_KIND
     return None
+
+
+_INFER_STRATEGIES: tuple[
+    Callable[[Mapping[str, Any]], str | None],
+    ...,
+] = (
+    _infer_kind_from_candidate,
+    _infer_kind_from_mime,
+    _infer_kind_from_extension,
+    _infer_kind_from_token_hint,
+)
 
 
 def infer_document_kind(
@@ -198,16 +228,10 @@ def infer_document_kind(
     if metadata is None:
         return default
 
-    resolvers = (
-        _resolve_kind_from_candidate,
-        _resolve_kind_from_mime,
-        _resolve_kind_from_extension,
-        _resolve_kind_from_token_hint,
-    )
-    for resolver in resolvers:
-        resolved_kind = resolver(metadata)
-        if resolved_kind:
-            return resolved_kind
+    for strategy in _INFER_STRATEGIES:
+        inferred_kind = strategy(metadata)
+        if inferred_kind:
+            return inferred_kind
 
     return default
 
@@ -243,7 +267,9 @@ class ChunkingStrategy(Protocol):
         Returns:
             List of LangChain documents produced by the strategy.
         """
-        ...
+        ...  # pylint: disable=unnecessary-ellipsis
+
+
 def _apply_recursive_refinement(
     documents: list[Document],
     cfg: ChunkingConfig,
@@ -523,7 +549,13 @@ def _merge_metadata(
             metadata.update(document.metadata)
         metadata["kind"] = kind
         metadata["chunk_index"] = index
-        chunk_key = f"{base_identifier}:{index}".encode("utf-8", "ignore")
+        content_digest = hashlib.blake2s(
+            document.page_content.encode("utf-8", "ignore"),
+            digest_size=8,
+        ).hexdigest()
+        chunk_key = f"{base_identifier}:{index}:{content_digest}".encode(
+            "utf-8", "ignore"
+        )
         metadata["chunk_id"] = hashlib.blake2s(chunk_key, digest_size=8).hexdigest()
         merged.append(Document(page_content=document.page_content, metadata=metadata))
     return merged
@@ -548,7 +580,8 @@ def chunk_to_documents(
     normalized_kind = _normalize_kind(kind, metadata_context)
     strategy = _STRATEGY_REGISTRY.get(normalized_kind)
     if strategy is None:
-        strategy = _STRATEGY_REGISTRY[_DEFAULT_STRATEGY_KEY]
+        normalized_kind = _DEFAULT_STRATEGY_KEY
+        strategy = _STRATEGY_REGISTRY[normalized_kind]
 
     documents = strategy.chunk(raw, cfg, metadata_context)
 
