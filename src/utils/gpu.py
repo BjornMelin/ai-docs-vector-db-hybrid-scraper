@@ -183,15 +183,21 @@ def get_gpu_stats() -> dict[str, Any]:
 
     torch = _load_torch()
     available = is_gpu_available()
+    optional_libraries = {
+        "xformers": "xformers",
+        "flash_attn": "flash_attn",
+        "vllm": "vllm",
+        "deepspeed": "deepspeed",
+        "bitsandbytes": "bitsandbytes",
+        "triton": "triton",
+    }
     stats: dict[str, Any] = {
         "torch_available": torch is not None,
         "cuda_available": available,
         "device_count": _device_count(),
         "libraries": {
-            "xformers": _optional_module_available("xformers"),
-            "flash_attn": _optional_module_available("flash_attn"),
-            "vllm": _optional_module_available("vllm"),
-            "deepspeed": _optional_module_available("deepspeed"),
+            key: _optional_module_available(module)
+            for key, module in optional_libraries.items()
         },
         "devices": [],
     }

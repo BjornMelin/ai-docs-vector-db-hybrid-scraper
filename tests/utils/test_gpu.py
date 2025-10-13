@@ -90,7 +90,9 @@ def fake_torch(monkeypatch: pytest.MonkeyPatch) -> tuple[_DummyTorch, _DummyCuda
         "xformers": True,
         "flash_attn": False,
         "vllm": False,
-        "deepspeed": True,
+        "deepspeed": False,
+        "bitsandbytes": False,
+        "triton": False,
     }
 
     def fake_find_spec(name: str) -> Any:
@@ -230,6 +232,10 @@ def test_get_gpu_stats_reports_optional_modules(
     assert stats["device_count"] == 1
     assert stats["libraries"]["xformers"] is True
     assert stats["libraries"]["flash_attn"] is False
+    assert stats["libraries"]["vllm"] is False
+    assert stats["libraries"]["deepspeed"] is False
+    assert stats["libraries"]["bitsandbytes"] is False
+    assert stats["libraries"]["triton"] is False
     assert stats["devices"][0]["name"] == "Dummy GPU 0"
 
 
