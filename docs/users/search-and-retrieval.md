@@ -127,6 +127,21 @@ traditional keyword-based searches.
 - Balances speed with accuracy
 - Handles large document collections efficiently
 
+### Retrieval modes (Configurable)
+
+**What it does**: Controls which embedding signals power your search.
+
+- `dense` – Uses FastEmbed dense vectors for semantic similarity.
+- `sparse` – Uses FastEmbedSparse BM25-style signals for lexical precision.
+- `hybrid` (default) – Combines both and lets Qdrant fuse scores during ranking.
+
+**How to use it**:
+
+- REST/MCP payloads: set `search_strategy` (REST) or `retrieval_mode` (config/CLI) to `dense`, `sparse`, or `hybrid`.
+- CLI: pass `--retrieval-mode` to `mcp search`, `mcp add-documents`, or `mcp add-documents-batch`.
+
+**User experience**: Hybrid usually provides the strongest relevance, while `dense` can reduce latency for short-term experiments and `sparse` helps when chasing exact keyword matches.
+
 ## Performance Expectations
 
 ### Search Response Times

@@ -15,8 +15,8 @@ points to the detailed guides for users, developers, and operators.
 
 ## Platform Highlights
 
-- **Hybrid search pipeline** – Dense + sparse embeddings, HyDE augmentation, and
-  reranking
+- **Hybrid search pipeline** – FastEmbed dense + sparse embeddings,
+  LangChain-managed chunking, HyDE augmentation, and reranking
 - **Five-tier browser automation** – Selects the lightest tool that can load and
   extract a page
 - **Unified configuration** – Single Pydantic settings module controls both simple
@@ -38,11 +38,13 @@ graph LR
 ```
 
 - **Ingestion** – A tiered browser manager fetches pages, extractors clean them,
-  and chunking normalises structure into canonical metadata payloads ready for
-  hybrid embeddings.
+  and `chunk_to_documents` routes each payload through the LangChain splitter
+  matrix (Markdown/HTML/code/JSON/token-aware paths) before canonical metadata is
+  attached.
 - **Processing** – Dense and sparse embedding providers run in parallel; HyDE
   expansion and caching keep retrieval responsive.
-- **Retrieval** – Qdrant stores vectors and payloads; the API orchestrates
+- **Retrieval** – LangChain's `QdrantVectorStore` persists FastEmbed dense +
+  sparse embeddings in Qdrant; the API orchestrates
   filtering, reranking, and response formatting (REST, MCP, browser integrations).
 
 ## Choose Your Guide

@@ -32,11 +32,13 @@ graph TD
 Core layers:
 
 - **Ingestion** – Five-tier browser manager chooses the lightest tool capable of
-  loading a page; extractors normalise content prior to embedding.
-- **Processing** – Dense/sparse embeddings (FastEmbed + LangChain) and HyDE
+  loading a page; extractors normalise content and `chunk_to_documents`
+  orchestrates LangChain splitters (Markdown/HTML/code/JSON/token aware) for
+  deterministic chunk metadata.
+- **Processing** – Dense/sparse embeddings (LangChain FastEmbed wrappers) and HyDE
   augmentation prepare vectors; Dragonfly accelerates recalls.
-- **Retrieval** – Qdrant stores payloads; the API handles filtering, reranking,
-  and response formatting.
+- **Retrieval** – LangChain's `QdrantVectorStore` persists dense and sparse
+  payloads; the API handles filtering, reranking, and response formatting.
 
 ### Service Composition
 
@@ -76,6 +78,37 @@ resolve services through `Provide[...]` bindings.
 CLI tooling and scripts also rely on `ensure_container` / `container_session`
 instead of bespoke managers, keeping lifecycle management for HTTP sessions,
 async clients, and monitoring tasks centralised.
+
+### Document chunking & vector ingestion pipeline
+
+All ingestion paths delegate to
+`src/services/document_chunking.chunk_to_documents`, which inspects crawler
+metadata to choose a LangChain splitter:
+
+- Markdown → `MarkdownHeaderTextSplitter` with recursive refinement for nested
+  headings.
+- HTML → `HTMLSemanticPreservingSplitter` (with header/section fallbacks) and
+  optional whitespace normalisation.
+- Code → `RecursiveCharacterTextSplitter.from_language` seeded by file
+  extension or detected language hints.
+- JSON → `RecursiveJsonSplitter`.
+- Token-aware content → `TokenTextSplitter.from_tiktoken_encoder` for strict
+  token budgets.
+- Plain text → `RecursiveCharacterTextSplitter` using newline/space fallback
+  separators.
+
+`ChunkingConfig` (also exposed through MCP request bodies) governs chunk size,
+overlap, token-aware limits, and HTML normalisation. The resulting LangChain
+`Document` list receives canonical metadata (`chunk_id`, `chunk_index`,
+`kind`, provenance fields) before vectorisation.
+
+`VectorStoreService` converts those documents into `TextDocument` payloads and
+relies on LangChain's `QdrantVectorStore` to persist them. FastEmbed dense and
+sparse embeddings (`FastEmbedEmbeddings` + `FastEmbedSparse`) are initialised
+once and reused across API, CLI, and MCP entry points, enabling hybrid search
+when `EmbeddingConfig.retrieval_mode` (or CLI/MCP overrides) is set to
+`hybrid`. Qdrant's sparse + dense scoring is then applied transparently during
+retrieval.
 
 ## 2. LangChain / LangGraph Orchestration
 

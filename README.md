@@ -23,8 +23,9 @@ applications.
 - Multi-tier crawling orchestration (`src/services/browser/unified_manager.py`)
   covering lightweight HTTP, Crawl4AI, browser-use, Playwright, and Firecrawl,
   plus a resumable bulk embedder CLI (`src/crawl4ai_bulk_embedder.py`).
-- Hybrid retrieval stack leveraging OpenAI and FastEmbed embeddings, SPLADE
-  sparse vectors, reranking, and HyDE augmentation through the modular Qdrant
+- Hybrid retrieval stack leveraging OpenAI and LangChain FastEmbed dense
+  embeddings plus FastEmbedSparse BM25 signals, reranking, and HyDE augmentation
+  through the modular Qdrant
   service (`src/services/vector_db/` and `src/services/hyde/`).
 - Dual interfaces: REST endpoints in FastAPI (`src/api/routers/v1/`) and a
   FastMCP server (`src/unified_mcp_server.py`) that registers search, document
@@ -136,6 +137,63 @@ flowchart LR
 - Firecrawl and Crawl4AI adapters plus browser-use / Playwright integrations cover static and dynamic sites.
 - `src/crawl4ai_bulk_embedder.py` streams bulk ingestion, chunking, and embedding into Qdrant with resumable state and progress reporting.
 - `docs/users/web-scraping.md` and `docs/users/examples-and-recipes.md` include tier selection guidance and code samples.
+
+#### LangChain splitter matrix & hybrid retrieval glue
+
+The ingestion stack no longer ships bespoke "basic" or "enhanced" chunkers. Every
+surface—FastAPI, MCP, CLI—calls the shared
+`src/services/document_chunking.chunk_to_documents` helper, which orchestrates a
+matrix of LangChain text splitters selected from document metadata:
+
+- Markdown → `MarkdownHeaderTextSplitter` + recursive refinement for heading-aware
+  segments.
+- HTML → `HTMLSemanticPreservingSplitter` (or header/section splitters when
+  semantic parsing is disabled) with optional whitespace normalisation.
+- Code → `RecursiveCharacterTextSplitter.from_language` seeded from inferred file
+  extensions or crawler metadata.
+- JSON → `RecursiveJsonSplitter` for structured payloads.
+- Token aware → `TokenTextSplitter.from_tiktoken_encoder` for strict token
+  budgets.
+- Plain text → `RecursiveCharacterTextSplitter` using newline/space fallbacks.
+
+All variants share canonical chunk metadata (`chunk_id`, `chunk_index`, inferred
+`kind`, provenance fields) so downstream services never rely on bespoke schemas.
+See the LangChain text splitter catalogue for implementation details.[^langchain-splitters]
+
+Dense and sparse embeddings are sourced from the LangChain FastEmbed wrappers—
+`FastEmbedEmbeddings` for dense vectors and `FastEmbedSparse` for BM25-compatible
+representations—allowing hybrid searches without vendor SDK drift.[^fastembed]
+`VectorStoreService` wires both outputs into LangChain's `QdrantVectorStore`, so
+ingestion code and documentation examples share a single integration point.[^langchain-qdrant]
+
+```python
+from langchain_community.embeddings import FastEmbedEmbeddings
+from langchain_qdrant import FastEmbedSparse, QdrantVectorStore
+
+from src.services.document_chunking import chunk_to_documents, infer_document_kind
+from src.config.models import ChunkingConfig
+
+config = ChunkingConfig(chunk_size=1600, chunk_overlap=200)
+documents = chunk_to_documents(
+    raw_text,
+    metadata,
+    infer_document_kind(metadata, "text"),
+    config,
+)
+
+store = QdrantVectorStore.from_documents(
+    documents,
+    embedding=FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5"),
+    sparse_embeddings=FastEmbedSparse(model_name="qdrant/bm25"),
+    url="http://localhost:6333",
+    collection_name="documentation",
+)
+```
+
+Toggle dense-only, sparse-only, or hybrid retrieval by setting
+`EmbeddingConfig.retrieval_mode` (and the equivalent CLI/MCP options). Hybrid mode
+persists both vector modalities and enables Qdrant's sparse+dense scoring during
+search.[^qdrant-hybrid]
 
 ### Vector Search & Retrieval
 
@@ -377,3 +435,8 @@ discover it.
 ## License
 
 Released under the [MIT License](LICENSE).
+
+[^langchain-splitters]: LangChain text splitter reference – <https://python.langchain.com/docs/modules/data_connection/document_transformers/text_splitters/>
+[^fastembed]: FastEmbed dense and sparse configuration guide – <https://qdrant.tech/documentation/fastembed/>
+[^langchain-qdrant]: LangChain Qdrant vector store integration – <https://python.langchain.com/docs/integrations/vectorstores/qdrant/>
+[^qdrant-hybrid]: Qdrant hybrid sparse+dense search overview – <https://qdrant.tech/articles/hybrid-search/>
