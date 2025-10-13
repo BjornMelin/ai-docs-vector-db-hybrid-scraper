@@ -31,11 +31,11 @@ Budget thresholds for the deterministic CI lane live in `config/eval_budgets.yml
 - minimum `precision_at_k` and `recall_at_k`
 - maximum average latency (`max_latency_ms`)
 
-Semantic evaluation is optional and governed by:
+Semantic evaluation uses ragas by default and is governed by:
 
-- default cap of 25 samples (`--ragas-max-samples` to override)
+- default cap of 25 samples (`--max-semantic-samples` to override)
 - cost guardrails in `config/eval_costs.yml`, including provider token budgets
-- CLI warnings reminding operators to set rate limits whenever `--enable-ragas` is enabled
+- CLI warnings reminding operators to set rate limits whenever API secrets are configured
 
 Run the semantic lane in CI only when secrets are provided; it publishes JSON artefacts but does not block merges by default.
 

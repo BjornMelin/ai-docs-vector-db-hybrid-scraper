@@ -4,15 +4,12 @@ This script executes the LangGraph-backed search orchestrator for every
 entry in the golden dataset and captures three layers of evaluation:
 
 * Deterministic baselines (string similarity + retrieval precision/recall)
-* Optional Ragas metrics (faithfulness, relevance, context recall)
+* Semantic Ragas metrics (faithfulness, answer relevancy, context recall/precision)
 
 Usage:
     uv run python scripts/eval/rag_golden_eval.py \
         --dataset tests/data/rag/golden_set.jsonl \
         --output artifacts/rag_golden_report.json
-
-Enable semantic metrics by providing an API-enabled LLM/embedding via
-environment variables and passing ``--enable-ragas``.
 """
 
 from __future__ import annotations
@@ -22,9 +19,10 @@ import asyncio
 import importlib
 import json
 import logging
+import os
 import re
 from collections import defaultdict
-from collections.abc import Iterable, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 from functools import lru_cache
@@ -33,6 +31,16 @@ from statistics import fmean
 from typing import TYPE_CHECKING, Any, Protocol
 
 import yaml
+from ragas import EvaluationDataset
+from ragas.embeddings import OpenAIEmbeddings as RagasOpenAIEmbeddings
+from ragas.evaluation import evaluate as ragas_evaluate
+from ragas.llms.base import OpenAI as RagasOpenAI
+from ragas.metrics import (
+    AnswerRelevancy,
+    ContextPrecision,
+    ContextRecall,
+    Faithfulness,
+)
 
 from scripts.eval.dataset_validator import DatasetValidationError, load_dataset_records
 from src.config import get_settings
@@ -124,78 +132,38 @@ class SupportsSearchOrchestrator(Protocol):
 
 
 class RagasEvaluator:
-    """Wrapper around Ragas metrics with graceful degradation when disabled."""
+    """Execute semantic metrics using ragas ≥0.3."""
 
-    def __init__(
+    _METRICS = [
+        Faithfulness(),
+        AnswerRelevancy(),
+        ContextPrecision(),
+        ContextRecall(),
+    ]
+
+    def __init__(  # pylint: disable=too-many-arguments
         self,
         *,
-        enabled: bool,
-        llm_model: str | None = None,
-        embedding_model: str | None = None,
+        api_key: str,
+        llm_model: str,
+        embedding_model: str,
+        max_retries: int = 2,
+        timeout: float | None = None,
     ) -> None:
-        self._enabled = False
-        self._evaluate = None
-        self._metrics_suite: list[Any] = []
-        self._llm = None
-        self._embeddings = None
-        self._dataset_cls: Any | None = None
-        if not enabled:
-            LOGGER.info("Ragas evaluation disabled; skipping semantic metrics.")
-            return
+        client_kwargs: dict[str, Any] = {"api_key": api_key}
+        if max_retries is not None:
+            client_kwargs["max_retries"] = max_retries
+        if timeout is not None:
+            client_kwargs["timeout"] = timeout
 
-        self._enabled = self._setup_backend(llm_model, embedding_model)
-
-    def _setup_backend(
-        self, llm_model: str | None, embedding_model: str | None
-    ) -> bool:
-        """Initialise optional Ragas dependencies."""
-
-        # pylint: disable=import-outside-toplevel,too-many-locals
-        try:  # pragma: no cover - optional dependency import path
-            langchain_openai = importlib.import_module("langchain_openai")
-            ragas_module = importlib.import_module("ragas")
-            dataset_schema = importlib.import_module("ragas.dataset_schema")
-            embeddings_module = importlib.import_module("ragas.embeddings")
-            llms_module = importlib.import_module("ragas.llms")
-            metrics_module = importlib.import_module("ragas.metrics")
-
-            chat_open_ai = langchain_openai.ChatOpenAI
-            openai_embeddings = langchain_openai.OpenAIEmbeddings
-            self._dataset_cls = dataset_schema.EvaluationDataset
-            self._evaluate = ragas_module.evaluate
-            self._metrics_suite = [
-                metrics_module.context_precision,
-                metrics_module.context_recall,
-                metrics_module.faithfulness,
-                metrics_module.answer_relevancy,
-            ]
-            llm_instance = chat_open_ai(model=llm_model or "gpt-4o-mini")
-            embedding_instance = openai_embeddings(
-                model=embedding_model or "text-embedding-3-small"
-            )
-            embeddings_wrapper = embeddings_module.LangchainEmbeddingsWrapper
-            llm_wrapper = llms_module.LangchainLLMWrapper
-            self._llm = llm_wrapper(llm_instance)
-            self._embeddings = embeddings_wrapper(embedding_instance)
-            LOGGER.info(
-                "Ragas evaluator initialised with model=%s embedding=%s",
-                llm_model or "gpt-4o-mini",
-                embedding_model or "text-embedding-3-small",
-            )
-            return True
-        except ImportError as exc:  # pragma: no cover - optional dependency path
-            LOGGER.warning(
-                "ragas/langchain_openai missing; semantic metrics disabled (%s)",
-                exc,
-            )
-            return False
-        except Exception as exc:  # pragma: no cover - environment specific
-            LOGGER.warning(
-                "Failed to initialise Ragas evaluator, metrics disabled: %s",
-                exc,
-                exc_info=True,
-            )
-            return False
+        self._llm = RagasOpenAI(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
+            model=llm_model,
+            **client_kwargs,
+        )
+        self._embeddings = RagasOpenAIEmbeddings(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
+            model=embedding_model,
+            api_key=api_key,
+        )
 
     def evaluate(
         self,
@@ -203,13 +171,10 @@ class RagasEvaluator:
         predicted_answer: str,
         contexts: Sequence[str],
     ) -> dict[str, float]:
-        """Return semantic metrics using Ragas when enabled."""
+        """Evaluate semantic metrics for a single example."""
 
-        if not self._enabled or self._evaluate is None or self._dataset_cls is None:
-            return {}
-
-        try:  # pragma: no cover - networked path
-            dataset = self._dataset_cls.from_list(
+        try:
+            dataset = EvaluationDataset.from_list(
                 [
                     {
                         "question": example.query,
@@ -220,36 +185,26 @@ class RagasEvaluator:
                     }
                 ]
             )
-            result = self._evaluate(
+            result = ragas_evaluate(
                 dataset=dataset,
-                metrics=self._metrics_suite,
+                metrics=self._METRICS,
                 llm=self._llm,
                 embeddings=self._embeddings,
             )
-
-            raw_scores: dict[str, float] = {}
-            for key, value in self._collect_metric_samples(result):
-                if value is None:
-                    continue
-                try:
-                    raw_scores[str(key)] = float(value)
-                except (TypeError, ValueError):
-                    continue
-
-            clean_scores: dict[str, float] = {}
-            for metric in self._metrics_suite:
-                metric_name = getattr(metric, "name", None)
-                if not metric_name:
-                    continue
-                for candidate_key in (
+            raw_scores = self._normalise_scores(result)
+            scores: dict[str, float] = {}
+            for metric in self._METRICS:
+                metric_name = getattr(metric, "name", metric.__class__.__name__).lower()
+                candidates = [
                     metric_name,
-                    f"{metric_name}_score",
                     metric_name.replace("-", "_"),
-                ):
-                    if candidate_key in raw_scores:
-                        clean_scores[metric_name] = raw_scores[candidate_key]
+                    f"{metric_name}_score",
+                ]
+                for key in candidates:
+                    if key in raw_scores:
+                        scores[metric_name] = float(raw_scores[key])
                         break
-            return clean_scores
+            return scores
         except Exception as exc:  # pragma: no cover - defensive guard
             LOGGER.warning(
                 "Ragas evaluation failed for query '%s': %s",
@@ -260,20 +215,39 @@ class RagasEvaluator:
             return {}
 
     @staticmethod
-    def _collect_metric_samples(raw_result: Any) -> Iterable[tuple[str, Any]]:
-        """Normalise the various result payloads emitted by Ragas."""
+    def _normalise_scores(raw_result: Any) -> dict[str, float]:
+        """Extract a flat mapping of metric name to score float."""
 
-        if hasattr(raw_result, "metrics") and isinstance(raw_result.metrics, dict):
-            return raw_result.metrics.items()
-        if hasattr(raw_result, "scores") and isinstance(raw_result.scores, dict):
-            return raw_result.scores.items()
+        def _extract(value: Any) -> float | None:
+            if value is None:
+                return None
+            if isinstance(value, (int, float)):
+                return float(value)
+            if hasattr(value, "score"):
+                candidate = value.score
+                return float(candidate) if candidate is not None else None
+            if isinstance(value, dict):
+                score_val = value.get("score") or value.get("value")
+                if score_val is not None:
+                    return float(score_val)
+            return None
+
+        payload: dict[str, Any] = {}
         if hasattr(raw_result, "to_dict"):
-            payload = raw_result.to_dict()
-            if isinstance(payload, dict):
-                return payload.items()
-        if isinstance(raw_result, dict):
-            return raw_result.items()
-        return []
+            candidate = raw_result.to_dict()
+            if isinstance(candidate, dict):
+                payload = candidate
+        elif hasattr(raw_result, "scores") and isinstance(raw_result.scores, dict):
+            payload = raw_result.scores
+        elif isinstance(raw_result, dict):
+            payload = raw_result
+
+        flattened: dict[str, float] = {}
+        for key, value in payload.items():
+            score = _extract(value)
+            if score is not None:
+                flattened[str(key).lower()] = score
+        return flattened
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -512,7 +486,7 @@ async def _evaluate_examples(
     ragas_evaluator: RagasEvaluator,
     *,
     limit: int,
-    ragas_sample_cap: int | None = None,
+    max_semantic_samples: int | None = None,
 ) -> list[ExampleResult]:
     """Execute the orchestrator for every example and collect metrics."""
 
@@ -542,7 +516,7 @@ async def _evaluate_examples(
             example, [record.model_dump() for record in response.records], k=limit
         )
 
-        if ragas_sample_cap is not None and len(results) >= ragas_sample_cap:
+        if max_semantic_samples is not None and len(results) >= max_semantic_samples:
             ragas_scores = {}
         else:
             ragas_scores = ragas_evaluator.evaluate(example, predicted, contexts)
@@ -615,19 +589,25 @@ async def _run(args: argparse.Namespace) -> None:
     examples = _load_dataset(dataset_path)
 
     default_max_samples, _ = _load_cost_controls()
-    ragas_sample_cap = args.ragas_max_samples
-    if ragas_sample_cap is None:
-        ragas_sample_cap = default_max_samples
+    semantic_sample_cap = args.max_semantic_samples
+    if semantic_sample_cap is None:
+        semantic_sample_cap = default_max_samples
+
+    settings = get_settings()
+    api_key = os.getenv("OPENAI_API_KEY") or getattr(settings.openai, "api_key", None)
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY must be configured for semantic evaluation.")
 
     ragas_evaluator = RagasEvaluator(
-        enabled=args.enable_ragas,
-        llm_model=args.ragas_model,
-        embedding_model=args.ragas_embedding,
+        api_key=api_key,
+        llm_model=args.ragas_llm_model,
+        embedding_model=args.ragas_embedding_model,
     )
-    if args.enable_ragas:
-        LOGGER.info(
-            "Semantic evaluation enabled. API usage limits should be configured."
-        )
+    LOGGER.info(
+        "Semantic metrics enabled with llm=%s embedding=%s",
+        args.ragas_llm_model,
+        args.ragas_embedding_model,
+    )
 
     async with container_session(force_reload=True):
         orchestrator = await _load_orchestrator()
@@ -637,7 +617,7 @@ async def _run(args: argparse.Namespace) -> None:
                 orchestrator,
                 ragas_evaluator,
                 limit=args.limit,
-                ragas_sample_cap=ragas_sample_cap,
+                max_semantic_samples=semantic_sample_cap,
             )
         finally:
             await orchestrator.cleanup()
@@ -687,27 +667,22 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         help="Metrics namespace for the Prometheus registry",
     )
     parser.add_argument(
-        "--enable-ragas",
-        action="store_true",
-        help="Enable semantic RAGAS metrics (requires configured LLM + embeddings)",
-    )
-    parser.add_argument(
-        "--ragas-model",
+        "--ragas-llm-model",
         type=str,
-        default=None,
-        help="LLM model identifier used by RAGAS (defaults to gpt-4o-mini)",
+        default="gpt-4o-mini",
+        help="LLM model identifier used for semantic evaluation",
     )
     parser.add_argument(
-        "--ragas-embedding",
+        "--ragas-embedding-model",
         type=str,
-        default=None,
-        help="Embedding model for RAGAS (default: text-embedding-3-small)",
+        default="text-embedding-3-small",
+        help="Embedding model used for semantic evaluation",
     )
     parser.add_argument(
-        "--ragas-max-samples",
+        "--max-semantic-samples",
         type=int,
         default=None,
-        help="Upper bound on examples processed with RAGAS (cost control)",
+        help="Maximum number of examples evaluated with RAGAS (cost control)",
     )
     return parser
 
