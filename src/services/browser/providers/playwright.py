@@ -129,7 +129,7 @@ class PlaywrightProvider(BrowserProvider):
                     )
 
                 return BrowserResult(
-                    success=True,
+                    success=not challenge_detected,
                     url=page.url,
                     title=await page.title(),
                     content=text_content,
