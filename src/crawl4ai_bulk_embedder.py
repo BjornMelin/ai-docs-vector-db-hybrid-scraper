@@ -348,12 +348,31 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
             raise ScrapingError(msg)
 
         content = scrape_result.get("content", {})
-        markdown_content = content.get("markdown", "")
-        text_content = content.get("text", "")
+        markdown_content = ""
+        text_content = ""
+        if isinstance(content, Mapping):
+            markdown_content = content.get("markdown", "")
+            text_content = content.get("text", "")
         metadata = scrape_result.get("metadata", {})
 
         # Use markdown if available, fallback to text
-        if not (content_to_chunk := markdown_content or text_content):
+        content_to_chunk = markdown_content or text_content
+        if not content_to_chunk:
+            raw_html = scrape_result.get("raw_html")
+            html_content = None
+            if isinstance(content, Mapping):
+                html_content = content.get("html")
+            elif isinstance(content, str):
+                html_content = content
+
+            def _normalize(candidate: Any) -> str | None:
+                if isinstance(candidate, str) and candidate.strip():
+                    return candidate
+                return None
+
+            content_to_chunk = _normalize(raw_html) or _normalize(html_content)
+
+        if not content_to_chunk:
             _raise_content_extraction_error()
 
         return scrape_result, content_to_chunk, metadata

@@ -57,10 +57,10 @@ async def _run_content_intelligence(
 
     try:
         analysis_result = await service.analyze_content(
-            content=crawl_result["content"],
+            content=crawl_result.get("content") or {},
             url=request.url,
             title=crawl_result.get("title")
-            or crawl_result["metadata"].get("title", ""),
+            or crawl_result.get("metadata", {}).get("title", ""),
             raw_html=crawl_result.get("raw_html"),
             confidence_threshold=0.7,
         )
@@ -108,11 +108,27 @@ async def _scrape_document(
 
     await ctx.debug(f"Scraping URL for document {doc_id} via UnifiedBrowserManager")
     crawl_result = await resolved_crawl_manager.scrape_url(request.url)
-    if (
-        not crawl_result
-        or not crawl_result.get("success")
-        or not crawl_result.get("content")
-    ):
+    has_chunkable_content = False
+
+    def _mark_if_chunkable(candidate: Any) -> None:
+        nonlocal has_chunkable_content
+        if has_chunkable_content or not isinstance(candidate, str):
+            return
+        if candidate.strip():
+            has_chunkable_content = True
+
+    content_field = None
+    if crawl_result:
+        content_field = crawl_result.get("content")
+        _mark_if_chunkable(crawl_result.get("raw_html"))
+        if isinstance(content_field, Mapping):
+            _mark_if_chunkable(content_field.get("html"))
+            _mark_if_chunkable(content_field.get("markdown"))
+            _mark_if_chunkable(content_field.get("text"))
+        else:
+            _mark_if_chunkable(content_field)
+
+    if not crawl_result or not crawl_result.get("success") or not has_chunkable_content:
         await ctx.error(f"Failed to scrape {request.url}")
         _raise_scrape_error(request.url)
 
