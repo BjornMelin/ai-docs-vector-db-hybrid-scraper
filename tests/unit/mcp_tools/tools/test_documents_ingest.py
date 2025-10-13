@@ -126,11 +126,7 @@ def documents_env(monkeypatch) -> SimpleNamespace:  # pylint: disable=too-many-l
         "from_unified_config",
         classmethod(lambda cls: validator),
     )
-    monkeypatch.setattr(
-        documents,
-        "split_content_into_documents",
-        _dummy_splitter,
-    )
+    monkeypatch.setattr(documents, "chunk_to_documents", _dummy_splitter)
 
     mock_mcp = MagicMock()
     registered: dict[str, Callable] = {}

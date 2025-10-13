@@ -472,7 +472,7 @@ class TestProcessingPipeline:
         ]
 
         with patch(
-            "src.crawl4ai_bulk_embedder.split_content_into_documents",
+            "src.crawl4ai_bulk_embedder.chunk_to_documents",
             return_value=chunk_documents,
         ):
             result = await embedder.process_url("https://example.com/test")
@@ -536,7 +536,7 @@ class TestProcessingPipeline:
         )
 
         with patch(
-            "src.crawl4ai_bulk_embedder.split_content_into_documents",
+            "src.crawl4ai_bulk_embedder.chunk_to_documents",
             return_value=[],
         ):
             result = await embedder.process_url("https://example.com/short")
