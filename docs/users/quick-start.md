@@ -337,7 +337,7 @@ time curl -X POST localhost:8000/api/v1/search \
 #### Server Won't Start
 
 - **Check Python version**: `python --version` (needs 3.11-3.13, 3.13 recommended)
-- **Verify unified dependencies**: `uv sync --dev`
+- **Verify unified dependencies**: `uv sync --all-extras`
 - **Check enhanced ports**: Qdrant (6333), DragonflyDB (6379), Monitoring (3000, 9090)
 - **Validate unified config**: `uv run python -c "from src.config.unified import UnifiedConfig; UnifiedConfig()"`
 
