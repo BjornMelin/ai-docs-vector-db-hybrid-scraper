@@ -3,15 +3,13 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+from src.services.embeddings.base import EmbeddingProvider
+from src.services.embeddings.fastembed_provider import FastEmbedProvider
+from src.services.embeddings.openai_provider import OpenAIEmbeddingProvider
 from src.services.errors import EmbeddingServiceError
-
-from ..base import EmbeddingProvider
-from ..fastembed_provider import FastEmbedProvider
-from ..openai_provider import OpenAIEmbeddingProvider
 
 
 @dataclass
@@ -48,13 +46,9 @@ class ProviderRegistry:
     def __init__(
         self,
         config: Any,
-        openai_client: Any | None = None,
-        openai_client_factory: (Callable[[], Awaitable[Any]] | None) = None,
         factories: ProviderFactories | None = None,
     ) -> None:
         self._config = config
-        self._openai_client = openai_client
-        self._openai_client_factory = openai_client_factory
         self._providers: dict[str, EmbeddingProvider] = {}
         self._reranker = None
         self._reranker_model = self._DEFAULT_RERANKER_MODEL
@@ -188,8 +182,6 @@ class ProviderRegistry:
                 api_key=self._config.openai.api_key,
                 model_name=self._config.openai.model,
                 dimensions=self._config.openai.dimensions,
-                client=self._openai_client,
-                client_factory=self._openai_client_factory,
             )
             await provider.initialize()
         except Exception as exc:  # pragma: no cover - aligns with legacy behavior

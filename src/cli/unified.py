@@ -227,10 +227,19 @@ def benchmark(profile: str):
 @click.option("--output", help="Optional JSON report destination")
 @click.option("--limit", type=int, default=5, show_default=True)
 @click.option("--namespace", default="ml_app", show_default=True)
-@click.option("--enable-ragas", is_flag=True, default=False)
-@click.option("--ragas-model")
-@click.option("--ragas-embedding")
-@click.option("--ragas-max-samples", type=int)
+@click.option(
+    "--ragas-llm-model",
+    default="gpt-4o-mini",
+    show_default=True,
+    help="LLM model for semantic evaluation",
+)
+@click.option(
+    "--ragas-embedding-model",
+    default="text-embedding-3-small",
+    show_default=True,
+    help="Embedding model for semantic evaluation",
+)
+@click.option("--max-semantic-samples", type=int)
 @click.option(
     "--metrics-allowlist",
     multiple=True,
@@ -241,10 +250,9 @@ def run_eval(  # pylint: disable=too-many-arguments,too-many-positional-argument
     output: str | None,
     limit: int,
     namespace: str,
-    enable_ragas: bool,
-    ragas_model: str | None,
-    ragas_embedding: str | None,
-    ragas_max_samples: int | None,
+    ragas_llm_model: str,
+    ragas_embedding_model: str,
+    max_semantic_samples: int | None,
     metrics_allowlist: tuple[str, ...],
 ):
     """Run the RAG golden evaluation harness."""
@@ -262,14 +270,10 @@ def run_eval(  # pylint: disable=too-many-arguments,too-many-positional-argument
 
     if output:
         cmd.extend(["--output", output])
-    if enable_ragas:
-        cmd.append("--enable-ragas")
-    if ragas_model:
-        cmd.extend(["--ragas-model", ragas_model])
-    if ragas_embedding:
-        cmd.extend(["--ragas-embedding", ragas_embedding])
-    if ragas_max_samples is not None:
-        cmd.extend(["--ragas-max-samples", str(ragas_max_samples)])
+    cmd.extend(["--ragas-llm-model", ragas_llm_model])
+    cmd.extend(["--ragas-embedding-model", ragas_embedding_model])
+    if max_semantic_samples is not None:
+        cmd.extend(["--max-semantic-samples", str(max_semantic_samples)])
     if metrics_allowlist:
         cmd.append("--metrics-allowlist")
         cmd.extend(metrics_allowlist)

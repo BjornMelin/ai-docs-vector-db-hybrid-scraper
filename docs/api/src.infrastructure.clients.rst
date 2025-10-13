@@ -20,14 +20,6 @@ src.infrastructure.clients.http\_client module
    :show-inheritance:
    :undoc-members:
 
-src.infrastructure.clients.openai\_client module
-------------------------------------------------
-
-.. automodule:: src.infrastructure.clients.openai_client
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 src.infrastructure.clients.qdrant\_client module
 ------------------------------------------------
 

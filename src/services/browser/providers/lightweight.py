@@ -9,8 +9,8 @@ import trafilatura
 
 from src.config.browser import LightweightSettings
 from src.services.browser.models import BrowserResult, ProviderKind, ScrapeRequest
+from src.services.browser.runtime import execute_with_retry
 
-from ..runtime import execute_with_retry
 from .base import BrowserProvider, ProviderContext
 
 

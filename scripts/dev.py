@@ -192,14 +192,12 @@ def cmd_eval(args: argparse.Namespace) -> int:
         command.extend(["--limit", str(args.limit)])
     if args.namespace:
         command.extend(["--namespace", args.namespace])
-    if args.enable_ragas:
-        command.append("--enable-ragas")
-    if args.ragas_model:
-        command.extend(["--ragas-model", args.ragas_model])
-    if args.ragas_embedding:
-        command.extend(["--ragas-embedding", args.ragas_embedding])
-    if args.ragas_max_samples is not None:
-        command.extend(["--ragas-max-samples", str(args.ragas_max_samples)])
+    if args.ragas_llm_model:
+        command.extend(["--ragas-llm-model", args.ragas_llm_model])
+    if args.ragas_embedding_model:
+        command.extend(["--ragas-embedding-model", args.ragas_embedding_model])
+    if args.max_semantic_samples is not None:
+        command.extend(["--max-semantic-samples", str(args.max_semantic_samples)])
     if args.metrics_allowlist:
         command.append("--metrics-allowlist")
         command.extend(args.metrics_allowlist)
@@ -587,22 +585,19 @@ def build_parser() -> argparse.ArgumentParser:
         help="Metrics namespace for the Prometheus snapshot",
     )
     eval_parser.add_argument(
-        "--enable-ragas",
-        action="store_true",
-        help="Enable semantic RAGAS metrics",
+        "--ragas-llm-model",
+        default="gpt-4o-mini",
+        help="Override the LLM model used for semantic evaluation",
     )
     eval_parser.add_argument(
-        "--ragas-model",
-        help="Override the LLM model used by RAGAS",
+        "--ragas-embedding-model",
+        default="text-embedding-3-small",
+        help="Override the embedding model used for semantic evaluation",
     )
     eval_parser.add_argument(
-        "--ragas-embedding",
-        help="Override the embedding model used by RAGAS",
-    )
-    eval_parser.add_argument(
-        "--ragas-max-samples",
+        "--max-semantic-samples",
         type=int,
-        help="Maximum number of samples for RAGAS evaluation",
+        help="Maximum number of examples evaluated with RAGAS",
     )
     eval_parser.add_argument(
         "--metrics-allowlist",

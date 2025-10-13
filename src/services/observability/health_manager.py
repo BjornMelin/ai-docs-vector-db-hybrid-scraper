@@ -300,7 +300,8 @@ class OpenAIHealthCheck(HealthCheck):
 
     def __init__(
         self,
-        client: AsyncOpenAI,
+        api_key: str,
+        model: str,
         *,
         name: str = "openai",
         timeout_seconds: float = 5.0,
@@ -308,7 +309,8 @@ class OpenAIHealthCheck(HealthCheck):
         """Initialize the OpenAI health probe."""
 
         super().__init__(name, timeout_seconds)
-        self._client = client
+        self._model = model
+        self._client = AsyncOpenAI(api_key=api_key, max_retries=2)
 
     async def check(self) -> HealthCheckResult:
         """List available models to validate API access."""
@@ -319,7 +321,12 @@ class OpenAIHealthCheck(HealthCheck):
         """Execute the OpenAI health probe."""
 
         try:
-            models = await self._client.models.list()
+            response = await self._client.responses.create(
+                model=self._model,
+                input="Health check ping",
+                max_output_tokens=1,
+                store=False,
+            )
         except OpenAIAPIError as exc:
             return HealthCheckResult(
                 name=self.name,
@@ -340,7 +347,11 @@ class OpenAIHealthCheck(HealthCheck):
             status=HealthStatus.HEALTHY,
             message="OpenAI API is reachable",
             duration_ms=0.0,
-            metadata={"model_count": len(models.data)},
+            metadata={
+                "total_tokens": getattr(
+                    getattr(response, "usage", None), "total_tokens", 0
+                )
+            },
         )
 
 
@@ -701,7 +712,8 @@ def build_health_manager(
         if api_key:
             manager.add_health_check(
                 OpenAIHealthCheck(
-                    AsyncOpenAI(api_key=api_key),
+                    api_key=api_key,
+                    model=settings.openai.model,
                     timeout_seconds=settings.monitoring.health_check_timeout,
                 )
             )

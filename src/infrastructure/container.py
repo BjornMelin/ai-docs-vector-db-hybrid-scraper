@@ -14,12 +14,11 @@ import aiohttp
 import redis.asyncio as redis
 from dependency_injector import containers, providers
 from dependency_injector.wiring import Provide
-from openai import AsyncOpenAI
+from firecrawl import AsyncFirecrawlApp  # type: ignore
+from langchain_mcp_adapters.client import MultiServerMCPClient  # type: ignore
+from langchain_mcp_adapters.sessions import Connection  # type: ignore
 from qdrant_client import AsyncQdrantClient
 
-from firecrawl import AsyncFirecrawlApp
-from langchain_mcp_adapters.client import MultiServerMCPClient
-from langchain_mcp_adapters.sessions import Connection
 from src.config.models import CacheType, MCPClientConfig, MCPServerConfig, MCPTransport
 from src.services.cache.manager import CacheManager
 from src.services.circuit_breaker import CircuitBreakerManager
@@ -28,28 +27,15 @@ from src.services.embeddings.manager import EmbeddingManager
 from src.services.vector_db.service import VectorStoreService
 
 
+Configuration = providers.Configuration  # pylint: disable=c-extension-no-member
+Singleton = providers.Singleton  # pylint: disable=c-extension-no-member
+Factory = providers.Factory  # pylint: disable=c-extension-no-member
+List = providers.List  # pylint: disable=c-extension-no-member
+Resource = providers.Resource  # pylint: disable=c-extension-no-member
+DeclarativeContainer = containers.DeclarativeContainer  # pylint: disable=c-extension-no-member
+Provider = providers.Provider  # pylint: disable=c-extension-no-member
+
 logger = logging.getLogger(__name__)
-
-
-def _create_openai_client(config: Any) -> AsyncOpenAI:
-    """Create OpenAI client with configuration.
-
-    Args:
-        config: Configuration object
-
-    Returns:
-        OpenAI client
-
-    """
-    try:
-        api_key = getattr(getattr(config, "openai", None), "api_key", None) or ""
-        max_retries = (
-            getattr(getattr(config, "performance", None), "max_retries", None) or 3
-        )
-        return AsyncOpenAI(api_key=api_key, max_retries=max_retries)
-    except (AttributeError, TypeError, ValueError) as e:
-        logger.warning("Failed to create OpenAI client with config: %s", e)
-        return AsyncOpenAI(api_key="", max_retries=3)
 
 
 def _create_qdrant_client(config: Any) -> AsyncQdrantClient:
@@ -99,10 +85,9 @@ def _create_firecrawl_client(config: Any) -> AsyncFirecrawlApp:
 async def _create_http_client() -> AsyncGenerator[Any]:
     """Create HTTP client with proper lifecycle management."""
 
-    async with asyncio.timeout(30.0):
-        timeout_config = aiohttp.ClientTimeout(total=30.0)
-        async with aiohttp.ClientSession(timeout=timeout_config) as session:
-            yield session
+    timeout_config = aiohttp.ClientTimeout(total=30.0)
+    async with aiohttp.ClientSession(timeout=timeout_config) as session:
+        yield session
 
 
 def _create_parallel_processing_system(*, embedding_manager: Any) -> Any:
@@ -168,14 +153,12 @@ def _create_cache_manager(config: Any) -> CacheManager:
 
 def _create_embedding_manager(
     config: Any,
-    openai_client: AsyncOpenAI | None,
     cache_manager: CacheManager | None,
 ) -> EmbeddingManager:
     """Instantiate the EmbeddingManager with DI-provided dependencies."""
 
     return EmbeddingManager(
         config=config,
-        openai_client=openai_client,
         cache_manager=cache_manager,
     )
 
@@ -493,119 +476,106 @@ async def _run_task_factories(factories: list[Any]) -> None:
             logger.debug("Container task execution failed", exc_info=True)
 
 
-class ApplicationContainer(containers.DeclarativeContainer):  # pylint: disable=c-extension-no-member
+class ApplicationContainer(DeclarativeContainer):
     """Application dependency injection container."""
 
     # Configuration
-    config = providers.Configuration()  # pylint: disable=c-extension-no-member
+    config = Configuration()
 
-    # Core client providers - using Factory for safe initialization
-    openai_client = providers.Singleton(  # pylint: disable=c-extension-no-member
-        _create_openai_client,
-        config=config,
-    )
-
-    qdrant_client = providers.Singleton(  # pylint: disable=c-extension-no-member
+    qdrant_client = Singleton(
         _create_qdrant_client,
         config=config,
     )
 
-    dragonfly_client = providers.Singleton(  # pylint: disable=c-extension-no-member
+    dragonfly_client = Singleton(
         _create_dragonfly_client,
         config=config,
     )
 
-    firecrawl_client = providers.Singleton(  # pylint: disable=c-extension-no-member
+    firecrawl_client = Singleton(
         _create_firecrawl_client,
         config=config,
     )
 
     # HTTP client with session management
-    http_client = providers.Resource(  # pylint: disable=c-extension-no-member
+    http_client = Resource(
         _create_http_client,
     )
 
-    # Client provider layer
-    openai_provider = providers.Singleton(
-        "src.infrastructure.clients.openai_client.OpenAIClientProvider",
-        openai_client=openai_client,
-    )
-
-    qdrant_provider = providers.Singleton(
+    qdrant_provider = Singleton(
         "src.infrastructure.clients.qdrant_client.QdrantClientProvider",
         qdrant_client=qdrant_client,
     )
 
-    firecrawl_provider = providers.Singleton(
+    firecrawl_provider = Singleton(
         "src.infrastructure.clients.firecrawl_client.FirecrawlClientProvider",
         firecrawl_client=firecrawl_client,
     )
 
-    http_provider = providers.Singleton(
+    http_provider = Singleton(
         "src.infrastructure.clients.http_client.HTTPClientProvider",
         http_client=http_client,
     )
 
-    cache_manager = providers.Singleton(
+    cache_manager = Singleton(
         _create_cache_manager,
         config=config,
     )
 
-    embedding_manager = providers.Singleton(
+    embedding_manager = Singleton(
         _create_embedding_manager,
         config=config,
-        openai_client=openai_client,
         cache_manager=cache_manager,
     )
 
-    vector_store_service = providers.Singleton(
+    vector_store_service = Singleton(
         _create_vector_store_service,
         config=config,
         async_qdrant_client=qdrant_client,
     )
 
-    circuit_breaker_manager = providers.Singleton(
+    circuit_breaker_manager = Singleton(
         _create_circuit_breaker_manager,
         config=config,
     )
 
-    project_storage = providers.Singleton(
+    project_storage = Singleton(
         _create_project_storage,
         config=config,
     )
 
-    content_intelligence_service = providers.Singleton(
+    content_intelligence_service = Singleton(
         _create_content_intelligence_service,
         config=config,
         embedding_manager=embedding_manager,
         cache_manager=cache_manager,
     )
 
-    browser_manager = providers.Singleton(
+    browser_manager = Singleton(
         _create_browser_manager,
         config=config,
     )
 
-    rag_generator = providers.Singleton(
+    rag_generator = Singleton(
         _create_rag_generator,
         config=config,
         vector_service=vector_store_service,
     )
 
-    mcp_client = providers.Singleton(
+    mcp_client = Singleton(
         _create_mcp_client,
         config=config,
     )
 
     # Parallel processing system
-    parallel_processing_system = providers.Factory(  # pylint: disable=c-extension-no-member
+    parallel_processing_system = Factory(
         _create_parallel_processing_system,
         embedding_manager=embedding_manager,
     )
 
     # Lifecycle management
-    startup_tasks = providers.List()  # pylint: disable=c-extension-no-member
-    shutdown_tasks = providers.List()  # pylint: disable=c-extension-no-member
+    startup_tasks = List()
+    shutdown_tasks = List()
 
 
 class ContainerManager:
@@ -725,12 +695,6 @@ async def shutdown_container() -> None:
 
 
 # Dependency injection decorators and functions for easy access
-def inject_openai_provider():
-    """Inject OpenAI client provider dependency."""
-
-    return Provide[ApplicationContainer.openai_provider]
-
-
 def inject_qdrant_provider():
     """Inject Qdrant client provider dependency."""
 
@@ -803,32 +767,25 @@ def inject_rag_generator():
     return Provide[ApplicationContainer.rag_generator]
 
 
-# Raw client injection helpers
-def inject_openai() -> AsyncOpenAI:
-    """Inject raw OpenAI client dependency."""
-
-    return Provide[ApplicationContainer.openai_client]
-
-
-def inject_qdrant() -> AsyncQdrantClient:
+def inject_qdrant() -> Provider[AsyncQdrantClient]:
     """Inject raw Qdrant client dependency."""
 
     return Provide[ApplicationContainer.qdrant_client]
 
 
-def inject_dragonfly_client() -> redis.Redis:
+def inject_dragonfly_client() -> Provider[redis.Redis]:
     """Inject raw Dragonfly cache client dependency."""
 
     return Provide[ApplicationContainer.dragonfly_client]
 
 
-def inject_firecrawl() -> AsyncFirecrawlApp:
+def inject_firecrawl() -> Provider[AsyncFirecrawlApp]:
     """Inject raw Firecrawl client dependency."""
 
     return Provide[ApplicationContainer.firecrawl_client]
 
 
-def inject_http() -> Any:
+def inject_http() -> Provider[Any]:
     """Inject raw HTTP client dependency."""
 
     return Provide[ApplicationContainer.http_client]

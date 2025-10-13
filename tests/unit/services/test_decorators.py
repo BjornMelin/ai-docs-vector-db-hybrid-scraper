@@ -5,13 +5,13 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from src.services.circuit_breaker.decorators import circuit_breaker
 from src.services.errors import (
     ExternalServiceError,
     NetworkError,
     ResourceError,
     ToolError,
     ValidationError,
-    circuit_breaker,
     handle_mcp_errors,
     retry_async,
     validate_input,

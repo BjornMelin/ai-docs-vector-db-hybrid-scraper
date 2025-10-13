@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Provisioned deterministic CPU and GPU validation harnesses (`scripts/validation`) with pytest coverage and operator docs so environments surface scientific/GPU drift automatically.
+- Added a dedicated `validation.yml` GitHub Actions pipeline that publishes JSON harness artefacts for both CPU and self-hosted GPU runners.
 - Added focused FastAPI security middleware tests and published release notes summarising the configuration/file-watch hardening work.
 - Documented osquery prerequisites for configuration file watching to help operators enable the feature safely.
 - Captured ADR 0009 documenting the tiered Playwright anti-bot stack and exported the new browser metrics section in `docs/observability/query_processing_metrics.md` with challenge counters.
@@ -35,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Refactor
 
+- Updated core embeddings and browser providers to use absolute imports, enforced OpenAI client cleanup semantics, and banned legacy SDK surfaces via new Ruff tidy-import rules.
+- Realigned pinned dependencies (OpenAI, NumPy, SciPy, lxml, aiohttp, xformers) to the maximum versions compatible with browser-use, crawl4ai, and vLLM, regenerating `uv.lock` under the new matrix.
 - **[MCP]:** Enforced explicit dependency injection for MCP tools and services,
   removing service locator helpers and requiring startup wiring to supply all
   shared managers.

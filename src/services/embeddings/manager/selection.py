@@ -5,7 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from ..base import EmbeddingProvider
+from src.services.embeddings.base import EmbeddingProvider
+
 from .types import QualityTier
 
 

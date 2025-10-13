@@ -17,7 +17,7 @@ from src.services.vector_db.service import VectorStoreService
 class VectorServiceStub:
     """Minimal vector service stub with deterministic responses."""
 
-    def __init__(self, collection: str = "docs") -> None:
+    def __init__(self, collection: str = "documentation") -> None:
         self._collection = collection
         self.config = SimpleNamespace(
             qdrant=SimpleNamespace(collection_name=collection)
@@ -78,6 +78,7 @@ async def test_search_returns_results_with_collection_field() -> None:
         query="vector databases",
         collection=None,
         limit=3,
+        offset=0,
         enable_expansion=False,
     )
 
@@ -107,6 +108,7 @@ async def test_search_uses_list_collections_when_default_missing() -> None:
         query="missing defaults",
         collection=None,
         limit=10,
+        offset=0,
         enable_expansion=False,
     )
 
@@ -116,16 +118,21 @@ async def test_search_uses_list_collections_when_default_missing() -> None:
 
 
 @pytest.mark.asyncio
-async def test_query_expansion_applied_when_enabled(monkeypatch) -> None:
+async def test_query_expansion_applied_when_enabled() -> None:
     """Verify query expansion is applied when the feature flag is enabled."""
 
-    service = VectorServiceStub("docs")
+    service = VectorServiceStub()
     orchestrator = SearchOrchestrator(
         vector_store_service=cast(VectorStoreService, service)
     )
     await orchestrator.initialize()
 
-    request = SearchRequest(query="install widget", limit=10, enable_expansion=True)
+    request = SearchRequest(
+        query="install widget",
+        limit=10,
+        offset=0,
+        enable_expansion=True,
+    )
 
     result = await orchestrator.search(request)
 
@@ -138,7 +145,7 @@ async def test_query_expansion_applied_when_enabled(monkeypatch) -> None:
 async def test_search_with_rag_pipeline(monkeypatch) -> None:
     """Verify the search orchestrator integrates with the LangGraph RAG pipeline."""
 
-    service = VectorServiceStub("docs")
+    service = VectorServiceStub()
     rag_config = ServiceRAGConfig()
 
     captured: dict[str, Any] = {}
@@ -146,7 +153,9 @@ async def test_search_with_rag_pipeline(monkeypatch) -> None:
     class DummyPipeline:  # noqa: D401 - simple stub
         """Stub pipeline capturing invocation arguments."""
 
-        def __init__(self, vector_service) -> None:  # pragma: no cover - simple
+        def __init__(
+            self, vector_service: VectorServiceStub
+        ) -> None:  # pragma: no cover - simple
             assert vector_service is service
 
         async def run(self, **kwargs: Any) -> dict[str, Any]:
@@ -171,6 +180,7 @@ async def test_search_with_rag_pipeline(monkeypatch) -> None:
     request = SearchRequest(
         query="vector rag",
         limit=3,
+        offset=0,
         enable_expansion=False,
         enable_rag=True,
         rag_top_k=2,

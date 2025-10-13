@@ -8,9 +8,9 @@ import json
 import uuid
 from collections.abc import Callable
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from dataclasses import dataclass
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -134,7 +134,7 @@ class EmbedderTestContext:
     vector_service: MagicMock
 
 
-class TestBulkEmbedder(BulkEmbedder):
+class BulkEmbedderHarness(BulkEmbedder):
     """Bulk embedder variant exposing its testing context."""
 
     test_context: EmbedderTestContext
@@ -161,12 +161,12 @@ class TestBulkEmbedder(BulkEmbedder):
 def embedder_factory(
     mock_config: MagicMock,
     tmp_path: Path,
-) -> Callable[..., TestBulkEmbedder]:
+) -> Callable[..., BulkEmbedderHarness]:
     """Build BulkEmbedder instances with isolated state files."""
 
     counter = 0
 
-    def factory(**overrides: Any) -> TestBulkEmbedder:
+    def factory(**overrides: Any) -> BulkEmbedderHarness:
         nonlocal counter
         counter += 1
 
@@ -190,7 +190,7 @@ def embedder_factory(
             vector_service=vector_service,
         )
 
-        embedder = TestBulkEmbedder(
+        embedder = BulkEmbedderHarness(
             config=overrides.pop("config", mock_config),
             collection_name=overrides.pop("collection_name", "test_collection"),
             state_file=state_path,
@@ -233,7 +233,7 @@ class TestStatePersistence:
     def test_load_state_from_file(
         self,
         mock_config: MagicMock,
-        embedder_factory: Callable[..., TestBulkEmbedder],
+        embedder_factory: Callable[..., BulkEmbedderHarness],
         tmp_path: Path,
         sample_state_data: dict[str, Any],
     ) -> None:
@@ -247,7 +247,7 @@ class TestStatePersistence:
 
     def test_load_state_invalid_json(
         self,
-        embedder_factory: Callable[..., TestBulkEmbedder],
+        embedder_factory: Callable[..., BulkEmbedderHarness],
         tmp_path: Path,
     ) -> None:
         state_file = tmp_path / "invalid.json"
@@ -258,7 +258,7 @@ class TestStatePersistence:
 
     def test_save_state(
         self,
-        embedder_factory: Callable[..., TestBulkEmbedder],
+        embedder_factory: Callable[..., BulkEmbedderHarness],
         tmp_path: Path,
     ) -> None:
         embedder = embedder_factory()
@@ -278,7 +278,7 @@ class TestServiceInitialization:
     @pytest.mark.asyncio
     async def test_initialize_services(
         self,
-        embedder_factory: Callable[..., TestBulkEmbedder],
+        embedder_factory: Callable[..., BulkEmbedderHarness],
     ) -> None:
         embedder = embedder_factory()
         ctx = embedder.test_context
@@ -304,7 +304,7 @@ class TestUrlLoading:
     @pytest.mark.asyncio
     async def test_load_urls_from_text(
         self,
-        embedder_factory: Callable[..., TestBulkEmbedder],
+        embedder_factory: Callable[..., BulkEmbedderHarness],
         tmp_path: Path,
     ) -> None:
         embedder = embedder_factory()
@@ -328,7 +328,7 @@ https://example.com/page3
     @pytest.mark.asyncio
     async def test_load_urls_from_csv(
         self,
-        embedder_factory: Callable[..., TestBulkEmbedder],
+        embedder_factory: Callable[..., BulkEmbedderHarness],
         tmp_path: Path,
     ) -> None:
         embedder = embedder_factory()
@@ -350,7 +350,7 @@ https://example.com/page2,Page 2
     @pytest.mark.asyncio
     async def test_load_urls_from_json(
         self,
-        embedder_factory: Callable[..., TestBulkEmbedder],
+        embedder_factory: Callable[..., BulkEmbedderHarness],
         tmp_path: Path,
     ) -> None:
         embedder = embedder_factory()
@@ -386,7 +386,7 @@ https://example.com/page2,Page 2
     @pytest.mark.asyncio
     async def test_load_urls_from_sitemap(
         self,
-        embedder_factory: Callable[..., TestBulkEmbedder],
+        embedder_factory: Callable[..., BulkEmbedderHarness],
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         embedder = embedder_factory()
@@ -411,7 +411,7 @@ https://example.com/page2,Page 2
     @pytest.mark.asyncio
     async def test_load_urls_from_sitemap_index(
         self,
-        embedder_factory: Callable[..., TestBulkEmbedder],
+        embedder_factory: Callable[..., BulkEmbedderHarness],
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         embedder = embedder_factory()
@@ -440,7 +440,7 @@ https://example.com/page2,Page 2
     @pytest.mark.asyncio
     async def test_load_urls_from_sitemap_http_error(
         self,
-        embedder_factory: Callable[..., TestBulkEmbedder],
+        embedder_factory: Callable[..., BulkEmbedderHarness],
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         embedder = embedder_factory()
@@ -464,7 +464,7 @@ class TestProcessingPipeline:
     @pytest.mark.asyncio
     async def test_process_url_success(
         self,
-        embedder_factory: Callable[..., TestBulkEmbedder],
+        embedder_factory: Callable[..., BulkEmbedderHarness],
     ) -> None:
         embedder = embedder_factory()
         embedder.crawl_manager = AsyncMock()
@@ -510,7 +510,7 @@ class TestProcessingPipeline:
     @pytest.mark.asyncio
     async def test_process_url_failure(
         self,
-        embedder_factory: Callable[..., TestBulkEmbedder],
+        embedder_factory: Callable[..., BulkEmbedderHarness],
     ) -> None:
         embedder = embedder_factory()
         embedder.crawl_manager = AsyncMock()
@@ -527,7 +527,7 @@ class TestProcessingPipeline:
     @pytest.mark.asyncio
     async def test_process_url_no_content(
         self,
-        embedder_factory: Callable[..., TestBulkEmbedder],
+        embedder_factory: Callable[..., BulkEmbedderHarness],
     ) -> None:
         embedder = embedder_factory()
         embedder.crawl_manager = AsyncMock()
@@ -547,7 +547,7 @@ class TestProcessingPipeline:
     @pytest.mark.asyncio
     async def test_process_url_no_chunks(
         self,
-        embedder_factory: Callable[..., TestBulkEmbedder],
+        embedder_factory: Callable[..., BulkEmbedderHarness],
     ) -> None:
         embedder = embedder_factory()
         embedder.crawl_manager = AsyncMock()
@@ -576,7 +576,7 @@ class TestBatchProcessing:
     @pytest.mark.asyncio
     async def test_process_urls_batch_updates_state(
         self,
-        embedder_factory: Callable[..., TestBulkEmbedder],
+        embedder_factory: Callable[..., BulkEmbedderHarness],
         sample_urls: list[str],
     ) -> None:
         embedder = embedder_factory()
@@ -609,7 +609,7 @@ class TestBatchProcessing:
     @pytest.mark.asyncio
     async def test_process_urls_batch_without_progress_saves_periodically(
         self,
-        embedder_factory: Callable[..., TestBulkEmbedder],
+        embedder_factory: Callable[..., BulkEmbedderHarness],
     ) -> None:
         embedder = embedder_factory()
 
@@ -631,7 +631,7 @@ class TestBatchProcessing:
     @pytest.mark.asyncio
     async def test_process_urls_batch_handles_exceptions(
         self,
-        embedder_factory: Callable[..., TestBulkEmbedder],
+        embedder_factory: Callable[..., BulkEmbedderHarness],
     ) -> None:
         embedder = embedder_factory()
 
@@ -660,7 +660,7 @@ class TestRunFlow:
     @pytest.mark.asyncio
     async def test_run_with_resume_skips_completed(
         self,
-        embedder_factory: Callable[..., TestBulkEmbedder],
+        embedder_factory: Callable[..., BulkEmbedderHarness],
         sample_urls: list[str],
     ) -> None:
         embedder = embedder_factory()
@@ -688,7 +688,7 @@ class TestRunFlow:
     @pytest.mark.asyncio
     async def test_run_without_resume_processes_all(
         self,
-        embedder_factory: Callable[..., TestBulkEmbedder],
+        embedder_factory: Callable[..., BulkEmbedderHarness],
         sample_urls: list[str],
     ) -> None:
         embedder = embedder_factory()
@@ -715,7 +715,7 @@ class TestRunFlow:
     @pytest.mark.asyncio
     async def test_run_all_urls_completed(
         self,
-        embedder_factory: Callable[..., TestBulkEmbedder],
+        embedder_factory: Callable[..., BulkEmbedderHarness],
         sample_urls: list[str],
     ) -> None:
         embedder = embedder_factory()

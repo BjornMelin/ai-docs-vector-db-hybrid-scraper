@@ -10,6 +10,7 @@ from unittest.mock import Mock, patch
 import pytest
 from pydantic import ValidationError as PydanticValidationError
 
+from src.services.circuit_breaker.decorators import circuit_breaker
 from src.services.errors import (
     APIError,  # API errors
     BaseError,  # Base errors
@@ -25,7 +26,6 @@ from src.services.errors import (
     ServiceError,
     ToolError,
     ValidationError,  # Validation errors
-    circuit_breaker,
     create_validation_error,  # Pydantic utilities
     handle_mcp_errors,
     retry_async,

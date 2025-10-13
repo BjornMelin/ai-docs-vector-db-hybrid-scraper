@@ -6,11 +6,11 @@ import logging
 import os
 import tempfile
 import time
-from collections.abc import Awaitable, Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypedDict
+from typing import Any, ClassVar, Literal, TypedDict
 
 import tiktoken
+from openai import AsyncOpenAI
 
 from src.services.errors import EmbeddingServiceError
 from src.services.observability.tracing import trace_function
@@ -19,14 +19,12 @@ from src.services.observability.tracking import record_ai_operation
 from .base import EmbeddingProvider
 
 
-if TYPE_CHECKING:
-    from openai import AsyncOpenAI
-
 logger = logging.getLogger(__name__)
 
 
 def _raise_openai_api_key_not_configured() -> None:
     """Raise EmbeddingServiceError for missing OpenAI API key."""
+
     msg = "OpenAI API key not configured"
     raise EmbeddingServiceError(msg)
 
@@ -47,7 +45,7 @@ class TokenSummary(TypedDict):
     total_tokens: int
 
 
-class OpenAIEmbeddingProvider(EmbeddingProvider):
+class OpenAIEmbeddingProvider(EmbeddingProvider):  # pylint: disable=too-many-instance-attributes
     """OpenAI embedding provider with batch processing."""
 
     _model_configs: ClassVar[dict[str, ModelConfig]] = {
@@ -74,17 +72,17 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         model_name: str = "text-embedding-3-small",
         dimensions: int | None = None,
         *,
-        client: "AsyncOpenAI | None" = None,
-        client_factory: (Callable[[], Awaitable["AsyncOpenAI"]] | None) = None,
-    ):
+        max_retries: int = 3,
+        timeout: float | None = None,
+    ):  # pylint: disable=too-many-arguments
         """Initialize OpenAI provider.
 
         Args:
             api_key: OpenAI API key
             model_name: Model name (text-embedding-3-small, text-embedding-3-large)
             dimensions: Optional dimensions for text-embedding-3-* models
-            client: Optional preconfigured AsyncOpenAI client instance
-            client_factory: Optional factory returning an AsyncOpenAI client
+            max_retries: Retry attempts configured on the OpenAI client.
+            timeout: Optional request timeout passed to the OpenAI client.
         """
 
         super().__init__(model_name)
@@ -92,9 +90,9 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         self._client: AsyncOpenAI | None = None
         self._dimensions = dimensions
         self._initialized = False
-        self._client_override = client
-        self._client_factory = client_factory
         self._token_encoder: Any | None = None
+        self._max_retries = max_retries
+        self._timeout = timeout
 
         if model_name not in self._model_configs:
             msg = (
@@ -118,37 +116,41 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
 
     @trace_function()
     async def initialize(self) -> None:
-        """Initialize OpenAI client using the DI-supplied factory or API key."""
+        """Initialize the OpenAI client for embedding operations."""
 
         if self._initialized:
             return
 
+        if not self.api_key:
+            _raise_openai_api_key_not_configured()
+
+        client_kwargs: dict[str, Any] = {"api_key": self.api_key}
+        if self._max_retries is not None:
+            client_kwargs["max_retries"] = self._max_retries
+        if self._timeout is not None:
+            client_kwargs["timeout"] = self._timeout
+
         try:
-            if self._client_override is not None and self._client is None:
-                self._client = self._client_override
-            elif self._client_factory is not None and self._client is None:
-                self._client = await self._client_factory()
-            elif self._client is None:
-                if not self.api_key:
-                    _raise_openai_api_key_not_configured()
-                # Create a standalone client as a fallback (main path uses DI)
-                from openai import AsyncOpenAI  # local import to avoid mandatory dep
-
-                self._client = AsyncOpenAI(api_key=self.api_key)
-
-            if self._client is None:
-                _raise_openai_api_key_not_configured()
-
+            self._client = AsyncOpenAI(**client_kwargs)
             self._initialized = True
             logger.info("OpenAI client initialized with model %s", self.model_name)
-        except Exception as e:
-            msg = f"Failed to initialize OpenAI client: {e}"
-            raise EmbeddingServiceError(msg) from e
+        except Exception as exc:  # pragma: no cover - defensive
+            msg = f"Failed to initialize OpenAI client: {exc}"
+            raise EmbeddingServiceError(msg) from exc
 
     async def cleanup(self) -> None:
         """Cleanup OpenAI client by clearing the cached instance."""
+
+        client = self._client
         self._client = None
         self._initialized = False
+        self._token_encoder = None
+
+        if client is None:
+            return
+
+        with contextlib.suppress(ConnectionError, RuntimeError, TimeoutError):
+            await client.close()  # type: ignore[reportAttributeAccess]
 
     @trace_function()
     async def generate_embeddings(
