@@ -189,6 +189,11 @@ mcp scrape --url "https://spa-application.com" --tier="playwright" --wait-for-co
 # Batch document processing with intelligent chunking
 mcp add-documents-batch --path "/path/to/documents" --enable-chunking --optimize-embeddings
 
+# Every chunk now lands in the vector store with canonical metadata fields
+# (source, uri, tenant, chunk identifiers, timestamps). Downstream search tools
+# automatically pick up these attributes for filtering without any extra
+# configuration.
+
 # Project creation with dependency injection
 mcp create-project --name "my-docs" --enable-enterprise-features
 ```

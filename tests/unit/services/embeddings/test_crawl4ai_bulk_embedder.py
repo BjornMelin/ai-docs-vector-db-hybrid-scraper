@@ -1,13 +1,16 @@
 """Tests for the crawl4ai bulk embedder workflow."""
 
+# pylint: disable=too-many-lines  # consolidated integration-style tests
+
 from __future__ import annotations
 
 import json
 import uuid
 from collections.abc import Callable
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
-from types import SimpleNamespace
+from dataclasses import dataclass
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -29,9 +32,15 @@ from src.crawl4ai_bulk_embedder import (
 from src.services.errors import ServiceError
 
 
-pytestmark = pytest.mark.filterwarnings(
-    "ignore:jsonschema.exceptions.RefResolutionError is deprecated:DeprecationWarning"
-)
+pytestmark = [
+    pytest.mark.filterwarnings(
+        "ignore:jsonschema.exceptions.RefResolutionError is deprecated:"
+        "DeprecationWarning"
+    ),
+    pytest.mark.filterwarnings("ignore::pydantic.warnings.PydanticDeprecatedSince20"),
+    pytest.mark.filterwarnings("ignore:read_text is deprecated:DeprecationWarning"),
+    pytest.mark.filterwarnings("ignore:open_text is deprecated:DeprecationWarning"),
+]
 
 
 def create_httpx_response(
@@ -116,68 +125,83 @@ def sample_state_data() -> dict[str, Any]:
     }
 
 
+@dataclass(slots=True)
+class EmbedderTestContext:
+    """Context object bundling test doubles used by the embedder factory."""
+
+    container: MagicMock
+    crawl_manager: MagicMock
+    vector_service: MagicMock
+
+
+class TestBulkEmbedder(BulkEmbedder):
+    """Bulk embedder variant exposing its testing context."""
+
+    test_context: EmbedderTestContext
+
+    def __init__(
+        self,
+        config: Settings,
+        collection_name: str = "bulk_embeddings",
+        state_file: Path | None = None,
+        *,
+        container: Any | None = None,
+        test_context: EmbedderTestContext,
+    ) -> None:
+        super().__init__(
+            config=config,
+            collection_name=collection_name,
+            state_file=state_file,
+            container=container,
+        )
+        self.test_context = test_context
+
+
 @pytest.fixture
 def embedder_factory(
     mock_config: MagicMock,
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> Callable[..., BulkEmbedder]:
+) -> Callable[..., TestBulkEmbedder]:
     """Build BulkEmbedder instances with isolated state files."""
 
     counter = 0
 
-    def factory(**overrides: Any) -> BulkEmbedder:
+    def factory(**overrides: Any) -> TestBulkEmbedder:
         nonlocal counter
         counter += 1
 
         container = overrides.pop("container", MagicMock())
         crawl_manager = overrides.pop("crawl_manager", MagicMock())
-        embedding_manager = overrides.pop("embedding_manager", MagicMock())
         vector_service = overrides.pop("vector_service", MagicMock())
         vector_service.is_initialized.return_value = overrides.pop(
             "vector_initialized", True
         )
         container.browser_manager.return_value = crawl_manager
-        container.embedding_manager.return_value = embedding_manager
         container.vector_store_service.return_value = vector_service
-
-        get_container_value = overrides.pop("get_container_value", container)
-        monkeypatch.setattr(
-            "src.crawl4ai_bulk_embedder.get_container",
-            lambda: get_container_value,
-        )
-        init_mock = AsyncMock(return_value=container)
-        shutdown_mock = AsyncMock()
-        monkeypatch.setattr(
-            "src.crawl4ai_bulk_embedder.initialize_container",
-            init_mock,
-        )
-        monkeypatch.setattr(
-            "src.crawl4ai_bulk_embedder.shutdown_container",
-            shutdown_mock,
-        )
 
         state_path = overrides.pop(
             "state_file",
             tmp_path / f"state_{uuid.uuid4().hex}.json",
         )
-        embedder = BulkEmbedder(
+        use_container_override = overrides.pop("use_container_override", True)
+        context = EmbedderTestContext(
+            container=container,
+            crawl_manager=crawl_manager,
+            vector_service=vector_service,
+        )
+
+        embedder = TestBulkEmbedder(
             config=overrides.pop("config", mock_config),
             collection_name=overrides.pop("collection_name", "test_collection"),
             state_file=state_path,
-            container=container
-            if overrides.pop("use_container_override", True)
-            else None,
-            **overrides,
+            container=container if use_container_override else None,
+            test_context=context,
         )
-        embedder._test_context = SimpleNamespace(
-            container=container,
-            crawl_manager=crawl_manager,
-            embedding_manager=embedding_manager,
-            vector_service=vector_service,
-            init_mock=init_mock,
-            shutdown_mock=shutdown_mock,
-        )
+
+        if overrides:
+            unexpected = ", ".join(sorted(overrides))
+            raise AssertionError(f"Unexpected overrides provided: {unexpected}")
+
         return embedder
 
     return factory
@@ -209,7 +233,7 @@ class TestStatePersistence:
     def test_load_state_from_file(
         self,
         mock_config: MagicMock,
-        embedder_factory: Callable[..., BulkEmbedder],
+        embedder_factory: Callable[..., TestBulkEmbedder],
         tmp_path: Path,
         sample_state_data: dict[str, Any],
     ) -> None:
@@ -223,7 +247,7 @@ class TestStatePersistence:
 
     def test_load_state_invalid_json(
         self,
-        embedder_factory: Callable[..., BulkEmbedder],
+        embedder_factory: Callable[..., TestBulkEmbedder],
         tmp_path: Path,
     ) -> None:
         state_file = tmp_path / "invalid.json"
@@ -234,7 +258,7 @@ class TestStatePersistence:
 
     def test_save_state(
         self,
-        embedder_factory: Callable[..., BulkEmbedder],
+        embedder_factory: Callable[..., TestBulkEmbedder],
         tmp_path: Path,
     ) -> None:
         embedder = embedder_factory()
@@ -254,10 +278,10 @@ class TestServiceInitialization:
     @pytest.mark.asyncio
     async def test_initialize_services(
         self,
-        embedder_factory: Callable[..., BulkEmbedder],
+        embedder_factory: Callable[..., TestBulkEmbedder],
     ) -> None:
         embedder = embedder_factory()
-        ctx = embedder._test_context
+        ctx = embedder.test_context
 
         vector_service = ctx.vector_service
         vector_service.is_initialized.return_value = False
@@ -271,7 +295,6 @@ class TestServiceInitialization:
         vector_service.initialize.assert_awaited_once()
         vector_service.ensure_collection.assert_awaited_once()
         assert embedder.crawl_manager is ctx.crawl_manager
-        assert embedder.embedding_manager is ctx.embedding_manager
         assert embedder.vector_service is vector_service
 
 
@@ -281,7 +304,7 @@ class TestUrlLoading:
     @pytest.mark.asyncio
     async def test_load_urls_from_text(
         self,
-        embedder_factory: Callable[..., BulkEmbedder],
+        embedder_factory: Callable[..., TestBulkEmbedder],
         tmp_path: Path,
     ) -> None:
         embedder = embedder_factory()
@@ -305,7 +328,7 @@ https://example.com/page3
     @pytest.mark.asyncio
     async def test_load_urls_from_csv(
         self,
-        embedder_factory: Callable[..., BulkEmbedder],
+        embedder_factory: Callable[..., TestBulkEmbedder],
         tmp_path: Path,
     ) -> None:
         embedder = embedder_factory()
@@ -327,7 +350,7 @@ https://example.com/page2,Page 2
     @pytest.mark.asyncio
     async def test_load_urls_from_json(
         self,
-        embedder_factory: Callable[..., BulkEmbedder],
+        embedder_factory: Callable[..., TestBulkEmbedder],
         tmp_path: Path,
     ) -> None:
         embedder = embedder_factory()
@@ -363,7 +386,7 @@ https://example.com/page2,Page 2
     @pytest.mark.asyncio
     async def test_load_urls_from_sitemap(
         self,
-        embedder_factory: Callable[..., BulkEmbedder],
+        embedder_factory: Callable[..., TestBulkEmbedder],
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         embedder = embedder_factory()
@@ -388,7 +411,7 @@ https://example.com/page2,Page 2
     @pytest.mark.asyncio
     async def test_load_urls_from_sitemap_index(
         self,
-        embedder_factory: Callable[..., BulkEmbedder],
+        embedder_factory: Callable[..., TestBulkEmbedder],
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         embedder = embedder_factory()
@@ -417,7 +440,7 @@ https://example.com/page2,Page 2
     @pytest.mark.asyncio
     async def test_load_urls_from_sitemap_http_error(
         self,
-        embedder_factory: Callable[..., BulkEmbedder],
+        embedder_factory: Callable[..., TestBulkEmbedder],
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         embedder = embedder_factory()
@@ -441,7 +464,7 @@ class TestProcessingPipeline:
     @pytest.mark.asyncio
     async def test_process_url_success(
         self,
-        embedder_factory: Callable[..., BulkEmbedder],
+        embedder_factory: Callable[..., TestBulkEmbedder],
     ) -> None:
         embedder = embedder_factory()
         embedder.crawl_manager = AsyncMock()
@@ -454,17 +477,11 @@ class TestProcessingPipeline:
                 },
                 "metadata": {"title": "Title", "description": "desc"},
                 "provider": "crawl4ai",
-            }
-        )
-        embedder.embedding_manager = AsyncMock()
-        embedder.embedding_manager.generate_embeddings = AsyncMock(
-            return_value={
-                "embeddings": [[0.1] * 3, [0.2] * 3],
-                "sparse_embeddings": [{"0": 0.5}, {"1": 0.6}],
+                "url": "https://example.com/test",
             }
         )
         embedder.vector_service = AsyncMock()
-        embedder.vector_service.upsert_vectors = AsyncMock()
+        embedder.vector_service.upsert_documents = AsyncMock()
 
         chunk_documents = [
             Document(page_content="Chunk 1", metadata={"start_index": 0}),
@@ -479,13 +496,21 @@ class TestProcessingPipeline:
 
         assert result["success"] is True
         assert result["chunks"] == 2
-        embedder.embedding_manager.generate_embeddings.assert_awaited_once()
-        embedder.vector_service.upsert_vectors.assert_awaited_once()
+        embedder.vector_service.upsert_documents.assert_awaited_once()
+        args = embedder.vector_service.upsert_documents.await_args.args
+        assert args[0] == embedder.collection_name
+        documents = args[1]
+        assert len(documents) == 2
+        first_metadata = dict(documents[0].metadata or {})
+        assert first_metadata["source"] == "https://example.com/test"
+        assert first_metadata["uri_or_path"] == "https://example.com/test"
+        assert first_metadata["chunk_index"] == 0
+        assert first_metadata["chunk_id"] == 0
 
     @pytest.mark.asyncio
     async def test_process_url_failure(
         self,
-        embedder_factory: Callable[..., BulkEmbedder],
+        embedder_factory: Callable[..., TestBulkEmbedder],
     ) -> None:
         embedder = embedder_factory()
         embedder.crawl_manager = AsyncMock()
@@ -502,7 +527,7 @@ class TestProcessingPipeline:
     @pytest.mark.asyncio
     async def test_process_url_no_content(
         self,
-        embedder_factory: Callable[..., BulkEmbedder],
+        embedder_factory: Callable[..., TestBulkEmbedder],
     ) -> None:
         embedder = embedder_factory()
         embedder.crawl_manager = AsyncMock()
@@ -522,7 +547,7 @@ class TestProcessingPipeline:
     @pytest.mark.asyncio
     async def test_process_url_no_chunks(
         self,
-        embedder_factory: Callable[..., BulkEmbedder],
+        embedder_factory: Callable[..., TestBulkEmbedder],
     ) -> None:
         embedder = embedder_factory()
         embedder.crawl_manager = AsyncMock()
@@ -551,7 +576,7 @@ class TestBatchProcessing:
     @pytest.mark.asyncio
     async def test_process_urls_batch_updates_state(
         self,
-        embedder_factory: Callable[..., BulkEmbedder],
+        embedder_factory: Callable[..., TestBulkEmbedder],
         sample_urls: list[str],
     ) -> None:
         embedder = embedder_factory()
@@ -584,7 +609,7 @@ class TestBatchProcessing:
     @pytest.mark.asyncio
     async def test_process_urls_batch_without_progress_saves_periodically(
         self,
-        embedder_factory: Callable[..., BulkEmbedder],
+        embedder_factory: Callable[..., TestBulkEmbedder],
     ) -> None:
         embedder = embedder_factory()
 
@@ -606,7 +631,7 @@ class TestBatchProcessing:
     @pytest.mark.asyncio
     async def test_process_urls_batch_handles_exceptions(
         self,
-        embedder_factory: Callable[..., BulkEmbedder],
+        embedder_factory: Callable[..., TestBulkEmbedder],
     ) -> None:
         embedder = embedder_factory()
 
@@ -635,7 +660,7 @@ class TestRunFlow:
     @pytest.mark.asyncio
     async def test_run_with_resume_skips_completed(
         self,
-        embedder_factory: Callable[..., BulkEmbedder],
+        embedder_factory: Callable[..., TestBulkEmbedder],
         sample_urls: list[str],
     ) -> None:
         embedder = embedder_factory()
@@ -663,7 +688,7 @@ class TestRunFlow:
     @pytest.mark.asyncio
     async def test_run_without_resume_processes_all(
         self,
-        embedder_factory: Callable[..., BulkEmbedder],
+        embedder_factory: Callable[..., TestBulkEmbedder],
         sample_urls: list[str],
     ) -> None:
         embedder = embedder_factory()
@@ -690,7 +715,7 @@ class TestRunFlow:
     @pytest.mark.asyncio
     async def test_run_all_urls_completed(
         self,
-        embedder_factory: Callable[..., BulkEmbedder],
+        embedder_factory: Callable[..., TestBulkEmbedder],
         sample_urls: list[str],
     ) -> None:
         embedder = embedder_factory()
@@ -846,11 +871,21 @@ class TestAsyncMain:
         mock_config: MagicMock,
         tmp_path: Path,
     ) -> None:
-        init_mock = AsyncMock()
-        shutdown_mock = AsyncMock()
+        container = MagicMock()
+        session_calls: dict[str, Any] = {"entered": 0, "exited": 0}
+
+        @asynccontextmanager
+        async def fake_session(*args: Any, **kwargs: Any):
+            session_calls["args"] = args
+            session_calls["kwargs"] = kwargs
+            session_calls["entered"] += 1
+            try:
+                yield container
+            finally:
+                session_calls["exited"] += 1
+
         with (
-            patch("src.crawl4ai_bulk_embedder.initialize_container", init_mock),
-            patch("src.crawl4ai_bulk_embedder.shutdown_container", shutdown_mock),
+            patch("src.crawl4ai_bulk_embedder.container_session", fake_session),
             patch("src.crawl4ai_bulk_embedder.BulkEmbedder") as embedder_cls,
         ):
             embedder = AsyncMock()
@@ -873,8 +908,9 @@ class TestAsyncMain:
         assert run_kwargs["urls"] == ["https://example.com/1", "https://example.com/2"]
         assert run_kwargs["max_concurrent"] == 5
         assert run_kwargs["resume"] is True
-        init_mock.assert_awaited_once()
-        shutdown_mock.assert_awaited_once()
+        assert session_calls["entered"] == session_calls["exited"] == 1
+        assert session_calls["kwargs"]["settings"] is mock_config
+        assert session_calls["kwargs"]["force_reload"] is True
 
     @pytest.mark.asyncio
     async def test_async_main_with_file_and_sitemap(
@@ -887,11 +923,21 @@ class TestAsyncMain:
             "https://example.com/file1\nhttps://example.com/file2\n", encoding="utf-8"
         )
 
-        init_mock = AsyncMock()
-        shutdown_mock = AsyncMock()
+        container = MagicMock()
+        session_calls: dict[str, Any] = {"entered": 0, "exited": 0}
+
+        @asynccontextmanager
+        async def fake_session(*args: Any, **kwargs: Any):
+            session_calls["args"] = args
+            session_calls["kwargs"] = kwargs
+            session_calls["entered"] += 1
+            try:
+                yield container
+            finally:
+                session_calls["exited"] += 1
+
         with (
-            patch("src.crawl4ai_bulk_embedder.initialize_container", init_mock),
-            patch("src.crawl4ai_bulk_embedder.shutdown_container", shutdown_mock),
+            patch("src.crawl4ai_bulk_embedder.container_session", fake_session),
             patch("src.crawl4ai_bulk_embedder.BulkEmbedder") as embedder_cls,
         ):
             embedder = AsyncMock()
@@ -927,8 +973,8 @@ class TestAsyncMain:
         embedder.load_urls_from_sitemap.assert_awaited_once_with(
             "https://example.com/sitemap.xml"
         )
-        init_mock.assert_awaited_once()
-        shutdown_mock.assert_awaited_once()
+        assert session_calls["entered"] == session_calls["exited"] == 1
+        assert session_calls["kwargs"]["settings"] is mock_config
 
     @pytest.mark.asyncio
     async def test_async_main_deduplicates_urls(
@@ -936,11 +982,21 @@ class TestAsyncMain:
         mock_config: MagicMock,
         tmp_path: Path,
     ) -> None:
-        init_mock = AsyncMock()
-        shutdown_mock = AsyncMock()
+        container = MagicMock()
+        session_calls: dict[str, Any] = {"entered": 0, "exited": 0}
+
+        @asynccontextmanager
+        async def fake_session(*args: Any, **kwargs: Any):
+            session_calls["args"] = args
+            session_calls["kwargs"] = kwargs
+            session_calls["entered"] += 1
+            try:
+                yield container
+            finally:
+                session_calls["exited"] += 1
+
         with (
-            patch("src.crawl4ai_bulk_embedder.initialize_container", init_mock),
-            patch("src.crawl4ai_bulk_embedder.shutdown_container", shutdown_mock),
+            patch("src.crawl4ai_bulk_embedder.container_session", fake_session),
             patch("src.crawl4ai_bulk_embedder.BulkEmbedder") as embedder_cls,
         ):
             embedder = AsyncMock()
@@ -964,8 +1020,7 @@ class TestAsyncMain:
 
         unique_urls = embedder.run.call_args.kwargs["urls"]
         assert sorted(unique_urls) == ["https://example.com/1", "https://example.com/2"]
-        init_mock.assert_awaited_once()
-        shutdown_mock.assert_awaited_once()
+        assert session_calls["entered"] == session_calls["exited"] == 1
 
     @pytest.mark.asyncio
     async def test_async_main_cleanup_on_error(
@@ -973,10 +1028,19 @@ class TestAsyncMain:
         mock_config: MagicMock,
         tmp_path: Path,
     ) -> None:
-        shutdown_mock = AsyncMock()
+        container = MagicMock()
+        session_calls: dict[str, Any] = {"entered": 0, "exited": 0}
+
+        @asynccontextmanager
+        async def fake_session(*args: Any, **kwargs: Any):
+            session_calls["entered"] += 1
+            try:
+                yield container
+            finally:
+                session_calls["exited"] += 1
+
         with (
-            patch("src.crawl4ai_bulk_embedder.initialize_container", AsyncMock()),
-            patch("src.crawl4ai_bulk_embedder.shutdown_container", shutdown_mock),
+            patch("src.crawl4ai_bulk_embedder.container_session", fake_session),
             patch("src.crawl4ai_bulk_embedder.BulkEmbedder") as embedder_cls,
         ):
             embedder = AsyncMock()
@@ -995,7 +1059,7 @@ class TestAsyncMain:
                     resume=True,
                 )
 
-        shutdown_mock.assert_awaited_once()
+        assert session_calls["entered"] == session_calls["exited"] == 1
 
 
 def test_bulk_embedder_errors_subclass_service_error() -> None:
