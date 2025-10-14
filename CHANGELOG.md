@@ -38,6 +38,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Refactor
 
+- **[Tests]:** Consolidated and streamlined test fixtures by creating a unified
+  `MockFactory` for all external service mocks, improving test code reusability
+  and maintainability.
 - Wrapped the Firecrawl and Qdrant client adapters in protocol-driven wrappers with
   OpenTelemetry spans, structured logging, and stricter typing to align with the
   unified observability contract.
