@@ -47,6 +47,25 @@ class MockFactory:
         """
 
         client = MagicMock()
+        client.embeddings = self._build_embeddings_api(
+            embedding_dim=embedding_dim,
+            model=model,
+            rate_limit=rate_limit,
+        )
+        client.responses = self._build_responses_api()
+
+        return client
+
+    def _build_embeddings_api(
+        self,
+        *,
+        embedding_dim: int,
+        model: str,
+        rate_limit: int,
+    ) -> MagicMock:
+        """Create the embeddings API mock for the OpenAI client."""
+
+        embeddings_api = MagicMock()
 
         embedding_response = MagicMock()
         embedding_response.data = [MagicMock(embedding=[0.1] * embedding_dim)]
@@ -57,12 +76,17 @@ class MockFactory:
             total_tokens=10,
         )
 
-        client.embeddings.create = AsyncMock(return_value=embedding_response)
-        client.embeddings.create.headers = {
+        embeddings_api.create = AsyncMock(return_value=embedding_response)
+        embeddings_api.create.headers = {
             "x-ratelimit-limit-requests": str(rate_limit),
             "x-ratelimit-remaining-requests": str(rate_limit - 1),
             "x-ratelimit-reset-requests": "1s",
         }
+
+        return embeddings_api
+
+    def _build_responses_api(self) -> MagicMock:
+        """Create the responses API mock for the OpenAI client."""
 
         responses_payload = MagicMock()
         responses_payload.output_text = "Generated hypothetical document"
@@ -72,11 +96,10 @@ class MockFactory:
             total_tokens=70,
         )
 
-        responses_mock = MagicMock()
-        responses_mock.create = AsyncMock(return_value=responses_payload)
-        client.responses = responses_mock
+        responses_api = MagicMock()
+        responses_api.create = AsyncMock(return_value=responses_payload)
 
-        return client
+        return responses_api
 
     def create_qdrant_client(
         self,
@@ -345,27 +368,24 @@ class MockFactory:
             list[dict[str, Any]]: Collection of embedding point dictionaries.
         """
 
-        points: list[dict[str, Any]] = []
-        for index in range(count):
-            points.append(
-                {
-                    "id": index + 1,
-                    "vector": [0.1 * (index + 1)] * vector_size,
-                    "payload": {
-                        "url": f"{base_url}/doc{index + 1}",
-                        "title": f"Test Document {index + 1}",
-                        "content": f"Test content for document {index + 1}",
-                        "chunk_index": 0,
-                        "metadata": {
-                            "source": "test",
-                            "timestamp": f"2024-01-{index + 1:02d}T00:00:00Z",
-                            "word_count": 100 + index * 10,
-                        },
+        return [
+            {
+                "id": index + 1,
+                "vector": [0.1 * (index + 1)] * vector_size,
+                "payload": {
+                    "url": f"{base_url}/doc{index + 1}",
+                    "title": f"Test Document {index + 1}",
+                    "content": f"Test content for document {index + 1}",
+                    "chunk_index": 0,
+                    "metadata": {
+                        "source": "test",
+                        "timestamp": f"2024-01-{index + 1:02d}T00:00:00Z",
+                        "word_count": 100 + index * 10,
                     },
-                }
-            )
-
-        return points
+                },
+            }
+            for index in range(count)
+        ]
 
     def build_crawl_response(
         self,

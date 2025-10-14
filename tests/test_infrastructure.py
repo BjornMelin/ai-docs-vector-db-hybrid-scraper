@@ -93,14 +93,15 @@ class TestMockFactories:
         client = mock_factory.create_openai_client(
             embedding_dim=512, model="custom-model"
         )
-        assert client.embeddings.create is not None
+        assert hasattr(client.embeddings, "create")
 
     def test_mock_qdrant_factory(self, mock_factory):
         """Test Qdrant mock factory fixture."""
         client = mock_factory.create_qdrant_client(
             vector_size=512, collection_exists=False
         )
-        assert client.collection_exists is not None
+        assert hasattr(client, "collection_exists")
+        assert callable(client.collection_exists)
 
 
 @pytest.mark.asyncio
