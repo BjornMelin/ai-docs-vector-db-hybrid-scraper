@@ -89,19 +89,22 @@ class TraceTestHelper:
 
         # Check span relationships
         span_ids = {s.span_id for s in spans}
-        for span in spans:
-            if span.parent_span_id and span.parent_span_id not in span_ids:
-                issues.append(
-                    f"Parent span {span.parent_span_id} not found for "
-                    f"span {span.span_id}"
-                )
+        issues.extend(
+            [
+                f"Parent span {span.parent_span_id} not found for span {span.span_id}"
+                for span in spans
+                if span.parent_span_id and span.parent_span_id not in span_ids
+            ]
+        )
 
         # Check timing
-        for span in spans:
-            if span.end_time and span.start_time and span.end_time < span.start_time:
-                issues.append(
-                    f"Invalid timing for span {span.span_id}: end before start"
-                )
+        issues.extend(
+            [
+                f"Invalid timing for span {span.span_id}: end before start"
+                for span in spans
+                if span.end_time and span.start_time and span.end_time < span.start_time
+            ]
+        )
 
         return {
             "valid": len(issues) == 0,
