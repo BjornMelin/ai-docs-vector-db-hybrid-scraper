@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable
 from types import SimpleNamespace
-from typing import Any, cast
+from typing import Any, Self, cast
 
 import click
 import pytest
@@ -84,6 +84,9 @@ def test_complete_collection_name_handles_errors(
 
         async def cleanup(self) -> None:  # pragma: no cover - nothing to clean
             return None
+
+        def __call__(self) -> Self:
+            return self
 
     monkeypatch.setattr(batch_module, "_init_vector_manager", _VectorDBStub())
     ctx = click.Context(batch_module.batch, obj={"config": object()})
@@ -230,6 +233,9 @@ def test_create_collections_enqueues_operations(
         async def cleanup(self) -> None:
             return None
 
+        def __call__(self) -> Self:
+            return self
+
     monkeypatch.setattr(batch_module, "_init_vector_manager", _VectorDBStub())
 
     queue_instances: list[_QueueStub] = []
@@ -323,6 +329,9 @@ def test_delete_collections_enqueues_deletions(
 
         async def cleanup(self) -> None:
             return None
+
+        def __call__(self) -> Self:
+            return self
 
     monkeypatch.setattr(batch_module, "_init_vector_manager", _VectorDBStub())
 

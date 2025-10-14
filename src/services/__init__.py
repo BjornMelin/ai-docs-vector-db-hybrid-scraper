@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from .base import BaseService
 from .errors import (
     APIError,
     CrawlServiceError,
@@ -13,7 +12,6 @@ from .errors import (
 
 __all__ = [
     "APIError",
-    "BaseService",
     "CrawlServiceError",
     "EmbeddingServiceError",
     "QdrantServiceError",

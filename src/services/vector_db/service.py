@@ -24,7 +24,6 @@ from src.config.models import (
     SearchStrategy,
 )
 from src.contracts.retrieval import SearchRecord
-from src.services.base import BaseService
 from src.services.errors import EmbeddingServiceError
 from src.services.observability.tracing import set_span_attributes
 
@@ -57,7 +56,7 @@ _RETRIEVAL_MODE_MAP: dict[SearchStrategy, RetrievalMode] = {
 }
 
 
-class VectorStoreService(BaseService):  # pylint: disable=too-many-public-methods,too-many-instance-attributes
+class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-instance-attributes
     """High-level vector store wrapper using LangChain's QdrantVectorStore."""
 
     def __init__(
@@ -68,7 +67,7 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
     ) -> None:
         """Initialize the VectorStoreService."""
 
-        super().__init__(config)
+        self.config = config
         self.collection_name: str | None = None
         self._async_client: AsyncQdrantClient | None = async_qdrant_client
         self._sync_client: QdrantClient | None = None
@@ -79,6 +78,11 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         self._dense_model_name = self._resolve_dense_model()
         self._sparse_model_name = self._resolve_sparse_model()
         self._retrieval_mode: SearchStrategy = self._resolve_retrieval_mode()
+
+    def is_initialized(self) -> bool:
+        """Return True when a vector store has been constructed."""
+
+        return self._vector_store is not None
 
     async def initialize(self) -> None:
         """Initialize Qdrant clients and embeddings."""
@@ -118,7 +122,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
             retrieval_mode=retrieval_mode,
             sparse_embedding=sparse_embedding,
         )
-        self._mark_initialized()
         logger.info("VectorStoreService initialized via LangChain QdrantVectorStore")
 
     async def cleanup(self) -> None:
@@ -130,7 +133,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         self._dense_embeddings = None
         self._sparse_embeddings = None
         self._embedding_dimension = None
-        self._mark_uninitialized()
 
     @property
     def embedding_dimension(self) -> int:
