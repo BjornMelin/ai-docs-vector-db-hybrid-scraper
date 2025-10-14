@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Hybrid AI documentation scraping system combining Crawl4AI (bulk) + Firecrawl MCP (on-demand) with Qdrant vector database for Claude Desktop/Code integration"
 readme = "README.md"
 license = { text = "MIT" }
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.11,<3.12"
 authors = [{ name = "Bjorn Melin" }]
 keywords = [
     "ai",
@@ -24,10 +24,7 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    # Python 3.13 temporarily unsupported due to upstream GPU stack
-    # compatibility (vLLM/Torch/TorchVision). Keep classifiers aligned
-    # with requires-python to avoid resolver splits.
+    # Python 3.12+ unsupported until upstream GPU stack compatibility lands.
     "Topic :: Software Development :: Documentation",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Internet :: WWW/HTTP :: Indexing/Search",
@@ -101,6 +98,9 @@ dependencies = [
     "tiktoken>=0.12.0,<0.13.0",
     "anyio>=4.4.0,<5.0.0",
     "pydantic-core>=2.23.4,<3.0.0",
+    "opentelemetry-api>=1.37.0,<2.0.0",
+    "opentelemetry-sdk>=1.37.0,<2.0.0",
+    "opentelemetry-exporter-otlp>=1.37.0,<2.0.0",
 ]
 
 
@@ -167,12 +167,17 @@ llm = [
 
 # Observability and monitoring
 observability = [
-    "opentelemetry-api>=1.37.0,<2.0.0",
-    "opentelemetry-sdk>=1.37.0,<2.0.0",
     "opentelemetry-instrumentation-fastapi>=0.58b0,<0.59.0",
     "opentelemetry-exporter-prometheus>=0.58b0,<0.59.0",
     "opentelemetry-instrumentation-starlette>=0.58b0,<0.59.0",
     "psutil>=6.1.1",
+]
+
+obs = [
+    "opentelemetry-api>=1.37.0,<2.0.0",
+    "opentelemetry-sdk>=1.37.0,<2.0.0",
+    "opentelemetry-exporter-otlp>=1.37.0,<2.0.0",
+    "prometheus-client>=0.23.1,<0.24.0",
 ]
 
 # Code parsing tools
@@ -486,4 +491,17 @@ disable = [
     "redefined-outer-name", # W0621 - Common when fixtures redefine names
     "pointless-string-statement", # W0105 - Duplicate docstrings in test classes
     "line-too-long", # C0301 - Test code often has long lines due to complex setup
+]
+
+[dependency-groups]
+dev = [
+    "coverage>=7.10.7",
+    "deptry>=0.23.1",
+    "pylint>=4.0.0",
+    "pyright>=1.1.406",
+    "pytest>=8.4.2",
+    "pytest-randomly>=4.0.1",
+    "pytest-xdist>=3.8.0",
+    "ruff>=0.14.0",
+    "vulture>=2.14",
 ]

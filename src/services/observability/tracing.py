@@ -16,7 +16,7 @@ from enum import Enum
 from typing import Any, TypeVar, cast
 
 from opentelemetry import trace
-from opentelemetry.trace import Span, Status, StatusCode
+from opentelemetry.trace import Span, SpanContext, Status, StatusCode
 
 
 LOGGER = logging.getLogger(__name__)
@@ -141,3 +141,44 @@ def set_span_attributes(attributes: Mapping[str, Any]) -> None:
         LOGGER.debug("No active span when attempting to set attributes")
         return
     _apply_attributes(current_span, attributes)
+
+
+def current_trace_context() -> tuple[str | None, str | None]:
+    """Return the identifiers for the active span if available.
+
+    Returns:
+        tuple[str | None, str | None]: Pair containing ``trace_id`` and
+        ``span_id`` strings when a span is active; ``None`` values otherwise.
+    """
+
+    span = trace.get_current_span()
+    if not span:
+        return None, None
+    context: SpanContext = span.get_span_context()
+    if not context.is_valid:
+        return None, None
+    trace_id = f"{context.trace_id:032x}"
+    span_id = f"{context.span_id:016x}"
+    return trace_id, span_id
+
+
+def log_extra_with_trace(operation: str, **metadata: Any) -> dict[str, Any]:
+    """Return structured logging extras enriched with trace identifiers.
+
+    Args:
+        operation: Logical operation name to annotate log records with.
+        **metadata: Additional structured metadata to include in the payload.
+
+    Returns:
+        dict[str, Any]: Logging extras containing trace identifiers when
+        available.
+    """
+
+    trace_id, span_id = current_trace_context()
+    payload: dict[str, Any] = {
+        "operation": operation,
+        "trace_id": trace_id,
+        "span_id": span_id,
+    }
+    payload.update(metadata)
+    return payload

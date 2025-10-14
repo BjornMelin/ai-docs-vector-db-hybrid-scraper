@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from types import SimpleNamespace
+from typing import cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -195,10 +196,9 @@ def test_get_relevant_documents_sync_raises_when_loop_active(monkeypatch) -> Non
     vector_store = _make_vector_store_mock()
     retriever = VectorServiceRetriever(vector_store, "docs")
 
-    def _get_loop() -> asyncio.AbstractEventLoop:
-        return asyncio.get_event_loop()
+    fake_loop = cast(asyncio.AbstractEventLoop, object())
 
-    monkeypatch.setattr(asyncio, "get_running_loop", _get_loop)
+    monkeypatch.setattr(asyncio, "get_running_loop", lambda: fake_loop)
 
     with pytest.raises(RuntimeError):
         retriever._get_relevant_documents("hello")

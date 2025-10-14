@@ -10,10 +10,17 @@ import redis.asyncio as redis
 from redis.exceptions import RedisError
 
 from src.services.cache.base import CacheInterface
-from src.services.observability.tracing import trace_function
+from src.services.observability.tracing import log_extra_with_trace, trace_function
 
 
 logger = logging.getLogger(__name__)
+
+
+def _log_extra(event: str, **metadata: Any) -> dict[str, Any]:
+    """Return structured logging extras enriched with trace identifiers."""
+
+    metadata.setdefault("component", "cache.dragonfly")
+    return log_extra_with_trace(event, **metadata)
 
 
 class DragonflyCache(CacheInterface[Any]):
@@ -91,7 +98,11 @@ class DragonflyCache(CacheInterface[Any]):
         try:
             await self.client.ping()
         except RedisError as exc:  # pragma: no cover - network dependant
-            logger.error("Failed to initialise Dragonfly cache: %s", exc)
+            logger.error(
+                "Failed to initialise Dragonfly cache: %s",
+                exc,
+                extra=_log_extra("cache.dragonfly.initialize", url=self.redis_url),
+            )
             raise
 
     @trace_function("cache.dragonfly.get")
@@ -101,7 +112,12 @@ class DragonflyCache(CacheInterface[Any]):
         try:
             result = await self.client.get(self._format_key(key))
         except RedisError as exc:
-            logger.error("Dragonfly get failed for key %s: %s", key, exc)
+            logger.error(
+                "Dragonfly get failed for key %s: %s",
+                key,
+                exc,
+                extra=_log_extra("cache.dragonfly.get", key=key),
+            )
             return None
 
         if result is None:
@@ -116,7 +132,12 @@ class DragonflyCache(CacheInterface[Any]):
         try:
             payload = self._serialize(value)
         except (TypeError, ValueError) as exc:
-            logger.error("Failed serialising cache payload for %s: %s", key, exc)
+            logger.error(
+                "Failed serialising cache payload for %s: %s",
+                key,
+                exc,
+                extra=_log_extra("cache.dragonfly.serialize", key=key),
+            )
             return False
 
         try:
@@ -124,7 +145,12 @@ class DragonflyCache(CacheInterface[Any]):
                 await self.client.set(self._format_key(key), payload, ex=expiry)
             )
         except RedisError as exc:
-            logger.error("Dragonfly set failed for key %s: %s", key, exc)
+            logger.error(
+                "Dragonfly set failed for key %s: %s",
+                key,
+                exc,
+                extra=_log_extra("cache.dragonfly.set", key=key, ttl=expiry),
+            )
             return False
 
     async def delete(self, key: str) -> bool:
@@ -133,7 +159,12 @@ class DragonflyCache(CacheInterface[Any]):
         try:
             return bool(await self.client.delete(self._format_key(key)))
         except RedisError as exc:
-            logger.error("Dragonfly delete failed for key %s: %s", key, exc)
+            logger.error(
+                "Dragonfly delete failed for key %s: %s",
+                key,
+                exc,
+                extra=_log_extra("cache.dragonfly.delete", key=key),
+            )
             return False
 
     async def exists(self, key: str) -> bool:
@@ -163,7 +194,12 @@ class DragonflyCache(CacheInterface[Any]):
                 await self.client.delete(key)
                 deleted += 1
         except RedisError as exc:
-            logger.error("Dragonfly clear_pattern failed for %s: %s", pattern, exc)
+            logger.error(
+                "Dragonfly clear_pattern failed for %s: %s",
+                pattern,
+                exc,
+                extra=_log_extra("cache.dragonfly.clear_pattern", pattern=pattern),
+            )
             return deleted
 
         return deleted
@@ -183,7 +219,12 @@ class DragonflyCache(CacheInterface[Any]):
                     decoded = decoded[len(self.key_prefix) :]
                 keys.append(decoded)
         except RedisError as exc:
-            logger.error("Dragonfly scan_keys failed for %s: %s", pattern, exc)
+            logger.error(
+                "Dragonfly scan_keys failed for %s: %s",
+                pattern,
+                exc,
+                extra=_log_extra("cache.dragonfly.scan_keys", pattern=pattern),
+            )
             return []
 
         return keys
@@ -201,7 +242,11 @@ class DragonflyCache(CacheInterface[Any]):
                 return count
             return int(await self.client.dbsize())
         except RedisError as exc:
-            logger.error("Dragonfly size probe failed: %s", exc)
+            logger.error(
+                "Dragonfly size probe failed: %s",
+                exc,
+                extra=_log_extra("cache.dragonfly.size"),
+            )
             return 0
 
     async def ttl(self, key: str) -> int:
@@ -210,7 +255,12 @@ class DragonflyCache(CacheInterface[Any]):
         try:
             ttl_value = await self.client.ttl(self._format_key(key))
         except RedisError as exc:
-            logger.error("Dragonfly ttl lookup failed for %s: %s", key, exc)
+            logger.error(
+                "Dragonfly ttl lookup failed for %s: %s",
+                key,
+                exc,
+                extra=_log_extra("cache.dragonfly.ttl", key=key),
+            )
             return 0
         return max(0, int(ttl_value))
 
@@ -220,7 +270,12 @@ class DragonflyCache(CacheInterface[Any]):
         try:
             return bool(await self.client.expire(self._format_key(key), ttl))
         except RedisError as exc:
-            logger.error("Dragonfly expire failed for %s: %s", key, exc)
+            logger.error(
+                "Dragonfly expire failed for %s: %s",
+                key,
+                exc,
+                extra=_log_extra("cache.dragonfly.expire", key=key, ttl=ttl),
+            )
             return False
 
     async def mget(self, keys: list[str]) -> list[Any | None]:
@@ -230,7 +285,12 @@ class DragonflyCache(CacheInterface[Any]):
             full_keys = [self._format_key(key) for key in keys]
             results = await self.client.mget(full_keys)
         except RedisError as exc:
-            logger.error("Dragonfly mget failed for %s keys: %s", len(keys), exc)
+            logger.error(
+                "Dragonfly mget failed for %s keys: %s",
+                len(keys),
+                exc,
+                extra=_log_extra("cache.dragonfly.mget", key_count=len(keys)),
+            )
             return [None] * len(keys)
 
         payloads: list[Any | None] = []
@@ -252,7 +312,11 @@ class DragonflyCache(CacheInterface[Any]):
             for key, value in mapping.items():
                 serialised[self._format_key(key)] = self._serialize(value)
         except (TypeError, ValueError) as exc:
-            logger.error("Dragonfly mset serialisation failed: %s", exc)
+            logger.error(
+                "Dragonfly mset serialisation failed: %s",
+                exc,
+                extra=_log_extra("cache.dragonfly.mset", key_count=len(mapping)),
+            )
             return False
 
         try:
@@ -265,7 +329,11 @@ class DragonflyCache(CacheInterface[Any]):
                 await pipeline.execute()
             return True
         except RedisError as exc:
-            logger.error("Dragonfly mset failed: %s", exc)
+            logger.error(
+                "Dragonfly mset failed: %s",
+                exc,
+                extra=_log_extra("cache.dragonfly.mset", key_count=len(mapping)),
+            )
             return False
 
     async def delete_many(self, keys: list[str]) -> dict[str, bool]:
@@ -282,7 +350,11 @@ class DragonflyCache(CacheInterface[Any]):
         try:
             results = await pipeline.execute()
         except RedisError as exc:
-            logger.error("Dragonfly delete_many failed: %s", exc)
+            logger.error(
+                "Dragonfly delete_many failed: %s",
+                exc,
+                extra=_log_extra("cache.dragonfly.delete_many", key_count=len(keys)),
+            )
             return dict.fromkeys(keys, False)
 
         return {

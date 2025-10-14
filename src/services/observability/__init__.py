@@ -21,8 +21,10 @@ from .init import (
 )
 from .tracing import (
     ConfigOperationType,
+    current_trace_context,
     get_tracer,
     instrument_config_operation,
+    log_extra_with_trace,
     set_span_attributes,
     span,
     trace_function,
@@ -46,6 +48,7 @@ __all__ = [
     "AITracerDep",
     "AIOperationTracker",
     "ConfigOperationType",
+    "current_trace_context",
     "ObservabilityConfig",
     "ObservabilityConfigDep",
     "ObservabilityServiceDep",
@@ -60,6 +63,7 @@ __all__ = [
     "get_tracer",
     "initialize_observability",
     "instrument_config_operation",
+    "log_extra_with_trace",
     "is_observability_enabled",
     "record_ai_operation",
     "record_ai_operation_metrics",

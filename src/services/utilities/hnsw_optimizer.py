@@ -1,5 +1,6 @@
 """HNSW parameter optimization and adaptive ef_retrieve implementation."""
 
+import asyncio
 import logging
 import time
 from typing import Any
@@ -41,7 +42,15 @@ class HNSWOptimizer(BaseService):
             return
 
         # Validate that qdrant service is initialized
-        if not self.qdrant_service.is_initialized:
+        readiness = getattr(self.qdrant_service, "is_initialized", None)
+        if callable(readiness):
+            is_ready = readiness()
+        elif readiness is not None:
+            is_ready = bool(readiness)
+        else:
+            is_ready = bool(getattr(self.qdrant_service, "_initialized", False))
+
+        if not is_ready:
             msg = "QdrantService must be initialized before HNSWOptimizer"
             raise QdrantServiceError(msg)
 
@@ -159,8 +168,15 @@ class HNSWOptimizer(BaseService):
                     # Moderate time usage, try smaller increment
                     current_ef = min(current_ef + (step_size // 2), max_ef)
 
-            except (ValueError, TypeError, UnicodeDecodeError) as e:
-                self.logger.warning("Search failed at EF %d: %s", current_ef, e)
+            except (ValueError, TypeError, UnicodeDecodeError) as exc:
+                self.logger.warning("Search failed at EF %d: %s", current_ef, exc)
+                break
+            except Exception as exc:  # noqa: BLE001 - fallback for client errors
+                if isinstance(
+                    exc, asyncio.CancelledError
+                ):  # pragma: no cover - propagate cancellations
+                    raise
+                self.logger.warning("Search failed at EF %d: %s", current_ef, exc)
                 break
 
         final_search_time = search_times[-1] if search_times else 0
@@ -472,7 +488,7 @@ class HNSWOptimizer(BaseService):
 
             try:
                 client = await self.qdrant_service.get_client()
-                await client.query_points(
+                result = await client.query_points(
                     collection_name=collection_name,
                     query=query_vector,
                     using="dense",
@@ -482,11 +498,24 @@ class HNSWOptimizer(BaseService):
                     with_vectors=False,
                 )
 
+                if result is None:
+                    self.logger.warning(
+                        "Performance test query returned no results at EF %d", ef_value
+                    )
+                    continue
+
                 search_time_ms = (time.time() - start_time) * 1000
                 search_times.append(search_time_ms)
 
-            except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
-                self.logger.warning("Performance test query failed: %s", e)
+            except (ValueError, ConnectionError, TimeoutError, RuntimeError) as exc:
+                self.logger.warning("Performance test query failed: %s", exc)
+                continue
+            except Exception as exc:  # noqa: BLE001 - tolerate transport errors
+                if isinstance(
+                    exc, asyncio.CancelledError
+                ):  # pragma: no cover - propagate cancellations
+                    raise
+                self.logger.warning("Performance test query failed: %s", exc)
                 continue
 
         if search_times:

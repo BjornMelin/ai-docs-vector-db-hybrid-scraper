@@ -1,13 +1,17 @@
-"""Cache manager that fronts Dragonfly for all caching operations."""
+"""Cache management utilities coordinating Dragonfly caches."""
 
 from __future__ import annotations
 
 import hashlib
 import logging
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Protocol, cast, runtime_checkable
 
 from src.config.models import CacheType
-from src.services.observability.tracing import set_span_attributes, trace_function
+from src.services.observability.tracing import (
+    log_extra_with_trace,
+    set_span_attributes,
+    trace_function,
+)
 
 from .dragonfly_cache import DragonflyCache
 from .embedding_cache import EmbeddingCache
@@ -15,6 +19,13 @@ from .search_cache import SearchResultCache
 
 
 logger = logging.getLogger(__name__)
+
+
+def _log_extra(event: str, **metadata: Any) -> dict[str, Any]:
+    """Return logging extras enriched with trace metadata."""
+
+    metadata.setdefault("component", "cache.manager")
+    return log_extra_with_trace(event, **metadata)
 
 
 DEFAULT_TTLS: dict[CacheType, int] = {
@@ -34,13 +45,19 @@ class _PatternClearableCache(Protocol):
     async def clear_pattern(self, pattern: str) -> int:  # pragma: no cover - protocol
         """Remove keys matching ``pattern``."""
 
+        ...
+
     async def scan_keys(self, pattern: str) -> list[str]:  # pragma: no cover - protocol
         """Return keys matching ``pattern``."""
+
+        ...
 
     async def delete_many(  # pragma: no cover - protocol
         self, keys: list[str]
     ) -> dict[str, bool]:
         """Delete a batch of keys."""
+
+        ...
 
 
 class CacheManager:
@@ -84,6 +101,7 @@ class CacheManager:
         else:
             logger.warning(
                 "Distributed Dragonfly cache disabled; cache operations will no-op",
+                extra=_log_extra("cache.manager.init", distributed=False),
             )
 
         self._embedding_cache: EmbeddingCache | None = None
@@ -104,6 +122,11 @@ class CacheManager:
             "CacheManager configured (distributed=%s, specialized=%s)",
             enable_distributed_cache,
             enable_specialized_caches,
+            extra=_log_extra(
+                "cache.manager.init",
+                distributed=enable_distributed_cache,
+                specialized=enable_specialized_caches,
+            ),
         )
 
     async def initialize(self) -> None:
@@ -173,7 +196,16 @@ class CacheManager:
         try:
             result = await distributed.get(cache_key)
         except (ConnectionError, OSError, TimeoutError) as exc:
-            logger.error("Distributed cache get error for key %s: %s", cache_key, exc)
+            logger.error(
+                "Distributed cache get error for key %s: %s",
+                cache_key,
+                exc,
+                extra=_log_extra(
+                    "cache.manager.get",
+                    key=cache_key,
+                    cache_type=cache_type.value,
+                ),
+            )
             return default
 
         if result is not None:
@@ -212,7 +244,17 @@ class CacheManager:
         try:
             return await distributed.set(cache_key, value, ttl=effective_ttl)
         except (ConnectionError, OSError, TimeoutError) as exc:
-            logger.error("Distributed cache set error for key %s: %s", cache_key, exc)
+            logger.error(
+                "Distributed cache set error for key %s: %s",
+                cache_key,
+                exc,
+                extra=_log_extra(
+                    "cache.manager.set",
+                    key=cache_key,
+                    cache_type=cache_type.value,
+                    ttl=effective_ttl,
+                ),
+            )
             return False
 
     async def delete(
@@ -237,7 +279,14 @@ class CacheManager:
             return await distributed.delete(cache_key)
         except (ConnectionError, OSError, TimeoutError) as exc:
             logger.error(
-                "Distributed cache delete error for key %s: %s", cache_key, exc
+                "Distributed cache delete error for key %s: %s",
+                cache_key,
+                exc,
+                extra=_log_extra(
+                    "cache.manager.delete",
+                    key=cache_key,
+                    cache_type=cache_type.value,
+                ),
             )
             return False
 
@@ -265,7 +314,23 @@ class CacheManager:
         distributed = self._distributed_cache
         if distributed is None:
             return 0
-        return await distributed.clear()
+
+        if isinstance(distributed, DragonflyCache):
+            return await distributed.clear()
+
+        if isinstance(distributed, _PatternClearableCache):
+            clearable = cast(_PatternClearableCache, distributed)
+            keys = await clearable.scan_keys("*")
+            if not keys:
+                return 0
+            result = await clearable.delete_many(keys)
+            return sum(result.values())
+
+        logger.debug(
+            "Distributed cache does not support full clear",
+            extra=_log_extra("cache.manager.clear_all", supported=False),
+        )
+        return 0
 
     async def clear_pattern(self, pattern: str) -> int:
         """Clear entries matching ``pattern`` via Dragonfly pattern support.
@@ -290,10 +355,11 @@ class CacheManager:
             return await distributed.clear_pattern(prefixed_pattern)
 
         if isinstance(distributed, _PatternClearableCache):
-            keys = await distributed.scan_keys(pattern)
+            clearable = cast(_PatternClearableCache, distributed)
+            keys = await clearable.scan_keys(pattern)
             if not keys:
                 return 0
-            result = await distributed.delete_many(keys)
+            result = await clearable.delete_many(keys)
             return sum(result.values())
 
         return 0
@@ -308,7 +374,7 @@ class CacheManager:
         stats: dict[str, Any] = {"manager": {"enabled_layers": []}}
 
         distributed = self._distributed_cache
-        if distributed is not None:
+        if isinstance(distributed, DragonflyCache):
             stats["manager"]["enabled_layers"].append("dragonfly")
             stats["dragonfly"] = {
                 "size": await distributed.size(),
@@ -341,7 +407,7 @@ class CacheManager:
 
         stats: dict[str, Any] = {}
         distributed = self._distributed_cache
-        if distributed is not None:
+        if isinstance(distributed, DragonflyCache):
             stats["distributed"] = {
                 "compression_enabled": getattr(
                     distributed, "compression_enabled", False
@@ -354,12 +420,16 @@ class CacheManager:
         """Close Dragonfly connection."""
 
         distributed = self._distributed_cache
-        if distributed is None:
+        if not isinstance(distributed, DragonflyCache):
             return
         try:
             await distributed.close()
         except (ConnectionError, OSError, TimeoutError) as exc:
-            logger.error("Error closing distributed cache: %s", exc)
+            logger.error(
+                "Error closing distributed cache: %s",
+                exc,
+                extra=_log_extra("cache.manager.close"),
+            )
 
     async def _clear_all_distributed(self) -> bool:
         """Clear entire distributed cache safely."""
@@ -367,12 +437,31 @@ class CacheManager:
         distributed = self._distributed_cache
         if distributed is None:
             return True
-        try:
-            await distributed.clear()
+
+        if isinstance(distributed, DragonflyCache):
+            try:
+                await distributed.clear()
+                return True
+            except (ConnectionError, OSError, TimeoutError) as exc:
+                logger.error(
+                    "Distributed cache clear error: %s",
+                    exc,
+                    extra=_log_extra("cache.manager.clear_all"),
+                )
+                return False
+
+        if isinstance(distributed, _PatternClearableCache):
+            clearable = cast(_PatternClearableCache, distributed)
+            keys = await clearable.scan_keys("*")
+            if keys:
+                await clearable.delete_many(keys)
             return True
-        except (ConnectionError, OSError, TimeoutError) as exc:
-            logger.error("Distributed cache clear error: %s", exc)
-            return False
+
+        logger.debug(
+            "Distributed cache clear skipped; unsupported cache type",
+            extra=_log_extra("cache.manager.clear_all", supported=False),
+        )
+        return False
 
     async def _clear_specific_cache_type(self, cache_type: CacheType) -> bool:
         """Clear keys matching the supplied cache type."""
@@ -392,14 +481,18 @@ class CacheManager:
             return True
 
         if isinstance(distributed, _PatternClearableCache):
-            keys = await distributed.scan_keys(pattern)
+            clearable = cast(_PatternClearableCache, distributed)
+            keys = await clearable.scan_keys(pattern)
             if keys:
-                await distributed.delete_many(keys)
+                await clearable.delete_many(keys)
             return True
 
         logger.debug(
             "Distributed cache does not expose pattern clearing; skip clear for %s",
             cache_type.value,
+            extra=_log_extra(
+                "cache.manager.clear_specific", cache_type=cache_type.value
+            ),
         )
         return False
 

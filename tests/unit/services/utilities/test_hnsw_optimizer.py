@@ -31,6 +31,10 @@ class TestHNSWOptimizer:
         service._client = MagicMock()
         service._client.query_points = AsyncMock()
         service._client.get_collection = AsyncMock()
+        service.get_client = AsyncMock(return_value=service._client)
+        service.is_initialized = MagicMock(
+            side_effect=lambda: bool(service._initialized)
+        )
         return service
 
     @pytest.fixture

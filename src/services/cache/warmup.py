@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable, Sequence
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from src.services.cache.manager import CacheManager
 
@@ -59,7 +59,7 @@ async def warm_caches(
             config = embedding_manager.config.embedding
             missing = await embedding_cache.warm_cache(
                 list(embedding_queries),
-                model=config.dense_model.value,
+                model=config.dense_model,
                 provider=config.provider.value,
             )
             summary["embeddings"]["already_cached"] = len(embedding_queries) - len(
@@ -67,7 +67,10 @@ async def warm_caches(
             )
             if missing:
                 result = await embedding_manager.generate_embeddings(list(missing))
-                generated = len(result.get("embeddings", []))
+                embeddings = cast(
+                    Sequence[Sequence[float]], result.get("embeddings", [])
+                )
+                generated = len(embeddings)
                 summary["embeddings"]["generated"] = generated
                 if generated < len(missing):
                     summary["embeddings"]["skipped"] = len(missing) - generated

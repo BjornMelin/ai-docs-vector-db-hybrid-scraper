@@ -27,7 +27,6 @@ pytest_plugins = [
     "tests.fixtures.parallel_config",
     "tests.fixtures.redis",
     "tests.fixtures.test_data",
-    "tests.plugins.random_seed",
     "tests.fixtures.http_mocks",
 ]
 

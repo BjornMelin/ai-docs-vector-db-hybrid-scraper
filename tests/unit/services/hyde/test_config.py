@@ -1,5 +1,6 @@
 """Tests for HyDE configuration models."""
 
+from typing import cast
 from unittest.mock import Mock
 
 import pytest
@@ -284,18 +285,20 @@ class TestHyDEConfig:
 
     def test_json_schema_extra(self):
         """Test that JSON schema extra example is accessible."""
-        config = HyDEConfig()
-        example = config.model_config.get("json_schema_extra", {}).get("example", {})
+        schema_config = getattr(HyDEConfig, "model_config", {})
+        json_schema_extra = schema_config.get("json_schema_extra", {})
+        example = json_schema_extra.get("example", {})
+        assert isinstance(example, dict)
 
-        assert example["enable_hyde"] is True
-        assert example["num_generations"] == 5
-        assert example["generation_temperature"] == 0.7
-        assert example["max_generation_tokens"] == 200
-        assert example["generation_model"] == "gpt-3.5-turbo"
-        assert example["hyde_prefetch_limit"] == 50
-        assert example["query_prefetch_limit"] == 30
-        assert example["cache_ttl_seconds"] == 3600
-        assert example["parallel_generation"] is True
+        assert example.get("enable_hyde") is True
+        assert example.get("num_generations") == 5
+        assert example.get("generation_temperature") == 0.7
+        assert example.get("max_generation_tokens") == 200
+        assert example.get("generation_model") == "gpt-3.5-turbo"
+        assert example.get("hyde_prefetch_limit") == 50
+        assert example.get("query_prefetch_limit") == 30
+        assert example.get("cache_ttl_seconds") == 3600
+        assert example.get("parallel_generation") is True
 
     def test_serialization(self):
         """Test config serialization and deserialization."""
@@ -389,23 +392,28 @@ class TestHyDEPromptConfig:
         """Test that prompt templates can be formatted with query."""
         config = HyDEPromptConfig()
         test_query = "How to use API authentication?"
+        prompt_data = config.model_dump()
 
         # Test each prompt template can be formatted
-        technical_formatted = config.technical_prompt.format(query=test_query)
+        technical_prompt = cast(str, prompt_data["technical_prompt"])
+        technical_formatted = technical_prompt.format(query=test_query)
         assert test_query in technical_formatted
-        assert technical_formatted != config.technical_prompt
+        assert technical_formatted != technical_prompt
 
-        code_formatted = config.code_prompt.format(query=test_query)
+        code_prompt = cast(str, prompt_data["code_prompt"])
+        code_formatted = code_prompt.format(query=test_query)
         assert test_query in code_formatted
-        assert code_formatted != config.code_prompt
+        assert code_formatted != code_prompt
 
-        tutorial_formatted = config.tutorial_prompt.format(query=test_query)
+        tutorial_prompt = cast(str, prompt_data["tutorial_prompt"])
+        tutorial_formatted = tutorial_prompt.format(query=test_query)
         assert test_query in tutorial_formatted
-        assert tutorial_formatted != config.tutorial_prompt
+        assert tutorial_formatted != tutorial_prompt
 
-        general_formatted = config.general_prompt.format(query=test_query)
+        general_prompt = cast(str, prompt_data["general_prompt"])
+        general_formatted = general_prompt.format(query=test_query)
         assert test_query in general_formatted
-        assert general_formatted != config.general_prompt
+        assert general_formatted != general_prompt
 
     def test_keyword_lists_not_empty(self):
         """Test that keyword lists are not empty."""
@@ -564,14 +572,16 @@ class TestHyDEMetricsConfig:
 
     def test_json_schema_extra(self):
         """Test that JSON schema extra example is accessible."""
-        config = HyDEMetricsConfig()
-        example = config.model_config.get("json_schema_extra", {}).get("example", {})
+        schema_config = getattr(HyDEMetricsConfig, "model_config", {})
+        json_schema_extra = schema_config.get("json_schema_extra", {})
+        example = json_schema_extra.get("example", {})
+        assert isinstance(example, dict)
 
-        assert example["track_generation_time"] is True
-        assert example["track_cache_hits"] is True
-        assert example["track_search_quality"] is True
-        assert example["ab_testing_enabled"] is False
-        assert example["control_group_percentage"] == 0.5
+        assert example.get("track_generation_time") is True
+        assert example.get("track_cache_hits") is True
+        assert example.get("track_search_quality") is True
+        assert example.get("ab_testing_enabled") is False
+        assert example.get("control_group_percentage") == 0.5
 
     def test_ab_testing_configuration(self):
         """Test A/B testing configuration combinations."""

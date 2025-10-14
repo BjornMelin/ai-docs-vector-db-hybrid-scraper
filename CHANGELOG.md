@@ -37,6 +37,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Refactor
 
+- Wrapped the Firecrawl and Qdrant client adapters in protocol-driven wrappers with
+  OpenTelemetry spans, structured logging, and stricter typing to align with the
+  unified observability contract.
+- Reused the shared observability tracing helpers for client logging and recorded
+  Qdrant vector search durations through the standard telemetry tracker to retain
+  OpenTelemetry alignment.
+- Simplified infrastructure container wiring to provide raw Qdrant, Firecrawl,
+  and aiohttp clients directly to services, matching the existing OpenAI client
+  usage pattern.
+- Hardened `CacheManager` warmup and stats helpers around Dragonfly adapters,
+  preserving tracing context while removing implicit casts and unsafe cache clears.
+- Refined cache, alias management, and health observability to reuse the shared
+  tracing extras, unifying structured logging across `services/cache`,
+  `services/core/qdrant_alias_manager.py`, and `services/observability/health_manager.py`.
+- Hardened the embedding manager benchmark loader to require structured embedding
+  sections, reuse benchmark normalisation, and restore prior selection state when
+  validation fails.
+- Updated the HNSW optimizer readiness and performance paths to respect injected
+  client managers, treat transport exceptions as warnings, and skip timing metrics
+  when queries return empty payloads.
 - **[Chunking]:** Refactored the document chunking service to use a Strategy pattern, making it more modular and easier to extend with new document types.
 - **[Browser]:** Unified runtime logic for all browser providers, centralizing retry,
   timeout, and error handling in `src/services/browser/runtime.py`.
@@ -208,6 +228,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- Deleted the obsolete `src/services/cache/metrics.py` module and associated docs
+  entries now that Dragonfly metrics flow through the shared observability stack.
+- Dropped the custom `tests.plugins.random_seed` shim in favour of `pytest-randomly`
+  defaults to avoid duplicate CLI options and conflicting parsers.
 - Deleted the unused `src/services/enterprise` package and example security integration module; optional services now fail closed until replacements arrive.
 - Deleted query_processing clustering, expansion, ranking, and utils modules plus their tests in favour of the final LangChain-backed stack.
 - Deleted support for the deprecated `AI_DOCS_DEPLOYMENT__TIER` environment variable in favor of `AI_DOCS_MODE` as the sole mode selector.
@@ -217,6 +241,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed the `QueryProcessingPipeline` wrapper; callers should invoke
   `SearchOrchestrator` directly and normalise inputs with
   `SearchRequest.from_input` (**SemVer: MAJOR**).
+- Deleted the `src/infrastructure/clients` wrappers and associated API docs so
+  modules rely on maintained library clients without redundant abstractions.
+
+### Tests
+
+- Updated HyDE configuration tests to guard against missing schema keys and
+  normalise prompt formatting through typed casts.
+- Reworked HNSW optimizer, vector manager, and retriever stubs to align with direct
+  client imports and validated the services suite via `uv run pytest -q tests/unit/services`.
+
+### Quality gates
+
+- Ruff, Pylint, Pyright, and
+  `pytest -q -n auto --maxfail=1 --randomly-seed=321852 tests/unit/services/hyde/test_config.py`
+  passed on cache and infrastructure client modules.
+- Ruff (`uv run ruff check --fix`), Pylint, Pyright, and `uv run pytest -q tests/unit/services`
+  passed across the embedding manager, vector DB manager tests, retriever tests, and
+  HNSW optimizer changes.
 
 ### Security
 
