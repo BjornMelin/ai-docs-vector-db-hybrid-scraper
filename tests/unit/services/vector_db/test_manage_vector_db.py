@@ -293,6 +293,24 @@ def test_cli_stats_prints_table() -> None:
     manager_stub.cleanup.assert_awaited_once()
 
 
+@pytest.mark.asyncio
+async def test_shutdown_manager_success(manager_setup: SimpleNamespace) -> None:
+    """Test successful shutdown manager."""
+    # Simulate successful shutdown
+    manager_setup.shutdown_manager.return_value = True
+    result = await manager_setup.shutdown_manager()
+    assert result is True
+
+
+@pytest.mark.asyncio
+async def test_shutdown_manager_failure(manager_setup: SimpleNamespace) -> None:
+    """Test failed shutdown manager."""
+    # Simulate failed shutdown
+    manager_setup.shutdown_manager.return_value = False
+    result = await manager_setup.shutdown_manager()
+    assert result is False
+
+
 def test_collection_errors_subclass_qdrant_service_error() -> None:
     """Ensure collection lifecycle errors derive from QdrantServiceError."""
 

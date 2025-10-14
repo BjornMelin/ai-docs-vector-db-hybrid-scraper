@@ -32,9 +32,7 @@ class TestHNSWOptimizer:
         service._client.query_points = AsyncMock()
         service._client.get_collection = AsyncMock()
         service.get_client = AsyncMock(return_value=service._client)
-        service.is_initialized = MagicMock(
-            side_effect=lambda: bool(service._initialized)
-        )
+        service.is_initialized = MagicMock(side_effect=lambda: service._initialized)
         return service
 
     @pytest.fixture
@@ -83,6 +81,16 @@ class TestHNSWOptimizer:
 
         assert "QdrantService must be initialized" in str(exc_info.value)
         assert optimizer._initialized is False
+
+    @pytest.mark.asyncio
+    async def test_initialize_readiness_error(self, optimizer, _mock_qdrant_service):
+        """Test initialization when is_initialized raises an exception."""
+        _mock_qdrant_service.is_initialized.side_effect = RuntimeError("Check failed")
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await optimizer.initialize()
+
+        assert "Check failed" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_adaptive_ef_retrieve_success(self, optimizer, _mock_qdrant_service):

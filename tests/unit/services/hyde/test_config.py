@@ -9,22 +9,23 @@ from pydantic import ValidationError
 from src.services.hyde.config import HyDEConfig, HyDEMetricsConfig, HyDEPromptConfig
 
 
+def _test_field_validation(
+    config_class: type, field_name: str, valid_values: list, invalid_cases: list[tuple]
+) -> None:
+    """Helper to test field validation for valid and invalid values."""
+    # Valid values
+    for value in valid_values:
+        config_class(**{field_name: value})
+
+    # Invalid values
+    for invalid_value, expected_message in invalid_cases:
+        with pytest.raises(ValidationError) as exc_info:
+            config_class(**{field_name: invalid_value})
+        assert expected_message in str(exc_info.value)
+
+
 class TestHyDEConfig:
     """Tests for HyDEConfig model."""
-
-    def _test_field_validation(
-        self, field_name: str, valid_values: list, invalid_cases: list[tuple]
-    ) -> None:
-        """Helper to test field validation for valid and invalid values."""
-        # Valid values
-        for value in valid_values:
-            HyDEConfig(**{field_name: value})
-
-        # Invalid values
-        for invalid_value, expected_message in invalid_cases:
-            with pytest.raises(ValidationError) as exc_info:
-                HyDEConfig(**{field_name: invalid_value})
-            assert expected_message in str(exc_info.value)
 
     def test_default_config(self):
         """Test default HyDE configuration."""
@@ -123,7 +124,8 @@ class TestHyDEConfig:
 
     def test_validation_num_generations(self):
         """Test validation for num_generations field."""
-        self._test_field_validation(
+        _test_field_validation(
+            HyDEConfig,
             "num_generations",
             [1, 5, 10],
             [(0, "greater than or equal to 1"), (11, "less than or equal to 10")],
@@ -131,7 +133,8 @@ class TestHyDEConfig:
 
     def test_validation_generation_temperature(self):
         """Test validation for generation_temperature field."""
-        self._test_field_validation(
+        _test_field_validation(
+            HyDEConfig,
             "generation_temperature",
             [0.0, 0.7, 1.0],
             [(-0.1, "greater than or equal to 0"), (1.1, "less than or equal to 1")],
@@ -139,7 +142,8 @@ class TestHyDEConfig:
 
     def test_validation_max_generation_tokens(self):
         """Test validation for max_generation_tokens field."""
-        self._test_field_validation(
+        _test_field_validation(
+            HyDEConfig,
             "max_generation_tokens",
             [50, 200, 500],
             [(49, "greater than or equal to 50"), (501, "less than or equal to 500")],
@@ -147,7 +151,8 @@ class TestHyDEConfig:
 
     def test_validation_generation_timeout_seconds(self):
         """Test validation for generation_timeout_seconds field."""
-        self._test_field_validation(
+        _test_field_validation(
+            HyDEConfig,
             "generation_timeout_seconds",
             [1, 10, 60],
             [(0, "greater than or equal to 1"), (61, "less than or equal to 60")],
@@ -155,7 +160,8 @@ class TestHyDEConfig:
 
     def test_validation_hyde_prefetch_limit(self):
         """Test validation for hyde_prefetch_limit field."""
-        self._test_field_validation(
+        _test_field_validation(
+            HyDEConfig,
             "hyde_prefetch_limit",
             [10, 50, 200],
             [(9, "greater than or equal to 10"), (201, "less than or equal to 200")],
@@ -163,7 +169,8 @@ class TestHyDEConfig:
 
     def test_validation_query_prefetch_limit(self):
         """Test validation for query_prefetch_limit field."""
-        self._test_field_validation(
+        _test_field_validation(
+            HyDEConfig,
             "query_prefetch_limit",
             [10, 30, 100],
             [(9, "greater than or equal to 10"), (101, "less than or equal to 100")],
@@ -171,7 +178,8 @@ class TestHyDEConfig:
 
     def test_validation_hyde_weight_in_fusion(self):
         """Test validation for hyde_weight_in_fusion field."""
-        self._test_field_validation(
+        _test_field_validation(
+            HyDEConfig,
             "hyde_weight_in_fusion",
             [0.0, 0.6, 1.0],
             [(-0.1, "greater than or equal to 0"), (1.1, "less than or equal to 1")],
@@ -179,7 +187,8 @@ class TestHyDEConfig:
 
     def test_validation_cache_ttl_seconds(self):
         """Test validation for cache_ttl_seconds field."""
-        self._test_field_validation(
+        _test_field_validation(
+            HyDEConfig,
             "cache_ttl_seconds",
             [300, 3600, 86400],
             [
@@ -190,7 +199,8 @@ class TestHyDEConfig:
 
     def test_validation_max_concurrent_generations(self):
         """Test validation for max_concurrent_generations field."""
-        self._test_field_validation(
+        _test_field_validation(
+            HyDEConfig,
             "max_concurrent_generations",
             [1, 5, 10],
             [(0, "greater than or equal to 1"), (11, "less than or equal to 10")],
@@ -198,7 +208,8 @@ class TestHyDEConfig:
 
     def test_validation_min_generation_length(self):
         """Test validation for min_generation_length field."""
-        self._test_field_validation(
+        _test_field_validation(
+            HyDEConfig,
             "min_generation_length",
             [10, 20, 100],
             [(9, "greater than or equal to 10"), (101, "less than or equal to 100")],
@@ -206,7 +217,8 @@ class TestHyDEConfig:
 
     def test_validation_diversity_threshold(self):
         """Test validation for diversity_threshold field."""
-        self._test_field_validation(
+        _test_field_validation(
+            HyDEConfig,
             "diversity_threshold",
             [0.0, 0.3, 1.0],
             [(-0.1, "greater than or equal to 0"), (1.1, "less than or equal to 1")],
@@ -416,20 +428,6 @@ class TestHyDEPromptConfig:
 class TestHyDEMetricsConfig:
     """Tests for HyDEMetricsConfig model."""
 
-    def _test_field_validation(
-        self, field_name: str, valid_values: list, invalid_cases: list[tuple]
-    ) -> None:
-        """Helper to test field validation for valid and invalid values."""
-        # Valid values
-        for value in valid_values:
-            HyDEMetricsConfig(**{field_name: value})
-
-        # Invalid values
-        for invalid_value, expected_message in invalid_cases:
-            with pytest.raises(ValidationError) as exc_info:
-                HyDEMetricsConfig(**{field_name: invalid_value})
-            assert expected_message in str(exc_info.value)
-
     def test_default_metrics_config(self):
         """Test default metrics configuration."""
         config = HyDEMetricsConfig()
@@ -483,7 +481,8 @@ class TestHyDEMetricsConfig:
 
     def test_validation_control_group_percentage(self):
         """Test validation for control_group_percentage field."""
-        self._test_field_validation(
+        _test_field_validation(
+            HyDEMetricsConfig,
             "control_group_percentage",
             [0.0, 0.5, 1.0],
             [(-0.1, "greater than or equal to 0"), (1.1, "less than or equal to 1")],
@@ -491,7 +490,8 @@ class TestHyDEMetricsConfig:
 
     def test_validation_metrics_export_interval(self):
         """Test validation for metrics_export_interval field."""
-        self._test_field_validation(
+        _test_field_validation(
+            HyDEMetricsConfig,
             "metrics_export_interval",
             [60, 300, 3600],
             [(59, "greater than or equal to 60"), (3601, "less than or equal to 3600")],
