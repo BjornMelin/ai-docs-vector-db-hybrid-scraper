@@ -16,12 +16,15 @@ class MockContext(Protocol):
 
     async def debug(self, msg: str) -> None:
         """Log debug message."""
+        ...
 
     async def warning(self, msg: str) -> None:
         """Log warning message."""
+        ...
 
     async def error(self, msg: str) -> None:
         """Log error message."""
+        ...
 
 
 class MockTool:
@@ -94,7 +97,6 @@ class ToolDependencies:
     project_service: Any
     analytics_service: Any
     cache_service: Any
-    deployment_service: Any
 
 
 def create_mock_tools(dependencies: ToolDependencies) -> dict[str, AsyncMock]:
@@ -200,12 +202,6 @@ def create_mock_tools(dependencies: ToolDependencies) -> dict[str, AsyncMock]:
         """Mock clear cache tool."""
         return await dependencies.cache_service.clear(pattern=pattern)
 
-    # Mock deployment tool
-    async def mock_list_aliases(**__kwargs) -> dict[str, Any]:
-        """Mock list aliases tool."""
-        result = await dependencies.deployment_service.list_aliases()
-        return {"aliases": result}
-
     # Mock utilities tool
     async def mock_validate_configuration(**__kwargs) -> dict[str, Any]:
         """Mock validate configuration tool."""
@@ -240,7 +236,6 @@ def create_mock_tools(dependencies: ToolDependencies) -> dict[str, AsyncMock]:
         "get_analytics": AsyncMock(side_effect=mock_get_analytics),
         "get_cache_stats": AsyncMock(side_effect=mock_get_cache_stats),
         "clear_cache": AsyncMock(side_effect=mock_clear_cache),
-        "list_aliases": AsyncMock(side_effect=mock_list_aliases),
         "validate_configuration": AsyncMock(side_effect=mock_validate_configuration),
         "reindex_collection": AsyncMock(side_effect=mock_reindex_collection),
         "hyde_search": AsyncMock(side_effect=mock_hyde_search),

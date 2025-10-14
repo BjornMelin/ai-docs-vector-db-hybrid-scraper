@@ -79,12 +79,6 @@ class Settings(BaseSettings):
     enable_advanced_monitoring: bool = Field(
         default=True, description="Enable advanced monitoring features"
     )
-    enable_deployment_features: bool = Field(
-        default=True, description="Enable deployment and operations APIs"
-    )
-    enable_ab_testing: bool = Field(
-        default=False, description="Enable A/B testing and experimentation"
-    )
 
     # Paths
     data_dir: Path = Field(default=Path("data"), description="Data directory")
@@ -160,7 +154,8 @@ class Settings(BaseSettings):
         default_factory=ObservabilityConfig, description="Observability configuration"
     )
     deployment: DeploymentConfig = Field(
-        default_factory=DeploymentConfig, description="Deployment configuration"
+        default_factory=DeploymentConfig,
+        description="Deployment orchestration settings",
     )
     documentation_sites: list[DocumentationSite] = Field(
         default_factory=list, description="Documentation sites to crawl"
@@ -184,35 +179,19 @@ class Settings(BaseSettings):
         return self
 
     def is_development(self) -> bool:
-        """Return True when running in development environment.
-
-        Returns:
-            True if environment is development.
-        """
+        """Return True when running in development environment."""
         return self.environment is Environment.DEVELOPMENT
 
     def is_production(self) -> bool:
-        """Return True when running in production environment.
-
-        Returns:
-            True if environment is production.
-        """
+        """Return True when running in production environment."""
         return self.environment is Environment.PRODUCTION
 
     def get_effective_chunking_strategy(self) -> ChunkingStrategy:
-        """Return the configured chunking strategy.
-
-        Returns:
-            Active chunking strategy.
-        """
+        """Return the configured chunking strategy."""
         return getattr(self.chunking, "strategy", ChunkingStrategy.BASIC)
 
     def get_effective_search_strategy(self) -> SearchStrategy:
-        """Return the configured search strategy.
-
-        Returns:
-            Active search strategy.
-        """
+        """Return the configured search strategy."""
         if hasattr(self.embedding, "retrieval_mode"):
             return self.embedding.retrieval_mode
         return SearchStrategy.DENSE
@@ -221,8 +200,6 @@ class Settings(BaseSettings):
         """Return the active feature flags for the unified application."""
         return {
             "advanced_monitoring": self.enable_advanced_monitoring,
-            "deployment_features": self.enable_deployment_features,
-            "a_b_testing": self.enable_ab_testing,
             "comprehensive_observability": bool(
                 getattr(self.observability, "enabled", False)
             ),

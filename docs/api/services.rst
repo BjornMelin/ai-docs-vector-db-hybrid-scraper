@@ -8,9 +8,9 @@ Subpackages
    :maxdepth: 4
 
    services.cache
+   services.deployment
    services.content_intelligence
    services.core
-   services.deployment
    services.embeddings
    services.fastapi
    services.hyde

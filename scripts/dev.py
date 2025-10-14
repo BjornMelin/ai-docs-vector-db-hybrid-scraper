@@ -450,6 +450,50 @@ def cmd_services(args: argparse.Namespace) -> int:
     return exit_code
 
 
+def cmd_deploy(args: argparse.Namespace) -> int:
+    """Render and optionally execute the active deployment plan."""
+    from src.config.loader import get_settings
+    from src.services.deployment import DeploymentExecutionError, DeploymentManager
+
+    settings = get_settings()
+    manager = DeploymentManager(settings)
+
+    try:
+        plan = manager.build_plan(args.strategy)
+    except ValueError as exc:  # pragma: no cover - guarded by argparse choices
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+
+    try:
+        manager.validate_plan(plan)
+    except ValueError as exc:
+        print(f"Validation failed: {exc}", file=sys.stderr)
+        return 2
+
+    print(f"Strategy: {plan.strategy.value}")
+    print(f"Description: {plan.description}")
+    print(f"Entrypoint: {plan.entrypoint}")
+    print(f"Available: {'yes' if plan.available else 'no'}")
+    print("Commands:")
+    for command in plan.formatted_commands():
+        print(f"  - {command}")
+    if plan.notes:
+        print("Notes:")
+        for note in plan.notes:
+            print(f"  - {note}")
+    if not args.apply:
+        return 0
+
+    try:
+        manager.execute_plan(plan)
+    except DeploymentExecutionError as exc:
+        print(f"Execution failed: {exc}", file=sys.stderr)
+        return 3
+
+    print("Deployment commands executed successfully.")
+    return 0
+
+
 def cmd_lint(args: argparse.Namespace) -> int:
     """Run Ruff linting, optionally applying fixes."""
     if not _ensure_uv_available():
@@ -659,6 +703,25 @@ def build_parser() -> argparse.ArgumentParser:
         help="Skip the post-start Qdrant health verification.",
     )
     services_parser.set_defaults(func=cmd_services)
+
+    from src.config.models import (
+        DeploymentStrategy,
+    )  # Local import to avoid module import during startup
+
+    deploy_parser = subparsers.add_parser(
+        "deploy", help="Show the active deployment plan or execute it"
+    )
+    deploy_parser.add_argument(
+        "--strategy",
+        choices=[strategy.value for strategy in DeploymentStrategy],
+        help="Override the configured deployment strategy.",
+    )
+    deploy_parser.add_argument(
+        "--apply",
+        action="store_true",
+        help="Execute the resolved deployment commands after validation.",
+    )
+    deploy_parser.set_defaults(func=cmd_deploy)
 
     lint_parser = subparsers.add_parser("lint", help="Run Ruff lint checks")
     lint_parser.add_argument(

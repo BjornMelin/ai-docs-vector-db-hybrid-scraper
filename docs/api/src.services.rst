@@ -14,7 +14,6 @@ Subpackages
    src.services.crawling
    src.services.content_intelligence
    src.services.core
-   src.services.deployment
    src.services.embeddings
    src.services.fastapi
    src.services.hyde

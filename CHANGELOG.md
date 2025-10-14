@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added curated router presets in `config/browser-routing-rules.json` so crawling tiers reuse the canonical RouterSettings model.
+- Introduced a unified deployment manager (`src/services/deployment/manager.py`) and
+  `python scripts/dev.py deploy` command that selects GitHub Actions, Docker
+  Compose, or Kubernetes flows via configuration and environment overrides.
 - Provisioned deterministic CPU and GPU validation harnesses (`scripts/validation`) with pytest coverage and operator docs so environments surface scientific/GPU drift automatically.
 - Added a dedicated `validation.yml` GitHub Actions pipeline that publishes JSON harness artefacts for both CPU and self-hosted GPU runners.
 - Added focused FastAPI security middleware tests and published release notes summarising the configuration/file-watch hardening work.
@@ -38,6 +41,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Refactor
 
+- Simplified configuration surfaces by removing deployment tier toggles,
+  updating property-based strategies, and pruning mocks so settings and tools
+  expose only maintained runtime services.
+- Reworked `pyproject.toml` optional dependency layout to rely on uv dependency
+  groups, added `eval` to dependency groups, and pinned `flash-attn`
+  build requirements so uv installs torch when compiling kernels.
+- Normalized `pyproject.toml` dev dependencies and removed unsupported uv
+  metadata to eliminate resolver warnings during environment bootstrap.
 - **[Core]:** Removed the `BaseService` and `LifecycleTracker` abstractions, delegating
   all service lifecycle management to the central dependency injection container.
 - **[Tests]:** Consolidated and streamlined test fixtures by creating a unified
@@ -243,6 +254,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- Deleted the dormant `src/services/deployment` package, associated docs, mocks,
+  and tests so the runtime reflects the library-first FastAPI and MCP surface.
 - Deleted the obsolete `src/services/cache/metrics.py` module and associated docs
   entries now that Dragonfly metrics flow through the shared observability stack.
 - Dropped the custom `tests.plugins.random_seed` shim in favour of `pytest-randomly`
@@ -261,6 +274,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Tests
 
+- Removed deployment configuration property suites and legacy MCP mock tooling,
+  focusing property-based checks on maintained settings and vector surfaces.
 - Updated HyDE configuration tests to guard against missing schema keys and
   normalise prompt formatting through typed casts.
 - Reworked HNSW optimizer, vector manager, and retriever stubs to align with direct
@@ -280,3 +295,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Applied SHA pinning across composite actions and documentation snippets, aligning with GitHub’s secure-use guidance to mitigate supply-chain risk.
 
 [Unreleased]: https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/compare/main...HEAD
+
+## [2025-10-15]
+
+### Added
+
+- Hardened deployment orchestration by validating GitHub Actions, Docker
+  Compose, and Kubernetes assets and wiring command execution with structured
+  tracing in `src/services/deployment/manager.py`.
+
+### Changed
+
+- Extended `scripts/dev.py deploy` with an `--apply` flag so operators can
+  execute validated plans in one step and reported execution status.
+- Exported `DeploymentExecutionError` from `src/services/deployment` for CLI and
+  service callers.
+- Documented the `flash-attn` build dependency constraint and retained PyTorch
+  within the `gpu` group while uv 0.7.x lacks the
+  `extra-build-dependencies` feature.
+
+### Tests
+
+- Exercised deployment validation and execution paths in
+  `tests/unit/services/deployment/test_manager.py` and the CLI flow in
+  `tests/scripts/test_dev_deploy_cli.py`.
+
+### Quality gates (scoped)
+
+- Ruff, Pylint, Pyright, and targeted pytest suites passed for deployment and
+  CLI modules (seed recorded in test artefacts).
+
+## [2025-10-14]
+
+### Removed
+
+- Removed `tool.uv.upgrade-package` auto-upgrade configuration so `uv lock --check` honors the existing lockfile instead of forcing resolver churn.
+
+### Refactor
+
+- Regenerated `uv.lock` after pruning upgrade automation to capture the canonical extras set without resolver noise.
+
+### Tests
+
+- Verified configuration and settings suites: `tests/property/test_config_schemas.py`, `tests/unit/infrastructure/test_pydantic_settings_patterns.py`.
+
+### Quality gates (scoped)
+
+- Ruff, Pylint, and Pyright clean on updated configuration and test modules; pytest green with seed 5758273.
