@@ -42,7 +42,6 @@ _STATE = _TelemetryState()
 
 def _has_explicit_instrumentation_preferences(observed: Any) -> bool:
     """Detect whether instrumentation toggles were explicitly provided."""
-
     preference_fields = {"instrument_fastapi", "instrument_httpx"}
 
     fields_set = getattr(observed, "model_fields_set", None)
@@ -72,7 +71,6 @@ def _has_explicit_instrumentation_preferences(observed: Any) -> bool:
 
 def _from_settings(settings: SettingsLike) -> ObservabilityConfig:
     """Create an :class:`ObservabilityConfig` from application settings."""
-
     observed = settings.observability
     instrumentations: list[str] = []
     if getattr(observed, "instrument_fastapi", False):
@@ -117,7 +115,6 @@ def _coerce_config(
     config: ObservabilityConfig | SettingsLike | None,
 ) -> ObservabilityConfig:
     """Normalize configuration inputs for observability initialization."""
-
     if config is None:
         return get_observability_config()
     if isinstance(config, ObservabilityConfig):
@@ -134,7 +131,6 @@ def _configure_instrumentations(instrumentations: Iterable[str]) -> None:
     Args:
         instrumentations: Collection of instrumentation module names to enable.
     """
-
     for name in instrumentations:
         try:
             if name == "fastapi":
@@ -180,7 +176,6 @@ def initialize_observability(
     Returns:
         bool: ``True`` when observability is enabled and providers are initialized.
     """
-
     runtime_config = _coerce_config(config)
     if not runtime_config.enabled:
         LOGGER.info("Observability disabled via configuration")
@@ -263,7 +258,6 @@ def initialize_observability(
 
 def shutdown_observability() -> None:
     """Flush exporters and reset providers."""
-
     if _STATE.tracer_provider is not None:
         try:
             _STATE.tracer_provider.shutdown()
@@ -282,5 +276,4 @@ def is_observability_enabled() -> bool:
     Returns:
         bool: ``True`` when a tracer provider has been configured.
     """
-
     return _STATE.tracer_provider is not None

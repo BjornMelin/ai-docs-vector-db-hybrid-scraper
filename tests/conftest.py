@@ -38,7 +38,6 @@ _ALLOWED_SKIP_PREFIXES: tuple[str, ...] = (
 
 def pytest_pycollect_makeitem(collector, name, obj):
     """Prevent pytest from treating custom exception helpers as test classes."""
-
     if inspect.isclass(obj) and name == "TestError":
         return []
 
@@ -47,7 +46,6 @@ def pytest_pycollect_makeitem(collector, name, obj):
 
 def _extract_skip_reason(report) -> str:
     """Map a pytest report to the human-readable skip reason string."""
-
     longrepr = getattr(report, "longrepr", None)
     if not longrepr:
         return ""
@@ -71,13 +69,11 @@ def _extract_skip_reason(report) -> str:
 
 def _is_skip_allowed(reason: str, prefixes: Iterable[str]) -> bool:
     """Return True when the recorded skip reason is part of the allowlist."""
-
     return any(reason.startswith(prefix) for prefix in prefixes)
 
 
 def pytest_terminal_summary(terminalreporter) -> None:
     """Fail the test run when an unexpected skip reason is encountered."""
-
     skipped_reports = terminalreporter.stats.get("skipped", [])
     unexpected = []
     for report in skipped_reports:

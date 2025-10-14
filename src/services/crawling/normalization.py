@@ -62,7 +62,6 @@ def normalize_crawler_output(
         callers can apply domain-specific enrichment without duplicating the
         heavy coercion logic.
     """
-
     if isinstance(result, BrowserResult):
         metadata = dict(result.metadata or {})
         metadata.setdefault("provider", result.provider.value)

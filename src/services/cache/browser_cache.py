@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import hashlib
+import inspect
 import json
 import logging
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable
 from typing import Any, cast
 from urllib.parse import urlparse
 
@@ -39,7 +40,6 @@ class BrowserCacheEntry:
             provider: Provider responsible for producing the scrape.
             timestamp: Optional epoch timestamp when cached.
         """
-
         self.url = url
         self.content = content
         self.metadata = metadata
@@ -50,7 +50,6 @@ class BrowserCacheEntry:
 
     def to_dict(self) -> dict[str, Any]:
         """Serialise the cache entry into a JSON-friendly payload."""
-
         return {
             "url": self.url,
             "content": self.content,
@@ -62,7 +61,6 @@ class BrowserCacheEntry:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> BrowserCacheEntry:
         """Deserialise a cache entry from persisted JSON data."""
-
         return cls(
             url=data["url"],
             content=data["content"],
@@ -91,7 +89,6 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
             dynamic_content_ttl: TTL for dynamic pages.
             static_content_ttl: TTL for static artefacts.
         """
-
         self.distributed_cache = distributed_cache
         self.default_ttl = default_ttl
         self.dynamic_content_ttl = dynamic_content_ttl
@@ -105,7 +102,6 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
 
     def _generate_cache_key(self, url: str, provider: str | None = None) -> str:
         """Return deterministic cache key derived from URL and provider."""
-
         parsed = urlparse(url)
         normalized_url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
         if parsed.query:
@@ -129,12 +125,10 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
         Returns:
             Canonical cache key string.
         """
-
         return self._generate_cache_key(url, provider)
 
     def _determine_ttl(self, url: str, content_length: int) -> int:
         """Derive TTL based on URL characteristics and payload size."""
-
         del content_length
         parsed = urlparse(url)
         domain = parsed.netloc.lower()
@@ -184,7 +178,6 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
         Returns:
             Cached entry if found, otherwise ``None``.
         """
-
         if self.distributed_cache is None:
             self._cache_stats["misses"] += 1
             return None
@@ -218,7 +211,6 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
         Returns:
             ``True`` when the value was persisted successfully.
         """
-
         if self.distributed_cache is None:
             logger.debug("Browser cache disabled; skipping set for %s", key)
             return False
@@ -228,8 +220,8 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
 
         try:
             cached_json = json.dumps(value.to_dict())
-        except (TypeError, ValueError) as exc:
-            logger.error("Failed serialising browser cache entry: %s", exc)
+        except (TypeError, ValueError):
+            logger.exception("Failed serialising browser cache entry")
             return False
 
         try:
@@ -252,7 +244,6 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
         Returns:
             ``True`` if the key was deleted, ``False`` otherwise.
         """
-
         if self.distributed_cache is None:
             return False
         try:
@@ -270,22 +261,31 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
         Returns:
             Number of cache entries invalidated.
         """
-
         if self.distributed_cache is None:
             return 0
 
         try:
-            clear_fn = getattr(self.distributed_cache, "clear_pattern", None)
-            if not callable(clear_fn):
+            clear_attr: Any = getattr(self.distributed_cache, "clear_pattern", None)
+            if clear_attr is None:
                 return 0
 
-            clear_callable: Callable[[str], Awaitable[int]] = cast(
-                Callable[[str], Awaitable[int]],
-                clear_fn,
+            def call_if_callable(obj: Any, *args: Any) -> Any:
+                if callable(obj):
+                    return obj(*args)
+                return obj
+
+            result = call_if_callable(clear_attr, f"browser:*{pattern}*")
+            if inspect.isawaitable(result):
+                count = await cast(Awaitable[int], result)
+            else:
+                count = int(cast(Any, result))
+        except (ConnectionError, OSError, TimeoutError):
+            logger.exception("Browser cache pattern invalidation failed")
+            return 0
+        except (TypeError, ValueError):
+            logger.exception(
+                "Browser cache pattern invalidation returned non-numeric count"
             )
-            count = await clear_callable(f"browser:*{pattern}*")
-        except (ConnectionError, OSError, TimeoutError) as exc:
-            logger.error("Browser cache pattern invalidation failed: %s", exc)
             return 0
 
         self._cache_stats["evictions"] += count
@@ -297,7 +297,6 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
         Returns:
             Dictionary containing hit/miss counters and derived metrics.
         """
-
         total_requests = self._cache_stats["hits"] + self._cache_stats["misses"]
         hit_rate = self._cache_stats["hits"] / total_requests if total_requests else 0.0
         return {
@@ -322,7 +321,6 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
         Returns:
             Tuple of the cache entry and a flag indicating whether it was cached.
         """
-
         provider_key = (
             provider.value if isinstance(provider, ProviderKind) else provider
         )
@@ -360,7 +358,6 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
         Returns:
             ``True`` if the key exists, otherwise ``False``.
         """
-
         if self.distributed_cache is None:
             return False
         try:
@@ -374,7 +371,6 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
         Returns:
             Number of entries removed from the distributed cache.
         """
-
         cleared = 0
         if self.distributed_cache is not None:
             try:
@@ -396,7 +392,6 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
         Returns:
             Estimated number of cached entries.
         """
-
         if self.distributed_cache is None:
             return 0
         try:
@@ -406,7 +401,6 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
 
     async def close(self) -> None:
         """Close the distributed cache connection if supported."""
-
         if self.distributed_cache is None:
             return
         try:

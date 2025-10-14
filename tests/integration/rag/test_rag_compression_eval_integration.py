@@ -20,7 +20,6 @@ from scripts.eval.rag_compression_eval import (
 @pytest.fixture
 def compression_eval_dataset(tmp_path: Path) -> Path:
     """Create a realistic compression evaluation dataset."""
-
     dataset = tmp_path / "compression_eval.json"
     data = [
         {
@@ -92,7 +91,6 @@ def compression_eval_dataset(tmp_path: Path) -> Path:
 @pytest.mark.integration
 def test_cli_script_execution(compression_eval_dataset: Path, tmp_path: Path) -> None:
     """Test that the CLI script can be executed without errors."""
-
     # This test verifies the script can be invoked; may fail due to missing services
     # The important thing is that the script loads and parses arguments correctly
 
@@ -120,7 +118,6 @@ def test_cli_script_execution(compression_eval_dataset: Path, tmp_path: Path) ->
 @pytest.mark.asyncio
 async def test_compression_evaluation_with_empty_dataset(tmp_path: Path) -> None:
     """Test evaluation with an empty dataset."""
-
     empty_dataset = tmp_path / "empty.json"
     empty_dataset.write_text("[]", encoding="utf-8")
 
@@ -169,7 +166,6 @@ async def test_compression_evaluation_with_empty_dataset(tmp_path: Path) -> None
 @pytest.mark.asyncio
 async def test_compression_evaluation_with_malformed_data(tmp_path: Path) -> None:
     """Test evaluation handles malformed data gracefully."""
-
     malformed_dataset = tmp_path / "malformed.json"
     # Dataset with missing required fields
     malformed_dataset.write_text(
@@ -226,7 +222,6 @@ async def test_compression_evaluation_with_malformed_data(tmp_path: Path) -> Non
 @pytest.mark.integration
 def test_token_estimation_realistic_cases() -> None:
     """Test token estimation with realistic text samples."""
-
     # Test various text lengths and complexities
     test_cases = [
         ("", 1),  # Empty string gets minimum 1
@@ -248,7 +243,6 @@ def test_token_estimation_realistic_cases() -> None:
 @pytest.mark.integration
 def test_document_building_with_realistic_metadata() -> None:
     """Test document building with realistic metadata structures."""
-
     raw_docs = [
         {
             "content": (

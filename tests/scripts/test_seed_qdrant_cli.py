@@ -15,7 +15,6 @@ from scripts.eval.seed_qdrant import _load_corpus, _seed_collection
 @pytest.fixture
 def corpus_path(tmp_path: Path) -> Path:
     """Write a minimal corpus file for seeding."""
-
     data_path = tmp_path / "corpus.json"
     rows = [
         {
@@ -31,7 +30,6 @@ def corpus_path(tmp_path: Path) -> Path:
 
 def test_load_corpus_round_trips(corpus_path: Path) -> None:
     """_load_corpus should deserialize JSON corpus files."""
-
     records = _load_corpus(corpus_path)
     assert records[0]["id"] == "doc-1"
     assert records[0]["doc_path"] == "docs/langgraph.md"
@@ -39,7 +37,6 @@ def test_load_corpus_round_trips(corpus_path: Path) -> None:
 
 def test_seed_collection_invokes_client(monkeypatch: pytest.MonkeyPatch) -> None:
     """_seed_collection should recreate and upsert as expected."""
-
     corpus = [
         {
             "id": "doc-1",

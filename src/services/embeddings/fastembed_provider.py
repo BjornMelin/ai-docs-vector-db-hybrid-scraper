@@ -51,7 +51,6 @@ class FastEmbedProvider(EmbeddingProvider):
             doc_embed_type: Embedding mode passed to LangChain (``default`` or
                 ``passage``).
         """
-
         super().__init__(model_name)
         self._doc_embed_type = doc_embed_type
         self._dense: FastEmbedEmbeddings | None = None
@@ -62,7 +61,6 @@ class FastEmbedProvider(EmbeddingProvider):
     @trace_function()
     async def initialize(self) -> None:
         """Initialize the underlying LangChain embeddings."""
-
         if self._initialized:
             return
 
@@ -78,7 +76,6 @@ class FastEmbedProvider(EmbeddingProvider):
 
     async def cleanup(self) -> None:
         """Release cached embedding instances."""
-
         self._dense = None
         self._sparse = None
         self._initialized = False
@@ -87,7 +84,6 @@ class FastEmbedProvider(EmbeddingProvider):
     @property
     def langchain_embeddings(self) -> FastEmbedEmbeddings:
         """Expose the underlying LangChain embedding instance."""
-
         if self._dense is None:
             msg = "FastEmbedProvider has not been initialized"
             raise EmbeddingServiceError(msg)
@@ -98,7 +94,6 @@ class FastEmbedProvider(EmbeddingProvider):
         self, texts: list[str], batch_size: int | None = None
     ) -> list[list[float]]:
         """Generate dense embeddings for the given texts."""
-
         if not self._initialized or self._dense is None:
             msg = "FastEmbedProvider has not been initialized"
             raise EmbeddingServiceError(msg)
@@ -115,8 +110,7 @@ class FastEmbedProvider(EmbeddingProvider):
             return await asyncio.to_thread(dense_model.embed_documents, texts)
 
         try:
-            embeddings = await _encode()
-            return embeddings
+            return await _encode()
         except Exception:
             success = False
             raise
@@ -137,7 +131,6 @@ class FastEmbedProvider(EmbeddingProvider):
         self, texts: Sequence[str]
     ) -> list[dict[str, Sequence[float]]]:
         """Generate sparse embeddings when supported."""
-
         if not texts:
             return []
         if not self._initialized:
@@ -181,13 +174,11 @@ class FastEmbedProvider(EmbeddingProvider):
     @property
     def cost_per_token(self) -> float:
         """Local embeddings are cost-free."""
-
         return 0.0
 
     @property
     def max_tokens_per_request(self) -> int:
         """Expose the FastEmbed max sequence length."""
-
         if self._dense is None:
             return 512
         return getattr(self._dense, "max_length", 512)

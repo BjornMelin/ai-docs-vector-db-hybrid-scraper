@@ -301,7 +301,6 @@ def questionary_testing_utils():
         @staticmethod
         def simulate_user_flow(responses_dict):
             """Simulate a complete user interaction flow."""
-
             patches = []
 
             if "confirm" in responses_dict:

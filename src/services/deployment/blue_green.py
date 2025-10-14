@@ -81,7 +81,6 @@ class BlueGreenConfig:  # pylint: disable=too-many-instance-attributes
 
     def to_deployment_config(self) -> DeploymentConfig:
         """Convert to base deployment configuration."""
-
         return DeploymentConfig(
             deployment_id=self.deployment_id,
             environment=DeploymentEnvironment.PRODUCTION,
@@ -109,7 +108,6 @@ class BlueGreenDeployment:  # pylint: disable=too-many-instance-attributes
             cache_manager: Cache manager used for environment state coordination.
             feature_flag_manager: Optional feature flag manager controlling enablement.
         """
-
         self.qdrant_service = qdrant_service
         self.cache_manager = cache_manager
         self.feature_flag_manager = feature_flag_manager
@@ -129,7 +127,6 @@ class BlueGreenDeployment:  # pylint: disable=too-many-instance-attributes
 
     async def initialize(self) -> None:
         """Initialize blue-green deployment manager."""
-
         if self._initialized:
             return
 
@@ -152,7 +149,6 @@ class BlueGreenDeployment:  # pylint: disable=too-many-instance-attributes
 
     async def _check_feature_flags(self) -> None:
         """Check if blue-green deployment is enabled via feature flags."""
-
         if not self.feature_flag_manager:
             return
 
@@ -183,7 +179,6 @@ class BlueGreenDeployment:  # pylint: disable=too-many-instance-attributes
         Raises:
             RuntimeError: If deployment is already in progress
         """
-
         if not self._initialized:
             await self.initialize()
 
@@ -237,7 +232,6 @@ class BlueGreenDeployment:  # pylint: disable=too-many-instance-attributes
         Returns:
             bool: True if switch was successful
         """
-
         if not self._initialized:
             await self.initialize()
 
@@ -308,7 +302,6 @@ class BlueGreenDeployment:  # pylint: disable=too-many-instance-attributes
 
     async def _execute_rollback(self) -> bool:
         """Perform rollback to the previously active environment."""
-
         self._deployment_status = BlueGreenStatus.ROLLING_BACK
 
         # Switch back to the other environment
@@ -325,7 +318,6 @@ class BlueGreenDeployment:  # pylint: disable=too-many-instance-attributes
         Returns:
             dict[str, DeploymentMetrics]: Metrics for blue and green environments
         """
-
         metrics = {}
 
         for env in [self._blue_env, self._green_env]:
@@ -360,7 +352,6 @@ class BlueGreenDeployment:  # pylint: disable=too-many-instance-attributes
 
     async def _execute_deployment(self, config: BlueGreenConfig) -> None:
         """Execute the blue-green deployment process."""
-
         try:
             target_env = self._green_env if self._blue_env.active else self._blue_env
             logger.info(
@@ -379,7 +370,6 @@ class BlueGreenDeployment:  # pylint: disable=too-many-instance-attributes
         self, target_env: BlueGreenEnvironment, config: BlueGreenConfig
     ) -> None:
         """Run the sequential phases of blue-green deployment."""
-
         # Phase 1: Deploy to inactive environment
         self._deployment_status = BlueGreenStatus.DEPLOYING
         await self._deploy_to_environment(target_env, config)
@@ -406,7 +396,6 @@ class BlueGreenDeployment:  # pylint: disable=too-many-instance-attributes
 
     async def _handle_automatic_switch(self, config: BlueGreenConfig) -> None:
         """Handle automatic traffic switch if enabled in config."""
-
         if not config.enable_automatic_switch:
             logger.info("Automatic switch disabled, manual intervention required")
             return
@@ -422,7 +411,6 @@ class BlueGreenDeployment:  # pylint: disable=too-many-instance-attributes
 
     async def _handle_deployment_failure(self, config: BlueGreenConfig) -> None:
         """Handle deployment failure and perform rollback if enabled."""
-
         if config.enable_automatic_rollback:  # Automatic rollback on failure
             await self.rollback()
 
@@ -430,7 +418,6 @@ class BlueGreenDeployment:  # pylint: disable=too-many-instance-attributes
         self, env: BlueGreenEnvironment, config: BlueGreenConfig
     ) -> None:
         """Deploy the new version to the specified environment."""
-
         try:
             self._update_environment_metadata(env, config)
             await self._execute_deployment_steps(env, config)
@@ -442,7 +429,6 @@ class BlueGreenDeployment:  # pylint: disable=too-many-instance-attributes
         self, env: BlueGreenEnvironment, config: BlueGreenConfig
     ) -> None:
         """Update environment metadata before deployment."""
-
         env.deployment_id = config.deployment_id
         env.version = config.target_version
 
@@ -458,7 +444,6 @@ class BlueGreenDeployment:  # pylint: disable=too-many-instance-attributes
         self, env: BlueGreenEnvironment, config: BlueGreenConfig
     ) -> None:
         """Execute the actual deployment steps to the environment."""
-
         # In production, this would:
         # 1. Deploy new application version to environment
         # 2. Update load balancer configuration
@@ -477,7 +462,6 @@ class BlueGreenDeployment:  # pylint: disable=too-many-instance-attributes
         self, env: BlueGreenEnvironment, config: BlueGreenConfig
     ) -> bool:
         """Perform health checks on the deployed environment."""
-
         for attempt in range(config.health_check_retries):
             try:
                 if await self._perform_single_health_check(env, attempt):
@@ -510,7 +494,6 @@ class BlueGreenDeployment:  # pylint: disable=too-many-instance-attributes
         self, env: BlueGreenEnvironment, attempt: int
     ) -> bool:
         """Perform a single health check attempt."""
-
         await asyncio.sleep(1)  # Simulate health check
 
         # In production, this would make HTTP requests to health endpoints
@@ -546,7 +529,6 @@ class BlueGreenDeployment:  # pylint: disable=too-many-instance-attributes
 
     async def _execute_traffic_switch(self, from_env: str, to_env: str) -> None:
         """Execute the actual traffic switch between environments."""
-
         # In production, this would:
         # 1. Update load balancer configuration
         # 2. Update DNS records if needed
@@ -562,7 +544,6 @@ class BlueGreenDeployment:  # pylint: disable=too-many-instance-attributes
 
     async def _health_check_loop(self) -> None:
         """Continuously monitor the health of both environments."""
-
         while True:
             try:
                 await asyncio.sleep(30)  # Check every 30 seconds
@@ -582,7 +563,6 @@ class BlueGreenDeployment:  # pylint: disable=too-many-instance-attributes
 
     async def _check_environment_health(self, env: BlueGreenEnvironment) -> None:
         """Check and update the health status of the given environment."""
-
         try:
             self._update_environment_health_status(env)
         except (ConnectionError, OSError, PermissionError):
@@ -590,7 +570,6 @@ class BlueGreenDeployment:  # pylint: disable=too-many-instance-attributes
 
     def _update_environment_health_status(self, env: BlueGreenEnvironment) -> None:
         """Update the health status of the given environment."""
-
         # In production, perform actual health checks
         # For now, maintain existing health status
         if env.health:
@@ -598,17 +577,14 @@ class BlueGreenDeployment:  # pylint: disable=too-many-instance-attributes
 
     async def _load_environment_state(self) -> None:
         """Load environment state from persistent storage."""
-
-        return None  # In production, load from database/storage
+        return  # In production, load from database/storage
 
     async def _persist_environment_state(self) -> None:
         """Persist current environment state to storage."""
-
-        return None  # In production, save to database/storage
+        return  # In production, save to database/storage
 
     async def cleanup(self) -> None:
         """Cleanup blue-green deployment manager resources."""
-
         if self._deployment_task:
             self._deployment_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):

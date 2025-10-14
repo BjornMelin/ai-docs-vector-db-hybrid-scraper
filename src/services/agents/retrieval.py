@@ -44,6 +44,7 @@ class RetrievalHelper:
         vector_service: VectorStoreService
         | Callable[[], Awaitable[VectorStoreService]],
     ) -> None:
+        """Initialize retrieval helper with vector service or lazy factory."""
         self._vector_service: VectorStoreService | None = None
         if callable(vector_service):
             self._vector_service_factory = vector_service
@@ -71,7 +72,6 @@ class RetrievalHelper:
         Returns:
             Sequence of ``RetrievedDocument`` items sorted by similarity score.
         """
-
         service = await self._resolve_service()
         records = await service.search_documents(
             query.collection,
@@ -90,4 +90,4 @@ class RetrievalHelper:
         ]
 
 
-__all__ = ["RetrievedDocument", "RetrievalHelper", "RetrievalQuery"]
+__all__ = ["RetrievalHelper", "RetrievalQuery", "RetrievedDocument"]

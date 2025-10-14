@@ -33,7 +33,6 @@ def _vector_match(
     metadata: dict[str, Any] | None = None,
 ) -> SimpleNamespace:
     """Construct a lightweight vector match object for adapter stubs."""
-
     payload = metadata or {}
 
     return SimpleNamespace(
@@ -56,19 +55,16 @@ class TestHyDEQueryEngine:
     @pytest.fixture
     def hyde_config(self) -> HyDEConfig:
         """Create HyDE configuration."""
-
         return HyDEConfig()
 
     @pytest.fixture
     def prompt_config(self) -> HyDEPromptConfig:
         """Create prompt configuration."""
-
         return HyDEPromptConfig()
 
     @pytest.fixture
     def metrics_config(self) -> HyDEMetricsConfig:
         """Create metrics configuration."""
-
         return HyDEMetricsConfig(
             track_generation_time=True,
             track_cache_hits=True,
@@ -80,7 +76,6 @@ class TestHyDEQueryEngine:
     @pytest.fixture
     def mock_embedding_manager(self):
         """Create mock embedding manager."""
-
         manager = MagicMock(spec=EmbeddingManager)
         manager.initialize = AsyncMock()
         manager.generate_embeddings = AsyncMock(
@@ -92,7 +87,6 @@ class TestHyDEQueryEngine:
     @pytest.fixture
     def mock_vector_store(self):
         """Create mock vector store service."""
-
         service = MagicMock(spec=VectorStoreService)
         service.initialize = AsyncMock()
         service.search_vector = AsyncMock()
@@ -103,7 +97,6 @@ class TestHyDEQueryEngine:
     @pytest.fixture
     def mock_embedding_cache(self):
         """Create mock embedding cache."""
-
         cache = MagicMock(spec=EmbeddingCache)
         cache.get_embedding = AsyncMock(return_value=None)
         cache.set_embedding = AsyncMock(return_value=True)
@@ -112,7 +105,6 @@ class TestHyDEQueryEngine:
     @pytest.fixture
     def mock_search_cache(self):
         """Create mock search cache."""
-
         cache = MagicMock(spec=SearchResultCache)
         cache.get_search_results = AsyncMock(return_value=None)
         cache.set_search_results = AsyncMock(return_value=True)
@@ -130,7 +122,6 @@ class TestHyDEQueryEngine:
         mock_search_cache,
     ) -> HyDEQueryEngine:
         """Create HyDEQueryEngine instance wired with mocks."""
-
         engine = HyDEQueryEngine(
             config=hyde_config,
             prompt_config=prompt_config,
@@ -169,7 +160,6 @@ class TestHyDEQueryEngine:
         mock_search_cache: Any,
     ) -> None:
         """Test engine initialization wiring."""
-
         assert engine.config == hyde_config
         assert engine.prompt_config == prompt_config
         assert engine.metrics_config == metrics_config
@@ -188,7 +178,6 @@ class TestHyDEQueryEngine:
         mock_vector_store: Any,
     ) -> None:
         """Test successful engine initialization."""
-
         await engine.initialize()
 
         assert engine._initialized is True
@@ -199,7 +188,6 @@ class TestHyDEQueryEngine:
     @pytest.mark.asyncio
     async def test_cleanup(self, engine: HyDEQueryEngine) -> None:
         """Test engine cleanup."""
-
         engine._initialized = True
         await engine.cleanup()
 
@@ -214,7 +202,6 @@ class TestHyDEQueryEngine:
         mock_vector_store: Any,
     ) -> None:
         """Search returns cached results when available."""
-
         engine._initialized = True
         cached_results = [{"id": "cached_doc", "score": 0.8}]
         cache_get_results = cast(AsyncMock, mock_search_cache.get_search_results)
@@ -240,7 +227,6 @@ class TestHyDEQueryEngine:
         mock_vector_store: Any,
     ) -> None:
         """Search caches results when no cached entry exists."""
-
         engine._initialized = True
         cache_get_results = cast(AsyncMock, mock_search_cache.get_search_results)
         cache_get_results.return_value = None
@@ -270,7 +256,6 @@ class TestHyDEQueryEngine:
         mock_embedding_manager: Any,
     ) -> None:
         """Search applies reranking when enabled."""
-
         engine._initialized = True
         engine.config.enable_reranking = True
         cache_get_results = cast(AsyncMock, mock_search_cache.get_search_results)
@@ -300,7 +285,6 @@ class TestHyDEQueryEngine:
         engine: HyDEQueryEngine,
     ) -> None:
         """Search falls back to standard search when HyDE fails."""
-
         engine._initialized = True
         engine.config.enable_fallback = True
         engine._get_or_generate_hyde_embedding = AsyncMock(
@@ -321,7 +305,6 @@ class TestHyDEQueryEngine:
         engine: HyDEQueryEngine,
     ) -> None:
         """Search raises when fallback disabled and HyDE fails."""
-
         engine._initialized = True
         engine.config.enable_fallback = False
         engine._get_or_generate_hyde_embedding = AsyncMock(
@@ -338,7 +321,6 @@ class TestHyDEQueryEngine:
         mock_embedding_cache: Any,
     ) -> None:
         """Embeddings are returned from cache when available."""
-
         engine._hyde_embedding_dimensions = 3
         cache_get = cast(AsyncMock, mock_embedding_cache.get_embedding)
         cache_get.return_value = [0.1, 0.2, 0.3]
@@ -361,7 +343,6 @@ class TestHyDEQueryEngine:
         mock_embedding_manager: Any,
     ) -> None:
         """Embeddings are generated and stored when cache misses."""
-
         cache_get = cast(AsyncMock, mock_embedding_cache.get_embedding)
         cache_get.return_value = None
         generate_embeddings = cast(
@@ -389,7 +370,6 @@ class TestHyDEQueryEngine:
         mock_embedding_manager: Any,
     ) -> None:
         """Second invocation reuses cached dimensions for consistent keys."""
-
         cache_get = cast(AsyncMock, mock_embedding_cache.get_embedding)
         cache_get.return_value = None
         generate_embeddings = cast(
@@ -414,7 +394,6 @@ class TestHyDEQueryEngine:
         engine: HyDEQueryEngine,
     ) -> None:
         """Raises when generator returns no documents."""
-
         generator_mock = cast(AsyncMock, engine.generator.generate_documents)
         generator_mock.return_value = GenerationResult(
             documents=[],
@@ -434,7 +413,6 @@ class TestHyDEQueryEngine:
         mock_embedding_manager: Any,
     ) -> None:
         """Raises when embedding generation result lacks embeddings."""
-
         generate_embeddings = cast(
             AsyncMock, mock_embedding_manager.generate_embeddings
         )
@@ -445,7 +423,6 @@ class TestHyDEQueryEngine:
 
     def test_get_performance_metrics(self, engine: HyDEQueryEngine) -> None:
         """Metrics include cache and generation summaries."""
-
         engine.search_count = 2
         engine.cache_hit_count = 1
         engine.embedding_cache_hit_count = 1
@@ -460,7 +437,6 @@ class TestHyDEQueryEngine:
 
     def test_reset_metrics(self, engine: HyDEQueryEngine) -> None:
         """Resetting metrics clears counters."""
-
         engine.search_count = 5
         engine.cache_hit_count = 2
         engine.embedding_cache_hit_count = 1
@@ -477,7 +453,6 @@ class TestHyDEQueryEngine:
         self, engine: HyDEQueryEngine
     ) -> None:
         """Setter stores non-negative floats."""
-
         engine.total_search_time = 12.5
 
         assert engine.total_search_time == 12.5
@@ -486,7 +461,6 @@ class TestHyDEQueryEngine:
         self, engine: HyDEQueryEngine
     ) -> None:
         """Setter rejects non-numeric values."""
-
         with pytest.raises(ValueError):
             engine.total_search_time = "invalid"  # type: ignore[assignment]
 
@@ -494,7 +468,6 @@ class TestHyDEQueryEngine:
         self, engine: HyDEQueryEngine
     ) -> None:
         """Setter rejects negative inputs."""
-
         with pytest.raises(ValueError):
             engine.total_search_time = -1.0
 
@@ -502,7 +475,6 @@ class TestHyDEQueryEngine:
         self, engine: HyDEQueryEngine
     ) -> None:
         """Setter rejects NaN inputs."""
-
         with pytest.raises(ValueError):
             engine.total_search_time = float("nan")
 
@@ -512,7 +484,6 @@ class TestHyDEQueryEngine:
         engine: HyDEQueryEngine,
     ) -> None:
         """AB testing respects control group routing."""
-
         engine._initialized = True
         engine.metrics_config.ab_testing_enabled = True
         engine._should_use_hyde_for_ab_test = AsyncMock(return_value=False)
@@ -532,7 +503,6 @@ class TestHyDEQueryEngine:
         mock_vector_store: Any,
     ) -> None:
         """Vector store errors raise QdrantServiceError."""
-
         engine._initialized = True
         mock_search_cache.get_search_results.return_value = None
         engine._get_or_generate_hyde_embedding = AsyncMock(return_value=[0.4, 0.5, 0.6])
@@ -550,7 +520,6 @@ class TestHyDEQueryEngine:
         mock_vector_store: Any,
     ) -> None:
         """Fallback search propagates failures."""
-
         generate_embeddings = cast(
             AsyncMock, mock_embedding_manager.generate_embeddings
         )

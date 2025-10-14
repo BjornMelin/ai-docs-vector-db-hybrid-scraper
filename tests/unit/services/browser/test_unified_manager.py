@@ -15,19 +15,26 @@ class _StubResult:
 
 
 class StubRouter:
+    """Stub implementation of BrowserRouter for testing."""
+
     def __init__(self, *_, **__):
+        """Initialize the stub router."""
         self.initialized = False
 
     async def initialize(self) -> None:
+        """Initialize the stub router."""
         self.initialized = True
 
     async def cleanup(self) -> None:
+        """Cleanup the stub router."""
         self.initialized = False
 
     def is_initialized(self) -> bool:
+        """Check if the stub router is initialized."""
         return self.initialized
 
     async def scrape(self, request):  # pragma: no cover - stub intercept
+        """Stub scrape method."""
         return BrowserResult(
             success=True,
             url=request.url,
@@ -42,11 +49,13 @@ class StubRouter:
         )
 
     def get_provider(self, kind):  # pragma: no cover - manager doesn't call in test
-        return None
+        """Stub get_provider method."""
+        return
 
 
 @pytest.mark.asyncio
 async def test_unified_manager_uses_router(monkeypatch):
+    """Unified manager should use the router for scraping."""
     monkeypatch.setattr(
         "src.services.browser.unified_manager.BrowserRouter",
         StubRouter,

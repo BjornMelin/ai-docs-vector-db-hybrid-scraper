@@ -21,6 +21,7 @@ import json
 import logging
 import os
 import re
+import typing
 from collections import defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -69,7 +70,6 @@ LOGGER = logging.getLogger(__name__)
 @lru_cache(maxsize=1)
 def _load_search_components() -> tuple[type[Any], type[Any], type[Any]]:
     """Lazily import search request/response models and orchestrator."""
-
     models_module = importlib.import_module("src.models.search")
     retrieval_module = importlib.import_module("src.contracts.retrieval")
     orchestrator_module = importlib.import_module(
@@ -137,7 +137,7 @@ class SupportsSearchOrchestrator(Protocol):
 class RagasEvaluator:
     """Execute semantic metrics using ragas ≥0.3."""
 
-    _METRICS = [
+    _METRICS: typing.ClassVar[list] = [
         Faithfulness(),
         AnswerRelevancy(),
         ContextPrecision(),
@@ -153,6 +153,15 @@ class RagasEvaluator:
         max_retries: int = 2,
         timeout: float | None = None,
     ) -> None:
+        """Initialize evaluator clients for ragas scoring.
+
+        Args:
+            api_key: API key for both LLM and embedding clients.
+            llm_model: Model identifier for the language model scorer.
+            embedding_model: Embedding model used for ragas context scoring.
+            max_retries: Maximum retry attempts for API calls.
+            timeout: Optional timeout in seconds for API calls.
+        """
         client_kwargs: dict[str, Any] = {"api_key": api_key}
         if max_retries is not None:
             client_kwargs["max_retries"] = max_retries
@@ -184,7 +193,6 @@ class RagasEvaluator:
         contexts: Sequence[str],
     ) -> dict[str, float]:
         """Evaluate semantic metrics for a single example."""
-
         try:
             dataset = EvaluationDataset.from_list(
                 [
@@ -264,7 +272,6 @@ class RagasEvaluator:
 
 def _load_yaml(path: Path) -> dict[str, Any]:
     """Load a YAML file returning an empty dict when missing or invalid."""
-
     if not path.exists():
         return {}
     try:
@@ -281,7 +288,6 @@ def _load_yaml(path: Path) -> dict[str, Any]:
 
 def _load_cost_controls() -> tuple[int | None, dict[str, Any]]:
     """Return semantic evaluation caps and raw config."""
-
     config = _load_yaml(Path("config/eval_costs.yml"))
     raw_semantic = config.get("semantic")
     semantic = raw_semantic if isinstance(raw_semantic, dict) else {}
@@ -292,7 +298,6 @@ def _load_cost_controls() -> tuple[int | None, dict[str, Any]]:
 
 def _load_thresholds() -> dict[str, float]:
     """Load evaluation threshold budget values."""
-
     raw = _load_yaml(Path("config/eval_budgets.yml"))
     thresholds: dict[str, float] = {}
     for key in ("similarity_avg", "precision_at_k", "recall_at_k", "max_latency_ms"):
@@ -304,7 +309,6 @@ def _load_thresholds() -> dict[str, float]:
 
 def _format_threshold_failure(metric: str, observed: float, required: float) -> str:
     """Return a concise message describing a threshold violation."""
-
     return f"{metric} {observed:.3f} outside budget {required:.3f}"
 
 
@@ -312,7 +316,6 @@ def _enforce_thresholds(
     aggregates: dict[str, Any], thresholds: dict[str, float]
 ) -> list[str]:
     """Return failures when aggregates fall outside the configured budgets."""
-
     failures: list[str] = []
     if not thresholds:
         return failures
@@ -353,7 +356,6 @@ def _enforce_thresholds(
 
 def _load_dataset(path: Path) -> list[GoldenExample]:
     """Parse the golden dataset in JSON Lines format."""
-
     if not path.exists():
         msg = f"Dataset path does not exist: {path}"
         raise FileNotFoundError(msg)
@@ -379,7 +381,6 @@ def _load_dataset(path: Path) -> list[GoldenExample]:
 
 async def _load_orchestrator() -> SearchOrchestrator:
     """Instantiate and initialise the shared search orchestrator."""
-
     _, _, orchestrator_cls = _load_search_components()
     container = await ensure_container(settings=get_settings())
     vector_service = container.vector_store_service()
@@ -395,14 +396,11 @@ _WHITESPACE_RE = re.compile(r"\s+")
 
 def _normalize_text(candidate: str) -> str:
     """Return a lowercase, normalised representation for similarity scoring."""
-
-    collapsed = _WHITESPACE_RE.sub(" ", candidate.lower()).strip()
-    return collapsed
+    return _WHITESPACE_RE.sub(" ", candidate.lower()).strip()
 
 
 def _compute_similarity(predicted: str, expected: str) -> float:
     """Deterministic string similarity baseline."""
-
     matcher = SequenceMatcher(
         a=_normalize_text(predicted),
         b=_normalize_text(expected),
@@ -412,7 +410,6 @@ def _compute_similarity(predicted: str, expected: str) -> float:
 
 def _extract_reference(record: dict[str, Any]) -> str | None:
     """Best-effort extraction of a reference identifier from a search record."""
-
     metadata = record.get("metadata") or {}
     for key in ("doc_path", "source_path", "reference", "uri"):
         candidate = metadata.get(key)
@@ -430,7 +427,6 @@ def _compute_retrieval_metrics(
     k: int,
 ) -> dict[str, float]:
     """Precision/recall style metrics derived from retrieved records."""
-
     if not records:
         return {"precision_at_k": 0.0, "recall_at_k": 0.0, "hit_rate": 0.0, "mrr": 0.0}
 
@@ -461,7 +457,6 @@ def _compute_retrieval_metrics(
 
 def _aggregate_metrics(results: Sequence[ExampleResult]) -> dict[str, Any]:
     """Aggregate numeric metrics across all examples."""
-
     if not results:
         return {}
 
@@ -501,7 +496,6 @@ async def _evaluate_examples(
     max_semantic_samples: int | None = None,
 ) -> list[ExampleResult]:
     """Execute the orchestrator for every example and collect metrics."""
-
     # pylint: disable=too-many-locals  # named intermediates keep reporting explicit
     results: list[ExampleResult] = []
     search_request_cls, _, _ = _load_search_components()
@@ -553,7 +547,6 @@ async def _evaluate_examples(
 
 def _render_report(report: EvaluationReport) -> dict[str, Any]:
     """Convert the dataclass-based report into serialisable structures."""
-
     return {
         "aggregates": report.aggregates,
         "results": [
@@ -583,7 +576,6 @@ def _render_report(report: EvaluationReport) -> dict[str, Any]:
 
 def _write_output(payload: dict[str, Any], output_path: Path | None) -> None:
     """Persist the report to disk or pretty-print to stdout."""
-
     if output_path is None:
         print(json.dumps(payload, indent=2, ensure_ascii=False))
         return
@@ -701,7 +693,6 @@ def _build_arg_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     """CLI entrypoint for the regression evaluation harness."""
-
     logging.basicConfig(level=logging.INFO)
     args = _build_arg_parser().parse_args()
     asyncio.run(_run(args))

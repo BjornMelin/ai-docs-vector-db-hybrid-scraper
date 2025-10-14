@@ -27,7 +27,6 @@ DOCS_ROOT = PROJECT_ROOT / "docs"
 
 def _normalize_command(command: Sequence[str | os.PathLike[str]]) -> list[str]:
     """Convert supported command tokens into plain strings."""
-
     normalized: list[str] = []
     for token in command:
         token_str = os.fspath(token)
@@ -64,7 +63,6 @@ def run_command(
     env: dict[str, str] | None = None,
 ) -> int:
     """Run a command and stream its output."""
-
     normalized = _normalize_command(command)
     print(f"$ {shlex.join(normalized)}")
     result = subprocess.run(normalized, cwd=cwd, env=env, check=False, shell=False)  # noqa: S603
@@ -76,7 +74,6 @@ def run_command(
 @lru_cache(maxsize=1)
 def _ensure_uv_available() -> bool:
     """Validate that the uv CLI is available before running uv-backed commands."""
-
     if shutil.which("uv"):
         return True
 
@@ -91,7 +88,6 @@ def _ensure_uv_available() -> bool:
 
 def _auto_worker_count(explicit: int | None) -> str:
     """Return an appropriate worker count for pytest-xdist."""
-
     if explicit and explicit > 0:
         return str(explicit)
     cpu_count = os.cpu_count() or 1
@@ -100,7 +96,6 @@ def _auto_worker_count(explicit: int | None) -> str:
 
 def _coverage_arguments(enable: bool) -> list[str]:
     """Return coverage arguments when requested."""
-
     if not enable:
         return []
     return [
@@ -120,7 +115,6 @@ def _build_pytest_command(
     extra: Sequence[str],
 ) -> list[str]:
     """Construct the pytest command for the selected profile."""
-
     try:
         profile_cfg = PYTEST_PROFILES[profile]
     except KeyError as exc:  # pragma: no cover - safeguarded by argparse choices
@@ -150,7 +144,6 @@ def _build_pytest_command(
 
 def cmd_test(args: argparse.Namespace) -> int:
     """Execute one of the supported pytest profiles."""
-
     if not _ensure_uv_available():
         return 1
 
@@ -174,7 +167,6 @@ def cmd_test(args: argparse.Namespace) -> int:
 
 def cmd_eval(args: argparse.Namespace) -> int:
     """Run the RAG golden evaluation harness."""
-
     if not _ensure_uv_available():
         return 1
 
@@ -206,7 +198,6 @@ def cmd_eval(args: argparse.Namespace) -> int:
 
 def cmd_benchmark(args: argparse.Namespace) -> int:
     """Run pytest-powered benchmark suites."""
-
     if not _ensure_uv_available():
         return 1
 
@@ -250,7 +241,6 @@ def cmd_benchmark(args: argparse.Namespace) -> int:
 
 def _import_check(module: str) -> bool:
     """Safely test whether a module can be imported."""
-
     try:
         __import__(module)
     except ModuleNotFoundError:
@@ -260,13 +250,11 @@ def _import_check(module: str) -> bool:
 
 def _is_external_link(link: str) -> bool:
     """Return ``True`` when the link points outside of the repository."""
-
     return bool(re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", link)) or link.startswith("#")
 
 
 def _resolve_link_target(source: Path, link: str) -> Path | None:
     """Resolve a documentation link to an absolute path."""
-
     parts = link.split("#", 1)
     if (clean_link := parts[0]) == "":
         return source
@@ -280,7 +268,6 @@ def _resolve_link_target(source: Path, link: str) -> Path | None:
 
 def _validate_docs_links() -> list[tuple[Path, int, str]]:
     """Validate documentation links and report any missing targets."""
-
     issues: list[tuple[Path, int, str]] = []
     if not DOCS_ROOT.exists():
         return issues
@@ -309,7 +296,6 @@ def _validate_docs_links() -> list[tuple[Path, int, str]]:
 
 def _check_service_health(url: str) -> bool:
     """Return ``True`` when the given HTTP endpoint responds successfully."""
-
     try:
         response = url_request.urlopen(url, timeout=5)  # noqa: S310
     except (url_error.URLError, ValueError):
@@ -321,7 +307,6 @@ def _check_service_health(url: str) -> bool:
 
 def cmd_validate(args: argparse.Namespace) -> int:  # pylint: disable=too-many-branches
     """Validate configuration, dependencies, and optionally documentation."""
-
     errors: list[str] = []
     warnings: list[str] = []
 
@@ -391,7 +376,6 @@ def cmd_validate(args: argparse.Namespace) -> int:  # pylint: disable=too-many-b
 
 def _compose_base_command() -> list[str]:
     """Determine the docker compose executable to use."""
-
     if docker := shutil.which("docker"):
         compose_probe = subprocess.run(  # noqa: S603
             _normalize_command([docker, "compose", "version"]),
@@ -419,7 +403,6 @@ def _compose_command(
     base: Sequence[str], *, file: str, action: str, services: Sequence[str]
 ) -> list[str]:
     """Build a docker compose command for the requested action."""
-
     command = [*base, "-f", file]
     if action == "start":
         command.extend(["up", "-d"])
@@ -435,7 +418,6 @@ def _compose_command(
 
 def cmd_services(args: argparse.Namespace) -> int:
     """Manage supporting docker-compose services."""
-
     compose_cmd = _compose_base_command()
 
     if args.stack == "vector":
@@ -470,7 +452,6 @@ def cmd_services(args: argparse.Namespace) -> int:
 
 def cmd_lint(args: argparse.Namespace) -> int:
     """Run Ruff linting, optionally applying fixes."""
-
     if not _ensure_uv_available():
         return 1
 
@@ -482,7 +463,6 @@ def cmd_lint(args: argparse.Namespace) -> int:
 
 def cmd_format(_: argparse.Namespace) -> int:
     """Format the codebase using Ruff."""
-
     if not _ensure_uv_available():
         return 1
 
@@ -491,7 +471,6 @@ def cmd_format(_: argparse.Namespace) -> int:
 
 def cmd_typecheck(_: argparse.Namespace) -> int:
     """Run Pyright static type checking."""
-
     if not _ensure_uv_available():
         return 1
 
@@ -500,7 +479,6 @@ def cmd_typecheck(_: argparse.Namespace) -> int:
 
 def cmd_quality(args: argparse.Namespace) -> int:
     """Execute the standard quality gate (format, lint, typecheck)."""
-
     if not _ensure_uv_available():
         return 1
 
@@ -527,7 +505,6 @@ def cmd_quality(args: argparse.Namespace) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     """Create the CLI argument parser."""
-
     parser = argparse.ArgumentParser(description="Developer workflow helper")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -717,7 +694,6 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> int:
     """Entry point for the CLI."""
-
     parser = build_parser()
     args = parser.parse_args(argv)
     return args.func(args)

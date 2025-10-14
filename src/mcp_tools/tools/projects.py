@@ -51,7 +51,6 @@ def register_tools(
         request: ProjectRequest, ctx: Context | None = None
     ) -> ProjectInfo:
         """Create a new project with a dedicated vector collection."""
-
         storage = project_storage
         service = vector_service
 
@@ -81,7 +80,6 @@ def register_tools(
     @mcp.tool()
     async def list_projects(ctx: Context | None = None) -> list[ProjectInfo]:
         """Return all projects with lightweight collection statistics."""
-
         storage = project_storage
         service = vector_service
 
@@ -114,7 +112,6 @@ def register_tools(
         ctx: Context | None = None,
     ) -> ProjectInfo:
         """Update basic project metadata."""
-
         storage = project_storage
         project = await storage.get_project(project_id)
         if not project:
@@ -144,7 +141,6 @@ def register_tools(
         ctx: Context | None = None,
     ) -> OperationStatus:
         """Delete a project record and optionally drop its vector collection."""
-
         storage = project_storage
         project = await storage.get_project(project_id)
         if not project:
@@ -180,7 +176,6 @@ def register_tools(
         ctx: Context | None = None,
     ) -> list[SearchRecord]:
         """Search within a project's dedicated collection."""
-
         storage = project_storage
         project = await storage.get_project(project_id)
         if not project:

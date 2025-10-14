@@ -63,7 +63,7 @@ def _dev_script_command(*args: str) -> list[str | os.PathLike[str]]:
 
 @click.group()
 def cli():
-    """AI Docs Vector DB - Unified Development CLI"""
+    """AI Docs Vector DB - Unified Development CLI."""
 
 
 @cli.command()
@@ -178,7 +178,7 @@ def quality(skip_format: bool, fix_lint: bool):
 @click.option("--host", default="0.0.0.0")  # noqa: S104
 @click.option("--port", default=8001)
 def docs(host: str, port: int):
-    """Serve documentation locally"""
+    """Serve documentation locally."""
     click.echo(f"Starting documentation server at http://{host}:{port}")
     _run_command(["mkdocs", "serve", "--host", host, "--port", str(port)])
 
@@ -256,7 +256,6 @@ def run_eval(  # pylint: disable=too-many-arguments,too-many-positional-argument
     metrics_allowlist: tuple[str, ...],
 ):
     """Run the RAG golden evaluation harness."""
-
     click.echo("Running RAG golden evaluation harness")
     cmd: list[str | os.PathLike[str]] = _dev_script_command(
         "eval",

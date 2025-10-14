@@ -109,7 +109,6 @@ class _StubGenerator:
 @pytest.mark.asyncio
 async def test_services_generate_answer() -> None:
     """Running the orchestrator should return an answer with sources."""
-
     matches = [
         SearchRecord(
             id="doc-1",
@@ -164,7 +163,6 @@ async def test_services_generate_answer() -> None:
 @pytest.mark.asyncio
 async def test_services_handle_empty_retrieval_quickly() -> None:
     """No documents should still produce a fast response and no answer."""
-
     vector_service = _StubVectorService(matches=[], collection="docs")
     await vector_service.initialize()
 

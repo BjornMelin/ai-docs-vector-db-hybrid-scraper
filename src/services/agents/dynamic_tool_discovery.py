@@ -58,7 +58,6 @@ class ToolCapability:
 
     def model_dump(self) -> dict[str, Any]:
         """Return a serialisable representation."""
-
         return {
             "name": self.name,
             "server": self.server,
@@ -82,7 +81,6 @@ class DynamicToolDiscovery:  # pylint: disable=too-many-instance-attributes
         telemetry_hook: Callable[[dict[str, Any]], None] | None = None,
     ) -> None:
         """Initialise the dynamic tool discovery service."""
-
         if callable(client):
             self._client_factory = client
             self._client: MultiServerMCPClient | None = None
@@ -97,7 +95,6 @@ class DynamicToolDiscovery:  # pylint: disable=too-many-instance-attributes
 
     async def _resolve_client(self) -> MultiServerMCPClient:
         """Return the MCP client, creating it if necessary."""
-
         if self._client is not None:
             return self._client
         if self._client_factory is None:
@@ -113,7 +110,6 @@ class DynamicToolDiscovery:  # pylint: disable=too-many-instance-attributes
         Args:
             force: If ``True``, refresh even when the cache TTL has not elapsed.
         """
-
         now = time.monotonic()
         if not force and self._cache_ttl_seconds and now < self._cache_expires_at:
             record_ai_operation(
@@ -197,7 +193,6 @@ class DynamicToolDiscovery:  # pylint: disable=too-many-instance-attributes
 
     def get_capabilities(self) -> tuple[ToolCapability, ...]:
         """Return cached capabilities as an immutable sequence."""
-
         return tuple(self._capabilities.values())
 
     def get_capability(
@@ -212,7 +207,6 @@ class DynamicToolDiscovery:  # pylint: disable=too-many-instance-attributes
         Returns:
             Matching ``ToolCapability`` or ``None`` when absent.
         """
-
         if server is not None:
             return self._capabilities.get(self._cache_key(server, name))
         for capability in self._capabilities.values():
@@ -230,7 +224,6 @@ class DynamicToolDiscovery:  # pylint: disable=too-many-instance-attributes
         Raises:
             APIError: If no MCP connections are configured.
         """
-
         client = await self._resolve_client()
         if not getattr(client, "connections", None):
             msg = "No MCP server connections available for discovery"
@@ -292,7 +285,6 @@ class DynamicToolDiscovery:  # pylint: disable=too-many-instance-attributes
     @staticmethod
     def _extract_schema_keys(schema: Mapping[str, Any] | None) -> tuple[str, ...]:
         """Return sorted property keys from a JSON schema mapping."""
-
         if not schema:
             return ()
         properties = schema.get("properties", {})
@@ -331,7 +323,6 @@ class DynamicToolDiscovery:  # pylint: disable=too-many-instance-attributes
         Yields:
             Active MCP session for the requested server.
         """
-
         try:
             async with client.session(server_name) as session:
                 yield session

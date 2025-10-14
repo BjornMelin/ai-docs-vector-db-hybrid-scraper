@@ -26,29 +26,24 @@ DEFAULT_APP_NAME = "ai-docs-scraper"
 
 def get_cache_dir(app_name: str = DEFAULT_APP_NAME) -> Path:
     """Return the platform-appropriate cache directory."""
-
     return Path(user_cache_dir(app_name, appauthor=None)).expanduser().resolve()
 
 
 def get_config_dir(app_name: str = DEFAULT_APP_NAME) -> Path:
     """Return the platform-appropriate configuration directory."""
-
     return Path(user_config_dir(app_name, appauthor=None)).expanduser().resolve()
 
 
 def get_data_dir(app_name: str = DEFAULT_APP_NAME) -> Path:
     """Return the platform-appropriate data directory."""
-
     return Path(user_data_dir(app_name, appauthor=None)).expanduser().resolve()
 
 
 def get_log_dir(app_name: str = DEFAULT_APP_NAME) -> Path:
     """Return the platform-appropriate log directory."""
-
     return Path(user_log_dir(app_name, appauthor=None)).expanduser().resolve()
 
 
 def normalize_path(path: Path | str) -> Path:
     """Return a resolved absolute path for ``path``."""
-
     return Path(path).expanduser().resolve()

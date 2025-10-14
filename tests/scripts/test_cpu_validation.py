@@ -9,7 +9,6 @@ from scripts.validation import cpu_validation
 
 def test_cpu_validation_passes() -> None:
     """The harness should succeed when scientific libraries operate correctly."""
-
     report = cpu_validation.run_cpu_validation()
     assert report.status == "passed"
     check_names = {check.name for check in report.checks}

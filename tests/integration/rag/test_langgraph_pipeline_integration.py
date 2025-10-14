@@ -114,7 +114,6 @@ class _StubGenerator:
 @pytest.mark.asyncio
 async def test_pipeline_generates_answer_from_vector_matches() -> None:
     """LangGraph pipeline should orchestrate retrieval and generation."""
-
     matches = [
         SearchRecord(
             id="doc-1",
@@ -176,7 +175,6 @@ async def test_pipeline_generates_answer_from_vector_matches() -> None:
 @pytest.mark.asyncio
 async def test_pipeline_returns_none_when_no_documents() -> None:
     """Pipeline should escalate when retrieval yields no documents."""
-
     stub_vector_service = _StubVectorService(matches=[], collection="docs")
     await stub_vector_service.initialize()
 

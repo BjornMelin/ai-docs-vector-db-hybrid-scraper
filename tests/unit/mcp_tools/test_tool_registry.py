@@ -14,7 +14,6 @@ from src.mcp_tools import tool_registry
 @pytest.fixture()
 def fake_mcp() -> MagicMock:
     """Provide a fake FastMCP application."""
-
     app = MagicMock()
     app.tool.side_effect = lambda *args, **kwargs: (lambda fn: fn)
     return app
@@ -23,7 +22,6 @@ def fake_mcp() -> MagicMock:
 @pytest.fixture()
 def stub_services() -> dict[str, Any]:
     """Expose stubbed service dependencies."""
-
     return {
         "vector_service": MagicMock(name="vector_service"),
         "cache_manager": MagicMock(name="cache_manager"),
@@ -42,7 +40,6 @@ async def test_register_all_tools_invokes_registrars_once(
     stub_services: dict[str, Any],
 ) -> None:
     """Each tool module should be invoked exactly once with expected args."""
-
     calls: dict[str, SimpleNamespace] = {}
 
     def _capture(name: str):
@@ -189,7 +186,6 @@ async def test_register_all_tools_logs_summary(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Registry should log a concise summary after successful registration."""
-
     for module in [
         tool_registry.tools.retrieval,
         tool_registry.tools.documents,
@@ -222,7 +218,6 @@ async def test_register_all_tools_skips_system_health_when_disabled(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """System health tools should be skipped when no manager is provided."""
-
     services = {**stub_services, "health_manager": None}
 
     for module in [

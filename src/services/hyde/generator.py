@@ -84,7 +84,6 @@ class HypotheticalDocumentGenerator:
         Raises:
             EmbeddingServiceError: If OpenAI client unavailable
         """
-
         if self.is_initialized():
             return
 
@@ -108,7 +107,6 @@ class HypotheticalDocumentGenerator:
 
     def is_initialized(self) -> bool:
         """Return True when the generator holds a live OpenAI client."""
-
         return self._initialized and self._llm_client is not None
 
     async def cleanup(self) -> None:

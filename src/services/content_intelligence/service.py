@@ -140,12 +140,10 @@ class ContentIntelligenceService:  # pylint: disable=too-many-instance-attribute
 
     def is_initialized(self) -> bool:
         """Return True when dependent components are ready."""
-
         return self._initialized
 
     def _ensure_initialized(self) -> None:
         """Raise an APIError if the service has not been initialized."""
-
         if not self.is_initialized():
             msg = "ContentIntelligenceService is not initialized"
             raise APIError(msg)
@@ -320,7 +318,6 @@ class ContentIntelligenceService:  # pylint: disable=too-many-instance-attribute
         Returns:
             ContentMetadata: Enriched metadata
         """
-
         self._ensure_initialized()
 
         try:
@@ -356,7 +353,6 @@ class ContentIntelligenceService:  # pylint: disable=too-many-instance-attribute
         Returns:
             list[AdaptationRecommendation]: List of adaptation recommendations
         """
-
         self._ensure_initialized()
 
         try:
@@ -410,7 +406,6 @@ class ContentIntelligenceService:  # pylint: disable=too-many-instance-attribute
         Returns:
             EnrichedContent: Complete analysis results
         """
-
         analysis_start = time.time()
 
         # Initialize result with basic data
@@ -526,7 +521,6 @@ class ContentIntelligenceService:  # pylint: disable=too-many-instance-attribute
         Returns:
             list[AdaptationRecommendation]: Quality-based recommendations
         """
-
         recommendations = []
 
         # Low completeness
@@ -600,7 +594,6 @@ class ContentIntelligenceService:  # pylint: disable=too-many-instance-attribute
         Returns:
             list[AdaptationRecommendation]: Pattern-based recommendations
         """
-
         recommendations = []
 
         # Check for common patterns
@@ -640,7 +633,6 @@ class ContentIntelligenceService:  # pylint: disable=too-many-instance-attribute
         Returns:
             str: Cache key for the request
         """
-
         # Create hash from content and key parameters
         content_hash = hashlib.sha256(request.content.encode()).hexdigest()
         options_hash = hashlib.sha256(
@@ -662,7 +654,6 @@ class ContentIntelligenceService:  # pylint: disable=too-many-instance-attribute
         Returns:
             EnrichedContent | None: Cached result if found
         """
-
         if not self.cache_manager:
             return None
 
@@ -687,7 +678,6 @@ class ContentIntelligenceService:  # pylint: disable=too-many-instance-attribute
             cache_key: Cache key
             result: Analysis result to cache
         """
-
         if not self.cache_manager:
             return
 
@@ -712,7 +702,6 @@ class ContentIntelligenceService:  # pylint: disable=too-many-instance-attribute
         Returns:
             dict[str, Any]: Performance metrics
         """
-
         return {
             "total_analyses": self._analysis_count,
             "total_processing_time_ms": self._total_processing_time,

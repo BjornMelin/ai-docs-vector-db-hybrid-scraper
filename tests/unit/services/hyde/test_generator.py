@@ -13,6 +13,7 @@ from src.services.hyde.generator import GenerationResult, HypotheticalDocumentGe
 
 @pytest.fixture
 def hyde_config() -> HyDEConfig:
+    """Provide HyDE configuration with test defaults."""
     return HyDEConfig(
         num_generations=2,
         generation_temperature=0.7,
@@ -28,11 +29,13 @@ def hyde_config() -> HyDEConfig:
 
 @pytest.fixture
 def prompt_config() -> HyDEPromptConfig:
+    """Provide HyDE prompt configuration defaults."""
     return HyDEPromptConfig()
 
 
 @pytest.fixture
 def async_openai_constructor(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
+    """Mock AsyncOpenAI client with complete usage metadata."""
     client = AsyncMock()
     client.responses.create = AsyncMock(
         return_value=MagicMock(
@@ -61,6 +64,7 @@ def async_openai_constructor(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
 def async_openai_without_total_tokens(
     monkeypatch: pytest.MonkeyPatch,
 ) -> AsyncMock:
+    """Mock AsyncOpenAI client with missing total_tokens field."""
     client = AsyncMock()
     client.responses.create = AsyncMock(
         return_value=MagicMock(
@@ -86,7 +90,10 @@ def async_openai_without_total_tokens(
 
 
 class TestGenerationResultModel:
+    """Tests for GenerationResult model serialization."""
+
     def test_model_dump_and_restore(self) -> None:
+        """Verify GenerationResult serializes and deserializes correctly."""
         result = GenerationResult(
             documents=["doc"],
             generation_time=0.5,
@@ -105,9 +112,12 @@ class TestGenerationResultModel:
 
 
 class TestHypotheticalDocumentGenerator:
+    """Tests for HypotheticalDocumentGenerator lifecycle and generation."""
+
     def test_init_defaults(
         self, hyde_config: HyDEConfig, prompt_config: HyDEPromptConfig
     ) -> None:
+        """Verify generator initializes with config and starts uninitialized."""
         generator = HypotheticalDocumentGenerator(
             config=hyde_config,
             prompt_config=prompt_config,
@@ -125,6 +135,7 @@ class TestHypotheticalDocumentGenerator:
         prompt_config: HyDEPromptConfig,
         async_openai_constructor: AsyncMock,
     ) -> None:
+        """Verify generator initializes AsyncOpenAI client successfully."""
         generator = HypotheticalDocumentGenerator(
             config=hyde_config,
             prompt_config=prompt_config,
@@ -140,6 +151,7 @@ class TestHypotheticalDocumentGenerator:
     async def test_initialize_missing_api_key(
         self, hyde_config: HyDEConfig, prompt_config: HyDEPromptConfig
     ) -> None:
+        """Verify initialization raises when API key is missing."""
         generator = HypotheticalDocumentGenerator(
             config=hyde_config,
             prompt_config=prompt_config,
@@ -158,6 +170,7 @@ class TestHypotheticalDocumentGenerator:
         prompt_config: HyDEPromptConfig,
         async_openai_constructor: AsyncMock,
     ) -> None:
+        """Verify generation produces documents with token usage tracking."""
         generator = HypotheticalDocumentGenerator(
             config=hyde_config,
             prompt_config=prompt_config,
@@ -178,6 +191,7 @@ class TestHypotheticalDocumentGenerator:
         prompt_config: HyDEPromptConfig,
         async_openai_without_total_tokens: AsyncMock,
     ) -> None:
+        """Verify fallback calculation when total_tokens missing from API."""
         generator = HypotheticalDocumentGenerator(
             config=hyde_config,
             prompt_config=prompt_config,
@@ -197,6 +211,7 @@ class TestHypotheticalDocumentGenerator:
         prompt_config: HyDEPromptConfig,
         async_openai_constructor: AsyncMock,
     ) -> None:
+        """Verify cleanup closes AsyncOpenAI client properly."""
         generator = HypotheticalDocumentGenerator(
             config=hyde_config,
             prompt_config=prompt_config,

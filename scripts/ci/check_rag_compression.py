@@ -39,7 +39,7 @@ class _PrecomputedEmbeddings(Embeddings):
                 embedding = self._sentence_embeddings[text]
             except KeyError as exc:  # pragma: no cover - dataset mismatch
                 msg = f"Missing embedding for sentence: {text!r}"
-                raise ValueError(msg) from exc
+                raise TypeError(msg) from exc
             embeddings.append(list(embedding))
         return embeddings
 
@@ -52,7 +52,7 @@ def _load_dataset(path: Path) -> list[dict[str, Any]]:
     with path.open(encoding="utf-8") as handle:
         data = json.load(handle)
     if not isinstance(data, list):
-        raise ValueError("Dataset must be a list of samples")
+        raise TypeError("Dataset must be a list of samples")
     return data
 
 
@@ -66,6 +66,16 @@ def _estimate_tokens(text: str) -> int:
 async def _run(
     dataset_path: Path, min_reduction: float, min_recall: float | None
 ) -> bool:
+    """Execute compression quality gate evaluation against dataset.
+
+    Args:
+        dataset_path: Path to evaluation dataset.
+        min_reduction: Minimum required token reduction ratio.
+        min_recall: Optional minimum recall threshold.
+
+    Returns:
+        True if quality thresholds met.
+    """
     samples = _load_dataset(dataset_path)
 
     total_tokens_before = 0
@@ -79,7 +89,7 @@ async def _run(
         if not isinstance(query_embedding, list) or not isinstance(
             sentence_embeddings, dict
         ):
-            raise ValueError("Sample missing embeddings")
+            raise TypeError("Sample missing embeddings")
 
         query = str(sample.get("query", "")).strip()
         if not query:
@@ -178,6 +188,7 @@ def _parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
+    """Execute CLI entry point for the compression quality gate."""
     args = _parse_args()
     try:
         success = asyncio.run(

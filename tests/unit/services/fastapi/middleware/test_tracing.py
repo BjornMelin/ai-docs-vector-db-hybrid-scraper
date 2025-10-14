@@ -15,7 +15,6 @@ def test_tracing_middleware_sets_response_headers(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test that TracingMiddleware sets response headers."""
-
     app = FastAPI()
     app.add_middleware(TracingMiddleware)
 
@@ -35,7 +34,7 @@ def test_tracing_middleware_sets_response_headers(
     assert request_records, "expected request log entry"
     record = request_records[0]
     assert hasattr(record, "correlation_id")
-    path = getattr(record, "path", None)  # noqa: B009
+    path = getattr(record, "path", None)
     if path is not None:
         assert path == "/ping"
 
@@ -44,7 +43,6 @@ def test_tracing_middleware_optionally_logs_bodies(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test that TracingMiddleware optionally logs bodies."""
-
     app = FastAPI()
     app.add_middleware(
         TracingMiddleware,
@@ -63,11 +61,11 @@ def test_tracing_middleware_optionally_logs_bodies(
     assert response.status_code == 200
     request_records = [record for record in caplog.records if record.msg == "request"]
     assert request_records
-    body = getattr(request_records[0], "body", None)  # noqa: B009
+    body = getattr(request_records[0], "body", None)
     assert body is not None
     assert "hello" in body
 
     response_records = [record for record in caplog.records if record.msg == "response"]
     assert response_records
-    status = getattr(response_records[0], "status_code", None)  # noqa: B009
+    status = getattr(response_records[0], "status_code", None)
     assert status == 200

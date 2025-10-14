@@ -39,6 +39,7 @@ class ToolExecutionError(RuntimeError):
     """Base error when an MCP tool invocation fails."""
 
     def __init__(self, message: str, *, server_name: str | None = None) -> None:
+        """Initialize error with optional server context."""
         super().__init__(message)
         self.server_name = server_name
 
@@ -67,12 +68,10 @@ class ToolExecutionResult:
     @property
     def is_error(self) -> bool:
         """Return ``True`` when the MCP response marks an error."""
-
         return bool(self.result.isError)
 
     def model_dump(self) -> dict[str, Any]:
         """Return a JSON-serialisable representation of the result."""
-
         return {
             "tool_name": self.tool_name,
             "server_name": self.server_name,
@@ -110,6 +109,14 @@ class ToolExecutionService:
         max_attempts: int = _DEFAULT_MAX_ATTEMPTS,
         backoff_seconds: float = _DEFAULT_BACKOFF_SECONDS,
     ) -> None:
+        """Initialize tool execution service with MCP client and retry configuration.
+
+        Args:
+            client: Shared MCP client or factory returning a connected client.
+            mcp_config: MCP client configuration for telemetry and timeout tuning.
+            max_attempts: Maximum retry attempts for tool execution.
+            backoff_seconds: Base backoff between retries in seconds.
+        """
         if callable(client):
             self._client_factory = client
             self._client: MultiServerMCPClient | None = None
@@ -139,7 +146,6 @@ class ToolExecutionService:
         read_timeout_ms: int | None = None,
     ) -> ToolExecutionResult:
         """Execute an MCP tool and return the structured result."""
-
         payload = _validate_arguments(arguments)
         client = await self._resolve_client()
         mcp_config = self._config
@@ -190,7 +196,6 @@ class ToolExecutionService:
     ) -> tuple[ToolExecutionResult | None, ToolExecutionError | None]:
         # pylint: disable=too-many-arguments,too-many-locals
         """Execute a tool on a single server with retries and telemetry."""
-
         last_error: ToolExecutionError | None = None
         for attempt in range(1, self._max_attempts + 1):
             start_time = time.perf_counter()
@@ -300,7 +305,6 @@ class ToolExecutionService:
     @staticmethod
     async def detect_tools(client: MultiServerMCPClient) -> dict[str, list[str]]:
         """Return the tools exposed by each configured server."""
-
         summary: dict[str, list[str]] = {}
         for name in client.connections:
             async with ToolExecutionService._open_session(client, name) as session:
@@ -314,7 +318,6 @@ class ToolExecutionService:
         client: MultiServerMCPClient, server_name: str
     ) -> AsyncIterator[Any]:
         """Yield an MCP session with consistent error conversion."""
-
         try:
             async with client.session(server_name) as session:
                 yield session

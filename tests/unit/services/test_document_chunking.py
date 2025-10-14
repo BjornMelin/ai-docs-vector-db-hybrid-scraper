@@ -39,6 +39,7 @@ def _make_config(**overrides: int | bool | str) -> ChunkingConfig:
 
 
 def test_plain_text_strategy_chunks_multiple_sections() -> None:
+    """Verify plain text splitter creates multiple chunks from paragraphs."""
     strategy = PlainTextChunkingStrategy()
     cfg = _make_config(chunk_size=20, chunk_overlap=0)
     raw = "First paragraph.\n\nSecond paragraph continues with more text."
@@ -50,6 +51,7 @@ def test_plain_text_strategy_chunks_multiple_sections() -> None:
 
 
 def test_token_strategy_chunks_using_token_window() -> None:
+    """Verify token-aware strategy respects token window configuration."""
     strategy = TokenAwareChunkingStrategy()
     cfg = _make_config(token_chunk_size=5, token_chunk_overlap=0)
     raw = " ".join(f"token{i}" for i in range(12))
@@ -61,6 +63,7 @@ def test_token_strategy_chunks_using_token_window() -> None:
 
 
 def test_code_strategy_respects_language_hint(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify code strategy uses language metadata to configure splitter."""
     strategy = CodeChunkingStrategy()
     cfg = _make_config()
     captured: dict[str, Language] = {}
@@ -101,6 +104,7 @@ def test_code_strategy_respects_language_hint(monkeypatch: pytest.MonkeyPatch) -
 
 
 def test_json_strategy_raises_on_invalid_payload() -> None:
+    """Verify JSON strategy raises error on malformed input."""
     strategy = JsonChunkingStrategy()
     cfg = _make_config()
 
@@ -109,6 +113,7 @@ def test_json_strategy_raises_on_invalid_payload() -> None:
 
 
 def test_markdown_splitter_preserves_header_hierarchy() -> None:
+    """Verify markdown splitter retains header metadata in chunks."""
     config = _make_config()
     markdown = (
         "# Title\n\n"
@@ -139,6 +144,7 @@ def test_markdown_splitter_preserves_header_hierarchy() -> None:
 
 
 def test_html_semantic_splitter_respects_sections() -> None:
+    """Verify HTML splitter uses semantic boundaries for chunking."""
     config = _make_config(enable_semantic_html_segmentation=True)
     html = (
         "<html><body><h1>Title</h1><p>Intro paragraph.</p>"
@@ -165,6 +171,7 @@ def test_html_semantic_splitter_respects_sections() -> None:
 
 
 def test_code_language_inferred_from_extension() -> None:
+    """Verify code language detected from file extension."""
     config = _make_config()
     code = """def add(a: int, b: int) -> int:\n    return a + b\n"""
 
@@ -184,6 +191,7 @@ def test_code_language_inferred_from_extension() -> None:
 
 
 def test_json_splitter_creates_structured_chunks() -> None:
+    """Verify JSON splitter respects max_chars configuration."""
     config = _make_config(
         chunk_size=60,
         chunk_overlap=10,
@@ -214,6 +222,7 @@ def test_json_splitter_creates_structured_chunks() -> None:
 
 
 def test_token_splitter_respects_token_configuration() -> None:
+    """Verify token splitter honors chunk size and overlap settings."""
     config = _make_config(token_chunk_size=10, token_chunk_overlap=0)
     text = " ".join(f"token{i}" for i in range(40))
 
@@ -231,6 +240,7 @@ def test_token_splitter_respects_token_configuration() -> None:
 
 
 def test_metadata_token_hint_triggers_token_splitter() -> None:
+    """Verify token_aware metadata flag activates token splitter."""
     config = _make_config(token_chunk_size=12, token_chunk_overlap=2)
     text = "This document should be split using token aware logic." * 2
 
@@ -258,10 +268,12 @@ def test_metadata_token_hint_triggers_token_splitter() -> None:
     ],
 )
 def test_infer_extension_handles_paths(uri: str | None, expected: str | None) -> None:
+    """Verify extension inference handles URLs, paths, and None."""
     assert infer_extension(uri) == expected
 
 
 def test_chunk_to_documents_fallbacks_to_text_kind() -> None:
+    """Verify unsupported document kind falls back to text chunking."""
     config = _make_config()
 
     documents = chunk_to_documents(
@@ -276,6 +288,7 @@ def test_chunk_to_documents_fallbacks_to_text_kind() -> None:
 
 
 def test_infer_document_kind_uses_metadata_hierarchy() -> None:
+    """Verify document kind inferred from mime_type and uri_or_path."""
     metadata = {
         "mime_type": "text/markdown",
         "uri_or_path": "./guide.md",
@@ -285,14 +298,17 @@ def test_infer_document_kind_uses_metadata_hierarchy() -> None:
 
 
 def test_infer_document_kind_detects_token_flag() -> None:
+    """Verify token_aware boolean flag overrides default kind."""
     metadata = {"token_aware": True}
     assert infer_document_kind(metadata) == "token"
 
 
 def test_infer_document_kind_handles_token_alias_string() -> None:
+    """Verify token_aware string alias triggers token kind."""
     metadata = {"token_aware": "Token_Aware"}
     assert infer_document_kind(metadata) == "token"
 
 
 def test_infer_language_falls_back_to_extension() -> None:
+    """Verify language mapping uses file extension when metadata absent."""
     assert infer_language("py", {}) == "python"

@@ -29,7 +29,6 @@ class TestCollectionAutoCompletion:
 
     def test_complete_collection_name_function_exists(self):
         """Test that collection name completion function exists."""
-
         assert complete_collection_name is not None
         assert callable(complete_collection_name)
 
@@ -209,7 +208,6 @@ class TestDatabaseIntegration:
 
     def test_database_imports(self):
         """Test that database module can be imported."""
-
         assert database is not None
         assert complete_collection_name is not None
         assert hasattr(database, "commands")
@@ -220,7 +218,6 @@ class TestProgressIndicators:
 
     def test_progress_imports_available(self):
         """Test that progress tracking modules can be imported."""
-
         assert Progress is not None
         assert SpinnerColumn is not None
         assert TextColumn is not None

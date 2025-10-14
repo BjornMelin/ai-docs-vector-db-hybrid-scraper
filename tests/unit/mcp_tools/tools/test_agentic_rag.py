@@ -21,16 +21,19 @@ class StubGraphRunner:
         search_outcome: GraphSearchOutcome,
         analysis_outcome: GraphAnalysisOutcome,
     ) -> None:
+        """Initialize stub runner with predetermined outcomes."""
         self._search_outcome = search_outcome
         self._analysis_outcome = analysis_outcome
         self.run_search_calls: list[dict[str, Any]] = []
         self.run_analysis_calls: list[dict[str, Any]] = []
 
     async def run_search(self, **kwargs: Any) -> GraphSearchOutcome:
+        """Record search call and return predetermined outcome."""
         self.run_search_calls.append(kwargs)
         return self._search_outcome
 
     async def run_analysis(self, **kwargs: Any) -> GraphAnalysisOutcome:
+        """Record analysis call and return predetermined outcome."""
         self.run_analysis_calls.append(kwargs)
         return self._analysis_outcome
 
@@ -39,10 +42,14 @@ class StubMCP:
     """Stub FastMCP server recording registered tools."""
 
     def __init__(self) -> None:
+        """Initialize stub MCP server with empty tool registry."""
         self.tools: dict[str, Callable[..., Any]] = {}
 
     def tool(self, *_, name: str, **__):  # pragma: no cover - decorator wiring
+        """Decorator to register a tool function by name."""
+
         def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+            """Decorator to register a tool function by name."""
             self.tools[name] = func
             return func
 
@@ -52,7 +59,6 @@ class StubMCP:
 @pytest.fixture(autouse=True)
 def reset_tracker() -> Iterator[None]:
     """Reset agent telemetry before and after each test."""
-
     agentic_rag.get_ai_tracker().reset()
     yield
     agentic_rag.get_ai_tracker().reset()
@@ -61,7 +67,6 @@ def reset_tracker() -> Iterator[None]:
 @pytest.fixture()
 def stub_runner() -> StubGraphRunner:
     """Provide a stub GraphRunner with deterministic outcomes."""
-
     search_outcome = GraphSearchOutcome(
         success=True,
         session_id="session-1",
@@ -89,7 +94,6 @@ def stub_runner() -> StubGraphRunner:
 @pytest.fixture()
 def registered_tools(stub_runner: StubGraphRunner) -> dict[str, Callable[..., Any]]:
     """Register agentic tools against the stub MCP server."""
-
     mcp = StubMCP()
     agentic_rag.register_tools(
         cast(FastMCP[Any], mcp),
@@ -103,8 +107,7 @@ async def test_agentic_search_returns_runner_payload(
     registered_tools: dict[str, Callable[..., Any]],
     stub_runner: StubGraphRunner,
 ) -> None:
-    """agentic search should surface GraphRunner results and telemetry."""
-
+    """Agentic search should surface GraphRunner results and telemetry."""
     request = agentic_rag.AgenticSearchRequest(
         query="q",
         collection="docs",
@@ -129,8 +132,7 @@ async def test_agentic_analysis_returns_runner_payload(
     registered_tools: dict[str, Callable[..., Any]],
     stub_runner: StubGraphRunner,
 ) -> None:
-    """agentic analysis should surface GraphRunner analysis outcomes."""
-
+    """Agentic analysis should surface GraphRunner analysis outcomes."""
     request = agentic_rag.AgenticAnalysisRequest(
         query="analyse",
         data=[{}],
@@ -152,7 +154,6 @@ async def test_metrics_tools_expose_tracker_snapshot(
     registered_tools: dict[str, Callable[..., Any]],
 ) -> None:
     """Telemetry tools should reflect tracker state."""
-
     tracker = agentic_rag.get_ai_tracker()
     tracker.record_operation(
         operation="agent.graph.run",

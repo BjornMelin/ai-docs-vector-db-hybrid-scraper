@@ -22,6 +22,7 @@ class AsyncHTTPTestHelper:
     _NO_MOCK_CONTEXT_ERROR = "Must be used within mock_http_context"
 
     def __init__(self):
+        """Initialize the async HTTP test helper."""
         self.mock_router: MockRouter | None = None
         self.recorded_requests: list[httpx.Request] = []
 

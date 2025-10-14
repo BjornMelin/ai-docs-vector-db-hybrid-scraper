@@ -17,7 +17,7 @@ class _IntegrationRequestHandler(BaseHTTPRequestHandler):
 
     server_version = "Crawl4AITestServer/0.1"
 
-    def do_GET(self) -> None:  # noqa: D401
+    def do_GET(self) -> None:
         path = self.path.split("?", 1)[0]
         if path == "/static":
             self._send_html(
@@ -85,7 +85,7 @@ class _IntegrationRequestHandler(BaseHTTPRequestHandler):
         else:
             self.send_error(HTTPStatus.NOT_FOUND)
 
-    def log_message(self, format: str, *args):  # noqa: D401
+    def log_message(self, format: str, *args):
         return
 
     def _send_html(self, html: str) -> None:
@@ -108,7 +108,6 @@ class _IntegrationRequestHandler(BaseHTTPRequestHandler):
 @pytest.fixture(scope="session")
 def integration_server() -> Iterator[str]:
     """Start a lightweight HTTP server for integration tests."""
-
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.bind(("127.0.0.1", 0))
         host, port = sock.getsockname()

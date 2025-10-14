@@ -20,7 +20,6 @@ logger = logging.getLogger(__name__)
 
 async def require_config_access(request: Request) -> None:
     """Ensure configuration endpoints enforce API key requirements."""
-
     security_config = get_settings().security
     if not security_config.api_key_required:
         return
@@ -80,7 +79,6 @@ class RefreshResponse(BaseModel):
 @router.get("/", response_model=SettingsSnapshot)
 def read_settings() -> SettingsSnapshot:
     """Return a sanitized snapshot of the current settings."""
-
     try:
         settings = get_settings()
         return SettingsSnapshot(
@@ -103,7 +101,6 @@ def read_settings() -> SettingsSnapshot:
 @router.get("/status", response_model=SettingsSnapshot)
 def read_status() -> SettingsSnapshot:
     """Return the same snapshot with emphasis on current mode."""
-
     try:
         settings = get_settings()
         return SettingsSnapshot(
@@ -126,7 +123,6 @@ def read_status() -> SettingsSnapshot:
 @router.post("/refresh", response_model=RefreshResponse, status_code=status.HTTP_200_OK)
 def refresh_settings_endpoint(request: RefreshRequest) -> RefreshResponse:
     """Refresh the cached settings instance, applying optional overrides."""
-
     overrides = request.overrides or {}
     try:
         settings = refresh_settings(**overrides)

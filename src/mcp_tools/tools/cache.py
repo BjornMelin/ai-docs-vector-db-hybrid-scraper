@@ -65,7 +65,6 @@ def register_tools(
 
         Returns hit rate, size, and performance metrics for the cache.
         """
-
         if ctx:
             await ctx.info("Retrieving cache statistics")
 

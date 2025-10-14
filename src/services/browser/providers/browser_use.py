@@ -31,13 +31,13 @@ class BrowserUseProvider(BrowserProvider):
     kind = ProviderKind.BROWSER_USE
 
     def __init__(self, context: ProviderContext, settings: BrowserUseSettings) -> None:
+        """Initialize browser-use provider with settings and lazy dependency loading."""
         super().__init__(context)
         self._settings = settings
         self._deps: _BrowserUseDeps | None = None
 
     def _load_dependencies(self) -> _BrowserUseDeps:
         """Import browser-use and LLM providers on demand."""
-
         try:
             browser_use = import_module("browser_use")
             agent_cls = browser_use.Agent
@@ -77,12 +77,10 @@ class BrowserUseProvider(BrowserProvider):
 
     async def initialize(self) -> None:
         """Ensure dependencies are importable."""
-
         self._deps = self._load_dependencies()
 
     async def close(self) -> None:
         """No persistent resources to dispose."""
-
         self._deps = None
 
     def _task_from_request(self, request: ScrapeRequest) -> str:
@@ -102,7 +100,6 @@ class BrowserUseProvider(BrowserProvider):
 
     async def scrape(self, request: ScrapeRequest) -> BrowserResult:
         """Delegate to browser-use Agent."""
-
         if self._deps is None:  # pragma: no cover - lifecycle guard
             raise RuntimeError("Provider not initialized")
 

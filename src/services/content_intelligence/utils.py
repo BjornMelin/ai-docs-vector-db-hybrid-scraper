@@ -21,7 +21,6 @@ def cosine_similarity(
     Returns:
         float: Cosine similarity value in the range [-1.0, 1.0].
     """
-
     try:
         vector_one = tuple(float(component) for component in vec1)
         vector_two = tuple(float(component) for component in vec2)

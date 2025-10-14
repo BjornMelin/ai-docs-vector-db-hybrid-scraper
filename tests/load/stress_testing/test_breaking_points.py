@@ -57,6 +57,7 @@ class BreakingPointAnalyzer:
     """Analyze system performance to identify breaking points."""
 
     def __init__(self):
+        """Initialize the analyzer with empty data."""
         self.performance_points: list[PerformancePoint] = []
         self.breaking_point_threshold = {
             "error_rate": 10.0,  # 10% error rate
@@ -226,7 +227,7 @@ class TestBreakingPoints:
                     0, (current_users - self.error_threshold) / 1000
                 )
 
-                if random.random() < error_probability:  # noqa: S311
+                if random.random() < error_probability:
                     msg = f"Service overloaded at {current_users} users"
                     raise TestError(msg)
 
@@ -545,7 +546,6 @@ class TestBreakingPoints:
     @pytest.mark.asyncio
     async def test_recovery_time_measurement(self, load_test_runner):
         """Measure system recovery time after hitting breaking point."""
-
         # Recovery phases
 
         # Mock service with recovery behavior

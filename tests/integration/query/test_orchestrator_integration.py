@@ -64,7 +64,7 @@ class _StubRAGPipeline:
         self.answer = answer
         self.invocations = []
 
-    async def run(self, **kwargs) -> dict[str, object] | None:  # noqa: D401 - pipeline signature
+    async def run(self, **kwargs) -> dict[str, object] | None:
         self.invocations.append(kwargs)
         return {
             "answer": self.answer,
@@ -84,7 +84,6 @@ class _StubRAGPipeline:
 @pytest.mark.asyncio
 async def test_orchestrator_generates_rag_answer_with_stub_pipeline() -> None:
     """SearchOrchestrator should delegate to LangGraph pipeline when enabled."""
-
     matches = [
         SearchRecord(
             id="doc-1",
@@ -150,7 +149,6 @@ async def test_orchestrator_generates_rag_answer_with_stub_pipeline() -> None:
 @pytest.mark.asyncio
 async def test_orchestrator_handles_missing_rag_result() -> None:
     """Orchestrator should return search-only response when pipeline yields nothing."""
-
     matches = [
         SearchRecord(
             id="doc-1",
@@ -164,7 +162,7 @@ async def test_orchestrator_handles_missing_rag_result() -> None:
     stub_vector_service = _StubVectorService(matches, collection="docs")
 
     class _NullPipeline(_StubRAGPipeline):
-        async def run(self, **kwargs) -> dict[str, object] | None:  # noqa: D401 - pipeline signature
+        async def run(self, **kwargs) -> dict[str, object] | None:
             self.invocations.append(kwargs)
             return None
 

@@ -10,7 +10,6 @@ from src.config.browser import BrowserAutomationConfig
 
 def test_browser_automation_defaults() -> None:
     """Validate default browser automation configuration values."""
-
     config = BrowserAutomationConfig()
 
     config_dump = config.model_dump()
@@ -25,7 +24,6 @@ def test_browser_automation_defaults() -> None:
 
 def test_browser_automation_custom_payload() -> None:
     """Ensure overrides apply when loading custom payloads."""
-
     payload = {
         "lightweight": {"timeout_seconds": 4.0, "allow_redirects": False},
         "crawl4ai": {"headless": False, "browser_type": "firefox"},
@@ -59,7 +57,6 @@ def test_browser_automation_custom_payload() -> None:
 )
 def test_browser_automation_invalid(browser_use: dict[str, str]) -> None:
     """Reject invalid browser-use configurations."""
-
     payload = {"browser_use": browser_use}
     with pytest.raises(ValidationError):
         BrowserAutomationConfig.model_validate(payload)

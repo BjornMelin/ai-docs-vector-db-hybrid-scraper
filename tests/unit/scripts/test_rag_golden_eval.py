@@ -29,9 +29,11 @@ class _StubOrchestrator:
     """Simple orchestrator stub returning canned responses."""
 
     def __init__(self, fixtures: dict[str, SearchResponse]) -> None:
+        """Initialize the stub orchestrator with predefined fixtures."""
         self._fixtures = fixtures
 
     async def search(self, request) -> SearchResponse:  # pragma: no cover - wrapper
+        """Return a canned search response based on the query."""
         query = request.query
         try:
             return self._fixtures[query]
@@ -39,14 +41,16 @@ class _StubOrchestrator:
             raise AssertionError(f"Unexpected query: {query}") from exc
 
     async def cleanup(self) -> None:  # pragma: no cover - symmetrical no-op
-        return None
+        """Perform any necessary cleanup after search operations."""
+        return
 
 
 class _DummyRagas(RagasEvaluator):
     """Ragas evaluator stub that returns deterministic values."""
 
     def __init__(self, score: float = 0.8) -> None:
-        super().__init__(enabled=False)
+        """Initialize the dummy evaluator with a fixed score."""
+        # pylint: disable=super-init-not-called
         self._score = score
 
     def evaluate(  # type: ignore[override]
@@ -55,13 +59,13 @@ class _DummyRagas(RagasEvaluator):
         predicted_answer: str,
         contexts: Any,
     ) -> dict[str, float]:
+        """Return a fixed faithfulness score."""
         return {"faithfulness": self._score}
 
 
 @pytest.mark.asyncio
 async def test_evaluate_examples_and_aggregation() -> None:
     """The evaluator computes deterministic, reproducible metrics."""
-
     examples = [
         GoldenExample(
             query="How should operators rotate API keys?",
@@ -195,7 +199,6 @@ async def test_evaluate_examples_and_aggregation() -> None:
 @pytest.mark.asyncio
 async def test_evaluate_examples_handles_missing_records() -> None:
     """Empty retrieval results produce zeroed metrics without crashing."""
-
     example = GoldenExample(
         query="Missing context",
         expected_answer="No answer",
@@ -234,7 +237,6 @@ async def test_evaluate_examples_handles_missing_records() -> None:
 
 def test_load_dataset_raises_on_invalid_json(tmp_path: Path) -> None:
     """Malformed JSON should raise a descriptive error."""
-
     dataset_path = tmp_path / "broken.jsonl"
     dataset_path.write_text("{invalid json}\n", encoding="utf-8")
     with pytest.raises(ValueError):
@@ -243,7 +245,6 @@ def test_load_dataset_raises_on_invalid_json(tmp_path: Path) -> None:
 
 def test_dataset_validator_detects_missing_metadata(tmp_path: Path) -> None:
     """Dataset validator should fail when required metadata keys are absent."""
-
     dataset_path = tmp_path / "dataset.jsonl"
     record = {
         "query": "test",
@@ -259,6 +260,7 @@ def test_dataset_validator_detects_missing_metadata(tmp_path: Path) -> None:
 
 
 def test_enforce_thresholds_detects_budget_failures() -> None:
+    """Threshold enforcement should identify metrics that exceed budgets."""
     aggregates = {
         "similarity_avg": 0.72,
         "processing_time_ms_avg": 1800.0,
@@ -281,7 +283,6 @@ def test_load_cost_controls_handles_missing_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Missing config files should yield None and empty config."""
-
     monkeypatch.chdir(tmp_path)
     max_samples, config = _load_cost_controls()
     assert max_samples is None
@@ -292,7 +293,6 @@ def test_load_thresholds_filters_numeric_values(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Threshold loader should ignore non-numeric entries and coerce floats."""
-
     config_dir = tmp_path / "config"
     config_dir.mkdir()
     budgets_path = config_dir / "eval_budgets.yml"
@@ -316,15 +316,13 @@ max_latency_ms: 1500.5
 
 def test_enforce_thresholds_returns_empty_list_when_no_thresholds() -> None:
     """No configured thresholds should produce no failures."""
-
-    assert _enforce_thresholds({"similarity_avg": 1.0}, {}) == []
+    assert not _enforce_thresholds({"similarity_avg": 1.0}, {})
 
 
 def test_load_cost_controls_coerces_integer(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Cost control loader should parse integer max samples."""
-
     config_dir = tmp_path / "config"
     config_dir.mkdir()
     costs_path = config_dir / "eval_costs.yml"

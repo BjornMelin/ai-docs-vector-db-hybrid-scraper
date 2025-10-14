@@ -10,9 +10,9 @@ from types import ModuleType
 
 
 __all__ = [
+    "load_content_intelligence_module",
     "register_module",
     "stub_content_intelligence_dependencies",
-    "load_content_intelligence_module",
 ]
 
 ROOT_PATH = Path(__file__).resolve().parents[4]
@@ -30,7 +30,6 @@ def _ensure_package(name: str, path: Path) -> ModuleType:
     Returns:
         ModuleType: Existing or newly created package module.
     """
-
     package = sys.modules.get(name)
     if package is None:
         package = ModuleType(name)
@@ -46,7 +45,6 @@ def register_module(name: str, module: ModuleType) -> None:
         name: Fully qualified module name to register.
         module: Module instance that should be associated with the name.
     """
-
     if name not in sys.modules:
         sys.modules[name] = module
 
@@ -57,7 +55,6 @@ def stub_content_intelligence_dependencies() -> None:
     Returns:
         None: The function mutates ``sys.modules`` in place.
     """
-
     redis_module = ModuleType("redis")
     redis_async_module = ModuleType("redis.asyncio")
     redis_module.asyncio = redis_async_module  # type: ignore[attr-defined]
@@ -115,7 +112,6 @@ def _ensure_src_on_path() -> None:
     Returns:
         None: The function appends the ``src`` directory to ``sys.path`` when missing.
     """
-
     src_str = str(SRC_PATH)
     if src_str not in sys.path:
         sys.path.insert(0, src_str)
@@ -133,7 +129,6 @@ def load_content_intelligence_module(module: str) -> ModuleType:
     Raises:
         ImportError: If the module specification cannot be resolved.
     """
-
     stub_content_intelligence_dependencies()
     _ensure_src_on_path()
 

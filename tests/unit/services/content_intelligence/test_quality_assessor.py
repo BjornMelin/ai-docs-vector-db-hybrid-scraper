@@ -23,7 +23,6 @@ def quality_assessor_types() -> dict[str, Any]:
     Returns:
         dict[str, Any]: Mapping of quality assessor support types for the test suite.
     """
-
     assessor_module = load_content_intelligence_module("quality_assessor")
     models_module = load_content_intelligence_module("models")
     return {
@@ -42,7 +41,6 @@ def assessor_cls(quality_assessor_types: dict[str, Any]) -> type[QualityAssessor
     Returns:
         type[QualityAssessor]: Quality assessor class reference.
     """
-
     return quality_assessor_types["assessor_cls"]
 
 
@@ -56,7 +54,6 @@ def score_cls(quality_assessor_types: dict[str, Any]) -> type[QualityScore]:
     Returns:
         type[QualityScore]: Dataclass type used to represent assessment outputs.
     """
-
     return quality_assessor_types["score_cls"]
 
 
@@ -69,7 +66,6 @@ def _text_to_vector(text: str) -> list[float]:
     Returns:
         list[float]: Simplified numeric embedding representation.
     """
-
     tokens = text.lower().split()
     unique_tokens = set(tokens)
     return [
@@ -131,7 +127,6 @@ async def quality_assessor(
     Returns:
         QualityAssessor: Initialized quality assessor instance for tests.
     """
-
     assessor = assessor_cls(embedding_manager=embedding_manager)
     await assessor.initialize()
     return assessor
@@ -150,7 +145,6 @@ class TestQualityAssessor:
             quality_assessor: Initialized quality assessor instance.
             score_cls: Dataclass type used to represent assessment outputs.
         """
-
         content = (
             "Comprehensive documentation with examples, tutorials, and updated "
             "references that users can follow easily."
@@ -180,7 +174,6 @@ class TestQualityAssessor:
         Args:
             quality_assessor: Initialized quality assessor instance.
         """
-
         content = "Frequently asked questions about account security."
         existing = [
             "Frequently asked questions about account security and recovery options.",
@@ -202,7 +195,6 @@ class TestQualityAssessor:
         Args:
             quality_assessor: Initialized quality assessor instance.
         """
-
         content = "Step-by-step tutorial for configuring webhooks."
         relevance = await quality_assessor._assess_relevance(  # pylint: disable=protected-access
             content=content,
@@ -223,7 +215,6 @@ class TestQualityAssessor:
             empty_manager_factory: Factory returning assessors without embeddings.
             score_cls: Dataclass type used to represent assessment outputs.
         """
-
         assessor = empty_manager_factory()
         await assessor.initialize()
 

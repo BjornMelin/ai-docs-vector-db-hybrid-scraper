@@ -24,7 +24,6 @@ def build_embedding_cache_key(
     Returns:
         Prefixed cache key scoped to embedding artefacts.
     """
-
     digest_source = f"{provider}:{model}:{text}"
     digest = hashlib.sha256(digest_source.encode("utf-8")).hexdigest()
     if dimensions is not None:
@@ -42,7 +41,6 @@ def build_search_cache_key(query: str, filters: dict[str, Any] | None = None) ->
     Returns:
         Prefixed cache key scoped to search results.
     """
-
     serialized_filters = json.dumps(filters or {}, sort_keys=True, default=str)
     digest = hashlib.sha256(f"{query}:{serialized_filters}".encode()).hexdigest()
     return f"srch:{digest}"

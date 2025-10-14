@@ -1,1 +1,1 @@
-# Processing tests module
+"""Processing package for unit tests."""

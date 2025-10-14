@@ -11,7 +11,6 @@ from src.services.vector_db.payload_schema import (
 
 def test_ensure_canonical_payload_creates_expected_fields() -> None:
     """Canonical payload should populate required fields with defaults."""
-
     metadata = {"topic": "testing"}
     canonical = ensure_canonical_payload(metadata, content="alpha", id_hint="doc-1")
 
@@ -25,7 +24,6 @@ def test_ensure_canonical_payload_creates_expected_fields() -> None:
 
 def test_ensure_canonical_payload_respects_existing_fields() -> None:
     """Existing canonical metadata should be preserved when valid."""
-
     metadata = {
         "doc_id": "doc-2",
         "chunk_id": 5,
@@ -44,7 +42,6 @@ def test_ensure_canonical_payload_respects_existing_fields() -> None:
 
 def test_ensure_canonical_payload_raises_for_invalid_strings() -> None:
     """Invalid string inputs should surface a validation error."""
-
     metadata = {"doc_id": None, "chunk_id": 0, "tenant": "", "source": ""}
     try:
         ensure_canonical_payload(metadata, content="gamma", id_hint="")

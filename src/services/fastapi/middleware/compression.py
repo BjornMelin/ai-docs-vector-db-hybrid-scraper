@@ -1,5 +1,4 @@
-"""
-Compression middleware thin wrappers.
+"""Compression middleware thin wrappers.
 
 Prefer battle-tested implementations:
 - Starlette's GZipMiddleware for gzip.
@@ -24,4 +23,4 @@ try:
 except Exception:  # pragma: no cover - optional dep
     BrotliCompressionMiddleware = CompressionMiddleware  # type: ignore[misc]
 
-__all__ = ["CompressionMiddleware", "BrotliCompressionMiddleware"]
+__all__ = ["BrotliCompressionMiddleware", "CompressionMiddleware"]

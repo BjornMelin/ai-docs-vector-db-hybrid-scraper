@@ -45,7 +45,6 @@ class MockFactory:
         Returns:
             MagicMock: Mocked client with embeddings and responses APIs.
         """
-
         client = MagicMock()
         client.embeddings = self._build_embeddings_api(
             embedding_dim=embedding_dim,
@@ -64,7 +63,6 @@ class MockFactory:
         rate_limit: int,
     ) -> MagicMock:
         """Create the embeddings API mock for the OpenAI client."""
-
         embeddings_api = MagicMock()
 
         embedding_response = MagicMock()
@@ -87,7 +85,6 @@ class MockFactory:
 
     def _build_responses_api(self) -> MagicMock:
         """Create the responses API mock for the OpenAI client."""
-
         responses_payload = MagicMock()
         responses_payload.output_text = "Generated hypothetical document"
         responses_payload.usage = MagicMock(
@@ -115,7 +112,6 @@ class MockFactory:
         Returns:
             MagicMock: Mocked client with collection and search APIs.
         """
-
         client = MagicMock()
         client.create_collection = AsyncMock()
         client.delete_collection = AsyncMock()
@@ -160,7 +156,6 @@ class MockFactory:
         Returns:
             MagicMock: Redis client mock with async command implementations.
         """
-
         client = MagicMock()
 
         if connected:
@@ -198,7 +193,6 @@ class MockFactory:
         Returns:
             MagicMock: Async client mock covering standard HTTP verbs.
         """
-
         client = MagicMock()
 
         response = MagicMock()
@@ -221,7 +215,6 @@ class MockFactory:
         Returns:
             MagicMock: Sentinel mock covering discovery and failover paths.
         """
-
         sentinel = MagicMock()
         master = MagicMock()
 
@@ -238,7 +231,6 @@ class MockFactory:
         Returns:
             MagicMock: Service mock exposing crawl and batch_crawl coroutines.
         """
-
         service = MagicMock()
 
         async def _crawl(url: str, **kwargs: Any) -> dict[str, Any]:
@@ -271,7 +263,6 @@ class MockFactory:
         Returns:
             Iterator[list[dict[str, Any]]]: Iterator yielding recorded webhook calls.
         """
-
         webhook_calls: list[dict[str, Any]] = []
 
         async def _mock(url: str, data: dict[str, Any]) -> dict[str, Any]:
@@ -289,7 +280,6 @@ class MockFactory:
         Returns:
             MagicMock: Elasticsearch client mock supporting basic operations.
         """
-
         client = MagicMock()
         client.indices.create = AsyncMock()
         client.indices.delete = AsyncMock()
@@ -336,7 +326,6 @@ class MockFactory:
         Returns:
             dict[str, MagicMock]: Mapping of service names to their mocks.
         """
-
         return {
             "prometheus": MagicMock(
                 push_metric=AsyncMock(),
@@ -367,7 +356,6 @@ class MockFactory:
         Returns:
             list[dict[str, Any]]: Collection of embedding point dictionaries.
         """
-
         return [
             {
                 "id": index + 1,
@@ -403,7 +391,6 @@ class MockFactory:
         Returns:
             dict[str, Any]: Crawl response payload with optional metadata.
         """
-
         if not success:
             return {
                 "url": url,
@@ -454,7 +441,6 @@ class MockFactory:
         Returns:
             AsyncIterator[respx.Router]: Asynchronous iterator yielding the router.
         """
-
         if respx is None:
             pytest.skip("respx is not installed")
 
@@ -485,5 +471,4 @@ def mock_factory() -> MockFactory:
     Returns:
         MockFactory: Shared factory for building mocks and test payloads.
     """
-
     return MockFactory()

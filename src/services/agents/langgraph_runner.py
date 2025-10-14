@@ -54,8 +54,14 @@ _OP_AGENT_RETRIEVAL = "agent.graph.retrieval"
 
 
 def _serialise_document(document: Any) -> dict[str, Any]:
-    """Return a JSON-serialisable representation of a retrieval document."""
+    """Return a JSON-serialisable representation of a retrieval document.
 
+    Args:
+        document: Document to serialise.
+
+    Returns:
+        Dictionary with id, score, and metadata.
+    """
     identifier = getattr(document, "id", None)
     score = float(getattr(document, "score", 0.0))
     metadata = getattr(document, "metadata", None)
@@ -102,17 +108,13 @@ class AgentErrorCode(str, Enum):
 
 def _error_entry(source: str, code: AgentErrorCode, **extra: Any) -> dict[str, Any]:
     """Construct a structured error payload with optional metadata."""
-
     entry: dict[str, Any] = {"source": source, "code": code.value}
-    for key, value in extra.items():
-        if value is not None:
-            entry[key] = value
+    entry.update({key: value for key, value in extra.items() if value is not None})
     return entry
 
 
 def _map_tool_error_code(exc: ToolExecutionError) -> AgentErrorCode:
     """Translate ToolExecutionError subclasses into canonical codes."""
-
     if isinstance(exc, ToolExecutionTimeout):
         return AgentErrorCode.TOOL_TIMEOUT
     if isinstance(exc, ToolExecutionInvalidArgument):
@@ -164,6 +166,16 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
         run_timeout_seconds: float | None = None,
         retrieval_limit: int = 8,
     ) -> None:
+        """Initialize LangGraph runner dependencies.
+
+        Args:
+            discovery: Dynamic tool discovery for MCP capabilities.
+            tool_service: Executor responsible for MCP tool invocations.
+            retrieval_helper: Optional retrieval helper override.
+            max_parallel_tools: Maximum concurrent tool executions.
+            run_timeout_seconds: Optional LangGraph run timeout in seconds.
+            retrieval_limit: Default document retrieval cap per query.
+        """
         self._discovery = discovery
         self._tool_service = tool_service
         self._retrieval_helper = retrieval_helper or RetrievalHelper(
@@ -191,7 +203,6 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
         GraphRunner,
     ]:
         """Construct discovery, execution service, retrieval helper, and runner."""
-
         settings = get_settings()
         agentic_cfg = getattr(settings, "agentic", None)
 
@@ -245,7 +256,6 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
             ``GraphSearchOutcome`` containing retrieval results and operational
             telemetry.
         """
-
         session_identifier = session_id or str(uuid4())
         effective_top_k = (
             self._default_retrieval_limit if top_k is None else max(1, top_k)
@@ -286,7 +296,6 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
         Returns:
             ``GraphAnalysisOutcome`` describing the aggregated analysis result.
         """
-
         session_identifier = session_id or str(uuid4())
         state: AgenticGraphState = {
             "mode": "analysis",
@@ -359,11 +368,10 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
                     "tool_count": len(state.get("tool_outputs", []) or []),
                     "error_count": len(errors),
                 }
-                timeout_state = cast(
+                return cast(
                     AgenticGraphState,
                     {**state, "errors": errors, "metrics": metrics, "success": False},
                 )
-                return timeout_state
 
     def _build_graph(self):
         graph = StateGraph(AgenticGraphState)
@@ -557,10 +565,11 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
             "agent.tool_execution",
             attributes={"agent.requested_tools": len(selected)},
         ):
-            task_results: list[asyncio.Task[tuple[str, ToolCapability, Any]]] = []
             async with asyncio.TaskGroup() as group:
-                for capability in selected:
-                    task_results.append(group.create_task(invoke_tool(capability)))
+                task_results: list[asyncio.Task[tuple[str, ToolCapability, Any]]] = [
+                    group.create_task(invoke_tool(capability))
+                    for capability in selected
+                ]
 
         for task in task_results:
             outcome, capability, payload = task.result()

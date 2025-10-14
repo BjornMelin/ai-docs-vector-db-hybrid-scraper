@@ -117,7 +117,6 @@ class HyDEConfig(BaseModel):
     @classmethod
     def from_unified_config(cls, config: Any) -> "HyDEConfig":
         """Create HyDE configuration from unified settings object."""
-
         return cls(
             enable_hyde=getattr(config, "enable_hyde", True),
             enable_fallback=getattr(config, "enable_fallback", True),

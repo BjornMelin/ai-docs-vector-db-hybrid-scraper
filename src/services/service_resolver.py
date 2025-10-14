@@ -32,7 +32,6 @@ def _require_container() -> ApplicationContainer:
     Raises:
         RuntimeError: If the container has not been initialised yet.
     """
-
     container = get_container()
     if container is None:
         msg = "Dependency injector container is not initialized"
@@ -50,7 +49,6 @@ async def _ensure_initialized(service: Any, *, name: str) -> Any:
     Returns:
         Any: The same service instance, initialised if required.
     """
-
     initializer = getattr(service, "initialize", None)
     is_initialized = getattr(service, "is_initialized", None)
 
@@ -111,7 +109,6 @@ async def _resolve_service(  # noqa: UP047
     Raises:
         RuntimeError: If a required service is not available from the container.
     """
-
     container = _require_container()
     instance = supplier(container)
     if instance is None:
@@ -140,7 +137,6 @@ async def get_cache_manager() -> CacheManager:
     Raises:
         RuntimeError: If the cache manager cannot be resolved.
     """
-
     manager = await _resolve_service(
         name="cache_manager",
         supplier=lambda container: container.cache_manager(),
@@ -162,7 +158,6 @@ async def get_embedding_manager() -> EmbeddingManager:
     Raises:
         RuntimeError: If the embedding manager cannot be resolved.
     """
-
     manager = await _resolve_service(
         name="embedding_manager",
         supplier=lambda container: container.embedding_manager(),
@@ -184,7 +179,6 @@ async def get_vector_store_service() -> VectorStoreService:
     Raises:
         RuntimeError: If the vector store service cannot be resolved.
     """
-
     service = await _resolve_service(
         name="vector_store_service",
         supplier=lambda container: container.vector_store_service(),
@@ -206,13 +200,11 @@ async def get_content_intelligence_service() -> Any:
     Raises:
         RuntimeError: If the content intelligence service is unavailable.
     """
-
-    service = await _resolve_service(
+    return await _resolve_service(
         name="content_intelligence_service",
         supplier=lambda container: container.content_intelligence_service(),
         optional=False,
     )
-    return service
 
 
 async def get_mcp_client() -> MultiServerMCPClient:
@@ -224,7 +216,6 @@ async def get_mcp_client() -> MultiServerMCPClient:
     Raises:
         RuntimeError: If the MCP client integration is disabled.
     """
-
     client = await _resolve_service(
         name="mcp_client",
         supplier=lambda container: container.mcp_client(),
@@ -251,13 +242,11 @@ async def get_crawl_manager() -> Any:
     Raises:
         RuntimeError: If the browser manager is unavailable.
     """
-
-    manager = await _resolve_service(
+    return await _resolve_service(
         name="browser_manager",
         supplier=lambda container: container.browser_manager(),
         optional=False,
     )
-    return manager
 
 
 @circuit_breaker(
@@ -274,7 +263,6 @@ async def get_rag_generator() -> Any:
     Raises:
         RuntimeError: If the RAG generator is not available.
     """
-
     generator = await _resolve_service(
         name="rag_generator",
         supplier=lambda container: container.rag_generator(),

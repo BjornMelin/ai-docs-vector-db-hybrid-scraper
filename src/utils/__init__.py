@@ -22,6 +22,6 @@ __all__ = [
     "get_gpu_stats",
     "is_gpu_available",
     "optimize_gpu_memory",
-    "safe_gpu_operation",
     "paths",
+    "safe_gpu_operation",
 ]

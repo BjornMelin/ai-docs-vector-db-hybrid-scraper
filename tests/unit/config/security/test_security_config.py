@@ -9,7 +9,6 @@ from src.config.security.config import SecurityConfig
 
 def test_security_config_defaults() -> None:
     """Default values align with the security middleware expectations."""
-
     config = SecurityConfig()
 
     assert config.enabled is True
@@ -32,7 +31,6 @@ def test_security_config_defaults() -> None:
 )
 def test_api_keys_round_trip(api_keys: list[str]) -> None:
     """API key lists are preserved exactly."""
-
     config = SecurityConfig(api_key_required=bool(api_keys), api_keys=api_keys)
     assert config.api_key_required is bool(api_keys)
     assert config.api_keys == api_keys
@@ -44,14 +42,12 @@ def test_api_keys_round_trip(api_keys: list[str]) -> None:
 )
 def test_rate_limit_window_accepts_positive_values(rate_limit_window: int) -> None:
     """Positive rate limit windows are accepted."""
-
     config = SecurityConfig(rate_limit_window=rate_limit_window)
     assert config.rate_limit_window == rate_limit_window
 
 
 def test_rate_limit_window_rejects_non_positive_values() -> None:
     """Non-positive windows raise validation errors."""
-
     with pytest.raises(ValueError):
         SecurityConfig(rate_limit_window=0)
     with pytest.raises(ValueError):
@@ -60,7 +56,6 @@ def test_rate_limit_window_rejects_non_positive_values() -> None:
 
 def test_default_rate_limit_requires_positive_integer() -> None:
     """Default rate limit must be a positive integer."""
-
     with pytest.raises(ValueError):
         SecurityConfig(default_rate_limit=0)
     with pytest.raises(ValueError):

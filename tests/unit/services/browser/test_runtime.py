@@ -11,7 +11,6 @@ from src.services.browser.runtime import execute_with_retry
 @pytest.mark.asyncio
 async def test_execute_with_retry_eventually_succeeds() -> None:
     """Test that execute_with_retry retries a flaky operation."""
-
     attempts: list[int] = []
 
     async def flaky() -> str:

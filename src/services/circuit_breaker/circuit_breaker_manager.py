@@ -54,8 +54,8 @@ class CircuitBreakerManager:
         Args:
             redis_url: Redis URL for distributed state storage
             config: Application configuration for circuit breaker settings
+            unit_of_work: Optional custom unit of work for testing or advanced use
         """
-
         self.redis_url = redis_url
         self.config = config
 
@@ -111,7 +111,6 @@ class CircuitBreakerManager:
         Returns:
             Circuit breaker instance for the service
         """
-
         if service_name not in self._breakers:
             async with self._lock:
                 if service_name not in self._breakers:
@@ -146,7 +145,6 @@ class CircuitBreakerManager:
             CircuitBreakerOpenError: If the circuit breaker is open
             Exception: Any exception raised by the function
         """
-
         breaker = await self.get_breaker(service_name)
 
         async with breaker:
@@ -184,7 +182,6 @@ class CircuitBreakerManager:
         Returns:
             Dictionary with circuit breaker status information
         """
-
         breaker = self._breakers.get(service_name)
         if breaker is None:
             return {"service_name": service_name, "state": "not_initialized"}
@@ -214,7 +211,6 @@ class CircuitBreakerManager:
         Returns:
             True if reset was successful, False otherwise
         """
-
         try:
             breaker = await self.get_breaker(service_name)
             context = breaker.context
@@ -233,7 +229,6 @@ class CircuitBreakerManager:
         Returns:
             Dictionary mapping service names to their circuit breaker status
         """
-
         return {
             service_name: await self.get_breaker_status(service_name)
             for service_name in self._breakers
@@ -241,7 +236,6 @@ class CircuitBreakerManager:
 
     def list_services(self) -> list[str]:
         """Return the list of service names with initialized breakers."""
-
         return sorted(self._breakers.keys())
 
     async def close(self) -> None:
@@ -256,13 +250,11 @@ class CircuitBreakerManager:
 
     async def _cleanup_resources(self) -> None:
         """Clean up circuit breaker manager resources."""
-
         self._breakers.clear()
         logger.info("CircuitBreakerManager closed successfully")
 
     async def _flush_messages(self, breaker: Any) -> None:
         """Persist pending domain events emitted by the breaker context."""
-
         while breaker.context.messages:
             await breaker.messagebus.handle(
                 breaker.context.messages.pop(0),
@@ -283,5 +275,4 @@ def create_circuit_breaker_manager(
     Returns:
         CircuitBreakerManager instance
     """
-
     return CircuitBreakerManager(redis_url, config)

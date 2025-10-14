@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Streamlit-based API Explorer for AI Documentation System
+"""Streamlit-based API Explorer for AI Documentation System.
 
 Provides interactive testing interface for API endpoints including:
 - Hybrid vector search with neural reranking
@@ -103,7 +102,6 @@ def create_performance_chart(metrics: list[dict]) -> go.Figure:
 
 def main():
     """Main application entry point."""
-
     st.title("AI Docs API Explorer")
 
     # Sidebar configuration

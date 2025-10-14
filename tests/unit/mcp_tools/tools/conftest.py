@@ -11,13 +11,12 @@ import pytest
 
 def _install_agents_stub() -> None:
     """Install a lightweight stub for ``src.services.agents`` if missing."""
-
     if "src.services.agents" in sys.modules:
         return
 
     module = types.ModuleType("src.services.agents")
 
-    class QueryOrchestrator:  # noqa: D401 - lightweight stub
+    class QueryOrchestrator:
         """Minimal query orchestrator stub used in tests."""
 
         def __init__(self) -> None:
@@ -62,6 +61,5 @@ _install_agents_stub()
 @pytest.fixture(autouse=True)
 def _ensure_agent_stubs():
     """Ensure the agent services module is stubbed before each test."""
-
     _install_agents_stub()
     yield

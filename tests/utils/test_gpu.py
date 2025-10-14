@@ -70,7 +70,6 @@ class _DummyTorch:
 @pytest.fixture(autouse=True)
 def _clear_torch_cache() -> Generator[None, None, None]:
     """Reset lazy torch loader cache before and after each test."""
-
     with contextlib.suppress(AttributeError):  # pragma: no cover - patched loader
         gpu._load_torch.cache_clear()  # type: ignore[attr-defined]
     yield
@@ -81,7 +80,6 @@ def _clear_torch_cache() -> Generator[None, None, None]:
 @pytest.fixture
 def fake_torch(monkeypatch: pytest.MonkeyPatch) -> tuple[_DummyTorch, _DummyCuda]:
     """Provide a patched torch module backed by dummy CUDA stats."""
-
     cuda = _DummyCuda()
     torch_module = _DummyTorch(cuda)
 
@@ -110,7 +108,6 @@ def fake_torch(monkeypatch: pytest.MonkeyPatch) -> tuple[_DummyTorch, _DummyCuda
 
 def test_is_gpu_unavailable_without_torch(monkeypatch: pytest.MonkeyPatch) -> None:
     """Return falsey GPU status when torch cannot be imported."""
-
     monkeypatch.setattr(gpu, "find_spec", lambda name: None, raising=False)
     assert not gpu.is_gpu_available()
     assert gpu.get_gpu_device() is None
@@ -121,7 +118,6 @@ def test_get_gpu_device_with_memory_requirements(
     fake_torch: tuple[_DummyTorch, _DummyCuda],
 ) -> None:
     """Select the first CUDA device that satisfies the memory budget."""
-
     _torch, cuda = fake_torch
 
     assert gpu.get_gpu_device(memory_required_gb=4.0) == "cuda:0"
@@ -134,7 +130,6 @@ def test_get_gpu_memory_info_returns_expected_shape(
     fake_torch: tuple[_DummyTorch, _DummyCuda],
 ) -> None:
     """Convert CUDA memory info into a floating-point dictionary."""
-
     expected = gpu.get_gpu_memory_info("cuda:0")
     assert pytest.approx(expected["total"], rel=1e-6) == 8.0
     assert pytest.approx(expected["free"], rel=1e-6) == 6.0
@@ -145,7 +140,6 @@ def test_optimize_gpu_memory_triggers_cuda_calls(
     fake_torch: tuple[_DummyTorch, _DummyCuda],
 ) -> None:
     """Ensure cleanup operations forward to torch.cuda."""
-
     _torch, cuda = fake_torch
     gpu.optimize_gpu_memory()
 
@@ -155,7 +149,6 @@ def test_optimize_gpu_memory_triggers_cuda_calls(
 
 def test_safe_gpu_operation_uses_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
     """Fallback callable executes when GPU is unavailable."""
-
     monkeypatch.setattr(gpu, "is_gpu_available", lambda: False)
     sentinel = object()
     result = gpu.safe_gpu_operation(lambda: 1 / 0, fallback=lambda: sentinel)
@@ -166,7 +159,6 @@ def test_safe_gpu_operation_handles_runtime_errors(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Runtime errors trigger fallback values when GPUs fail."""
-
     monkeypatch.setattr(gpu, "is_gpu_available", lambda: True)
 
     def blow_up() -> None:
@@ -180,7 +172,6 @@ def test_get_torch_device_requires_installed_torch(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Missing torch installation raises a runtime error."""
-
     monkeypatch.setattr(gpu, "find_spec", lambda name: None, raising=False)
 
     with pytest.raises(RuntimeError, match="PyTorch is not installed"):
@@ -191,7 +182,6 @@ def test_move_to_device_without_torch_returns_original(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Objects remain untouched when torch cannot be imported."""
-
     monkeypatch.setattr(gpu, "find_spec", lambda name: None, raising=False)
     payload: dict[str, str] = {"value": "cpu"}
     assert gpu.move_to_device(payload) is payload
@@ -201,7 +191,6 @@ def test_move_to_device_invokes_tensor_to(
     fake_torch: tuple[_DummyTorch, _DummyCuda],
 ) -> None:
     """Delegates to the tensor's ``to`` method with resolved device."""
-
     torch_module, _cuda = fake_torch
 
     class DummyTensor:
@@ -224,7 +213,6 @@ def test_get_gpu_stats_reports_optional_modules(
     fake_torch: tuple[_DummyTorch, _DummyCuda],
 ) -> None:
     """Summarise GPU environment and optional library availability."""
-
     stats = gpu.get_gpu_stats()
 
     assert stats["torch_available"] is True
@@ -243,7 +231,6 @@ def test_enable_tf32_sets_backend_flags(
     fake_torch: tuple[_DummyTorch, _DummyCuda],
 ) -> None:
     """Flag toggles propagate to torch backend namespaces."""
-
     torch_module, _cuda = fake_torch
     gpu.enable_tf32()
 
@@ -255,7 +242,6 @@ def test_set_memory_fraction_records_fraction(
     fake_torch: tuple[_DummyTorch, _DummyCuda],
 ) -> None:
     """Record per-process memory fraction against the dummy CUDA shim."""
-
     _torch, cuda = fake_torch
     gpu.set_memory_fraction(0.5)
     assert cuda.mem_fraction == (0.5, 0)
@@ -263,6 +249,5 @@ def test_set_memory_fraction_records_fraction(
 
 def test_set_memory_fraction_validates_range() -> None:
     """Reject fractions outside the open interval ``(0, 1]``."""
-
     with pytest.raises(ValueError, match="between 0 and 1"):
         gpu.set_memory_fraction(0.0)

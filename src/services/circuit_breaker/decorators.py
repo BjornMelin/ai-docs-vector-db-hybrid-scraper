@@ -42,7 +42,6 @@ def _build_breaker_kwargs(
     recovery_timeout: float,
 ) -> dict[str, object]:
     """Translate circuit breaker configuration into purgatory parameters."""
-
     return {
         "threshold": failure_threshold,
         "ttl": recovery_timeout,
@@ -57,7 +56,6 @@ async def _call_with_circuit_breaker(
     **kwargs,
 ):
     """Execute an async callable inside a purgatory circuit breaker."""
-
     manager = await _get_circuit_breaker_manager()
     breaker = await manager.get_breaker(service_name, **breaker_kwargs)
     try:
@@ -77,7 +75,6 @@ def circuit_breaker(
     recovery_timeout: float = 60.0,
 ) -> Callable[[F], F]:
     """Wrap an async function with the shared purgatory circuit breaker."""
-
     breaker_kwargs = _build_breaker_kwargs(failure_threshold, recovery_timeout)
 
     def decorator(func: F) -> F:
@@ -125,7 +122,6 @@ def tenacity_circuit_breaker(  # pylint: disable=too-many-arguments,too-many-pos
     ),
 ) -> Callable[[F], F]:
     """Combine Tenacity retries with the shared purgatory circuit breaker."""
-
     breaker_kwargs = _build_breaker_kwargs(failure_threshold, recovery_timeout)
 
     def decorator(func: F) -> F:
@@ -155,6 +151,7 @@ def tenacity_circuit_breaker(  # pylint: disable=too-many-arguments,too-many-pos
                         *args,
                         **kwargs,
                     )
+            return None
 
         async def _status() -> dict[str, Any]:
             manager = await _get_circuit_breaker_manager()
@@ -174,7 +171,6 @@ def tenacity_circuit_breaker(  # pylint: disable=too-many-arguments,too-many-pos
 
 async def _get_circuit_breaker_manager():
     """Resolve the circuit breaker manager lazily to avoid import cycles."""
-
     from src.services.circuit_breaker.provider import (  # pylint: disable=import-outside-toplevel
         get_circuit_breaker_manager,
     )

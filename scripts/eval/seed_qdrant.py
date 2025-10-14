@@ -14,7 +14,6 @@ from qdrant_client.http import models as http_models
 
 def _load_corpus(path: Path) -> list[dict[str, Any]]:
     """Return the corpus records stored in JSON format."""
-
     with path.open(encoding="utf-8") as handle:
         return json.load(handle)
 
@@ -28,7 +27,6 @@ def _seed_collection(
     recreate: bool,
 ) -> None:
     """Create or refresh the collection using FastEmbed embeddings."""
-
     texts = [record["text"] for record in corpus]
     embedder = TextEmbedding(model_name=model_name)
     embeddings = list(embedder.embed(texts))
@@ -66,7 +64,6 @@ def _seed_collection(
 
 def main() -> None:
     """CLI entrypoint for seeding the golden_eval collection."""
-
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--host",

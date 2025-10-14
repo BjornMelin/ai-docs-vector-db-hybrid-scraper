@@ -9,7 +9,6 @@ from src.services.cache.manager import CacheManager, CacheType
 @pytest.mark.asyncio
 async def test_dragonfly_cache_round_trip(fakeredis_cache: DragonflyCache) -> None:
     """Ensure values stored in DragonflyCache round-trip correctly."""
-
     payload = {"value": 42, "nested": {"flag": True}}
     assert await fakeredis_cache.set("integration:test", payload) is True
 
@@ -25,7 +24,6 @@ async def test_cache_manager_clear_specific_cache_type_uses_correct_prefix(
     fakeredis_cache: DragonflyCache,
 ) -> None:
     """CacheManager.clear(cache_type=...) should remove prefixed keys exactly once."""
-
     manager = CacheManager(
         distributed_cache=fakeredis_cache,
         enable_specialized_caches=False,
@@ -54,8 +52,7 @@ async def test_cache_manager_clear_specific_cache_type_uses_correct_prefix(
 async def test_dragonfly_cache_mset_supports_ttl(
     fakeredis_cache: DragonflyCache,
 ) -> None:
-    """mset should accept TTL overrides and apply them to each key."""
-
+    """Mset should accept TTL overrides and apply them to each key."""
     assert await fakeredis_cache.mset({"ttl:test": {"value": 1}}, ttl=5) is True
     ttl = await fakeredis_cache.ttl("ttl:test")
     assert 0 < ttl <= 5
@@ -66,7 +63,6 @@ async def test_dragonfly_cache_delete_many_pipelines_requests(
     fakeredis_cache: DragonflyCache,
 ) -> None:
     """delete_many should pipeline deletions for better throughput."""
-
     await fakeredis_cache.set("batch:a", 1)
     await fakeredis_cache.set("batch:b", 2)
 

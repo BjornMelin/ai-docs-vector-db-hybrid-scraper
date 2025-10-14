@@ -283,7 +283,6 @@ class TestBreakingPointAnalysis:
 
             async def analyze_response_time_degradation(self):
                 """Analyze how response times degrade under increasing load."""
-
                 # Progressive load tests to see response time degradation
                 load_levels = [
                     {"users": 10, "rps": 5, "name": "baseline"},
@@ -480,7 +479,7 @@ class TestBreakingPointAnalysis:
                     0.8, base_error_rate + load_factor * 0.15 + cascade_error_rate
                 )
 
-                if random.random() < _total_error_rate:  # noqa: S311
+                if random.random() < _total_error_rate:
                     # Increase cascade level on error
                     msg = (
                         f"Cascading error (cascade level: "

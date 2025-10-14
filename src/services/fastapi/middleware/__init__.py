@@ -1,6 +1,4 @@
-"""
-Production middleware package, consolidated and library-first.
-"""
+"""Production middleware package, consolidated and library-first."""
 
 from .compression import BrotliCompressionMiddleware, CompressionMiddleware
 from .correlation import generate_correlation_id, get_correlation_id, set_correlation_id
@@ -12,20 +10,20 @@ from .tracing import TracingMiddleware
 
 
 __all__ = [
-    "apply_defaults",
-    "MiddlewareSpec",
-    "CompressionMiddleware",
     "BrotliCompressionMiddleware",
-    "SecurityMiddleware",
-    "enable_global_rate_limit",
-    "TimeoutMiddleware",
     "BulkheadMiddleware",
-    "TimeoutConfig",
     "CircuitState",
+    "CompressionMiddleware",
+    "MiddlewareSpec",
     "PerformanceMiddleware",
-    "setup_prometheus",
+    "SecurityMiddleware",
+    "TimeoutConfig",
+    "TimeoutMiddleware",
     "TracingMiddleware",
+    "apply_defaults",
+    "enable_global_rate_limit",
+    "generate_correlation_id",
     "get_correlation_id",
     "set_correlation_id",
-    "generate_correlation_id",
+    "setup_prometheus",
 ]

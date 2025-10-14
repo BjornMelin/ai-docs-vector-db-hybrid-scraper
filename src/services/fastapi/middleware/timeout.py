@@ -38,6 +38,7 @@ class CircuitBreakerResolver(Protocol):
     """Protocol for async factory returning a circuit breaker manager."""
 
     async def __call__(self) -> CircuitBreakerManager:  # pragma: no cover - typing only
+        """Return circuit breaker manager instance."""
         ...
 
 
@@ -70,6 +71,14 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
         manager: CircuitBreakerManager | None = None,
         manager_resolver: CircuitBreakerResolver | None = None,
     ) -> None:
+        """Initialize timeout middleware with circuit breaker integration.
+
+        Args:
+            app: Downstream ASGI application.
+            config: Timeout and circuit breaker configuration values.
+            manager: Optional pre-initialised circuit breaker manager.
+            manager_resolver: Optional resolver returning a breaker manager.
+        """
         super().__init__(app)
         self._cfg = config
         self._manager = manager
@@ -83,7 +92,6 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
         """Execute the request within timeout and circuit breaker constraints."""
-
         if not self._cfg.enabled:
             return await call_next(request)
 
@@ -95,7 +103,6 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
 
     async def _resolve_manager(self) -> CircuitBreakerManager | None:
         """Return an injected manager or lazily resolve via resolver."""
-
         if self._manager is not None:
             return self._manager
 
@@ -111,7 +118,6 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
         self, manager: CircuitBreakerManager
     ) -> AsyncCircuitBreaker:
         """Return the cached circuit breaker instance for FastAPI requests."""
-
         if self._breaker is not None:
             return self._breaker
 
@@ -133,7 +139,6 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
         """Fallback path enforcing only the request timeout."""
-
         response: Response | None = None
         with anyio.move_on_after(self._cfg.request_timeout) as scope:
             response = await call_next(request)
@@ -156,7 +161,6 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
         """Route the request through the circuit breaker when available."""
-
         breaker = await self._ensure_breaker(manager)
 
         if breaker.context.state == "opened":
@@ -191,15 +195,30 @@ class BulkheadMiddleware(BaseHTTPMiddleware):
     """Per-endpoint concurrency limiter using AnyIO capacity limiters."""
 
     def __init__(self, app: Callable, *, max_concurrent: int = 10) -> None:
+        """Initialize concurrency limiter middleware.
+
+        Args:
+            app: Downstream ASGI application.
+            max_concurrent: Maximum concurrent requests per endpoint.
+        """
         super().__init__(app)
         self._max = max_concurrent
         self._locks: dict[str, anyio.CapacityLimiter] = {}
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        """Dispatch request through concurrency limiter.
+
+        Args:
+            request: Incoming HTTP request.
+            call_next: Next middleware or handler.
+
+        Returns:
+            HTTP response.
+        """
         key = f"{request.method}:{request.url.path}"
         limiter = self._locks.setdefault(key, anyio.CapacityLimiter(self._max))
         async with limiter:
             return await call_next(request)
 
 
-__all__ = ["TimeoutMiddleware", "BulkheadMiddleware", "CircuitState", "TimeoutConfig"]
+__all__ = ["BulkheadMiddleware", "CircuitState", "TimeoutConfig", "TimeoutMiddleware"]

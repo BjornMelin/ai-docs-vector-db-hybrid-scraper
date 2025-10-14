@@ -22,13 +22,11 @@ def cli_group() -> click.Group:
     @cli.command()
     async def greet() -> None:
         """Emit a greeting asynchronously."""
-
         click.echo("hello")
 
     @cli.command()
     def farewell() -> None:
         """Emit a farewell synchronously."""
-
         click.echo("goodbye")
 
     return cli
@@ -36,7 +34,6 @@ def cli_group() -> click.Group:
 
 def test_async_to_sync_click_executes_async_command(cli_group: click.Group) -> None:
     """Ensure async Click callbacks run successfully after patching."""
-
     async_utils.async_to_sync_click(cli_group)
 
     runner = CliRunner()
@@ -48,7 +45,6 @@ def test_async_to_sync_click_executes_async_command(cli_group: click.Group) -> N
 
 def test_async_to_sync_click_is_idempotent(cli_group: click.Group) -> None:
     """Verify multiple invocations keep callbacks stable."""
-
     async_utils.async_to_sync_click(cli_group)
     first_callback = cli_group.commands["greet"].callback
 
@@ -61,7 +57,6 @@ def test_async_to_sync_click_is_idempotent(cli_group: click.Group) -> None:
 
 def test_async_to_sync_click_preserves_sync_commands(cli_group: click.Group) -> None:
     """Confirm synchronous callbacks remain untouched."""
-
     original_callback = cli_group.commands["farewell"].callback
 
     async_utils.async_to_sync_click(cli_group)

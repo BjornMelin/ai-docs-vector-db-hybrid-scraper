@@ -29,7 +29,6 @@ class UnifiedBrowserManager:
         Args:
             settings: Fully-populated application settings.
         """
-
         browser_cfg: BrowserAutomationConfig = settings.browser
         self._router = BrowserRouter(
             settings=browser_cfg.router,
@@ -52,17 +51,14 @@ class UnifiedBrowserManager:
 
     async def initialize(self) -> None:
         """Initialize all underlying providers."""
-
         await self._router.initialize()
 
     async def cleanup(self) -> None:
         """Release provider resources."""
-
         await self._router.cleanup()
 
     def is_initialized(self) -> bool:
         """Return True when providers have been initialized."""
-
         return self._router.is_initialized()
 
     async def scrape_url(
@@ -91,7 +87,6 @@ class UnifiedBrowserManager:
         Returns:
             BrowserResult produced by the winning provider.
         """
-
         provider = None
         if preferred_provider:
             try:
@@ -128,7 +123,6 @@ class UnifiedBrowserManager:
         Returns:
             Crawl job payload produced by Firecrawl.
         """
-
         provider = preferred_provider or ProviderKind.FIRECRAWL.value
         if provider != ProviderKind.FIRECRAWL.value:
             raise BrowserRouterError(

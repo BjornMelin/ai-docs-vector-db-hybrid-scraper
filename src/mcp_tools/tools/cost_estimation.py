@@ -50,7 +50,6 @@ def register_tools(mcp):
         Returns:
             Cost estimation
         """
-
         try:
             provider = provider.lower()
             if provider not in PRICING:
@@ -116,7 +115,6 @@ def register_tools(mcp):
         Returns:
             Pricing information
         """
-
         try:
             if provider:
                 provider = provider.lower()

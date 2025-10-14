@@ -1,5 +1,4 @@
-"""
-Performance middleware and Prometheus integration.
+"""Performance middleware and Prometheus integration.
 
 - Adds a lightweight `X-Response-Time` header (milliseconds).
 - Exposes a helper to wire Prometheus metrics via the instrumentator.
@@ -29,11 +28,11 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
             app: ASGI app.
             precision_ms: Millisecond precision for the header value.
         """
-
         super().__init__(app)
         self._fmt = f"{{:.{max(0, min(6, precision_ms))}f}}"
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        """Measure response time and inject X-Response-Time header."""
         start = time.perf_counter()
         response = await call_next(request)
         elapsed_ms = (time.perf_counter() - start) * 1000.0
@@ -54,7 +53,6 @@ def setup_prometheus(app, *, include_default: bool = True) -> Instrumentator:
     Example:
         instrumentator = setup_prometheus(app)
     """
-
     inst = Instrumentator()
     if include_default:
         inst.instrument(app)

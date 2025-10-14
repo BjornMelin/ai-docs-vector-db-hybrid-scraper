@@ -33,7 +33,6 @@ def _patch_startup(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_create_app_registers_canonical_routes() -> None:
     """The generated application exposes the canonical routers."""
-
     app = app_factory.create_app()
 
     with TestClient(app) as client:
@@ -49,7 +48,6 @@ def test_create_app_route_registration_failure(
     monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Router import failures should not prevent app creation."""
-
     original_import = app_factory.import_module
 
     def broken_import(module_path: str) -> Any:
@@ -74,7 +72,6 @@ def test_create_app_route_registration_failure(
 
 def test_root_endpoint_reports_features() -> None:
     """The root endpoint surfaces configured feature flags."""
-
     app = app_factory.create_app()
 
     with TestClient(app) as client:
@@ -90,7 +87,6 @@ def test_root_endpoint_error_handling_missing_settings(
     monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Root endpoint should surface sanitized errors when settings fail."""
-
     app = app_factory.create_app()
     settings = app.state.settings
 
@@ -113,7 +109,6 @@ def test_root_endpoint_error_handling_missing_settings(
 
 def test_features_endpoint_matches_root_payload() -> None:
     """The features endpoint mirrors the root feature summary."""
-
     app = app_factory.create_app()
 
     with TestClient(app) as client:
@@ -125,7 +120,6 @@ def test_features_endpoint_matches_root_payload() -> None:
 
 def _get_cors_middleware(app: FastAPI) -> dict[str, Any]:
     """Return the configuration dictionary for the CORS middleware."""
-
     middleware = next(
         entry for entry in app.user_middleware if entry.cls is CORSMiddleware
     )
@@ -136,7 +130,6 @@ def test_cors_disables_credentials_for_wildcard_origins(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Wildcard origins should disable credentials to satisfy Starlette constraints."""
-
     monkeypatch.delenv("CORS_ALLOWED_ORIGINS", raising=False)
     refresh_settings(settings=load_settings(environment=Environment.DEVELOPMENT))
 
@@ -154,7 +147,6 @@ def test_cors_retains_credentials_for_explicit_origins(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Explicit origins may continue to use credentials."""
-
     monkeypatch.setenv("CORS_ALLOWED_ORIGINS", "https://example.test")
     refresh_settings(settings=load_settings(environment=Environment.PRODUCTION))
 

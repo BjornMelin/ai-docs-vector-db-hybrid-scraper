@@ -26,7 +26,6 @@ async def _collect_records(
     batch_size: int,
 ) -> list[models.Record]:
     """Retrieve records from a collection respecting the requested limit."""
-
     gathered: list[models.Record] = []
     next_offset: PointId | None = None
     remaining = limit if limit > 0 else None
@@ -57,7 +56,6 @@ async def _audit_collection(
     batch_size: int,
 ) -> None:
     """Audit payload metadata and optionally persist canonical fields."""
-
     config = get_settings()
     client = AsyncQdrantClient(url=config.qdrant.url, api_key=config.qdrant.api_key)
     try:
@@ -136,7 +134,6 @@ def audit(
     batch_size: int = typer.Option(256, help="Batch size for scroll operations."),
 ) -> None:
     """Audit Qdrant payload metadata for canonical field coverage."""
-
     record_limit = limit if limit > 0 else -1
     asyncio.run(_audit_collection(collection, record_limit, apply, batch_size))
 

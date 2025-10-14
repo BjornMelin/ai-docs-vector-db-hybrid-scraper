@@ -59,11 +59,9 @@ class EmbeddingProvider(ABC):
     @property
     def embedding_dimension(self) -> int:
         """Expose the configured embedding dimensionality."""
-
         return self.dimensions
 
     @property
     def normalize_embeddings(self) -> bool:
         """Return whether generated embeddings are L2-normalized."""
-
         return self._normalize_embeddings

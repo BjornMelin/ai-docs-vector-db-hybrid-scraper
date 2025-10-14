@@ -107,7 +107,6 @@ def register_tools(  # pylint: disable=too-many-statements
         - Optimization recommendations
         - Duplicate content detection
         """
-
         try:
             analysis_request = payload.analysis.model_copy()
             await ctx.info(
@@ -172,7 +171,6 @@ def register_tools(  # pylint: disable=too-many-statements
         - News: News articles, announcements
         - Forum: Discussion threads, community posts
         """
-
         try:
             await ctx.info(f"Classifying content type for URL: {payload.url}")
 
@@ -232,7 +230,6 @@ def register_tools(  # pylint: disable=too-many-statements
         - Readability: Sentence complexity and vocabulary assessment
         - Duplicate Similarity: Similarity to existing content
         """
-
         try:
             await ctx.info("Assessing content quality")
 
@@ -295,7 +292,6 @@ def register_tools(  # pylint: disable=too-many-statements
         - Hierarchy: Breadcrumbs, parent/related URLs
         - Structured: Schema.org types, JSON-LD data
         """
-
         try:
             await ctx.info(f"Extracting metadata for URL: {payload.url}")
 
@@ -361,7 +357,6 @@ def register_tools(  # pylint: disable=too-many-statements
         - Reddit: Handle infinite scroll comments
         - Documentation sites: Extract main content
         """
-
         try:
             if ctx:
                 await ctx.info(f"Generating adaptation recommendations for: {url}")
@@ -411,7 +406,6 @@ def register_tools(  # pylint: disable=too-many-statements
         - Service initialization status
         - Component availability status
         """
-
         try:
             if ctx:
                 await ctx.info("Retrieving Content Intelligence Service metrics")

@@ -31,6 +31,7 @@ class ObservabilityConfig:  # pylint: disable=too-many-instance-attributes
     log_correlation: bool = False
 
     def resource_attributes(self) -> dict[str, str]:
+        """Return OpenTelemetry resource attributes for service identification."""
         return {
             "service.name": self.service_name,
             "service.version": self.service_version,
@@ -42,6 +43,14 @@ class ObservabilityConfig:  # pylint: disable=too-many-instance-attributes
     def from_env(
         cls, overrides: Mapping[str, Any] | None = None
     ) -> ObservabilityConfig:
+        """Construct configuration from environment variables.
+
+        Args:
+            overrides: Optional mapping of override values.
+
+        Returns:
+            Observability configuration derived from environment state.
+        """
         overrides = dict(overrides or {})
 
         endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
@@ -95,14 +104,24 @@ class ObservabilityConfig:  # pylint: disable=too-many-instance-attributes
 
 @lru_cache(maxsize=1)
 def _load_config() -> ObservabilityConfig:
+    """Load observability configuration with caching."""
     return ObservabilityConfig.from_env()
 
 
 def clear_observability_cache() -> None:
+    """Reset the cached observability configuration."""
     _load_config.cache_clear()
 
 
 def get_observability_config(*, force_refresh: bool = False) -> ObservabilityConfig:
+    """Return cached observability configuration, optionally refreshing.
+
+    Args:
+        force_refresh: When ``True`` reload configuration from environment.
+
+    Returns:
+        Observability configuration instance.
+    """
     if force_refresh:
         _load_config.cache_clear()
     return _load_config()
@@ -111,17 +130,27 @@ def get_observability_config(*, force_refresh: bool = False) -> ObservabilityCon
 def get_resource_attributes(
     config: ObservabilityConfig | None = None,
 ) -> Mapping[str, str]:
+    """Return resource attributes for telemetry exporters.
+
+    Args:
+        config: Optional configuration override.
+
+    Returns:
+        Mapping of OpenTelemetry resource attributes.
+    """
     config = config or get_observability_config()
     return config.resource_attributes()
 
 
 def _coerce_bool(value: str | bool) -> bool:
+    """Coerce environment variable string to boolean."""
     if isinstance(value, bool):
         return value
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _parse_headers(raw: str) -> MutableMapping[str, str]:
+    """Parse comma-separated key=value pairs into header mapping."""
     headers: dict[str, str] = {}
     for pair in raw.split(","):
         if "=" not in pair:

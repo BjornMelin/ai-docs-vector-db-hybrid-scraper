@@ -15,7 +15,6 @@ from src.models.search import SearchRequest
 @pytest.fixture
 def base_payload() -> dict[str, Any]:
     """Provide a minimal payload used across tests."""
-
     return {"query": "vector databases"}
 
 
@@ -26,7 +25,6 @@ class TestConstruction:
         self, base_payload: Mapping[str, Any]
     ) -> None:
         """Model defaults should match canonical configuration."""
-
         request = SearchRequest.model_validate(base_payload)
 
         assert request.collection == "documentation"
@@ -40,7 +38,6 @@ class TestConstruction:
 
     def test_rejects_empty_query(self) -> None:
         """Empty queries violate minimum length constraints."""
-
         with pytest.raises(ValidationError):
             SearchRequest.model_validate({"query": ""})
 
@@ -52,7 +49,6 @@ class TestFromInput:
         self, base_payload: Mapping[str, Any]
     ) -> None:
         """Existing instances are returned verbatim if no overrides provided."""
-
         original = SearchRequest.model_validate(base_payload)
         result = SearchRequest.from_input(original)
 
@@ -62,7 +58,6 @@ class TestFromInput:
         self, base_payload: Mapping[str, Any]
     ) -> None:
         """Overrides should produce an updated copy."""
-
         original = SearchRequest.model_validate(base_payload)
         result = SearchRequest.from_input(
             original,
@@ -79,7 +74,6 @@ class TestFromInput:
 
     def test_accepts_plain_string_payload(self) -> None:
         """String payloads are turned into SearchRequest instances."""
-
         request = SearchRequest.from_input(
             "install agent",
             collection="docs",
@@ -92,7 +86,6 @@ class TestFromInput:
 
     def test_accepts_mapping_payload(self, base_payload: Mapping[str, Any]) -> None:
         """Dictionary payloads merge with explicit overrides."""
-
         payload = dict(base_payload)
         payload["limit"] = 3
         request = SearchRequest.from_input(payload, enable_expansion=False)
@@ -102,7 +95,6 @@ class TestFromInput:
 
     def test_rejects_unsupported_payload_type(self) -> None:
         """Unsupported types raise :class:`TypeError`."""
-
         with pytest.raises(TypeError):
             SearchRequest.from_input(123)  # type: ignore[arg-type]
 
@@ -123,7 +115,6 @@ class TestValidation:
         base_payload: Mapping[str, Any],
     ) -> None:
         """Sparse-capable vector types mandate sparse_vector data."""
-
         payload = dict(base_payload)
         payload["vector_type"] = vector_type
 
@@ -134,7 +125,6 @@ class TestValidation:
         self, base_payload: Mapping[str, Any]
     ) -> None:
         """Sparse strategy cannot be paired with a purely dense vector type."""
-
         payload = dict(base_payload)
         payload["search_strategy"] = SearchStrategy.SPARSE
 
@@ -145,7 +135,6 @@ class TestValidation:
         self, base_payload: Mapping[str, Any]
     ) -> None:
         """Dense strategy rejects sparse-only vector configurations."""
-
         payload = dict(base_payload)
         payload["vector_type"] = VectorType.SPARSE
         payload["search_strategy"] = SearchStrategy.DENSE
@@ -161,7 +150,6 @@ class TestValidation:
         self, base_payload: Mapping[str, Any]
     ) -> None:
         """force_dimension must match query_vector length."""
-
         payload = dict(base_payload)
         payload["query_vector"] = [0.1, 0.2, 0.3]
         payload["force_dimension"] = 2
@@ -173,7 +161,6 @@ class TestValidation:
         self, base_payload: Mapping[str, Any]
     ) -> None:
         """Non-finite values are invalid."""
-
         payload = dict(base_payload)
         payload["query_vector"] = [0.1, float("nan")]
 
@@ -184,7 +171,6 @@ class TestValidation:
         self, base_payload: Mapping[str, Any]
     ) -> None:
         """Sparse vector indices must coerce to integers."""
-
         payload = dict(base_payload)
         payload["vector_type"] = VectorType.HYBRID
         payload["sparse_vector"] = {"bad": 0.5}
@@ -198,7 +184,6 @@ class TestValidation:
         self, base_payload: Mapping[str, Any]
     ) -> None:
         """Filter keys must match the allowed regex."""
-
         payload = dict(base_payload)
         payload["filters"] = {"invalid key": "value"}
 
@@ -209,7 +194,6 @@ class TestValidation:
         self, base_payload: Mapping[str, Any]
     ) -> None:
         """Dangerous patterns in filter values are rejected."""
-
         payload = dict(base_payload)
         payload["filters"] = {"title": "DROP TABLE docs"}
 
@@ -220,7 +204,6 @@ class TestValidation:
         self, base_payload: Mapping[str, Any]
     ) -> None:
         """Nested filter groups must use permitted operators and entries."""
-
         payload = dict(base_payload)
         payload["filter_groups"] = [
             {"operator": "and", "filters": [{"field": "language", "value": "en"}]}
@@ -235,7 +218,6 @@ class TestValidation:
         self, base_payload: Mapping[str, Any]
     ) -> None:
         """Invalid operators should trigger validation failure."""
-
         payload = dict(base_payload)
         payload["filter_groups"] = [
             {"operator": "xor", "filters": [{"field": "language", "value": "en"}]}

@@ -142,6 +142,7 @@ class XDistOptimizer:
     """Optimizes pytest-xdist configuration for the environment."""
 
     def __init__(self):
+        """Detect the current CI environment details."""
         self.env_info = CIEnvironmentDetector.detect()
 
     def get_optimal_config(self) -> XDistConfig:

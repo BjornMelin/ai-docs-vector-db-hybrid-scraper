@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 def _validate_url(url: str) -> str:
     """Ensure the provided URL contains a scheme and network location."""
-
     parsed = urlparse(url)
     if not parsed.scheme or not parsed.netloc:
         msg = "Invalid URL format"
@@ -37,7 +36,6 @@ def register_tools(mcp, crawl_manager: Any | None = None) -> None:
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Delegate crawling to the UnifiedBrowserManager router."""
-
         validated_url = _validate_url(url)
         if ctx:
             await ctx.info(f"Dispatching crawl request for {validated_url}")
@@ -52,7 +50,7 @@ def register_tools(mcp, crawl_manager: Any | None = None) -> None:
                 timeout_ms=timeout_ms,
                 actions=custom_actions,
             )
-        except Exception as exc:  # noqa: BLE001 - log and re-raise for MCP
+        except Exception as exc:
             logger.exception("Enhanced crawl failed for %s", validated_url)
             if ctx:
                 await ctx.error(f"Enhanced crawl failed: {exc}")
@@ -78,7 +76,6 @@ def register_tools(mcp, crawl_manager: Any | None = None) -> None:
     @mcp.tool()
     async def get_crawling_capabilities() -> dict[str, Any]:
         """Describe supported tiers and their characteristics."""
-
         return {
             "available_tiers": [
                 "lightweight",

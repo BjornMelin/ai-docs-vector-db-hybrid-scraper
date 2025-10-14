@@ -1,5 +1,4 @@
-"""
-Correlation ID utilities and integration.
+"""Correlation ID utilities and integration.
 
 Uses `asgi-correlation-id` to propagate IDs and enrich logs; falls back to UUIDs
 if the library is not present.
@@ -30,7 +29,6 @@ def get_correlation_id(_request: Request) -> str:
     Returns:
         Correlation ID string.
     """
-
     if _cid:
         return _cid.get() or str(uuid.uuid4())
     return str(uuid.uuid4())
@@ -46,15 +44,13 @@ def set_correlation_id(_request: Request, correlation_id: str) -> None:
     Notes:
         This function is a no-op if the library is absent.
     """
-
     if _cid:
         _cid.set(correlation_id)
 
 
 def generate_correlation_id() -> str:
     """Generate a new correlation ID."""
-
     return str(uuid.uuid4())
 
 
-__all__ = ["get_correlation_id", "set_correlation_id", "generate_correlation_id"]
+__all__ = ["generate_correlation_id", "get_correlation_id", "set_correlation_id"]

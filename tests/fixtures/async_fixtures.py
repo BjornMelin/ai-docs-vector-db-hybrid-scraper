@@ -189,7 +189,6 @@ async def async_cache():
 @pytest_asyncio.fixture
 async def async_queue():
     """Async queue for testing producer-consumer patterns."""
-
     queue: asyncio.Queue[Any] = asyncio.Queue(maxsize=100)
 
     class AsyncQueueTools:
@@ -216,7 +215,6 @@ async def async_queue():
 
 async def async_drain_queue(queue: asyncio.Queue[Any]) -> list[Any]:
     """Drain all items from queue."""
-
     items = []
     while not queue.empty():
         try:
@@ -229,6 +227,5 @@ async def async_drain_queue(queue: asyncio.Queue[Any]) -> list[Any]:
 
 async def async_fill_queue(queue: asyncio.Queue[Any], items: list[Any]) -> None:
     """Fill queue with items."""
-
     for item in items:
         await queue.put(item)

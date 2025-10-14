@@ -40,7 +40,6 @@ class StubProvider(BrowserProvider):
         call_log: list[ProviderKind] | None = None,
     ) -> None:
         """Initialize the stub provider."""
-
         super().__init__(context)
         self.kind = context.provider
         self._responses = deque(responses or [])
@@ -51,15 +50,18 @@ class StubProvider(BrowserProvider):
         self.calls = 0
 
     async def initialize(self) -> None:
+        """Initialize the stub provider."""
         if self._init_failures > 0:
             self._init_failures -= 1
             raise BrowserProviderError("init failure", provider=self.kind.value)
         self.initialized = True
 
     async def close(self) -> None:
+        """Close the stub provider."""
         self.initialized = False
 
     async def scrape(self, request: ScrapeRequest) -> BrowserResult:
+        """Simulate a scrape operation."""
         self.calls += 1
         if self._call_log is not None:
             self._call_log.append(self.kind)
@@ -106,7 +108,6 @@ def _build_router(
     overrides: dict[ProviderKind, StubProvider] | None = None,
 ) -> BrowserRouter:
     """Helper to build a router with stub providers."""
-
     overrides = overrides or {}
     providers = {
         kind: overrides.get(
@@ -128,7 +129,6 @@ def _build_router(
 @pytest.mark.asyncio
 async def test_router_returns_successful_result_and_records_metrics() -> None:
     """Test router fallback to successful provider and metrics recording."""
-
     failing_lightweight = StubProvider(
         ProviderContext(ProviderKind.LIGHTWEIGHT),
         responses=[False],
@@ -155,7 +155,6 @@ async def test_router_returns_successful_result_and_records_metrics() -> None:
 @pytest.mark.asyncio
 async def test_scrape_respects_explicit_provider_override() -> None:
     """Test explicit provider override in scrape request."""
-
     captured_calls: list[ProviderKind] = []
     browser_use = StubProvider(
         ProviderContext(ProviderKind.BROWSER_USE),
@@ -175,7 +174,6 @@ async def test_scrape_respects_explicit_provider_override() -> None:
 @pytest.mark.asyncio
 async def test_require_interaction_skips_lightweight_and_crawl4ai() -> None:
     """Test interaction requirement skips lightweight and Crawl4AI providers."""
-
     call_log: list[ProviderKind] = []
     overrides = {
         kind: StubProvider(
@@ -199,7 +197,6 @@ async def test_require_interaction_skips_lightweight_and_crawl4ai() -> None:
 @pytest.mark.asyncio
 async def test_hard_domain_reorders_providers() -> None:
     """Test hard domain configuration reorders provider priority."""
-
     call_log: list[ProviderKind] = []
     overrides = {
         kind: StubProvider(
@@ -222,7 +219,6 @@ async def test_hard_domain_reorders_providers() -> None:
 @pytest.mark.asyncio
 async def test_router_skips_unavailable_providers_after_failed_init() -> None:
     """Test router skips providers that fail initialization."""
-
     unavailable_lightweight = StubProvider(
         ProviderContext(ProviderKind.LIGHTWEIGHT),
         responses=[True],
@@ -250,7 +246,6 @@ async def test_router_skips_unavailable_providers_after_failed_init() -> None:
 @pytest.mark.asyncio
 async def test_router_reinitializes_provider_after_backoff() -> None:
     """Provider should recover once retry window elapses."""
-
     recovering_lightweight = StubProvider(
         ProviderContext(ProviderKind.LIGHTWEIGHT),
         responses=[True],
@@ -285,7 +280,6 @@ async def test_router_handles_rate_limited_provider(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Router should fall back when a provider is rate limited."""
-
     lightweight = StubProvider(
         ProviderContext(ProviderKind.LIGHTWEIGHT),
         responses=[True],
@@ -308,7 +302,7 @@ async def test_router_handles_rate_limited_provider(
         },
     )
 
-    async def fake_acquire(provider: ProviderKind, deadline: float) -> bool:  # noqa: ARG001
+    async def fake_acquire(provider: ProviderKind, deadline: float) -> bool:
         return provider is not ProviderKind.LIGHTWEIGHT
 
     monkeypatch.setattr(router, "_acquire_limiter", fake_acquire)
@@ -322,7 +316,6 @@ async def test_router_handles_rate_limited_provider(
 @pytest.mark.asyncio
 async def test_router_raises_after_all_providers_fail() -> None:
     """Test router raises error when all providers fail."""
-
     overrides = {
         kind: StubProvider(ProviderContext(kind), responses=[False])
         for kind in ProviderKind
@@ -338,7 +331,6 @@ async def test_router_raises_after_all_providers_fail() -> None:
 @pytest.mark.asyncio
 async def test_router_continues_after_timeout_exception() -> None:
     """Providers raising TimeoutError should be treated as failures with fallback."""
-
     timing_out = StubProvider(
         ProviderContext(ProviderKind.LIGHTWEIGHT),
         responses=[TimeoutError("budget exceeded")],

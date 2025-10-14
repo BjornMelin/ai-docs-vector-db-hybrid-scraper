@@ -4,6 +4,7 @@
 class AsyncFirecrawlApp:
     """Minimal stub for AsyncFirecrawlApp used in tests."""
 
-    def __init__(self, *args, **kwargs) -> None:  # noqa: D401
+    def __init__(self, *args, **kwargs) -> None:
+        """Initialize the stub AsyncFirecrawlApp with given arguments."""
         self.args = args
         self.kwargs = kwargs

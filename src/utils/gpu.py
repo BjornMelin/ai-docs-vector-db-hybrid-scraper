@@ -13,10 +13,10 @@ from typing import Any, TypeVar, cast
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    "enable_tf32",
     "get_gpu_device",
     "get_gpu_memory_info",
     "get_gpu_stats",
-    "enable_tf32",
     "get_torch_device",
     "is_gpu_available",
     "move_to_device",
@@ -31,25 +31,22 @@ _T = TypeVar("_T")
 @cache
 def _load_torch() -> Any | None:
     """Load torch lazily and cache the module."""
-
     if find_spec("torch") is None:
         return None
     try:
         return import_module("torch")
-    except Exception as exc:  # noqa: BLE001 - torch import failures vary by platform
+    except Exception as exc:
         logger.info("Torch import failed: %s", exc)
         return None
 
 
 def _optional_module_available(name: str) -> bool:
     """Return True when the optional module is importable."""
-
     return find_spec(name) is not None
 
 
 def is_gpu_available() -> bool:
     """Return True when CUDA-capable devices are available."""
-
     torch = _load_torch()
     if torch is None:
         return False
@@ -71,7 +68,6 @@ def _device_count() -> int:
 
 def get_gpu_device(memory_required_gb: float | None = None) -> str | None:
     """Return a CUDA device identifier or ``None`` when unavailable."""
-
     if not is_gpu_available():
         return None
     torch = _load_torch()
@@ -94,7 +90,6 @@ def get_gpu_device(memory_required_gb: float | None = None) -> str | None:
 
 def get_gpu_memory_info(device: str | None = None) -> dict[str, float]:
     """Return memory statistics for ``device`` in GiB."""
-
     torch = _load_torch()
     if torch is None or not is_gpu_available():
         return {"total": 0.0, "free": 0.0, "used": 0.0}
@@ -118,7 +113,6 @@ def get_gpu_memory_info(device: str | None = None) -> dict[str, float]:
 
 def optimize_gpu_memory(device: str | None = None) -> None:
     """Release cached allocations for ``device``."""
-
     torch = _load_torch()
     if torch is None or not is_gpu_available():
         return
@@ -139,7 +133,6 @@ def safe_gpu_operation(
     **kwargs: Any,
 ) -> _T | None:
     """Execute ``func`` when GPUs are available; otherwise return ``fallback``."""
-
     if not is_gpu_available():
         if isinstance(fallback, Callable):
             return fallback(*args, **kwargs)
@@ -155,7 +148,6 @@ def safe_gpu_operation(
 
 def get_torch_device(device: str | None = None) -> Any:
     """Return a torch device instance or raise ``RuntimeError`` when unavailable."""
-
     torch = _load_torch()
     if torch is None:
         msg = "PyTorch is not installed"
@@ -166,7 +158,6 @@ def get_torch_device(device: str | None = None) -> Any:
 
 def move_to_device(obj: Any, device: str | None = None) -> Any:
     """Move ``obj`` to ``device`` when torch is available."""
-
     torch = _load_torch()
     if torch is None:
         return obj
@@ -180,7 +171,6 @@ def move_to_device(obj: Any, device: str | None = None) -> Any:
 
 def get_gpu_stats() -> dict[str, Any]:
     """Return summary information about optional GPU integrations."""
-
     torch = _load_torch()
     available = is_gpu_available()
     optional_libraries = {
@@ -211,7 +201,6 @@ def get_gpu_stats() -> dict[str, Any]:
 
 def enable_tf32() -> None:
     """Enable TensorFloat-32 optimisations when CUDA is present."""
-
     torch = _load_torch()
     if torch is None or not is_gpu_available():
         return
@@ -224,7 +213,6 @@ def enable_tf32() -> None:
 
 def set_memory_fraction(fraction: float, device: str | None = None) -> None:
     """Limit CUDA memory usage to ``fraction`` of the selected device."""
-
     if not 0.0 < fraction <= 1.0:
         msg = "fraction must be between 0 and 1"
         raise ValueError(msg)

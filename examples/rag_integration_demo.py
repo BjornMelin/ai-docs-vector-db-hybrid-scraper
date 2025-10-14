@@ -43,14 +43,12 @@ from src.services.rag.utils import initialise_rag_generator
 
 def _print_banner() -> None:
     """Display the demonstration banner."""
-
     print("🚀 RAG Integration Patterns Demonstration")
     print("=" * 50)
 
 
 def _print_configuration(config: Settings) -> None:
     """Print the active RAG configuration."""
-
     print(f"✅ RAG enabled with model: {config.rag.model}")
     print(
         "🔧 Configuration: "
@@ -63,7 +61,6 @@ async def _initialise_generator(
     config: Settings,
 ) -> tuple[RAGGenerator, ServiceRAGConfig]:
     """Initialise the vector-backed RAG generator."""
-
     container = await ensure_container(settings=config)
 
     vector_store = container.vector_store_service()
@@ -76,7 +73,6 @@ async def _initialise_generator(
 
 def _display_initial_metrics(generator: RAGGenerator) -> None:
     """Print initial generator metrics."""
-
     metrics = generator.get_metrics()
     print(f"📊 Initial metrics: {metrics.generation_count} generations recorded")
     print()
@@ -84,7 +80,6 @@ def _display_initial_metrics(generator: RAGGenerator) -> None:
 
 def _demo_rag_request(rag_config: ServiceRAGConfig) -> RAGRequest:
     """Create the sample RAG request used in the demo."""
-
     request = RAGRequest(
         query=("How do I use type hints with FastAPI and Pydantic for API validation?"),
         include_sources=True,
@@ -102,7 +97,6 @@ def _demo_rag_request(rag_config: ServiceRAGConfig) -> RAGRequest:
 
 def _display_answer(response: RAGResponse) -> None:
     """Pretty-print the generated answer and metadata."""
-
     print("✅ RAG answer generated successfully")
     if response.confidence_score is not None:
         print(f"🎯 Confidence Score: {response.confidence_score:.2f}")
@@ -143,7 +137,6 @@ async def _run_rag_workflow(
     rag_request: RAGRequest, rag_generator: RAGGenerator
 ) -> None:
     """Execute the answer generation workflow and display results."""
-
     print("📋 Pattern 3: RAG Answer Generation with Circuit Breaker")
     print("-" * 40)
     try:
@@ -159,7 +152,6 @@ async def _run_rag_workflow(
 
 async def _display_observability(rag_generator: RAGGenerator) -> None:
     """Showcase metrics and cache helpers."""
-
     print("📋 Pattern 4: Metrics & Observability")
     print("-" * 40)
     metrics = await get_rag_metrics(rag_generator)
@@ -176,7 +168,6 @@ async def _display_observability(rag_generator: RAGGenerator) -> None:
 
 async def demonstrate_rag_patterns() -> None:
     """Demonstrate the updated LangChain-enabled RAG workflow."""
-
     _print_banner()
     config = get_settings()
     if not config.rag.enable_rag:

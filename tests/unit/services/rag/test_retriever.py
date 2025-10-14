@@ -17,7 +17,6 @@ from src.services.rag import RAGConfig, VectorServiceRetriever
 
 def _make_vector_store_mock(initialized: bool = True) -> MagicMock:
     """Create a mock VectorStoreService with sensible defaults."""
-
     store = MagicMock()
     store.is_initialized.return_value = initialized
     store.initialize = AsyncMock()
@@ -28,7 +27,6 @@ def _make_vector_store_mock(initialized: bool = True) -> MagicMock:
 @pytest.mark.asyncio
 async def test_aget_relevant_documents_initializes_service() -> None:
     """The retriever should initialize the vector service lazily."""
-
     vector_store = _make_vector_store_mock(initialized=False)
     vector_store.search_documents.return_value = []
     retriever = VectorServiceRetriever(vector_store, "docs")
@@ -45,7 +43,6 @@ async def test_aget_relevant_documents_initializes_service() -> None:
 @pytest.mark.asyncio
 async def test_aget_relevant_documents_returns_documents() -> None:
     """Documents returned by the vector store should be normalized."""
-
     match = SearchRecord(
         id="doc-1",
         score=0.87,
@@ -72,7 +69,6 @@ async def test_aget_relevant_documents_returns_documents() -> None:
 
 def test_with_search_kwargs_creates_new_instance() -> None:
     """with_search_kwargs must return a new retriever with overrides applied."""
-
     vector_store = _make_vector_store_mock()
     rag_config = RAGConfig(compression_enabled=False)
     retriever = VectorServiceRetriever(
@@ -158,7 +154,6 @@ async def test_compression_pipeline_filters_documents(monkeypatch) -> None:
 
 def test_get_relevant_documents_sync_path_runs_event_loop(monkeypatch) -> None:
     """When no loop is running, the sync method should call asyncio.run."""
-
     vector_store = _make_vector_store_mock()
     retriever = VectorServiceRetriever(vector_store, "docs")
 
@@ -191,7 +186,6 @@ def test_get_relevant_documents_sync_path_runs_event_loop(monkeypatch) -> None:
 
 def test_get_relevant_documents_sync_raises_when_loop_active(monkeypatch) -> None:
     """If a loop is running, the sync helper should abort with RuntimeError."""
-
     vector_store = _make_vector_store_mock()
     retriever = VectorServiceRetriever(vector_store, "docs")
 
@@ -205,7 +199,6 @@ def test_get_relevant_documents_sync_raises_when_loop_active(monkeypatch) -> Non
 
 def test_get_relevant_documents_sync_handles_loop_error(monkeypatch) -> None:
     """If get_running_loop raises, the sync helper should proceed."""
-
     vector_store = _make_vector_store_mock()
     retriever = VectorServiceRetriever(vector_store, "docs")
 

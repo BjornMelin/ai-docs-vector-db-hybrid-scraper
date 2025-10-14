@@ -23,7 +23,6 @@ from src.services.logging_config import (
 @pytest.fixture(autouse=True)
 def isolate_logging_state():
     """Provide a clean logging environment for each test."""
-
     root_logger = logging.getLogger()
     original_handlers = list(root_logger.handlers)
     original_level = root_logger.level
@@ -53,7 +52,6 @@ def isolate_logging_state():
 
 def _managed_handlers() -> list[logging.Handler]:
     """Return the list of managed handlers."""
-
     root = logging.getLogger()
     return [
         handler
@@ -64,7 +62,6 @@ def _managed_handlers() -> list[logging.Handler]:
 
 def test_configure_logging_installs_managed_handlers(tmp_path: Path) -> None:
     """Test that configure_logging installs managed handlers."""
-
     log_path = tmp_path / "logs" / "service.log"
 
     configure_logging(level="DEBUG", enable_color=False, log_file=log_path, force=True)
@@ -87,7 +84,6 @@ def test_configure_logging_installs_managed_handlers(tmp_path: Path) -> None:
 
 def test_configure_logging_is_idempotent() -> None:
     """Test that configure_logging is idempotent."""
-
     configure_logging(level="INFO", enable_color=False, force=True)
     first_handlers = list(_managed_handlers())
 
@@ -100,7 +96,6 @@ def test_configure_logging_is_idempotent() -> None:
 
 def test_configure_logging_json_console() -> None:
     """Test that configure_logging sets JSON console formatter."""
-
     configure_logging(level="INFO", json_console=True, enable_color=False, force=True)
 
     console_handler = next(
@@ -111,7 +106,6 @@ def test_configure_logging_json_console() -> None:
 
 def test_log_context_binds_service_and_operation() -> None:
     """Test that LogContext binds service and operation."""
-
     configure_logging(level="INFO", enable_color=False, force=True)
     record_factory = logging.getLogRecordFactory()
 
@@ -124,7 +118,6 @@ def test_log_context_binds_service_and_operation() -> None:
 
 def test_with_service_context_resets_after_exit() -> None:
     """Test that with_service_context resets after exit."""
-
     configure_logging(level="INFO", enable_color=False, force=True)
     record_factory = logging.getLogRecordFactory()
 
@@ -140,7 +133,6 @@ def test_with_service_context_resets_after_exit() -> None:
 
 def test_bind_and_clear_log_context() -> None:
     """Test binding and clearing log context."""
-
     configure_logging(level="INFO", enable_color=False, force=True)
     token = bind_log_context(request_id="abc123")
     try:
@@ -161,7 +153,6 @@ def test_bind_and_clear_log_context() -> None:
 
 def test_redaction_filter_masks_sensitive_values() -> None:
     """Test that RedactionFilter masks sensitive values."""
-
     configure_logging(level="INFO", enable_color=False, force=True)
     handler = logging.StreamHandler(StringIO())
     handler.addFilter(logging_config.RedactionFilter())
@@ -182,7 +173,6 @@ def test_redaction_filter_masks_sensitive_values() -> None:
 
 def test_json_formatter_includes_context_metadata() -> None:
     """Test that JsonFormatter includes context metadata."""
-
     formatter = logging_config.JsonFormatter()
     record = logging.LogRecord(
         name="test",
@@ -207,9 +197,12 @@ def test_json_formatter_includes_context_metadata() -> None:
 def test_json_formatter_serializes_exceptions() -> None:
     """Test that JsonFormatter serializes exceptions."""
 
+    def _raise_test_exception():
+        raise ValueError("boom")
+
     formatter = logging_config.JsonFormatter()
     try:
-        raise ValueError("boom")
+        _raise_test_exception()
     except ValueError as exc:
         record = logging.LogRecord(
             name="test",
@@ -228,7 +221,6 @@ def test_json_formatter_serializes_exceptions() -> None:
 
 def test_configure_logging_redaction_applies_to_runtime_logs() -> None:
     """Test that configure_logging applies redaction to runtime logs."""
-
     buffer = StringIO()
     handler = logging.StreamHandler(buffer)
     handler.addFilter(logging_config.RedactionFilter())

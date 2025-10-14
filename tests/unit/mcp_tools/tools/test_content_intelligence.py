@@ -34,25 +34,29 @@ class MockContext:
     """Mock context for testing."""
 
     def __init__(self):
+        """Initialize mock context with empty log storage."""
         self.logs = {"info": [], "debug": [], "warning": [], "error": []}
 
     async def info(self, msg: str):
+        """Capture info log message."""
         self.logs["info"].append(msg)
 
     async def debug(self, msg: str):
+        """Capture debug log message."""
         self.logs["debug"].append(msg)
 
     async def warning(self, msg: str):
+        """Capture warning log message."""
         self.logs["warning"].append(msg)
 
     async def error(self, msg: str):
+        """Capture error log message."""
         self.logs["error"].append(msg)
 
 
 @pytest.fixture
 def mock_content_intelligence_service():
     """Create mock content intelligence service."""
-
     service = AsyncMock()
 
     # Mock analyze_content method
@@ -142,7 +146,6 @@ def mock_content_intelligence_service():
 @pytest.fixture
 def mock_mcp():
     """Create mock MCP server."""
-
     mcp = Mock()
     mcp.tools = {}
 
@@ -160,14 +163,12 @@ def mock_mcp():
 @pytest.fixture
 def mock_context():
     """Create mock context."""
-
     return MockContext()
 
 
 @pytest.fixture(autouse=True)
 def setup_tools(mock_mcp, mock_content_intelligence_service):
     """Register tools for testing."""
-
     register_tools(
         mock_mcp,
         content_service=mock_content_intelligence_service,
@@ -200,7 +201,6 @@ class TestAnalyzeContentIntelligence:
         self, mock_mcp, mock_context, mock_content_intelligence_service
     ):
         """Test successful content intelligence analysis."""
-
         analysis_payload = ContentAnalysisRequest(
             content="This is a comprehensive API documentation page "
             "explaining authentication.",
@@ -252,7 +252,6 @@ class TestAnalyzeContentIntelligence:
         mock_context,
     ):
         """Test handling when content intelligence service is unavailable."""
-
         # Re-register tools with unavailable service
         mock_mcp.tools.clear()
         register_tools(mock_mcp, content_service=None)
@@ -279,7 +278,6 @@ class TestAnalyzeContentIntelligence:
         self, mock_mcp, mock_context, mock_content_intelligence_service
     ):
         """Test exception handling during analysis."""
-
         # Make service raise exception
         mock_content_intelligence_service.analyze_content.side_effect = ValueError(
             "Service error"
@@ -313,7 +311,6 @@ class TestClassifyContentType:
         self, mock_mcp, mock_context, mock_content_intelligence_service
     ):
         """Test successful content type classification."""
-
         request = ContentClassificationToolPayload(
             content="# API Reference\\n\\nThis document provides "
             "comprehensive API documentation.",
@@ -349,7 +346,6 @@ class TestClassifyContentType:
         mock_context,
     ):
         """Test classification when service is unavailable."""
-
         mock_mcp.tools.clear()
         register_tools(mock_mcp, content_service=None)
 
@@ -373,7 +369,6 @@ class TestClassifyContentType:
         self, mock_mcp, mock_context, mock_content_intelligence_service
     ):
         """Test exception handling during classification."""
-
         mock_content_intelligence_service.classify_content_type.side_effect = (
             RuntimeError("Classification error")
         )
@@ -401,7 +396,6 @@ class TestAssessContentQuality:
         self, mock_mcp, mock_context, mock_content_intelligence_service
     ):
         """Test successful content quality assessment."""
-
         request = ContentQualityToolPayload(
             content="Well-structured documentation with clear examples "
             "and good formatting.",
@@ -439,7 +433,6 @@ class TestAssessContentQuality:
         mock_context,
     ):
         """Test quality assessment when service is unavailable."""
-
         mock_mcp.tools.clear()
         register_tools(mock_mcp, content_service=None)
 
@@ -464,7 +457,6 @@ class TestAssessContentQuality:
         self, mock_mcp, mock_context, mock_content_intelligence_service
     ):
         """Test exception handling during quality assessment."""
-
         mock_content_intelligence_service.assess_extraction_quality.side_effect = (
             RuntimeError("Assessment error")
         )
@@ -529,7 +521,6 @@ class TestExtractContentMetadata:
         mock_context,
     ):
         """Test metadata extraction when service is unavailable."""
-
         mock_mcp.tools.clear()
         register_tools(mock_mcp, content_service=None)
 
@@ -553,7 +544,6 @@ class TestExtractContentMetadata:
         self, mock_mcp, mock_context, mock_content_intelligence_service
     ):
         """Test exception handling during metadata extraction."""
-
         mock_content_intelligence_service.extract_metadata.side_effect = RuntimeError(
             "Extraction error"
         )
@@ -592,7 +582,6 @@ class TestContentIntelligenceIntegration:
     @pytest.mark.asyncio
     async def test_comprehensive_workflow(self, mock_mcp, mock_context):
         """Test a comprehensive workflow using multiple tools."""
-
         content = "# API Documentation\\n\\nComprehensive REST API guide with examples."
         url = "https://example.com/api-docs"
 

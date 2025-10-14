@@ -1,1 +1,1 @@
-"""Performance testing module"""
+"""Performance testing module."""

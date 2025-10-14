@@ -14,7 +14,6 @@ from src.infrastructure.bootstrap import container_session
 @asynccontextmanager
 async def container_lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Manage the dependency-injector container lifecycle for FastAPI."""
-
     async with container_session(
         settings=get_settings(), force_reload=True
     ) as container:

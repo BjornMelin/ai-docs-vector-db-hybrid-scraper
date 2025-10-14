@@ -64,7 +64,6 @@ class MLSecurityValidator:
 
     def __init__(self) -> None:
         """Initialize with existing security config."""
-
         settings = get_settings()
         self.config = settings
         self.security_config = getattr(settings, "security", None)
@@ -72,14 +71,12 @@ class MLSecurityValidator:
 
     def _record_result(self, result: SecurityCheckResult) -> SecurityCheckResult:
         """Store and return a security check result for consistent handling."""
-
         self.checks_performed.append(result)
         return result
 
     @classmethod
     def from_unified_config(cls) -> "MLSecurityValidator":
         """Create MLSecurityValidator from unified config."""
-
         return cls()
 
     def validate_input(
@@ -94,7 +91,6 @@ class MLSecurityValidator:
         Returns:
             Security check result
         """
-
         # Check if ML input validation is enabled (use default if not configured)
         enable_validation = getattr(
             self.security_config, "enable_ml_input_validation", True
@@ -161,7 +157,7 @@ class MLSecurityValidator:
                     message="Input validation passed",
                 )
             )
-        except Exception as exc:  # noqa: BLE001 - broad due to validation surface
+        except Exception as exc:
             logger.exception("Input validation error")
             return self._record_result(
                 SecurityCheckResult(
@@ -178,7 +174,6 @@ class MLSecurityValidator:
         Returns:
             Security check result
         """
-
         # Check if dependency scanning is enabled (use default if not configured)
         enable_scanning = getattr(
             self.security_config, "enable_dependency_scanning", True
@@ -234,7 +229,7 @@ class MLSecurityValidator:
                     severity="info",
                 )
             )
-        except Exception as exc:  # noqa: BLE001 - capture unexpected subprocess errors
+        except Exception as exc:
             logger.exception("Unexpected dependency check error")
             return self._record_result(
                 SecurityCheckResult(
@@ -284,7 +279,6 @@ class MLSecurityValidator:
         Returns:
             Security check result
         """
-
         try:
             # Try trivy first with full path for security
             trivy_path = shutil.which("trivy")
@@ -372,7 +366,7 @@ class MLSecurityValidator:
                     severity="info",
                 )
             )
-        except Exception:  # noqa: BLE001 - safeguard against subprocess errors
+        except Exception:
             logger.exception("Container scan failed")
             return self._record_result(
                 SecurityCheckResult(
@@ -395,7 +389,6 @@ class MLSecurityValidator:
         Raises:
             SecurityError: If the collection name is invalid.
         """
-
         if not isinstance(name, str) or not name.strip():
             msg = "Collection name must be a non-empty string"
             raise SecurityError(msg)
@@ -426,7 +419,6 @@ class MLSecurityValidator:
         Raises:
             SecurityError: If the query is invalid.
         """
-
         if not isinstance(query, str) or not query.strip():
             msg = "Query must be a non-empty string"
             raise SecurityError(msg)
@@ -451,14 +443,13 @@ class MLSecurityValidator:
         Raises:
             SecurityError: If the URL is unsafe or malformed.
         """
-
         if not isinstance(url, str) or not url.strip():
             msg = "URL must be a non-empty string"
             raise SecurityError(msg)
 
         try:
             parsed = urlparse(url.strip())
-        except Exception as exc:  # noqa: BLE001 - propagate security context
+        except Exception as exc:
             msg = f"Invalid URL format: {exc}"
             raise SecurityError(msg) from exc
 
@@ -502,7 +493,6 @@ class MLSecurityValidator:
         Returns:
             Sanitized filename safe for local operations.
         """
-
         if not isinstance(filename, str) or not filename:
             return "safe_filename"
 

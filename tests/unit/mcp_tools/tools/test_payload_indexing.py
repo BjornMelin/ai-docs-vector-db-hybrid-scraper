@@ -13,7 +13,6 @@ from src.mcp_tools.tools.payload_indexing import register_tools
 @pytest.fixture(autouse=True)
 def mock_security_validator(monkeypatch):
     """Provide a permissive MLSecurityValidator stub for all tests."""
-
     validator = Mock()
     validator.validate_collection_name.side_effect = lambda value: value
     validator.validate_query_string.side_effect = lambda value: value
@@ -28,7 +27,6 @@ def mock_security_validator(monkeypatch):
 @pytest.fixture
 def mock_vector_service():
     """Create a mock VectorStoreService."""
-
     service = Mock()
     service.is_initialized.return_value = True
     service.initialize = AsyncMock()
@@ -85,7 +83,6 @@ def mock_vector_service():
 @pytest.fixture
 def mock_client_manager(mock_vector_service):
     """Client manager fixture exposing the mocked vector service."""
-
     manager = Mock()
     manager.get_vector_store_service = AsyncMock(return_value=mock_vector_service)
     return manager
@@ -94,7 +91,6 @@ def mock_client_manager(mock_vector_service):
 @pytest.fixture
 def mock_context():
     """Asynchronous MCP context stub capturing log calls."""
-
     ctx = Mock()
     ctx.info = AsyncMock()
     ctx.debug = AsyncMock()
@@ -106,7 +102,6 @@ def mock_context():
 @pytest.mark.asyncio
 async def test_tool_registration(mock_client_manager):
     """Verify the payload indexing tools register correctly."""
-
     mock_mcp = MagicMock()
     registered = {}
 
@@ -131,7 +126,6 @@ async def test_create_payload_indexes(
     mock_client_manager, mock_vector_service, mock_context
 ):
     """Ensure create_payload_indexes provisions indexes and returns metadata."""
-
     mock_mcp = MagicMock()
     registered = {}
     mock_mcp.tool.return_value = lambda func: registered.setdefault(func.__name__, func)
@@ -161,7 +155,6 @@ async def test_create_payload_indexes_missing_collection(
     mock_client_manager, mock_vector_service, mock_context
 ):
     """Raise ValueError when the requested collection cannot be found."""
-
     mock_vector_service.list_collections.return_value = []
 
     mock_mcp = MagicMock()
@@ -180,7 +173,6 @@ async def test_create_payload_indexes_missing_collection(
 @pytest.mark.asyncio
 async def test_list_payload_indexes(mock_client_manager, mock_context):
     """Return summary metadata for existing payload indexes."""
-
     mock_mcp = MagicMock()
     registered = {}
     mock_mcp.tool.return_value = lambda func: registered.setdefault(func.__name__, func)
@@ -202,7 +194,6 @@ async def test_reindex_collection(
     mock_client_manager, mock_vector_service, mock_context
 ):
     """Drop and recreate indexes while reporting post-state summary."""
-
     mock_mcp = MagicMock()
     registered = {}
     mock_mcp.tool.return_value = lambda func: registered.setdefault(func.__name__, func)
@@ -223,7 +214,6 @@ async def test_reindex_collection(
 @pytest.mark.asyncio
 async def test_benchmark_filtered_search(mock_client_manager, mock_context):
     """Benchmark filtered search and return performance metrics."""
-
     mock_mcp = MagicMock()
     registered = {}
     mock_mcp.tool.return_value = lambda func: registered.setdefault(func.__name__, func)

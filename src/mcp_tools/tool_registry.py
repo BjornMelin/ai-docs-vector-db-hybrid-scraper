@@ -32,7 +32,6 @@ async def register_all_tools(  # pylint: disable=too-many-arguments
     health_manager: HealthCheckManager | None,
 ) -> None:
     """Register the full MCP tool suite with explicit dependencies."""
-
     logger.debug("Registering MCP tool modules")
     tools.retrieval.register_tools(mcp, vector_service=vector_service)
     tools.documents.register_tools(

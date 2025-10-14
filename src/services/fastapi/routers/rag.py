@@ -41,11 +41,11 @@ async def generate_answer(
     Args:
         request: RAG generation request with query and search results
         config: Application configuration dependency
+        rag_generator: RAG generator service dependency
 
     Returns:
         RAGResponse: Generated answer with metadata and sources
     """
-
     # Check if RAG is enabled
     if not config.rag.enable_rag:
         raise HTTPException(
@@ -80,7 +80,6 @@ async def get_metrics(
     Returns:
         dict[str, Any]: Service metrics and statistics
     """
-
     try:
         metrics = await get_rag_metrics(rag_generator)
     except Exception as e:
@@ -111,7 +110,6 @@ async def clear_cache(
     Returns:
         dict[str, str]: Cache clearing results
     """
-
     try:
         return await clear_rag_cache(rag_generator)
     except Exception as e:

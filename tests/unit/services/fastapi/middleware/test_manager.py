@@ -12,7 +12,6 @@ from src.services.fastapi.middleware import manager
 
 def _middleware_class_names(app: Starlette) -> list[str]:
     """Extract class names from Starlette middleware."""
-
     names: list[str] = []
     for middleware in app.user_middleware:
         cls_name = getattr(
@@ -28,7 +27,6 @@ def test_apply_defaults_installs_expected_stack(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test that apply_defaults installs the expected middleware stack."""
-
     called = False
 
     def _fake_setup(app: Starlette, *, include_default: bool = True):
@@ -65,7 +63,6 @@ def test_apply_defaults_installs_expected_stack(
 
 def test_apply_defaults_sets_limiter_state(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test that apply_defaults sets the limiter state."""
-
     limiter_instance = object()
 
     def _fake_enable(app: Starlette, **_: Any):
@@ -87,7 +84,6 @@ def test_apply_named_stack_returns_applied_names(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test that apply_named_stack returns applied middleware names."""
-
     monkeypatch.setattr(manager, "enable_global_rate_limit", lambda app, **_: None)
     monkeypatch.setattr(manager, "setup_prometheus", lambda app, **_: None)
     monkeypatch.setitem(

@@ -26,7 +26,6 @@ ObservabilityConfigDep = Annotated[
 @lru_cache
 def get_observability_service() -> dict[str, Any]:
     """Initialize observability once and expose tracers/meters to routes."""
-
     config = get_observability_config()
     enabled = initialize_observability(config)
 
@@ -68,6 +67,7 @@ async def record_ai_operation_metrics(  # pylint: disable=too-many-arguments
     cost_usd: float | None = None,
     service: ObservabilityServiceDep,
 ) -> None:
+    """Record AI operation metrics if observability is enabled."""
     if not service["enabled"]:
         return
     record_ai_operation(
@@ -87,6 +87,7 @@ async def track_ai_cost_metrics(  # pylint: disable=too-many-arguments
     cost_usd: float,
     service: ObservabilityServiceDep,
 ) -> None:
+    """Track AI cost metrics if observability is enabled."""
     if not service["enabled"]:
         return
     track_cost(
@@ -98,9 +99,9 @@ async def track_ai_cost_metrics(  # pylint: disable=too-many-arguments
 
 
 __all__ = [
+    "AITracerDep",
     "ObservabilityConfigDep",
     "ObservabilityServiceDep",
-    "AITracerDep",
     "get_observability_service",
     "record_ai_operation_metrics",
     "track_ai_cost_metrics",

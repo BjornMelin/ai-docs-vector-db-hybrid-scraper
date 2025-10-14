@@ -13,7 +13,6 @@ from src.services.fastapi.middleware.performance import (
 
 def test_performance_middleware_sets_header() -> None:
     """Test that PerformanceMiddleware sets response time header."""
-
     app = FastAPI()
     app.add_middleware(PerformanceMiddleware)
 
@@ -32,7 +31,6 @@ def test_performance_middleware_sets_header() -> None:
 
 def test_setup_prometheus_adds_metrics_route() -> None:
     """Test that setup_prometheus adds metrics route."""
-
     app = FastAPI()
     inst = setup_prometheus(app)
 

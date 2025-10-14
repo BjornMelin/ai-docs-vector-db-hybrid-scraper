@@ -11,7 +11,6 @@ from src.services.cache.dragonfly_cache import DragonflyCache
 @pytest_asyncio.fixture
 async def fakeredis_server() -> AsyncIterator[FakeServer]:
     """Provide a shared FakeRedis server for deterministic state."""
-
     server = FakeServer()
     try:
         yield server
@@ -25,7 +24,6 @@ async def fakeredis_cache(
     fakeredis_server: FakeServer,
 ) -> AsyncIterator[DragonflyCache]:
     """Yield a DragonflyCache backed by fakeredis for integration testing."""
-
     client = fakeredis_aioredis.FakeRedis(
         server=fakeredis_server,
         decode_responses=False,

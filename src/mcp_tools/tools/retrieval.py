@@ -1,5 +1,4 @@
-"""
-Unified retrieval tools for the MCP server.
+"""Unified retrieval tools for the MCP server.
 
 Exposes a single, typed surface for all search operations:
 - Dense/hybrid search
@@ -58,7 +57,6 @@ class MultiStageSearchPayload(BaseModel):
 
 def _dedupe_by_id(matches: Iterable[SearchRecord]) -> list[SearchRecord]:
     """Return matches deduped by id while keeping highest score."""
-
     ranked: OrderedDict[str, SearchRecord] = OrderedDict()
     for record in matches:
         previous = ranked.get(record.id)
@@ -71,7 +69,6 @@ def _maybe_strip_metadata(
     records: Iterable[SearchRecord], *, include_metadata: bool
 ) -> list[SearchRecord]:
     """Return records with optional metadata stripping."""
-
     if include_metadata:
         return list(records)
     return [
@@ -81,7 +78,6 @@ def _maybe_strip_metadata(
 
 def _rrf_rank(matches: list[SearchRecord], *, k: int = 60) -> list[SearchRecord]:
     """Return matches ranked by Reciprocal Rank Fusion."""
-
     scored: list[tuple[float, SearchRecord]] = []
     for idx, record in enumerate(matches, start=1):
         scored.append((1.0 / (k + idx), record))
@@ -96,7 +92,6 @@ async def _search_matches(
     ctx: Context | None = None,
 ) -> list[SearchRecord]:
     """Run a vector search and return the raw matches."""
-
     service = vector_service
     collection_value = request.collection or "documentation"
     if ctx:
@@ -143,7 +138,6 @@ def register_tools(
         request: CoreSearchRequest, ctx: Context
     ) -> list[SearchRecord]:
         """Execute a single-stage search."""
-
         matches = await _search_matches(request, vector_service=vector_service, ctx=ctx)
         return _maybe_strip_metadata(
             matches[: request.limit], include_metadata=request.include_metadata
@@ -154,7 +148,6 @@ def register_tools(
         request: CoreSearchRequest, ctx: Context
     ) -> list[SearchRecord]:
         """Execute a search with structured filters."""
-
         normalized_request = request.model_copy(
             update={"search_strategy": SearchStrategy.HYBRID}
         )
@@ -170,8 +163,7 @@ def register_tools(
     async def multi_stage_search(
         payload: MultiStageSearchPayload, ctx: Context
     ) -> list[SearchRecord]:
-        """Execute a simplified multi‑stage search."""
-
+        """Execute a simplified multi-stage search."""
         service = vector_service
         all_matches: list[SearchRecord] = []
 
@@ -207,7 +199,6 @@ def register_tools(
         ctx: Context | None = None,
     ) -> list[SearchRecord]:
         """Return primary results plus an extended context set."""
-
         extended_limit = max(limit + max(context_size, 0), limit)
         base_request = CoreSearchRequest.model_validate(
             {
@@ -237,7 +228,6 @@ def register_tools(
         ctx: Context | None = None,
     ) -> list[SearchRecord]:
         """Recommend documents similar to a given point."""
-
         service = vector_service
         payload = await service.get_document(collection, point_id)
         if payload is None:
@@ -263,7 +253,6 @@ def register_tools(
         request: CoreSearchRequest, ctx: Context
     ) -> list[SearchRecord]:
         """Search then apply RRF scoring for shallow reranking."""
-
         service = vector_service
         collection_value = request.collection or "documentation"
         baseline = await service.search_documents(
@@ -285,7 +274,6 @@ def register_tools(
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Scroll a collection with pagination."""
-
         service = vector_service
         docs, next_off = await service.list_documents(
             collection, limit=limit, offset=offset

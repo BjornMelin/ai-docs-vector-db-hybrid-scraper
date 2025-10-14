@@ -17,6 +17,7 @@ class TestObservabilityConfig:
     """Behaviour of the dataclass itself."""
 
     def test_defaults(self) -> None:
+        """Verify default configuration values."""
         config = ObservabilityConfig()
         assert config.enabled is True
         assert config.service_name == "ai-docs-vector-db"
@@ -25,6 +26,7 @@ class TestObservabilityConfig:
         assert config.metrics_enabled is True
 
     def test_resource_attributes(self) -> None:
+        """Verify resource attributes are populated correctly."""
         config = ObservabilityConfig(
             service_name="example",
             service_version="2.1.0",
@@ -40,12 +42,15 @@ class TestObservabilityConfigFromEnv:
     """Ensure environment overrides are respected."""
 
     def setup_method(self) -> None:
+        """Clear cache before each test."""
         clear_observability_cache()
 
     def teardown_method(self) -> None:
+        """Clear cache after each test."""
         clear_observability_cache()
 
     def test_env_overrides(self) -> None:
+        """Verify environment variables override defaults."""
         with patch.dict(
             os.environ,
             {
@@ -72,6 +77,7 @@ class TestObservabilityConfigFromEnv:
         assert config.otlp_headers == {"authorization": "Bearer token"}
 
     def test_resource_attributes_helper(self) -> None:
+        """Verify resource attributes helper function."""
         config = ObservabilityConfig(service_name="helper", service_version="1.2.3")
         attrs = get_resource_attributes(config)
         assert attrs["service.name"] == "helper"

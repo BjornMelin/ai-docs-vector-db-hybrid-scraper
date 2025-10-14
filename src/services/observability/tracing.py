@@ -79,7 +79,7 @@ def trace_function(
                 ) as current_span:
                     try:
                         return await func(*args, **kwargs)
-                    except Exception as exc:  # noqa: BLE001 - re-raised after recording
+                    except Exception as exc:
                         if current_span.is_recording():
                             current_span.record_exception(exc)
                             current_span.set_status(Status(StatusCode.ERROR, str(exc)))
@@ -94,7 +94,7 @@ def trace_function(
             ) as current_span:
                 try:
                     return func(*args, **kwargs)
-                except Exception as exc:  # noqa: BLE001 - re-raised after recording
+                except Exception as exc:
                     if current_span.is_recording():
                         current_span.record_exception(exc)
                         current_span.set_status(Status(StatusCode.ERROR, str(exc)))
