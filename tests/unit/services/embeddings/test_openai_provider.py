@@ -68,7 +68,7 @@ class TestInitialization:
         assert provider.dimensions == 2048
 
     def test_dimensions_above_limit(self) -> None:
-        with pytest.raises(EmbeddingServiceError, match="Dimensions .* exceeds max"):
+        with pytest.raises(EmbeddingServiceError, match=r"Dimensions .* exceeds max"):
             OpenAIEmbeddingProvider(
                 api_key="sk-test",
                 model_name="text-embedding-3-small",
@@ -83,8 +83,8 @@ class TestInitialization:
 
         await provider.initialize()
 
-        assert provider._initialized is True  # noqa: SLF001
-        assert provider._client is async_openai_mock  # noqa: SLF001
+        assert provider._initialized is True
+        assert provider._client is async_openai_mock
 
     @pytest.mark.asyncio
     async def test_initialize_without_key_fails(self) -> None:
@@ -119,7 +119,7 @@ class TestInitialization:
         await provider.initialize()
         await provider.initialize()
 
-        assert provider._client is async_openai_mock  # noqa: SLF001
+        assert provider._client is async_openai_mock
 
     @pytest.mark.asyncio
     async def test_cleanup_closes_client(self, async_openai_mock: AsyncMock) -> None:
@@ -128,8 +128,8 @@ class TestInitialization:
         await provider.cleanup()
 
         async_openai_mock.close.assert_awaited_once()
-        assert provider._client is None  # noqa: SLF001
-        assert provider._initialized is False  # noqa: SLF001
+        assert provider._client is None
+        assert provider._initialized is False
 
 
 class TestEmbeddingGeneration:

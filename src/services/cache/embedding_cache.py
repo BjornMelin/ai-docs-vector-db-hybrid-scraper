@@ -69,7 +69,7 @@ class EmbeddingCache:
             return None
 
         except (AttributeError, ConnectionError, RuntimeError, TimeoutError) as e:
-            logger.error("Error retrieving embedding from cache: %s", e)
+            logger.exception("Error retrieving embedding from cache: %s", e)
             return None
 
     # pylint: disable=too-many-arguments,too-many-positional-arguments
@@ -120,7 +120,7 @@ class EmbeddingCache:
             return success
 
         except (AttributeError, ImportError, RuntimeError, ValueError) as e:
-            logger.error("Error caching embedding: %s", e)
+            logger.exception("Error caching embedding: %s", e)
             return False
 
     def _get_key(
@@ -206,7 +206,7 @@ class EmbeddingCache:
             return cached, missing
 
         except (AttributeError, ConnectionError, RuntimeError, TimeoutError) as e:
-            logger.error("Error in batch embedding retrieval: %s", e)
+            logger.exception("Error in batch embedding retrieval: %s", e)
             # Return all as missing on error
             return {}, texts
 
@@ -280,7 +280,7 @@ class EmbeddingCache:
             return success
 
         except (AttributeError, ConnectionError, ImportError, RuntimeError) as e:
-            logger.error("Error in batch embedding caching: %s", e)
+            logger.exception("Error in batch embedding caching: %s", e)
             return False
 
     async def warm_cache(
@@ -332,7 +332,7 @@ class EmbeddingCache:
             return missing_texts
 
         except (ConnectionError, ImportError, RuntimeError, TimeoutError) as e:
-            logger.error("Error in cache warming: %s", e)
+            logger.exception("Error in cache warming: %s", e)
             return common_queries  # Return all as missing on error
 
     async def invalidate_model(
@@ -368,7 +368,7 @@ class EmbeddingCache:
             return deleted_count
 
         except (AttributeError, ConnectionError, ImportError, RuntimeError) as e:
-            logger.error("Error invalidating model cache: %s", e)
+            logger.exception("Error invalidating model cache: %s", e)
             return 0
 
     async def get_cache_stats(self) -> dict:
@@ -413,7 +413,7 @@ class EmbeddingCache:
             return stats
 
         except (ConnectionError, ImportError, RuntimeError, TimeoutError) as e:
-            logger.error("Error getting cache stats: %s", e)
+            logger.exception("Error getting cache stats: %s", e)
             return {"error": str(e)}
 
     async def get_stats(self) -> dict:

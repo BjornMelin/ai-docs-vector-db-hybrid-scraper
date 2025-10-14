@@ -163,8 +163,8 @@ def _extract_total_tokens(result: Any) -> int | None:
 
     if hasattr(result, "total_tokens") and result.total_tokens is not None:
         return int(result.total_tokens)
-    if hasattr(result, "_total_tokens") and result._total_tokens is not None:  # noqa: SLF001
-        return int(result._total_tokens)  # noqa: SLF001
+    if hasattr(result, "_total_tokens") and result._total_tokens is not None:
+        return int(result._total_tokens)
     return None
 
 

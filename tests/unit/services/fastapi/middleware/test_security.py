@@ -59,7 +59,7 @@ def test_enable_global_rate_limit_enforces_limits() -> None:
 
     @app.get("/limited")
     @limiter.limit("1/minute")
-    async def _limited(request: Request) -> dict[str, str]:  # noqa: ARG001
+    async def _limited(request: Request) -> dict[str, str]:
         return {"ok": "true"}
 
     client = TestClient(app)

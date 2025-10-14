@@ -33,7 +33,7 @@ def fake_tavily(monkeypatch):
         def __init__(self, api_key: str) -> None:
             calls["api_key"] = api_key
 
-        def search(self, **kwargs):  # noqa: ANN003 - mirror third-party API
+        def search(self, **kwargs):
             calls["search_kwargs"] = kwargs
             return {
                 "results": [

@@ -19,7 +19,7 @@ def deployment(mocker: pytest.MockFixture) -> BlueGreenDeployment:
     """Provide a deployment manager with stubbed dependencies."""
 
     manager = BlueGreenDeployment(qdrant_service=object(), cache_manager=object())
-    manager._initialized = True  # noqa: SLF001 - test-only priming
+    manager._initialized = True
     mocker.patch.object(manager, "_persist_environment_state", mocker.AsyncMock())
     return manager
 
@@ -30,8 +30,8 @@ async def test_switch_environments_requires_healthy_target(
 ) -> None:
     """Switching should fail when the target environment is unhealthy."""
 
-    deployment._blue_env.active = True  # noqa: SLF001
-    deployment._green_env.health = None  # noqa: SLF001
+    deployment._blue_env.active = True
+    deployment._green_env.health = None
 
     success = await deployment.switch_environments()
 
@@ -45,8 +45,8 @@ async def test_switch_environments_succeeds_when_healthy(
 ) -> None:
     """Switching should succeed when the target environment is healthy."""
 
-    deployment._blue_env.active = True  # noqa: SLF001
-    deployment._green_env.health = HealthCheckResult(  # noqa: SLF001
+    deployment._blue_env.active = True
+    deployment._green_env.health = HealthCheckResult(
         name="green_deployment",
         status=HealthStatus.HEALTHY,
         message="ok",
@@ -79,7 +79,7 @@ async def test_perform_health_checks_sets_unhealthy_state(
         mocker.AsyncMock(side_effect=[False, False, False]),
     )
 
-    healthy = await deployment._perform_health_checks(env, config)  # noqa: SLF001
+    healthy = await deployment._perform_health_checks(env, config)
 
     assert healthy is False
     assert env.health is not None
@@ -93,14 +93,14 @@ async def test_get_deployment_metrics_uses_health_metadata(
 ) -> None:
     """Deployment metrics should include health-derived information."""
 
-    deployment._blue_env.health = HealthCheckResult(  # noqa: SLF001
+    deployment._blue_env.health = HealthCheckResult(
         name="blue",
         status=HealthStatus.HEALTHY,
         message="ok",
         duration_ms=0.0,
         metadata={"response_time_ms": 42.0, "error_rate": 1.5},
     )
-    deployment._blue_env.deployment_id = "dep-blue"  # noqa: SLF001
+    deployment._blue_env.deployment_id = "dep-blue"
 
     metrics = await deployment.get_deployment_metrics()
 

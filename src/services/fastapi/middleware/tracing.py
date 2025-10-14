@@ -63,7 +63,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
                 "path": request.url.path,
                 "query": safe_escape(str(request.query_params))
                 if request.query_params
-                else None,  # noqa: E501
+                else None,
                 "client_ip": client_ip(request, trust_proxy=self._trust_proxy),
                 "content_type": request.headers.get("content-type"),
                 "content_length": request.headers.get("content-length"),

@@ -61,14 +61,14 @@ _SECRET_PATTERNS = (
 class ContextFilter(logging.Filter):
     """Inject context variables into log records with safe defaults."""
 
-    __slots__ = ("_default_service", "_default_operation")
+    __slots__ = ("_default_operation", "_default_service")
 
     def __init__(self, service: str = "-", operation: str = "-") -> None:
         super().__init__(name="ai_docs_context_filter")
         self._default_service = service
         self._default_operation = operation
 
-    def filter(self, record: logging.LogRecord) -> bool:  # noqa: D401
+    def filter(self, record: logging.LogRecord) -> bool:
         context = dict(_LOG_CONTEXT.get())
         service = context.get("service", self._default_service)
         operation = context.get("operation", self._default_operation)
@@ -84,7 +84,7 @@ class ContextFilter(logging.Filter):
 class RedactionFilter(logging.Filter):
     """Mask sensitive values from formatted log messages before emission."""
 
-    def filter(self, record: logging.LogRecord) -> bool:  # noqa: D401
+    def filter(self, record: logging.LogRecord) -> bool:
         message = record.getMessage()
         redacted = message
         for pattern in _SECRET_PATTERNS:
@@ -133,7 +133,7 @@ class LogContext:
         self._token = bind_log_context(**self._context)
         return self
 
-    def __exit__(self, exc_type, exc, tb) -> None:  # noqa: D401
+    def __exit__(self, exc_type, exc, tb) -> None:
         if self._token is not None:
             reset_log_context(self._token)
 

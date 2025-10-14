@@ -64,7 +64,7 @@ class _StubRAGPipeline:
         self.answer = answer
         self.invocations = []
 
-    async def run(self, **kwargs) -> dict[str, object] | None:  # noqa: D401 - pipeline signature
+    async def run(self, **kwargs) -> dict[str, object] | None:
         self.invocations.append(kwargs)
         return {
             "answer": self.answer,
@@ -164,7 +164,7 @@ async def test_orchestrator_handles_missing_rag_result() -> None:
     stub_vector_service = _StubVectorService(matches, collection="docs")
 
     class _NullPipeline(_StubRAGPipeline):
-        async def run(self, **kwargs) -> dict[str, object] | None:  # noqa: D401 - pipeline signature
+        async def run(self, **kwargs) -> dict[str, object] | None:
             self.invocations.append(kwargs)
             return None
 

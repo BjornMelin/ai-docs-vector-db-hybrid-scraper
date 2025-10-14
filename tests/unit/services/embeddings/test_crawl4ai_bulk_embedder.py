@@ -63,7 +63,7 @@ def stub_async_client(
     """Patch httpx.AsyncClient with deterministic responses."""
 
     class AsyncClientStub:
-        def __init__(self, *args: Any, **kwargs: Any) -> None:  # noqa: D401 - simple stub
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
             self._responses = responses
 
         async def __aenter__(self):  # type: ignore[override]

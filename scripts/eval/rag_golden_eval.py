@@ -396,8 +396,7 @@ _WHITESPACE_RE = re.compile(r"\s+")
 def _normalize_text(candidate: str) -> str:
     """Return a lowercase, normalised representation for similarity scoring."""
 
-    collapsed = _WHITESPACE_RE.sub(" ", candidate.lower()).strip()
-    return collapsed
+    return _WHITESPACE_RE.sub(" ", candidate.lower()).strip()
 
 
 def _compute_similarity(predicted: str, expected: str) -> float:

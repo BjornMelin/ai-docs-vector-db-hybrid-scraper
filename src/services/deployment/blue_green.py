@@ -599,12 +599,12 @@ class BlueGreenDeployment:  # pylint: disable=too-many-instance-attributes
     async def _load_environment_state(self) -> None:
         """Load environment state from persistent storage."""
 
-        return None  # In production, load from database/storage
+        return  # In production, load from database/storage
 
     async def _persist_environment_state(self) -> None:
         """Persist current environment state to storage."""
 
-        return None  # In production, save to database/storage
+        return  # In production, save to database/storage
 
     async def cleanup(self) -> None:
         """Cleanup blue-green deployment manager resources."""

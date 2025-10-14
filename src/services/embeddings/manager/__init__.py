@@ -682,9 +682,9 @@ class EmbeddingManager:
 
 __all__ = [
     "EmbeddingManager",
+    "FastEmbedProvider",
+    "OpenAIEmbeddingProvider",
     "QualityTier",
     "TextAnalysis",
     "UsageStats",
-    "FastEmbedProvider",
-    "OpenAIEmbeddingProvider",
 ]

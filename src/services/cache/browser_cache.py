@@ -229,7 +229,7 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
         try:
             cached_json = json.dumps(value.to_dict())
         except (TypeError, ValueError) as exc:
-            logger.error("Failed serialising browser cache entry: %s", exc)
+            logger.exception("Failed serialising browser cache entry: %s", exc)
             return False
 
         try:
@@ -285,7 +285,7 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
             )
             count = await clear_callable(f"browser:*{pattern}*")
         except (ConnectionError, OSError, TimeoutError) as exc:
-            logger.error("Browser cache pattern invalidation failed: %s", exc)
+            logger.exception("Browser cache pattern invalidation failed: %s", exc)
             return 0
 
         self._cache_stats["evictions"] += count

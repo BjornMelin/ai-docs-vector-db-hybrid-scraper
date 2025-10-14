@@ -151,13 +151,12 @@ class EmbeddingPipeline:
             texts, embeddings, selection.model, metrics
         )
 
-        result = self._build_result(
+        return self._build_result(
             embeddings,
             sparse_embeddings,
             metrics,
             selection,
         )
-        return result
 
     async def _try_single_text_cache(
         self,

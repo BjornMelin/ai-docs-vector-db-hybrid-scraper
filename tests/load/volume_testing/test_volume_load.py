@@ -152,8 +152,7 @@ class TestVolumeLoad:
 
                 # Generate mock embeddings
                 embeddings = [
-                    [random.random() for _ in range(384)]
-                    for _ in range(batch_size)  # noqa: S311
+                    [random.random() for _ in range(384)] for _ in range(batch_size)
                 ]
 
                 return {
@@ -191,10 +190,10 @@ class TestVolumeLoad:
         async def bulk_embedding_operation(**_kwargs):
             """Generate embeddings for large text batches."""
             # Generate batch of texts
-            batch_size = random.randint(50, 200)  # Variable batch sizes  # noqa: S311
+            batch_size = random.randint(50, 200)  # Variable batch sizes
             texts = [
                 f"This is test document {i} with content about "
-                f"{random.choice(['AI', 'ML', 'NLP', 'vectors', 'embeddings'])}"  # noqa: S311
+                f"{random.choice(['AI', 'ML', 'NLP', 'vectors', 'embeddings'])}"
                 for i in range(batch_size)
             ]
 
@@ -336,8 +335,8 @@ class TestVolumeLoad:
                 "software architecture patterns",
             ]
 
-            query = random.choice(queries)  # noqa: S311
-            limit = random.randint(500, 2000)  # Large result sets  # noqa: S311
+            query = random.choice(queries)
+            limit = random.randint(500, 2000)  # Large result sets
 
             return await search_processor.search_with_large_results(
                 query=query, limit=limit, **_kwargs
@@ -407,7 +406,7 @@ class TestVolumeLoad:
                         await asyncio.sleep(processing_time)
 
                         # Simulate potential failures
-                        if random.random() < 0.01:  # 1% failure rate  # noqa: S311
+                        if random.random() < 0.01:  # 1% failure rate
                             _raise_processing_error(doc["url"])
 
                         processed_doc = {
@@ -482,17 +481,15 @@ class TestVolumeLoad:
         async def batch_ingestion_operation(**_kwargs):
             """Perform batch document ingestion."""
             # Generate batch of documents to ingest
-            batch_size = random.randint(20, 100)  # noqa: S311
+            batch_size = random.randint(20, 100)
             document_batch = []
 
             for i in range(batch_size):
                 doc = {
                     "url": f"https://example.com/docs/document_{i}.html",
                     "title": f"Document {i}",
-                    "size_mb": random.uniform(
-                        0.5, 5.0
-                    ),  # 0.5-5MB documents  # noqa: S311
-                    "content_type": random.choice(["tutorial", "reference", "guide"]),  # noqa: S311
+                    "size_mb": random.uniform(0.5, 5.0),  # 0.5-5MB documents
+                    "content_type": random.choice(["tutorial", "reference", "guide"]),
                 }
                 document_batch.append(doc)
 

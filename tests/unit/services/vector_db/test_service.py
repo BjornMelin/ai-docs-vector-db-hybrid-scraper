@@ -19,7 +19,7 @@ from src.services.vector_db.types import CollectionSchema, TextDocument, VectorR
 class StubVectorStore:
     """Minimal stand-in for LangChain's QdrantVectorStore."""
 
-    def __init__(self, *, collection_name: str, **_: object) -> None:  # noqa: D401
+    def __init__(self, *, collection_name: str, **_: object) -> None:
         self.collection_name = collection_name
         self.add_calls: list[tuple[list[Document], list[str]]] = []
         self.search_return: list[tuple[Document, float]] = []

@@ -70,7 +70,7 @@ class SearchResultCache:
             return None
 
         except (ConnectionError, RuntimeError, TimeoutError) as e:
-            logger.error("Error retrieving search results from cache: %s", e)
+            logger.exception("Error retrieving search results from cache: %s", e)
             return None
 
     # pylint: disable=too-many-arguments,too-many-positional-arguments
@@ -139,7 +139,7 @@ class SearchResultCache:
             return success
 
         except (ConnectionError, OSError, PermissionError) as e:
-            logger.error("Error caching search results: %s", e)
+            logger.exception("Error caching search results: %s", e)
             return False
 
     async def invalidate_by_collection(self, collection_name: str) -> int:
@@ -170,7 +170,7 @@ class SearchResultCache:
             return deleted_count
 
         except (ConnectionError, OSError, PermissionError) as e:
-            logger.error("Error invalidating collection cache: %s", e)
+            logger.exception("Error invalidating collection cache: %s", e)
             return 0
 
     async def invalidate_by_query_pattern(self, query_pattern: str) -> int:
@@ -203,7 +203,7 @@ class SearchResultCache:
             return 0
 
         except (ConnectionError, RuntimeError, TimeoutError) as e:
-            logger.error("Error invalidating query pattern cache: %s", e)
+            logger.exception("Error invalidating query pattern cache: %s", e)
             return 0
 
     async def get_popular_queries(self, limit: int = 10) -> list[tuple[str, int]]:
@@ -239,7 +239,7 @@ class SearchResultCache:
             return []
 
         except (ConnectionError, RuntimeError, TimeoutError) as e:
-            logger.error("Error getting popular queries: %s", e)
+            logger.exception("Error getting popular queries: %s", e)
             return []
 
     async def cleanup_expired_popularity(self) -> int:
@@ -268,7 +268,7 @@ class SearchResultCache:
             return 0
 
         except (ConnectionError, RuntimeError, TimeoutError) as e:
-            logger.error("Error cleaning up expired popularity: %s", e)
+            logger.exception("Error cleaning up expired popularity: %s", e)
             return 0
 
     async def get_cache_stats(self) -> dict[str, Any]:
@@ -311,7 +311,7 @@ class SearchResultCache:
             return stats
 
         except (ConnectionError, RuntimeError, TimeoutError) as e:
-            logger.error("Error getting cache stats: %s", e)
+            logger.exception("Error getting cache stats: %s", e)
             return {"error": str(e)}
 
     async def get_stats(self) -> dict[str, Any]:
@@ -447,5 +447,5 @@ class SearchResultCache:
             return warmed_count
 
         except (ConnectionError, RuntimeError, TimeoutError) as e:
-            logger.error("Error in search cache warming: %s", e)
+            logger.exception("Error in search cache warming: %s", e)
             return warmed_count

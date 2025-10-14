@@ -42,7 +42,7 @@ class FakeCache:
 async def _noop_increment(_self, _query: str) -> None:
     """No-op increment function for monkeypatching."""
 
-    return None
+    return
 
 
 async def _zero_popularity(_self, _query: str) -> int:

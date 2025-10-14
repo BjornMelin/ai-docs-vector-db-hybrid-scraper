@@ -17,7 +17,7 @@ class _IntegrationRequestHandler(BaseHTTPRequestHandler):
 
     server_version = "Crawl4AITestServer/0.1"
 
-    def do_GET(self) -> None:  # noqa: D401
+    def do_GET(self) -> None:
         path = self.path.split("?", 1)[0]
         if path == "/static":
             self._send_html(
@@ -85,7 +85,7 @@ class _IntegrationRequestHandler(BaseHTTPRequestHandler):
         else:
             self.send_error(HTTPStatus.NOT_FOUND)
 
-    def log_message(self, format: str, *args):  # noqa: D401
+    def log_message(self, format: str, *args):
         return
 
     def _send_html(self, html: str) -> None:

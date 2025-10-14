@@ -57,19 +57,19 @@ class VectorDBSearchBehavior(TaskSet):
     @task(5)
     def search_documents(self):
         """Primary search operation with various parameters."""
-        query = random.choice(self.search_queries)  # noqa: S311
-        collection = random.choice(self.collections)  # noqa: S311
-        filters = random.choice(self.search_filters)  # noqa: S311
+        query = random.choice(self.search_queries)
+        collection = random.choice(self.collections)
+        filters = random.choice(self.search_filters)
 
         with self.client.post(
             "/search_documents",
             json={
                 "query": query,
                 "collection": collection,
-                "limit": random.randint(5, 20),  # noqa: S311
-                "score_threshold": random.uniform(0.6, 0.8),  # noqa: S311
-                "search_type": random.choice(["dense", "sparse", "hybrid"]),  # noqa: S311
-                "enable_reranking": random.choice([True, False]),  # noqa: S311
+                "limit": random.randint(5, 20),
+                "score_threshold": random.uniform(0.6, 0.8),
+                "search_type": random.choice(["dense", "sparse", "hybrid"]),
+                "enable_reranking": random.choice([True, False]),
                 "filters": filters,
                 "include_metadata": True,
             },
@@ -91,16 +91,16 @@ class VectorDBSearchBehavior(TaskSet):
     def search_similar(self):
         """Similar document search."""
         # Use a known document ID or generate one
-        query_id = f"doc_{random.randint(1, 1000)}"  # noqa: S311
-        collection = random.choice(self.collections)  # noqa: S311
+        query_id = f"doc_{random.randint(1, 1000)}"
+        collection = random.choice(self.collections)
 
         with self.client.post(
             "/search_similar",
             json={
                 "query_id": query_id,
                 "collection": collection,
-                "limit": random.randint(5, 15),  # noqa: S311
-                "score_threshold": random.uniform(0.7, 0.9),  # noqa: S311
+                "limit": random.randint(5, 15),
+                "score_threshold": random.uniform(0.7, 0.9),
             },
             catch_response=True,
             name="search_similar",
@@ -119,22 +119,22 @@ class VectorDBSearchBehavior(TaskSet):
         with self.client.post(
             "/search_advanced",
             json={
-                "query": random.choice(self.search_queries),  # noqa: S311
-                "collections": random.sample(self.collections, random.randint(1, 3)),  # noqa: S311
-                "limit": random.randint(10, 30),  # noqa: S311
+                "query": random.choice(self.search_queries),
+                "collections": random.sample(self.collections, random.randint(1, 3)),
+                "limit": random.randint(10, 30),
                 "search_config": {
-                    "dense_weight": random.uniform(0.3, 0.7),  # noqa: S311
-                    "sparse_weight": random.uniform(0.2, 0.5),  # noqa: S311
-                    "enable_mmr": random.choice([True, False]),  # noqa: S311
-                    "mmr_lambda": random.uniform(0.5, 0.8),  # noqa: S311
+                    "dense_weight": random.uniform(0.3, 0.7),
+                    "sparse_weight": random.uniform(0.2, 0.5),
+                    "enable_mmr": random.choice([True, False]),
+                    "mmr_lambda": random.uniform(0.5, 0.8),
                 },
                 "rerank_config": {
                     "enabled": True,
-                    "top_k": random.randint(50, 100),  # noqa: S311
+                    "top_k": random.randint(50, 100),
                 },
                 "filters": {
-                    "metadata.source": random.choice(["github", "docs", "blog"]),  # noqa: S311
-                    "metadata.difficulty": random.choice(  # noqa: S311
+                    "metadata.source": random.choice(["github", "docs", "blog"]),
+                    "metadata.difficulty": random.choice(
                         ["beginner", "intermediate", "advanced"]
                     ),
                 },
@@ -187,25 +187,25 @@ class VectorDBDocumentBehavior(TaskSet):
     @task(3)
     def add_document(self):
         """Add a document to the collection."""
-        url = random.choice(self.test_urls)  # noqa: S311
-        project = random.choice(self.projects)  # noqa: S311
+        url = random.choice(self.test_urls)
+        project = random.choice(self.projects)
 
         with self.client.post(
             "/add_document",
             json={
                 "url": url,
                 "project": project,
-                "collection": random.choice(["documentation", "tutorials"]),  # noqa: S311
+                "collection": random.choice(["documentation", "tutorials"]),
                 "metadata": {
                     "source": "load_test",
                     "timestamp": time.time(),
-                    "category": random.choice(["tutorial", "reference", "guide"]),  # noqa: S311
-                    "difficulty": random.choice(  # noqa: S311
+                    "category": random.choice(["tutorial", "reference", "guide"]),
+                    "difficulty": random.choice(
                         ["beginner", "intermediate", "advanced"]
                     ),
                 },
-                "chunking_strategy": random.choice(["basic", "enhanced", "ast_based"]),  # noqa: S311
-                "force_reprocess": random.choice([True, False]),  # noqa: S311
+                "chunking_strategy": random.choice(["basic", "enhanced", "ast_based"]),
+                "force_reprocess": random.choice([True, False]),
             },
             catch_response=True,
             name="add_document",
@@ -221,8 +221,8 @@ class VectorDBDocumentBehavior(TaskSet):
     @task(1)
     def update_document(self):
         """Update an existing document."""
-        url = random.choice(self.test_urls)  # noqa: S311
-        project = random.choice(self.projects)  # noqa: S311
+        url = random.choice(self.test_urls)
+        project = random.choice(self.projects)
 
         with self.client.post(
             "/update_document",
@@ -231,7 +231,7 @@ class VectorDBDocumentBehavior(TaskSet):
                 "project": project,
                 "metadata": {
                     "updated_at": time.time(),
-                    "version": random.randint(1, 10),  # noqa: S311
+                    "version": random.randint(1, 10),
                     "load_test_update": True,
                 },
                 "force_reprocess": True,
@@ -250,8 +250,8 @@ class VectorDBDocumentBehavior(TaskSet):
     @task(1)
     def delete_document(self):
         """Delete a document."""
-        url = random.choice(self.test_urls)  # noqa: S311
-        project = random.choice(self.projects)  # noqa: S311
+        url = random.choice(self.test_urls)
+        project = random.choice(self.projects)
 
         with self.client.post(
             "/delete_document",
@@ -303,9 +303,9 @@ class VectorDBEmbeddingBehavior(TaskSet):
     @task(4)
     def generate_embeddings(self):
         """Generate embeddings for text."""
-        text = random.choice(self.test_texts)  # noqa: S311
-        provider = random.choice(self.providers)  # noqa: S311
-        model = random.choice(self.models[provider])  # noqa: S311
+        text = random.choice(self.test_texts)
+        provider = random.choice(self.providers)
+        model = random.choice(self.models[provider])
 
         with self.client.post(
             "/generate_embeddings",
@@ -313,7 +313,7 @@ class VectorDBEmbeddingBehavior(TaskSet):
                 "text": text,
                 "provider": provider,
                 "model": model,
-                "normalize": random.choice([True, False]),  # noqa: S311
+                "normalize": random.choice([True, False]),
             },
             catch_response=True,
             name="generate_embeddings",
@@ -332,9 +332,9 @@ class VectorDBEmbeddingBehavior(TaskSet):
     @task(2)
     def batch_generate_embeddings(self):
         """Generate embeddings for multiple texts."""
-        texts = random.sample(self.test_texts, random.randint(2, 5))  # noqa: S311
-        provider = random.choice(self.providers)  # noqa: S311
-        model = random.choice(self.models[provider])  # noqa: S311
+        texts = random.sample(self.test_texts, random.randint(2, 5))
+        provider = random.choice(self.providers)
+        model = random.choice(self.models[provider])
 
         with self.client.post(
             "/batch_generate_embeddings",
@@ -342,7 +342,7 @@ class VectorDBEmbeddingBehavior(TaskSet):
                 "texts": texts,
                 "provider": provider,
                 "model": model,
-                "batch_size": random.randint(2, 10),  # noqa: S311
+                "batch_size": random.randint(2, 10),
             },
             catch_response=True,
             name="batch_generate_embeddings",
@@ -464,7 +464,7 @@ class AdminUser(HttpUser):
     @task(1)
     def cache_operations(self):
         """Perform cache operations."""
-        sample_queries = random.sample(self.search_queries, k=3)  # noqa: S311
+        sample_queries = random.sample(self.search_queries, k=3)
         with self.client.post(
             "/api/v1/cache/warm",
             json={"embedding_queries": sample_queries},

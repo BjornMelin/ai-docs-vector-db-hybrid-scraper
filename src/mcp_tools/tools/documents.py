@@ -358,7 +358,7 @@ def register_tools(
                     f"quality: {getattr(result, 'quality_score', 0.0):.2f})"
                 )
             await ctx.info(message)
-        except Exception as exc:  # noqa: BLE001 - surface unexpected errors to MCP clients
+        except Exception as exc:
             await ctx.error(f"Failed to process document {doc_id}: {exc}")
             logger.exception("Failed to add document")
             raise

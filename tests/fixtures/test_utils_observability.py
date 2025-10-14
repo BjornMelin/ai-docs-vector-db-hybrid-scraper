@@ -26,7 +26,7 @@ class TraceTestHelper:
         tags: dict[str, Any] | None = None,
     ) -> TraceSpan:
         """Create a child span for a given parent span."""
-        child_span = TraceSpan(
+        return TraceSpan(
             trace_id=parent_span.trace_id,
             span_id=str(uuid.uuid4()),
             parent_span_id=parent_span.span_id,
@@ -37,7 +37,6 @@ class TraceTestHelper:
             tags=tags or {},
             logs=[],
         )
-        return child_span
 
     @staticmethod
     def calculate_trace_duration(spans: list[TraceSpan]) -> float:

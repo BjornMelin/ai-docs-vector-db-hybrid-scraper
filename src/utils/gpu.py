@@ -13,10 +13,10 @@ from typing import Any, TypeVar, cast
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    "enable_tf32",
     "get_gpu_device",
     "get_gpu_memory_info",
     "get_gpu_stats",
-    "enable_tf32",
     "get_torch_device",
     "is_gpu_available",
     "move_to_device",
@@ -36,7 +36,7 @@ def _load_torch() -> Any | None:
         return None
     try:
         return import_module("torch")
-    except Exception as exc:  # noqa: BLE001 - torch import failures vary by platform
+    except Exception as exc:
         logger.info("Torch import failed: %s", exc)
         return None
 

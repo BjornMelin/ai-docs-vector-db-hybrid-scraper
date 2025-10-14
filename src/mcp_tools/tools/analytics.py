@@ -90,7 +90,7 @@ def register_tools(
         payload: dict[str, Any] = {
             "timestamp": _timestamp(),
             "collections": collection_stats,
-        }  # noqa: E501
+        }
 
         if request.include_performance:
             payload["performance"] = {
@@ -107,7 +107,7 @@ def register_tools(
         if ctx:
             await ctx.info(
                 f"Analytics generated for {len(collection_stats)} collections"
-            )  # noqa: E501
+            )
         return AnalyticsResponse(**payload)
 
     @mcp.tool()

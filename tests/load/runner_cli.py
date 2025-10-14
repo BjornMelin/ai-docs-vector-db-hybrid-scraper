@@ -293,7 +293,7 @@ def main() -> None:
     except KeyboardInterrupt as exc:
         logger.info("Test interrupted by user")
         raise SystemExit(1) from exc
-    except Exception as exc:  # noqa: BLE001 - capture for structured logging
+    except Exception as exc:
         logger.exception("Test execution failed")
         if args.verbose:
             traceback.print_exc()

@@ -52,7 +52,7 @@ def register_tools(mcp, crawl_manager: Any | None = None) -> None:
                 timeout_ms=timeout_ms,
                 actions=custom_actions,
             )
-        except Exception as exc:  # noqa: BLE001 - log and re-raise for MCP
+        except Exception as exc:
             logger.exception("Enhanced crawl failed for %s", validated_url)
             if ctx:
                 await ctx.error(f"Enhanced crawl failed: {exc}")

@@ -202,4 +202,4 @@ class BulkheadMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
 
-__all__ = ["TimeoutMiddleware", "BulkheadMiddleware", "CircuitState", "TimeoutConfig"]
+__all__ = ["BulkheadMiddleware", "CircuitState", "TimeoutConfig", "TimeoutMiddleware"]

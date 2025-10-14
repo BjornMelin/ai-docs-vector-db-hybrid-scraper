@@ -58,17 +58,17 @@ class StubDiscovery:
         self._capabilities = capabilities
         self.refresh_count = 0
 
-    async def refresh(self, *, force: bool = False) -> None:  # noqa: D401
+    async def refresh(self, *, force: bool = False) -> None:
         self.refresh_count += 1
 
-    def get_capabilities(self) -> tuple[Any, ...]:  # noqa: D401
+    def get_capabilities(self) -> tuple[Any, ...]:
         return tuple(self._capabilities)
 
 
 class StubToolService:
     async def execute_tool(
         self, tool_name, *, arguments, server_name, read_timeout_ms=None
-    ):  # noqa: D401, ANN001
+    ):
         return ToolExecutionResult(
             tool_name=tool_name,
             server_name=server_name,
@@ -82,7 +82,7 @@ class StubToolService:
 
 
 class StubRetrievalHelper:
-    async def fetch(self, query):  # noqa: D401, ANN001
+    async def fetch(self, query):
         return (
             RetrievedDocument(
                 id="doc-1",
@@ -94,7 +94,7 @@ class StubRetrievalHelper:
 
 
 class FailingToolService:
-    async def execute_tool(self, *_, **__):  # noqa: D401, ANN001
+    async def execute_tool(self, *_, **__):
         raise ToolExecutionFailure("boom")
 
 
@@ -109,7 +109,7 @@ class SlowToolService:
         arguments,
         server_name,
         read_timeout_ms=None,
-    ):  # noqa: ANN001
+    ):
         try:
             await asyncio.sleep(0.05)
             return ToolExecutionResult(
@@ -255,11 +255,11 @@ async def test_discovery_failure_returns_structured_error() -> None:
         def __init__(self) -> None:
             self.calls = 0
 
-        async def refresh(self, *, force: bool = False) -> None:  # noqa: D401
+        async def refresh(self, *, force: bool = False) -> None:
             self.calls += 1
             raise RuntimeError("discovery unavailable")
 
-        def get_capabilities(self) -> tuple[Any, ...]:  # noqa: D401
+        def get_capabilities(self) -> tuple[Any, ...]:
             return ()
 
     discovery = BrokenDiscovery()

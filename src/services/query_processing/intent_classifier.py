@@ -70,4 +70,4 @@ class QueryIntentClassifier:
         return QueryIntentClassification(primary_intent="general", confidence=0.3)
 
 
-__all__ = ["QueryIntentClassifier", "QueryIntentClassification"]
+__all__ = ["QueryIntentClassification", "QueryIntentClassifier"]

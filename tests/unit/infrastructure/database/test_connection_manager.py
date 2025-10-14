@@ -28,7 +28,7 @@ class _DummySession:
 
 
 class _FailingSession(_DummySession):
-    async def commit(self) -> None:  # noqa: D401 - intentionally raise for failure path
+    async def commit(self) -> None:
         raise RuntimeError("commit failed")
 
 

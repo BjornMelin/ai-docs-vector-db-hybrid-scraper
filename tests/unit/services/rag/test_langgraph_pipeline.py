@@ -96,8 +96,8 @@ class DummyGenerator(RAGGenerator):
             raise RuntimeError("DummyGenerator must be initialized before use")
         DummyGenerator.call_count += 1
         document = None
-        if isinstance(self._retriever, _StaticDocumentRetriever):  # noqa: SLF001
-            document = next(iter(self._retriever._documents), None)  # noqa: SLF001
+        if isinstance(self._retriever, _StaticDocumentRetriever):
+            document = next(iter(self._retriever._documents), None)
         source = SourceAttribution(
             source_id=str(document.metadata.get("source_id", "missing"))
             if document
@@ -246,13 +246,14 @@ def test_rag_tracing_callback_records_token_usage() -> None:
     callback.on_llm_start({"name": "gpt-4o-mini"}, ["prompt"], run_id="run-1")
 
     class _Response:
-        llm_output = {
-            "token_usage": {
-                "prompt_tokens": 5,
-                "completion_tokens": 7,
-                "total_tokens": 12,
+        def __init__(self) -> None:
+            self.llm_output = {
+                "token_usage": {
+                    "prompt_tokens": 5,
+                    "completion_tokens": 7,
+                    "total_tokens": 12,
+                }
             }
-        }
 
     callback.on_llm_end(_Response(), run_id="run-1")
 

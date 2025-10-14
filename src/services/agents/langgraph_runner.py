@@ -359,11 +359,10 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
                     "tool_count": len(state.get("tool_outputs", []) or []),
                     "error_count": len(errors),
                 }
-                timeout_state = cast(
+                return cast(
                     AgenticGraphState,
                     {**state, "errors": errors, "metrics": metrics, "success": False},
                 )
-                return timeout_state
 
     def _build_graph(self):
         graph = StateGraph(AgenticGraphState)

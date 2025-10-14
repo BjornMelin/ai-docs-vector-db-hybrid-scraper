@@ -270,4 +270,4 @@ def _estimate_tokens(content: str) -> int:
     return max(1, len(content.split()))
 
 
-__all__ = ("VectorServiceRetriever", "CompressionStats")
+__all__ = ("CompressionStats", "VectorServiceRetriever")

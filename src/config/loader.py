@@ -238,7 +238,7 @@ _ACTIVE_SETTINGS: Settings | None = None
 def get_settings() -> Settings:
     """Return the cached application settings instance."""
 
-    global _ACTIVE_SETTINGS  # noqa: PLW0603 - intentional module-level cache
+    global _ACTIVE_SETTINGS
     if _ACTIVE_SETTINGS is None:
         _ACTIVE_SETTINGS = load_settings()
     return _ACTIVE_SETTINGS
@@ -259,7 +259,7 @@ def refresh_settings(
         The newly cached settings instance.
     """
 
-    global _ACTIVE_SETTINGS  # noqa: PLW0603 - intentional module-level cache
+    global _ACTIVE_SETTINGS
     if settings is not None and overrides:
         msg = "Provide either a concrete settings instance or overrides, not both."
         raise ValueError(msg)
@@ -341,7 +341,7 @@ __all__ = [
     "ensure_runtime_directories",
     "get_settings",
     "load_settings",
-    "refresh_settings",
     "load_settings_from_file",
+    "refresh_settings",
     "validate_settings_payload",
 ]

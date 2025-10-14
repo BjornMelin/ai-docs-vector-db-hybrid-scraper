@@ -242,7 +242,7 @@ def main() -> int:
             json.dumps(payload, indent=args.indent), encoding="utf-8"
         )
     else:
-        print(json.dumps(payload, indent=args.indent))  # noqa: T201
+        print(json.dumps(payload, indent=args.indent))
 
     if report.status == "failed" and not args.allow_failures:
         return 1

@@ -17,7 +17,7 @@ def _install_agents_stub() -> None:
 
     module = types.ModuleType("src.services.agents")
 
-    class QueryOrchestrator:  # noqa: D401 - lightweight stub
+    class QueryOrchestrator:
         """Minimal query orchestrator stub used in tests."""
 
         def __init__(self) -> None:

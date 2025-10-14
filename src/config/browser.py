@@ -207,8 +207,8 @@ __all__ = [
     "Crawl4AISettings",
     "FirecrawlSettings",
     "LightweightSettings",
+    "PlaywrightSettings",
     "RateLimitConfig",
     "RouterSettings",
     "StealthMode",
-    "PlaywrightSettings",
 ]

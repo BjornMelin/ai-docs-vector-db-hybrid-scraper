@@ -226,7 +226,7 @@ class TestBreakingPoints:
                     0, (current_users - self.error_threshold) / 1000
                 )
 
-                if random.random() < error_probability:  # noqa: S311
+                if random.random() < error_probability:
                     msg = f"Service overloaded at {current_users} users"
                     raise TestError(msg)
 

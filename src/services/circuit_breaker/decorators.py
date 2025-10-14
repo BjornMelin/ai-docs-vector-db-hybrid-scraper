@@ -155,6 +155,7 @@ def tenacity_circuit_breaker(  # pylint: disable=too-many-arguments,too-many-pos
                         *args,
                         **kwargs,
                     )
+            return None
 
         async def _status() -> dict[str, Any]:
             manager = await _get_circuit_breaker_manager()

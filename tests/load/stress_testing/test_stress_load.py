@@ -396,7 +396,7 @@ class TestStressLoad:
             _ = sum(i * i for i in range(1000))
 
         # Simulate I/O wait
-        return asyncio.sleep(random.uniform(0.05, 0.5))  # noqa: S311
+        return asyncio.sleep(random.uniform(0.05, 0.5))
 
     def _analyze_degradation(self, step_metrics: list[dict]) -> dict:
         """Analyze system degradation pattern."""

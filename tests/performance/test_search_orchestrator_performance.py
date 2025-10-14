@@ -50,7 +50,7 @@ class _StubPipeline:
     def __init__(self) -> None:
         self.invocations = 0
 
-    async def run(self, **_: object) -> dict[str, object]:  # noqa: D401 signature
+    async def run(self, **_: object) -> dict[str, object]:
         self.invocations += 1
         await asyncio.sleep(0)  # Yield control without adding measurable latency.
         return {

@@ -137,14 +137,14 @@ def apply_defaults(app: Starlette) -> None:
 
 
 __all__ = [
+    "CompressionMiddleware",
     "MiddlewareSpec",
+    "PerformanceMiddleware",
+    "SecurityMiddleware",
+    "TimeoutMiddleware",
     "apply_defaults",
     "apply_named_stack",
     "get_correlation_id",
-    "PerformanceMiddleware",
-    "TimeoutMiddleware",
-    "SecurityMiddleware",
-    "CompressionMiddleware",
 ]
 
 if "brotli" in _CLASS_REGISTRY:

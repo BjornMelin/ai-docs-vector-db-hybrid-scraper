@@ -16,7 +16,7 @@ from weakref import WeakSet
 import click
 
 
-__all__ = ["async_to_sync_click", "async_command"]
+__all__ = ["async_command", "async_to_sync_click"]
 
 _wrapped_cli_groups: WeakSet[click.Group] = WeakSet()
 

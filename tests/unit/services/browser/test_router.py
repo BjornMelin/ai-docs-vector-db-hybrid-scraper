@@ -308,7 +308,7 @@ async def test_router_handles_rate_limited_provider(
         },
     )
 
-    async def fake_acquire(provider: ProviderKind, deadline: float) -> bool:  # noqa: ARG001
+    async def fake_acquire(provider: ProviderKind, deadline: float) -> bool:
         return provider is not ProviderKind.LIGHTWEIGHT
 
     monkeypatch.setattr(router, "_acquire_limiter", fake_acquire)

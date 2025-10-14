@@ -72,7 +72,7 @@ def calculate_diff(base: Mapping[str, Any], data: Mapping[str, Any]) -> dict[str
             for key, value in frame.candidate.items():
                 stack.append(
                     DiffFrame(
-                        path=frame.path + (key,),
+                        path=(*frame.path, key),
                         base_value=base_branch.get(key),
                         candidate=value,
                     )
@@ -90,6 +90,6 @@ def calculate_diff(base: Mapping[str, Any], data: Mapping[str, Any]) -> dict[str
 
 __all__ = [
     "apply_overrides",
-    "merge_overrides",
     "calculate_diff",
+    "merge_overrides",
 ]

@@ -105,7 +105,7 @@ class TestSimpleValidators:
 
     def test_validate_percentage(self) -> None:
         assert validate_percentage(0.25, field_name="confidence") == 0.25
-        with pytest.raises(ValueError, match="confidence must be between 0.0 and 1.0"):
+        with pytest.raises(ValueError, match=r"confidence must be between 0.0 and 1.0"):
             validate_percentage(1.5, field_name="confidence")
 
     def test_validate_cache_ttl_bounds(self) -> None:
@@ -159,10 +159,10 @@ class TestChunkAndWeightValidators:
     def test_validate_scoring_weights(self) -> None:
         validate_scoring_weights(0.6, 0.3, 0.1)
         with pytest.raises(
-            ValueError, match="Scoring weights must sum to 1.0, got 1.5"
+            ValueError, match=r"Scoring weights must sum to 1.0, got 1.5"
         ):
             validate_scoring_weights(0.5, 0.5, 0.5)
-        with pytest.raises(ValueError, match="Scoring weights must sum to 1.0"):
+        with pytest.raises(ValueError, match=r"Scoring weights must sum to 1.0"):
             validate_scoring_weights(0.2, 0.2, 0.2)
 
 

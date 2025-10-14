@@ -191,12 +191,11 @@ class VectorDBManager:
         try:
             await self.initialize()
             vector_service = await self.get_vector_store_service()
-            records = await vector_service.search_documents(
+            return await vector_service.search_documents(
                 collection_name,
                 query,
                 limit=limit,
             )
-            return records
         except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             console.print(f"❌ Error searching collection: {e}", style="red")
             return []
@@ -213,13 +212,12 @@ class VectorDBManager:
         try:
             await self.initialize()
             vector_service = await self.get_vector_store_service()
-            records = await vector_service.search_vector(
+            return await vector_service.search_vector(
                 collection_name,
                 query_vector,
                 limit=limit,
                 filters=filters,
             )
-            return records
         except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             console.print(f"❌ Error searching by vector: {e}", style="red")
             return []

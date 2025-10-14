@@ -115,8 +115,7 @@ class FastEmbedProvider(EmbeddingProvider):
             return await asyncio.to_thread(dense_model.embed_documents, texts)
 
         try:
-            embeddings = await _encode()
-            return embeddings
+            return await _encode()
         except Exception:
             success = False
             raise

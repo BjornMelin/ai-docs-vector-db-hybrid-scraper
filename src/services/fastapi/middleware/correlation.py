@@ -57,4 +57,4 @@ def generate_correlation_id() -> str:
     return str(uuid.uuid4())
 
 
-__all__ = ["get_correlation_id", "set_correlation_id", "generate_correlation_id"]
+__all__ = ["generate_correlation_id", "get_correlation_id", "set_correlation_id"]

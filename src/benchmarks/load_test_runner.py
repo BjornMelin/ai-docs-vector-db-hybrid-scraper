@@ -185,9 +185,7 @@ class LoadTestUser:  # pylint: disable=too-many-instance-attributes
     def _prepare_query(self) -> SearchRequest:
         """Return a cloned query with load-test specific identifiers."""
 
-        query = random.choice(  # noqa: S311 - non-crypto random for load testing
-            self.test_queries
-        ).model_copy()
+        query = random.choice(self.test_queries).model_copy()
         query.user_id = f"load_test_user_{self.user_id}"
         query.session_id = f"load_test_session_{self.user_id}_{int(time.time())}"
         return query
@@ -268,9 +266,7 @@ class LoadTestUser:  # pylint: disable=too-many-instance-attributes
         """Pause between requests using configured think time range."""
 
         think_time = (
-            random.randint(  # noqa: S311 - non-crypto random for load testing
-                self.config.think_time_min_ms, self.config.think_time_max_ms
-            )
+            random.randint(self.config.think_time_min_ms, self.config.think_time_max_ms)
             / 1000.0
         )
         await asyncio.sleep(think_time)

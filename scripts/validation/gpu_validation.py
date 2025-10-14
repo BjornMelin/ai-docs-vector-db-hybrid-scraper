@@ -239,7 +239,7 @@ def run_gpu_validation(
     try:
         torch_module = torch_module or importlib.import_module("torch")
     except ModuleNotFoundError as exc:
-        report = ValidationReport(
+        return ValidationReport(
             status="failed",
             python_version=platform.python_version(),
             platform=platform.platform(),
@@ -250,7 +250,6 @@ def run_gpu_validation(
             library_versions={},
             checks=[CheckResult("torch-import", "failed", str(exc))],
         )
-        return report
 
     torch_checks, metadata = _torch_device_checks(torch_module, require_gpu=require_gpu)
     checks.extend(torch_checks)
@@ -288,7 +287,7 @@ def run_gpu_validation(
     else:
         status = "passed"
 
-    report = ValidationReport(
+    return ValidationReport(
         status=status,
         python_version=platform.python_version(),
         platform=platform.platform(),
@@ -299,14 +298,13 @@ def run_gpu_validation(
         library_versions=library_versions,
         checks=checks,
     )
-    return report
 
 
 def _write_report(path: Path | None, payload: dict[str, Any], indent: int) -> None:
     """Write the validation report to a file or stdout."""
 
     if path is None:
-        print(json.dumps(payload, indent=indent))  # noqa: T201
+        print(json.dumps(payload, indent=indent))
         return
 
     path.parent.mkdir(parents=True, exist_ok=True)

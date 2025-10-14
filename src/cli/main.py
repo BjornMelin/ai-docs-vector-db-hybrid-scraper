@@ -213,7 +213,7 @@ def status(ctx: click.Context):
     try:
         with rich_cli.console.status("[bold green]Checking system status..."):
             summary = asyncio.run(_collect_health_summary(config))
-    except Exception as exc:  # noqa: BLE001 - surfaced as CLI error message
+    except Exception as exc:
         rich_cli.show_error("Health checks failed", str(exc))
         return
 

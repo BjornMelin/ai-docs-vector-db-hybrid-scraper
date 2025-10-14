@@ -736,7 +736,7 @@ class TestSystemMonitoring:
                     current_latency = self.base_latency * self.degradation_factor
 
                     # Add some randomness
-                    actual_latency = current_latency * random.uniform(0.8, 1.5)  # noqa: S311
+                    actual_latency = current_latency * random.uniform(0.8, 1.5)
 
                     start_time = time.perf_counter()
                     await asyncio.sleep(actual_latency)
@@ -750,7 +750,7 @@ class TestSystemMonitoring:
 
                     # Introduce errors as performance degrades
                     error_probability = max(0, (self.degradation_factor - 2.0) / 10)
-                    if random.random() < error_probability:  # noqa: S311
+                    if random.random() < error_probability:
                         msg = "Service degraded - operation failed"
                         raise TestError(msg)
 

@@ -270,7 +270,7 @@ class HNSWOptimizer(BaseService):
         except (ValueError, TypeError) as exc:
             self._log_or_propagate(exc, log_context)
             return None
-        except Exception as exc:  # noqa: BLE001 - fallback for client errors
+        except Exception as exc:
             self._log_or_propagate(exc, log_context)
             return None
 
@@ -657,7 +657,7 @@ class HNSWOptimizer(BaseService):
             except (ValueError, ConnectionError, TimeoutError, RuntimeError) as exc:
                 self._log_or_propagate(exc, "Performance test query")
                 continue
-            except Exception as exc:  # noqa: BLE001 - tolerate transport errors
+            except Exception as exc:
                 self._log_or_propagate(exc, "Performance test query")
                 continue
 

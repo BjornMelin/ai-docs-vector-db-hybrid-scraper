@@ -98,9 +98,9 @@ async def track_ai_cost_metrics(  # pylint: disable=too-many-arguments
 
 
 __all__ = [
+    "AITracerDep",
     "ObservabilityConfigDep",
     "ObservabilityServiceDep",
-    "AITracerDep",
     "get_observability_service",
     "record_ai_operation_metrics",
     "track_ai_cost_metrics",

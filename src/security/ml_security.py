@@ -161,7 +161,7 @@ class MLSecurityValidator:
                     message="Input validation passed",
                 )
             )
-        except Exception as exc:  # noqa: BLE001 - broad due to validation surface
+        except Exception as exc:
             logger.exception("Input validation error")
             return self._record_result(
                 SecurityCheckResult(
@@ -234,7 +234,7 @@ class MLSecurityValidator:
                     severity="info",
                 )
             )
-        except Exception as exc:  # noqa: BLE001 - capture unexpected subprocess errors
+        except Exception as exc:
             logger.exception("Unexpected dependency check error")
             return self._record_result(
                 SecurityCheckResult(
@@ -372,7 +372,7 @@ class MLSecurityValidator:
                     severity="info",
                 )
             )
-        except Exception:  # noqa: BLE001 - safeguard against subprocess errors
+        except Exception:
             logger.exception("Container scan failed")
             return self._record_result(
                 SecurityCheckResult(
@@ -458,7 +458,7 @@ class MLSecurityValidator:
 
         try:
             parsed = urlparse(url.strip())
-        except Exception as exc:  # noqa: BLE001 - propagate security context
+        except Exception as exc:
             msg = f"Invalid URL format: {exc}"
             raise SecurityError(msg) from exc
 

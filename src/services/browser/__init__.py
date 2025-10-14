@@ -5,8 +5,8 @@ from .router import BrowserRouter
 
 
 __all__ = [
-    "BrowserRouter",
     "BrowserResult",
+    "BrowserRouter",
     "ProviderKind",
     "ScrapeRequest",
 ]

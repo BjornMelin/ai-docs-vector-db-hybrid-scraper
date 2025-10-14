@@ -10,9 +10,9 @@ from types import ModuleType
 
 
 __all__ = [
+    "load_content_intelligence_module",
     "register_module",
     "stub_content_intelligence_dependencies",
-    "load_content_intelligence_module",
 ]
 
 ROOT_PATH = Path(__file__).resolve().parents[4]

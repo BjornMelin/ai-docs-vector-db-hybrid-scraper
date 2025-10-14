@@ -806,6 +806,7 @@ class DocumentationSite(BaseModel):
 
 
 __all__ = [
+    "AgenticConfig",
     "CacheConfig",
     "CacheType",
     "ChunkingConfig",
@@ -821,7 +822,6 @@ __all__ = [
     "EmbeddingModel",
     "EmbeddingProvider",
     "Environment",
-    "AgenticConfig",
     "FastEmbedConfig",
     "FusionAlgorithm",
     "HyDEConfig",

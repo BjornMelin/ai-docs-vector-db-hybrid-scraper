@@ -269,12 +269,11 @@ def _create_content_intelligence_service(
         )
         return None
 
-    service = service_cls(
+    return service_cls(
         config=config,
         embedding_manager=embedding_manager,
         cache_manager=cache_manager,
     )
-    return service
 
 
 def _create_browser_manager(config: Any) -> Any | None:

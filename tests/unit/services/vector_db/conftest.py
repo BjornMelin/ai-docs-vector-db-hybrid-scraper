@@ -22,10 +22,10 @@ from src.services.vector_db.types import CollectionSchema, TextDocument
 class _DenseEmbeddingStub:
     """Deterministic FastEmbed replacement for unit tests."""
 
-    def __init__(self, model_name: str, **_: object) -> None:  # noqa: D401
+    def __init__(self, model_name: str, **_: object) -> None:
         self.model_name = model_name
 
-    def embed_query(self, text: str) -> list[float]:  # noqa: D401, ARG002
+    def embed_query(self, text: str) -> list[float]:
         return [1.0, 2.0, 3.0]
 
     def embed_documents(self, texts: Sequence[str]) -> list[list[float]]:
@@ -35,10 +35,10 @@ class _DenseEmbeddingStub:
 class _SparseEmbeddingStub:
     """Sparse FastEmbed replacement returning fixed coordinates."""
 
-    def __init__(self, model_name: str, **_: object) -> None:  # noqa: D401
+    def __init__(self, model_name: str, **_: object) -> None:
         self.model_name = model_name
 
-    def embed_query(self, text: str) -> SimpleNamespace:  # noqa: D401, ARG002
+    def embed_query(self, text: str) -> SimpleNamespace:
         return SimpleNamespace(indices=[0, 1], values=[1.0, 0.5])
 
 
@@ -207,11 +207,11 @@ async def initialized_vector_store_service(
 
 __all__ = [
     "build_vector_store_service",
-    "initialize_vector_store_service",
-    "qdrant_client_mock",
-    "vector_container",
     "collection_schema",
-    "sample_documents",
     "config_stub",
+    "initialize_vector_store_service",
     "initialized_vector_store_service",
+    "qdrant_client_mock",
+    "sample_documents",
+    "vector_container",
 ]

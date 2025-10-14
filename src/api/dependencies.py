@@ -22,8 +22,7 @@ def get_app_container_from_request(request: Request) -> ApplicationContainer:
         ApplicationContainer: The dependency injector container bound to the app.
     """
 
-    container = get_app_container(request.app)
-    return container
+    return get_app_container(request.app)
 
 
 async def get_vector_service_dependency() -> VectorStoreService:

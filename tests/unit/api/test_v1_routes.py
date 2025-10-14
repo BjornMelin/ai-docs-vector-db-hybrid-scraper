@@ -53,11 +53,11 @@ class _StubVectorService:
         query: str,
         *,
         limit: int,
-        filters: dict[str, Any] | None = None,  # noqa: ARG002 - signature parity
-        group_by: str | None = None,  # noqa: ARG002
-        group_size: int | None = None,  # noqa: ARG002
-        overfetch_multiplier: float | None = None,  # noqa: ARG002
-        normalize_scores: bool | None = None,  # noqa: ARG002
+        filters: dict[str, Any] | None = None,
+        group_by: str | None = None,
+        group_size: int | None = None,
+        overfetch_multiplier: float | None = None,
+        normalize_scores: bool | None = None,
     ) -> list[SearchRecord]:
         if failure := self._failures.get("search_documents"):
             raise failure
@@ -77,7 +77,7 @@ class _StubVectorService:
         vector: list[float],
         *,
         limit: int,
-        filters: dict[str, Any] | None = None,  # noqa: ARG002 - signature parity
+        filters: dict[str, Any] | None = None,
     ) -> list[SearchRecord]:
         if failure := self._failures.get("search_vector"):
             raise failure

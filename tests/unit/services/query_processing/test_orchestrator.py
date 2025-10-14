@@ -150,7 +150,7 @@ async def test_search_with_rag_pipeline(monkeypatch) -> None:
 
     captured: dict[str, Any] = {}
 
-    class DummyPipeline:  # noqa: D401 - simple stub
+    class DummyPipeline:
         """Stub pipeline capturing invocation arguments."""
 
         def __init__(

@@ -207,9 +207,12 @@ def test_json_formatter_includes_context_metadata() -> None:
 def test_json_formatter_serializes_exceptions() -> None:
     """Test that JsonFormatter serializes exceptions."""
 
+    def _raise_test_exception():
+        raise ValueError("boom")
+
     formatter = logging_config.JsonFormatter()
     try:
-        raise ValueError("boom")
+        _raise_test_exception()
     except ValueError as exc:
         record = logging.LogRecord(
             name="test",

@@ -90,4 +90,4 @@ class RetrievalHelper:
         ]
 
 
-__all__ = ["RetrievedDocument", "RetrievalHelper", "RetrievalQuery"]
+__all__ = ["RetrievalHelper", "RetrievalQuery", "RetrievedDocument"]

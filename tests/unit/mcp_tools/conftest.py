@@ -70,7 +70,7 @@ class FakeVectorStoreService:
         count = len(self._docs.get(name, []))
         return {"points_count": count, "vectors": {"size": count}}
 
-    async def ensure_collection(self, schema) -> None:  # noqa: ANN001
+    async def ensure_collection(self, schema) -> None:
         """Ensure collection exists."""
 
         self._docs.setdefault(schema.name, [])

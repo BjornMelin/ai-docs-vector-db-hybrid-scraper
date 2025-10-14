@@ -196,7 +196,7 @@ class CacheManager:
         try:
             result = await distributed.get(cache_key)
         except (ConnectionError, OSError, TimeoutError) as exc:
-            logger.error(
+            logger.exception(
                 "Distributed cache get error for key %s: %s",
                 cache_key,
                 exc,
@@ -244,7 +244,7 @@ class CacheManager:
         try:
             return await distributed.set(cache_key, value, ttl=effective_ttl)
         except (ConnectionError, OSError, TimeoutError) as exc:
-            logger.error(
+            logger.exception(
                 "Distributed cache set error for key %s: %s",
                 cache_key,
                 exc,
@@ -278,7 +278,7 @@ class CacheManager:
         try:
             return await distributed.delete(cache_key)
         except (ConnectionError, OSError, TimeoutError) as exc:
-            logger.error(
+            logger.exception(
                 "Distributed cache delete error for key %s: %s",
                 cache_key,
                 exc,
@@ -425,7 +425,7 @@ class CacheManager:
         try:
             await distributed.close()
         except (ConnectionError, OSError, TimeoutError) as exc:
-            logger.error(
+            logger.exception(
                 "Error closing distributed cache: %s",
                 exc,
                 extra=_log_extra("cache.manager.close"),
@@ -443,7 +443,7 @@ class CacheManager:
                 await distributed.clear()
                 return True
             except (ConnectionError, OSError, TimeoutError) as exc:
-                logger.error(
+                logger.exception(
                     "Distributed cache clear error: %s",
                     exc,
                     extra=_log_extra("cache.manager.clear_all"),
