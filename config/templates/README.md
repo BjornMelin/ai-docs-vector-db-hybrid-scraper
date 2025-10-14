@@ -1,174 +1,79 @@
 # Configuration Templates
 
-This directory contains pre-configured templates for common use cases. Each template is optimized for specific scenarios and can be used as a starting point for your configuration.
+Templates are now composed from a shared baseline (`base.json`) and a compact
+profile index (`profiles.json`). Each profile records metadata plus the
+`Settings` overrides that differ from the baseline defaults defined in
+`src.config.loader.Settings`. The CLI wizard consumes this structure to display
+profiles, preview metadata, and emit validated configurations.
 
-## Available Templates
+## Layout
 
-### 🚀 production.json
+- `base.json` – canonical defaults shared by every profile. The file mirrors the
+  lightweight "minimal" configuration: FastEmbed embeddings, Crawl4AI routing,
+  Prometheus metrics on `/metrics`, and observability disabled by default.
+- `profiles.json` – mapping of profile names to metadata (`description`,
+  `use_case`, `features`) and an `overrides` object. Overrides may be shallow or
+  deeply nested; anything omitted inherits from `base.json` and ultimately from
+  the `Settings` model defaults.
+- `browser-routing-rules.json` – curated router presets for specialised crawling
+  tiers. Copy sections into the `browser.router` block inside a profile override
+  or environment-derived configuration.
 
-**Use Case:** Production deployment with high performance and reliability
+## Available profiles
 
-- Uses OpenAI embeddings for best quality
-- DragonflyDB caching enabled for performance
-- Vector quantization enabled for storage efficiency
-- Security features enabled (API keys, rate limiting)
-- Optimized batch sizes and concurrency settings
+Profiles ship in `profiles.json` with the following intents:
 
-### 🛠️ development.json
+- `minimal` – baseline configuration that mirrors `base.json`.
+- `development` – local debugging with Crawl4AI, headful Playwright, and relaxed
+  router budgets.
+- `production` – OpenAI embeddings, Firecrawl crawling, Dragonfly cache, and
+  OTLP tracing enabled.
+- `personal-use` – single-machine defaults with FastEmbed only and conservative
+  concurrency limits.
+- `local-only` – offline-friendly routing constrained to localhost targets.
+- `testing` – deterministic throttles and metrics disabled for CI pipelines.
 
-**Use Case:** Local development and testing
+## Usage
 
-- Debug mode enabled with verbose logging
-- Uses local FastEmbed for faster iteration
-- DragonflyDB caching disabled (local cache only)
-- Smaller batch sizes for easier debugging
-- Browser not headless for visual debugging
-
-### 🏠 local-only.json
-
-**Use Case:** Privacy-conscious deployment without cloud services
-
-- All processing done locally with FastEmbed
-- No external API dependencies
-- Optimized for single-machine deployment
-- Models cached locally
-- Restricted to localhost connections only
-
-### 🧪 testing.json
-
-**Use Case:** Automated testing and CI/CD pipelines
-
-- Minimal resource usage
-- Caching disabled for test isolation
-- Small batch sizes for fast execution
-- Low timeouts for quick failure detection
-- Single concurrent operations for predictability
-
-### 📄 minimal.json
-
-**Use Case:** Quick start with minimal configuration
-
-- Relies on sensible defaults
-- Only essential settings specified
-- Good starting point for customization
-- Easiest to understand and modify
-
-### 👤 personal-use.json
-
-**Use Case:** Individual developers and personal projects
-
-- Resource-optimized for single-user scenarios
-- 60-80% lower resource usage than production
-- DragonflyDB compression and quantization enabled
-- Ideal for learning, experimentation, and side projects
-- Easy scaling path to production when needed
-
-## How to Use
-
-1. **Copy a template:**
-
-   ```bash
-   # For production deployment
-   cp config/templates/production.json config.json
-   
-   # For personal projects (recommended for individuals)
-   cp config/templates/personal-use.json config.json
-   ```
-
-2. **Set environment variables for sensitive data:**
-
-   ```bash
-   export AI_DOCS__OPENAI__API_KEY=sk-REPLACE-WITH-YOUR-OPENAI-API-KEY
-   export AI_DOCS__FIRECRAWL__API_KEY=fc-REPLACE-WITH-YOUR-FIRECRAWL-KEY
-   ```
-
-3. **Customize as needed:**
-   - Edit the copied `config.json` file
-   - Override specific values via environment variables
-   - Use the config management CLI for validation
-
-4. **Start services (for personal-use template):**
-
-   ```bash
-   # Start with personal-use configuration
-   docker-compose -f docker-compose.personal-use.yml --profile personal-use up -d
-   ```
-
-5. **Validate your configuration:**
-
-   ```bash
-   python -m src.manage_config validate --config-file config.json
-   ```
-
-## Template Selection Guide
-
-Choose your template based on:
-
-| Scenario | Recommended Template | Key Features |
-|----------|---------------------|--------------|
-| Production deployment | `production.json` | High performance, security, monitoring |
-| Local development | `development.json` | Debug features, visual feedback |
-| Privacy requirements | `local-only.json` | No cloud dependencies |
-| CI/CD pipelines | `testing.json` | Fast, isolated, predictable |
-| Getting started | `minimal.json` | Simple, easy to understand |
-| Personal projects | `personal-use.json` | Resource-optimized, cost-effective |
-
-## Customization Tips
-
-1. **API Keys:** Never store API keys in config files. Use environment variables:
-
-   ```bash
-   AI_DOCS__OPENAI__API_KEY=sk-REPLACE-WITH-YOUR-OPENAI-API-KEY
-   AI_DOCS__FIRECRAWL__API_KEY=fc-REPLACE-WITH-YOUR-FIRECRAWL-KEY
-   ```
-
-2. **Performance Tuning:**
-   - Adjust `batch_size` based on your memory
-   - Increase `max_concurrent_requests` for better throughput
-   - Tune cache TTLs based on update frequency
-
-3. **Cost Optimization:**
-   - Use `fastembed` for free local embeddings
-   - Enable vector quantization for storage savings
-   - Set budget limits for API providers
-
-4. **Security Hardening:**
-   - Always enable `api_key_required` in production
-   - Provision strong API keys via the `api_keys` list
-   - Enable rate limiting to prevent abuse
-
-## Environment-Specific Overrides
-
-You can override any setting using environment variables:
+Generate a configuration for a specific profile using the wizard:
 
 ```bash
-# Override environment
-export AI_DOCS__ENVIRONMENT=staging
-
-# Override nested settings
-export AI_DOCS__CACHE__REDIS_URL=redis://prod-dragonfly:6379
-export AI_DOCS__QDRANT__URL=http://qdrant-cluster:6333
-
-# Override API keys (as JSON)
-export AI_DOCS__SECURITY__API_KEYS='["prod-key-1", "prod-key-2"]'
+uv run python -m src.cli.wizard template use --profile development --output config.json
+uv run python -m src.cli.wizard validate --config config.json
 ```
 
-## Migrating from Old Configuration
+Alternatively, merge overrides manually:
 
-If you have existing configuration files:
+```bash
+python - <<'PY'
+import json
+from pathlib import Path
 
-1. Run the migration script:
+base = json.loads(Path("config/templates/base.json").read_text())
+profiles = json.loads(Path("config/templates/profiles.json").read_text())
+profile = profiles["production"]
 
-   ```bash
-   python scripts/migrate_config.py
-   ```
+merged = base | {}
+stack = [(merged, profile["overrides"])]
+while stack:
+    target, source = stack.pop()
+    for key, value in source.items():
+        if isinstance(value, dict) and isinstance(target.get(key), dict):
+            stack.append((target[key], value))
+        else:
+            target[key] = value
 
-2. Review the generated `config.json`
+Path("config.json").write_text(json.dumps(merged, indent=2))
+PY
+```
 
-3. Choose the most appropriate template and merge your settings
+Secrets and runtime-specific values should continue to flow through environment
+variables:
 
-## Need Help?
+```bash
+export AI_DOCS__OPENAI__API_KEY="sk-..."
+export AI_DOCS__FIRECRAWL__API_KEY="fc-..."
+```
 
-- Run `python -m src.manage_config --help` for CLI options
-- Check `docs/UNIFIED_CONFIG.md` for detailed documentation
-- View the schema with `python -m src.manage_config show-schema`
+Add new profiles by updating `profiles.json`. The CLI automatically recomputes
+metadata tables and persists custom profiles via the wizard.

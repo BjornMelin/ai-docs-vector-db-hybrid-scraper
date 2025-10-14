@@ -1,0 +1,51 @@
+{
+  "environment": "development",
+  "debug": false,
+  "log_level": "INFO",
+  "embedding_provider": "fastembed",
+  "crawl_provider": "crawl4ai",
+  "monitoring": {
+    "enable_metrics": true,
+    "metrics_path": "/metrics",
+    "metrics_port": 8000
+  },
+  "observability": {
+    "enabled": false,
+    "service_name": "ai-docs-local",
+    "track_ai_operations": true,
+    "track_costs": false
+  },
+  "browser": {
+    "router": {
+      "hard_domains": [
+        "openai.com"
+      ],
+      "rate_limits": {
+        "lightweight": {
+          "max_requests": 10,
+          "period_seconds": 1.0
+        },
+        "crawl4ai": {
+          "max_requests": 4,
+          "period_seconds": 1.0
+        },
+        "playwright": {
+          "max_requests": 2,
+          "period_seconds": 1.5
+        },
+        "browser_use": {
+          "max_requests": 1,
+          "period_seconds": 2.5
+        },
+        "firecrawl": {
+          "max_requests": 1,
+          "period_seconds": 3.5
+        }
+      },
+      "per_attempt_cap_ms": 20000,
+      "min_budget_ms": 750,
+      "monitor_failures": true,
+      "unavailable_retry_seconds": 60.0
+    }
+  }
+}

@@ -4,13 +4,15 @@
       "name": "Qdrant Documentation",
       "url": "https://docs.qdrant.tech/",
       "max_pages": 100,
+      "max_depth": 3,
       "priority": "high",
       "description": "Vector database documentation"
     },
     {
-      "name": "Crawl4AI Documentation", 
+      "name": "Crawl4AI Documentation",
       "url": "https://docs.crawl4ai.com/",
       "max_pages": 50,
+      "max_depth": 3,
       "priority": "high",
       "description": "Web crawling framework documentation"
     },
@@ -18,13 +20,15 @@
       "name": "Firecrawl Documentation",
       "url": "https://docs.firecrawl.dev/",
       "max_pages": 50,
-      "priority": "high", 
+      "max_depth": 3,
+      "priority": "high",
       "description": "AI-powered web scraping documentation"
     },
     {
       "name": "OpenAI API Documentation",
       "url": "https://platform.openai.com/docs/",
       "max_pages": 75,
+      "max_depth": 3,
       "priority": "high",
       "description": "OpenAI API and embeddings documentation"
     },
@@ -32,6 +36,7 @@
       "name": "Claude MCP Documentation",
       "url": "https://modelcontextprotocol.io/docs/",
       "max_pages": 30,
+      "max_depth": 2,
       "priority": "high",
       "description": "Model Context Protocol documentation"
     },
@@ -39,6 +44,7 @@
       "name": "FastAPI Documentation",
       "url": "https://fastapi.tiangolo.com/",
       "max_pages": 60,
+      "max_depth": 3,
       "priority": "medium",
       "description": "Modern Python web framework documentation"
     },
@@ -46,6 +52,7 @@
       "name": "Python asyncio Documentation",
       "url": "https://docs.python.org/3/library/asyncio.html",
       "max_pages": 40,
+      "max_depth": 2,
       "priority": "medium",
       "description": "Python asynchronous programming documentation"
     },
@@ -53,6 +60,7 @@
       "name": "Docker Documentation",
       "url": "https://docs.docker.com/",
       "max_pages": 50,
+      "max_depth": 2,
       "priority": "medium",
       "description": "Container platform documentation"
     },
@@ -60,6 +68,7 @@
       "name": "LangChain Documentation",
       "url": "https://python.langchain.com/",
       "max_pages": 80,
+      "max_depth": 3,
       "priority": "medium",
       "description": "LLM application framework documentation"
     },
@@ -67,6 +76,7 @@
       "name": "Playwright Documentation",
       "url": "https://playwright.dev/docs/",
       "max_pages": 45,
+      "max_depth": 2,
       "priority": "low",
       "description": "Browser automation documentation"
     }

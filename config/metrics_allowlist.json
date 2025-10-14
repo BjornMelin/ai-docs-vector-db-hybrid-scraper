@@ -1,9 +1,15 @@
 {
   "metrics": [
-    "ml_app_rag_stage_latency_seconds",
-    "ml_app_rag_answers_total",
-    "ml_app_rag_errors_total",
-    "ml_app_rag_generation_latency_seconds",
-    "ml_app_compression_token_ratio"
+    "browser_operation_total",
+    "browser_operation_latency_seconds_bucket",
+    "browser_operation_latency_seconds_sum",
+    "browser_operation_latency_seconds_count",
+    "http_request_duration_seconds_bucket",
+    "http_request_duration_seconds_sum",
+    "http_request_duration_seconds_count",
+    "http_requests_total",
+    "ai.operation.duration",
+    "ai.operation.tokens",
+    "ai.operation.cost"
   ]
 }
