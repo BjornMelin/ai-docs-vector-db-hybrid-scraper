@@ -24,6 +24,16 @@ def _test_field_validation(
         assert expected_message in str(exc_info.value)
 
 
+def _test_prompt_formatting(
+    prompt_data: dict, prompt_key: str, test_query: str
+) -> None:
+    """Helper to test that a prompt template can be formatted."""
+    prompt = cast(str, prompt_data[prompt_key])
+    formatted = prompt.format(query=test_query)
+    assert test_query in formatted
+    assert formatted != prompt
+
+
 class TestHyDEConfig:
     """Tests for HyDEConfig model."""
 
@@ -336,25 +346,10 @@ class TestHyDEPromptConfig:
         prompt_data = config.model_dump()
 
         # Test each prompt template can be formatted
-        technical_prompt = cast(str, prompt_data["technical_prompt"])
-        technical_formatted = technical_prompt.format(query=test_query)
-        assert test_query in technical_formatted
-        assert technical_formatted != technical_prompt
-
-        code_prompt = cast(str, prompt_data["code_prompt"])
-        code_formatted = code_prompt.format(query=test_query)
-        assert test_query in code_formatted
-        assert code_formatted != code_prompt
-
-        tutorial_prompt = cast(str, prompt_data["tutorial_prompt"])
-        tutorial_formatted = tutorial_prompt.format(query=test_query)
-        assert test_query in tutorial_formatted
-        assert tutorial_formatted != tutorial_prompt
-
-        general_prompt = cast(str, prompt_data["general_prompt"])
-        general_formatted = general_prompt.format(query=test_query)
-        assert test_query in general_formatted
-        assert general_formatted != general_prompt
+        _test_prompt_formatting(prompt_data, "technical_prompt", test_query)
+        _test_prompt_formatting(prompt_data, "code_prompt", test_query)
+        _test_prompt_formatting(prompt_data, "tutorial_prompt", test_query)
+        _test_prompt_formatting(prompt_data, "general_prompt", test_query)
 
     def test_keyword_lists_not_empty(self):
         """Test that keyword lists are not empty."""
