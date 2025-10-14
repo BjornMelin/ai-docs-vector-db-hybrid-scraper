@@ -1,4 +1,4 @@
-"""Unit tests verifying FastAPI dependency resolution through the centralized service resolver."""
+"""Tests for FastAPI dependency resolution via the centralized service resolver."""
 
 from __future__ import annotations
 

@@ -17,6 +17,26 @@ from src.services.errors import QdrantServiceError
 logger = logging.getLogger(__name__)
 
 
+@dataclass(slots=True)
+class AdaptiveEfConfig:
+    """Configuration knobs for adaptive EF selection."""
+
+    time_budget_ms: int = 100
+    min_ef: int = 50
+    max_ef: int = 200
+    step_size: int = 25
+    target_limit: int = 10
+
+
+@dataclass(slots=True)
+class AdaptiveSearchContext:
+    """Container holding search parameters and configuration."""
+
+    collection_name: str
+    query_vector: list[float]
+    config: AdaptiveEfConfig
+
+
 @dataclass
 class AdaptiveSearchState:
     """Track adaptive EF search progress."""
@@ -93,80 +113,65 @@ class HNSWOptimizer(BaseService):
         self,
         collection_name: str,
         query_vector: list[float],
-        time_budget_ms: int = 100,
-        min_ef: int = 50,
-        max_ef: int = 200,
-        step_size: int = 25,
-        target_limit: int = 10,
+        *,
+        config: AdaptiveEfConfig | None = None,
     ) -> dict[str, Any]:
         """Dynamically adjust ef parameter based on time budget.
 
         Args:
             collection_name: Collection to search
             query_vector: Query vector
-            time_budget_ms: Maximum time budget in milliseconds
-            min_ef: Minimum ef value to try
-            max_ef: Maximum ef value to try
-            step_size: Step size for ef increments
-            target_limit: Number of results to return
+            config: Adaptive EF configuration overrides
 
         Returns:
             Search results with optimal ef value used
         """
-        cache_key = self._make_adaptive_cache_key(
-            collection_name, time_budget_ms, min_ef, max_ef
+        effective_config = config or AdaptiveEfConfig()
+        context = AdaptiveSearchContext(
+            collection_name=collection_name,
+            query_vector=query_vector,
+            config=effective_config,
         )
+
+        cache_key = self._make_adaptive_cache_key(context)
         client = await self.qdrant_service.get_client()
 
-        cached = await self._try_cached_search(
-            client,
-            cache_key,
-            collection_name,
-            query_vector,
-            target_limit,
-            time_budget_ms,
-        )
+        cached = await self._try_cached_search(client, cache_key, context)
         if cached is not None:
             return cached
 
-        state = AdaptiveSearchState(best_ef=min_ef)
+        state = AdaptiveSearchState(best_ef=effective_config.min_ef)
         self.logger.debug(
             "Starting adaptive EF for %s with budget %dms",
             collection_name,
-            time_budget_ms,
+            effective_config.time_budget_ms,
         )
         await self._run_adaptive_search(
             client=client,
             state=state,
-            collection_name=collection_name,
-            query_vector=query_vector,
-            time_budget_ms=time_budget_ms,
-            min_ef=min_ef,
-            max_ef=max_ef,
-            step_size=step_size,
-            target_limit=target_limit,
+            context=context,
         )
 
         self._store_adaptive_cache(cache_key, state)
 
         return self._build_adaptive_response(
-            state=state, time_budget_ms=time_budget_ms, source="adaptive"
+            state=state,
+            context=context,
+            source="adaptive",
         )
 
-    def _make_adaptive_cache_key(
-        self, collection_name: str, time_budget_ms: int, min_ef: int, max_ef: int
-    ) -> str:
+    def _make_adaptive_cache_key(self, context: AdaptiveSearchContext) -> str:
         """Generate cache key for adaptive EF lookups."""
-        return f"{collection_name}:{time_budget_ms}:{min_ef}:{max_ef}"
+        cfg = context.config
+        return (
+            f"{context.collection_name}:{cfg.time_budget_ms}:{cfg.min_ef}:{cfg.max_ef}"
+        )
 
     async def _try_cached_search(
         self,
         client: Any,
         cache_key: str,
-        collection_name: str,
-        query_vector: list[float],
-        target_limit: int,
-        time_budget_ms: int,
+        context: AdaptiveSearchContext,
     ) -> dict[str, Any] | None:
         """Execute cached EF search if available."""
 
@@ -178,16 +183,14 @@ class HNSWOptimizer(BaseService):
         self.logger.debug(
             "Using cached optimal EF %d for collection %s",
             cached_ef,
-            collection_name,
+            context.collection_name,
         )
 
         timed_query = await self._query_points_with_timing(
             client,
-            collection_name,
-            query_vector,
-            target_limit,
+            context,
             cached_ef,
-            context=f"Cached search at EF {cached_ef}",
+            log_context=f"Cached search at EF {cached_ef}",
         )
 
         if timed_query is None:
@@ -198,9 +201,9 @@ class HNSWOptimizer(BaseService):
             "results": results.points,
             "ef_used": cached_ef,
             "search_time_ms": search_time_ms,
-            "time_budget_ms": time_budget_ms,
+            "time_budget_ms": context.config.time_budget_ms,
             "budget_utilized_percent": self._budget_utilization(
-                search_time_ms, time_budget_ms
+                search_time_ms, context.config.time_budget_ms
             ),
             "source": "cache",
         }
@@ -210,25 +213,18 @@ class HNSWOptimizer(BaseService):
         *,
         client: Any,
         state: AdaptiveSearchState,
-        collection_name: str,
-        query_vector: list[float],
-        time_budget_ms: int,
-        min_ef: int,
-        max_ef: int,
-        step_size: int,
-        target_limit: int,
+        context: AdaptiveSearchContext,
     ) -> None:
         """Iteratively search with increasing EF until the time budget is met."""
 
-        current_ef = min_ef
-        while current_ef <= max_ef:
+        config = context.config
+        current_ef = config.min_ef
+        while current_ef <= config.max_ef:
             timed_query = await self._query_points_with_timing(
                 client,
-                collection_name,
-                query_vector,
-                target_limit,
+                context,
                 current_ef,
-                context=f"Search at EF {current_ef}",
+                log_context=f"Search at EF {current_ef}",
             )
             if timed_query is None:
                 break
@@ -237,16 +233,14 @@ class HNSWOptimizer(BaseService):
             self.logger.debug("EF %d: %.1fms", current_ef, search_time_ms)
             state.record(current_ef, results, search_time_ms)
 
-            if self._should_stop(search_time_ms, time_budget_ms):
+            if self._should_stop(search_time_ms, config):
                 self.logger.debug("Stopping at EF %d due to time budget", current_ef)
                 break
 
             next_ef = self._next_ef(
                 current_ef=current_ef,
                 elapsed_ms=search_time_ms,
-                time_budget_ms=time_budget_ms,
-                step_size=step_size,
-                max_ef=max_ef,
+                config=config,
             )
             if next_ef is None:
                 break
@@ -255,64 +249,60 @@ class HNSWOptimizer(BaseService):
     async def _query_points_with_timing(
         self,
         client: Any,
-        collection_name: str,
-        query_vector: list[float],
-        target_limit: int,
+        context: AdaptiveSearchContext,
         ef_value: int,
         *,
-        context: str,
+        log_context: str,
     ) -> tuple[float, Any] | None:
         """Execute a query and capture elapsed time in milliseconds."""
 
         start_time = time.time()
         try:
             results = await client.query_points(
-                collection_name=collection_name,
-                query=query_vector,
+                collection_name=context.collection_name,
+                query=context.query_vector,
                 using="dense",
-                limit=target_limit,
+                limit=context.config.target_limit,
                 params=models.SearchParams(hnsw_ef=ef_value, exact=False),
                 with_payload=True,
                 with_vectors=False,
             )
         except (ValueError, TypeError) as exc:
-            self._log_or_propagate(exc, context)
+            self._log_or_propagate(exc, log_context)
             return None
         except Exception as exc:  # noqa: BLE001 - fallback for client errors
-            self._log_or_propagate(exc, context)
+            self._log_or_propagate(exc, log_context)
             return None
 
         elapsed_ms = (time.time() - start_time) * 1000
         return elapsed_ms, results
 
     @staticmethod
-    def _should_stop(search_time_ms: float, time_budget_ms: int) -> bool:
+    def _should_stop(search_time_ms: float, config: AdaptiveEfConfig) -> bool:
         """Determine whether the search should stop based on budget usage."""
 
-        if time_budget_ms <= 0:
+        if config.time_budget_ms <= 0:
             return True
-        return search_time_ms >= time_budget_ms * 0.8
+        return search_time_ms >= config.time_budget_ms * 0.8
 
     @staticmethod
     def _next_ef(
         *,
         current_ef: int,
         elapsed_ms: float,
-        time_budget_ms: int,
-        step_size: int,
-        max_ef: int,
+        config: AdaptiveEfConfig,
     ) -> int | None:
         """Calculate the next EF value or signal completion."""
 
-        if current_ef >= max_ef:
+        if current_ef >= config.max_ef:
             return None
 
-        if time_budget_ms <= 0 or elapsed_ms < time_budget_ms * 0.5:
-            increment = step_size
+        if config.time_budget_ms <= 0 or elapsed_ms < config.time_budget_ms * 0.5:
+            increment = config.step_size
         else:
-            increment = max(step_size // 2, 1)
+            increment = max(config.step_size // 2, 1)
 
-        next_ef = min(current_ef + increment, max_ef)
+        next_ef = min(current_ef + increment, config.max_ef)
         if next_ef == current_ef:
             return None
         return next_ef
@@ -341,7 +331,7 @@ class HNSWOptimizer(BaseService):
         self,
         *,
         state: AdaptiveSearchState,
-        time_budget_ms: int,
+        context: AdaptiveSearchContext,
         source: str,
     ) -> dict[str, Any]:
         """Construct the response payload from adaptive search data."""
@@ -352,9 +342,9 @@ class HNSWOptimizer(BaseService):
             "results": best_results,
             "ef_used": state.best_ef,
             "search_time_ms": final_time,
-            "time_budget_ms": time_budget_ms,
+            "time_budget_ms": context.config.time_budget_ms,
             "budget_utilized_percent": self._budget_utilization(
-                final_time, time_budget_ms
+                final_time, context.config.time_budget_ms
             ),
             "ef_progression": state.tested_ef_values,
             "time_progression": state.search_times_ms,
