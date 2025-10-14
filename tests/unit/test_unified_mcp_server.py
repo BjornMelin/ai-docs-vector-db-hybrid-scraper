@@ -157,11 +157,7 @@ def test_validate_streaming_config_skips_non_streamable_transport() -> None:
     errors: list[str] = []
     warnings: list[str] = []
 
-    with patch.dict(
-        os.environ,
-        {"FASTMCP_TRANSPORT": "stdio"},
-        clear=True,
-    ):
+    with patch.dict(os.environ, {"FASTMCP_TRANSPORT": "stdio"}, clear=True):
         unified_mcp_server._validate_streaming_config(errors, warnings)
 
     assert not errors
