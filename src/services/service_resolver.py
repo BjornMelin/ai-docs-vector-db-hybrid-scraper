@@ -210,6 +210,7 @@ async def get_content_intelligence_service() -> Any:
     service = await _resolve_service(
         name="content_intelligence_service",
         supplier=lambda container: container.content_intelligence_service(),
+        optional=False,
     )
     return service
 
@@ -254,6 +255,7 @@ async def get_crawl_manager() -> Any:
     manager = await _resolve_service(
         name="browser_manager",
         supplier=lambda container: container.browser_manager(),
+        optional=False,
     )
     return manager
 

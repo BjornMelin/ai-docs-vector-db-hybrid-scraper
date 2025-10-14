@@ -465,10 +465,12 @@ async def _initialize_service_graph(container: ApplicationContainer) -> None:
     await _maybe_initialize(
         container.content_intelligence_service(),
         "content_intelligence_service",
+        required=True,
     )
     await _maybe_initialize(
         container.browser_manager(),
         "browser_manager",
+        required=True,
     )
     await _maybe_initialize(
         container.rag_generator(),
