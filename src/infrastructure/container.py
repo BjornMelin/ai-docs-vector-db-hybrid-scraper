@@ -772,6 +772,11 @@ class DependencyContext:
     """Context manager for dependency injection setup."""
 
     def __init__(self, config: Any):
+        """Store configuration for deferred container initialization.
+
+        Args:
+            config: Runtime settings for dependency construction.
+        """
         self.config = config
         self.container: ApplicationContainer | None = None
 

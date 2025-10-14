@@ -59,6 +59,7 @@ class MockCircuitBreaker:
     """Mock circuit breaker for testing."""
 
     def __init__(self, config: CircuitBreakerConfig):
+        """Initialize the mock circuit breaker with given configuration."""
         self.config = config
         self.state = CircuitBreakerState.CLOSED
         self.failure_count = 0
@@ -116,8 +117,7 @@ class MockCircuitBreaker:
                 self._transition_to_open()
 
             raise
-        else:
-            return result
+        return result
 
     def _transition_to_open(self):
         """Transition circuit breaker to open state."""

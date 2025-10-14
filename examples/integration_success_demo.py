@@ -31,6 +31,7 @@ class MockEmbeddingManager:
     """Mock embedding manager for demonstration."""
 
     def __init__(self):
+        """Initialize mock embedding manager state."""
         self.name = "MockEmbeddingManager"
 
 

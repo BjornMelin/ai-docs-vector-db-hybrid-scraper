@@ -59,6 +59,11 @@ class ResourceMonitor:
     """Monitor system resource usage during stress tests."""
 
     def __init__(self, interval: float = 1.0):
+        """Initialize the resource monitor.
+
+        Args:
+            interval: Sampling interval expressed in seconds.
+        """
         self.interval = interval
         self.metrics = ResourceMetrics()
         self.monitoring = False
@@ -283,8 +288,9 @@ class TestResourceExhaustion:
     @pytest.mark.stress
     @pytest.mark.asyncio
     async def test_cpu_saturation_parallel_embeddings(self, load_test_runner):
-        """Test system behavior under CPU saturation from parallel
-        embedding generation.
+        """Test behavior when parallel embedding generation saturates CPU.
+
+        Evaluates how the system degrades under parallel embedding workloads.
         """
         monitor = ResourceMonitor(interval=0.5)
         monitor.start_monitoring()

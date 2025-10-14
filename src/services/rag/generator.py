@@ -57,7 +57,7 @@ class RAGGenerator(BaseService):
         retriever: BaseRetriever,
         chat_model: ChatOpenAI | None = None,
     ) -> None:
-        """Initialize RAG generator with configuration, retriever, and optional chat model."""
+        """Init generator with config, retriever, and optional chat model."""
         super().__init__(None)
         self._config = config
         self._retriever = retriever

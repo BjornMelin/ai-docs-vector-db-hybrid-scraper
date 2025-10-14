@@ -23,7 +23,7 @@ def _resolve_delete_callable(
     delete_method = getattr(vector_service, "delete_collection", None)
     if not callable(delete_method):
         msg = "Vector service does not expose a collection deletion method"
-        raise AttributeError(msg)
+        raise TypeError(msg)
     return cast(Callable[[str], Awaitable[None]], delete_method)
 
 

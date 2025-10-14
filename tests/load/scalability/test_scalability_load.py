@@ -4,6 +4,7 @@ This module implements scalability tests to validate horizontal scaling,
 vertical scaling, and auto-scaling capabilities of the system.
 """
 
+# pylint: disable=too-many-lines
 import asyncio
 import logging
 import math
@@ -995,6 +996,7 @@ class HorizontalScalingSimulator:
     """Simulates horizontal scaling infrastructure."""
 
     def __init__(self):
+        """Initialize the horizontal scaling simulator."""
         self.base_units = 2
         self.current_units = 2
         self.max_units = 20

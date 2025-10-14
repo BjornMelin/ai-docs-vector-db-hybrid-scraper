@@ -48,7 +48,7 @@ class ProviderRegistry:
         config: Any,
         factories: ProviderFactories | None = None,
     ) -> None:
-        """Initialize provider registry with configuration and optional factory overrides."""
+        """Initialize provider registry and optional factory overrides."""
         self._config = config
         self._providers: dict[str, EmbeddingProvider] = {}
         self._reranker = None

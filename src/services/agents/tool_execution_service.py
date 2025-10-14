@@ -39,6 +39,7 @@ class ToolExecutionError(RuntimeError):
     """Base error when an MCP tool invocation fails."""
 
     def __init__(self, message: str, *, server_name: str | None = None) -> None:
+        """Initialize error with optional server context."""
         super().__init__(message)
         self.server_name = server_name
 
@@ -108,7 +109,14 @@ class ToolExecutionService:
         max_attempts: int = _DEFAULT_MAX_ATTEMPTS,
         backoff_seconds: float = _DEFAULT_BACKOFF_SECONDS,
     ) -> None:
-        """Initialize tool execution service with MCP client and retry configuration."""
+        """Initialize tool execution service with MCP client and retry configuration.
+
+        Args:
+            client: Shared MCP client or factory returning a connected client.
+            mcp_config: MCP client configuration for telemetry and timeout tuning.
+            max_attempts: Maximum retry attempts for tool execution.
+            backoff_seconds: Base backoff between retries in seconds.
+        """
         if callable(client):
             self._client_factory = client
             self._client: MultiServerMCPClient | None = None

@@ -19,12 +19,16 @@ class StubMCP:
     """Minimal FastMCP stub capturing registered tools."""
 
     def __init__(self) -> None:
+        """Initialize the stub MCP with an empty tool registry."""
         self.tools: dict[str, ToolCallable] = {}
 
     def tool(
         self, *_args: Any, **_kwargs: Any
     ) -> Callable[[ToolCallable], ToolCallable]:
+        """Decorator capturing the registered tool function."""
+
         def decorator(func: ToolCallable) -> ToolCallable:
+            """Decorator capturing the registered tool function."""
             self.tools[func.__name__] = func
             return func
 

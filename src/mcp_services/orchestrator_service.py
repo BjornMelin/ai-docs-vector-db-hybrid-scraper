@@ -37,7 +37,17 @@ class OrchestratorService:  # pylint: disable=too-many-instance-attributes
         graph_runner: GraphRunner | None = None,
         discovery: DynamicToolDiscovery | None = None,
     ) -> None:
-        """Initialize orchestrator service with domain services and LangGraph components."""
+        """Wire orchestrator interfaces to domain services and LangGraph tooling.
+
+        Args:
+            name: MCP application identifier.
+            search_service: Search service providing retrieval tools.
+            document_service: Document service managing ingestion workflows.
+            analytics_service: Analytics service exposing monitoring tooling.
+            system_service: System coordination and health reporting service.
+            graph_runner: Optional LangGraph runner override.
+            discovery: Optional dynamic discovery instance.
+        """
         instructions = (
             "Coordinate domain tools, surface orchestration telemetry, and expose "
             "LangGraph-based workflows for multi-service requests."

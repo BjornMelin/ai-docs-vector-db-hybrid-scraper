@@ -40,7 +40,10 @@ class SystemService:
         """Initialize the system service.
 
         Args:
-            name: Service name for MCP registration
+            name: Service name for MCP registration.
+            vector_service: Vector store service wiring system queries.
+            embedding_manager: Embedding manager exposing provider tooling.
+            health_manager: Health check manager for system diagnostics.
         """
         self.mcp = FastMCP(
             name,

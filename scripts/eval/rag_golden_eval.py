@@ -153,6 +153,15 @@ class RagasEvaluator:
         max_retries: int = 2,
         timeout: float | None = None,
     ) -> None:
+        """Initialize evaluator clients for ragas scoring.
+
+        Args:
+            api_key: API key for both LLM and embedding clients.
+            llm_model: Model identifier for the language model scorer.
+            embedding_model: Embedding model used for ragas context scoring.
+            max_retries: Maximum retry attempts for API calls.
+            timeout: Optional timeout in seconds for API calls.
+        """
         client_kwargs: dict[str, Any] = {"api_key": api_key}
         if max_retries is not None:
             client_kwargs["max_retries"] = max_retries

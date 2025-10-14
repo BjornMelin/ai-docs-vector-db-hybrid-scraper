@@ -57,6 +57,7 @@ class BreakingPointAnalyzer:
     """Analyze system performance to identify breaking points."""
 
     def __init__(self):
+        """Initialize the analyzer with empty data."""
         self.performance_points: list[PerformancePoint] = []
         self.breaking_point_threshold = {
             "error_rate": 10.0,  # 10% error rate

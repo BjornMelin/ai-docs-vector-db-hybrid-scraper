@@ -337,7 +337,7 @@ def load_settings_from_file(path: Path) -> Settings:
 
     if not isinstance(payload, dict):
         msg = "Configuration file must define a JSON/YAML object"
-        raise ValueError(msg)
+        raise TypeError(msg)
 
     return load_settings(**payload)
 

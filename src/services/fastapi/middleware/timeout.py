@@ -71,6 +71,14 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
         manager: CircuitBreakerManager | None = None,
         manager_resolver: CircuitBreakerResolver | None = None,
     ) -> None:
+        """Initialize timeout middleware with circuit breaker integration.
+
+        Args:
+            app: Downstream ASGI application.
+            config: Timeout and circuit breaker configuration values.
+            manager: Optional pre-initialised circuit breaker manager.
+            manager_resolver: Optional resolver returning a breaker manager.
+        """
         super().__init__(app)
         self._cfg = config
         self._manager = manager
@@ -187,6 +195,12 @@ class BulkheadMiddleware(BaseHTTPMiddleware):
     """Per-endpoint concurrency limiter using AnyIO capacity limiters."""
 
     def __init__(self, app: Callable, *, max_concurrent: int = 10) -> None:
+        """Initialize concurrency limiter middleware.
+
+        Args:
+            app: Downstream ASGI application.
+            max_concurrent: Maximum concurrent requests per endpoint.
+        """
         super().__init__(app)
         self._max = max_concurrent
         self._locks: dict[str, anyio.CapacityLimiter] = {}

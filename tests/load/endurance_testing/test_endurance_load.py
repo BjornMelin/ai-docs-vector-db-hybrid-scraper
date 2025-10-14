@@ -634,6 +634,7 @@ class MemoryLeakSimulator:
     """Simulates memory allocation and cleanup patterns."""
 
     def __init__(self):
+        """Initialize the memory leak simulator."""
         self.allocated_memory = []
         self.memory_samples = []
         self.start_time = time.time()

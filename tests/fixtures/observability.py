@@ -1,4 +1,4 @@
-"""Observability-specific fixtures for testing distributed tracing, metrics, and monitoring.
+"""Observability fixtures for testing distributed tracing, metrics, and monitoring.
 
 This module provides reusable fixtures and infrastructure for testing
 observability components across the distributed system.

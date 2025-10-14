@@ -39,6 +39,7 @@ class VectorDBUserBehavior(TaskSet):
     """User behavior scenarios for vector database operations."""
 
     def __init__(self, parent):
+        """Initialize user behavior with test data."""
         super().__init__(parent)
         self.test_documents = [
             "https://docs.python.org/3/tutorial/index.html",
@@ -220,6 +221,7 @@ class PerformanceMetricsCollector:
     """Collect and analyze performance metrics during load tests."""
 
     def __init__(self):
+        """Initialize metrics collector."""
         self.metrics: dict[str, list[float]] = {
             "response_times": [],
             "error_rates": [],

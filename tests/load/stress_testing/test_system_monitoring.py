@@ -85,6 +85,11 @@ class SystemMonitor:
     """Monitor system resources during stress tests."""
 
     def __init__(self, collection_interval: float = 1.0):
+        """Initialize the system monitor.
+
+        Args:
+            collection_interval: Sampling cadence in seconds.
+        """
         self.collection_interval = collection_interval
         self.system_metrics: list[SystemMetrics] = []
         self.application_metrics: list[ApplicationMetrics] = []
@@ -379,6 +384,7 @@ class MetricsCollector:
     """Collect and analyze performance metrics during stress tests."""
 
     def __init__(self):
+        """Initialize metric buffers for stress-test analysis."""
         self.response_times = deque(maxlen=10000)  # Keep last 10k response times
         self.error_counts = defaultdict(int)
         self.throughput_samples = deque(maxlen=1000)

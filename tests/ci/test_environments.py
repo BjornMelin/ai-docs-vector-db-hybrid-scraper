@@ -90,6 +90,7 @@ class GitHubActionsEnvironment(CIEnvironment):
         }
 
     def get_test_selection(self) -> tuple[str, list[str]]:
+        """Return marker expression and paths based on GitHub event type."""
         # Run different test sets based on event type
         event_name = os.getenv("GITHUB_EVENT_NAME", "push")
 
@@ -126,6 +127,7 @@ class GitLabCIEnvironment(CIEnvironment):
         ]
 
     def get_env_vars(self) -> dict[str, str]:
+        """Return GitLab environment variables for pytest execution."""
         return {
             "PYTEST_XDIST_AUTO_NUM_WORKERS": "2",
             "PYTHONDONTWRITEBYTECODE": "1",
@@ -134,6 +136,7 @@ class GitLabCIEnvironment(CIEnvironment):
         }
 
     def get_test_selection(self) -> tuple[str, list[str]]:
+        """Return GitLab test selection tuned to pipeline source."""
         ci_pipeline_source = os.getenv("CI_PIPELINE_SOURCE", "push")
 
         if ci_pipeline_source == "merge_request_event":
@@ -167,6 +170,7 @@ class JenkinsEnvironment(CIEnvironment):
         ]
 
     def get_env_vars(self) -> dict[str, str]:
+        """Return Jenkins-specific environment variables."""
         return {
             "PYTEST_XDIST_AUTO_NUM_WORKERS": str(min(os.cpu_count() or 2, 8)),
             "PYTHONDONTWRITEBYTECODE": "1",
@@ -178,7 +182,7 @@ class AzureDevOpsEnvironment(CIEnvironment):
     """Azure DevOps environment configuration."""
 
     def detect(self) -> bool:
-        """Detect Azure DevOps environment via SYSTEM_TEAMFOUNDATIONCOLLECTIONURI env var."""
+        """Detect Azure DevOps env via SYSTEM_TEAMFOUNDATIONCOLLECTIONURI env var."""
         return bool(os.getenv("SYSTEM_TEAMFOUNDATIONCOLLECTIONURI"))
 
     def get_pytest_args(self) -> list[str]:
@@ -197,6 +201,7 @@ class AzureDevOpsEnvironment(CIEnvironment):
         ]
 
     def get_env_vars(self) -> dict[str, str]:
+        """Return Azure DevOps environment variables for pytest."""
         return {
             "PYTEST_XDIST_AUTO_NUM_WORKERS": "4",
             "PYTHONDONTWRITEBYTECODE": "1",
@@ -241,6 +246,7 @@ class CircleCIEnvironment(CIEnvironment):
         ]
 
     def get_env_vars(self) -> dict[str, str]:
+        """Return CircleCI environment variables for pytest execution."""
         return {
             "PYTEST_XDIST_AUTO_NUM_WORKERS": "4",
             "PYTHONDONTWRITEBYTECODE": "1",
@@ -279,12 +285,14 @@ class LocalEnvironment(CIEnvironment):
         ]
 
     def get_env_vars(self) -> dict[str, str]:
+        """Return local development defaults for pytest."""
         return {
             "PYTEST_XDIST_AUTO_NUM_WORKERS": "2",
             "PYTHONDONTWRITEBYTECODE": "1",
         }
 
     def get_test_selection(self) -> tuple[str, list[str]]:
+        """Return test selection for local development runs."""
         # Allow running all tests locally
         return "", ["tests"]
 

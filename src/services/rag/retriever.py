@@ -79,7 +79,7 @@ class VectorServiceRetriever(BaseRetriever):
         filters: Mapping[str, Any] | None = None,
         rag_config: RAGConfig | None = None,
     ) -> None:
-        """Initialize vector service retriever with collection, search parameters, and optional compression."""
+        """Initialize retriever with collection config and optional compression."""
         super().__init__()
         self._vector_service = vector_service
         self._collection = collection

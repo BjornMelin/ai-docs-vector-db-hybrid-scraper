@@ -500,7 +500,7 @@ class EmbeddingConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_sparse_requirements(self) -> Self:
-        """Validate that sparse model is configured when using sparse or hybrid retrieval."""
+        """Ensure sparse retrieval modes provide a sparse model identifier."""
         if (
             self.retrieval_mode in (SearchStrategy.SPARSE, SearchStrategy.HYBRID)
             and not self.sparse_model

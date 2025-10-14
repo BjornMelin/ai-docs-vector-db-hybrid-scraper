@@ -36,6 +36,16 @@ class DocumentService:
         content_intelligence_service: Any,
         project_storage: ProjectStorage,
     ) -> None:
+        """Configure MCP document service with domain dependencies.
+
+        Args:
+            name: MCP application identifier.
+            vector_service: Vector store service wiring document storage.
+            cache_manager: Cache manager for expensive computation reuse.
+            crawl_manager: Crawling manager serving acquisition tooling.
+            content_intelligence_service: Service providing content classifiers.
+            project_storage: Storage backend for project artefacts.
+        """
         self.mcp = FastMCP(
             name,
             instructions=(

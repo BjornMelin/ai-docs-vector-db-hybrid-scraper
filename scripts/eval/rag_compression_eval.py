@@ -199,6 +199,7 @@ async def _evaluate(  # pylint: disable=too-many-locals
 
 
 def main() -> None:
+    """Run the compression evaluation CLI entry point."""
     args = _parse_args()
     asyncio.run(_evaluate(args.input, args.collection))
 

@@ -109,9 +109,7 @@ class AgentErrorCode(str, Enum):
 def _error_entry(source: str, code: AgentErrorCode, **extra: Any) -> dict[str, Any]:
     """Construct a structured error payload with optional metadata."""
     entry: dict[str, Any] = {"source": source, "code": code.value}
-    for key, value in extra.items():
-        if value is not None:
-            entry[key] = value
+    entry.update({key: value for key, value in extra.items() if value is not None})
     return entry
 
 
@@ -168,6 +166,16 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
         run_timeout_seconds: float | None = None,
         retrieval_limit: int = 8,
     ) -> None:
+        """Initialize LangGraph runner dependencies.
+
+        Args:
+            discovery: Dynamic tool discovery for MCP capabilities.
+            tool_service: Executor responsible for MCP tool invocations.
+            retrieval_helper: Optional retrieval helper override.
+            max_parallel_tools: Maximum concurrent tool executions.
+            run_timeout_seconds: Optional LangGraph run timeout in seconds.
+            retrieval_limit: Default document retrieval cap per query.
+        """
         self._discovery = discovery
         self._tool_service = tool_service
         self._retrieval_helper = retrieval_helper or RetrievalHelper(
@@ -557,10 +565,11 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
             "agent.tool_execution",
             attributes={"agent.requested_tools": len(selected)},
         ):
-            task_results: list[asyncio.Task[tuple[str, ToolCapability, Any]]] = []
             async with asyncio.TaskGroup() as group:
-                for capability in selected:
-                    task_results.append(group.create_task(invoke_tool(capability)))
+                task_results: list[asyncio.Task[tuple[str, ToolCapability, Any]]] = [
+                    group.create_task(invoke_tool(capability))
+                    for capability in selected
+                ]
 
         for task in task_results:
             outcome, capability, payload = task.result()

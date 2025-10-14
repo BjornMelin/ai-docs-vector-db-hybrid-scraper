@@ -52,7 +52,7 @@ def _load_dataset(path: Path) -> list[dict[str, Any]]:
     with path.open(encoding="utf-8") as handle:
         data = json.load(handle)
     if not isinstance(data, list):
-        raise ValueError("Dataset must be a list of samples")
+        raise TypeError("Dataset must be a list of samples")
     return data
 
 
@@ -89,7 +89,7 @@ async def _run(
         if not isinstance(query_embedding, list) or not isinstance(
             sentence_embeddings, dict
         ):
-            raise ValueError("Sample missing embeddings")
+            raise TypeError("Sample missing embeddings")
 
         query = str(sample.get("query", "")).strip()
         if not query:
@@ -188,6 +188,7 @@ def _parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
+    """Execute CLI entry point for the compression quality gate."""
     args = _parse_args()
     try:
         success = asyncio.run(

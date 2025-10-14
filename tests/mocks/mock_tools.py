@@ -14,15 +14,26 @@ class MockContext(Protocol):
         """Log info message."""
         ...
 
-    async def debug(self, msg: str) -> None: ...
-    async def warning(self, msg: str) -> None: ...
-    async def error(self, msg: str) -> None: ...
+    async def debug(self, msg: str) -> None:
+        """Log debug message."""
+
+    async def warning(self, msg: str) -> None:
+        """Log warning message."""
+
+    async def error(self, msg: str) -> None:
+        """Log error message."""
 
 
 class MockTool:
     """Mock MCP tool for testing."""
 
     def __init__(self, name: str, handler: Any):
+        """Store tool metadata for invocation.
+
+        Args:
+            name: Tool identifier.
+            handler: Callable implementing tool behaviour.
+        """
         self.name = name
         self.handler = handler
 
@@ -31,6 +42,11 @@ class MockMCPServer:
     """Mock MCP server for testing."""
 
     def __init__(self, name: str):
+        """Initialize mock server container.
+
+        Args:
+            name: Server identifier used for debugging.
+        """
         self.name = name
         self._tools: list[MockTool] = []
         self._resources = []

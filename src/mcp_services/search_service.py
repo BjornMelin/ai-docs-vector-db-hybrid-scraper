@@ -23,6 +23,12 @@ class SearchService:
         *,
         vector_service: VectorStoreService,
     ):
+        """Configure MCP search service with vector retrieval tooling.
+
+        Args:
+            name: MCP application identifier.
+            vector_service: Vector store interface providing search operations.
+        """
         self.mcp = FastMCP(
             name,
             instructions=(

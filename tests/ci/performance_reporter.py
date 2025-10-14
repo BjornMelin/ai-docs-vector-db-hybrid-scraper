@@ -84,6 +84,11 @@ class PerformanceReporter:
     """pytest plugin for performance reporting in parallel execution."""
 
     def __init__(self, config: Config):
+        """Initialize performance reporter with pytest configuration.
+
+        Args:
+            config: Active pytest configuration object.
+        """
         self.config = config
         self.test_metrics: list[TestMetrics] = []
         self.worker_metrics: dict[str, WorkerMetrics] = defaultdict(

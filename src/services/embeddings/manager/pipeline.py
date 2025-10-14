@@ -206,7 +206,7 @@ class EmbeddingPipeline:
         text_analysis: TextAnalysis,
         options: GenerationOptions,
     ) -> ProviderSelection:
-        """Select embedding provider based on manual override, quality tier, or smart recommendation."""
+        """Select an embedding provider using overrides, tiers, or smart picks."""
         if options.provider_name:
             provider = self._providers.resolve(
                 options.provider_name, options.quality_tier

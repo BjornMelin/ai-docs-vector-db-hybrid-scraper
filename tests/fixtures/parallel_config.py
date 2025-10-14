@@ -106,6 +106,7 @@ class ParallelResourceManager:
     """Manages resources for parallel test execution."""
 
     def __init__(self, worker_config: dict[str, Any]):
+        """Initialize the resource manager with worker configuration."""
         self.worker_config = worker_config
         self._allocated_ports = set()
 

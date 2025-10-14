@@ -208,6 +208,7 @@ def configure_logging(
         log_file: Optional file path for structured log output.
         json_console: When ``True`` the console handler emits JSON instead of text.
         force: When ``True`` existing managed handlers are replaced.
+        settings: Optional settings override for logging configuration.
     """
     config = settings or get_settings()
 

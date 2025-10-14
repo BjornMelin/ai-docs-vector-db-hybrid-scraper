@@ -49,6 +49,11 @@ class ValidationReport:
     checks: list[CheckResult] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
+        """Convert the validation report into a serialisable mapping.
+
+        Returns:
+            Dict containing validation metadata and check results.
+        """
         payload = asdict(self)
         payload["checks"] = [asdict(check) for check in self.checks]
         return payload

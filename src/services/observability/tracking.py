@@ -89,6 +89,11 @@ class AIOperationTracker:
     """Track AI activity in-memory while emitting optional metrics."""
 
     def __init__(self, meter: Meter | None = None) -> None:
+        """Initialize tracker with an optional metrics meter.
+
+        Args:
+            meter: Meter instance used to record telemetry metrics.
+        """
         self._lock = threading.Lock()
         self._stats: dict[str, _OperationStats] = defaultdict(_OperationStats)
         self._meter = meter or metrics.get_meter(__name__)
@@ -174,6 +179,7 @@ class PerformanceTracker:
     """Minimal tracker used by agent components to measure durations."""
 
     def __init__(self) -> None:
+        """Initialize storage for tracked durations."""
         self._lock = threading.Lock()
         self._durations: dict[str, list[float]] = defaultdict(list)
 
@@ -212,6 +218,7 @@ class TraceCorrelationManager:
     """Tiny helper for carrying request correlation metadata."""
 
     def __init__(self) -> None:
+        """Initialize thread-local correlation storage."""
         self._local = threading.local()
 
     def set_context(self, **context: Any) -> None:
@@ -260,11 +267,13 @@ class TraceCorrelationManager:
 
 @lru_cache(maxsize=1)
 def get_ai_tracker() -> AIOperationTracker:
+    """Return global AI operation tracker singleton."""
     return AIOperationTracker()
 
 
 @lru_cache(maxsize=1)
 def get_correlation_manager() -> TraceCorrelationManager:
+    """Return global correlation manager singleton."""
     return TraceCorrelationManager()
 
 
