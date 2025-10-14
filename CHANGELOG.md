@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added curated router presets in `config/browser-routing-rules.json` so crawling tiers reuse the canonical RouterSettings model.
 - Provisioned deterministic CPU and GPU validation harnesses (`scripts/validation`) with pytest coverage and operator docs so environments surface scientific/GPU drift automatically.
 - Added a dedicated `validation.yml` GitHub Actions pipeline that publishes JSON harness artefacts for both CPU and self-hosted GPU runners.
 - Added focused FastAPI security middleware tests and published release notes summarising the configuration/file-watch hardening work.
@@ -58,6 +59,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   bootstrap helpers for FastAPI, MCP, CLI utilities, and evaluation scripts.
 - **[Config]:** Deprecated `src/core`, relocating defaults into Pydantic settings
   models so `Settings` remains the canonical source of configuration values.
+- **[Config]:** Consolidated template management into `base.json` plus
+  `profiles.json`, updating the wizard and CI validation to generate profiles
+  from a single source of truth.
 - **[API]:** Removed the duplicated `/api/routers/simple` module and unified all endpoints to use the canonical `SearchRequest` and `SearchRecord` data models.
 - **[Models]:** Consolidated all search-related request and response models into canonical `SearchRequest` and `SearchRecord` contracts, removing significant code duplication.
 - **[Search]:** Centralized `SearchRequest` validation, removed `src/models/vector_search.py`, and ensured vector store operations emit `SearchRecord` instances directly.
@@ -92,6 +96,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Updated configuration templates to embed router overrides and normalised Prometheus metrics ports to match the FastAPI `/metrics` endpoint.
 - CLI commands, wizard utilities, and tests now emit technical, emoji-free
   messaging aligned with the canonical `SearchRecord` workflow, ensuring
   consistent help output across CLI entry points.

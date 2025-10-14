@@ -1,0 +1,25 @@
+# Prometheus configuration aligned with docker-compose services.
+# The compose file mounts this path into /etc/prometheus/prometheus.yml.
+# Alertmanager integration is intentionally omitted until a service is provided.
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'application'
+    honor_labels: true
+    metrics_path: '/metrics'
+    static_configs:
+      - targets:
+          - 'app:8000'
+  - job_name: 'qdrant'
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+    static_configs:
+      - targets:
+          - 'qdrant:6333'
+  - job_name: 'prometheus'
+    static_configs:
+      - targets:
+          - 'localhost:9090'

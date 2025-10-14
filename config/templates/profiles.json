@@ -1,0 +1,402 @@
+{
+  "minimal": {
+    "description": "Baseline configuration with sane defaults and Prometheus metrics.",
+    "use_case": "Starting point for bespoke setups and experiments.",
+    "features": "Lightweight defaults, no external providers, metrics on /metrics.",
+    "overrides": {}
+  },
+  "development": {
+    "description": "Local development with debug logging and Crawl4AI routing.",
+    "use_case": "Interactive debugging and feature development.",
+    "features": "Debug logging, local Dragonfly optional, relaxed router budget.",
+    "overrides": {
+      "debug": true,
+      "log_level": "DEBUG",
+      "cache": {
+        "enable_caching": true,
+        "enable_dragonfly_cache": false,
+        "dragonfly_url": "redis://localhost:6379"
+      },
+      "qdrant": {
+        "url": "http://localhost:6333",
+        "collection_name": "dev_documents",
+        "batch_size": 64
+      },
+      "fastembed": {
+        "dense_model": "BAAI/bge-small-en-v1.5",
+        "sparse_model": "qdrant/bm25",
+        "retrieval_mode": "hybrid",
+        "batch_size": 16
+      },
+      "openai": {
+        "model": "text-embedding-3-small"
+      },
+      "browser": {
+        "playwright": {
+          "headless": false,
+          "timeout_ms": 45000
+        },
+        "router": {
+          "hard_domains": [
+            "openai.com",
+            "anthropic.com",
+            "github.com",
+            "docs.qdrant.tech"
+          ],
+          "rate_limits": {
+            "lightweight": {
+              "max_requests": 12
+            },
+            "browser_use": {
+              "period_seconds": 2.0
+            },
+            "playwright": {
+              "period_seconds": 1.0
+            },
+            "firecrawl": {
+              "period_seconds": 3.0
+            }
+          },
+          "per_attempt_cap_ms": 18000,
+          "min_budget_ms": 600,
+          "monitor_failures": false,
+          "unavailable_retry_seconds": 45.0
+        }
+      },
+      "performance": {
+        "max_concurrent_requests": 5,
+        "max_concurrent_crawls": 4,
+        "request_timeout": 60.0,
+        "max_retries": 2
+      },
+      "monitoring": {
+        "namespace": "ai_docs_dev",
+        "include_system_metrics": false
+      },
+      "observability": {
+        "service_name": "ai-docs-dev"
+      },
+      "security": {
+        "enabled": true,
+        "enable_rate_limiting": false,
+        "api_key_required": false
+      },
+      "documentation_sites": [
+        {
+          "name": "Example Docs",
+          "url": "https://docs.example.com",
+          "max_pages": 10,
+          "max_depth": 2,
+          "priority": "high"
+        }
+      ]
+    }
+  },
+  "production": {
+    "description": "Hardened deployment with OpenAI embeddings and Firecrawl crawling.",
+    "use_case": "Production workloads with external providers and stricter limits.",
+    "features": "OpenAI embeddings, Firecrawl routing, Dragonfly cache, OTLP tracing.",
+    "overrides": {
+      "environment": "production",
+      "embedding_provider": "openai",
+      "crawl_provider": "firecrawl",
+      "cache": {
+        "enable_caching": true,
+        "enable_dragonfly_cache": true,
+        "dragonfly_url": "redis://redis:6379",
+        "dragonfly_database": 0
+      },
+      "qdrant": {
+        "url": "http://qdrant:6333",
+        "collection_name": "production_documents",
+        "use_grpc": true,
+        "prefer_grpc": true,
+        "group_size": 2
+      },
+      "fastembed": {
+        "retrieval_mode": "hybrid",
+        "batch_size": 64
+      },
+      "openai": {
+        "model": "text-embedding-3-large",
+        "api_key": "sk-REPLACE"
+      },
+      "browser": {
+        "router": {
+          "hard_domains": [
+            "openai.com",
+            "anthropic.com",
+            "console.aws.amazon.com",
+            "portal.azure.com",
+            "console.cloud.google.com",
+            "github.com"
+          ],
+          "rate_limits": {
+            "lightweight": {
+              "max_requests": 18
+            },
+            "playwright": {
+              "max_requests": 4,
+              "period_seconds": 1.0
+            },
+            "browser_use": {
+              "max_requests": 2,
+              "period_seconds": 2.0
+            },
+            "firecrawl": {
+              "max_requests": 2,
+              "period_seconds": 3.0
+            },
+            "crawl4ai": {
+              "max_requests": 6
+            }
+          },
+          "per_attempt_cap_ms": 22000,
+          "min_budget_ms": 800
+        },
+        "firecrawl": {
+          "api_key": "fc-REPLACE",
+          "timeout_seconds": 180
+        }
+      },
+      "performance": {
+        "max_concurrent_requests": 12,
+        "max_concurrent_crawls": 6,
+        "request_timeout": 45.0,
+        "max_retries": 3
+      },
+      "monitoring": {
+        "namespace": "ai_docs",
+        "include_system_metrics": true
+      },
+      "observability": {
+        "enabled": true,
+        "service_name": "ai-docs-prod",
+        "trace_sample_rate": 0.25,
+        "track_costs": true,
+        "otlp_endpoint": "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4317}"
+      },
+      "security": {
+        "enabled": true,
+        "enable_rate_limiting": true,
+        "api_key_required": true,
+        "default_rate_limit": 60,
+        "rate_limit_window": 60
+      }
+    }
+  },
+  "personal-use": {
+    "description": "Single-machine profile optimised for individuals and demos.",
+    "use_case": "Personal exploration without external dependencies.",
+    "features": "Local FastEmbed, relaxed router budgets, no Dragonfly cache.",
+    "overrides": {
+      "crawl_provider": "playwright",
+      "cache": {
+        "enable_caching": true,
+        "enable_dragonfly_cache": false,
+        "cache_ttl_seconds": {
+          "search_results": 1800,
+          "embeddings": 43200,
+          "collections": 7200
+        }
+      },
+      "qdrant": {
+        "url": "http://localhost:6333",
+        "collection_name": "personal_docs"
+      },
+      "fastembed": {
+        "dense_model": "BAAI/bge-small-en-v1.5",
+        "retrieval_mode": "hybrid",
+        "batch_size": 8
+      },
+      "browser": {
+        "playwright": {
+          "headless": true,
+          "timeout_ms": 60000
+        },
+        "router": {
+          "hard_domains": [
+            "openai.com",
+            "notion.so",
+            "linear.app"
+          ],
+          "rate_limits": {
+            "lightweight": {
+              "max_requests": 6
+            },
+            "crawl4ai": {
+              "max_requests": 3
+            },
+            "playwright": {
+              "period_seconds": 2.0
+            },
+            "browser_use": {
+              "period_seconds": 3.0
+            },
+            "firecrawl": {
+              "period_seconds": 4.0
+            }
+          },
+          "per_attempt_cap_ms": 16000,
+          "min_budget_ms": 550,
+          "monitor_failures": false,
+          "unavailable_retry_seconds": 75.0
+        }
+      },
+      "performance": {
+        "max_concurrent_requests": 3,
+        "max_concurrent_crawls": 2,
+        "request_timeout": 75.0
+      },
+      "monitoring": {
+        "include_system_metrics": false
+      },
+      "observability": {
+        "service_name": "ai-docs-personal"
+      },
+      "security": {
+        "enabled": true,
+        "enable_rate_limiting": false,
+        "api_key_required": false
+      }
+    }
+  },
+  "local-only": {
+    "description": "Privacy-focused profile restricted to localhost resources.",
+    "use_case": "Offline operation without external APIs.",
+    "features": "Local routing, stricter domain allowlist, cached FastEmbed models.",
+    "overrides": {
+      "crawl_provider": "playwright",
+      "cache": {
+        "enable_caching": true,
+        "enable_dragonfly_cache": false
+      },
+      "qdrant": {
+        "url": "http://localhost:6333",
+        "collection_name": "local_docs"
+      },
+      "fastembed": {
+        "dense_model": "BAAI/bge-small-en-v1.5",
+        "retrieval_mode": "dense",
+        "cache_dir": "./cache/models"
+      },
+      "browser": {
+        "playwright": {
+          "headless": true,
+          "timeout_ms": 45000
+        },
+        "router": {
+          "hard_domains": [
+            "localhost",
+            "127.0.0.1"
+          ],
+          "rate_limits": {
+            "lightweight": {
+              "max_requests": 8
+            },
+            "crawl4ai": {
+              "max_requests": 2
+            },
+            "playwright": {
+              "max_requests": 1,
+              "period_seconds": 2.0
+            },
+            "browser_use": {
+              "period_seconds": 3.0
+            },
+            "firecrawl": {
+              "period_seconds": 5.0
+            }
+          },
+          "per_attempt_cap_ms": 15000,
+          "min_budget_ms": 500,
+          "monitor_failures": false,
+          "unavailable_retry_seconds": 45.0
+        }
+      },
+      "performance": {
+        "max_concurrent_requests": 2,
+        "max_concurrent_crawls": 1,
+        "request_timeout": 60.0
+      },
+      "monitoring": {
+        "include_system_metrics": false
+      },
+      "observability": {
+        "track_ai_operations": false
+      },
+      "security": {
+        "enabled": true,
+        "enable_rate_limiting": false,
+        "api_key_required": false,
+        "allowed_domains": [
+          "localhost",
+          "127.0.0.1"
+        ]
+      }
+    }
+  },
+  "testing": {
+    "description": "CI friendly profile with deterministic runtimes and no metrics.",
+    "use_case": "Automated testing and validation pipelines.",
+    "features": "Metrics disabled, tight router limits, fast FastEmbed batching.",
+    "overrides": {
+      "environment": "testing",
+      "log_level": "WARNING",
+      "cache": {
+        "enable_caching": false,
+        "enable_dragonfly_cache": false
+      },
+      "qdrant": {
+        "url": "http://localhost:6333",
+        "collection_name": "test_documents",
+        "batch_size": 16
+      },
+      "fastembed": {
+        "dense_model": "BAAI/bge-small-en-v1.5",
+        "retrieval_mode": "dense",
+        "batch_size": 4
+      },
+      "browser": {
+        "router": {
+          "rate_limits": {
+            "lightweight": {
+              "max_requests": 4
+            },
+            "crawl4ai": {
+              "max_requests": 2
+            },
+            "playwright": {
+              "max_requests": 1
+            },
+            "firecrawl": {
+              "period_seconds": 4.0
+            }
+          },
+          "per_attempt_cap_ms": 12000,
+          "min_budget_ms": 500,
+          "monitor_failures": false,
+          "unavailable_retry_seconds": 30.0
+        }
+      },
+      "performance": {
+        "max_concurrent_requests": 2,
+        "max_concurrent_crawls": 1,
+        "request_timeout": 20.0,
+        "max_retries": 1
+      },
+      "monitoring": {
+        "enable_metrics": false,
+        "include_system_metrics": false
+      },
+      "observability": {
+        "track_ai_operations": false
+      },
+      "security": {
+        "enabled": false,
+        "enable_rate_limiting": false,
+        "api_key_required": false
+      }
+    }
+  }
+}

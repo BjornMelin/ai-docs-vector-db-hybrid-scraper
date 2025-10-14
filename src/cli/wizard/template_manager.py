@@ -1,12 +1,9 @@
-"""Template management for the configuration wizard.
-
-Handles loading, validating, and managing configuration templates
-with Pydantic integration for real-time validation.
-"""
+"""Template management utilities for the configuration wizard."""
 
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -23,24 +20,31 @@ if TYPE_CHECKING:  # pragma: no cover - import for typing only
 
 console = Console()
 
+_BASE_TEMPLATE_FILENAME = "base.json"
+_PROFILE_INDEX_FILENAME = "profiles.json"
+
 
 class TemplateManager:
     """Manages configuration templates for the wizard."""
 
     def __init__(self, templates_dir: Path | None = None):
-        """Initialize template manager.
+        """Initialize the template manager.
 
         Args:
-            templates_dir: Directory containing templates. Defaults to config/templates
-
+            templates_dir: Directory containing template assets. Defaults to
+                ``config/templates``.
         """
+
         self.templates_dir = templates_dir or Path("config/templates")
         self._templates: dict[str, dict[str, Any]] = {}
         self._metadata: dict[str, dict[str, str]] = {}
+        self._base_template: dict[str, Any] = {}
+        self._profile_index: dict[str, Any] = {}
         self._load_templates()
 
     def _load_templates(self) -> None:
-        """Load all templates from the templates directory."""
+        """Load base template and profile overrides from disk."""
+
         if not self.templates_dir.exists():
             console.print(
                 "[yellow]Warning: Templates directory not found: "
@@ -48,96 +52,107 @@ class TemplateManager:
             )
             return
 
-        template_files = list(self.templates_dir.glob("*.json"))
-        if not template_files:
+        base_path = self.templates_dir / _BASE_TEMPLATE_FILENAME
+        profiles_path = self.templates_dir / _PROFILE_INDEX_FILENAME
+
+        try:
+            self._base_template = self._load_json(base_path)
+        except FileNotFoundError:
             console.print(
-                "[yellow]Warning: No template files found in "
-                f"{self.templates_dir}[/yellow]"
+                f"[yellow]Warning: Base template missing at {base_path}[/yellow]"
             )
-            return
+            self._base_template = {}
+        except json.JSONDecodeError as exc:
+            console.print(
+                f"[red]Invalid JSON in base template {base_path}: {exc}[/red]"
+            )
+            self._base_template = {}
 
-        for template_file in template_files:
-            try:
-                with template_file.open() as f:
-                    template_data = json.load(f)
+        try:
+            self._profile_index = self._load_json(profiles_path)
+        except FileNotFoundError:
+            console.print(
+                f"[yellow]Warning: Profile index missing at {profiles_path}[/yellow]"
+            )
+            self._profile_index = {}
+        except json.JSONDecodeError as exc:
+            console.print(
+                f"[red]Invalid JSON in profile index {profiles_path}: {exc}[/red]"
+            )
+            self._profile_index = {}
 
-                template_name = template_file.stem
-                self._templates[template_name] = template_data
-                self._metadata[template_name] = self._extract_metadata(
-                    template_data, template_name
-                )
+        self._templates.clear()
+        self._metadata.clear()
 
-            except (OSError, json.JSONDecodeError, ValueError) as e:
-                console.print(f"[red]Error loading template {template_file}: {e}[/red]")
+        for name, record in self._profile_index.items():
+            overrides = record.get("overrides", {})
+            template = self._merge_template(overrides)
+            self._templates[name] = template
+            self._metadata[name] = self._extract_metadata(name, record)
 
-    def _extract_metadata(
-        self, _template_data: dict[str, Any], name: str
-    ) -> dict[str, str]:
-        """Extract metadata from template data."""
-        # Template metadata mapping
-        metadata_map = {
-            "development": {
-                "description": "Local development with debug features",
-                "use_case": "Development and testing",
-                "features": "Debug mode, local FastEmbed, visual browser",
-            },
-            "production": {
-                "description": "High-performance production deployment",
-                "use_case": "Production deployment",
-                "features": "OpenAI embeddings, caching, security enabled",
-            },
-            "personal-use": {
-                "description": "Resource-optimized for individual developers",
-                "use_case": "Personal projects and learning",
-                "features": "Cost-effective, moderate resources",
-            },
-            "local-only": {
-                "description": "Privacy-focused without cloud dependencies",
-                "use_case": "Privacy-conscious deployment",
-                "features": "Local FastEmbed only, no external APIs",
-            },
-            "testing": {
-                "description": "Optimized for automated testing and CI/CD",
-                "use_case": "Automated testing pipelines",
-                "features": "Minimal resources, fast execution",
-            },
-            "minimal": {
-                "description": "Quick start with essential settings only",
-                "use_case": "Getting started quickly",
-                "features": "Simple configuration, easy to understand",
-            },
+    def _load_json(self, path: Path) -> dict[str, Any]:
+        """Return JSON content from ``path`` as a dictionary."""
+
+        text = path.read_text(encoding="utf-8")
+        data = json.loads(text)
+        if not isinstance(data, dict):
+            msg = f"Template asset {path} must contain a JSON object."
+            raise ValueError(msg)
+        return data
+
+    def _merge_template(self, overrides: dict[str, Any]) -> dict[str, Any]:
+        """Merge overrides onto the base template and return a new mapping."""
+
+        merged = deepcopy(self._base_template)
+        self._apply_overrides(merged, overrides)
+        return merged
+
+    def _apply_overrides(
+        self, target: dict[str, Any], overrides: dict[str, Any]
+    ) -> None:
+        """Apply nested overrides onto ``target`` in place."""
+
+        stack: list[tuple[dict[str, Any], dict[str, Any]]] = [(target, overrides)]
+        while stack:
+            destination, source = stack.pop()
+            for key, value in source.items():
+                if isinstance(value, dict) and isinstance(destination.get(key), dict):
+                    stack.append((destination[key], value))
+                else:
+                    destination[key] = value
+
+    def _extract_metadata(self, name: str, record: dict[str, Any]) -> dict[str, str]:
+        """Return human-readable metadata for ``name``."""
+
+        description = record.get("description", f"Configuration template for {name}")
+        use_case = record.get("use_case", f"{name.title()} deployment")
+        features = record.get("features", "Custom configuration template")
+        return {
+            "description": description,
+            "use_case": use_case,
+            "features": features,
         }
 
-        return metadata_map.get(
-            name,
-            {
-                "description": f"Configuration template for {name}",
-                "use_case": f"{name.title()} deployment",
-                "features": "Custom configuration template",
-            },
-        )
-
     def list_templates(self) -> list[str]:
-        """Get list of available template names."""
+        """Return the available template identifiers."""
+
         return list(self._templates.keys())
 
     def get_template(self, name: str) -> dict[str, Any] | None:
-        """Get template data by name."""
+        """Return the template data for ``name`` if present."""
+
         return self._templates.get(name)
 
     def get_template_metadata(self, name: str) -> dict[str, str] | None:
-        """Get template metadata by name."""
+        """Return metadata describing the template named ``name``."""
+
         return self._metadata.get(name)
 
     def validate_template(
         self, template_data: dict[str, Any]
     ) -> tuple[bool, str | None]:
-        """Validate template data against the Config model.
+        """Validate template data against the Settings model."""
 
-        Returns:
-            Tuple of (is_valid, error_message)
-
-        """
         is_valid, errors, _ = validate_settings_payload(template_data)
         if not is_valid:
             return False, errors[0] if errors else "Validation failed"
@@ -145,6 +160,7 @@ class TemplateManager:
 
     def show_template_comparison(self) -> None:
         """Display a comparison table of all templates."""
+
         if not self._templates:
             console.print("[yellow]No templates available[/yellow]")
             return
@@ -162,7 +178,6 @@ class TemplateManager:
         table.add_column("Embedding", style="cyan", width=12)
         table.add_column("Caching", style="green", width=10)
 
-        # Sort templates by recommended order
         template_order = [
             "personal-use",
             "development",
@@ -178,7 +193,6 @@ class TemplateManager:
             if template_name in self._templates
         ]
 
-        # Add any templates not in the order
         ordered_templates.extend(
             [
                 template_name
@@ -194,11 +208,9 @@ class TemplateManager:
                 {"use_case": "Unknown", "features": "No description available"},
             )
 
-            # Extract key info from template
             embedding_provider = template_data.get("embedding_provider", "unknown")
             cache_enabled = template_data.get("cache", {}).get("enable_caching", False)
 
-            # Style the template name based on recommendation
             if template_name == "personal-use":
                 name_text = Text(template_name, style="bold green")
             elif template_name == "development":
@@ -224,6 +236,7 @@ class TemplateManager:
 
     def preview_template(self, name: str) -> None:
         """Show a detailed preview of a specific template."""
+
         template_data = self.get_template(name)
         if not template_data:
             console.print(f"[red]Template '{name}' not found[/red]")
@@ -231,14 +244,12 @@ class TemplateManager:
 
         metadata = self.get_template_metadata(name)
 
-        # Create preview panel
         console.print(f"\n[bold cyan]Template Preview: {name}[/bold cyan]")
         if metadata and "description" in metadata:
             console.print(f"[dim]{metadata['description']}[/dim]\n")
         else:
             console.print("[dim]No description available[/dim]\n")
 
-        # Show key configuration sections
         sections = [
             ("Environment", ["environment", "debug", "log_level"]),
             ("Providers", ["embedding_provider", "crawl_provider"]),
@@ -268,29 +279,18 @@ class TemplateManager:
     def create_config_from_template(
         self, template_name: str, overrides: dict[str, Any] | None = None
     ) -> Settings:
-        """Create a Settings object from template with optional overrides.
-
-        Args:
-            template_name: Name of the template to use
-            overrides: Optional dictionary of values to override in template
-
-        Returns:
-            Settings object created from template
-
-        Raises:
-            ValueError: If template not found or validation fails
-        """
+        """Create a Settings object from template with optional overrides."""
 
         template_data = self.get_template(template_name)
         if not template_data:
             msg = f"Template '{template_name}' not found"
             raise ValueError(msg)
 
-        # Apply overrides if provided
         if overrides:
-            template_data = {**template_data, **overrides}
+            template_copy = deepcopy(template_data)
+            self._apply_overrides(template_copy, overrides)
+            template_data = template_copy
 
-        # Validate and create config
         is_valid, errors, settings = validate_settings_payload(template_data)
         if not is_valid or settings is None:
             details = "; ".join(errors) if errors else "unknown error"
@@ -300,32 +300,63 @@ class TemplateManager:
         return settings
 
     def save_template(self, name: str, config: Settings, description: str = "") -> Path:
-        """Save a Settings object as a new template.
+        """Persist a Settings object as a profile override.
 
         Args:
-            name: Name for the new template
-            config: Settings object to save
-            description: Optional description for the template
+            name: Name for the new template.
+            config: Settings object to persist.
+            description: Optional human readable description.
 
         Returns:
-            Path to saved template file
+            Path to the updated profile index file.
         """
 
-        template_file = self.templates_dir / f"{name}.json"
-
-        # Create templates directory if it doesn't exist
-        self.templates_dir.mkdir(parents=True, exist_ok=True)
-
-        # Save template data
-        with template_file.open("w") as f:
-            json.dump(config.model_dump(), f, indent=2)
-
-        # Update internal cache
-        self._templates[name] = config.model_dump()
-        self._metadata[name] = {
+        config_data = config.model_dump()
+        overrides = self._compute_diff(self._base_template, config_data)
+        metadata = {
             "description": description or f"Custom template: {name}",
-            "use_case": "Custom configuration",
+            "use_case": "Custom profile configuration",
             "features": "User-defined settings",
+            "overrides": overrides,
         }
 
-        return template_file
+        self._profile_index[name] = metadata
+        self._metadata[name] = {
+            "description": metadata["description"],
+            "use_case": metadata["use_case"],
+            "features": metadata["features"],
+        }
+        self._templates[name] = self._merge_template(overrides)
+
+        profiles_path = self.templates_dir / _PROFILE_INDEX_FILENAME
+        profiles_path.write_text(
+            json.dumps(self._profile_index, indent=2), encoding="utf-8"
+        )
+
+        return profiles_path
+
+    def _compute_diff(
+        self, base: dict[str, Any], data: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Return overrides required to transform ``base`` into ``data``."""
+
+        diff: dict[str, Any] = {}
+        stack: list[tuple[tuple[str, ...], Any, Any]] = [((), base, data)]
+        while stack:
+            path, base_value, new_value = stack.pop()
+            if isinstance(new_value, dict):
+                base_value = base_value or {}
+                for key, value in new_value.items():
+                    stack.append((path + (key,), base_value.get(key), value))
+            else:
+                if new_value != base_value:
+                    cursor = diff
+                    for key in path[:-1]:
+                        cursor = cursor.setdefault(key, {})
+                    cursor[path[-1]] = new_value
+        return diff
+
+
+__all__ = [
+    "TemplateManager",
+]
