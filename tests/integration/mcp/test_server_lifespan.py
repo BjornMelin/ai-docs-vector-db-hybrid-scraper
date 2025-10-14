@@ -16,7 +16,6 @@ from src import unified_mcp_server
 
 def _lifespan_context() -> AbstractAsyncContextManager[None]:
     """Return the managed lifespan context for the unified MCP server."""
-
     lifespan_factory = getattr(unified_mcp_server, "managed_lifespan", None)
     if lifespan_factory is None:
         msg = "Unified MCP server does not expose a managed lifespan context."
@@ -29,7 +28,6 @@ def _lifespan_context() -> AbstractAsyncContextManager[None]:
 
 def _stub_container() -> SimpleNamespace:
     """Return a container stub exposing the providers used during startup."""
-
     vector_service = MagicMock(name="vector_service")
     cache_manager = MagicMock(name="cache_manager")
     browser_manager = MagicMock(name="browser_manager")
@@ -54,7 +52,6 @@ async def test_lifespan_initializes_and_cleans_up(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The lifespan context should initialize services and register tools."""
-
     monkeypatch.setattr(unified_mcp_server, "validate_configuration", MagicMock())
 
     config = SimpleNamespace(
@@ -127,7 +124,6 @@ async def test_lifespan_enables_monitoring_when_configured(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Health monitoring should start when configuration enables it."""
-
     monkeypatch.setattr(unified_mcp_server, "validate_configuration", MagicMock())
 
     config = SimpleNamespace(
@@ -214,5 +210,4 @@ async def test_lifespan_enables_monitoring_when_configured(
 @pytest.fixture(autouse=True)
 def reset_cache_singleton() -> Generator[None, None, None]:
     """Ensure global cache manager state is clean for each test."""
-
     yield

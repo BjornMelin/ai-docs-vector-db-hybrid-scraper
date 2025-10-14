@@ -54,7 +54,6 @@ async def embedding_manager(mock_config):
 @contextmanager
 def override_provider_factories(manager, *, openai_cls=None, fastembed_cls=None):
     """Temporarily swap provider factories for targeted initialization behaviour."""
-
     original_set_factories = manager._provider_registry.set_factories
 
     def _configure_factories(factories):
@@ -76,7 +75,6 @@ class TestEmbeddingManagerInitialization:
     @pytest.mark.asyncio
     async def test_initialization_with_openai_provider(self, mock_config):
         """Test manager initialization with OpenAI and FastEmbed providers."""
-
         manager = EmbeddingManager(config=mock_config)
 
         with (

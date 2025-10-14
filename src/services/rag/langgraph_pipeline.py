@@ -33,7 +33,7 @@ except ModuleNotFoundError:  # pragma: no cover
 
 
 try:  # pragma: no cover - optional dependency guard
-    from langgraph.graph import StateGraph
+    from langgraph.graph import StateGraph  # type: ignore
 
     LANGGRAPH_AVAILABLE = True
 except ModuleNotFoundError:  # pragma: no cover
@@ -117,6 +117,7 @@ class LangGraphRAGPipeline:
         *,
         generator_factory: GeneratorFactory | None = None,
     ) -> None:
+        """Initialize the LangGraph RAG pipeline."""
         self._vector_service = vector_service
         self._generator_factory = generator_factory or self._default_generator
         self._tracer = trace.get_tracer(__name__)
@@ -125,7 +126,6 @@ class LangGraphRAGPipeline:
     @staticmethod
     def _default_generator(config: RAGConfig, retriever: BaseRetriever) -> RAGGenerator:
         """Factory that instantiates the default RAG generator."""
-
         return RAGGenerator(config, retriever)
 
     # pylint: disable=too-many-arguments,too-many-locals,too-many-statements
@@ -139,7 +139,6 @@ class LangGraphRAGPipeline:
         prefetched_records: Sequence[SearchRecord] | None = None,
     ) -> dict[str, Any] | None:
         """Execute the LangGraph pipeline and return structured outputs."""
-
         if not LANGGRAPH_AVAILABLE:
             msg = "LangGraph must be installed to run the LangGraphRAGPipeline"
             raise RuntimeError(msg)
@@ -313,7 +312,6 @@ class LangGraphRAGPipeline:
 
     def _build_compressor(self, config: RAGConfig) -> DocumentCompressorPipeline:
         """Create a document compressor pipeline based on configuration."""
-
         if not config.compression_enabled:
             return DocumentCompressorPipeline(transformers=[])
 
@@ -337,7 +335,6 @@ class LangGraphRAGPipeline:
     @staticmethod
     def _iter_items(obj: Any) -> Iterable[tuple[str, Any]]:
         """Yield key/value pairs from mapping-like instrumentation payloads."""
-
         empty: tuple[tuple[str, Any], ...] = ()
         if obj is None:
             return empty
@@ -350,14 +347,15 @@ class LangGraphRAGPipeline:
             except TypeError:
                 return empty
             if isinstance(candidate, Iterable):
-                pairs: list[tuple[str, Any]] = []
-                for item in candidate:
+                pairs = [
+                    (item[0], item[1])
+                    for item in candidate
                     if (
                         isinstance(item, tuple)
                         and len(item) == 2
                         and isinstance(item[0], str)
-                    ):
-                        pairs.append((item[0], item[1]))
+                    )
+                ]
                 if pairs:
                     return tuple(pairs)
         return empty

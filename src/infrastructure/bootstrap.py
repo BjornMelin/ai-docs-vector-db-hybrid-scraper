@@ -29,7 +29,6 @@ async def ensure_container(
     Returns:
         The active :class:`ApplicationContainer` instance.
     """
-
     container = get_container()
     if container is not None and not force_reload:
         return container
@@ -56,7 +55,6 @@ async def container_session(
     Yields:
         The active :class:`ApplicationContainer` instance.
     """
-
     existing = get_container()
     created = force_reload or existing is None
     container: ApplicationContainer

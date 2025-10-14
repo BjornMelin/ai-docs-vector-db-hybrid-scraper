@@ -176,7 +176,6 @@ class TestQdrantAliasManager:
     @pytest.mark.asyncio
     async def test_cleanup_with_pending_tasks(self, alias_manager):
         """Cleanup remains a no-op with direct deletion."""
-
         await alias_manager.cleanup()
 
     @pytest.mark.asyncio

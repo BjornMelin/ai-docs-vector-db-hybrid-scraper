@@ -15,7 +15,6 @@ from src.services.cache.manager import CacheManager, CacheType
 @pytest.mark.asyncio
 async def test_cache_manager_round_trip(fakeredis_cache: DragonflyCache) -> None:
     """CacheManager should perform distributed set/get/delete operations."""
-
     manager = CacheManager(
         distributed_cache=fakeredis_cache,
         enable_distributed_cache=True,
@@ -38,7 +37,6 @@ async def test_cache_manager_round_trip(fakeredis_cache: DragonflyCache) -> None
 @pytest.mark.asyncio
 async def test_specialized_cache_ttl_overrides(fakeredis_cache: DragonflyCache) -> None:
     """Specialised caches inherit TTL overrides provided at construction time."""
-
     manager = CacheManager(
         distributed_cache=fakeredis_cache,
         enable_specialized_caches=True,
@@ -61,7 +59,6 @@ async def test_clear_specific_cache_type_removes_distributed_keys(
     fakeredis_cache: DragonflyCache,
 ) -> None:
     """Clearing a cache type should evict matching Dragonfly keys."""
-
     manager = CacheManager(
         distributed_cache=fakeredis_cache,
         enable_specialized_caches=False,
@@ -108,7 +105,6 @@ async def test_delete_in_batches_counts_successful_deletions() -> None:
 
 def test_cache_manager_warns_when_distributed_disabled(caplog) -> None:
     """Disabling Dragonfly caching should emit a configuration warning."""
-
     with caplog.at_level("WARNING"):
         CacheManager(enable_distributed_cache=False)
 

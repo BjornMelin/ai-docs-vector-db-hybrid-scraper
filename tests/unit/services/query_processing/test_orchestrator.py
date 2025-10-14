@@ -18,19 +18,23 @@ class VectorServiceStub:
     """Minimal vector service stub with deterministic responses."""
 
     def __init__(self, collection: str = "documentation") -> None:
+        """Initialize stub with fixed collection name."""
         self._collection = collection
         self.config = SimpleNamespace(
             qdrant=SimpleNamespace(collection_name=collection)
         )
         self._initialized = False
 
-    async def initialize(self) -> None:  # pragma: no cover - simple stub
+    async def initialize(self) -> None:
+        """Set initialization flag."""
         self._initialized = True
 
-    async def cleanup(self) -> None:  # pragma: no cover - simple stub
+    async def cleanup(self) -> None:
+        """Clear initialization flag."""
         self._initialized = False
 
     def is_initialized(self) -> bool:
+        """Return current initialization state."""
         return self._initialized
 
     async def search_documents(
@@ -39,6 +43,7 @@ class VectorServiceStub:
         query: str,
         **kwargs: Any,
     ) -> list[SearchRecord]:
+        """Return a fixed search record for testing."""
         assert collection == self._collection
         assert kwargs.get("group_by") == "doc_id"
         record = SearchRecord(
@@ -61,13 +66,13 @@ class VectorServiceStub:
         return [record]
 
     async def list_collections(self) -> list[str]:
+        """Return configured collection name."""
         return [self._collection]
 
 
 @pytest.mark.asyncio
 async def test_search_returns_results_with_collection_field() -> None:
     """Verify search results include collection metadata in returned records."""
-
     service = VectorServiceStub("articles")
     orchestrator = SearchOrchestrator(
         vector_store_service=cast(VectorStoreService, service)
@@ -96,7 +101,6 @@ async def test_search_returns_results_with_collection_field() -> None:
 @pytest.mark.asyncio
 async def test_search_uses_list_collections_when_default_missing() -> None:
     """Verify the orchestrator falls back to list_collections() without a default."""
-
     service = VectorServiceStub("knowledge")
     service.config = SimpleNamespace()  # no qdrant section
     orchestrator = SearchOrchestrator(
@@ -120,7 +124,6 @@ async def test_search_uses_list_collections_when_default_missing() -> None:
 @pytest.mark.asyncio
 async def test_query_expansion_applied_when_enabled() -> None:
     """Verify query expansion is applied when the feature flag is enabled."""
-
     service = VectorServiceStub()
     orchestrator = SearchOrchestrator(
         vector_store_service=cast(VectorStoreService, service)
@@ -144,13 +147,12 @@ async def test_query_expansion_applied_when_enabled() -> None:
 @pytest.mark.asyncio
 async def test_search_with_rag_pipeline(monkeypatch) -> None:
     """Verify the search orchestrator integrates with the LangGraph RAG pipeline."""
-
     service = VectorServiceStub()
     rag_config = ServiceRAGConfig()
 
     captured: dict[str, Any] = {}
 
-    class DummyPipeline:  # noqa: D401 - simple stub
+    class DummyPipeline:
         """Stub pipeline capturing invocation arguments."""
 
         def __init__(

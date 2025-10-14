@@ -39,7 +39,6 @@ class ContentClassifier:
         Args:
             embedding_manager: Optional EmbeddingManager for semantic analysis
         """
-
         self.embedding_manager = embedding_manager
         self._initialized = False
 
@@ -352,7 +351,6 @@ class ContentClassifier:
 
     async def initialize(self) -> None:
         """Initialize the classifier (no additional setup needed)."""
-
         self._initialized = True
         logger.info("ContentClassifier initialized with rule-based patterns")
 
@@ -377,7 +375,6 @@ class ContentClassifier:
         Raises:
             RuntimeError: If classifier not initialized
         """
-
         if not self._initialized:
             msg = "ContentClassifier not initialized"
             raise RuntimeError(msg)
@@ -407,7 +404,6 @@ class ContentClassifier:
 
     def _create_unknown_classification(self, reason: str) -> ContentClassification:
         """Create a classification result for unknown content."""
-
         return ContentClassification(
             primary_type=ContentType.UNKNOWN,
             secondary_types=[],
@@ -419,7 +415,6 @@ class ContentClassifier:
         self, content: str, url: str | None, title: str | None
     ) -> tuple[dict[ContentType, float], list[str]]:
         """Calculate rule-based classification scores."""
-
         content_lower = content.lower()
         url_lower = url.lower() if url else ""
         title_lower = title.lower() if title else ""
@@ -444,7 +439,6 @@ class ContentClassifier:
         self, content_lower: str, url_lower: str, title_lower: str, patterns: dict
     ) -> tuple[float, list[str]]:
         """Score a single content type against patterns."""
-
         score = 0.0
         type_reasoning = []
 
@@ -506,7 +500,6 @@ class ContentClassifier:
         reasoning_parts: list[str],
     ) -> dict[ContentType, float]:
         """Apply semantic analysis to enhance classification scores."""
-
         try:
             semantic_scores = await self._semantic_classification(content)
             blend_ratio = CLASSIFICATION_WEIGHTS["semantic_blend_ratio"]
@@ -527,7 +520,6 @@ class ContentClassifier:
         self, type_scores: dict[ContentType, float], content: str, url: str | None
     ) -> dict[ContentType, float]:
         """Handle special case for pure code content classification."""
-
         if not self._is_pure_code_content(content):
             return type_scores
 
@@ -544,7 +536,6 @@ class ContentClassifier:
 
     def _calculate_tutorial_url_boost(self, url: str | None) -> float:
         """Calculate tutorial boost based on URL patterns."""
-
         if not url:
             return 0.0
 
@@ -562,7 +553,6 @@ class ContentClassifier:
         reasoning_parts: list[str],
     ) -> ContentClassification:
         """Create the final classification result."""
-
         sorted_types = sorted(type_scores.items(), key=lambda x: x[1], reverse=True)
 
         if (
@@ -595,7 +585,6 @@ class ContentClassifier:
         self, sorted_types: list[tuple[ContentType, float]]
     ) -> list[ContentType]:
         """Determine secondary content types from sorted scores."""
-
         return [
             content_type
             for content_type, score in sorted_types[1:]
@@ -615,7 +604,6 @@ class ContentClassifier:
         Returns:
             dict[ContentType, float]: Semantic similarity scores for each type
         """
-
         # Reference texts for each content type (used for semantic similarity)
         reference_texts = {
             ContentType.DOCUMENTATION: (
@@ -693,7 +681,6 @@ class ContentClassifier:
         Returns:
             bool: True if code blocks are detected
         """
-
         code_patterns = [
             r"```\w*\n",  # Markdown code fences
             r"^\s{4,}\w+",  # Indented code blocks
@@ -717,7 +704,6 @@ class ContentClassifier:
         Returns:
             list[str]: List of detected programming languages
         """
-
         detected_languages = []
 
         for language, patterns in self._programming_languages.items():
@@ -735,7 +721,6 @@ class ContentClassifier:
         Returns:
             bool: True if content appears tutorial-like
         """
-
         tutorial_indicators = [
             r"step\s+\d+",
             r"first",
@@ -766,7 +751,6 @@ class ContentClassifier:
         Returns:
             bool: True if content appears reference-like
         """
-
         reference_indicators = [
             r"parameters?:",
             r"returns?:",
@@ -798,7 +782,6 @@ class ContentClassifier:
         Returns:
             bool: True if content appears to be pure code
         """
-
         lines = [line.strip() for line in content.split("\n") if line.strip()]
         if len(lines) < 3:
             return False
@@ -882,7 +865,6 @@ class ContentClassifier:
         Returns:
             dict: Adjusted type scores
         """
-
         content_lower = content.lower()
 
         # Forum vs Code disambiguation: forums
@@ -975,6 +957,5 @@ class ContentClassifier:
 
     async def cleanup(self) -> None:
         """Cleanup classifier resources."""
-
         self._initialized = False
         logger.info("ContentClassifier cleaned up")

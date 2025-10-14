@@ -34,7 +34,6 @@ class TemplateManager:
             templates_dir: Directory containing template assets. Defaults to
                 ``config/templates``.
         """
-
         self.templates_dir = templates_dir or Path("config/templates")
         self._templates: dict[str, dict[str, Any]] = {}
         self._metadata: dict[str, dict[str, str]] = {}
@@ -44,7 +43,6 @@ class TemplateManager:
 
     def _load_templates(self) -> None:
         """Load base template and profile overrides from disk."""
-
         if not self.templates_dir.exists():
             console.print(
                 "[yellow]Warning: Templates directory not found: "
@@ -98,22 +96,19 @@ class TemplateManager:
 
     def _load_json(self, path: Path) -> dict[str, Any]:
         """Return JSON content from ``path`` as a dictionary."""
-
         text = path.read_text(encoding="utf-8")
         data = json.loads(text)
         if not isinstance(data, dict):
             msg = f"Template asset {path} must contain a JSON object."
-            raise ValueError(msg)
+            raise TypeError(msg)
         return data
 
     def _merge_template(self, overrides: dict[str, Any]) -> dict[str, Any]:
         """Merge overrides onto the base template and return a new mapping."""
-
         return merge_overrides(self._base_template, overrides)
 
     def _extract_metadata(self, name: str, record: dict[str, Any]) -> dict[str, str]:
         """Return human-readable metadata for ``name``."""
-
         description = record.get("description", f"Configuration template for {name}")
         use_case = record.get("use_case", f"{name.title()} deployment")
         features = record.get("features", "Custom configuration template")
@@ -125,24 +120,20 @@ class TemplateManager:
 
     def list_templates(self) -> list[str]:
         """Return the available template identifiers."""
-
         return list(self._templates.keys())
 
     def get_template(self, name: str) -> dict[str, Any] | None:
         """Return the template data for ``name`` if present."""
-
         return self._templates.get(name)
 
     def get_template_metadata(self, name: str) -> dict[str, str] | None:
         """Return metadata describing the template named ``name``."""
-
         return self._metadata.get(name)
 
     def validate_template(
         self, template_data: dict[str, Any]
     ) -> tuple[bool, str | None]:
         """Validate template data against the Settings model."""
-
         is_valid, errors, _ = validate_settings_payload(template_data)
         if not is_valid:
             return False, errors[0] if errors else "Validation failed"
@@ -150,7 +141,6 @@ class TemplateManager:
 
     def show_template_comparison(self) -> None:
         """Display a comparison table of all templates."""
-
         if not self._templates:
             console.print("[yellow]No templates available[/yellow]")
             return
@@ -226,7 +216,6 @@ class TemplateManager:
 
     def preview_template(self, name: str) -> None:
         """Show a detailed preview of a specific template."""
-
         template_data = self.get_template(name)
         if not template_data:
             console.print(f"[red]Template '{name}' not found[/red]")
@@ -270,7 +259,6 @@ class TemplateManager:
         self, template_name: str, overrides: dict[str, Any] | None = None
     ) -> Settings:
         """Create a Settings object from template with optional overrides."""
-
         template_data = self.get_template(template_name)
         if not template_data:
             msg = f"Template '{template_name}' not found"
@@ -298,7 +286,6 @@ class TemplateManager:
         Returns:
             Path to the updated profile index file.
         """
-
         config_data = config.model_dump()
         overrides = calculate_diff(self._base_template, config_data)
         metadata = {

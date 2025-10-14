@@ -86,7 +86,6 @@ class SearchRecord(BaseModel):
         Raises:
             TypeError: If the payload type cannot be normalized.
         """
-
         if isinstance(payload, cls):
             return payload
         if isinstance(payload, dict):
@@ -115,7 +114,6 @@ class SearchRecord(BaseModel):
         Returns:
             List of validated :class:`SearchRecord` instances.
         """
-
         return [
             cls._coerce_from_any(item, default_collection=default_collection)
             for item in payloads
@@ -126,7 +124,6 @@ class SearchRecord(BaseModel):
         cls, payload: Any, *, default_collection: str | None
     ) -> SearchRecord:
         """Best-effort coercion of arbitrary payloads into ``SearchRecord``s."""
-
         try:
             return cls.from_payload(payload)
         except (TypeError, ValidationError) as exc:
@@ -154,7 +151,6 @@ class SearchRecord(BaseModel):
     @staticmethod
     def _resolve_collection(payload: Any, default_collection: str | None) -> str | None:
         """Extract a collection hint from known payload shapes."""
-
         if isinstance(payload, Mapping):
             collection = payload.get("collection") or payload.get("_collection")
             if isinstance(collection, str):
@@ -193,7 +189,6 @@ class SearchRecord(BaseModel):
         Returns:
             Canonical :class:`SearchRecord` representation of the match.
         """
-
         payload: dict[str, Any] = dict(getattr(match, "payload", {}) or {})
         group_info_raw = payload.get("_grouping")
         group_info: Mapping[str, Any] | None = (

@@ -311,14 +311,12 @@ class TestModuleExports:
 
     def test_all_exports(self):
         """Test that __all__ contains expected functions."""
-
         assert hasattr(utils, "__all__")
         assert "async_command" in utils.__all__
         assert "async_to_sync_click" in utils.__all__
 
     def test_exported_functions_exist(self):
         """Test that all exported functions exist."""
-
         for export in utils.__all__:
             assert hasattr(utils, export)
             assert callable(getattr(utils, export))

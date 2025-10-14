@@ -67,7 +67,6 @@ class DatabaseManager:
             circuit_breaker_manager: Optional circuit breaker manager.
             breaker_service_name: Service identifier for breaker acquisition.
         """
-
         self.config = config
         self._engine: AsyncEngine | None = None
         self._session_factory: SessionFactory | None = None
@@ -79,7 +78,6 @@ class DatabaseManager:
 
     async def initialize(self) -> None:
         """Initialize database infrastructure."""
-
         if self._engine is not None:
             return
 
@@ -114,7 +112,6 @@ class DatabaseManager:
 
     async def cleanup(self) -> None:
         """Clean up database resources."""
-
         try:
             if self._engine:
                 await self._engine.dispose()
@@ -129,7 +126,6 @@ class DatabaseManager:
     @asynccontextmanager
     async def session(self) -> AsyncGenerator[Any, None]:
         """Yield a monitored database session."""
-
         session_factory = self._session_factory
         if session_factory is None:
             msg = "Database manager not initialized"
@@ -174,7 +170,6 @@ class DatabaseManager:
 
     async def get_performance_metrics(self) -> dict[str, Any]:
         """Get database performance metrics."""
-
         pool_snapshot: dict[str, int] = {}
         if self._engine is not None:
             pool = getattr(self._engine, "pool", None)
@@ -201,13 +196,11 @@ class DatabaseManager:
     @property
     def is_initialized(self) -> bool:
         """Check if the database manager is ready."""
-
         return self._engine is not None
 
     @property
     def engine(self) -> AsyncEngine:
         """Get the database engine."""
-
         if not self._engine:
             msg = "Database manager not initialized"
             raise RuntimeError(msg)
@@ -215,7 +208,6 @@ class DatabaseManager:
 
     async def _get_circuit_breaker_state(self) -> str:
         """Return current circuit breaker state or fallback when unavailable."""
-
         if self._circuit_breaker_manager is None:
             return "unconfigured"
 

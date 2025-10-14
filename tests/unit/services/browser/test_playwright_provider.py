@@ -69,7 +69,6 @@ class _StubBrowser:
 
 async def _passthrough_retry(**kwargs: Any) -> Any:
     """Execute the wrapped coroutine without retries for deterministic tests."""
-
     func = kwargs["func"]
     return await func()
 
@@ -79,7 +78,6 @@ async def test_playwright_scrape_returns_success_when_no_challenge(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Scrape should succeed when the page HTML lacks challenge markers."""
-
     monkeypatch.setattr(
         playwright_module, "execute_with_retry", _passthrough_retry, raising=True
     )
@@ -103,7 +101,6 @@ async def test_playwright_scrape_raises_on_challenge(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Scrape should raise a provider error when challenge keywords are present."""
-
     monkeypatch.setattr(
         playwright_module, "execute_with_retry", _passthrough_retry, raising=True
     )

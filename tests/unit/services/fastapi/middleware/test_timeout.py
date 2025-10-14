@@ -29,6 +29,7 @@ class DummyContext:
     """Minimal breaker context for testing."""
 
     def __init__(self, state: str = "closed") -> None:
+        """Initialize breaker context with state."""
         self.state = state
 
 
@@ -36,35 +37,38 @@ class DummyBreaker:
     """Async-compatible circuit breaker double."""
 
     def __init__(self, state: str = "closed") -> None:
+        """Initialize breaker with context."""
         self.context = DummyContext(state)
 
     async def __aenter__(self) -> DummyBreaker:
+        """Enter async context."""
         return self
 
-    async def __aexit__(self, exc_type, exc, tb) -> None:  # pragma: no cover - simple
-        return None
+    async def __aexit__(self, exc_type, exc, tb) -> None:
+        """Exit async context."""
+        return
 
 
 class DummyManager:
     """In-memory manager returning a shared dummy breaker."""
 
     def __init__(self) -> None:
+        """Initialize with a single shared breaker."""
         self.breaker = DummyBreaker()
 
     async def get_breaker(self, *_args, **_kwargs) -> DummyBreaker:
+        """Return the shared dummy breaker."""
         return self.breaker
 
 
 @pytest.fixture(name="dummy_manager")
 def _dummy_manager() -> DummyManager:
     """Fixture providing a reusable dummy circuit breaker manager."""
-
     return DummyManager()
 
 
 def _build_request() -> Request:
     """Build a test request."""
-
     scope = {
         "type": "http",
         "method": "GET",
@@ -78,7 +82,6 @@ def _build_request() -> Request:
 @pytest.mark.anyio
 async def test_timeout_middleware_passes_through(dummy_manager: DummyManager) -> None:
     """Middleware should forward responses when the circuit is closed."""
-
     middleware = TimeoutMiddleware(
         lambda *_: None,
         config=TimeoutConfig(),
@@ -100,7 +103,6 @@ async def test_timeout_middleware_returns_open_response(
     dummy_manager: DummyManager,
 ) -> None:
     """Middleware should short-circuit when breaker reports open."""
-
     middleware = TimeoutMiddleware(
         lambda *_: None,
         config=TimeoutConfig(),
@@ -120,7 +122,6 @@ async def test_timeout_middleware_returns_open_response(
 @pytest.mark.anyio
 async def test_timeout_middleware_times_out(dummy_manager: DummyManager) -> None:
     """Middleware should emit timeout response on TimeoutError."""
-
     middleware = TimeoutMiddleware(
         lambda *_: None,
         config=TimeoutConfig(request_timeout=0.1),
@@ -139,7 +140,6 @@ async def test_timeout_middleware_times_out(dummy_manager: DummyManager) -> None
 @pytest.mark.anyio
 async def test_timeout_middleware_timeout_only_fallback() -> None:
     """Middleware should still enforce timeout when no manager is injected."""
-
     middleware = TimeoutMiddleware(
         lambda *_: None, config=TimeoutConfig(request_timeout=0.01)
     )
@@ -159,7 +159,6 @@ async def test_timeout_middleware_disabled_returns_directly(
     dummy_manager: DummyManager,
 ) -> None:
     """Middleware should bypass timeout entirely when disabled."""
-
     middleware = TimeoutMiddleware(
         lambda *_: None,
         config=TimeoutConfig(enabled=False),
@@ -178,7 +177,6 @@ async def test_timeout_middleware_resolver_used_once(
     dummy_manager: DummyManager,
 ) -> None:
     """Resolver should only execute until cached manager is initialized."""
-
     calls = 0
 
     async def _resolver() -> CircuitBreakerManager:
@@ -204,7 +202,6 @@ async def test_timeout_middleware_resolver_used_once(
 @pytest.mark.anyio
 async def test_bulkhead_middleware_tracks_limiters() -> None:
     """Bulkhead middleware should memoize limiters by method/path."""
-
     middleware = BulkheadMiddleware(lambda *_: None, max_concurrent=1)
 
     async def call_next(_request: Request) -> Response:

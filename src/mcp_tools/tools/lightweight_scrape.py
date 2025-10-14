@@ -33,7 +33,6 @@ async def _analyze_url_suitability(
     crawl_manager, url: str, ctx: Context | None
 ) -> bool:
     """Analyze URL to determine if lightweight tier is suitable."""
-
     if not (crawl_manager and hasattr(crawl_manager, "analyze_url")):
         return True  # Default to allowing the attempt
 
@@ -56,7 +55,6 @@ def _convert_content_formats(
     content: str, formats: Sequence[str], result: Mapping[str, object]
 ) -> dict[str, str]:
     """Convert content to requested formats."""
-
     content_dict = {}
 
     metadata = result.get("metadata")
@@ -85,7 +83,6 @@ def _build_success_response(
     can_handle: bool,
 ) -> dict:
     """Build successful response dictionary."""
-
     metadata = result.get("metadata")
     metadata_dict = dict(metadata) if isinstance(metadata, Mapping) else {}
     content = str(result.get("content", ""))
@@ -120,7 +117,6 @@ async def _handle_scrape_failure(
     result: Mapping[str, object], url: str, ctx: Context | None
 ) -> None:
     """Handle scrape failure with appropriate logging and error raising."""
-
     error_value = result.get("error", "Unknown error")
     error_msg = str(error_value)
     failed_tiers_value = result.get("failed_tiers")
@@ -195,7 +191,6 @@ def register_tools(
             ValueError: If URL is invalid or formats are invalid
             CrawlServiceError: If scraping fails
         """
-
         if ctx:
             await ctx.info(f"Starting lightweight scrape of {url}")
 

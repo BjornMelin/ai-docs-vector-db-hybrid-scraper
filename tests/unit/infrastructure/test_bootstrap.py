@@ -15,7 +15,6 @@ async def test_ensure_container_reuses_existing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """`ensure_container` should return an existing container without reinitializing."""
-
     existing = SimpleNamespace()
     monkeypatch.setattr(bootstrap, "get_container", lambda: existing)
     initialize_mock = AsyncMock()
@@ -34,7 +33,6 @@ async def test_container_session_initializes_and_shuts_down(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """`container_session` should initialize and then shut down the container."""
-
     created = SimpleNamespace()
     get_container_mock = MagicMock(return_value=None)
     initialize_mock = AsyncMock(return_value=created)
@@ -58,7 +56,6 @@ async def test_container_session_shutdown_on_context_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """`container_session` should shut down even when the context body raises."""
-
     created = SimpleNamespace()
     monkeypatch.setattr(bootstrap, "get_container", MagicMock(return_value=None))
     initialize_mock = AsyncMock(return_value=created)

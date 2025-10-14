@@ -50,7 +50,7 @@ class _StubPipeline:
     def __init__(self) -> None:
         self.invocations = 0
 
-    async def run(self, **_: object) -> dict[str, object]:  # noqa: D401 signature
+    async def run(self, **_: object) -> dict[str, object]:
         self.invocations += 1
         await asyncio.sleep(0)  # Yield control without adding measurable latency.
         return {
@@ -64,7 +64,6 @@ class _StubPipeline:
 @pytest.mark.asyncio
 async def test_orchestrator_handles_parallel_queries() -> None:
     """The orchestrator should sustain high concurrency with stubbed pipeline."""
-
     matches = [
         SearchRecord(
             id=f"doc-{i}",

@@ -58,7 +58,6 @@ class TestEnduranceLoad:
         @env.events.stats_reset.add_listener  # pyright: ignore[reportAttributeAccessIssue]
         def collect_time_series_metrics(**__kwargs):
             """Collect metrics at regular intervals."""
-
             current_time = time.time()
             process = psutil.Process(os.getpid())
             memory_mb = process.memory_info().rss / 1024 / 1024
@@ -261,9 +260,8 @@ class TestEnduranceLoad:
 
         async def cache_aware_operation(**_kwargs):
             """Operation that uses cache."""
-
             # Generate cache key from operation parameters
-            query = _kwargs.get("query", f"query_{random.randint(1, 100)}")  # noqa: S311
+            query = _kwargs.get("query", f"query_{random.randint(1, 100)}")
             cache_key = hashlib.sha256(query.encode()).hexdigest()[:8]
 
             # Try cache first
@@ -493,10 +491,9 @@ class TestEnduranceLoad:
 
     def _stable_operation(self, **__kwargs):
         """Stable operation for endurance testing."""
-
         # Consistent, predictable operation
         base_time = 0.05
-        variation = random.uniform(-0.01, 0.01)  # Small variation  # noqa: S311
+        variation = random.uniform(-0.01, 0.01)  # Small variation
 
         return asyncio.sleep(base_time + variation)
 
@@ -637,15 +634,15 @@ class MemoryLeakSimulator:
     """Simulates memory allocation and cleanup patterns."""
 
     def __init__(self):
+        """Initialize the memory leak simulator."""
         self.allocated_memory = []
         self.memory_samples = []
         self.start_time = time.time()
 
     def allocate_memory(self, size_mb: float):
         """Simulate memory allocation."""
-
         # Simulate memory allocation (using list as proxy)
-        data = [random.random() for _ in range(int(size_mb * 1000))]  # noqa: S311
+        data = [random.random() for _ in range(int(size_mb * 1000))]
         self.allocated_memory.append(
             {
                 "data": data,
@@ -669,7 +666,7 @@ class MemoryLeakSimulator:
         if self.allocated_memory:
             # Remove 10-30% of allocations
 
-            cleanup_count = random.randint(1, max(1, len(self.allocated_memory) // 3))  # noqa: S311
+            cleanup_count = random.randint(1, max(1, len(self.allocated_memory) // 3))
 
             for _ in range(min(cleanup_count, len(self.allocated_memory))):
                 self.allocated_memory.pop(0)  # Remove oldest

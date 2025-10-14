@@ -95,7 +95,6 @@ class _FakeXformers:
 
 def test_gpu_validation_fails_without_gpu() -> None:
     """The harness should fail when CUDA is required but unavailable."""
-
     report = gpu_validation.run_gpu_validation(
         require_gpu=True,
         torch_module=_FakeTorchNoGpu(),
@@ -115,7 +114,6 @@ def test_gpu_validation_warns_when_allowing_missing_gpu(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Opting into degraded mode should downgrade missing GPU errors to warnings."""
-
     original_import = gpu_validation.importlib.import_module
 
     def _fake_import(
@@ -144,7 +142,6 @@ def test_gpu_validation_warns_when_allowing_missing_gpu(
 
 def test_gpu_validation_succeeds_with_fake_gpu(monkeypatch: pytest.MonkeyPatch) -> None:
     """The harness should pass when torch and xformers operations succeed."""
-
     fake_modules = {
         "flash_attn": types.SimpleNamespace(__version__="2.6.0"),
         "flash_attn.flash_attn_interface": object(),

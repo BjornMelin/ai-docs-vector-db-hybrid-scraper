@@ -32,7 +32,6 @@ class _ConfigStub:
 @pytest.fixture()
 def vector_service() -> VectorStoreService:
     """Provide a :class:`VectorStoreService` instance for grouping tests."""
-
     return VectorStoreService(
         config=_ConfigStub(),
         async_qdrant_client=AsyncMock(),
@@ -41,7 +40,6 @@ def vector_service() -> VectorStoreService:
 
 def _make_record(metadata: dict[str, Any] | None = None) -> SearchRecord:
     """Create a :class:`SearchRecord` for grouping tests."""
-
     return SearchRecord(
         id="rec-1",
         content="sample",
@@ -54,7 +52,6 @@ def test_annotate_grouping_metadata_updates_record_fields(
     vector_service: VectorStoreService,
 ) -> None:
     """Server-side grouping metadata should populate record attributes."""
-
     record = _make_record(
         {
             "doc_id": "doc-99",
@@ -83,7 +80,6 @@ def test_group_client_side_sets_group_attributes(
     vector_service: VectorStoreService,
 ) -> None:
     """Client-side grouping should update metadata and record attributes."""
-
     records = [
         _make_record({"doc_id": "doc-1"}),
         SearchRecord(
@@ -117,7 +113,6 @@ def test_annotate_grouping_metadata_noop_when_group_by_absent(
     vector_service: VectorStoreService,
 ) -> None:
     """Annotation should not modify records when grouping is disabled."""
-
     record = _make_record()
 
     result = vector_service._annotate_grouping_metadata(

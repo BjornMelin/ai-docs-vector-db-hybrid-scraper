@@ -11,7 +11,6 @@ from src.services.fastapi.middleware.security import enable_global_rate_limit
 
 def _create_app(config: SecurityConfig) -> FastAPI:
     """Construct a FastAPI app with configured rate limiting."""
-
     app = FastAPI()
     limiter = enable_global_rate_limit(app, config=config)
     assert limiter is not None, "Limiter should be initialized when enabled"
@@ -25,7 +24,6 @@ def _create_app(config: SecurityConfig) -> FastAPI:
 
 def test_rate_limiting_enforces_configured_threshold() -> None:
     """Requests exceeding the configured limit receive HTTP 429 responses."""
-
     app = _create_app(
         SecurityConfig(
             default_rate_limit=2,

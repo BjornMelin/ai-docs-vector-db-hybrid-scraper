@@ -665,7 +665,7 @@ def mock_data_generator():
     class MockDataGenerator:
         def __init__(self):
             self.seed = 42
-            random.seed(self.seed)  # noqa: S311
+            random.seed(self.seed)
 
         def generate_document_records(
             self, count: int = 100, introduce_quality_issues: bool = False
@@ -679,49 +679,49 @@ def mock_data_generator():
                     "url": f"https://example.com/doc/{i}",
                     "title": f"Document {i}",
                     "content": f"This is the content of document {i}. "
-                    * random.randint(5, 20),  # noqa: S311
+                    * random.randint(5, 20),
                     "created_at": datetime.now(tz=UTC)
-                    - timedelta(days=random.randint(0, 365)),  # noqa: S311
+                    - timedelta(days=random.randint(0, 365)),
                     "updated_at": datetime.now(tz=UTC)
-                    - timedelta(days=random.randint(0, 30)),  # noqa: S311
-                    "collection": random.choice(  # noqa: S311
+                    - timedelta(days=random.randint(0, 30)),
+                    "collection": random.choice(
                         ["tech", "science", "business", "general"]
                     ),
-                    "status": random.choice(["active", "archived", "pending"]),  # noqa: S311
-                    "word_count": random.randint(100, 2000),  # noqa: S311
+                    "status": random.choice(["active", "archived", "pending"]),
+                    "word_count": random.randint(100, 2000),
                     "embedding_model": "text-embedding-ada-002",
                     "metadata": {
-                        "source": random.choice(["web", "api", "upload"]),  # noqa: S311
+                        "source": random.choice(["web", "api", "upload"]),
                         "language": "en",
-                        "tags": random.sample(  # noqa: S311
+                        "tags": random.sample(
                             ["ai", "ml", "data", "tech", "science"],
-                            random.randint(1, 3),  # noqa: S311
+                            random.randint(1, 3),
                         ),
                     },
                 }
 
                 # Introduce quality issues if requested
                 if introduce_quality_issues:
-                    issue_type = random.choice(  # noqa: S311
+                    issue_type = random.choice(
                         ["missing_field", "invalid_format", "duplicate", "inconsistent"]
                     )
 
-                    if issue_type == "missing_field" and random.random() < 0.1:  # noqa: S311
+                    if issue_type == "missing_field" and random.random() < 0.1:
                         # Remove a required field
-                        field_to_remove = random.choice(["title", "url", "content"])  # noqa: S311
+                        field_to_remove = random.choice(["title", "url", "content"])
                         record.pop(field_to_remove, None)
 
-                    elif issue_type == "invalid_format" and random.random() < 0.05:  # noqa: S311
+                    elif issue_type == "invalid_format" and random.random() < 0.05:
                         # Invalid URL format
                         record["url"] = f"invalid-url-{i}"
 
-                    elif issue_type == "duplicate" and random.random() < 0.02:  # noqa: S311
+                    elif issue_type == "duplicate" and random.random() < 0.02:
                         # Duplicate ID
                         record["id"] = records[-1]["id"] if records else "doc_0000"
 
-                    elif issue_type == "inconsistent" and random.random() < 0.05:  # noqa: S311
+                    elif issue_type == "inconsistent" and random.random() < 0.05:
                         # Inconsistent dates (updated before created)
-                        record["updated_at"] = record["created_at"] - timedelta(days=1)  # noqa: S311
+                        record["updated_at"] = record["created_at"] - timedelta(days=1)
 
                 records.append(record)
 
@@ -736,15 +736,15 @@ def mock_data_generator():
                     "user_id": f"user_{i:04d}",
                     "email": f"user{i}@example.com",
                     "name": f"User {i}",
-                    "role": random.choice(["admin", "user", "viewer"]),  # noqa: S311
+                    "role": random.choice(["admin", "user", "viewer"]),
                     "created_at": datetime.now(tz=UTC)
-                    - timedelta(days=random.randint(30, 730)),  # noqa: S311
+                    - timedelta(days=random.randint(30, 730)),
                     "last_login": datetime.now(tz=UTC)
-                    - timedelta(days=random.randint(0, 30)),  # noqa: S311
-                    "active": random.choice([True, False]),  # noqa: S311
+                    - timedelta(days=random.randint(0, 30)),
+                    "active": random.choice([True, False]),
                     "preferences": {
-                        "theme": random.choice(["light", "dark"]),  # noqa: S311
-                        "notifications": random.choice([True, False]),  # noqa: S311
+                        "theme": random.choice(["light", "dark"]),
+                        "notifications": random.choice([True, False]),
                     },
                 }
                 records.append(record)

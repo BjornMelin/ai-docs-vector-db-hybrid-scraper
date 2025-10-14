@@ -53,7 +53,6 @@ def _install_vector_service_stub(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.mark.asyncio
 async def test_load_vector_service_no_override() -> None:
     """Test loading vector service without collection override."""
-
     with (
         patch("scripts.eval.rag_compression_eval.get_settings") as mock_settings,
         patch("scripts.eval.rag_compression_eval.get_container") as mock_get_container,
@@ -84,7 +83,6 @@ async def test_load_vector_service_no_override() -> None:
 @pytest.mark.asyncio
 async def test_load_vector_service_with_override() -> None:
     """Test loading vector service with collection override."""
-
     with (
         patch("scripts.eval.rag_compression_eval.get_settings") as mock_settings,
         patch("scripts.eval.rag_compression_eval.get_container") as mock_get_container,
@@ -113,7 +111,6 @@ async def test_load_vector_service_with_override() -> None:
 
 def test_build_documents() -> None:
     """Test building Document objects from raw data."""
-
     raw_documents = [
         {"content": "Test content 1", "metadata": {"key": "value1"}},
         {"content": "Test content 2", "metadata": None},
@@ -134,7 +131,6 @@ def test_build_documents() -> None:
 
 def test_estimate_tokens() -> None:
     """Test token estimation function."""
-
     assert _estimate_tokens("hello world") == 2
     assert _estimate_tokens("") == 1  # minimum
     assert _estimate_tokens("a b c d e f g") == 7
@@ -145,7 +141,6 @@ async def test_evaluate_compression_disabled(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test evaluation when compression is disabled."""
-
     _install_vector_service_stub(monkeypatch)
 
     # Mock settings with compression disabled

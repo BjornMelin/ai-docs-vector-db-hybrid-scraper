@@ -21,7 +21,6 @@ class TestCosineSimilarity:
         Returns:
             None: This test asserts the cosine similarity equals one.
         """
-
         vector = [1.0, 2.0, 3.0]
         assert cosine_similarity(vector, vector) == pytest.approx(1.0)
 
@@ -31,7 +30,6 @@ class TestCosineSimilarity:
         Returns:
             None: This test asserts the cosine similarity equals zero.
         """
-
         first = [1.0, 0.0, 0.0]
         second = [0.0, 1.0, 0.0]
         assert cosine_similarity(first, second) == pytest.approx(0.0)
@@ -42,7 +40,6 @@ class TestCosineSimilarity:
         Returns:
             None: This test asserts invalid inputs produce neutral similarity.
         """
-
         assert cosine_similarity([], []) == 0.0
         assert cosine_similarity([0.0, 0.0], [0.0, 0.0]) == 0.0
         assert cosine_similarity([math.nan, 1.0], [1.0, 2.0]) == 0.0
@@ -53,7 +50,6 @@ class TestCosineSimilarity:
         Returns:
             None: This test asserts similarity is computed using overlapping entries.
         """
-
         assert cosine_similarity([1.0, 0.0, 2.0], [1.0, 2.0]) == pytest.approx(0.2)
 
     def test_casts_numeric_strings(self) -> None:
@@ -62,5 +58,4 @@ class TestCosineSimilarity:
         Returns:
             None: This test asserts string inputs yield expected similarity.
         """
-
         assert cosine_similarity(["1", "0"], [1, 0]) == pytest.approx(1.0)

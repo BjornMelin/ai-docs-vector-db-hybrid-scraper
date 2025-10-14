@@ -26,7 +26,7 @@ class TraceTestHelper:
         tags: dict[str, Any] | None = None,
     ) -> TraceSpan:
         """Create a child span for a given parent span."""
-        child_span = TraceSpan(
+        return TraceSpan(
             trace_id=parent_span.trace_id,
             span_id=str(uuid.uuid4()),
             parent_span_id=parent_span.span_id,
@@ -37,7 +37,6 @@ class TraceTestHelper:
             tags=tags or {},
             logs=[],
         )
-        return child_span
 
     @staticmethod
     def calculate_trace_duration(spans: list[TraceSpan]) -> float:
@@ -90,19 +89,22 @@ class TraceTestHelper:
 
         # Check span relationships
         span_ids = {s.span_id for s in spans}
-        for span in spans:
-            if span.parent_span_id and span.parent_span_id not in span_ids:
-                issues.append(
-                    f"Parent span {span.parent_span_id} not found for "
-                    f"span {span.span_id}"
-                )
+        issues.extend(
+            [
+                f"Parent span {span.parent_span_id} not found for span {span.span_id}"
+                for span in spans
+                if span.parent_span_id and span.parent_span_id not in span_ids
+            ]
+        )
 
         # Check timing
-        for span in spans:
-            if span.end_time and span.start_time and span.end_time < span.start_time:
-                issues.append(
-                    f"Invalid timing for span {span.span_id}: end before start"
-                )
+        issues.extend(
+            [
+                f"Invalid timing for span {span.span_id}: end before start"
+                for span in spans
+                if span.end_time and span.start_time and span.end_time < span.start_time
+            ]
+        )
 
         return {
             "valid": len(issues) == 0,

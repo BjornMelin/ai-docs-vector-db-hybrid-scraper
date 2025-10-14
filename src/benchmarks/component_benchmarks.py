@@ -74,7 +74,6 @@ class ComponentBenchmarks:
         Returns:
             Dictionary mapping component names to benchmark results
         """
-
         queries = list(test_queries)
         results: dict[str, ComponentBenchmarkResult] = {}
 

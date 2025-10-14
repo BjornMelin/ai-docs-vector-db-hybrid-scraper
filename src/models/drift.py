@@ -337,11 +337,11 @@ class DriftEvent(SQLModel, table=True):
 
 
 __all__ = [
-    "DriftSourceType",
-    "DriftEventType",
-    "DriftSeverity",
-    "DriftStatus",
-    "DriftSource",
     "ConfigSnapshot",
     "DriftEvent",
+    "DriftEventType",
+    "DriftSeverity",
+    "DriftSource",
+    "DriftSourceType",
+    "DriftStatus",
 ]

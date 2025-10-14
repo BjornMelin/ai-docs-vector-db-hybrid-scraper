@@ -19,7 +19,8 @@ from src.services.vector_db.types import CollectionSchema, TextDocument, VectorR
 class StubVectorStore:
     """Minimal stand-in for LangChain's QdrantVectorStore."""
 
-    def __init__(self, *, collection_name: str, **_: object) -> None:  # noqa: D401
+    def __init__(self, *, collection_name: str, **_: object) -> None:
+        """Initialize the stub vector store with a collection name."""
         self.collection_name = collection_name
         self.add_calls: list[tuple[list[Document], list[str]]] = []
         self.search_return: list[tuple[Document, float]] = []
@@ -32,6 +33,7 @@ class StubVectorStore:
         ids: list[str] | None = None,
         **_: object,
     ) -> None:
+        """Record call parameters for later inspection."""
         self.add_calls.append((documents, list(ids or [])))
 
     def similarity_search_with_score_by_vector(
@@ -39,9 +41,10 @@ class StubVectorStore:
         *,
         vector: list[float],
         k: int,
-        filter: object | None = None,
+        search_filter: object | None = None,
     ) -> list[tuple[Document, float]]:
-        _ = (vector, k, filter)
+        """Record call parameters and return preset results."""
+        _ = (vector, k, search_filter)
         return self.search_return or [
             (
                 Document(page_content="stub", metadata={"doc_id": "doc-1"}),
@@ -56,7 +59,6 @@ async def initialized_service(
     vector_container: ApplicationContainer,
 ) -> AsyncIterator[VectorStoreService]:
     """Provide an initialized VectorStoreService with stubbed dependencies."""
-
     stub_store = StubVectorStore(collection_name="documents")
     monkeypatch.setattr(
         "src.services.vector_db.service.QdrantVectorStore",
@@ -85,7 +87,6 @@ async def test_initialize_sets_vector_store(
     initialized_service: VectorStoreService,
 ) -> None:
     """Vector store should be initialized once with configured collection name."""
-
     service = initialized_service
     assert service.is_initialized()
     assert service.embedding_dimension == 3
@@ -97,7 +98,6 @@ async def test_ensure_collection_creates_when_missing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """ensure_collection should call the async client when collection missing."""
-
     client = initialized_service._async_client
     assert isinstance(client, AsyncMock)
     client.collection_exists.return_value = False
@@ -114,7 +114,6 @@ async def test_upsert_documents_invokes_vector_store(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Upserting documents should delegate to the LangChain vector store."""
-
     store = initialized_service._vector_store
     assert isinstance(store, StubVectorStore)
 
@@ -155,7 +154,6 @@ async def test_upsert_vectors_calls_qdrant_async_client(
     initialized_service: VectorStoreService,
 ) -> None:
     """upsert_vectors should prepare PointStruct payloads for Async client."""
-
     service = initialized_service
     async_client = service._async_client
     assert isinstance(async_client, AsyncMock)
@@ -182,7 +180,6 @@ async def test_upsert_vectors_calls_qdrant_async_client(
 
 def test_filter_from_mapping_handles_sequences_and_scalars() -> None:
     """Sequence values should map to MatchAny, scalars to MatchValue."""
-
     filters = _filter_from_mapping({"tags": ["doc", "faq"], "lang": "en"})
     assert isinstance(filters, models.Filter)
     raw_must = filters.must
@@ -218,7 +215,6 @@ def test_filter_from_mapping_handles_sequences_and_scalars() -> None:
 
 def test_filter_from_mapping_treats_strings_as_scalars() -> None:
     """String sequences should not be treated as iterables for MatchAny."""
-
     filters = _filter_from_mapping({"category": "docs"})
     assert isinstance(filters, models.Filter)
     raw_must = filters.must
@@ -234,7 +230,6 @@ async def test_search_documents_returns_vector_matches(
     initialized_service: VectorStoreService,
 ) -> None:
     """search_documents should normalise results from the vector store."""
-
     store = initialized_service._vector_store
     assert isinstance(store, StubVectorStore)
 
@@ -263,7 +258,6 @@ async def test_hybrid_search_uses_dense_path_when_sparse_missing(
     initialized_service: VectorStoreService,
 ) -> None:
     """Hybrid search should degrade to dense search when sparse payload absent."""
-
     service = initialized_service
     service._retrieval_mode = SearchStrategy.DENSE
     store = service._vector_store
@@ -284,10 +278,9 @@ async def test_hybrid_search_executes_hybrid_prefetch(
     initialized_service: VectorStoreService,
 ) -> None:
     """Hybrid search should request dense and sparse prefetch queries."""
-
     service = initialized_service
     service._retrieval_mode = SearchStrategy.HYBRID
-    service._sparse_embeddings = SimpleNamespace(
+    service._sparse_embeddings = SimpleNamespace(  # type: ignore[assignment]
         embed_query=lambda _: SimpleNamespace(indices=[0], values=[1.0])
     )
     client = service._async_client

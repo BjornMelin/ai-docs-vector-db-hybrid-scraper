@@ -1,5 +1,4 @@
-"""
-Utilities shared by FastAPI middleware.
+"""Utilities shared by FastAPI middleware.
 
 - client_ip(): safe client IP extraction with optional proxy trust.
 - safe_escape(): HTML-escape user-provided strings for log safety.
@@ -40,7 +39,6 @@ def client_ip(request: Request, trust_proxy: bool = False) -> str:
         handling or place a dedicated proxy-headers middleware in your stack.
         This function is a simple, explicit policy toggle.
     """
-
     if trust_proxy:
         fwd = request.headers.get(_H_X_FORWARDED_FOR)
         if fwd:
@@ -57,7 +55,6 @@ def client_ip(request: Request, trust_proxy: bool = False) -> str:
 
 def safe_escape(value: str | None) -> str | None:
     """Escape a possibly unsafe string for logs."""
-
     return None if value is None else html.escape(str(value))
 
 
@@ -70,7 +67,6 @@ def body_bytes(response: Response) -> bytes | None:
     Returns:
         Bytes or None if streaming/not accessible.
     """
-
     try:
         return response.body  # type: ignore[attr-defined]
     except AttributeError:
@@ -83,7 +79,6 @@ def ensure_vary_accept_encoding(headers: MutableMapping[str, str]) -> None:
     Args:
         headers: A mutable headers mapping.
     """
-
     vary = headers.get("vary", "")
     if "accept-encoding" not in vary.lower():
         headers["vary"] = (

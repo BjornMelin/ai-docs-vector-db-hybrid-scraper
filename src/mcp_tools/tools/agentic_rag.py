@@ -87,7 +87,6 @@ class AgenticOrchestrationMetricsResponse(BaseModel):
 
 async def _get_runner(override: GraphRunner | None = None) -> GraphRunner:
     """Initialise and cache the LangGraph runner instance."""
-
     if override is not None:
         return override
 
@@ -192,7 +191,6 @@ def _build_search_response(
     *, success: bool, session_id: str, payload: Mapping[str, Any]
 ) -> AgenticSearchResponse:
     """Build an AgenticSearchResponse from raw payload data."""
-
     results: Sequence[Any] | None = payload.get("results")
     normalised_results: list[SearchRecord] = []
     if results:
@@ -236,7 +234,6 @@ def _build_analysis_response(
     *, success: bool, analysis_id: str, payload: Mapping[str, Any]
 ) -> AgenticAnalysisResponse:
     """Build an AgenticAnalysisResponse from raw payload data."""
-
     return AgenticAnalysisResponse(
         success=success,
         analysis_id=analysis_id,
@@ -252,7 +249,6 @@ def _build_analysis_response(
 
 def _normalise_errors(values: Sequence[Any] | None) -> list[dict[str, Any]]:
     """Coerce error payloads into a stable list of dictionaries."""
-
     items: Sequence[Any] = values or []
     normalised: list[dict[str, Any]] = []
     for item in items:
@@ -265,7 +261,6 @@ def _normalise_errors(values: Sequence[Any] | None) -> list[dict[str, Any]]:
 
 def _safe_latency(metrics: Mapping[str, Any]) -> float:
     """Extract a safe latency value from the metrics dictionary."""
-
     value = metrics.get("latency_ms", 0.0)
     try:
         return float(value)
@@ -278,7 +273,6 @@ async def _run_search(
     request: AgenticSearchRequest, graph_runner: GraphRunner | None = None
 ) -> AgenticSearchResponse:
     """Execute an agentic search and return the response."""
-
     call_id = str(uuid4())
     logger.info(
         "agentic_search started call_id=%s session_id=%s collection=%s",
@@ -380,7 +374,6 @@ async def _run_analysis(
     request: AgenticAnalysisRequest, graph_runner: GraphRunner | None = None
 ) -> AgenticAnalysisResponse:
     """Execute an agentic analysis and return the response."""
-
     call_id = str(uuid4())
     logger.info(
         "agentic_analysis started call_id=%s session_id=%s",
@@ -469,7 +462,6 @@ async def _run_analysis(
 
 def _export_metrics_snapshot() -> tuple[dict[str, Any], list[str]]:
     """Return tracker snapshot with warnings for any export issues."""
-
     try:
         snapshot = get_ai_tracker().snapshot()
         return snapshot, []
@@ -482,7 +474,6 @@ def _parse_operation_samples(
     data: Any, warnings: list[str]
 ) -> dict[str, OperationSamplePayload]:
     """Validate and coerce tracker snapshots into payload objects."""
-
     if not isinstance(data, Mapping):
         if data is not None:
             warnings.append("operations: expected mapping")
@@ -513,7 +504,6 @@ def register_tools(
     )
     async def agentic_search(request: AgenticSearchRequest) -> AgenticSearchResponse:
         """Execute the LangGraph-based search workflow."""
-
         return await _run_search(request, graph_runner)
 
     @mcp.tool(
@@ -525,7 +515,6 @@ def register_tools(
         request: AgenticAnalysisRequest,
     ) -> AgenticAnalysisResponse:
         """Execute the LangGraph-based analysis workflow."""
-
         return await _run_analysis(request, graph_runner)
 
     @mcp.tool(
@@ -535,7 +524,6 @@ def register_tools(
     )
     async def get_agent_performance_metrics() -> AgentPerformanceMetricsResponse:
         """Return aggregated tracker statistics for agent operations."""
-
         snapshot, warnings = _export_metrics_snapshot()
         operations = _parse_operation_samples(snapshot, warnings)
         return AgentPerformanceMetricsResponse(
@@ -553,7 +541,6 @@ def register_tools(
     )
     async def reset_agent_learning(confirm: bool = False) -> dict[str, Any]:
         """Reset the in-memory telemetry snapshot."""
-
         if not confirm:
             raise ToolError(
                 "Confirmation required; call with confirm=True to reset telemetry",
@@ -579,7 +566,6 @@ def register_tools(
         constraints: dict[str, float] | None = None,
     ) -> dict[str, Any]:
         """Raise an informative error for unavailable optimisation features."""
-
         raise ToolError(
             "Agent configuration optimisation is not implemented",
             error_code="NOT_IMPLEMENTED",
@@ -599,7 +585,6 @@ def register_tools(
         AgenticOrchestrationMetricsResponse
     ):
         """Return aggregated LangGraph orchestration metrics."""
-
         snapshot, warnings = _export_metrics_snapshot()
         operations = _parse_operation_samples(snapshot, warnings)
         run_stats = operations.get(RUN_OPERATION)

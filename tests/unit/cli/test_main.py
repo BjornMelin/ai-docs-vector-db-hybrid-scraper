@@ -385,7 +385,6 @@ class TestCLIUtilities:
 
     def test_rich_cli_module_import(self):
         """Test that RichCLI can be imported and instantiated."""
-
         rich_cli = RichCLI()
         assert rich_cli is not None
         assert hasattr(rich_cli, "console")
@@ -394,14 +393,12 @@ class TestCLIUtilities:
 
     def test_main_command_import(self):
         """Test that main command can be imported."""
-
         assert main is not None
         assert hasattr(main, "invoke")
         assert hasattr(main, "commands")
 
     def test_command_registration(self):
         """Test that all commands are properly registered."""
-
         # Verify expected commands are registered
         main_command = cast(Group, main)
         ctx = click.Context(main_command)

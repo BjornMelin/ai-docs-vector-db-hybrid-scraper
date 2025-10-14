@@ -7,6 +7,7 @@ class CIEnvironment:
     """Base class for test environment configuration."""
 
     def __init__(self):
+        """Initialize CI environment detector."""
         self.name = self.__class__.__name__
         self.is_active = self.detect()
 
@@ -31,9 +32,11 @@ class GitHubActionsEnvironment(CIEnvironment):
     """GitHub Actions CI environment configuration."""
 
     def detect(self) -> bool:
+        """Detect GitHub Actions environment via GITHUB_ACTIONS env var."""
         return bool(os.getenv("GITHUB_ACTIONS"))
 
     def get_pytest_args(self) -> list[str]:
+        """Return GitHub Actions pytest args with OS-specific optimizations."""
         runner_os = os.getenv("RUNNER_OS", "Linux").lower()
 
         # Base args for all GitHub runners
@@ -77,6 +80,7 @@ class GitHubActionsEnvironment(CIEnvironment):
         return args
 
     def get_env_vars(self) -> dict[str, str]:
+        """Return GitHub Actions environment variables for test execution."""
         return {
             "PYTEST_XDIST_AUTO_NUM_WORKERS": "4",
             "PYTHONDONTWRITEBYTECODE": "1",
@@ -86,6 +90,7 @@ class GitHubActionsEnvironment(CIEnvironment):
         }
 
     def get_test_selection(self) -> tuple[str, list[str]]:
+        """Return marker expression and paths based on GitHub event type."""
         # Run different test sets based on event type
         event_name = os.getenv("GITHUB_EVENT_NAME", "push")
 
@@ -103,9 +108,11 @@ class GitLabCIEnvironment(CIEnvironment):
     """GitLab CI environment configuration."""
 
     def detect(self) -> bool:
+        """Detect GitLab CI environment via GITLAB_CI env var."""
         return bool(os.getenv("GITLAB_CI"))
 
     def get_pytest_args(self) -> list[str]:
+        """Return GitLab CI pytest args optimized for shared runners."""
         # GitLab runners typically have fewer resources
         return [
             "--numprocesses=2",
@@ -120,6 +127,7 @@ class GitLabCIEnvironment(CIEnvironment):
         ]
 
     def get_env_vars(self) -> dict[str, str]:
+        """Return GitLab environment variables for pytest execution."""
         return {
             "PYTEST_XDIST_AUTO_NUM_WORKERS": "2",
             "PYTHONDONTWRITEBYTECODE": "1",
@@ -128,6 +136,7 @@ class GitLabCIEnvironment(CIEnvironment):
         }
 
     def get_test_selection(self) -> tuple[str, list[str]]:
+        """Return GitLab test selection tuned to pipeline source."""
         ci_pipeline_source = os.getenv("CI_PIPELINE_SOURCE", "push")
 
         if ci_pipeline_source == "merge_request_event":
@@ -139,9 +148,11 @@ class JenkinsEnvironment(CIEnvironment):
     """Jenkins CI environment configuration."""
 
     def detect(self) -> bool:
+        """Detect Jenkins environment via JENKINS_URL env var."""
         return bool(os.getenv("JENKINS_URL"))
 
     def get_pytest_args(self) -> list[str]:
+        """Return Jenkins pytest args scaled by available CPU count."""
         # Jenkins typically has more resources available
         cpu_count = os.cpu_count() or 2
         num_workers = min(cpu_count - 1, 8)
@@ -159,6 +170,7 @@ class JenkinsEnvironment(CIEnvironment):
         ]
 
     def get_env_vars(self) -> dict[str, str]:
+        """Return Jenkins-specific environment variables."""
         return {
             "PYTEST_XDIST_AUTO_NUM_WORKERS": str(min(os.cpu_count() or 2, 8)),
             "PYTHONDONTWRITEBYTECODE": "1",
@@ -170,9 +182,11 @@ class AzureDevOpsEnvironment(CIEnvironment):
     """Azure DevOps environment configuration."""
 
     def detect(self) -> bool:
+        """Detect Azure DevOps env via SYSTEM_TEAMFOUNDATIONCOLLECTIONURI env var."""
         return bool(os.getenv("SYSTEM_TEAMFOUNDATIONCOLLECTIONURI"))
 
     def get_pytest_args(self) -> list[str]:
+        """Return Azure DevOps pytest args with Cobertura coverage format."""
         return [
             "--numprocesses=auto",
             "--dist=loadscope",
@@ -187,6 +201,7 @@ class AzureDevOpsEnvironment(CIEnvironment):
         ]
 
     def get_env_vars(self) -> dict[str, str]:
+        """Return Azure DevOps environment variables for pytest."""
         return {
             "PYTEST_XDIST_AUTO_NUM_WORKERS": "4",
             "PYTHONDONTWRITEBYTECODE": "1",
@@ -199,9 +214,11 @@ class CircleCIEnvironment(CIEnvironment):
     """CircleCI environment configuration."""
 
     def detect(self) -> bool:
+        """Detect CircleCI environment via CIRCLECI env var."""
         return bool(os.getenv("CIRCLECI"))
 
     def get_pytest_args(self) -> list[str]:
+        """Return CircleCI pytest args tuned by resource class."""
         # CircleCI resource class determines available resources
         resource_class = os.getenv("CIRCLE_JOB_RESOURCE_CLASS", "medium")
 
@@ -229,6 +246,7 @@ class CircleCIEnvironment(CIEnvironment):
         ]
 
     def get_env_vars(self) -> dict[str, str]:
+        """Return CircleCI environment variables for pytest execution."""
         return {
             "PYTEST_XDIST_AUTO_NUM_WORKERS": "4",
             "PYTHONDONTWRITEBYTECODE": "1",
@@ -240,6 +258,7 @@ class LocalEnvironment(CIEnvironment):
     """Local development environment configuration."""
 
     def detect(self) -> bool:
+        """Detect local environment by absence of CI env vars."""
         # Active if no CI environment is detected
         ci_envs = [
             "CI",
@@ -252,6 +271,7 @@ class LocalEnvironment(CIEnvironment):
         return not any(os.getenv(var) for var in ci_envs)
 
     def get_pytest_args(self) -> list[str]:
+        """Return conservative pytest args for local development."""
         # Conservative settings for local development
         return [
             "--numprocesses=2",  # Don't overwhelm developer machine
@@ -265,12 +285,14 @@ class LocalEnvironment(CIEnvironment):
         ]
 
     def get_env_vars(self) -> dict[str, str]:
+        """Return local development defaults for pytest."""
         return {
             "PYTEST_XDIST_AUTO_NUM_WORKERS": "2",
             "PYTHONDONTWRITEBYTECODE": "1",
         }
 
     def get_test_selection(self) -> tuple[str, list[str]]:
+        """Return test selection for local development runs."""
         # Allow running all tests locally
         return "", ["tests"]
 

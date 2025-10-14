@@ -56,6 +56,7 @@ class RAGGenerator:
         retriever: BaseRetriever,
         chat_model: ChatOpenAI | None = None,
     ) -> None:
+        """Initialize the RAG generator with configuration and components."""
         self._config = config
         self._retriever = retriever
         self._chat_model = chat_model
@@ -66,35 +67,29 @@ class RAGGenerator:
     @property
     def config(self) -> RAGConfig:
         """Return the generator configuration."""
-
         return self._config
 
     @config.setter
     def config(self, value: RAGConfig | None) -> None:
         """Allow the parent class to assign configuration during initialization."""
-
         if value is not None:
             self._config = value
 
     @property
     def retriever(self) -> BaseRetriever:
         """Expose the underlying retriever instance."""
-
         return self._retriever
 
     def register_callbacks(self, callbacks: Sequence[BaseCallbackHandler]) -> None:
         """Register LangChain callback handlers for downstream execution."""
-
         self._callbacks = list(callbacks)
 
     def is_initialized(self) -> bool:
         """Return True when a chat model instance is available."""
-
         return self._chat_model is not None
 
     async def initialize(self) -> None:
         """Prepare the chat model and executable chain."""
-
         if self.is_initialized():
             return
 
@@ -111,25 +106,21 @@ class RAGGenerator:
 
     async def cleanup(self) -> None:
         """Release cached model instances."""
-
         self._chat_model = None
 
     @property
     def llm_client_available(self) -> bool:
         """Indicate whether the underlying chat model is initialized."""
-
         return self._chat_model is not None
 
     def clear_cache(self) -> None:
         """No-op retained for compatibility with management endpoints."""
-
         logger.debug("RAGGenerator.clear_cache invoked; no cache to purge")
 
     async def generate_answer(  # pylint: disable=too-many-locals
         self, request: RAGRequest
     ) -> RAGResult:
         """Generate an answer based on retrieval results."""
-
         if not self.is_initialized():
             msg = "RAG generator is not initialized"
             raise EmbeddingServiceError(msg)
@@ -206,7 +197,6 @@ class RAGGenerator:
 
     async def validate_configuration(self) -> None:
         """Validate generator configuration and retriever wiring."""
-
         if not self._config.model.strip():
             msg = "RAG model identifier must be configured"
             raise ValueError(msg)
@@ -231,7 +221,6 @@ class RAGGenerator:
 
     def get_metrics(self) -> RAGServiceMetrics:
         """Return aggregated generation metrics for observability endpoints."""
-
         avg_time = (
             self._total_latency_ms / self._generation_count
             if self._generation_count
@@ -247,7 +236,6 @@ class RAGGenerator:
         self, request: RAGRequest, include_sources: bool
     ) -> list[Document]:
         """Retrieve context documents using the configured LangChain retriever."""
-
         search_kwargs: dict[str, Any] = {
             "k": request.top_k or self._config.retriever_top_k
         }
@@ -279,7 +267,6 @@ class RAGGenerator:
     @staticmethod
     def _build_metrics(latency_ms: float, metadata: dict[str, Any]) -> AnswerMetrics:
         """Construct token usage metrics from LLM response metadata."""
-
         usage = metadata.get("token_usage") or metadata.get("usage") or {}
         prompt_tokens = usage.get("prompt_tokens") if isinstance(usage, dict) else None
         completion_tokens = (
@@ -297,7 +284,6 @@ class RAGGenerator:
     @staticmethod
     def _render_context(documents: Iterable[Document], include_sources: bool) -> str:
         """Render the context block supplied to the chat prompt."""
-
         lines: list[str] = []
         for idx, document in enumerate(documents, start=1):
             meta = document.metadata
@@ -313,7 +299,6 @@ class RAGGenerator:
     @staticmethod
     def _build_sources(documents: Iterable[Document]) -> list[SourceAttribution]:
         """Create structured source attributions returned to the caller."""
-
         sources: list[SourceAttribution] = []
         for document in documents:
             meta = document.metadata
@@ -330,7 +315,6 @@ class RAGGenerator:
 
     def _derive_confidence(self, documents: Iterable[Document]) -> float | None:
         """Derive a confidence score from supplied retrieval metadata."""
-
         if not self._config.confidence_from_scores:
             return None
 
@@ -347,7 +331,6 @@ class RAGGenerator:
 
 def _normalize_score(value: Any) -> float | None:
     """Normalise scores to the [0, 1] range when possible."""
-
     if isinstance(value, int | float):
         if -1.0 <= value <= 1.0:
             return (float(value) + 1) / 2

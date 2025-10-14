@@ -1,5 +1,4 @@
-"""
-Security headers and rate-limiting glue.
+"""Security headers and rate-limiting glue.
 
 - Injects conservative security headers.
 - Provides a function to enable SlowAPI global rate limits with Redis.
@@ -45,13 +44,13 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         extra_headers: Mapping[str, str] | None = None,
     ) -> None:
         """Initialize with optional extra headers."""
-
         super().__init__(app)
         self._headers = dict(_DEFAULT_HEADERS)
         if extra_headers:
             self._headers.update(extra_headers)
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        """Inject security headers without overwriting existing response headers."""
         response = await call_next(request)
         for k, v in self._headers.items():
             response.headers.setdefault(k, v)
@@ -78,7 +77,6 @@ def enable_global_rate_limit(
         Initialized :class:`Limiter` instance when rate limiting is enabled.
         ``None`` when rate limiting is disabled in the configuration.
     """
-
     security_config = config or get_settings().security
     if not security_config.enable_rate_limiting:
         app.state.limiter = None
@@ -97,7 +95,6 @@ def enable_global_rate_limit(
 
 def _format_default_limit(config: SecurityConfig) -> str:
     """Convert :class:`SecurityConfig` limits to SlowAPI notation."""
-
     window = config.rate_limit_window
     granularity_map: dict[int, str] = {
         1: "second",
@@ -113,7 +110,6 @@ def _format_default_limit(config: SecurityConfig) -> str:
 
 def _resolve_storage_uri(config: SecurityConfig) -> str | None:
     """Build the SlowAPI storage URI from security configuration."""
-
     if not config.redis_url:
         return None
 

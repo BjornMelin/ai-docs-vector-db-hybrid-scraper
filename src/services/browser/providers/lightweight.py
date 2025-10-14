@@ -20,13 +20,13 @@ class LightweightProvider(BrowserProvider):
     kind = ProviderKind.LIGHTWEIGHT
 
     def __init__(self, context: ProviderContext, settings: LightweightSettings) -> None:
+        """Init lightweight HTTP scraper + httpx client and Trafilatura extraction."""
         super().__init__(context)
         self._settings = settings
         self._client: httpx.AsyncClient | None = None
 
     async def initialize(self) -> None:
         """Create HTTP client."""
-
         self._client = httpx.AsyncClient(
             follow_redirects=self._settings.allow_redirects,
             timeout=self._settings.timeout_seconds,
@@ -41,14 +41,12 @@ class LightweightProvider(BrowserProvider):
 
     async def close(self) -> None:
         """Dispose HTTP client."""
-
         if self._client:
             await self._client.aclose()
             self._client = None
 
     async def scrape(self, request: ScrapeRequest) -> BrowserResult:
         """Fetch and extract markdown content."""
-
         if self._client is None:  # pragma: no cover - guarded by lifecycle
             raise RuntimeError("Provider not initialized")
 

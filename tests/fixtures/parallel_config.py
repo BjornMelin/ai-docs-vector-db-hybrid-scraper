@@ -23,7 +23,6 @@ except ImportError:  # pragma: no cover - fcntl not available on Windows
 
 def pytest_configure(config):  # pragma: no cover - exercised with xdist
     """Configure per-worker environment when pytest-xdist is active."""
-
     workerinput = getattr(config, "workerinput", None)
     if workerinput is None:
         return
@@ -107,6 +106,7 @@ class ParallelResourceManager:
     """Manages resources for parallel test execution."""
 
     def __init__(self, worker_config: dict[str, Any]):
+        """Initialize the resource manager with worker configuration."""
         self.worker_config = worker_config
         self._allocated_ports = set()
 

@@ -35,7 +35,6 @@ async def warm_caches(
     Returns:
         Dictionary summarising the warmup results per cache type.
     """
-
     summary: dict[str, Any] = {
         "embeddings": {
             "requested": len(embedding_queries or []),

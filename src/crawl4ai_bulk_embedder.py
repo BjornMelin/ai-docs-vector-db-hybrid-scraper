@@ -115,7 +115,6 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
             state_file: Optional state file for resumability
             container: Optional DI container override (useful for testing)
         """
-
         self.config = config
         self.collection_name = collection_name
         self.state_file = state_file or Path(".crawl4ai_state.json")
@@ -128,7 +127,6 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
 
     def _load_state(self) -> ProcessingState:
         """Load processing state from file if exists."""
-
         if self.state_file.exists():
             try:
                 data = self._load_state_data()
@@ -145,27 +143,23 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
 
     def _load_state_data(self) -> dict:
         """Load state data from file."""
-
         with Path(self.state_file).open(encoding="utf-8") as f:
             return json.load(f)
 
     def _validate_state_data(self, data: dict) -> ProcessingState:
         """Validate and create state from data."""
-
         state = ProcessingState.model_validate(data)
         logger.info("Resumed from state: %d completed", len(state.completed_urls))
         return state
 
     def _save_state(self) -> None:
         """Save current processing state."""
-
         self.state.last_checkpoint = datetime.now(tz=UTC)
         with Path(self.state_file).open("w", encoding="utf-8") as f:
             json.dump(self.state.model_dump(mode="json"), f, indent=2, default=str)
 
     async def initialize_services(self) -> None:
         """Initialize all required services."""
-
         if self._container_override is not None:
             container = self._container_override
         else:
@@ -203,7 +197,6 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
 
     async def load_urls_from_file(self, file_path: Path) -> list[str]:
         """Load URLs from various file formats."""
-
         urls = []
 
         if file_path.suffix == ".csv":
@@ -254,7 +247,6 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
 
     async def load_urls_from_sitemap(self, sitemap_url: str) -> list[str]:
         """Load URLs from a sitemap."""
-
         urls = []
 
         async with httpx.AsyncClient() as client:
@@ -286,7 +278,6 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
 
     async def process_url(self, url: str) -> dict[str, Any]:
         """Process a single URL: scrape, chunk, embed, and store."""
-
         result = {
             "url": url,
             "success": False,
@@ -322,7 +313,6 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
 
     async def _scrape_and_extract(self, url: str) -> dict[str, Any]:
         """Scrape URL and normalize the payload."""
-
         try:
             if self.crawl_manager is None:
                 raise RuntimeError("Crawl manager not initialized")
@@ -366,7 +356,6 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
         self, crawl_result: dict[str, Any], url: str
     ) -> list[Document]:
         """Chunk normalized content into LangChain documents."""
-
         try:
             raw_content, metadata_payload, kind_hint = resolve_chunk_inputs(
                 crawl_result,
@@ -398,7 +387,6 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
         crawl_result: dict[str, Any],
     ) -> list[TextDocument]:
         """Translate chunked content into TextDocument payloads."""
-
         metadata_block = crawl_result.get("metadata", {})
         if not isinstance(metadata_block, Mapping):
             metadata_block = {}
@@ -416,7 +404,6 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
 
     async def _store_points(self, documents: list[TextDocument]) -> None:
         """Persist prepared documents using the vector service."""
-
         if not documents:
             return
 
@@ -439,7 +426,6 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
         progress: Progress | None = None,
     ) -> dict[str, Any]:
         """Process URLs in batches with concurrency control."""
-
         semaphore = asyncio.Semaphore(max_concurrent)
 
         task_id: int | None = None
@@ -451,7 +437,6 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
 
         async def process_with_semaphore(url: str) -> dict[str, Any]:
             """Process a single URL with semaphore control."""
-
             async with semaphore:
                 result = await self.process_url(url)
 
@@ -498,7 +483,6 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
         resume: bool = True,
     ) -> None:
         """Run the bulk embedding pipeline."""
-
         # Filter out already completed URLs if resuming
         if resume and self.state.completed_urls:
             urls = [url for url in urls if url not in self.state.completed_urls]
@@ -536,7 +520,6 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
 
     def _display_summary(self, results: dict[str, Any]) -> None:
         """Display processing summary."""
-
         table = Table(title="Processing Summary")
         table.add_column("Metric", style="cyan")
         table.add_column("Value", style="green")

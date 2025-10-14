@@ -39,6 +39,7 @@ class VectorDBUserBehavior(TaskSet):
     """User behavior scenarios for vector database operations."""
 
     def __init__(self, parent):
+        """Initialize user behavior with test data."""
         super().__init__(parent)
         self.test_documents = [
             "https://docs.python.org/3/tutorial/index.html",
@@ -71,8 +72,8 @@ class VectorDBUserBehavior(TaskSet):
     @task(3)
     def search_documents(self):
         """Simulate document search operations."""
-        query = random.choice(self.test_queries)  # noqa: S311
-        collection = random.choice(self.collections)  # noqa: S311
+        query = random.choice(self.test_queries)
+        collection = random.choice(self.collections)
 
         with self.client.post(
             "/api/v1/search",
@@ -97,8 +98,8 @@ class VectorDBUserBehavior(TaskSet):
     @task(2)
     def add_document(self):
         """Simulate document addition operations."""
-        url = random.choice(self.test_documents)  # noqa: S311
-        collection = random.choice(self.collections)  # noqa: S311
+        url = random.choice(self.test_documents)
+        collection = random.choice(self.collections)
 
         with self.client.post(
             "/api/v1/documents",
@@ -124,8 +125,8 @@ class VectorDBUserBehavior(TaskSet):
     @task(1)
     def update_document(self):
         """Simulate document update operations."""
-        url = random.choice(self.test_documents)  # noqa: S311
-        collection = random.choice(self.collections)  # noqa: S311
+        url = random.choice(self.test_documents)
+        collection = random.choice(self.collections)
 
         with self.client.put(
             "/api/v1/documents",
@@ -135,7 +136,7 @@ class VectorDBUserBehavior(TaskSet):
                 "metadata": {
                     "source": "load_test",
                     "updated_at": time.time(),
-                    "version": random.randint(1, 10),  # noqa: S311
+                    "version": random.randint(1, 10),
                 },
             },
             catch_response=True,
@@ -220,6 +221,7 @@ class PerformanceMetricsCollector:
     """Collect and analyze performance metrics during load tests."""
 
     def __init__(self):
+        """Initialize metrics collector."""
         self.metrics: dict[str, list[float]] = {
             "response_times": [],
             "error_rates": [],
@@ -369,7 +371,6 @@ def create_load_test_runner(host: str = "http://localhost:8000") -> Environment:
     Returns:
         Configured Locust environment
     """
-
     setup_logging("INFO", None)
 
     # Create environment

@@ -50,7 +50,6 @@ class CompressionStats:
     @property
     def reduction_ratio(self) -> float:
         """Return the token reduction ratio achieved by compression."""
-
         if self.tokens_before <= 0:
             return 0.0
         adjusted_after = max(self.tokens_after, 0)
@@ -59,7 +58,6 @@ class CompressionStats:
 
     def to_dict(self) -> dict[str, float | int]:
         """Serialize statistics for logging or metrics exports."""
-
         return {
             "documents_processed": self.documents_processed,
             "documents_compressed": self.documents_compressed,
@@ -81,6 +79,7 @@ class VectorServiceRetriever(BaseRetriever):
         filters: Mapping[str, Any] | None = None,
         rag_config: RAGConfig | None = None,
     ) -> None:
+        """Initialize retriever with collection config and optional compression."""
         super().__init__()
         self._vector_service = vector_service
         self._collection = collection
@@ -100,7 +99,6 @@ class VectorServiceRetriever(BaseRetriever):
         filters: Mapping[str, Any] | None = None,
     ) -> Self:
         """Return a new retriever with updated search configuration."""
-
         return self.__class__(
             self._vector_service,
             self._collection,
@@ -112,7 +110,6 @@ class VectorServiceRetriever(BaseRetriever):
     @property
     def compression_stats(self) -> CompressionStats | None:
         """Return compression statistics from the most recent retrieval."""
-
         return self._compression_stats
 
     @property
@@ -261,7 +258,6 @@ class VectorServiceRetriever(BaseRetriever):
 
 def _estimate_tokens(content: str) -> int:
     """Estimate token count using tiktoken when available."""
-
     if not content:
         return 0
     if tiktoken is not None:  # pragma: no branch - quick exit when installed
@@ -270,4 +266,4 @@ def _estimate_tokens(content: str) -> int:
     return max(1, len(content.split()))
 
 
-__all__ = ("VectorServiceRetriever", "CompressionStats")
+__all__ = ("CompressionStats", "VectorServiceRetriever")

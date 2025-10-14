@@ -55,7 +55,6 @@ class BaseError(Exception):
             error_code: Machine-readable error code for categorization
             context: Additional context information
         """
-
         self.message = message
         self.error_code = error_code or self.__class__.__name__
         self.context = context or {}
@@ -63,7 +62,6 @@ class BaseError(Exception):
 
     def to_dict(self) -> dict[str, Any]:
         """Convert error to dictionary for API responses."""
-
         return {
             "error": self.message,
             "error_code": self.error_code,
@@ -100,7 +98,6 @@ class ValidationError(BaseError):
     @classmethod
     def from_pydantic(cls, exc: PydanticValidationError) -> "ValidationError":  # type: ignore[name-defined]
         """Create ValidationError from Pydantic ValidationError."""
-
         errors = exc.errors()
         if len(errors) == 1:
             error = errors[0]
@@ -151,7 +148,6 @@ class APIError(BaseError):
         context: dict[str, Any] | None = None,
     ):
         """Initialize API error with HTTP status code."""
-
         super().__init__(message, error_code, context)
         self.status_code = status_code
 
@@ -188,7 +184,6 @@ def safe_response(success: bool, **kwargs) -> dict[str, Any]:
     Returns:
         Safe response dictionary with sanitized error messages
     """
-
     response = {"success": success, "timestamp": time.time()}
 
     if success:
@@ -235,7 +230,6 @@ def retry_async(
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
             """Wrapper function for async retry logic."""
-
             last_exception = None
 
             for attempt in range(max_attempts):
@@ -389,7 +383,6 @@ def create_validation_error(
     Returns:
         PydanticCustomError instance
     """
-
     return PydanticCustomError(
         error_type,
         message,

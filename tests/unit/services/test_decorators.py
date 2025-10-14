@@ -153,7 +153,6 @@ class TestCircuitBreaker:
     @pytest.mark.asyncio
     async def test_circuit_breaker_normal_operation(self):
         """Test circuit breaker in normal operation."""
-
         mock_func = AsyncMock(return_value="success")
 
         @circuit_breaker(

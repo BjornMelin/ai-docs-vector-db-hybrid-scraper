@@ -55,7 +55,6 @@ from .strategies import (
 
 def test_router_settings_retry_backoff_positive() -> None:
     """Router settings should default to a positive retry window."""
-
     settings = RouterSettings()
     assert settings.unavailable_retry_seconds >= 1.0
 
@@ -65,8 +64,7 @@ class TestCacheConfigProperties:
 
     @given(cache_configurations())
     def test_cache_config_valid_properties(self, config_data: dict[str, Any]):
-        """Test that valid cache configurations always create valid
-        CacheConfig objects."""
+        """Test valid cache configs always create valid CacheConfig objects."""
         config = CacheConfig(**config_data)
         cache_data = config.model_dump()
 

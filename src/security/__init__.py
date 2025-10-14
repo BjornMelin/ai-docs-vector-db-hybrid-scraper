@@ -19,6 +19,6 @@ from .ml_security import (
 __all__ = [
     "MLSecurityValidator",
     "MinimalMLSecurityConfig",
-    "SecurityError",
     "SecurityCheckResult",
+    "SecurityError",
 ]

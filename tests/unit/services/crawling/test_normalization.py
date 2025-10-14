@@ -10,6 +10,7 @@ from src.services.crawling import normalization as normalization_module
 
 @pytest.fixture()
 def sample_browser_result() -> BrowserResult:
+    """Provide a sample BrowserResult for testing."""
     metadata = {
         "title": "Sample Page",
         "content": {"markdown": "**hello**"},
@@ -30,6 +31,7 @@ def sample_browser_result() -> BrowserResult:
 def test_normalize_crawler_output_from_browser_result(
     sample_browser_result: BrowserResult,
 ) -> None:
+    """Verify normalization of BrowserResult into standard payload."""
     payload = normalization_module.normalize_crawler_output(
         sample_browser_result,
         fallback_url="https://fallback.local",
@@ -45,6 +47,7 @@ def test_normalize_crawler_output_from_browser_result(
 
 
 def test_normalize_crawler_output_from_mapping() -> None:
+    """Verify normalization of dict-based crawler output."""
     payload = normalization_module.normalize_crawler_output(
         {
             "title": "Mapped",
@@ -64,6 +67,7 @@ def test_normalize_crawler_output_from_mapping() -> None:
 def test_resolve_chunk_inputs_prefers_structured_content(
     sample_browser_result: BrowserResult,
 ) -> None:
+    """Verify chunk input resolution prefers structured content."""
     payload = normalization_module.normalize_crawler_output(
         sample_browser_result,
         fallback_url="https://fallback.local",
@@ -82,6 +86,7 @@ def test_resolve_chunk_inputs_prefers_structured_content(
 
 
 def test_resolve_chunk_inputs_raises_when_missing_content() -> None:
+    """Verify error raised when content is missing."""
     payload = {"metadata": {"title": "Missing"}}
 
     with pytest.raises(ValueError):
@@ -91,6 +96,7 @@ def test_resolve_chunk_inputs_raises_when_missing_content() -> None:
 
 
 def test_resolve_chunk_inputs_falls_back_to_raw_html() -> None:
+    """Verify fallback to raw HTML when structured content unavailable."""
     payload = {
         "url": "https://example.com/page",
         "metadata": {"title": "Sample"},

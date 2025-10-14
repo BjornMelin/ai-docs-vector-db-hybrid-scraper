@@ -60,7 +60,6 @@ async def initialize_dependencies() -> None:
     Raises:
         RuntimeError: If the dependency container cannot be initialised.
     """
-
     await ensure_container(settings=get_settings(), force_reload=True)
 
 
@@ -70,7 +69,6 @@ async def cleanup_dependencies() -> None:
     Raises:
         RuntimeError: If the dependency container cannot be shut down.
     """
-
     await shutdown_container()
 
 
@@ -80,7 +78,6 @@ def get_config_dependency() -> Settings:
     Returns:
         Settings: Pydantic settings instance representing the app configuration.
     """
-
     return get_settings()
 
 
@@ -93,7 +90,6 @@ async def get_vector_service() -> VectorStoreService:
     Raises:
         HTTPException: If the service cannot be obtained from the container.
     """
-
     try:
         return await resolve_vector_store_service()
     except Exception as exc:  # pragma: no cover - defensive
@@ -113,7 +109,6 @@ async def get_embedding_manager() -> EmbeddingManager:
     Raises:
         HTTPException: If the embedding manager cannot be resolved.
     """
-
     try:
         return await resolve_embedding_manager()
     except Exception as exc:  # pragma: no cover - defensive
@@ -133,7 +128,6 @@ async def get_cache_manager() -> CacheManager:
     Raises:
         HTTPException: If the cache manager cannot be resolved.
     """
-
     try:
         return await resolve_cache_manager()
     except Exception as exc:  # pragma: no cover - defensive
@@ -159,7 +153,6 @@ async def get_rag_generator() -> Any:
     Raises:
         HTTPException: If the generator cannot be resolved.
     """
-
     try:
         return await resolve_rag_generator()
     except Exception as exc:  # pragma: no cover - defensive
@@ -184,7 +177,6 @@ async def database_session() -> AsyncGenerator[DatabaseSessionContext, None]:
     Raises:
         HTTPException: If the dependency container is not initialised.
     """
-
     container = get_container()
     if container is None:
         logger.error("Dependency container is not initialised for database session")
@@ -235,7 +227,6 @@ def get_correlation_id_dependency(request: Request) -> str:
     Returns:
         str: The correlation identifier associated with the request.
     """
-
     return get_correlation_id(request)
 
 
@@ -248,7 +239,6 @@ def get_request_context(request: Request) -> dict[str, Any]:
     Returns:
         dict[str, Any]: Structured diagnostics captured from the request.
     """
-
     return {
         "correlation_id": get_correlation_id(request),
         "method": request.method,
@@ -268,7 +258,6 @@ async def get_health_checker() -> HealthCheckManager:
     Returns:
         HealthCheckManager: The shared health manager used by the API.
     """
-
     global _health_manager  # pylint: disable=global-statement
     if _health_manager is not None:
         return _health_manager

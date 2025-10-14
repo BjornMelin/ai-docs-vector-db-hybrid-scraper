@@ -32,6 +32,14 @@ class _OperationStats:
         cost_usd: float | None,
         success: bool,
     ) -> None:
+        """Record an AI operation metric.
+
+        Args:
+            duration_s: Duration in seconds.
+            tokens: Optional token count.
+            cost_usd: Optional cost in USD.
+            success: Whether operation succeeded.
+        """
         self.count += 1
         if success:
             self.success_count += 1
@@ -66,7 +74,6 @@ def _operation_payload(  # pylint: disable=too-many-arguments
     Returns:
         dict[str, Any]: Structured payload used for in-memory aggregation.
     """
-
     return {
         "operation": operation_type,
         "provider": provider,
@@ -82,6 +89,11 @@ class AIOperationTracker:
     """Track AI activity in-memory while emitting optional metrics."""
 
     def __init__(self, meter: Meter | None = None) -> None:
+        """Initialize tracker with an optional metrics meter.
+
+        Args:
+            meter: Meter instance used to record telemetry metrics.
+        """
         self._lock = threading.Lock()
         self._stats: dict[str, _OperationStats] = defaultdict(_OperationStats)
         self._meter = meter or metrics.get_meter(__name__)
@@ -122,7 +134,6 @@ class AIOperationTracker:
             cost_usd: Optional monetary cost of the operation.
             success: Flag indicating whether the call succeeded.
         """
-
         labels = {
             "operation": operation,
             "provider": provider,
@@ -146,7 +157,6 @@ class AIOperationTracker:
 
     def snapshot(self) -> dict[str, dict[str, float]]:
         """Return an immutable snapshot of aggregated operation statistics."""
-
         with self._lock:
             return {
                 name: {
@@ -161,7 +171,6 @@ class AIOperationTracker:
 
     def reset(self) -> None:
         """Clear all recorded statistics."""
-
         with self._lock:
             self._stats.clear()
 
@@ -170,17 +179,20 @@ class PerformanceTracker:
     """Minimal tracker used by agent components to measure durations."""
 
     def __init__(self) -> None:
+        """Initialize storage for tracked durations."""
         self._lock = threading.Lock()
         self._durations: dict[str, list[float]] = defaultdict(list)
 
     @contextmanager
     def track(self, label: str) -> Any:
-        """Context manager capturing execution duration under ``label``.
+        """Context manager capturing execution duration under label.
 
         Args:
             label: Identifier used to group durations.
-        """
 
+        Yields:
+            None.
+        """
         start = time.perf_counter()
         try:
             yield
@@ -190,8 +202,11 @@ class PerformanceTracker:
                 self._durations[label].append(duration)
 
     def summary(self) -> dict[str, float]:
-        """Return average duration per tracked label."""
+        """Return average duration per tracked label.
 
+        Returns:
+            Mapping of label to average duration.
+        """
         with self._lock:
             return {
                 label: (sum(values) / len(values)) if values else 0.0
@@ -203,6 +218,7 @@ class TraceCorrelationManager:
     """Tiny helper for carrying request correlation metadata."""
 
     def __init__(self) -> None:
+        """Initialize thread-local correlation storage."""
         self._local = threading.local()
 
     def set_context(self, **context: Any) -> None:
@@ -211,7 +227,6 @@ class TraceCorrelationManager:
         Args:
             **context: Key-value pairs to append to the correlation state.
         """
-
         existing = getattr(self._local, "context", {})
         merged = {**existing, **context}
         self._local.context = merged
@@ -221,14 +236,23 @@ class TraceCorrelationManager:
                 active_span.set_attribute(f"correlation.{key}", value)
 
     def get_context(self) -> dict[str, Any]:
-        """Return a shallow copy of the stored correlation context."""
+        """Return a shallow copy of the stored correlation context.
 
+        Returns:
+            Current correlation context.
+        """
         return getattr(self._local, "context", {}).copy()
 
     @contextmanager
     def correlated_operation(self, **context: Any) -> Any:
-        """Temporarily extend the correlation context within a block."""
+        """Temporarily extend the correlation context within a block.
 
+        Args:
+            **context: Additional context to merge.
+
+        Yields:
+            Updated correlation context.
+        """
         previous = self.get_context()
         self.set_context(**context)
         try:
@@ -238,17 +262,18 @@ class TraceCorrelationManager:
 
     def clear(self) -> None:
         """Remove any stored correlation metadata."""
-
         self._local.context = {}
 
 
 @lru_cache(maxsize=1)
 def get_ai_tracker() -> AIOperationTracker:
+    """Return global AI operation tracker singleton."""
     return AIOperationTracker()
 
 
 @lru_cache(maxsize=1)
 def get_correlation_manager() -> TraceCorrelationManager:
+    """Return global correlation manager singleton."""
     return TraceCorrelationManager()
 
 
@@ -279,7 +304,6 @@ def record_ai_operation(  # pylint: disable=too-many-arguments
         completion_tokens: Optional completion token count.
         attributes: Optional additional span attributes to set.
     """
-
     current_span = trace.get_current_span()
     if current_span and current_span.get_span_context().is_valid:
         span_attrs: dict[str, Any] = {
@@ -321,7 +345,6 @@ def track_cost(
     cost_usd: float,
 ) -> None:
     """Record a cost-only event in the global tracker."""
-
     record_ai_operation(
         operation_type=operation_type,
         provider=provider,
@@ -348,7 +371,6 @@ def track_llm_call(
         cost_usd: Optional cost for the call.
         metadata: Optional tracing metadata to append to the span.
     """
-
     start = time.perf_counter()
     with span(
         "ai.llm.call",
@@ -373,7 +395,6 @@ def track_embedding_generation(
     cost_usd: float | None = None,
 ) -> None:
     """Trace and record an embedding generation pass."""
-
     start = time.perf_counter()
     attributes: dict[str, Any] = {"ai.provider": provider, "ai.model": model}
     if batch_size is not None:
@@ -397,7 +418,6 @@ def track_vector_search(
     result_count: int | None = None,
 ) -> None:
     """Trace and record vector search latency."""
-
     start = time.perf_counter()
     attributes: dict[str, Any] = {
         "vector.collection": collection,
@@ -423,7 +443,6 @@ def track_rag_pipeline(
     stages: dict[str, float] | None = None,
 ) -> None:
     """Trace and record an entire RAG pipeline execution."""
-
     attributes: dict[str, Any] = {
         "ai.provider": provider,
         "ai.model": model,

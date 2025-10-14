@@ -185,6 +185,6 @@ def config_factory(
 __all__ = [
     "app_config",
     "ci_environment_config",
-    "performance_monitor",
     "config_factory",
+    "performance_monitor",
 ]

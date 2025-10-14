@@ -242,7 +242,7 @@ async def demonstrate_auto_optimization(parallel_system: Any):
         for opt in optimizations:
             logger.info("   • %s", opt)
     else:
-        logger.info("ℹ️ No optimizations needed - system is already optimal")
+        logger.info("No optimizations needed - system is already optimal")
 
     logger.info(
         "🕒 Optimization timestamp: %s", optimization_result.get("timestamp", "Unknown")

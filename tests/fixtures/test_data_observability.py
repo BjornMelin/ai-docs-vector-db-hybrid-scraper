@@ -29,7 +29,7 @@ class ObservabilityTestDataFactory:
         span_id = span_id or str(uuid.uuid4())
         start_time = time.time()
 
-        span = TraceSpan(
+        return TraceSpan(
             trace_id=trace_id,
             span_id=span_id,
             parent_span_id=parent_span_id,
@@ -40,8 +40,6 @@ class ObservabilityTestDataFactory:
             tags=tags or {},
             logs=[],
         )
-
-        return span
 
     @staticmethod
     def create_request_trace_spans(

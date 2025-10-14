@@ -378,7 +378,7 @@ class TestStressScenarios:
                     0.3, current_load * 0.05 + self.failure_cascade_level * 0.1
                 )
 
-                if random.random() < failure_probability:  # noqa: S311
+                if random.random() < failure_probability:
                     self.consecutive_failures += 1
                     self.failure_cascade_level = min(
                         5, self.failure_cascade_level + 0.1

@@ -16,7 +16,6 @@ def test_validate_configuration_requires_openai_key(
     build_unified_mcp_config: Callable[..., SimpleNamespace],
 ) -> None:
     """`validate_configuration` should raise when the OpenAI key is absent."""
-
     config = build_unified_mcp_config(openai_key=None)
     with (
         patch("src.unified_mcp_server.get_settings", return_value=config),
@@ -30,7 +29,6 @@ def test_validate_configuration_requires_qdrant_url(
     build_unified_mcp_config: Callable[..., SimpleNamespace],
 ) -> None:
     """`validate_configuration` should reject missing Qdrant endpoints."""
-
     config = build_unified_mcp_config(
         qdrant_url=None,
         providers=["fastembed"],
@@ -50,7 +48,6 @@ def test_validate_configuration_warns_on_missing_firecrawl(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """`validate_configuration` should only warn when Firecrawl is optional."""
-
     config = build_unified_mcp_config(
         firecrawl_key=None,
         providers=["fastembed"],
@@ -70,7 +67,6 @@ def test_validate_configuration_passes_for_valid_config(
     build_unified_mcp_config: Callable[..., SimpleNamespace],
 ) -> None:
     """`validate_configuration` should pass configs with optional Firecrawl."""
-
     config = build_unified_mcp_config(
         firecrawl_key="",
         providers=["fastembed"],
@@ -133,7 +129,6 @@ def test_validate_streaming_config_records_issues(
     expected_warning_substrings: list[str],
 ) -> None:
     """Streaming configuration issues should be recorded as errors or warnings."""
-
     errors: list[str] = []
     warnings: list[str] = []
 
@@ -153,7 +148,6 @@ def test_validate_streaming_config_records_issues(
 
 def test_validate_streaming_config_skips_non_streamable_transport() -> None:
     """Alternate transports should bypass streaming validation entirely."""
-
     errors: list[str] = []
     warnings: list[str] = []
 

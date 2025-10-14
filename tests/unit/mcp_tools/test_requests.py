@@ -43,7 +43,6 @@ def test_search_request_enforces_limit_bounds(limit):
 
 def test_search_request_rejects_malicious_filters() -> None:
     """Filter keys and values should be sanitized for injection patterns."""
-
     with pytest.raises(ValidationError):
         SearchRequest(query="danger", filters={"$illegal": "ok"})
 
@@ -56,7 +55,6 @@ def test_search_request_rejects_malicious_filters() -> None:
 
 def test_search_request_validates_vectors() -> None:
     """Dense and sparse vectors must respect dimensional constraints."""
-
     with pytest.raises(ValidationError):
         SearchRequest(query="vector", query_vector=[])
 
@@ -83,7 +81,6 @@ def test_search_request_validates_vectors() -> None:
 
 def test_search_request_validates_strategy_alignment() -> None:
     """Search strategy and vector type combinations must remain consistent."""
-
     with pytest.raises(ValidationError):
         SearchRequest(
             query="strategy",

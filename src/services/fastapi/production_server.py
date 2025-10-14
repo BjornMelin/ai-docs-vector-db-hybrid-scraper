@@ -148,7 +148,6 @@ class ProductionMCPServer:
             Returns:
                 JSONResponse describing aggregated system health.
             """
-
             await self._health_manager.check_all()
             summary = self._health_manager.get_health_summary()
             overall_status = summary.get("overall_status", HealthStatus.UNKNOWN.value)

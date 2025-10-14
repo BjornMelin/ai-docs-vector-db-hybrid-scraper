@@ -218,6 +218,7 @@ class MCPServerConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_transport(self) -> MCPServerConfig:
+        """Validate that transport-specific required fields are present."""
         if self.transport == MCPTransport.STDIO and not self.command:
             msg = "command is required for stdio MCP transports"
             raise ValueError(msg)
@@ -276,7 +277,6 @@ class DeploymentConfig(BaseModel):
         cls, value: set[DeploymentStrategy]
     ) -> set[DeploymentStrategy]:
         """Ensure at least one strategy is enabled."""
-
         if not value:
             msg = "enabled_strategies must include at least one deployment strategy"
             raise ValueError(msg)
@@ -284,12 +284,10 @@ class DeploymentConfig(BaseModel):
 
     def is_enabled(self, strategy: DeploymentStrategy) -> bool:
         """Return True when the strategy is permitted."""
-
         return strategy in self.enabled_strategies
 
     def resolve_entrypoint(self, strategy: DeploymentStrategy) -> Path:
         """Return the canonical entrypoint for the selected strategy."""
-
         if strategy is DeploymentStrategy.GITHUB_ACTIONS:
             return self.workflow_file
         if strategy is DeploymentStrategy.DOCKER_COMPOSE:
@@ -434,6 +432,7 @@ class OpenAIConfig(BaseModel):
     @field_validator("api_key", mode="before")
     @classmethod
     def validate_api_key(cls, value: str | None) -> str | None:
+        """Validate OpenAI API key format."""
         if value and not value.startswith("sk-"):
             msg = "OpenAI API key must start with 'sk-'"
             raise ValueError(msg)
@@ -508,6 +507,7 @@ class ChunkingConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_chunk_sizes(self) -> Self:
+        """Validate chunk size relationships and constraints."""
         if self.chunk_overlap >= self.chunk_size:
             msg = "chunk_overlap must be less than chunk_size"
             raise ValueError(msg)
@@ -526,6 +526,7 @@ class EmbeddingConfig(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def alias_search_strategy(cls, values: Any) -> Any:
+        """Alias search_strategy to retrieval_mode for backward compatibility."""
         if (
             isinstance(values, dict)
             and "search_strategy" in values
@@ -555,6 +556,7 @@ class EmbeddingConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_sparse_requirements(self) -> Self:
+        """Ensure sparse retrieval modes provide a sparse model identifier."""
         if (
             self.retrieval_mode in (SearchStrategy.SPARSE, SearchStrategy.HYBRID)
             and not self.sparse_model
@@ -830,6 +832,7 @@ class DocumentationSite(BaseModel):
 
 
 __all__ = [
+    "AgenticConfig",
     "CacheConfig",
     "CacheType",
     "ChunkingConfig",
@@ -843,7 +846,6 @@ __all__ = [
     "EmbeddingModel",
     "EmbeddingProvider",
     "Environment",
-    "AgenticConfig",
     "FastEmbedConfig",
     "FusionAlgorithm",
     "HyDEConfig",

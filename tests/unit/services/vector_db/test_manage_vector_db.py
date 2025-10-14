@@ -25,7 +25,6 @@ from src.services.errors import QdrantServiceError
 @pytest.fixture()
 def vector_service_mock() -> AsyncMock:
     """Provide an AsyncMock representing the VectorStoreService."""
-
     service = AsyncMock()
     service.list_collections = AsyncMock(return_value=["docs"])
     service.ensure_collection = AsyncMock(return_value=None)
@@ -54,7 +53,6 @@ def manager_setup(
     monkeypatch: pytest.MonkeyPatch, vector_service_mock: AsyncMock
 ) -> SimpleNamespace:
     """Create a VectorDBManager wired to stubbed client manager helpers."""
-
     container = SimpleNamespace(
         vector_store_service=lambda: vector_service_mock,
     )
@@ -88,8 +86,7 @@ def manager_setup(
 
 @pytest.mark.asyncio
 async def test_initialize_use_client_manager(manager_setup: SimpleNamespace) -> None:
-    """initialize should resolve the vector service via the client manager."""
-
+    """Initialize should resolve the vector service via the client manager."""
     manager = manager_setup.manager
 
     await manager.initialize()
@@ -103,7 +100,6 @@ async def test_list_collections_uses_vector_service(
     manager_setup: SimpleNamespace,
 ) -> None:
     """list_collections should call the vector service and return results."""
-
     manager = manager_setup.manager
 
     collections = await manager.list_collections()
@@ -117,7 +113,6 @@ async def test_create_collection_builds_schema(
     manager_setup: SimpleNamespace,
 ) -> None:
     """create_collection should construct the schema and invoke ensure_collection."""
-
     manager = manager_setup.manager
 
     result = await manager.create_collection("analytics", vector_size=256)
@@ -136,7 +131,6 @@ async def test_delete_collection_drops_via_service(
     manager_setup: SimpleNamespace,
 ) -> None:
     """delete_collection should call drop_collection and report success."""
-
     manager = manager_setup.manager
 
     result = await manager.delete_collection("obsolete")
@@ -150,7 +144,6 @@ async def test_get_collection_info_maps_stats(
     manager_setup: SimpleNamespace,
 ) -> None:
     """get_collection_info should translate stats into CollectionInfo."""
-
     manager = manager_setup.manager
 
     info = await manager.get_collection_info("docs")
@@ -165,7 +158,6 @@ async def test_search_documents_returns_models(
     manager_setup: SimpleNamespace,
 ) -> None:
     """search_documents should return canonical SearchRecord objects."""
-
     manager = manager_setup.manager
 
     results = await manager.search_documents("docs", "query", limit=1)
@@ -184,7 +176,6 @@ async def test_clear_collection_recreates(
     manager_setup: SimpleNamespace,
 ) -> None:
     """clear_collection should drop and then ensure the collection."""
-
     manager = manager_setup.manager
 
     result = await manager.clear_collection("docs")
@@ -196,8 +187,7 @@ async def test_clear_collection_recreates(
 
 @pytest.mark.asyncio
 async def test_cleanup_shuts_down_manager(manager_setup: SimpleNamespace) -> None:
-    """cleanup should release the client-manager-managed services."""
-
+    """Cleanup should release the client-manager-managed services."""
     manager = manager_setup.manager
 
     await manager.initialize()
@@ -208,7 +198,6 @@ async def test_cleanup_shuts_down_manager(manager_setup: SimpleNamespace) -> Non
 
 def _run_cli(command: list[str], manager_stub: AsyncMock) -> Any:
     """Invoke the CLI with the provided command arguments."""
-
     runner = CliRunner()
     with (
         patch("src.manage_vector_db.setup_logging"),
@@ -222,7 +211,6 @@ def _run_cli(command: list[str], manager_stub: AsyncMock) -> Any:
 
 def test_cli_list_collections_outputs_results() -> None:
     """list-collections command should print discovered collections."""
-
     manager_stub = AsyncMock()
     manager_stub.list_collections = AsyncMock(return_value=["docs"])
     manager_stub.cleanup = AsyncMock()
@@ -236,8 +224,7 @@ def test_cli_list_collections_outputs_results() -> None:
 
 
 def test_cli_create_collection_reports_success() -> None:
-    """create command should call VectorDBManager.create_collection."""
-
+    """Create command should call VectorDBManager.create_collection."""
     manager_stub = AsyncMock()
     manager_stub.create_collection = AsyncMock(return_value=True)
     manager_stub.cleanup = AsyncMock()
@@ -251,8 +238,7 @@ def test_cli_create_collection_reports_success() -> None:
 
 
 def test_cli_search_prints_results() -> None:
-    """search command should display formatted search results."""
-
+    """Search command should display formatted search results."""
     search_result = SearchRecord(
         id="doc-1",
         score=0.8,
@@ -274,8 +260,7 @@ def test_cli_search_prints_results() -> None:
 
 
 def test_cli_stats_prints_table() -> None:
-    """stats command should render aggregate metrics."""
-
+    """Stats command should render aggregate metrics."""
     stats = DatabaseStats(
         total_collections=1,
         total_vectors=3,
@@ -313,6 +298,5 @@ async def test_shutdown_manager_failure(manager_setup: SimpleNamespace) -> None:
 
 def test_collection_errors_subclass_qdrant_service_error() -> None:
     """Ensure collection lifecycle errors derive from QdrantServiceError."""
-
     assert issubclass(CollectionCreationError, QdrantServiceError)
     assert issubclass(CollectionDeletionError, QdrantServiceError)

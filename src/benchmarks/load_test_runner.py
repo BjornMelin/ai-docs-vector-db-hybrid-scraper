@@ -184,17 +184,13 @@ class LoadTestUser:  # pylint: disable=too-many-instance-attributes
 
     def _prepare_query(self) -> SearchRequest:
         """Return a cloned query with load-test specific identifiers."""
-
-        query = random.choice(  # noqa: S311 - non-crypto random for load testing
-            self.test_queries
-        ).model_copy()
+        query = random.choice(self.test_queries).model_copy()
         query.user_id = f"load_test_user_{self.user_id}"
         query.session_id = f"load_test_session_{self.user_id}_{int(time.time())}"
         return query
 
     async def _execute_request(self, query: SearchRequest) -> None:
         """Execute a request and record results, including retries when enabled."""
-
         try:
             response_time_ms = await self._perform_request(query)
         except TimeoutError:
@@ -206,7 +202,6 @@ class LoadTestUser:  # pylint: disable=too-many-instance-attributes
 
     async def _perform_request(self, query: SearchRequest) -> float:
         """Perform a single request and return the latency in milliseconds."""
-
         start_time = time.perf_counter()
         await asyncio.wait_for(
             self.search_service.hybrid_search(query),
@@ -217,20 +212,17 @@ class LoadTestUser:  # pylint: disable=too-many-instance-attributes
 
     def _record_success(self, response_time_ms: float) -> None:
         """Record a successful request."""
-
         self.response_times.append(response_time_ms)
         self.requests_sent += 1
 
     def _record_timeout(self) -> None:
         """Record a timeout failure."""
-
         self.failures += 1
         self.errors.append("timeout")
         logger.debug("User %s: Request timeout", self.user_id)
 
     async def _handle_failure(self, exc: Exception, query: SearchRequest) -> None:
         """Handle non-timeout failures, retrying when configured."""
-
         error_type = type(exc).__name__
         self.failures += 1
         self.errors.append(error_type)
@@ -241,7 +233,6 @@ class LoadTestUser:  # pylint: disable=too-many-instance-attributes
 
     async def _retry_request(self, query: SearchRequest) -> None:
         """Retry a failed request with exponential backoff."""
-
         for retry in range(self.config.max_retries):
             try:
                 await asyncio.sleep(0.1 * (retry + 1))
@@ -266,11 +257,8 @@ class LoadTestUser:  # pylint: disable=too-many-instance-attributes
 
     async def _sleep_between_requests(self) -> None:
         """Pause between requests using configured think time range."""
-
         think_time = (
-            random.randint(  # noqa: S311 - non-crypto random for load testing
-                self.config.think_time_min_ms, self.config.think_time_max_ms
-            )
+            random.randint(self.config.think_time_min_ms, self.config.think_time_max_ms)
             / 1000.0
         )
         await asyncio.sleep(think_time)
@@ -461,7 +449,6 @@ class LoadTestRunner:
         self, user_results: list[dict[str, Any]]
     ) -> _AggregatedUserMetrics:
         """Combine per-user results into aggregate counters."""
-
         response_times: list[float] = []
         error_counts: dict[str, int] = {}
         timeout_count = 0
@@ -489,7 +476,6 @@ class LoadTestRunner:
         self, response_times: list[float]
     ) -> dict[str, float]:
         """Return percentile and summary latency statistics in milliseconds."""
-
         if not response_times:
             return {
                 "avg_ms": 0.0,

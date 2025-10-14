@@ -27,7 +27,6 @@ SKIP_DIRS = {
 
 def scan_file(path: Path) -> list[str]:
     """Return forbidden patterns detected in ``path``."""
-
     try:
         text = path.read_text(encoding="utf-8")
     except UnicodeDecodeError:
@@ -46,7 +45,6 @@ def scan_file(path: Path) -> list[str]:
 
 def main() -> int:
     """Scan repository tree for deprecated configuration helpers."""
-
     repo_root = Path(__file__).resolve().parents[2]
     violations: list[str] = []
 

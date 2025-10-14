@@ -1,5 +1,4 @@
-"""
-Request/response logging with correlation IDs.
+"""Request/response logging with correlation IDs.
 
 - Uses asgi-correlation-id context to tag logs and responses.
 - Keep name `TracingMiddleware` for compatibility; OTel should be enabled
@@ -35,6 +34,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
         max_body_bytes: int = 1024,
         trust_proxy: bool = False,
     ) -> None:
+        """Initialize tracing middleware with structured logging configuration."""
         super().__init__(app)
         self._log_req = log_request_body
         self._log_res = log_response_body
@@ -42,6 +42,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
         self._trust_proxy = trust_proxy
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        """Log request/response with correlation ID and inject timing headers."""
         cid = get_correlation_id(request)
         start = time.perf_counter()
 
@@ -63,7 +64,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
                 "path": request.url.path,
                 "query": safe_escape(str(request.query_params))
                 if request.query_params
-                else None,  # noqa: E501
+                else None,
                 "client_ip": client_ip(request, trust_proxy=self._trust_proxy),
                 "content_type": request.headers.get("content-type"),
                 "content_length": request.headers.get("content-length"),

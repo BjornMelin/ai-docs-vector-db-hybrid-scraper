@@ -54,21 +54,29 @@ AgentErrorCode = cast(Any, module.AgentErrorCode)
 
 
 class StubDiscovery:
+    """Stub implementation of DynamicToolDiscovery for testing."""
+
     def __init__(self, capabilities: list[Any]) -> None:
+        """Initialize the stub discovery with given capabilities."""
         self._capabilities = capabilities
         self.refresh_count = 0
 
-    async def refresh(self, *, force: bool = False) -> None:  # noqa: D401
+    async def refresh(self, *, force: bool = False) -> None:
+        """Simulate refreshing the discovery capabilities."""
         self.refresh_count += 1
 
-    def get_capabilities(self) -> tuple[Any, ...]:  # noqa: D401
+    def get_capabilities(self) -> tuple[Any, ...]:
+        """Get the current capabilities."""
         return tuple(self._capabilities)
 
 
 class StubToolService:
+    """Stub implementation of ToolService for testing."""
+
     async def execute_tool(
         self, tool_name, *, arguments, server_name, read_timeout_ms=None
-    ):  # noqa: D401, ANN001
+    ):
+        """Simulate executing a tool."""
         return ToolExecutionResult(
             tool_name=tool_name,
             server_name=server_name,
@@ -82,7 +90,10 @@ class StubToolService:
 
 
 class StubRetrievalHelper:
-    async def fetch(self, query):  # noqa: D401, ANN001
+    """Stub implementation of RetrievalHelper for testing."""
+
+    async def fetch(self, query):
+        """Simulate fetching documents based on a query."""
         return (
             RetrievedDocument(
                 id="doc-1",
@@ -94,12 +105,18 @@ class StubRetrievalHelper:
 
 
 class FailingToolService:
-    async def execute_tool(self, *_, **__):  # noqa: D401, ANN001
+    """Stub implementation of a tool service that always fails."""
+
+    async def execute_tool(self, *_, **__):
+        """Simulate a tool execution failure."""
         raise ToolExecutionFailure("boom")
 
 
 class SlowToolService:
+    """Stub implementation of a tool service that simulates a slow execution."""
+
     def __init__(self) -> None:
+        """Initialize the slow tool service."""
         self.cancelled = asyncio.Event()
 
     async def execute_tool(
@@ -109,7 +126,8 @@ class SlowToolService:
         arguments,
         server_name,
         read_timeout_ms=None,
-    ):  # noqa: ANN001
+    ):
+        """Simulate a slow tool execution that can be cancelled."""
         try:
             await asyncio.sleep(0.05)
             return ToolExecutionResult(
@@ -127,6 +145,7 @@ class SlowToolService:
 
 @pytest.mark.asyncio
 async def test_run_search_produces_outcome() -> None:
+    """Test that running a search produces a successful outcome."""
     capabilities = [
         ToolCapability(
             name="semantic_search",
@@ -160,6 +179,7 @@ async def test_run_search_produces_outcome() -> None:
 
 @pytest.mark.asyncio
 async def test_run_analysis_returns_summary() -> None:
+    """Test that running an analysis produces a summary outcome."""
     capabilities = [
         ToolCapability(
             name="report_analysis",
@@ -190,6 +210,7 @@ async def test_run_analysis_returns_summary() -> None:
 
 @pytest.mark.asyncio
 async def test_run_search_surfaces_structured_tool_error() -> None:
+    """Test that a structured tool error is surfaced in the outcome."""
     capabilities = [
         ToolCapability(
             name="semantic_search",
@@ -220,6 +241,7 @@ async def test_run_search_surfaces_structured_tool_error() -> None:
 
 @pytest.mark.asyncio
 async def test_run_search_times_out() -> None:
+    """Test that a tool execution timeout is handled correctly."""
     capabilities = [
         ToolCapability(
             name="slow_tool",
@@ -251,15 +273,17 @@ async def test_run_search_times_out() -> None:
 
 @pytest.mark.asyncio
 async def test_discovery_failure_returns_structured_error() -> None:
+    """Test that discovery failure returns a structured error."""
+
     class BrokenDiscovery:
         def __init__(self) -> None:
             self.calls = 0
 
-        async def refresh(self, *, force: bool = False) -> None:  # noqa: D401
+        async def refresh(self, *, force: bool = False) -> None:
             self.calls += 1
             raise RuntimeError("discovery unavailable")
 
-        def get_capabilities(self) -> tuple[Any, ...]:  # noqa: D401
+        def get_capabilities(self) -> tuple[Any, ...]:
             return ()
 
     discovery = BrokenDiscovery()

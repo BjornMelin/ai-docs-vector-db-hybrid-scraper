@@ -13,7 +13,6 @@ from src.services.observability.tracing import (
 
 def test_trace_function_sync() -> None:
     """Test tracing a synchronous function."""
-
     calls: list[int] = []
 
     @trace_function("example.span")
@@ -28,7 +27,6 @@ def test_trace_function_sync() -> None:
 @pytest.mark.asyncio
 async def test_trace_function_async() -> None:
     """Test tracing an asynchronous function."""
-
     calls: list[int] = []
 
     @trace_function("example.async")
@@ -43,7 +41,6 @@ async def test_trace_function_async() -> None:
 
 def test_instrument_config_operation() -> None:
     """Test instrumenting a config operation."""
-
     calls: list[str] = []
 
     @instrument_config_operation(operation_type=ConfigOperationType.UPDATE)

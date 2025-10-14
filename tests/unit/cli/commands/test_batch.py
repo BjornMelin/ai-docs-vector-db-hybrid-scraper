@@ -16,13 +16,11 @@ from src.cli.commands import batch as batch_module
 
 def _always_true(*_args: Any, **_kwargs: Any) -> bool:
     """Return ``True`` regardless of inputs."""
-
     return True
 
 
 def _always_false(*_args: Any, **_kwargs: Any) -> bool:
     """Return ``False`` regardless of inputs."""
-
     return False
 
 
@@ -44,7 +42,6 @@ def rich_cli_stub() -> SimpleNamespace:
 @pytest.fixture
 def cli_context(rich_cli_stub: SimpleNamespace) -> click.Context:
     """Create a click context that exposes the Rich CLI helper."""
-
     return click.Context(batch_module.batch, obj={"rich_cli": rich_cli_stub})
 
 
@@ -101,7 +98,6 @@ def test_operation_queue_execute_runs_all_operations(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """`OperationQueue.execute` should invoke queued operations and report success."""
-
     queue = batch_module.OperationQueue()
     executed: list[str] = []
     queue.add(
@@ -117,7 +113,6 @@ def test_operation_queue_execute_runs_all_operations(
 
 def test_operation_queue_execute_stops_on_error() -> None:
     """A failing operation should short-circuit execution and return ``False``."""
-
     queue = batch_module.OperationQueue()
 
     def _fail() -> None:
@@ -130,7 +125,6 @@ def test_operation_queue_execute_stops_on_error() -> None:
 
 def test_operation_queue_clear_removes_operations() -> None:
     """`clear` should empty the operation list."""
-
     queue = batch_module.OperationQueue()
     queue.add(batch_module.BatchOperation("noop", "", lambda: None))
 
@@ -141,7 +135,6 @@ def test_operation_queue_clear_removes_operations() -> None:
 
 def test_show_indexing_preview_emits_panel(rich_cli_stub: SimpleNamespace) -> None:
     """The dry-run preview should render a Rich panel to the console."""
-
     batch_module._show_indexing_preview(["a", "b", "c"], "collection", 2, rich_cli_stub)
 
     assert any(isinstance(item, Panel) for item in rich_cli_stub.printed)
@@ -153,7 +146,6 @@ def test_index_documents_dry_run_invokes_preview(
     rich_cli_stub: SimpleNamespace,
 ) -> None:
     """Dry-run invocations must call the preview helper instead of performing work."""
-
     captured: dict[str, Any] = {}
 
     def _capture(
@@ -197,7 +189,6 @@ def test_create_collections_aborts_without_confirmation(
     monkeypatch: pytest.MonkeyPatch, cli_context: click.Context
 ) -> None:
     """If the operator declines, no queue should be instantiated."""
-
     monkeypatch.setattr(batch_module, "Confirm", SimpleNamespace(ask=_always_false))
 
     def _queue_factory() -> None:
@@ -221,7 +212,6 @@ def test_create_collections_enqueues_operations(
     monkeypatch: pytest.MonkeyPatch, cli_context: click.Context
 ) -> None:
     """Confirmed requests should enqueue batch operations and execute them."""
-
     monkeypatch.setattr(batch_module, "Confirm", SimpleNamespace(ask=_always_true))
     db_manager = SimpleNamespace(calls=[])
 
@@ -292,7 +282,6 @@ def test_delete_collections_aborts_without_double_confirmation(
     monkeypatch: pytest.MonkeyPatch, cli_context: click.Context
 ) -> None:
     """Declining the destructive prompts should avoid queue creation."""
-
     responses = iter([False])
 
     def _ask(_prompt: str) -> bool:
@@ -319,7 +308,6 @@ def test_delete_collections_enqueues_deletions(
     monkeypatch: pytest.MonkeyPatch, cli_context: click.Context
 ) -> None:
     """The delete command should enqueue operations when confirmation is bypassed."""
-
     db_manager = SimpleNamespace(deleted=[])
 
     class _VectorDBStub:

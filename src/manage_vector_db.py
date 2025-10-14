@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Vector Database Management Utility
+"""Vector Database Management Utility.
 
 Provides database management, search, and maintenance utilities with async
 patterns for Qdrant operations.
@@ -69,13 +69,11 @@ class VectorDBManager:
 
     def __init__(self, qdrant_url: str | None = None) -> None:
         """Initialize with optional Qdrant override."""
-
         self.qdrant_url = qdrant_url
         self._vector_service: VectorStoreService | None = None
 
     async def initialize(self) -> None:
         """Ensure container-managed services are ready."""
-
         reload_required = False
         settings = get_settings()
         if self.qdrant_url:
@@ -98,7 +96,6 @@ class VectorDBManager:
 
     async def get_vector_store_service(self) -> VectorStoreService:
         """Return the shared vector store service."""
-
         if self._vector_service is None:
             await self.initialize()
         if self._vector_service is None:  # pragma: no cover - defensive
@@ -107,7 +104,6 @@ class VectorDBManager:
 
     async def cleanup(self) -> None:
         """Release container-managed services."""
-
         self._vector_service = None
         if get_container() is not None:
             await shutdown_container()
@@ -135,7 +131,7 @@ class VectorDBManager:
                 distance="cosine",
             )
             await vector_service.ensure_collection(schema)
-            return True  # noqa: TRY300
+            return True
         except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             console.print(
                 f"❌ Error creating collection {collection_name}: {e}", style="red"
@@ -148,7 +144,7 @@ class VectorDBManager:
             await self.initialize()
             vector_service = await self.get_vector_store_service()
             await vector_service.drop_collection(collection_name)
-            return True  # noqa: TRY300
+            return True
         except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             console.print(
                 f"❌ Error deleting collection {collection_name}: {e}", style="red"
@@ -191,12 +187,11 @@ class VectorDBManager:
         try:
             await self.initialize()
             vector_service = await self.get_vector_store_service()
-            records = await vector_service.search_documents(
+            return await vector_service.search_documents(
                 collection_name,
                 query,
                 limit=limit,
             )
-            return records
         except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             console.print(f"❌ Error searching collection: {e}", style="red")
             return []
@@ -209,24 +204,21 @@ class VectorDBManager:
         filters: Mapping[str, Any] | None = None,
     ) -> list[SearchRecord]:
         """Search using a pre-computed embedding vector."""
-
         try:
             await self.initialize()
             vector_service = await self.get_vector_store_service()
-            records = await vector_service.search_vector(
+            return await vector_service.search_vector(
                 collection_name,
                 query_vector,
                 limit=limit,
                 filters=filters,
             )
-            return records
         except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             console.print(f"❌ Error searching by vector: {e}", style="red")
             return []
 
     async def get_database_stats(self) -> DatabaseStats | None:
         """Get database statistics."""
-
         try:
             await self.initialize()
             vector_service = await self.get_vector_store_service()
@@ -264,7 +256,6 @@ class VectorDBManager:
 
     async def clear_collection(self, collection_name: str) -> bool:
         """Clear all vectors from a collection."""
-
         try:
             await self.initialize()
 
@@ -303,7 +294,6 @@ class VectorDBManager:
 
 def _create_manager_from_context(ctx) -> VectorDBManager:
     """Create VectorDBManager using the shared service registry."""
-
     override_url = ctx.obj.get("url")
     return VectorDBManager(qdrant_url=override_url)
 
@@ -332,7 +322,6 @@ def cli(ctx, url, log_level):
 @async_command
 async def list_collections(ctx):
     """List all collections."""
-
     manager = _create_manager_from_context(ctx)
     try:
         collections = await manager.list_collections()
@@ -353,7 +342,6 @@ async def list_collections(ctx):
 @async_command
 async def create(ctx, collection_name, vector_size):
     """Create a new collection."""
-
     manager = _create_manager_from_context(ctx)
     try:
         success = await manager.create_collection(
@@ -374,7 +362,6 @@ async def create(ctx, collection_name, vector_size):
 @async_command
 async def delete(ctx, collection_name):
     """Delete a collection."""
-
     manager = _create_manager_from_context(ctx)
     try:
         success = await manager.delete_collection(collection_name)
@@ -392,7 +379,6 @@ async def delete(ctx, collection_name):
 @async_command
 async def stats(ctx):
     """Show database statistics."""
-
     manager = _create_manager_from_context(ctx)
     try:
         stats = await manager.get_database_stats()
@@ -427,7 +413,6 @@ async def stats(ctx):
 @async_command
 async def info(ctx, collection_name):
     """Show collection information."""
-
     manager = _create_manager_from_context(ctx)
     try:
         info = await manager.get_collection_info(collection_name)
@@ -447,7 +432,6 @@ async def info(ctx, collection_name):
 @async_command
 async def clear(ctx, collection_name):
     """Clear all vectors from a collection."""
-
     manager = _create_manager_from_context(ctx)
     try:
         await manager.clear_collection(collection_name)
@@ -463,7 +447,6 @@ async def clear(ctx, collection_name):
 @async_command
 async def search(ctx, collection_name, query, limit):
     """Search for similar documents."""
-
     manager = _create_manager_from_context(ctx)
     try:
         results = await manager.search_documents(
@@ -492,7 +475,6 @@ async def search(ctx, collection_name, query, limit):
 
 def main():
     """Main entry point."""
-
     cli()  # pylint: disable=no-value-for-parameter
 
 

@@ -99,7 +99,6 @@ _MIME_KIND_MAP: dict[str, str] = {
 
 def infer_extension(uri_or_path: str | None) -> str | None:
     """Infer a lowercase file extension from a URI or filesystem path."""
-
     if not uri_or_path:
         return None
 
@@ -130,7 +129,6 @@ def infer_language(
     extension: str | None, metadata: Mapping[str, Any] | None = None
 ) -> str | None:
     """Infer the programming language identifier for metadata enrichment."""
-
     metadata = metadata or {}
     language: Language | None = None
 
@@ -224,7 +222,6 @@ def infer_document_kind(
     metadata: Mapping[str, Any] | None, default: str = "text"
 ) -> str:
     """Infer a logical document kind from crawler metadata."""
-
     if metadata is None:
         return default
 
@@ -304,7 +301,6 @@ class PlainTextChunkingStrategy:
         Returns:
             List of documents representing the chunked text.
         """
-
         _ = metadata
         splitter = RecursiveCharacterTextSplitter(
             chunk_size=cfg.chunk_size,
@@ -334,7 +330,6 @@ class TokenAwareChunkingStrategy:
         Returns:
             List of documents chunked using token-aware logic.
         """
-
         _ = metadata
         splitter = TokenTextSplitter.from_tiktoken_encoder(
             encoding_name=cfg.token_model,
@@ -364,7 +359,6 @@ class MarkdownChunkingStrategy:
         Returns:
             List of documents representing Markdown sections.
         """
-
         _ = metadata
         header_splitter = MarkdownHeaderTextSplitter(
             headers_to_split_on=_MARKDOWN_HEADERS
@@ -392,7 +386,6 @@ class HtmlChunkingStrategy:
         Returns:
             List of documents representing HTML sections.
         """
-
         _ = metadata
         if cfg.enable_semantic_html_segmentation:
             splitter = HTMLSemanticPreservingSplitter(
@@ -430,7 +423,6 @@ class CodeChunkingStrategy:
         Returns:
             List of documents representing source code segments.
         """
-
         metadata = metadata or {}
         extension = metadata.get("extension")
         language_name = (
@@ -476,7 +468,6 @@ class JsonChunkingStrategy:
         Raises:
             ValueError: If the supplied JSON cannot be decoded.
         """
-
         _ = metadata
         try:
             json_payload = json.loads(raw)
@@ -568,7 +559,6 @@ def chunk_to_documents(
     cfg: ChunkingConfig,
 ) -> list[Document]:
     """Split raw content into LangChain documents using adaptive splitters."""
-
     if not raw:
         return []
 

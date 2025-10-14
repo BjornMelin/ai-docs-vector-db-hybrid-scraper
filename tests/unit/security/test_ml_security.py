@@ -68,7 +68,6 @@ class TestMLSecurityValidator:  # pylint: disable=too-many-public-methods
     @pytest.fixture
     def validator(self):
         """Create validator instance with patched configuration."""
-
         security_config = SimpleNamespace(
             enable_ml_input_validation=True,
             max_ml_input_size=1_000_000,
@@ -190,7 +189,6 @@ class TestMLSecurityValidator:  # pylint: disable=too-many-public-methods
 
     def test_check_dependencies_pip_audit_not_available(self, validator):
         """Test dependency check when pip-audit is not available."""
-
         with patch("shutil.which", return_value=None):
             result = validator.check_dependencies()
 
@@ -318,7 +316,6 @@ class TestMLSecurityValidator:  # pylint: disable=too-many-public-methods
 
     def test_get_security_summary_empty(self, validator):
         """Test security summary with no checks."""
-
         summary = validator.get_security_summary()
 
         assert summary["total_checks"] == 0
@@ -329,7 +326,6 @@ class TestMLSecurityValidator:  # pylint: disable=too-many-public-methods
 
     def test_get_security_summary_with_checks(self, validator):
         """Test security summary with multiple checks."""
-
         validator.checks_performed = [
             SecurityCheckResult(
                 check_type="test1",
@@ -361,50 +357,42 @@ class TestMLSecurityValidator:  # pylint: disable=too-many-public-methods
 
     def test_validate_url_allows_configured_domain(self, validator):
         """URL validation should allow configured safe domains."""
-
         url = "https://example.com/resource"
         assert validator.validate_url(url) == url
 
     def test_validate_url_blocks_listed_domain(self, validator):
         """URL validation should block domains marked as unsafe."""
-
         with pytest.raises(SecurityError, match="blocked"):
             validator.validate_url("https://bad.com/resource")
 
     def test_validate_url_rejects_scheme(self, validator):
         """URL validation should reject unsupported schemes."""
-
         with pytest.raises(SecurityError, match="scheme"):
             validator.validate_url("ftp://example.com/file")
 
     def test_validate_collection_name_success(self, validator):
         """Collection name validation returns sanitized value."""
-
         assert validator.validate_collection_name("Valid_Name-01") == "Valid_Name-01"
 
     def test_validate_collection_name_invalid_chars(self, validator):
         """Invalid collection names raise SecurityError."""
-
         with pytest.raises(SecurityError, match="letters, numbers"):
             validator.validate_collection_name("invalid name!")
 
     def test_validate_query_string_length(self, validator):
         """Query validation enforces configured maximum length."""
-
         long_query = "x" * 600
         with pytest.raises(SecurityError, match="max 512"):
             validator.validate_query_string(long_query)
 
     def test_validate_query_string_sanitizes(self, validator):
         """Query validation strips unsafe characters."""
-
         cleaned = validator.validate_query_string("<script>alert(1)</script>")
         assert "<" not in cleaned
         assert ">" not in cleaned
 
     def test_sanitize_filename(self, validator):
         """Filename sanitization removes unsafe characters."""
-
         sanitized = validator.sanitize_filename("../../etc/passwd")
         assert sanitized == "passwd"
 
@@ -453,7 +441,6 @@ class TestIntegration:
     @pytest.fixture
     def validator(self):
         """Create validator for integration tests."""
-
         security_config = SimpleNamespace(
             enable_ml_input_validation=True,
             max_ml_input_size=1_000_000,
@@ -536,5 +523,4 @@ class TestIntegration:
 
 def test_security_error_subclass_validation_error() -> None:
     """Ensure SecurityError derives from the shared validation error base."""
-
     assert issubclass(SecurityError, ServiceValidationError)

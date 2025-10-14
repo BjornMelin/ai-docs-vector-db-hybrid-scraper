@@ -10,7 +10,6 @@ from src.config.loader import Settings  # pyright: ignore[reportMissingImports]
 
 def test_cache_ttl_defaults() -> None:
     """Cache defaults should retain the canonical TTL from the legacy constants."""
-
     settings = Settings()
 
     assert settings.cache.ttl_search_results == 3600
@@ -18,14 +17,12 @@ def test_cache_ttl_defaults() -> None:
 
 def test_cache_ttl_search_results_negative_value() -> None:
     """Negative TTL values for search results should be rejected."""
-
     with pytest.raises(ValidationError):
         Settings(cache={"ttl_search_results": -100})
 
 
 def test_chunking_defaults() -> None:
     """Chunking defaults should expose the canonical chunk size and overlap."""
-
     settings = Settings()
 
     assert settings.chunking.chunk_size == 1600
@@ -34,7 +31,6 @@ def test_chunking_defaults() -> None:
 
 def test_circuit_breaker_defaults() -> None:
     """Circuit breaker defaults should match the historical thresholds."""
-
     settings = Settings()
 
     assert settings.performance.request_timeout == 30.0

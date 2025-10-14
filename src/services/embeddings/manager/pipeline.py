@@ -80,6 +80,7 @@ class EmbeddingPipeline:
     """Coordinates embedding generation workflow."""
 
     def __init__(self, context: PipelineContext) -> None:
+        """Initialize embedding pipeline with aggregated dependencies."""
         self._config = context.config
         self._usage = context.usage
         self._selection = context.selection
@@ -89,17 +90,14 @@ class EmbeddingPipeline:
 
     def set_usage_tracker(self, usage: UsageTracker) -> None:
         """Update usage tracker reference after hot-swapping in manager."""
-
         self._usage = usage
 
     def set_selection_engine(self, selection: SelectionEngine) -> None:
         """Update selection engine reference."""
-
         self._selection = selection
 
     def set_smart_config(self, smart_config: Any | None) -> None:
         """Refresh smart selection config for budget/token estimations."""
-
         self._smart_config = smart_config
 
     async def generate(
@@ -108,7 +106,6 @@ class EmbeddingPipeline:
         options: GenerationOptions,
     ) -> dict[str, Any]:
         """Execute the embedding workflow and return enriched metadata."""
-
         start_time = time.time()
         text_analysis = self._selection.analyze(texts)
 
@@ -151,13 +148,12 @@ class EmbeddingPipeline:
             texts, embeddings, selection.model, metrics
         )
 
-        result = self._build_result(
+        return self._build_result(
             embeddings,
             sparse_embeddings,
             metrics,
             selection,
         )
-        return result
 
     async def _try_single_text_cache(
         self,
@@ -210,6 +206,7 @@ class EmbeddingPipeline:
         text_analysis: TextAnalysis,
         options: GenerationOptions,
     ) -> ProviderSelection:
+        """Select an embedding provider using overrides, tiers, or smart picks."""
         if options.provider_name:
             provider = self._providers.resolve(
                 options.provider_name, options.quality_tier

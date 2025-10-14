@@ -30,7 +30,6 @@ class UsageStats:
 
     def ensure_current_day(self) -> None:
         """Reset daily counters when the calendar day changes."""
-
         today = date.today()
         if self.last_reset_date != today:
             self.daily_cost = 0.0
@@ -54,6 +53,7 @@ class UsageTracker:
     def __init__(
         self, smart_config: Any | None = None, budget_limit: float | None = None
     ) -> None:
+        """Initialize usage tracker with optional budget constraints."""
         self._stats = UsageStats()
         self._smart_config = smart_config
         self._budget_limit = budget_limit
@@ -61,17 +61,14 @@ class UsageTracker:
     @property
     def stats(self) -> UsageStats:
         """Expose underlying usage statistics."""
-
         return self._stats
 
     def set_budget_limit(self, budget_limit: float | None) -> None:
         """Update budget limit at runtime."""
-
         self._budget_limit = budget_limit
 
     def record(self, record: UsageRecord) -> None:
         """Record usage for a completed embedding request."""
-
         stats = self._stats
         stats.ensure_current_day()
 
@@ -95,7 +92,6 @@ class UsageTracker:
 
     def check_budget(self, estimated_cost: float) -> dict[str, Any]:
         """Evaluate projected spend against configured budget limits."""
-
         projected_cost = max(float(estimated_cost), 0.0)
         stats = self._stats
         stats.ensure_current_day()
@@ -152,7 +148,6 @@ class UsageTracker:
 
     def report(self) -> dict[str, Any]:
         """Build a snapshot of usage aggregates for monitoring and budgeting."""
-
         stats = self._stats
         stats.ensure_current_day()
 
@@ -174,5 +169,4 @@ class UsageTracker:
 
     def set_smart_config(self, smart_config: Any | None) -> None:
         """Replace smart selection configuration for future calculations."""
-
         self._smart_config = smart_config

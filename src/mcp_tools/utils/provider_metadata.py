@@ -67,7 +67,6 @@ def normalize_provider_catalog(
     catalog: Mapping[str, Mapping[str, Any]],
 ) -> list[EmbeddingProviderInfo]:
     """Normalize embedding provider metadata using manager data and fallbacks."""
-
     provider_ids = sorted(set(catalog.keys()) | set(FALLBACK_PROVIDERS.keys()))
     normalized: list[EmbeddingProviderInfo] = []
 

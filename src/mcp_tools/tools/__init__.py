@@ -28,8 +28,6 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    # final surfaces
-    "retrieval",
     "analytics",
     "cache",
     "collection_management",
@@ -43,6 +41,8 @@ __all__ = [
     "payload_indexing",
     "projects",
     "rag",
+    # final surfaces
+    "retrieval",
     "system_health",
     "web_search",
 ]

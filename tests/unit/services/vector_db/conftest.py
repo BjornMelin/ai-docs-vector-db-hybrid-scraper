@@ -22,10 +22,10 @@ from src.services.vector_db.types import CollectionSchema, TextDocument
 class _DenseEmbeddingStub:
     """Deterministic FastEmbed replacement for unit tests."""
 
-    def __init__(self, model_name: str, **_: object) -> None:  # noqa: D401
+    def __init__(self, model_name: str, **_: object) -> None:
         self.model_name = model_name
 
-    def embed_query(self, text: str) -> list[float]:  # noqa: D401, ARG002
+    def embed_query(self, text: str) -> list[float]:
         return [1.0, 2.0, 3.0]
 
     def embed_documents(self, texts: Sequence[str]) -> list[list[float]]:
@@ -35,17 +35,16 @@ class _DenseEmbeddingStub:
 class _SparseEmbeddingStub:
     """Sparse FastEmbed replacement returning fixed coordinates."""
 
-    def __init__(self, model_name: str, **_: object) -> None:  # noqa: D401
+    def __init__(self, model_name: str, **_: object) -> None:
         self.model_name = model_name
 
-    def embed_query(self, text: str) -> SimpleNamespace:  # noqa: D401, ARG002
+    def embed_query(self, text: str) -> SimpleNamespace:
         return SimpleNamespace(indices=[0, 1], values=[1.0, 0.5])
 
 
 @pytest.fixture(autouse=True)
 def fastembed_stubs(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """Patch FastEmbed embedding classes with lightweight stubs."""
-
     monkeypatch.setattr(
         "src.services.vector_db.service.FastEmbedEmbeddings",
         _DenseEmbeddingStub,
@@ -65,7 +64,6 @@ def build_vector_store_service(
     container: ApplicationContainer,
 ) -> VectorStoreService:
     """Create a VectorStoreService instance from the DI container."""
-
     return container.vector_store_service()
 
 
@@ -73,7 +71,6 @@ async def initialize_vector_store_service(
     container: ApplicationContainer,
 ) -> VectorStoreService:
     """Construct and initialize a VectorStoreService for reuse."""
-
     service = build_vector_store_service(container)
     await service.initialize()
     return service
@@ -82,7 +79,6 @@ async def initialize_vector_store_service(
 @pytest.fixture
 def qdrant_client_mock() -> AsyncMock:
     """Create a mocked Qdrant async client."""
-
     client = AsyncMock(spec=AsyncQdrantClient)
     client.collection_exists.return_value = True
     client.get_collections.return_value = SimpleNamespace(collections=[])
@@ -103,7 +99,6 @@ def vector_container(
     qdrant_client_mock: AsyncMock,
 ) -> Iterator[ApplicationContainer]:
     """Provide a container with overrides for vector service dependencies."""
-
     container = ApplicationContainer()
     container.qdrant_client.override(providers.Object(qdrant_client_mock))
     container.vector_store_service.override(
@@ -123,14 +118,12 @@ def vector_container(
 @pytest.fixture
 def collection_schema() -> CollectionSchema:
     """Provide a reusable collection schema for adapter tests."""
-
     return CollectionSchema(name="docs", vector_size=3, distance="cosine")
 
 
 @pytest.fixture
 def sample_documents() -> list[TextDocument]:
     """Provide deterministic text documents for upsert tests."""
-
     return [
         TextDocument(
             id="doc-1",
@@ -195,7 +188,6 @@ async def initialized_vector_store_service(
     vector_container: ApplicationContainer,
 ) -> AsyncIterator[VectorStoreService]:
     """Initialize VectorStoreService for tests and ensure cleanup."""
-
     service = await initialize_vector_store_service(vector_container)
     if service.config and hasattr(service.config, "qdrant"):
         service.config.qdrant.enable_grouping = False
@@ -207,11 +199,11 @@ async def initialized_vector_store_service(
 
 __all__ = [
     "build_vector_store_service",
-    "initialize_vector_store_service",
-    "qdrant_client_mock",
-    "vector_container",
     "collection_schema",
-    "sample_documents",
     "config_stub",
+    "initialize_vector_store_service",
     "initialized_vector_store_service",
+    "qdrant_client_mock",
+    "sample_documents",
+    "vector_container",
 ]

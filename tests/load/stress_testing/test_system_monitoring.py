@@ -85,6 +85,11 @@ class SystemMonitor:
     """Monitor system resources during stress tests."""
 
     def __init__(self, collection_interval: float = 1.0):
+        """Initialize the system monitor.
+
+        Args:
+            collection_interval: Sampling cadence in seconds.
+        """
         self.collection_interval = collection_interval
         self.system_metrics: list[SystemMetrics] = []
         self.application_metrics: list[ApplicationMetrics] = []
@@ -379,6 +384,7 @@ class MetricsCollector:
     """Collect and analyze performance metrics during stress tests."""
 
     def __init__(self):
+        """Initialize metric buffers for stress-test analysis."""
         self.response_times = deque(maxlen=10000)  # Keep last 10k response times
         self.error_counts = defaultdict(int)
         self.throughput_samples = deque(maxlen=1000)
@@ -483,7 +489,6 @@ class TestSystemMonitoring:
     @pytest.mark.asyncio
     async def test_comprehensive_system_monitoring(self, load_test_runner):
         """Test comprehensive monitoring of system resources during stress."""
-
         monitor = SystemMonitor(collection_interval=0.5)
         metrics_collector = MetricsCollector()
 
@@ -708,7 +713,6 @@ class TestSystemMonitoring:
     @pytest.mark.asyncio
     async def test_performance_degradation_detection(self, load_test_runner):
         """Test detection of performance degradation patterns."""
-
         metrics_collector = MetricsCollector()
         metrics_collector.start_collection()
 
@@ -736,7 +740,7 @@ class TestSystemMonitoring:
                     current_latency = self.base_latency * self.degradation_factor
 
                     # Add some randomness
-                    actual_latency = current_latency * random.uniform(0.8, 1.5)  # noqa: S311
+                    actual_latency = current_latency * random.uniform(0.8, 1.5)
 
                     start_time = time.perf_counter()
                     await asyncio.sleep(actual_latency)
@@ -750,7 +754,7 @@ class TestSystemMonitoring:
 
                     # Introduce errors as performance degrades
                     error_probability = max(0, (self.degradation_factor - 2.0) / 10)
-                    if random.random() < error_probability:  # noqa: S311
+                    if random.random() < error_probability:
                         msg = "Service degraded - operation failed"
                         raise TestError(msg)
 

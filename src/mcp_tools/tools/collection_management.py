@@ -20,11 +20,10 @@ def _resolve_delete_callable(
     vector_service: object,
 ) -> Callable[[str], Awaitable[None]]:
     """Return the deletion callable exposed by the vector service."""
-
     delete_method = getattr(vector_service, "delete_collection", None)
     if not callable(delete_method):
         msg = "Vector service does not expose a collection deletion method"
-        raise AttributeError(msg)
+        raise TypeError(msg)
     return cast(Callable[[str], Awaitable[None]], delete_method)
 
 
@@ -42,7 +41,6 @@ def register_tools(  # pylint: disable=too-many-statements
 
         Returns information about each collection including size and status.
         """
-
         if ctx:
             await ctx.info("Retrieving list of all collections")
 
@@ -123,7 +121,6 @@ def register_tools(  # pylint: disable=too-many-statements
 
         Permanently removes the collection and all its data.
         """
-
         if ctx:
             await ctx.info(f"Starting deletion of collection: {collection_name}")
 
@@ -165,7 +162,6 @@ def register_tools(  # pylint: disable=too-many-statements
 
         Rebuilds indexes and optimizes storage.
         """
-
         if ctx:
             await ctx.info(f"Starting optimization of collection: {collection_name}")
 

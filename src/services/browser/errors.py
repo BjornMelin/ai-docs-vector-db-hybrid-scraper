@@ -21,7 +21,6 @@ class BrowserProviderError(CrawlServiceError):
             provider: Provider identifier that triggered the failure.
             context: Optional context payload.
         """
-
         super().__init__(message, context={"provider": provider, **(context or {})})
 
 
@@ -35,7 +34,6 @@ class BrowserRouterError(CrawlServiceError):
             message: Error description.
             attempted_providers: Providers attempted before failure.
         """
-
         super().__init__(message, context={"attempted_providers": attempted_providers})
 
 

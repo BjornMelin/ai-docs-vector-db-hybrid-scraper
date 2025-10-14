@@ -50,7 +50,6 @@ def build_text_documents(
     params: DocumentBuildParams,
 ) -> list[TextDocument]:
     """Return TextDocument payloads derived from chunked documents."""
-
     total_chunks = len(chunks)
     timestamp = datetime.now(UTC).isoformat()
     base_payload = dict(params.base_metadata or {})
@@ -156,7 +155,6 @@ def build_params_from_crawl(
     enriched_content: Any | None = None,
 ) -> DocumentBuildParams:
     """Create :class:`DocumentBuildParams` from a crawl result."""
-
     metadata_block = crawl_result.get("metadata", {})
     if not isinstance(metadata_block, Mapping):
         metadata_block = {}

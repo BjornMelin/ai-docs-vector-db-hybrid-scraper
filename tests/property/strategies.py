@@ -112,7 +112,6 @@ def http_urls(draw, schemes: list[str] | None = None) -> str:
 @st.composite
 def file_paths(draw, relative: bool = False) -> Path:
     """Generate valid file paths."""
-
     components = draw(
         st.lists(
             st.text(

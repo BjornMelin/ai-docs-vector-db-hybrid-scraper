@@ -17,7 +17,6 @@ from src.services.browser.providers.firecrawl import FirecrawlProvider
 
 async def _passthrough_retry(**kwargs: Any) -> Any:
     """Invoke the supplied callable immediately, emulating execute_with_retry."""
-
     func = kwargs["func"]
     return await func()
 
@@ -27,14 +26,12 @@ class _StubAsyncFirecrawl:
 
     def __init__(self, *_, **__):  # ignore api_url/api_key
         """Stub implementation of AsyncFirecrawl client."""
-
         self.scrape_called = False
         self.search_called = False
         self.last_kwargs: dict[str, Any] | None = None
 
     async def scrape(self, url: str, **kwargs: Any) -> dict[str, Any]:
         """Simulate a scrape call."""
-
         self.scrape_called = True
         self.last_kwargs = kwargs
         return {
@@ -71,7 +68,6 @@ class _StubAsyncFirecrawl:
 @pytest.mark.asyncio
 async def test_firecrawl_scrape_and_search(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test FirecrawlProvider scrape and search methods with stubbed client."""
-
     # Patch AsyncFirecrawl class used by provider
     monkeypatch.setattr(
         firecrawl_module, "AsyncFirecrawlApp", _StubAsyncFirecrawl, raising=True
@@ -110,7 +106,6 @@ async def test_firecrawl_scrape_respects_request_timeout(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Provider should forward request timeout in seconds to Firecrawl SDK."""
-
     monkeypatch.setattr(
         firecrawl_module, "AsyncFirecrawlApp", _StubAsyncFirecrawl, raising=True
     )
@@ -139,7 +134,6 @@ async def test_firecrawl_scrape_prefers_smaller_metadata_timeout(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Metadata timeout should be clamped by router request budget."""
-
     monkeypatch.setattr(
         firecrawl_module, "AsyncFirecrawlApp", _StubAsyncFirecrawl, raising=True
     )
@@ -172,7 +166,6 @@ async def test_firecrawl_scrape_rejects_invalid_metadata_timeout(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Non-numeric metadata timeout should raise a provider error."""
-
     monkeypatch.setattr(
         firecrawl_module, "AsyncFirecrawlApp", _StubAsyncFirecrawl, raising=True
     )

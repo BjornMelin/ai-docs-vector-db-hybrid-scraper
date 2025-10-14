@@ -87,6 +87,12 @@ def _estimate_tokens(text: str) -> int:
 async def _evaluate(  # pylint: disable=too-many-locals
     dataset_path: Path, collection_override: str | None
 ) -> None:
+    """Execute contextual compression evaluation against dataset.
+
+    Args:
+        dataset_path: Path to evaluation dataset.
+        collection_override: Optional collection name override.
+    """
     config = get_settings()
     exit_stack = AsyncExitStack()
     vector_service: VectorStoreService | None = None
@@ -193,6 +199,7 @@ async def _evaluate(  # pylint: disable=too-many-locals
 
 
 def main() -> None:
+    """Run the compression evaluation CLI entry point."""
     args = _parse_args()
     asyncio.run(_evaluate(args.input, args.collection))
 

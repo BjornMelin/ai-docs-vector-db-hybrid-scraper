@@ -31,20 +31,20 @@ __all__ = [
     # Background tasks
     # Middleware components
     "CompressionMiddleware",
-    # Middleware management
-    "apply_defaults",
-    "apply_named_stack",
     "PerformanceMiddleware",
     # Production server
     "ProductionMCPServer",
     "SecurityMiddleware",
     "TimeoutMiddleware",
     "TracingMiddleware",
+    # Middleware management
+    "apply_defaults",
+    "apply_named_stack",
     "cleanup_dependencies",
     "create_production_server",
-    "get_settings",
     "get_correlation_id",
     "get_health_checker",
+    "get_settings",
     "get_vector_service",
     # Dependency injection
     "initialize_dependencies",

@@ -45,16 +45,16 @@ from .tracking import (
 
 
 __all__ = [
-    "AITracerDep",
     "AIOperationTracker",
+    "AITracerDep",
     "ConfigOperationType",
-    "current_trace_context",
     "ObservabilityConfig",
     "ObservabilityConfigDep",
     "ObservabilityServiceDep",
     "PerformanceTracker",
     "TraceCorrelationManager",
     "clear_observability_cache",
+    "current_trace_context",
     "get_ai_tracker",
     "get_correlation_manager",
     "get_observability_config",
@@ -63,8 +63,8 @@ __all__ = [
     "get_tracer",
     "initialize_observability",
     "instrument_config_operation",
-    "log_extra_with_trace",
     "is_observability_enabled",
+    "log_extra_with_trace",
     "record_ai_operation",
     "record_ai_operation_metrics",
     "set_span_attributes",

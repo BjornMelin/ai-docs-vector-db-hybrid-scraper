@@ -54,7 +54,6 @@ class WizardValidator:
         Returns:
             Tuple of (is_valid, error_message)
         """
-
         if not api_key:
             return False, "API key cannot be empty"
 
@@ -85,7 +84,6 @@ class WizardValidator:
         Returns:
             Tuple of (is_valid, error_message)
         """
-
         if not url:
             return False, "URL cannot be empty"
 
@@ -109,7 +107,6 @@ class WizardValidator:
         Returns:
             Tuple of (is_valid, error_message)
         """
-
         try:
             port_int = int(port)
         except (ValueError, TypeError):
@@ -136,7 +133,6 @@ class WizardValidator:
         Returns:
             Tuple of (is_valid, error_message)
         """
-
         if not path:
             return False, "Path cannot be empty"
 
@@ -171,18 +167,12 @@ class WizardValidator:
         Returns:
             Tuple of (is_valid, error_messages)
         """
-
-        errors = []
-
         is_valid, validation_errors, _ = validate_settings_payload(config_data)
 
         if is_valid:
             return True, []
 
-        for error in validation_errors:
-            errors.append(error)
-
-        return False, errors
+        return False, list(validation_errors)
 
     def validate_and_show_errors(self, config_data: dict[str, Any]) -> bool:
         """Validate configuration and show user-friendly error messages.
@@ -193,7 +183,6 @@ class WizardValidator:
         Returns:
             True if valid, False otherwise
         """
-
         is_valid, errors = self.validate_config_partial(config_data)
 
         if not is_valid:
@@ -203,7 +192,6 @@ class WizardValidator:
 
     def _show_validation_errors(self, errors: list[str]) -> None:
         """Display validation errors in a user-friendly format."""
-
         if not errors:
             return
 
@@ -233,7 +221,6 @@ class WizardValidator:
         Returns:
             Dictionary of field -> suggested_fix
         """
-
         suggestions = {}
 
         for error in errors:
@@ -276,7 +263,6 @@ class WizardValidator:
         Returns:
             Tuple of (is_valid, error_message)
         """
-
         return self.validate_path(path, must_exist=must_exist, must_be_dir=False)
 
     def validate_directory_path(
@@ -291,7 +277,6 @@ class WizardValidator:
         Returns:
             Tuple of (is_valid, error_message)
         """
-
         return self.validate_path(path, must_exist=must_exist, must_be_dir=True)
 
     def validate_json_string(
@@ -305,7 +290,6 @@ class WizardValidator:
         Returns:
             Tuple of (is_valid, error_message, parsed_data)
         """
-
         if not json_str:
             return False, "JSON string cannot be empty", None
 
@@ -321,7 +305,6 @@ class WizardValidator:
         Args:
             config: Validated configuration object
         """
-
         summary_text = Text()
         summary_text.append("Configuration is valid.\n\n", style="bold green")
 
@@ -367,7 +350,6 @@ class WizardValidator:
         Returns:
             Tuple of (is_valid, error_messages)
         """
-
         # Merge template with customizations
         merged_data = {**template_data, **customizations}
 

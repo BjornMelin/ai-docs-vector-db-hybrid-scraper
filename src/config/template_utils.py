@@ -29,7 +29,6 @@ def apply_overrides(
     target: MutableMapping[str, Any], overrides: Mapping[str, Any]
 ) -> None:
     """Apply ``overrides`` onto ``target`` in place."""
-
     stack: list[MergeFrame] = [MergeFrame(destination=target, source=overrides)]
     while stack:
         frame = stack.pop()
@@ -50,7 +49,6 @@ def merge_overrides(
     base: Mapping[str, Any], overrides: Mapping[str, Any]
 ) -> dict[str, Any]:
     """Return a deep copy of ``base`` with ``overrides`` applied."""
-
     merged = cast(dict[str, Any], deepcopy(base))
     apply_overrides(merged, overrides)
     return merged
@@ -58,7 +56,6 @@ def merge_overrides(
 
 def calculate_diff(base: Mapping[str, Any], data: Mapping[str, Any]) -> dict[str, Any]:
     """Return overrides required to transform ``base`` into ``data``."""
-
     diff: dict[str, Any] = {}
     stack: list[DiffFrame] = [DiffFrame(path=(), base_value=base, candidate=data)]
     while stack:
@@ -72,7 +69,7 @@ def calculate_diff(base: Mapping[str, Any], data: Mapping[str, Any]) -> dict[str
             for key, value in frame.candidate.items():
                 stack.append(
                     DiffFrame(
-                        path=frame.path + (key,),
+                        path=(*frame.path, key),
                         base_value=base_branch.get(key),
                         candidate=value,
                     )
@@ -90,6 +87,6 @@ def calculate_diff(base: Mapping[str, Any], data: Mapping[str, Any]) -> dict[str
 
 __all__ = [
     "apply_overrides",
-    "merge_overrides",
     "calculate_diff",
+    "merge_overrides",
 ]
