@@ -38,11 +38,11 @@ from src.services.agents.tool_execution_service import (
     ToolExecutionService,
     ToolExecutionTimeout,
 )
-from src.services.dependencies import (
-    get_mcp_client,
-    get_vector_store_service as core_get_vector_store_service,
-)
 from src.services.observability.tracking import record_ai_operation
+from src.services.service_resolver import (
+    get_mcp_client,
+    get_vector_store_service,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -167,7 +167,7 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
         self._discovery = discovery
         self._tool_service = tool_service
         self._retrieval_helper = retrieval_helper or RetrievalHelper(
-            core_get_vector_store_service
+            get_vector_store_service
         )
         self._max_parallel_tools = max(1, max_parallel_tools)
         self._run_timeout_seconds = run_timeout_seconds
@@ -200,9 +200,7 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
             get_mcp_client,
             settings.mcp_client,
         )
-        retrieval_helper = retrieval_helper or RetrievalHelper(
-            core_get_vector_store_service
-        )
+        retrieval_helper = retrieval_helper or RetrievalHelper(get_vector_store_service)
 
         max_parallel = max_parallel_tools or getattr(
             agentic_cfg, "max_parallel_tools", 3

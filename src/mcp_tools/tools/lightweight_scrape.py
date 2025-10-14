@@ -9,8 +9,8 @@ from typing import Any, Literal
 from fastmcp import Context
 
 from src.services.browser.models import ProviderKind
-from src.services.dependencies import get_crawl_manager
 from src.services.errors import CrawlServiceError
+from src.services.service_resolver import get_crawl_manager
 
 
 logger = logging.getLogger(__name__)
@@ -203,7 +203,7 @@ def register_tools(
         validated_formats = _validate_formats(formats)
 
         # Get CrawlManager which uses UnifiedBrowserManager
-        manager = await get_crawl_manager(crawl_manager)
+        manager = crawl_manager or await get_crawl_manager()
 
         if ctx:
             await ctx.debug("Using UnifiedBrowserManager with lightweight tier")

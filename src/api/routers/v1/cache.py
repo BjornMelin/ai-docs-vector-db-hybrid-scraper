@@ -11,10 +11,9 @@ from pydantic import BaseModel, Field
 
 from src.services.cache.warmup import warm_caches
 from src.services.circuit_breaker.decorators import CircuitOpenError
-from src.services.dependencies import (
-    CacheManagerDep,
-    EmbeddingManagerDep,
-    get_vector_store_service as core_get_vector_store_service,
+from src.services.fastapi.dependencies import CacheManagerDep, EmbeddingManagerDep
+from src.services.service_resolver import (
+    get_vector_store_service as resolve_vector_store_service,
 )
 from src.services.vector_db.service import VectorStoreService
 
@@ -26,7 +25,13 @@ logger = logging.getLogger(__name__)
 
 
 class CacheWarmRequest(BaseModel):
-    """Request payload for cache warmup operations."""
+    """Request payload for cache warmup operations.
+
+    Attributes:
+        embedding_queries: Queries used to prime embedding cache.
+        search_queries: Queries used to prime vector search results.
+        search_collection: Collection name used for vector store warmup.
+    """
 
     embedding_queries: list[str] = Field(
         default_factory=list,
@@ -43,7 +48,12 @@ class CacheWarmRequest(BaseModel):
 
 
 class CacheWarmResponse(BaseModel):
-    """Response summarising cache warmup activity."""
+    """Response summarising cache warmup activity.
+
+    Attributes:
+        embeddings: Summary of embedding warmup results.
+        search: Summary of search warmup results.
+    """
 
     embeddings: dict[str, Any]
     search: dict[str, Any]
@@ -55,12 +65,21 @@ async def warm_cache(
     cache_manager: CacheManagerDep,
     embedding_manager: EmbeddingManagerDep,
 ) -> CacheWarmResponse:
-    """Warm embedding and search caches using configured services."""
+    """Warm embedding and search caches using configured services.
+
+    Args:
+        request: Payload describing cache warmup parameters.
+        cache_manager: Cache manager resolved from dependency injection.
+        embedding_manager: Embedding manager used to pre-compute embeddings.
+
+    Returns:
+        CacheWarmResponse: Summary of embedding and search warmup activity.
+    """
 
     search_executor: Callable[[str, str], Awaitable[list[dict[str, Any]]]] | None = None
     vector_service: VectorStoreService | None = None
     try:
-        vector_service = await core_get_vector_store_service()
+        vector_service = await resolve_vector_store_service()
     except (CircuitOpenError, RuntimeError) as exc:
         logger.debug("Vector store unavailable for cache warmup: %s", exc)
 

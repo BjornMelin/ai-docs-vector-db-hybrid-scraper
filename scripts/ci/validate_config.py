@@ -11,6 +11,8 @@ from pathlib import Path
 
 import yaml
 
+from src.config.template_utils import merge_overrides
+
 
 DEFAULT_REQUIRED_TEMPLATE_KEYS = (
     "environment",
@@ -109,35 +111,66 @@ def validate_templates(
             errors=[f"Templates directory not found: {templates_dir}"],
         )
 
-    candidates = sorted(templates_dir.glob("*.json"))
+    base_path = templates_dir / "base.json"
+    profiles_path = templates_dir / "profiles.json"
+
+    try:
+        base_template = json.loads(base_path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        errors.append(f"Base template missing: {base_path}")
+        return ValidationSummary(checked=checked, errors=errors)
+    except json.JSONDecodeError as exc:
+        errors.append(f"Invalid JSON in base template {base_path}: {exc}")
+        return ValidationSummary(checked=checked, errors=errors)
+
+    try:
+        profiles_index = json.loads(profiles_path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        errors.append(f"Profile index missing: {profiles_path}")
+        return ValidationSummary(checked=checked, errors=errors)
+    except json.JSONDecodeError as exc:
+        errors.append(f"Invalid JSON in profile index {profiles_path}: {exc}")
+        return ValidationSummary(checked=checked, errors=errors)
+
+    if not isinstance(base_template, dict):
+        errors.append(f"Base template {base_path} must contain a JSON object")
+        return ValidationSummary(checked=checked, errors=errors)
+    if not isinstance(profiles_index, dict):
+        errors.append(f"Profile index {profiles_path} must contain a JSON object")
+        return ValidationSummary(checked=checked, errors=errors)
+
+    names = sorted(profiles_index)
     if environment:
-        requested_template = templates_dir / f"{environment}.json"
-        if requested_template.exists():
-            candidates = [requested_template]
-        else:
+        if environment not in profiles_index:
             errors.append(
-                f"Environment template '{requested_template.name}' is missing."
+                f"Environment template '{environment}' is missing from profiles.json"
             )
             return ValidationSummary(checked=checked, errors=errors)
+        names = [environment]
 
-    for template_path in candidates:
-        checked += 1
-        try:
-            template_data = json.loads(template_path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError as exc:
-            errors.append(f"Invalid JSON in template {template_path}: {exc}")
+    for name in names:
+        record = profiles_index[name]
+        if not isinstance(record, dict):
+            errors.append(f"Profile '{name}' in {profiles_path} must be a JSON object")
             continue
 
-        if missing_keys := [key for key in required_keys if key not in template_data]:
-            errors.append(
-                f"Template {template_path} is missing required keys: {missing_keys}"
-            )
+        overrides = record.get("overrides", {})
+        if not isinstance(overrides, dict):
+            errors.append(f"Profile '{name}' overrides must be a JSON object")
+            continue
 
-        if environment and template_path.stem == environment:
+        template_data = merge_overrides(base_template, overrides)
+        checked += 1
+
+        missing_keys = [key for key in required_keys if key not in template_data]
+        if missing_keys:
+            errors.append(f"Template '{name}' is missing required keys: {missing_keys}")
+
+        if environment == name:
             actual_env = template_data.get("environment")
             if actual_env != environment:
                 errors.append(
-                    f"Template {template_path} env '{actual_env}' != '{environment}'."
+                    f"Template '{name}' env '{actual_env}' != '{environment}'."
                 )
 
     return ValidationSummary(checked=checked, errors=errors)
