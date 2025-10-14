@@ -6,12 +6,12 @@ import argparse
 import json
 import sys
 from collections.abc import Callable, Iterable, Sequence
-from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 import yaml
+
+from src.config.template_utils import merge_overrides
 
 
 DEFAULT_REQUIRED_TEMPLATE_KEYS = (
@@ -148,18 +148,6 @@ def validate_templates(
             return ValidationSummary(checked=checked, errors=errors)
         names = [environment]
 
-    def merge(base: dict[str, Any], overrides: dict[str, Any]) -> dict[str, Any]:
-        merged = deepcopy(base)
-        stack: list[tuple[dict[str, Any], dict[str, Any]]] = [(merged, overrides)]
-        while stack:
-            target, source = stack.pop()
-            for key, value in source.items():
-                if isinstance(value, dict) and isinstance(target.get(key), dict):
-                    stack.append((target[key], value))
-                else:
-                    target[key] = value
-        return merged
-
     for name in names:
         record = profiles_index[name]
         if not isinstance(record, dict):
@@ -171,7 +159,7 @@ def validate_templates(
             errors.append(f"Profile '{name}' overrides must be a JSON object")
             continue
 
-        template_data = merge(base_template, overrides)
+        template_data = merge_overrides(base_template, overrides)
         checked += 1
 
         missing_keys = [key for key in required_keys if key not in template_data]

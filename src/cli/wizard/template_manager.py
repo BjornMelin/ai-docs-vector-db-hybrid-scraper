@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from copy import deepcopy
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -12,6 +11,7 @@ from rich.table import Table
 from rich.text import Text
 
 from src.config import validate_settings_payload
+from src.config.template_utils import calculate_diff, merge_overrides
 
 
 if TYPE_CHECKING:  # pragma: no cover - import for typing only
@@ -86,6 +86,12 @@ class TemplateManager:
 
         for name, record in self._profile_index.items():
             overrides = record.get("overrides", {})
+            if not isinstance(overrides, dict):
+                console.print(
+                    f"[yellow]Profile '{name}' overrides must be a mapping; "
+                    "ignoring invalid overrides[/yellow]"
+                )
+                overrides = {}
             template = self._merge_template(overrides)
             self._templates[name] = template
             self._metadata[name] = self._extract_metadata(name, record)
@@ -103,23 +109,7 @@ class TemplateManager:
     def _merge_template(self, overrides: dict[str, Any]) -> dict[str, Any]:
         """Merge overrides onto the base template and return a new mapping."""
 
-        merged = deepcopy(self._base_template)
-        self._apply_overrides(merged, overrides)
-        return merged
-
-    def _apply_overrides(
-        self, target: dict[str, Any], overrides: dict[str, Any]
-    ) -> None:
-        """Apply nested overrides onto ``target`` in place."""
-
-        stack: list[tuple[dict[str, Any], dict[str, Any]]] = [(target, overrides)]
-        while stack:
-            destination, source = stack.pop()
-            for key, value in source.items():
-                if isinstance(value, dict) and isinstance(destination.get(key), dict):
-                    stack.append((destination[key], value))
-                else:
-                    destination[key] = value
+        return merge_overrides(self._base_template, overrides)
 
     def _extract_metadata(self, name: str, record: dict[str, Any]) -> dict[str, str]:
         """Return human-readable metadata for ``name``."""
@@ -287,9 +277,7 @@ class TemplateManager:
             raise ValueError(msg)
 
         if overrides:
-            template_copy = deepcopy(template_data)
-            self._apply_overrides(template_copy, overrides)
-            template_data = template_copy
+            template_data = merge_overrides(template_data, overrides)
 
         is_valid, errors, settings = validate_settings_payload(template_data)
         if not is_valid or settings is None:
@@ -312,7 +300,7 @@ class TemplateManager:
         """
 
         config_data = config.model_dump()
-        overrides = self._compute_diff(self._base_template, config_data)
+        overrides = calculate_diff(self._base_template, config_data)
         metadata = {
             "description": description or f"Custom template: {name}",
             "use_case": "Custom profile configuration",
@@ -334,27 +322,6 @@ class TemplateManager:
         )
 
         return profiles_path
-
-    def _compute_diff(
-        self, base: dict[str, Any], data: dict[str, Any]
-    ) -> dict[str, Any]:
-        """Return overrides required to transform ``base`` into ``data``."""
-
-        diff: dict[str, Any] = {}
-        stack: list[tuple[tuple[str, ...], Any, Any]] = [((), base, data)]
-        while stack:
-            path, base_value, new_value = stack.pop()
-            if isinstance(new_value, dict):
-                base_value = base_value or {}
-                for key, value in new_value.items():
-                    stack.append((path + (key,), base_value.get(key), value))
-            else:
-                if new_value != base_value:
-                    cursor = diff
-                    for key in path[:-1]:
-                        cursor = cursor.setdefault(key, {})
-                    cursor[path[-1]] = new_value
-        return diff
 
 
 __all__ = [

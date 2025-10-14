@@ -62,6 +62,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **[Config]:** Consolidated template management into `base.json` plus
   `profiles.json`, updating the wizard and CI validation to generate profiles
   from a single source of truth.
+- **[Config]:** Extracted shared template override helpers for the wizard and
+  CI validation so merge/diff logic lives in one reusable module.
 - **[API]:** Removed the duplicated `/api/routers/simple` module and unified all endpoints to use the canonical `SearchRequest` and `SearchRecord` data models.
 - **[Models]:** Consolidated all search-related request and response models into canonical `SearchRequest` and `SearchRecord` contracts, removing significant code duplication.
 - **[Search]:** Centralized `SearchRequest` validation, removed `src/models/vector_search.py`, and ensured vector store operations emit `SearchRecord` instances directly.
