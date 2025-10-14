@@ -27,14 +27,12 @@ FuncT = TypeVar("FuncT", bound=Callable[..., Any])
 
 def get_tracer(name: str | None = None) -> trace.Tracer:
     """Return a tracer using a consistent default namespace."""
-
     tracer_name = name or DEFAULT_TRACER_NAME
     return trace.get_tracer(tracer_name)
 
 
 def _apply_attributes(span: Span, attributes: Mapping[str, Any] | None) -> None:
     """Apply attributes to a span if recording."""
-
     if not attributes or not span.is_recording():
         return
     for key, value in attributes.items():
@@ -49,7 +47,6 @@ def span(
     tracer_name: str | None = None,
 ) -> Iterator[Span]:
     """Create a span context manager with consistent error handling."""
-
     tracer = get_tracer(tracer_name)
     with tracer.start_as_current_span(
         name,
@@ -125,7 +122,6 @@ def instrument_config_operation(
     extra_attributes: Mapping[str, Any] | None = None,
 ) -> Callable[[FuncT], FuncT]:
     """Trace configuration operations with standard attributes."""
-
     attributes = {"config.operation_type": operation_type.value}
     if extra_attributes:
         attributes.update(extra_attributes)
@@ -135,7 +131,6 @@ def instrument_config_operation(
 
 def set_span_attributes(attributes: Mapping[str, Any]) -> None:
     """Attach attributes to the active span when recording."""
-
     current_span = trace.get_current_span()
     if not current_span or not current_span.is_recording():
         LOGGER.debug("No active span when attempting to set attributes")
@@ -150,7 +145,6 @@ def current_trace_context() -> tuple[str | None, str | None]:
         tuple[str | None, str | None]: Pair containing ``trace_id`` and
         ``span_id`` strings when a span is active; ``None`` values otherwise.
     """
-
     span = trace.get_current_span()
     if not span:
         return None, None
@@ -173,12 +167,10 @@ def log_extra_with_trace(operation: str, **metadata: Any) -> dict[str, Any]:
         dict[str, Any]: Logging extras containing trace identifiers when
         available.
     """
-
     trace_id, span_id = current_trace_context()
     payload: dict[str, Any] = {
         "operation": operation,
         "trace_id": trace_id,
         "span_id": span_id,
-    }
-    payload.update(metadata)
+    } | metadata
     return payload
