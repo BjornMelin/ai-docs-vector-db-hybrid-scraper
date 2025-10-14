@@ -2,25 +2,25 @@
 
 # pylint: disable=c-extension-no-member
 
+from __future__ import annotations
+
 import asyncio
 import importlib
 import logging
 from collections.abc import AsyncGenerator
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import aiohttp
 import redis.asyncio as redis
 from dependency_injector import containers, providers
 from dependency_injector.wiring import Provide
-from firecrawl import AsyncFirecrawlApp  # type: ignore
 from langchain_mcp_adapters.client import MultiServerMCPClient  # type: ignore
 from langchain_mcp_adapters.sessions import Connection  # type: ignore
 from qdrant_client import AsyncQdrantClient
 
 from src.config.models import CacheType, MCPClientConfig, MCPServerConfig, MCPTransport
-from src.services.browser.unified_manager import UnifiedBrowserManager
 from src.services.cache.embedding_cache import EmbeddingCache
 from src.services.cache.manager import CacheManager
 from src.services.cache.search_cache import SearchResultCache
@@ -35,6 +35,14 @@ from src.services.hyde.config import (
 )
 from src.services.hyde.engine import HyDEQueryEngine
 from src.services.vector_db.service import VectorStoreService
+
+
+if TYPE_CHECKING:
+    from firecrawl import AsyncFirecrawlApp  # type: ignore[attr-defined]
+
+    from src.services.browser.unified_manager import UnifiedBrowserManager
+else:  # pragma: no cover - optional dependency
+    UnifiedBrowserManager = Any  # type: ignore[assignment]
 
 
 Configuration = providers.Configuration  # pylint: disable=c-extension-no-member
@@ -80,16 +88,31 @@ def _create_dragonfly_client(config: Any) -> redis.Redis:
         )
 
 
-def _create_firecrawl_client(config: Any) -> AsyncFirecrawlApp:
-    """Create Firecrawl client with configuration."""
+def _create_firecrawl_client(config: Any) -> AsyncFirecrawlApp | None:
+    """Create Firecrawl client when the SDK is available."""
+
+    try:
+        module = importlib.import_module("firecrawl")
+    except ModuleNotFoundError:
+        logger.info("Firecrawl SDK not installed; skipping client creation")
+        return None
+
+    client_cls = getattr(module, "AsyncFirecrawlApp", None)
+    if client_cls is None:
+        client_cls = getattr(module, "AsyncFirecrawl", None)
+    if client_cls is None:
+        logger.warning("Firecrawl SDK missing async client; skipping initialization")
+        return None
+
+    client_factory = cast("type[AsyncFirecrawlApp]", client_cls)
 
     try:
         firecrawl_config = getattr(config, "firecrawl", None)
         api_key = getattr(firecrawl_config, "api_key", None) or ""
-        return AsyncFirecrawlApp(api_key=api_key)
-    except (AttributeError, TypeError, ValueError) as e:
-        logger.warning("Failed to create Firecrawl client with config: %s", e)
-        return AsyncFirecrawlApp(api_key="")
+        return client_factory(api_key=api_key)
+    except (AttributeError, TypeError, ValueError) as exc:
+        logger.warning("Failed to create Firecrawl client with config: %s", exc)
+        return client_factory(api_key="")
 
 
 async def _create_http_client() -> AsyncGenerator[Any]:
@@ -264,10 +287,28 @@ def _create_content_intelligence_service(
     return service
 
 
-def _create_browser_manager(config: Any) -> UnifiedBrowserManager:
-    """Instantiate the UnifiedBrowserManager using required dependencies."""
+def _create_browser_manager(config: Any) -> UnifiedBrowserManager | None:
+    """Instantiate the UnifiedBrowserManager when optional deps are available."""
 
-    return UnifiedBrowserManager(config)
+    try:
+        module = importlib.import_module("src.services.browser.unified_manager")
+    except ModuleNotFoundError as exc:
+        logger.info(
+            "Browser integrations unavailable (missing dependency: %s); "
+            "skipping UnifiedBrowserManager initialization",
+            exc.name,
+        )
+        return None
+
+    manager_cls = getattr(module, "UnifiedBrowserManager", None)
+    if manager_cls is None or not callable(manager_cls):
+        logger.warning(
+            "Unified browser module missing manager class; skipping initialization",
+        )
+        return None
+
+    manager_type = cast("type[UnifiedBrowserManager]", manager_cls)
+    return manager_type(config)
 
 
 def _create_rag_generator(
@@ -426,7 +467,7 @@ async def _maybe_cleanup(service: Any, name: str) -> None:
         logger.debug("Error during cleanup for service '%s'", name, exc_info=True)
 
 
-async def _initialize_service_graph(container: "ApplicationContainer") -> None:
+async def _initialize_service_graph(container: ApplicationContainer) -> None:
     """Initialize core and optional services managed by the container."""
 
     await _maybe_initialize(
@@ -445,10 +486,12 @@ async def _initialize_service_graph(container: "ApplicationContainer") -> None:
     await _maybe_initialize(
         container.content_intelligence_service(),
         "content_intelligence_service",
+        required=True,
     )
     await _maybe_initialize(
         container.browser_manager(),
         "browser_manager",
+        required=True,
     )
     await _maybe_initialize(
         container.rag_generator(),
@@ -457,7 +500,7 @@ async def _initialize_service_graph(container: "ApplicationContainer") -> None:
     )
 
 
-async def _cleanup_service_graph(container: "ApplicationContainer") -> None:
+async def _cleanup_service_graph(container: ApplicationContainer) -> None:
     """Cleanup services managed by the container in reverse order."""
 
     await _maybe_cleanup(container.rag_generator(), "rag_generator")
@@ -762,7 +805,7 @@ def inject_dragonfly_client() -> Provider[redis.Redis]:
     return Provide[ApplicationContainer.dragonfly_client]
 
 
-def inject_firecrawl() -> Provider[AsyncFirecrawlApp]:
+def inject_firecrawl() -> Provider[AsyncFirecrawlApp | None]:
     """Inject raw Firecrawl client dependency."""
 
     return Provide[ApplicationContainer.firecrawl_client]

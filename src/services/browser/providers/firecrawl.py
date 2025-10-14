@@ -2,17 +2,11 @@
 
 from __future__ import annotations
 
+import importlib
 import os
 from collections.abc import Mapping, Sequence
-from typing import Any, cast
-
-
-try:
-    from firecrawl import AsyncFirecrawlApp  # type: ignore[attr-defined]
-except ImportError:  # pragma: no cover - compat fallback
-    from firecrawl import (  # type: ignore[attr-defined]
-        AsyncFirecrawl as AsyncFirecrawlApp,
-    )
+from functools import lru_cache
+from typing import TYPE_CHECKING, Any, cast
 
 from src.config.browser import FirecrawlSettings
 from src.services.browser.errors import BrowserProviderError
@@ -22,7 +16,29 @@ from src.services.browser.runtime import execute_with_retry
 from .base import BrowserProvider, ProviderContext
 
 
+if TYPE_CHECKING:
+    from firecrawl import AsyncFirecrawlApp  # type: ignore[attr-defined]
+
+
 MIN_TIMEOUT_SECONDS = 0.001
+
+
+@lru_cache(maxsize=1)
+def _firecrawl_client_factory() -> type[AsyncFirecrawlApp] | None:
+    """Resolve the async Firecrawl client constructor if available."""
+
+    try:
+        module = importlib.import_module("firecrawl")
+    except ModuleNotFoundError:
+        return None
+
+    client_cls = getattr(module, "AsyncFirecrawlApp", None)
+    if client_cls is None:
+        client_cls = getattr(module, "AsyncFirecrawl", None)
+    if client_cls is None:
+        return None
+
+    return cast("type[AsyncFirecrawlApp]", client_cls)
 
 
 class FirecrawlProvider(BrowserProvider):
@@ -38,6 +54,13 @@ class FirecrawlProvider(BrowserProvider):
     async def initialize(self) -> None:
         """Instantiate the AsyncFirecrawl client."""
 
+        client_factory = _firecrawl_client_factory()
+        if client_factory is None:
+            raise BrowserProviderError(
+                "Firecrawl SDK not installed",
+                provider=self.kind.value,
+            )
+
         api_key = self._settings.api_key or os.getenv(
             "AI_DOCS__BROWSER__FIRECRAWL__API_KEY"
         )
@@ -49,7 +72,7 @@ class FirecrawlProvider(BrowserProvider):
         kwargs: dict[str, Any] = {"api_key": api_key}
         if self._settings.api_url:
             kwargs["api_url"] = str(self._settings.api_url)
-        self._client = AsyncFirecrawlApp(**kwargs)
+        self._client = client_factory(**kwargs)
 
     async def close(self) -> None:
         """Firecrawl client does not expose a close hook."""

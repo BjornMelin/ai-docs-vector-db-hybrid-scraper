@@ -4854,6 +4854,7 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "typing-extensions" },
 ]
+sdist = { url = "https://files.pythonhosted.org/packages/00/e9/3916abb671bffb00845408c604ff03480dc8dc273310d8268547a37be0fb/pydantic_core-2.41.3.tar.gz", hash = "sha256:cdebb34b36ad05e8d77b4e797ad38a2a775c2a07a8fa386d4f6943b7778dcd39", size = 457489, upload-time = "2025-10-13T19:34:51.666Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/47/60/f7291e1264831136917e417b1ec9ed70dd64174a4c8ff4d75cad3028aab5/pydantic_core-2.41.3-cp311-cp311-macosx_10_12_x86_64.whl", hash = "sha256:91dfe6a6e02916fd1fb630f1ebe0c18f9fd9d3cbfe84bb2599f195ebbb0edb9b", size = 2107996, upload-time = "2025-10-13T19:31:04.902Z" },
     { url = "https://files.pythonhosted.org/packages/43/05/362832ea8b890f5821ada95cd72a0da1b2466f88f6ac1a47cf1350136722/pydantic_core-2.41.3-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:e301551c63d46122972ab5523a1438772cdde5d62d34040dac6f11017f18cc5d", size = 1916194, upload-time = "2025-10-13T19:31:06.313Z" },
