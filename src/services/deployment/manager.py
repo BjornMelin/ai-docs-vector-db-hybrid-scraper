@@ -271,10 +271,7 @@ class DeploymentManager:
             msg = f"Invalid GitHub Actions workflow at {entrypoint}: {exc}"
             raise ValueError(msg) from exc
         if not isinstance(workflow, dict):
-            msg = (
-                f"Workflow must deserialize into a mapping, got "
-                f"{type(workflow).__name__}"
-            )
+            msg = "Workflow must deserialize into a mapping"
             raise TypeError(msg)
         jobs = workflow.get("jobs")
         if not isinstance(jobs, dict):

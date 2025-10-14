@@ -16,12 +16,15 @@ class MockContext(Protocol):
 
     async def debug(self, msg: str) -> None:
         """Log debug message."""
+        ...
 
     async def warning(self, msg: str) -> None:
         """Log warning message."""
+        ...
 
     async def error(self, msg: str) -> None:
         """Log error message."""
+        ...
 
 
 class MockTool:
@@ -198,12 +201,6 @@ def create_mock_tools(dependencies: ToolDependencies) -> dict[str, AsyncMock]:
     ) -> dict[str, Any]:
         """Mock clear cache tool."""
         return await dependencies.cache_service.clear(pattern=pattern)
-
-    # Mock deployment tool
-    async def mock_list_aliases(**__kwargs) -> dict[str, Any]:
-        """Mock list aliases tool."""
-        result = await dependencies.deployment_service.list_aliases()
-        return {"aliases": result}
 
     # Mock utilities tool
     async def mock_validate_configuration(**__kwargs) -> dict[str, Any]:

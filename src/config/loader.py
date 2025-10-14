@@ -179,35 +179,19 @@ class Settings(BaseSettings):
         return self
 
     def is_development(self) -> bool:
-        """Return True when running in development environment.
-
-        Returns:
-            True if environment is development.
-        """
+        """Return True when running in development environment."""
         return self.environment is Environment.DEVELOPMENT
 
     def is_production(self) -> bool:
-        """Return True when running in production environment.
-
-        Returns:
-            True if environment is production.
-        """
+        """Return True when running in production environment."""
         return self.environment is Environment.PRODUCTION
 
     def get_effective_chunking_strategy(self) -> ChunkingStrategy:
-        """Return the configured chunking strategy.
-
-        Returns:
-            Active chunking strategy.
-        """
+        """Return the configured chunking strategy."""
         return getattr(self.chunking, "strategy", ChunkingStrategy.BASIC)
 
     def get_effective_search_strategy(self) -> SearchStrategy:
-        """Return the configured search strategy.
-
-        Returns:
-            Active search strategy.
-        """
+        """Return the configured search strategy."""
         if hasattr(self.embedding, "retrieval_mode"):
             return self.embedding.retrieval_mode
         return SearchStrategy.DENSE
