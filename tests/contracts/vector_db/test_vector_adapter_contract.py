@@ -14,5 +14,4 @@ import pytest
 @pytest.mark.skip(reason="Vector adapter consolidation pending")
 async def test_vector_adapter_contract_placeholder() -> None:
     """Placeholder until the unified adapter is implemented."""
-
     assert True

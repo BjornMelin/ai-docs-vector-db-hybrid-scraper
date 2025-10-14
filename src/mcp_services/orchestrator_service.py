@@ -55,7 +55,7 @@ class OrchestratorService:  # pylint: disable=too-many-instance-attributes
         if self._discovery:
             try:
                 loop = asyncio.get_running_loop()
-                loop.create_task(self._discovery.refresh(force=True))
+                _refresh_task = loop.create_task(self._discovery.refresh(force=True))
             except RuntimeError:
                 logger.debug("Event loop not running; discovery refresh deferred")
         else:  # pragma: no cover - defensive branch
@@ -74,7 +74,6 @@ class OrchestratorService:  # pylint: disable=too-many-instance-attributes
             performance_constraints: dict[str, Any] | None = None,
         ) -> dict[str, Any]:
             """Execute a LangGraph search workflow with orchestration context."""
-
             if not self._graph_runner:
                 return {"success": False, "error": "graph_runner_not_initialized"}
 
@@ -103,7 +102,6 @@ class OrchestratorService:  # pylint: disable=too-many-instance-attributes
         @self.mcp.tool()  # pylint: disable=no-value-for-parameter
         async def get_service_capabilities() -> dict[str, Any]:
             """Return capabilities for each domain service."""
-
             capabilities = {"services": {}}
             services = [
                 ("search", self.search_service),
@@ -131,7 +129,6 @@ class OrchestratorService:  # pylint: disable=too-many-instance-attributes
         @self.mcp.tool()  # pylint: disable=no-value-for-parameter
         async def optimize_service_performance() -> dict[str, Any]:
             """Refresh tool discovery information for optimisation workflows."""
-
             if not self._discovery:
                 return {"success": False, "error": "discovery_not_initialized"}
             await self._discovery.refresh(force=True)
@@ -145,7 +142,6 @@ class OrchestratorService:  # pylint: disable=too-many-instance-attributes
 
     async def get_service_info(self) -> dict[str, Any]:
         """Return orchestrator service metadata."""
-
         return {
             "service": "orchestrator",
             "version": "2.0",
@@ -161,7 +157,6 @@ class OrchestratorService:  # pylint: disable=too-many-instance-attributes
 
     async def get_all_services(self) -> dict[str, Any]:
         """Return metadata for all coordinated services."""
-
         services_info: dict[str, Any] = {}
         services = [
             ("search", self.search_service),
@@ -181,5 +176,4 @@ class OrchestratorService:  # pylint: disable=too-many-instance-attributes
 
     def get_mcp_server(self) -> FastMCP:
         """Return the configured FastMCP server instance."""
-
         return self.mcp

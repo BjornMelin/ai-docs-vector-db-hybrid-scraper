@@ -30,7 +30,6 @@ class EmbeddingTestUtils:
         Raises:
             ValueError: If ``count`` or ``dim`` is non-positive.
         """
-
         if count <= 0:
             msg = "count must be a positive integer"
             raise ValueError(msg)
@@ -49,5 +48,4 @@ def generate_embedding_vectors(
     seed: int | None = None,
 ) -> list[list[float]]:
     """Functional wrapper around the deterministic embedding generator."""
-
     return EmbeddingTestUtils.generate_test_embeddings(count=count, dim=dim, seed=seed)

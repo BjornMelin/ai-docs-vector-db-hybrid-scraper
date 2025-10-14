@@ -45,7 +45,6 @@ _LAZY_EXPORTS: Final[dict[str, str]] = {
 
 def __getattr__(name: str) -> Any:
     """Lazily import optional retriever dependencies on first access."""
-
     if name in _LAZY_EXPORTS:
         from . import retriever as _retriever  # pylint: disable=import-outside-toplevel
 
@@ -57,5 +56,4 @@ def __getattr__(name: str) -> Any:
 
 def __dir__() -> list[str]:
     """Expose lazily-loaded exports when introspecting the module."""
-
     return sorted(set(__all__) | set(globals().keys()))

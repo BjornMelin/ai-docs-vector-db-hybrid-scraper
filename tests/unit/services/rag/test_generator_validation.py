@@ -27,7 +27,6 @@ class _SyncRetriever:
 @pytest.mark.asyncio()
 async def test_validate_configuration_accepts_async_retriever() -> None:
     """validate_configuration should pass when the retriever exposes ``ainvoke``."""
-
     generator = RAGGenerator(RAGConfig(), cast(Any, _AsyncRetriever()))
 
     await generator.validate_configuration()
@@ -36,7 +35,6 @@ async def test_validate_configuration_accepts_async_retriever() -> None:
 @pytest.mark.asyncio()
 async def test_validate_configuration_rejects_sync_retriever() -> None:
     """validate_configuration should raise when ``ainvoke`` is not async."""
-
     generator = RAGGenerator(RAGConfig(), cast(Any, _SyncRetriever()))
 
     with pytest.raises(TypeError):

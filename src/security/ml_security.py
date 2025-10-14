@@ -64,7 +64,6 @@ class MLSecurityValidator:
 
     def __init__(self) -> None:
         """Initialize with existing security config."""
-
         settings = get_settings()
         self.config = settings
         self.security_config = getattr(settings, "security", None)
@@ -72,14 +71,12 @@ class MLSecurityValidator:
 
     def _record_result(self, result: SecurityCheckResult) -> SecurityCheckResult:
         """Store and return a security check result for consistent handling."""
-
         self.checks_performed.append(result)
         return result
 
     @classmethod
     def from_unified_config(cls) -> "MLSecurityValidator":
         """Create MLSecurityValidator from unified config."""
-
         return cls()
 
     def validate_input(
@@ -94,7 +91,6 @@ class MLSecurityValidator:
         Returns:
             Security check result
         """
-
         # Check if ML input validation is enabled (use default if not configured)
         enable_validation = getattr(
             self.security_config, "enable_ml_input_validation", True
@@ -178,7 +174,6 @@ class MLSecurityValidator:
         Returns:
             Security check result
         """
-
         # Check if dependency scanning is enabled (use default if not configured)
         enable_scanning = getattr(
             self.security_config, "enable_dependency_scanning", True
@@ -284,7 +279,6 @@ class MLSecurityValidator:
         Returns:
             Security check result
         """
-
         try:
             # Try trivy first with full path for security
             trivy_path = shutil.which("trivy")
@@ -395,7 +389,6 @@ class MLSecurityValidator:
         Raises:
             SecurityError: If the collection name is invalid.
         """
-
         if not isinstance(name, str) or not name.strip():
             msg = "Collection name must be a non-empty string"
             raise SecurityError(msg)
@@ -426,7 +419,6 @@ class MLSecurityValidator:
         Raises:
             SecurityError: If the query is invalid.
         """
-
         if not isinstance(query, str) or not query.strip():
             msg = "Query must be a non-empty string"
             raise SecurityError(msg)
@@ -451,7 +443,6 @@ class MLSecurityValidator:
         Raises:
             SecurityError: If the URL is unsafe or malformed.
         """
-
         if not isinstance(url, str) or not url.strip():
             msg = "URL must be a non-empty string"
             raise SecurityError(msg)
@@ -502,7 +493,6 @@ class MLSecurityValidator:
         Returns:
             Sanitized filename safe for local operations.
         """
-
         if not isinstance(filename, str) or not filename:
             return "safe_filename"
 

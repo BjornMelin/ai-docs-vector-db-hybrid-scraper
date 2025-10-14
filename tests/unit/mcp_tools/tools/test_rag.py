@@ -23,7 +23,6 @@ from src.services.rag.models import (
 @pytest.fixture()
 def configured_app(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     """Provide a configuration object with RAG enabled for tests."""
-
     config = SimpleNamespace(
         rag=SimpleNamespace(
             enable_rag=True,
@@ -41,7 +40,6 @@ def configured_app(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
 @pytest.fixture()
 def mock_rag_generator() -> SimpleNamespace:
     """Return a stub RAG generator exposing the service contract."""
-
     generator = SimpleNamespace()
     generator.generate_answer = AsyncMock()
     generator.get_metrics = Mock(
@@ -62,7 +60,6 @@ def registered_tools(
     monkeypatch: pytest.MonkeyPatch,
 ) -> dict[str, Callable[..., Any]]:
     """Register RAG tools against a mocked FastMCP instance."""
-
     del configured_app
     mock_app = SimpleNamespace()
     registry: dict[str, Callable[..., Any]] = {}
@@ -86,7 +83,6 @@ async def test_generate_rag_answer_uses_override(
     mock_rag_generator: SimpleNamespace,
 ) -> None:
     """generate_rag_answer should reuse the injected generator override."""
-
     rag_result = RAGResult(
         answer="Answer",
         confidence_score=0.9,
@@ -132,7 +128,6 @@ async def test_get_rag_metrics_surfaces_generator_metrics(
     mock_rag_generator: SimpleNamespace,
 ) -> None:
     """get_rag_metrics should proxy generator metrics."""
-
     response = await registered_tools["get_rag_metrics"]()
 
     mock_rag_generator.get_metrics.assert_called_once()
@@ -147,7 +142,6 @@ async def test_test_rag_configuration_confirms_connectivity(
     mock_rag_generator: SimpleNamespace,
 ) -> None:
     """test_rag_configuration should validate generator availability."""
-
     results = await registered_tools["test_rag_configuration"]()
 
     mock_rag_generator.validate_configuration.assert_awaited_once()

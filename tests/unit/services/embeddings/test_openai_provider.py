@@ -13,7 +13,6 @@ from src.services.errors import EmbeddingServiceError
 @pytest.fixture
 def async_openai_mock(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
     """Patch AsyncOpenAI constructor to return an async mock client."""
-
     client = AsyncMock()
     client.close = AsyncMock()
 
@@ -36,6 +35,7 @@ def async_openai_mock(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
 
 @pytest.fixture
 def telemetry_tracker(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
+    """Patch telemetry function to track calls."""
     tracker = MagicMock()
     monkeypatch.setattr(
         "src.services.embeddings.openai_provider.record_ai_operation", tracker
@@ -47,6 +47,7 @@ class TestInitialization:
     """OpenAIEmbeddingProvider initialization behaviour."""
 
     def test_supported_model_defaults(self) -> None:
+        """Supported models should set expected defaults."""
         provider = OpenAIEmbeddingProvider(
             api_key="sk-test", model_name="text-embedding-3-small"
         )
@@ -56,10 +57,12 @@ class TestInitialization:
         assert provider.dimensions == 1536
 
     def test_invalid_model_raises(self) -> None:
+        """Unsupported model names should raise an error."""
         with pytest.raises(EmbeddingServiceError, match="Unsupported model"):
             OpenAIEmbeddingProvider(api_key="sk-test", model_name="not-a-model")
 
     def test_custom_dimensions_within_bounds(self) -> None:
+        """Custom dimensions within allowed range should be accepted."""
         provider = OpenAIEmbeddingProvider(
             api_key="sk-test",
             model_name="text-embedding-3-large",
@@ -68,6 +71,7 @@ class TestInitialization:
         assert provider.dimensions == 2048
 
     def test_dimensions_above_limit(self) -> None:
+        """Custom dimensions exceeding max should raise."""
         with pytest.raises(EmbeddingServiceError, match=r"Dimensions .* exceeds max"):
             OpenAIEmbeddingProvider(
                 api_key="sk-test",
@@ -79,6 +83,7 @@ class TestInitialization:
     async def test_initialize_creates_client(
         self, async_openai_mock: AsyncMock
     ) -> None:
+        """Initialization should create and store the AsyncOpenAI client."""
         provider = OpenAIEmbeddingProvider(api_key="sk-test")
 
         await provider.initialize()
@@ -88,6 +93,7 @@ class TestInitialization:
 
     @pytest.mark.asyncio
     async def test_initialize_without_key_fails(self) -> None:
+        """Initialization without an API key should raise an error."""
         provider = OpenAIEmbeddingProvider(api_key="")
 
         with pytest.raises(
@@ -99,6 +105,7 @@ class TestInitialization:
     async def test_initialize_handles_constructor_failure(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """Failures in the AsyncOpenAI constructor should raise an error."""
         monkeypatch.setattr(
             "src.services.embeddings.openai_provider.AsyncOpenAI",
             MagicMock(side_effect=RuntimeError("boom")),
@@ -115,6 +122,7 @@ class TestInitialization:
     async def test_double_initialize_is_idempotent(
         self, async_openai_mock: AsyncMock
     ) -> None:
+        """Calling initialize multiple times should be safe."""
         provider = OpenAIEmbeddingProvider(api_key="sk-test")
         await provider.initialize()
         await provider.initialize()
@@ -123,6 +131,7 @@ class TestInitialization:
 
     @pytest.mark.asyncio
     async def test_cleanup_closes_client(self, async_openai_mock: AsyncMock) -> None:
+        """Cleanup should close the client and reset state."""
         provider = OpenAIEmbeddingProvider(api_key="sk-test")
         await provider.initialize()
         await provider.cleanup()
@@ -137,6 +146,7 @@ class TestEmbeddingGeneration:
 
     @pytest.mark.asyncio
     async def test_generation_requires_initialization(self) -> None:
+        """Requests before initialization should raise an error."""
         provider = OpenAIEmbeddingProvider(api_key="sk-test")
 
         with pytest.raises(EmbeddingServiceError, match="Provider not initialized"):
@@ -148,6 +158,7 @@ class TestEmbeddingGeneration:
         async_openai_mock: AsyncMock,
         telemetry_tracker: MagicMock,
     ) -> None:
+        """Empty input should short-circuit without calling the API."""
         provider = OpenAIEmbeddingProvider(api_key="sk-test")
         await provider.initialize()
 
@@ -163,6 +174,7 @@ class TestEmbeddingGeneration:
         async_openai_mock: AsyncMock,
         telemetry_tracker: MagicMock,
     ) -> None:
+        """Valid input should return expected embeddings."""
         provider = OpenAIEmbeddingProvider(api_key="sk-test")
         await provider.initialize()
 
@@ -180,6 +192,7 @@ class TestEmbeddingGeneration:
         self,
         async_openai_mock: AsyncMock,
     ) -> None:
+        """API errors should be wrapped in an EmbeddingServiceError."""
         async_openai_mock.embeddings.create.side_effect = RuntimeError("rate limit")
 
         provider = OpenAIEmbeddingProvider(api_key="sk-test")

@@ -33,7 +33,6 @@ logger = logging.getLogger(__name__)
 
 def _coerce_add_document_response(value: Any) -> AddDocumentResponse | None:
     """Convert cached payloads into :class:`AddDocumentResponse` instances."""
-
     if isinstance(value, AddDocumentResponse):
         return value
 
@@ -51,7 +50,6 @@ def _coerce_add_document_response(value: Any) -> AddDocumentResponse | None:
 
 def _raise_scrape_error(url: str) -> None:
     """Raise ValueError for scraping failure."""
-
     msg = f"Failed to scrape {url}"
     raise ValueError(msg)
 
@@ -64,7 +62,6 @@ async def _run_content_intelligence(
     ctx: Context,
 ):
     """Execute content intelligence analysis when the service is available."""
-
     if not service:
         await ctx.debug("Content Intelligence Service not available")
         return None
@@ -110,7 +107,6 @@ async def _scrape_document(
     content_service: Any | None = None,
 ) -> tuple[dict[str, Any], Any | None]:
     """Scrape the target URL and optionally enrich the content."""
-
     if crawl_manager is None:
         msg = (
             "UnifiedBrowserManager is unavailable; ensure browser features are enabled"
@@ -157,7 +153,6 @@ async def _chunk_document(
     ctx: Context,
 ) -> list[Document]:
     """Chunk the scraped document using the configured strategy."""
-
     chunk_config = ChunkingConfig(
         strategy=request.chunk_strategy,
         chunk_size=request.chunk_size,
@@ -207,7 +202,6 @@ def _build_text_documents(
     doc_id: str,
 ) -> list[TextDocument]:
     """Convert chunk data into TextDocument payloads."""
-
     if not chunks:
         msg = f"No chunks generated for {request.url}"
         raise ValueError(msg)
@@ -229,7 +223,6 @@ async def _persist_documents(
     documents_to_upsert: list[TextDocument],
 ) -> None:
     """Ensure collection existence and persist documents."""
-
     schema = CollectionSchema(
         name=collection,
         vector_size=vector_service.embedding_dimension,
@@ -248,7 +241,6 @@ def _build_ingestion_response(
     enriched_content: Any | None,
 ) -> AddDocumentResponse:
     """Create the structured response for the ingestion flow."""
-
     response_kwargs: dict[str, Any] = {
         "url": request.url,
         "title": crawl_result.get("title") or crawl_result["metadata"].get("title", ""),
@@ -373,7 +365,6 @@ def register_tools(
         Processes multiple URLs concurrently with rate limiting and
         progress tracking.
         """
-
         successes: list[AddDocumentResponse] = []
         failures: list[str] = []
         total_urls = len(request.urls)

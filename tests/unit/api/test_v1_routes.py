@@ -16,7 +16,6 @@ from src.contracts.retrieval import SearchRecord
 @pytest.fixture()
 def app_with_overrides() -> FastAPI:
     """Create a FastAPI app mounting the v1 routers with stub dependencies."""
-
     app = FastAPI()
     app.include_router(search_router.router, prefix="/api/v1")
     app.include_router(documents_router.router, prefix="/api/v1")
@@ -39,12 +38,10 @@ class _StubVectorService:
 
     def set_failure(self, operation: str, exc: Exception) -> None:
         """Inject a failure for the specified operation."""
-
         self._failures[operation] = exc
 
     def clear_failures(self) -> None:
         """Remove all injected failures."""
-
         self._failures.clear()
 
     async def search_documents(
@@ -163,7 +160,6 @@ class _StubVectorService:
 
 def test_post_search_uses_canonical_contract(app_with_overrides: FastAPI) -> None:
     """POST /search should validate SearchRequest and return SearchResponse."""
-
     with TestClient(app_with_overrides) as client:
         response = client.post(
             "/api/v1/search",
@@ -179,7 +175,6 @@ def test_post_search_uses_canonical_contract(app_with_overrides: FastAPI) -> Non
 
 def test_post_search_supports_query_vector(app_with_overrides: FastAPI) -> None:
     """POST /search accepts query vectors when the query is omitted."""
-
     with TestClient(app_with_overrides) as client:
         response = client.post(
             "/api/v1/search",
@@ -198,7 +193,6 @@ def test_post_search_supports_query_vector(app_with_overrides: FastAPI) -> None:
 
 def test_post_search_handles_service_failure(app_with_overrides: FastAPI) -> None:
     """Search endpoint surfaces 500 when the service raises unexpected errors."""
-
     stub: _StubVectorService = app_with_overrides.state.stub_vector_service
     stub.set_failure("search_documents", RuntimeError("boom"))
     try:
@@ -218,7 +212,6 @@ def test_post_search_handles_service_failure(app_with_overrides: FastAPI) -> Non
 
 def test_document_lifecycle_endpoints(app_with_overrides: FastAPI) -> None:
     """Document add/get/list/delete endpoints expose canonical payloads."""
-
     with TestClient(app_with_overrides) as client:
         add_response = client.post(
             "/api/v1/documents",
@@ -264,7 +257,6 @@ def test_document_lifecycle_endpoints(app_with_overrides: FastAPI) -> None:
 
 def test_add_document_handles_service_failure(app_with_overrides: FastAPI) -> None:
     """Document creation surfaces 500 when the service raises unexpected errors."""
-
     stub: _StubVectorService = app_with_overrides.state.stub_vector_service
     stub.set_failure("add_document", RuntimeError("boom"))
     try:

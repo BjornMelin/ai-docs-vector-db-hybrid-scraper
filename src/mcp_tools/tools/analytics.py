@@ -25,14 +25,12 @@ _BYTES_PER_FLOAT32 = 4
 
 def _timestamp() -> str:
     """Return the current UTC timestamp in ISO 8601 format."""
-
     ts = datetime.now(tz=UTC).isoformat()
     return ts.replace("+00:00", "Z")
 
 
 def _normalize_stats(stats: Any) -> dict[str, Any]:
     """Normalize stats payload into a plain dictionary."""
-
     if isinstance(stats, dict):
         return stats
     for attr in ("model_dump", "dict"):
@@ -61,7 +59,6 @@ def register_tools(
         request: AnalyticsRequest, ctx: Context | None = None
     ) -> AnalyticsResponse:
         """Return lightweight analytics for vector collections."""
-
         service = vector_service
         collections = (
             [request.collection]
@@ -113,7 +110,6 @@ def register_tools(
     @mcp.tool()
     async def get_system_health(ctx: Context | None = None) -> SystemHealthResponse:
         """Report high-level system health for analytics dependencies."""
-
         vector_status = SystemHealthServiceStatus(status="healthy", error=None)
         overall_status = "healthy"
 

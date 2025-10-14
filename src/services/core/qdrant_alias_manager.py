@@ -25,7 +25,6 @@ logger = logging.getLogger(__name__)
 
 def _log_extra(event: str, **metadata: Any) -> dict[str, Any]:
     """Return structured logging extras enriched with trace metadata."""
-
     metadata.setdefault("component", "qdrant.alias_manager")
     return log_extra_with_trace(event, **metadata)
 
@@ -64,7 +63,6 @@ class QdrantAliasManager(BaseService):
         Raises:
             QdrantServiceError: If name is invalid
         """
-
         if not name:
             msg = f"{name_type} cannot be empty"
             raise QdrantServiceError(msg)
@@ -106,7 +104,6 @@ class QdrantAliasManager(BaseService):
         Raises:
             QdrantServiceError: If operation fails
         """
-
         # Validate names
         self.validate_name(alias_name, "Alias name")
         self.validate_name(collection_name, "Collection name")
@@ -181,7 +178,6 @@ class QdrantAliasManager(BaseService):
         Raises:
             QdrantServiceError: If operation fails
         """
-
         # Validate names
         self.validate_name(alias_name, "Alias name")
         self.validate_name(new_collection, "Collection name")
@@ -275,7 +271,6 @@ class QdrantAliasManager(BaseService):
         Raises:
             QdrantServiceError: If operation fails
         """
-
         try:
             await self.client.update_collection_aliases(
                 change_aliases_operations=[
@@ -315,7 +310,6 @@ class QdrantAliasManager(BaseService):
 
     async def get_collection_for_alias(self, alias_name: str) -> str | None:
         """Get collection name that alias points to."""
-
         try:
             aliases = await self.client.get_aliases()
             for alias in aliases.aliases:
@@ -331,7 +325,6 @@ class QdrantAliasManager(BaseService):
         Returns:
             Dictionary mapping alias names to collection names
         """
-
         try:
             aliases = await self.client.get_aliases()
             return {
@@ -355,7 +348,6 @@ class QdrantAliasManager(BaseService):
             collection_name: Name of collection to delete
             grace_period_minutes: Minutes to wait before deletion
         """
-
         # Check if any alias points to this collection
         aliases = await self.list_aliases()
         if collection_name in aliases.values():
@@ -400,7 +392,6 @@ class QdrantAliasManager(BaseService):
         Raises:
             QdrantServiceError: If operation fails
         """
-
         try:
             # Get source collection info
             source_info = await self.client.get_collection(source)
@@ -469,7 +460,6 @@ class QdrantAliasManager(BaseService):
         Raises:
             QdrantServiceError: If operation fails
         """
-
         # Validate names
         self.validate_name(source, "Source collection name")
         self.validate_name(target, "Target collection name")
@@ -588,7 +578,6 @@ class QdrantAliasManager(BaseService):
         Returns:
             Tuple of (is_compatible, message)
         """
-
         try:
             # Get collection info
             info1 = await self.client.get_collection(collection1)

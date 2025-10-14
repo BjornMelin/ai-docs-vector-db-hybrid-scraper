@@ -36,14 +36,12 @@ def _request_factory() -> Callable[..., Request]:
 
 def test_client_ip_without_proxy(request_factory) -> None:
     """Test client IP extraction without proxy."""
-
     request = request_factory()
     assert utils.client_ip(request) == "127.0.0.1"
 
 
 def test_client_ip_trusted_proxy(request_factory) -> None:
     """Test client IP extraction with trusted proxy."""
-
     request = request_factory(
         headers={"x-forwarded-for": "203.0.113.10, 192.0.2.1"},
         client=("127.0.0.1", 4321),
@@ -53,40 +51,34 @@ def test_client_ip_trusted_proxy(request_factory) -> None:
 
 def test_client_ip_without_headers_returns_unknown(request_factory) -> None:
     """Test client IP returns unknown without headers."""
-
     request = request_factory(client=None)
     assert utils.client_ip(request) == "unknown"
 
 
 def test_safe_escape_handles_none() -> None:
     """Test safe_escape handles None input."""
-
     assert utils.safe_escape(None) is None
 
 
 def test_safe_escape_escapes_html() -> None:
     """Test safe_escape escapes HTML."""
-
     assert utils.safe_escape("<script>") == "&lt;script&gt;"
 
 
 def test_body_bytes_returns_body() -> None:
     """Test body_bytes returns response body."""
-
     response = Response(content=b"payload")
     assert utils.body_bytes(response) == b"payload"
 
 
 def test_body_bytes_missing_attribute_returns_none() -> None:
     """Test body_bytes returns None for missing attribute."""
-
     response = SimpleNamespace()
     assert utils.body_bytes(cast(Response, response)) is None
 
 
 def test_ensure_vary_accept_encoding_adds_header() -> None:
     """Test ensure_vary_accept_encoding adds header."""
-
     headers: dict[str, str] = {}
     utils.ensure_vary_accept_encoding(headers)
     assert headers["vary"] == "Accept-Encoding"
@@ -94,7 +86,6 @@ def test_ensure_vary_accept_encoding_adds_header() -> None:
 
 def test_ensure_vary_accept_encoding_appends() -> None:
     """Test ensure_vary_accept_encoding appends to existing."""
-
     headers = {"vary": "Cookie"}
     utils.ensure_vary_accept_encoding(headers)
     assert headers["vary"] == "Cookie, Accept-Encoding"

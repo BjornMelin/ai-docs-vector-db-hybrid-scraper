@@ -31,7 +31,6 @@ class StubMCP:
 @pytest.fixture
 def mock_vector_service() -> Mock:
     """Provide a vector service mock primed for hybrid search calls."""
-
     service = Mock()
     service.is_initialized.return_value = True
     service.initialize = AsyncMock()
@@ -43,7 +42,6 @@ def mock_vector_service() -> Mock:
 @pytest.fixture
 def registered_tools(mock_vector_service: Mock) -> dict[str, Callable[..., Any]]:
     """Register retrieval tools and capture the exposed callables."""
-
     mcp = StubMCP()
     retrieval.register_tools(mcp, vector_service=mock_vector_service)
     return mcp.tools
@@ -52,7 +50,6 @@ def registered_tools(mock_vector_service: Mock) -> dict[str, Callable[..., Any]]
 @pytest.fixture
 def mock_context() -> MagicMock:
     """Build an MCP context mock used for logging within tools."""
-
     ctx = MagicMock()
     ctx.info = AsyncMock()
     ctx.error = AsyncMock()
@@ -66,7 +63,6 @@ async def test_search_documents_returns_hybrid_results(
     mock_context: MagicMock,
 ) -> None:
     """Ensure hybrid search returns canonical search records."""
-
     mock_vector_service.search_documents.return_value = [
         SearchRecord(
             id="doc-1",
@@ -116,7 +112,6 @@ async def test_multi_stage_search_merges_deduped_matches(
     mock_context: MagicMock,
 ) -> None:
     """Verify multi-stage hybrid search dedupes IDs and keeps highest score."""
-
     mock_vector_service.search_documents.side_effect = [
         [
             SearchRecord(
@@ -172,7 +167,6 @@ async def test_filtered_search_forces_hybrid_strategy(
     mock_context: MagicMock,
 ) -> None:
     """Filtered search should normalise to hybrid strategy."""
-
     mock_vector_service.search_documents.return_value = []
     request = SearchRequest(
         query="term",
@@ -197,7 +191,6 @@ async def test_search_documents_strips_metadata_when_disabled(
     mock_context: MagicMock,
 ) -> None:
     """Metadata stripping should remove metadata payloads."""
-
     mock_vector_service.search_documents.return_value = [
         SearchRecord(
             id="doc-1",

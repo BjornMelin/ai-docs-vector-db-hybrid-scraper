@@ -77,19 +77,16 @@ def _otel_modules(resource_factory: MagicMock | None = None) -> dict[str, object
 class TestInitializeObservability:
     def setup_method(self) -> None:
         """Reset the observability state between test cases."""
-
         init_module._STATE.tracer_provider = None
         init_module._STATE.meter_provider = None
 
     def test_disabled_config_short_circuits(self) -> None:
         """Verify disabled configurations skip initialisation logic."""
-
         assert initialize_observability(ObservabilityConfig(enabled=False)) is False
         assert is_observability_enabled() is False
 
     def test_successful_initialisation(self) -> None:
         """Ensure a valid configuration wires OpenTelemetry components."""
-
         config = ObservabilityConfig(service_name="tests", enabled=True)
         resource_mock = MagicMock()
         resource_mock.create.return_value = MagicMock()
@@ -107,7 +104,6 @@ class TestInitializeObservability:
 
     def test_initialisation_from_settings(self) -> None:
         """Settings objects should be coerced into runtime observability configs."""
-
         settings = SimpleNamespace(
             app_name="Test Application",
             version="9.9.9",
@@ -145,7 +141,6 @@ class TestInitializeObservability:
 
     def test_settings_respect_disabled_instrumentations(self) -> None:
         """Explicitly disabled instrumentations should not be re-enabled."""
-
         settings = SimpleNamespace(
             app_name="Test Application",
             version="9.9.9",
@@ -175,14 +170,12 @@ class TestInitializeObservability:
 
     def test_reinitialisation_is_idempotent(self) -> None:
         """Confirm repeated initialisation calls keep state stable."""
-
         with patch.dict("sys.modules", _otel_modules()):
             initialize_observability(ObservabilityConfig())
             initialize_observability(ObservabilityConfig())
 
     def test_shutdown_resets_state(self) -> None:
         """Check shutdown clears providers and invokes resource cleanup."""
-
         tracer_provider = MagicMock()
         meter_provider = MagicMock()
         init_module._STATE.tracer_provider = tracer_provider

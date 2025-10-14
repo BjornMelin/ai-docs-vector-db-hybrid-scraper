@@ -10,7 +10,6 @@ from src.mcp_services.system_service import SystemService
 
 def test_initializes_with_dependency_managers() -> None:
     """Constructor should register FastMCP tools with supplied managers."""
-
     embedding_manager = Mock(name="EmbeddingManager")
     health_manager = Mock(name="HealthCheckManager")
     vector_service = Mock(name="VectorStoreService")
@@ -52,7 +51,6 @@ def test_initializes_with_dependency_managers() -> None:
 @pytest.mark.asyncio()
 async def test_get_service_info_returns_expected_payload() -> None:
     """Service info should enumerate available capabilities."""
-
     vector_service = Mock()
     embedding_manager = Mock()
     health_manager = Mock()
@@ -93,7 +91,6 @@ async def test_get_service_info_returns_expected_payload() -> None:
 
 def test_get_mcp_server_returns_fastmcp_instance() -> None:
     """The getter should return the configured FastMCP server."""
-
     vector_service = Mock()
     embedding_manager = Mock()
     health_manager = Mock()

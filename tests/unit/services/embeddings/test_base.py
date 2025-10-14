@@ -415,7 +415,6 @@ class TestProviderIntegration:
     @pytest.mark.asyncio
     async def test_concurrent_provider_usage(self):
         """Test concurrent usage of provider."""
-
         provider = ConcreteEmbeddingProvider()
 
         async def generate_batch(batch_id: int) -> list[list[float]]:

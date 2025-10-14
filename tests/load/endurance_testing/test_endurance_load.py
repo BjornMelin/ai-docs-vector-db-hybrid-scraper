@@ -58,7 +58,6 @@ class TestEnduranceLoad:
         @env.events.stats_reset.add_listener  # pyright: ignore[reportAttributeAccessIssue]
         def collect_time_series_metrics(**__kwargs):
             """Collect metrics at regular intervals."""
-
             current_time = time.time()
             process = psutil.Process(os.getpid())
             memory_mb = process.memory_info().rss / 1024 / 1024
@@ -261,7 +260,6 @@ class TestEnduranceLoad:
 
         async def cache_aware_operation(**_kwargs):
             """Operation that uses cache."""
-
             # Generate cache key from operation parameters
             query = _kwargs.get("query", f"query_{random.randint(1, 100)}")
             cache_key = hashlib.sha256(query.encode()).hexdigest()[:8]
@@ -493,7 +491,6 @@ class TestEnduranceLoad:
 
     def _stable_operation(self, **__kwargs):
         """Stable operation for endurance testing."""
-
         # Consistent, predictable operation
         base_time = 0.05
         variation = random.uniform(-0.01, 0.01)  # Small variation
@@ -643,7 +640,6 @@ class MemoryLeakSimulator:
 
     def allocate_memory(self, size_mb: float):
         """Simulate memory allocation."""
-
         # Simulate memory allocation (using list as proxy)
         data = [random.random() for _ in range(int(size_mb * 1000))]
         self.allocated_memory.append(

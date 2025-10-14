@@ -26,7 +26,6 @@ def classifier_types() -> dict[str, Any]:
     Returns:
         dict[str, Any]: Mapping of classifier support types for the test suite.
     """
-
     classifier_module = load_content_intelligence_module("classifiers")
     models_module = load_content_intelligence_module("models")
     return {
@@ -46,7 +45,6 @@ def content_type_enum(classifier_types: dict[str, Any]) -> ContentType:
     Returns:
         ContentType: Enumeration representing classified content categories.
     """
-
     return classifier_types["content_type_enum"]
 
 
@@ -62,7 +60,6 @@ def classification_cls(
     Returns:
         type[ContentClassification]: Dataclass type used for result validation.
     """
-
     return classifier_types["classification_cls"]
 
 
@@ -76,7 +73,6 @@ def _one_hot(index: int, size: int) -> list[float]:
     Returns:
         list[float]: One-hot encoded vector with a deterministic pattern.
     """
-
     return [1.0 if position == index else 0.0 for position in range(size)]
 
 
@@ -87,7 +83,6 @@ def deterministic_embedding_manager() -> AsyncMock:
     Returns:
         AsyncMock: Stubbed embedding manager with deterministic responses.
     """
-
     reference_order = [
         "This is documentation that explains how to use a software system or API.",
         "This is source code with functions, classes, and programming logic.",
@@ -142,7 +137,6 @@ def failing_classifier_factory(
         Callable[[], ContentClassifier]: Factory producing classifiers with
             failing embedding managers.
     """
-
     classifier_cls = classifier_types["classifier_cls"]
 
     async def _generate_embeddings(**_kwargs: Any) -> dict[str, Any]:
@@ -170,7 +164,6 @@ async def classifier(
     Returns:
         ContentClassifier: Initialized classifier instance for tests.
     """
-
     classifier_cls = classifier_types["classifier_cls"]
     instance = classifier_cls(embedding_manager=deterministic_embedding_manager)
     await instance.initialize()
@@ -194,7 +187,6 @@ class TestContentClassifier:
             classification_cls: Dataclass type for classification results.
             content_type_enum: Enumeration representing content types.
         """
-
         content = """
 
         def calculate_sum(numbers: list[int]) -> int:
@@ -227,7 +219,6 @@ class TestContentClassifier:
             deterministic_embedding_manager: Embedding manager stub used for assertions.
             content_type_enum: Enumeration representing content types.
         """
-
         content = (
             "Comprehensive documentation guide describing API authentication flows."
         )
@@ -257,7 +248,6 @@ class TestContentClassifier:
                 embeddings.
             classification_cls: Dataclass type for classification results.
         """
-
         classifier_instance = failing_classifier_factory()
         await classifier_instance.initialize()
 
@@ -284,7 +274,6 @@ class TestContentClassifier:
             classifier: Initialized classifier under test.
             content_type_enum: Enumeration representing content types.
         """
-
         scores = await classifier._semantic_classification(  # pylint: disable=protected-access
             "API reference documentation"
         )

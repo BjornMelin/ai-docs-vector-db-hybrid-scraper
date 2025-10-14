@@ -292,7 +292,6 @@ class SearchRequest(BaseModel):
         cls, value: dict[str, Any] | None
     ) -> dict[str, Any] | None:
         """Validate filter mappings to prevent injection and DoS attacks."""
-
         if value is None:
             return None
 
@@ -316,7 +315,6 @@ class SearchRequest(BaseModel):
         cls, value: list[dict[str, Any]] | None
     ) -> list[dict[str, Any]] | None:
         """Validate exclude filter payloads."""
-
         if value is None:
             return None
 
@@ -338,7 +336,6 @@ class SearchRequest(BaseModel):
         cls, value: list[dict[str, Any]] | None
     ) -> list[dict[str, Any]] | None:
         """Validate nested filter groups with depth and size limits."""
-
         if value is None:
             return None
 
@@ -354,7 +351,6 @@ class SearchRequest(BaseModel):
     @classmethod
     def _validate_query_vector(cls, value: list[float] | None) -> list[float] | None:
         """Validate dense query vectors for bounds and numeric stability."""
-
         if value is None:
             return None
 
@@ -399,7 +395,6 @@ class SearchRequest(BaseModel):
         cls, value: dict[int, float] | None
     ) -> dict[int, float] | None:
         """Validate sparse vector representations."""
-
         if value is None:
             return None
 
@@ -445,7 +440,6 @@ class SearchRequest(BaseModel):
     @model_validator(mode="after")
     def _validate_strategy(self) -> SearchRequest:
         """Cross-field validation for strategy, vector type, and dimensions."""
-
         if (
             self.vector_type in {VectorType.SPARSE, VectorType.HYBRID}
             and not self.sparse_vector
@@ -500,7 +494,6 @@ class SearchRequest(BaseModel):
         Raises:
             TypeError: If the payload type cannot be normalised.
         """
-
         if isinstance(payload, cls):
             if not overrides:
                 return payload
@@ -522,7 +515,6 @@ class SearchRequest(BaseModel):
     @classmethod
     def _ensure_valid_filter_key(cls, key: Any) -> str:
         """Validate a filter key name."""
-
         if not isinstance(key, str):
             msg = "Filter keys must be strings"
             raise TypeError(msg)
@@ -536,7 +528,6 @@ class SearchRequest(BaseModel):
     @classmethod
     def _validate_filter_value(cls, value: Any) -> Any:
         """Validate an individual filter value."""
-
         if value is None:
             return value
 
@@ -567,7 +558,6 @@ class SearchRequest(BaseModel):
     @classmethod
     def _validate_filter_group(cls, group: Mapping[str, Any], *, depth: int) -> None:
         """Validate nested filter group structure."""
-
         if not isinstance(group, Mapping):
             msg = "Filter groups must be mappings"
             raise TypeError(msg)

@@ -35,7 +35,6 @@ _INDEX_DEFINITIONS: dict[str, models.PayloadSchemaType] = {
 
 def _record_to_dict(record: SearchRecord) -> dict[str, Any]:
     """Serialize a search record into a plain dictionary."""
-
     payload: dict[str, Any] = {
         "id": record.id,
         "score": record.score,
@@ -74,7 +73,6 @@ def _normalise_summary(
     request_id: str | None = None,
 ) -> GenericDictResponse:
     """Shape summary metadata into a stable GenericDictResponse."""
-
     indexed_fields = summary.get("indexed_fields", [])
     points = summary.get("points_count", 0)
     payload_schema = summary.get("payload_schema", {})
@@ -98,7 +96,6 @@ def register_tools(
     vector_service: VectorStoreService,
 ) -> None:
     """Register payload indexing helpers with the MCP server."""
-
     validator = MLSecurityValidator.from_unified_config()
 
     @mcp.tool()
@@ -131,7 +128,6 @@ def register_tools(
         ctx: Context,
     ) -> GenericDictResponse:
         """List existing payload indexes for a collection."""
-
         safe_name = validator.validate_collection_name(collection_name)
         service = vector_service
         summary = await service.get_payload_index_summary(safe_name)
@@ -145,7 +141,6 @@ def register_tools(
         ctx: Context,
     ) -> ReindexCollectionResponse:
         """Reindex payload fields for an existing collection."""
-
         request_id = str(uuid4())
         await ctx.info(
             "Reindexing payload fields for collection: "
@@ -182,7 +177,6 @@ def register_tools(
         ctx: Context | None = None,
     ) -> GenericDictResponse:
         """Benchmark filtered search performance on a collection."""
-
         if ctx:
             await ctx.info(
                 "Benchmarking filtered search on %s",  # type: ignore[arg-type]

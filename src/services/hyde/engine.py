@@ -252,7 +252,6 @@ class HyDEQueryEngine(BaseService):
         self, query: str, domain: str | None, use_cache: bool
     ) -> list[float]:
         """Get HyDE embedding from cache or generate new one."""
-
         cache_text = self._build_embedding_cache_text(query, domain)
 
         # Try cache first
@@ -308,7 +307,6 @@ class HyDEQueryEngine(BaseService):
 
     def _resolve_hyde_embedding_dimensions(self) -> int | None:
         """Infer HyDE embedding dimensionality for cache key alignment."""
-
         if self._hyde_embedding_dimensions is not None:
             return self._hyde_embedding_dimensions
 
@@ -332,7 +330,6 @@ class HyDEQueryEngine(BaseService):
         Returns:
             Deterministic text payload used as embedding cache key.
         """
-
         domain_part = domain or "general"
         return f"{query}||domain::{domain_part}"
 
@@ -473,7 +470,6 @@ class HyDEQueryEngine(BaseService):
 
     def get_performance_metrics(self) -> dict[str, Any]:
         """Get aggregated performance metrics for the HyDE engine."""
-
         avg_search_time = (
             self.total_search_time / self.search_count if self.search_count > 0 else 0.0
         )
@@ -541,13 +537,11 @@ class HyDEQueryEngine(BaseService):
     @property
     def total_search_time(self) -> float:
         """Aggregate search latency recorded by the engine."""
-
         return self._total_search_time
 
     @total_search_time.setter
     def total_search_time(self, value: float) -> None:
         """Persist aggregate search time."""
-
         try:
             normalized = float(value)
         except (TypeError, ValueError) as exc:  # pragma: no cover - exercised via tests

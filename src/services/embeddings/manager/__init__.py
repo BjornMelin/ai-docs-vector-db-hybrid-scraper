@@ -42,7 +42,6 @@ logger = logging.getLogger(__name__)
 
 def _normalize_benchmarks(raw: Any) -> dict[str, dict[str, Any]]:
     """Convert benchmark mappings to plain dictionaries."""
-
     if not raw:
         return {}
 
@@ -83,7 +82,6 @@ class EmbeddingManager:
             cache_manager: Optional externally managed CacheManager instance.
             budget_limit: Daily budget limit in USD, if set.
         """
-
         self.config = config
         self._initialized = False
         self._usage: UsageTracker | None = None
@@ -152,13 +150,11 @@ class EmbeddingManager:
     @property
     def budget_limit(self) -> float | None:
         """Expose configured daily budget limit."""
-
         return self._budget_limit
 
     @budget_limit.setter
     def budget_limit(self, value: float | None) -> None:
         """Update budget limit and synchronize usage tracker."""
-
         self._budget_limit = value
         if self._usage is not None:
             self._usage.set_budget_limit(value)
@@ -166,7 +162,6 @@ class EmbeddingManager:
     @property
     def usage_stats(self) -> UsageStats:
         """Return current usage statistics."""
-
         if self._usage is None:
             self._usage = UsageTracker(self._smart_config, self._budget_limit)
             self._pipeline.set_usage_tracker(self._usage)
@@ -178,7 +173,6 @@ class EmbeddingManager:
         Initializes OpenAI provider if API key is available and FastEmbed provider
         for local embeddings. At least one provider must initialize successfully.
         """
-
         if self._initialized:
             return
 
@@ -199,7 +193,6 @@ class EmbeddingManager:
         Shuts down all initialized providers and closes cache manager
         if initialized. Errors during cleanup are logged but not raised.
         """
-
         await self._provider_registry.cleanup()
         self._initialized = False
 
@@ -231,7 +224,6 @@ class EmbeddingManager:
         Returns:
             tuple: (provider, model_name, estimated_cost, reasoning)
         """
-
         options = GenerationOptions(
             quality_tier=quality_tier,
             provider_name=provider_name,
@@ -268,7 +260,6 @@ class EmbeddingManager:
             cost: Monetary cost incurred by the request.
             tier: Quality tier label associated with the request.
         """
-
         if self._usage is None:
             self._usage = UsageTracker(self._smart_config, self._budget_limit)
             self._pipeline.set_usage_tracker(self._usage)
@@ -302,7 +293,6 @@ class EmbeddingManager:
             dict[str, Any]: Aggregated counters grouped by tier, provider, and
             budget metadata for reporting.
         """
-
         if self._usage is None:
             self._usage = UsageTracker(self._smart_config, self._budget_limit)
         return self._usage.report()
@@ -350,7 +340,6 @@ class EmbeddingManager:
                 - sparse_embeddings: Sparse embeddings if requested
                 - cache_hit: Whether result came from cache
         """
-
         if not self._initialized:
             msg = "Manager not initialized"
             raise EmbeddingServiceError(msg)
@@ -460,7 +449,7 @@ class EmbeddingManager:
         embedding_section = benchmark_data["embedding"]
         if not isinstance(embedding_section, dict):
             msg = "'embedding' section must be a mapping"
-            raise ValueError(msg)
+            raise TypeError(msg)
 
         previous_benchmarks = self._benchmarks.copy()
         previous_smart_config = self._smart_config
@@ -640,7 +629,6 @@ class EmbeddingManager:
         Returns:
             TextAnalysis: Structured analysis summary.
         """
-
         return self._selection.analyze(texts)
 
     def get_smart_provider_recommendation(

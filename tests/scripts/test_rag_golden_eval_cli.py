@@ -18,7 +18,6 @@ from scripts.eval.rag_golden_eval import (
 @pytest.fixture
 def golden_dataset(tmp_path: Path) -> Path:
     """Write a minimal golden dataset for CLI smoke tests."""
-
     dataset = tmp_path / "golden.jsonl"
     row = {
         "query": "What is LangGraph?",
@@ -87,7 +86,6 @@ async def test_cli_reports_success(
     tmp_path: Path, golden_dataset: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Running the CLI without budgets should exit successfully and emit JSON."""
-
     _install_orchestrator_stub(monkeypatch)
 
     output_path = tmp_path / "report.json"
@@ -110,7 +108,6 @@ async def test_cli_budget_violation_raises(
     tmp_path: Path, golden_dataset: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Budgets below achievable values should cause a SystemExit(1)."""
-
     _install_orchestrator_stub(monkeypatch)
     monkeypatch.setattr(
         "scripts.eval.rag_golden_eval._enforce_thresholds",

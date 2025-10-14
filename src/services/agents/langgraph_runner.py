@@ -55,7 +55,6 @@ _OP_AGENT_RETRIEVAL = "agent.graph.retrieval"
 
 def _serialise_document(document: Any) -> dict[str, Any]:
     """Return a JSON-serialisable representation of a retrieval document."""
-
     identifier = getattr(document, "id", None)
     score = float(getattr(document, "score", 0.0))
     metadata = getattr(document, "metadata", None)
@@ -102,7 +101,6 @@ class AgentErrorCode(str, Enum):
 
 def _error_entry(source: str, code: AgentErrorCode, **extra: Any) -> dict[str, Any]:
     """Construct a structured error payload with optional metadata."""
-
     entry: dict[str, Any] = {"source": source, "code": code.value}
     for key, value in extra.items():
         if value is not None:
@@ -112,7 +110,6 @@ def _error_entry(source: str, code: AgentErrorCode, **extra: Any) -> dict[str, A
 
 def _map_tool_error_code(exc: ToolExecutionError) -> AgentErrorCode:
     """Translate ToolExecutionError subclasses into canonical codes."""
-
     if isinstance(exc, ToolExecutionTimeout):
         return AgentErrorCode.TOOL_TIMEOUT
     if isinstance(exc, ToolExecutionInvalidArgument):
@@ -191,7 +188,6 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
         GraphRunner,
     ]:
         """Construct discovery, execution service, retrieval helper, and runner."""
-
         settings = get_settings()
         agentic_cfg = getattr(settings, "agentic", None)
 
@@ -245,7 +241,6 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
             ``GraphSearchOutcome`` containing retrieval results and operational
             telemetry.
         """
-
         session_identifier = session_id or str(uuid4())
         effective_top_k = (
             self._default_retrieval_limit if top_k is None else max(1, top_k)
@@ -286,7 +281,6 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
         Returns:
             ``GraphAnalysisOutcome`` describing the aggregated analysis result.
         """
-
         session_identifier = session_id or str(uuid4())
         state: AgenticGraphState = {
             "mode": "analysis",

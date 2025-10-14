@@ -41,7 +41,6 @@ async def search_documents(
     Returns:
         Canonical search response composed of ``SearchRecord`` entries.
     """
-
     return await _perform_search(request, vector_service)
 
 
@@ -71,7 +70,6 @@ async def search_documents_get(
     Returns:
         Canonical search response payload.
     """
-
     request = SearchRequest(query=q, limit=limit, collection=collection, offset=offset)
     return await search_documents(request, vector_service)
 
@@ -81,7 +79,6 @@ async def _perform_search(
     vector_service: VectorStoreService,
 ) -> SearchResponse:
     """Dispatch search execution based on the request contents."""
-
     started = perf_counter()
     collection = request.collection or "documentation"
 
@@ -119,7 +116,6 @@ async def _search_by_query(
     collection: str,
 ) -> list[SearchRecord]:
     """Execute a dense similarity search."""
-
     return await execute_service_call(
         operation="search.query",
         logger=logger,
@@ -147,7 +143,6 @@ async def _search_by_vector(
     filters: dict[str, Any] | None,
 ) -> list[SearchRecord]:
     """Execute a vector-only search."""
-
     if not vector:
         raise HTTPException(
             status_code=400,

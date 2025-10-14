@@ -29,7 +29,6 @@ def async_to_sync_click(cli_group: click.Group) -> None:
     Args:
         cli_group: Click group whose commands should be wrapped.
     """
-
     if cli_group in _wrapped_cli_groups:
         return
 

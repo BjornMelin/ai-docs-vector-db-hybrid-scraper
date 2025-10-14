@@ -89,7 +89,6 @@ class IsolatedTestResources:
 
     def cleanup(self):
         """Clean up allocated resources."""
-
         for temp_dir in self._temp_dirs:
             if temp_dir.exists():
                 with suppress(Exception):

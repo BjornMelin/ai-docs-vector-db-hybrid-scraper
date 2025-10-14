@@ -15,7 +15,6 @@ class TestEmbeddingManagerBenchmarks:
     @pytest.fixture
     def mock_config(self):
         """Create a mock configuration."""
-
         config = MagicMock(spec=Settings)
 
         # Mock cache config

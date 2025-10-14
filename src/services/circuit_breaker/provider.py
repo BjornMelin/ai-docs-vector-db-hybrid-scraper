@@ -41,7 +41,6 @@ def _build_fallback_manager() -> CircuitBreakerManager:
 
 async def get_circuit_breaker_manager() -> CircuitBreakerManager:
     """Return the shared CircuitBreakerManager instance from the DI container."""
-
     container = get_container()
     if container is None:
         logger.debug("DI container not initialized; using fallback circuit breaker")

@@ -737,7 +737,6 @@ def create_load_test_environment(
     Returns:
         Configured Locust environment
     """
-
     setup_logging("INFO", None)
 
     if user_classes is None:

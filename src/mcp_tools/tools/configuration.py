@@ -27,7 +27,6 @@ def _should_mask(key: str) -> bool:
 
 def _sanitize(value: Any) -> Any:
     """Convert config structures to serializable data with masked secrets."""
-
     processed = value
     if isinstance(processed, Enum):
         return processed.value
@@ -49,7 +48,6 @@ def _sanitize(value: Any) -> Any:
 
 def _collect_provider_warnings(config: Settings) -> list[str]:
     """Identify potential provider configuration gaps."""
-
     warnings: list[str] = []
     embedding_provider = getattr(config, "embedding_provider", None)
     openai_settings = getattr(config, "openai", None)
@@ -84,7 +82,6 @@ async def _grouping_support_status(
     vector_service: VectorStoreService,
 ) -> tuple[list[str], bool | None]:
     """Check QueryPointGroups readiness and emit warnings if required."""
-
     qdrant_settings = getattr(config, "qdrant", None)
     if not getattr(qdrant_settings, "enable_grouping", False):
         return [], None
@@ -105,7 +102,6 @@ async def _grouping_support_status(
 
 def _extract_child(current: Any, token: str) -> Any:
     """Traverse config structures case-insensitively and with list indexes."""
-
     candidates = {token, token.lower(), token.upper()}
     if isinstance(current, Mapping):
         for candidate in candidates:
@@ -130,7 +126,6 @@ def _extract_child(current: Any, token: str) -> Any:
 
 def _resolve_key(config: Settings, key: str) -> Any:
     """Resolve dotted configuration keys (case-insensitive)."""
-
     parts = [part for part in key.replace("__", ".").split(".") if part]
     current: Any = config
     for part in parts:
@@ -145,7 +140,6 @@ async def _probe_grouping_support(
     vector_service: VectorStoreService,
 ) -> bool | None:
     """Detect whether the active vector service supports QueryPointGroups."""
-
     try:
         server_side_probe = getattr(
             vector_service, "supports_server_side_grouping", None
@@ -175,7 +169,6 @@ def register_tools(
     vector_service: VectorStoreService,
 ):
     """Register configuration management tools."""
-
     config_loader = load_unified_config
 
     @mcp.tool()
@@ -184,7 +177,6 @@ def register_tools(
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Return configuration values from the unified settings model."""
-
         try:
             config: Settings = cast(Settings, config_loader())
             if key:
@@ -217,7 +209,6 @@ def register_tools(
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Validate configuration health and highlight potential issues."""
-
         try:
             config: Settings = cast(Settings, config_loader())
             issues: list[str] = []

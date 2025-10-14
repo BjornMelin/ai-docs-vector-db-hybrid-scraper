@@ -100,7 +100,6 @@ class FeatureFlagManager:
 
     def _create_flagsmith_client(self) -> None:
         """Create and configure the Flagsmith client."""
-
         assert Flagsmith is not None
         self._client = Flagsmith(
             environment_key=self.config.environment_key,
@@ -110,7 +109,6 @@ class FeatureFlagManager:
 
     def _handle_flagsmith_import_error(self) -> None:
         """Handle Flagsmith import errors gracefully."""
-
         logger.warning(
             "Flagsmith not available. Install with: pip install flagsmith"
             " Using fallback tier: %s",
@@ -124,7 +122,6 @@ class FeatureFlagManager:
         Returns:
             DeploymentTier: Current deployment configuration tier
         """
-
         if not self._initialized:
             await self.initialize()
 
@@ -142,7 +139,6 @@ class FeatureFlagManager:
         Returns:
             bool: True if feature is enabled
         """
-
         if not self._initialized:
             await self.initialize()
 
@@ -154,7 +150,6 @@ class FeatureFlagManager:
 
     async def _check_feature_flag(self, feature_name: str, user_id: str | None) -> bool:
         """Check feature flag using client or tier fallback."""
-
         if self._client:
             # Use Flagsmith client
             flags = await self._get_flags_from_client(user_id)
@@ -188,7 +183,6 @@ class FeatureFlagManager:
         self, config_key: str, default: Any, user_id: str | None
     ) -> Any:
         """Get configuration value from flags or tier fallback."""
-
         if self._client:
             # Use Flagsmith client for remote config
             flags = await self._get_flags_from_client(user_id)
@@ -205,7 +199,6 @@ class FeatureFlagManager:
         Returns:
             bool: True if feature is available in current tier
         """
-
         tier_features = {
             DeploymentTier.PERSONAL: {
                 "basic_search",
@@ -248,7 +241,6 @@ class FeatureFlagManager:
         Returns:
             Any: Configuration value for current tier
         """
-
         tier_configs = {
             DeploymentTier.PERSONAL: {
                 "max_concurrent_requests": 10,
@@ -284,7 +276,6 @@ class FeatureFlagManager:
         Returns:
             DeploymentTier: Determined tier
         """
-
         try:
             return await self._determine_tier_from_flags_or_env()
         except Exception:
@@ -293,7 +284,6 @@ class FeatureFlagManager:
 
     async def _determine_tier_from_flags_or_env(self) -> DeploymentTier:
         """Determine tier from feature flags or environment."""
-
         if self._client:
             return await self._determine_tier_from_flags()
 
@@ -303,7 +293,6 @@ class FeatureFlagManager:
 
     async def _determine_tier_from_flags(self) -> DeploymentTier:
         """Determine tier from feature flags."""
-
         flags = await self._get_flags_from_client()
 
         if flags.get("enterprise_features_enabled", False):
@@ -323,7 +312,6 @@ class FeatureFlagManager:
         Returns:
             dict[str, Any]: Feature flags and config values
         """
-
         if not self._client:
             return {}
 
@@ -335,7 +323,6 @@ class FeatureFlagManager:
 
     async def _fetch_and_cache_flags(self, user_id: str | None) -> dict[str, Any]:
         """Fetch flags from client and handle caching."""
-
         cache_key = f"flags_{user_id or 'anonymous'}"
         current_time = time.time()
 
@@ -354,7 +341,6 @@ class FeatureFlagManager:
 
     def _is_cache_valid(self, cache_key: str, current_time: float) -> bool:
         """Check if cached flags are still valid."""
-
         return (
             cache_key in self._cache
             and current_time - self._cache_timestamps.get(cache_key, 0)
@@ -363,7 +349,6 @@ class FeatureFlagManager:
 
     def _fetch_flags_from_flagsmith(self, user_id: str | None) -> Any:
         """Fetch flags from Flagsmith service."""
-
         assert self._client is not None
         if user_id:
             identity = {"identifier": user_id}
@@ -372,7 +357,6 @@ class FeatureFlagManager:
 
     def _convert_flags_to_dict(self, flags_response: Any) -> dict[str, Any]:
         """Convert Flagsmith response to simple dict format."""
-
         flags = {}
         for flag in flags_response:
             flags[flag.feature.name] = flag.enabled
@@ -387,7 +371,6 @@ class FeatureFlagManager:
 
     def _parse_flag_value(self, value: str) -> Any:
         """Parse flag value to appropriate type."""
-
         # Try to parse as number or boolean
         if value.lower() in ("true", "false"):
             return value.lower() == "true"
@@ -397,7 +380,6 @@ class FeatureFlagManager:
 
     async def cleanup(self) -> None:
         """Cleanup feature flag manager resources."""
-
         if self._client:
             # Flagsmith client doesn't require explicit cleanup
             pass

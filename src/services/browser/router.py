@@ -75,7 +75,6 @@ class BrowserRouter:
 
     async def initialize(self) -> None:
         """Initialize all providers."""
-
         if self._initialized:
             return
         for provider in self._providers.values():
@@ -90,7 +89,6 @@ class BrowserRouter:
 
     async def cleanup(self) -> None:
         """Cleanup all providers."""
-
         for provider in self._providers.values():
             await provider.close()
         self._initialized = False
@@ -98,12 +96,10 @@ class BrowserRouter:
 
     def is_initialized(self) -> bool:
         """Return True when providers are initialized."""
-
         return self._initialized
 
     def get_provider(self, kind: ProviderKind) -> BrowserProvider | None:
         """Return the provider instance for a given kind."""
-
         return self._providers.get(kind)
 
     def _deadline(self, request: ScrapeRequest) -> float:
@@ -160,7 +156,6 @@ class BrowserRouter:
 
     async def scrape(self, request: ScrapeRequest) -> BrowserResult:
         """Execute a scrape with tier fallbacks."""
-
         if not self._initialized:
             await self.initialize()
 

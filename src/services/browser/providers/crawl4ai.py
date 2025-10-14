@@ -45,7 +45,6 @@ class Crawl4AIProvider(BrowserProvider):
 
     async def initialize(self) -> None:
         """Instantiate and start the Crawl4AI crawler."""
-
         browser_config = BrowserConfig(
             browser_type=self._settings.browser_type,
             headless=self._settings.headless,
@@ -57,7 +56,6 @@ class Crawl4AIProvider(BrowserProvider):
 
     async def close(self) -> None:
         """Shutdown crawler resources."""
-
         if self._crawler:
             await self._crawler.close()
             self._crawler = None
@@ -94,7 +92,6 @@ class Crawl4AIProvider(BrowserProvider):
 
     async def scrape(self, request: ScrapeRequest) -> BrowserResult:
         """Execute a Crawl4AI scrape."""
-
         if self._crawler is None:  # pragma: no cover - guarded by lifecycle
             raise RuntimeError("Provider not initialized")
 

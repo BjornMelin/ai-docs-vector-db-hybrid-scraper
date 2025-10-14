@@ -284,7 +284,8 @@ class TestResourceExhaustion:
     @pytest.mark.asyncio
     async def test_cpu_saturation_parallel_embeddings(self, load_test_runner):
         """Test system behavior under CPU saturation from parallel
-        embedding generation."""
+        embedding generation.
+        """
         monitor = ResourceMonitor(interval=0.5)
         monitor.start_monitoring()
 

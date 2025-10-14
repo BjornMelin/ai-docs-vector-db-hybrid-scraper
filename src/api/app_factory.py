@@ -53,7 +53,6 @@ def create_app() -> FastAPI:
     Returns:
         FastAPI: Configured FastAPI application instance.
     """
-
     settings = get_settings()
     app = FastAPI(
         title=settings.app_name,
@@ -85,7 +84,6 @@ def _parse_allowed_origins(raw_value: str) -> list[str]:
     Returns:
         list[str]: Normalised origins with surrounding whitespace removed.
     """
-
     return [origin.strip() for origin in raw_value.split(",") if origin.strip()]
 
 
@@ -98,7 +96,6 @@ def _resolve_allowed_cors_origins(settings: Settings) -> list[str]:
     Returns:
         list[str]: List of allowed origins for CORS policy.
     """
-
     env_value = os.getenv("CORS_ALLOWED_ORIGINS")
     if env_value:
         parsed = _parse_allowed_origins(env_value)
@@ -130,7 +127,6 @@ def _configure_cors(app: FastAPI, *, settings: Settings) -> None:
         app: FastAPI application being configured.
         settings: Settings instance providing CORS configuration.
     """
-
     allowed_origins = _resolve_allowed_cors_origins(settings)
     allow_all = "*" in allowed_origins
     allow_credentials = not allow_all
@@ -159,7 +155,6 @@ def _apply_middleware(app: FastAPI) -> None:
     Args:
         app: FastAPI application receiving middleware defaults.
     """
-
     apply_defaults(app)
 
 
@@ -170,7 +165,6 @@ def _configure_routes(app: FastAPI, settings: Settings) -> None:
         app: FastAPI application where routes are registered.
         settings: Application settings used for configuration.
     """
-
     if config_router:
         app.include_router(config_router, prefix="/api/v1")
 
@@ -184,7 +178,6 @@ def _install_application_routes(app: FastAPI) -> None:
     Args:
         app: FastAPI application receiving the routers.
     """
-
     required_modules = {
         "search": "src.api.routers.v1.search",
         "documents": "src.api.routers.v1.documents",
@@ -237,7 +230,6 @@ def _configure_common_routes(app: FastAPI, settings: Settings) -> None:
         Returns:
             JSONResponse containing app metadata and enabled features.
         """
-
         try:
             feature_flags = settings.get_feature_flags()
         except Exception:  # pragma: no cover - defensive logging
@@ -266,7 +258,6 @@ def _configure_common_routes(app: FastAPI, settings: Settings) -> None:
         Returns:
             JSONResponse describing aggregate dependency health.
         """
-
         await checker.check_all()
         summary = checker.get_health_summary()
         overall_status = summary.get("overall_status", HealthStatus.UNKNOWN.value)
@@ -292,7 +283,6 @@ def _configure_common_routes(app: FastAPI, settings: Settings) -> None:
         Returns:
             Dictionary with descriptive metadata about the API surface.
         """
-
         try:
             feature_flags = settings.get_feature_flags()
         except Exception:  # pragma: no cover - defensive logging
@@ -319,7 +309,6 @@ def _configure_common_routes(app: FastAPI, settings: Settings) -> None:
         Returns:
             JSONResponse enumerating all available feature toggles.
         """
-
         try:
             feature_flags = settings.get_feature_flags()
         except Exception:  # pragma: no cover - defensive logging
@@ -362,7 +351,6 @@ def _build_app_lifespan(settings: Settings):
 
 async def _ping_dragonfly() -> None:
     """Perform a best-effort ping to the Dragonfly cache."""
-
     container = get_container()
     if container is None:
         return
@@ -377,7 +365,6 @@ async def _ping_dragonfly() -> None:
 
 async def _init_qdrant_client() -> None:
     """Perform a lightweight readiness check against the Qdrant client."""
-
     container = get_container()
     if container is None:
         return
@@ -401,7 +388,6 @@ def _cache_initialization_enabled(settings: Settings) -> bool:
     Returns:
         bool: ``True`` when cache initialisation should be performed.
     """
-
     cache_config = getattr(settings, "cache", None)
     if cache_config is None:
         return False
@@ -414,7 +400,6 @@ def _content_intelligence_available() -> bool:
     Returns:
         bool: ``True`` if the module is available in the environment.
     """
-
     return (
         importlib.util.find_spec("src.services.content_intelligence.service")
         is not None
@@ -427,7 +412,6 @@ async def _ensure_database_ready(settings: Settings) -> None:
     Args:
         settings: Application settings controlling cache initialisation.
     """
-
     await resolve_vector_store_service()
 
     if not _cache_initialization_enabled(settings):
@@ -443,7 +427,6 @@ async def _initialize_services(settings: Settings) -> None:
     Args:
         settings: Application settings used to drive service initialisation.
     """
-
     service_initializers: dict[str, Callable[[], Awaitable[Any]]] = {
         "embedding_service": resolve_embedding_manager,
         "vector_db_service": resolve_vector_store_service,
@@ -474,7 +457,6 @@ async def _initialize_services(settings: Settings) -> None:
 
 def get_app_container(app: FastAPI) -> ApplicationContainer:
     """Return the dependency-injector container from a FastAPI application."""
-
     container = getattr(app.state, "container", None)
     if container is None:
         msg = "DI container is not attached to application state"

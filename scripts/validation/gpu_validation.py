@@ -56,7 +56,6 @@ class ValidationReport:
 
 def _import_optional(name: str):
     """Import a module optionally, returning None if not found."""
-
     try:
         return importlib.import_module(name)
     except ModuleNotFoundError:
@@ -65,7 +64,6 @@ def _import_optional(name: str):
 
 def _tensor_exception_types(torch_module) -> tuple[type[BaseException], ...]:
     """Return tensor execution exceptions worth reporting explicitly."""
-
     exceptions: list[type[BaseException]] = [RuntimeError]
 
     out_of_memory = getattr(torch_module, "OutOfMemoryError", None)
@@ -84,7 +82,6 @@ def _torch_device_checks(
     torch_module, require_gpu: bool
 ) -> tuple[list[CheckResult], dict[str, Any]]:
     """Perform torch device checks and return results and metadata."""
-
     checks = []
     cuda_available = torch_module.cuda.is_available()
     device_count = torch_module.cuda.device_count() if cuda_available else 0
@@ -147,7 +144,6 @@ def _torch_device_checks(
 
 def _xformers_checks(torch_module, xformers_module, require_gpu: bool) -> CheckResult:
     """Perform xformers checks and return the result."""
-
     if xformers_module is None:
         status = "failed" if require_gpu else "warning"
         return CheckResult("xformers", status, "xformers not installed")
@@ -179,7 +175,6 @@ def _xformers_checks(torch_module, xformers_module, require_gpu: bool) -> CheckR
 
 def _flash_attention_check(require_gpu: bool) -> tuple[CheckResult, str | None]:
     """Check if flash attention is available and ready for use."""
-
     flash_module = _import_optional("flash_attn")
     interface_module = _import_optional("flash_attn.flash_attn_interface")
     if flash_module is None:
@@ -208,7 +203,6 @@ def _import_only_check(
     name: str, module_name: str, *, require_gpu: bool
 ) -> tuple[CheckResult, str | None]:
     """Import ``module_name`` and return a check result and version metadata."""
-
     try:
         module = importlib.import_module(module_name)
     except ModuleNotFoundError:
@@ -232,7 +226,6 @@ def run_gpu_validation(
     xformers_module=None,
 ) -> ValidationReport:
     """Execute the GPU validation harness and return a structured report."""
-
     checks: list[CheckResult] = []
     library_versions: dict[str, str | None] = {}
 
@@ -302,7 +295,6 @@ def run_gpu_validation(
 
 def _write_report(path: Path | None, payload: dict[str, Any], indent: int) -> None:
     """Write the validation report to a file or stdout."""
-
     if path is None:
         print(json.dumps(payload, indent=indent))
         return
@@ -313,7 +305,6 @@ def _write_report(path: Path | None, payload: dict[str, Any], indent: int) -> No
 
 def main() -> int:
     """Main entry point for the GPU validation script."""
-
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--output",

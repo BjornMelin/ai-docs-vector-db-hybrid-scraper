@@ -59,7 +59,6 @@ class DummyValidator:
 
 def _dummy_splitter(*_: Any, **__: Any) -> list[Document]:
     """Return deterministic LangChain documents with canonical metadata."""
-
     documents: list[Document] = []
     for index, section in enumerate(("intro", "body")):
         chunk_hash = f"feedbeefdead{index:02d}"
@@ -112,7 +111,6 @@ def _make_enriched_content() -> SimpleNamespace:
 @pytest.fixture()
 def documents_env(monkeypatch) -> SimpleNamespace:  # pylint: disable=too-many-locals
     """Provide registered document tools with mocked dependencies."""
-
     vector_service = VectorServiceStub()
     cache_manager = Mock()
     cache_manager.get = AsyncMock(return_value=None)

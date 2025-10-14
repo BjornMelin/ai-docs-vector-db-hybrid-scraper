@@ -136,7 +136,6 @@ def dummy_generator_factory(
     config: RAGConfig, retriever: BaseRetriever
 ) -> RAGGenerator:
     """Return a dummy generator for pipeline tests."""
-
     return DummyGenerator(config, retriever)
 
 

@@ -15,7 +15,6 @@ def test_tracing_middleware_sets_response_headers(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test that TracingMiddleware sets response headers."""
-
     app = FastAPI()
     app.add_middleware(TracingMiddleware)
 
@@ -44,7 +43,6 @@ def test_tracing_middleware_optionally_logs_bodies(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test that TracingMiddleware optionally logs bodies."""
-
     app = FastAPI()
     app.add_middleware(
         TracingMiddleware,

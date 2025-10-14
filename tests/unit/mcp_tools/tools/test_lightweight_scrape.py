@@ -35,7 +35,6 @@ class StubMCP:
 @pytest.fixture
 def functions() -> dict[str, Callable[..., Any]]:
     """Expose private helpers for isolated testing."""
-
     return {
         "validate_formats": lightweight_scrape_module._validate_formats,
         "analyze_url": lightweight_scrape_module._analyze_url_suitability,
@@ -47,7 +46,6 @@ def functions() -> dict[str, Callable[..., Any]]:
 
 def test_register_tools_uses_mcp_decorator() -> None:
     """Registering the tool should call the MCP decorator exactly once."""
-
     mcp = StubMCP()
     crawl_manager = MagicMock()
 
@@ -59,7 +57,6 @@ def test_register_tools_uses_mcp_decorator() -> None:
 @pytest.fixture
 def ctx() -> AsyncMock:
     """Async MCP context stub with logging hooks."""
-
     context = AsyncMock()
     context.info = AsyncMock()
     context.debug = AsyncMock()
@@ -71,7 +68,6 @@ def ctx() -> AsyncMock:
 @pytest.fixture
 def tool_setup() -> ToolSetup:
     """Register the tool and wire a mocked crawl manager dependency."""
-
     crawl_manager = MagicMock()
     crawl_manager.analyze_url = AsyncMock(
         return_value={"recommended_tier": "lightweight"}
@@ -91,7 +87,6 @@ async def test_successful_scrape_returns_expected_payload(
     ctx: AsyncMock,
 ) -> None:
     """Successful scrape should propagate metadata and performance metrics."""
-
     tool, crawl_manager = tool_setup
     crawl_manager.scrape_url.return_value = {
         "success": True,
@@ -130,7 +125,6 @@ async def test_multiple_formats_are_transformed(
     ctx: AsyncMock,
 ) -> None:
     """Requested formats should be populated using the scrape result."""
-
     tool, crawl_manager = tool_setup
     crawl_manager.scrape_url.return_value = {
         "success": True,
@@ -155,7 +149,6 @@ async def test_url_not_suitable_logs_warning(
     ctx: AsyncMock,
 ) -> None:
     """When analyze_url flags a heavier tier, a warning should be emitted."""
-
     tool, crawl_manager = tool_setup
     crawl_manager.analyze_url.return_value = {"recommended_tier": "standard"}
     crawl_manager.scrape_url.return_value = {
@@ -176,7 +169,6 @@ async def test_scrape_failure_raises_error(
     ctx: AsyncMock,
 ) -> None:
     """Failed scrapes should raise CrawlServiceError with guidance."""
-
     tool, crawl_manager = tool_setup
     crawl_manager.scrape_url.return_value = {
         "success": False,
@@ -193,7 +185,6 @@ def test_validate_formats_rejects_unknown(
     functions: dict[str, Callable[..., Any]],
 ) -> None:
     """Unknown formats should raise ValueError."""
-
     validator = functions["validate_formats"]
     with pytest.raises(ValueError):
         validator(["markdown", "pdf"])
@@ -212,7 +203,6 @@ def test_convert_content_formats_handles_metadata(
     expected: Mapping[str, Any],
 ) -> None:
     """Conversion helper should handle optional metadata gracefully."""
-
     result = functions["convert_formats"](
         metadata or {},
         ["markdown", "html"] if "html" in expected else ["markdown"],

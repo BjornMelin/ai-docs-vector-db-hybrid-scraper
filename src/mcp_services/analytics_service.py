@@ -24,7 +24,6 @@ class AnalyticsService:
         vector_service: VectorStoreService,
     ):
         """Initialize the analytics service with MCP tools."""
-
         self.mcp = FastMCP(
             name,
             instructions=(
@@ -37,12 +36,10 @@ class AnalyticsService:
 
     def get_mcp_server(self) -> FastMCP:
         """Return the MCP server instance."""
-
         return self.mcp
 
     async def get_service_info(self) -> dict[str, Any]:
         """Return metadata about the analytics service capabilities."""
-
         return {
             "service": "analytics",
             "version": "3.0",

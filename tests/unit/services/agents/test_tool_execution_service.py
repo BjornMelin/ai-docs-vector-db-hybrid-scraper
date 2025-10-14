@@ -25,7 +25,6 @@ from src.services.agents.tool_execution_service import (
 @pytest.fixture
 def operations(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, Any]]:
     """Capture telemetry operations emitted during tests."""
-
     ops: list[dict[str, Any]] = []
     monkeypatch.setattr(
         "src.services.agents.tool_execution_service.record_ai_operation",
@@ -38,7 +37,6 @@ def build_config(
     server_names: Iterable[str], timeout_ms: int = 1000
 ) -> MCPClientConfig:
     """Construct an MCPClientConfig covering the requested server identifiers."""
-
     servers = [
         MCPServerConfig(
             name=name,
@@ -61,7 +59,6 @@ def service_with_client(
     backoff_seconds: float = 0.0,
 ) -> ToolExecutionService:
     """Instantiate ToolExecutionService with the provided client stub."""
-
     config = build_config(servers)
     typed_client = cast(MultiServerMCPClient, client)
     return ToolExecutionService(
@@ -99,7 +96,6 @@ async def test_execute_tool_success(
     monkeypatch: pytest.MonkeyPatch, operations: list[dict[str, Any]]
 ) -> None:
     """Successful execution should return ToolExecutionResult and record telemetry."""
-
     call_tracker: dict[str, dict[str, Any]] = {}
 
     def _handler(
@@ -130,7 +126,6 @@ async def test_execute_tool_success(
 @pytest.mark.asyncio
 async def test_execute_tool_invalid_arguments() -> None:
     """Non-mapping arguments should raise validation errors."""
-
     client = SimpleNamespace(connections={"primary": object()})
     service = service_with_client(client)
 
@@ -195,7 +190,6 @@ async def test_execute_tool_moves_to_next_server(
     monkeypatch: pytest.MonkeyPatch, operations: list[dict[str, Any]]
 ) -> None:
     """Service should fall back to secondary servers when primaries fail."""
-
     responses: dict[str, CallToolResult] = {
         "primary": CallToolResult(content=[], structuredContent=None, isError=True),
         "backup": CallToolResult(
@@ -252,7 +246,6 @@ async def test_execute_tool_records_unexpected_exceptions(
 @pytest.mark.asyncio
 async def test_execute_tool_requires_servers() -> None:
     """Missing MCP servers should raise ToolExecutionFailure immediately."""
-
     config = MCPClientConfig(enabled=True, request_timeout_ms=5000, servers=[])
     client = cast(MultiServerMCPClient, SimpleNamespace(connections={}))
 
@@ -268,7 +261,6 @@ async def test_execute_tool_requires_servers() -> None:
 @pytest.mark.asyncio
 async def test_detect_tools(monkeypatch: pytest.MonkeyPatch) -> None:
     """detect_tools should enumerate tools for every configured server."""
-
     tools_per_server = {
         "primary": [Tool(name="search", description="Search docs", inputSchema={})],
         "backup": [Tool(name="qa", description="Answer questions", inputSchema={})],

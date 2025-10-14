@@ -9,7 +9,6 @@ from src.contracts.retrieval import SearchRecord
 
 def test_from_vector_match_normalizes_payload() -> None:
     """Ensure ``SearchRecord.from_vector_match`` maps vector matches correctly."""
-
     match = SimpleNamespace(
         id="123",
         score=0.42,
@@ -46,7 +45,6 @@ def test_from_vector_match_normalizes_payload() -> None:
 
 def test_from_vector_match_prefers_normalized_score() -> None:
     """Normalized score should override raw score when present."""
-
     match = SimpleNamespace(
         id="abc",
         score=0.2,
@@ -66,7 +64,6 @@ def test_from_vector_match_prefers_normalized_score() -> None:
 
 def test_from_vector_match_coerces_numeric_types() -> None:
     """Integer-like values should coerce to floats for scoring fields."""
-
     match = SimpleNamespace(
         id="num",
         score=1,

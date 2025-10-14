@@ -69,7 +69,6 @@ class BatchProcessor:
         Returns:
             Processing result for the item
         """
-
         loop = asyncio.get_running_loop()
         future: asyncio.Future[Any] = loop.create_future()
 
@@ -173,7 +172,6 @@ class BatchProcessor:
             batch_size: Size of the processed batch
             processing_time: Time taken to process the batch in milliseconds
         """
-
         # Add to performance history
         self.batch_performance_history.append((batch_size, processing_time))
 
@@ -187,7 +185,6 @@ class BatchProcessor:
 
     def _calculate_optimal_batch_size(self) -> None:
         """Calculate optimal batch size based on performance history."""
-
         if len(self.batch_performance_history) < 5:
             return  # Need more data
 
@@ -223,7 +220,6 @@ class BatchProcessor:
 
     async def _delayed_batch_processing(self) -> None:
         """Process batch after delay if minimum wait time exceeded."""
-
         await asyncio.sleep(self.config.max_wait_time)
 
         async with self.processing_lock:
@@ -238,7 +234,6 @@ class BatchProcessor:
         Returns:
             dict containing performance metrics
         """
-
         if not self.batch_performance_history:
             return {
                 "status": "no_data",
@@ -271,7 +266,6 @@ class BatchProcessor:
 
     async def flush_pending(self) -> None:
         """Force processing of any pending items."""
-
         async with self.processing_lock:
             if self.state.pending_items:
                 await self._process_batch()
@@ -302,7 +296,6 @@ class OptimizedEmbeddingService:
         Returns:
             Generated embedding vector
         """
-
         return await self.batch_processor.process_item(text)
 
     async def _batch_generate_embeddings(self, texts: list[str]) -> list[list[float]]:
@@ -314,7 +307,6 @@ class OptimizedEmbeddingService:
         Returns:
             list of embedding vectors
         """
-
         # TODO: This placeholder simulates actual embedding service calls, such as
         # integrations with OpenAI batch APIs or FastEmbed batch processing
 
@@ -330,5 +322,4 @@ class OptimizedEmbeddingService:
         Returns:
             Performance statistics for the embedding service
         """
-
         return self.batch_processor.get_performance_stats()

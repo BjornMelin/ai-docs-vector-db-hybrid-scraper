@@ -48,7 +48,6 @@ logger = logging.getLogger(__name__)
 
 def _create_qdrant_client(config: Any) -> AsyncQdrantClient:
     """Create Qdrant client with configuration."""
-
     try:
         qdrant_config = getattr(config, "qdrant", None)
         url = getattr(qdrant_config, "url", None) or "http://localhost:6333"
@@ -65,7 +64,6 @@ def _create_qdrant_client(config: Any) -> AsyncQdrantClient:
 
 def _create_dragonfly_client(config: Any) -> redis.Redis:
     """Create a Redis-compatible Dragonfly client from configuration."""
-
     try:
         cache_config = getattr(config, "cache", None)
         url = getattr(cache_config, "dragonfly_url", None) or "redis://localhost:6379"
@@ -80,7 +78,6 @@ def _create_dragonfly_client(config: Any) -> redis.Redis:
 
 def _create_firecrawl_client(config: Any) -> AsyncFirecrawlApp:
     """Create Firecrawl client with configuration."""
-
     try:
         firecrawl_config = getattr(config, "firecrawl", None)
         api_key = getattr(firecrawl_config, "api_key", None) or ""
@@ -92,7 +89,6 @@ def _create_firecrawl_client(config: Any) -> AsyncFirecrawlApp:
 
 async def _create_http_client() -> AsyncGenerator[Any]:
     """Create HTTP client with proper lifecycle management."""
-
     timeout_config = aiohttp.ClientTimeout(total=30.0)
     async with aiohttp.ClientSession(timeout=timeout_config) as session:
         yield session
@@ -103,7 +99,6 @@ def _create_parallel_processing_system(*, embedding_manager: Any) -> Any:
 
     Falls back to a lightweight stub when the optional dependency graph is absent.
     """
-
     manager = embedding_manager() if callable(embedding_manager) else embedding_manager
 
     try:  # Lazy import to avoid mandatory dependency.
@@ -120,7 +115,6 @@ def _create_parallel_processing_system(*, embedding_manager: Any) -> Any:
 
 def _create_cache_manager(config: Any) -> CacheManager:
     """Instantiate the CacheManager from application configuration."""
-
     cache_config = getattr(config, "cache", None)
     dragonfly_url = "redis://localhost:6379"
     enable_distributed_cache = True
@@ -164,7 +158,6 @@ def _create_embedding_manager(
     cache_manager: CacheManager | None,
 ) -> EmbeddingManager:
     """Instantiate the EmbeddingManager with DI-provided dependencies."""
-
     return EmbeddingManager(
         config=config,
         cache_manager=cache_manager,
@@ -176,7 +169,6 @@ def _create_vector_store_service(
     async_qdrant_client: AsyncQdrantClient,
 ) -> VectorStoreService:
     """Instantiate VectorStoreService backed by LangChain's Qdrant adapter."""
-
     return VectorStoreService(
         config=config,
         async_qdrant_client=async_qdrant_client,
@@ -191,7 +183,6 @@ def _create_hyde_query_engine(
     search_cache: SearchResultCache | None,
 ) -> HyDEQueryEngine:
     """Build a HyDEQueryEngine wired to shared cache services."""
-
     hyde_config_source = getattr(config, "hyde", None)
     hyde_config = (
         ServiceHyDEConfig.from_unified_config(hyde_config_source)
@@ -217,7 +208,6 @@ def _create_hyde_query_engine(
 
 def _create_circuit_breaker_manager(config: Any) -> CircuitBreakerManager | None:
     """Instantiate the CircuitBreakerManager if purgatory is available."""
-
     cache_config = getattr(config, "cache", None)
     redis_url = "redis://localhost:6379"
     if cache_config is not None:
@@ -239,7 +229,6 @@ def _create_circuit_breaker_manager(config: Any) -> CircuitBreakerManager | None
 
 def _create_project_storage(config: Any) -> ProjectStorage:
     """Instantiate project storage backed by filesystem."""
-
     data_dir = getattr(config, "data_dir", None)
     if data_dir is None:
         msg = "Configuration missing data_dir for project storage"
@@ -253,7 +242,6 @@ def _create_content_intelligence_service(
     cache_manager: Any,
 ) -> Any | None:
     """Lazily instantiate the ContentIntelligenceService if available."""
-
     try:
         module = importlib.import_module("src.services.content_intelligence.service")
     except ModuleNotFoundError:
@@ -278,7 +266,6 @@ def _create_content_intelligence_service(
 
 def _create_browser_manager(config: Any) -> Any | None:
     """Instantiate the UnifiedBrowserManager if optional dependencies exist."""
-
     try:
         module = importlib.import_module("src.services.browser.unified_manager")
     except ModuleNotFoundError:
@@ -300,7 +287,6 @@ def _create_rag_generator(
     vector_service: VectorStoreService,
 ) -> Any | None:
     """Instantiate the RAG generator if the optional module is installed."""
-
     try:
         rag_module = importlib.import_module("src.services.rag.generator")
         rag_models = importlib.import_module("src.services.rag.models")
@@ -351,7 +337,6 @@ def _create_rag_generator(
 
 def _build_mcp_connections(config: MCPClientConfig) -> dict[str, Connection]:
     """Translate MCP client configuration into session connections."""
-
     connections: dict[str, Connection] = {}
     for server in config.servers:
         connections[server.name] = _serialise_mcp_server(server, config)
@@ -401,7 +386,6 @@ def _serialise_mcp_server(
 
 def _create_mcp_client(config: Any) -> MultiServerMCPClient | None:
     """Instantiate MultiServerMCPClient when enabled in configuration."""
-
     mcp_config = getattr(config, "mcp_client", None)
     if not isinstance(mcp_config, MCPClientConfig) or not mcp_config.enabled:
         return None
@@ -414,7 +398,6 @@ def _create_mcp_client(config: Any) -> MultiServerMCPClient | None:
 
 async def _maybe_initialize(service: Any, name: str, *, required: bool = True) -> None:
     """Execute service.initialize() if available."""
-
     if service is None:
         return
 
@@ -435,7 +418,6 @@ async def _maybe_initialize(service: Any, name: str, *, required: bool = True) -
 
 async def _maybe_cleanup(service: Any, name: str) -> None:
     """Execute service.cleanup() if available."""
-
     if service is None:
         return
 
@@ -453,7 +435,6 @@ async def _maybe_cleanup(service: Any, name: str) -> None:
 
 async def _initialize_service_graph(container: "ApplicationContainer") -> None:
     """Initialize core and optional services managed by the container."""
-
     await _maybe_initialize(
         container.cache_manager(),
         "cache_manager",
@@ -486,7 +467,6 @@ async def _initialize_service_graph(container: "ApplicationContainer") -> None:
 
 async def _cleanup_service_graph(container: "ApplicationContainer") -> None:
     """Cleanup services managed by the container in reverse order."""
-
     await _maybe_cleanup(container.rag_generator(), "rag_generator")
     await _maybe_cleanup(container.browser_manager(), "browser_manager")
     await _maybe_cleanup(
@@ -505,7 +485,6 @@ async def _cleanup_service_graph(container: "ApplicationContainer") -> None:
 
 async def _run_task_factories(factories: list[Any]) -> None:
     """Execute callables returned by container task registries."""
-
     for factory in factories:
         try:
             result = factory()
@@ -620,7 +599,6 @@ class ContainerManager:
 
     async def initialize(self, config: Any) -> ApplicationContainer:
         """Initialize the container with configuration."""
-
         if self._initialized:
             if self.container is None:
                 raise RuntimeError("Container manager in inconsistent state")
@@ -641,7 +619,6 @@ class ContainerManager:
 
     async def shutdown(self) -> None:
         """Shutdown the container and cleanup resources."""
-
         if self._initialized and self.container is not None:
             await _run_task_factories(list(self.container.shutdown_tasks()))
             await _cleanup_service_graph(self.container)
@@ -652,7 +629,6 @@ class ContainerManager:
 
     def _config_to_dict(self, config: Any) -> dict:
         """Convert config object to dictionary for dependency-injector."""
-
         try:
             # Try to convert using model_dump if it's a Pydantic model
             if hasattr(config, "model_dump"):
@@ -672,7 +648,6 @@ class ContainerManager:
 
     def _serialize_config_dict(self, data: Any) -> Any:
         """Recursively serialize configuration data."""
-
         if hasattr(data, "model_dump"):
             return data.model_dump()
         if hasattr(data, "__dict__"):
@@ -697,13 +672,11 @@ _container_manager = ContainerManager()
 @lru_cache(maxsize=1)
 def get_container() -> ApplicationContainer | None:
     """Get the global container instance."""
-
     return _container_manager.container
 
 
 async def initialize_container(config: Any) -> ApplicationContainer:
     """Initialize the global container."""
-
     container = await _container_manager.initialize(config)
     get_container.cache_clear()
     return container
@@ -711,7 +684,6 @@ async def initialize_container(config: Any) -> ApplicationContainer:
 
 async def shutdown_container() -> None:
     """Shutdown the global container."""
-
     await _container_manager.shutdown()
     get_container.cache_clear()
 
@@ -719,85 +691,71 @@ async def shutdown_container() -> None:
 # Dependency injection decorators and functions for easy access
 def inject_parallel_processing_system():
     """Inject parallel processing system dependency."""
-
     return Provide[ApplicationContainer.parallel_processing_system]
 
 
 def inject_cache_manager():
     """Inject cache manager dependency."""
-
     return Provide[ApplicationContainer.cache_manager]
 
 
 def inject_embedding_manager():
     """Inject embedding manager dependency."""
-
     return Provide[ApplicationContainer.embedding_manager]
 
 
 def inject_vector_store_service():
     """Inject vector store service dependency."""
-
     return Provide[ApplicationContainer.vector_store_service]
 
 
 def inject_hyde_query_engine():
     """Inject HyDE query engine dependency."""
-
     return Provide[ApplicationContainer.hyde_query_engine]
 
 
 def inject_circuit_breaker_manager():
     """Inject circuit breaker manager dependency."""
-
     return Provide[ApplicationContainer.circuit_breaker_manager]
 
 
 def inject_project_storage():
     """Inject project storage dependency."""
-
     return Provide[ApplicationContainer.project_storage]
 
 
 def inject_content_intelligence_service():
     """Inject content intelligence service dependency."""
-
     return Provide[ApplicationContainer.content_intelligence_service]
 
 
 def inject_browser_manager():
     """Inject unified browser manager dependency."""
-
     return Provide[ApplicationContainer.browser_manager]
 
 
 def inject_rag_generator():
     """Inject RAG generator dependency."""
-
     return Provide[ApplicationContainer.rag_generator]
 
 
 def inject_qdrant() -> Provider[AsyncQdrantClient]:
     """Inject raw Qdrant client dependency."""
-
     return Provide[ApplicationContainer.qdrant_client]
 
 
 def inject_dragonfly_client() -> Provider[redis.Redis]:
     """Inject raw Dragonfly cache client dependency."""
-
     return Provide[ApplicationContainer.dragonfly_client]
 
 
 def inject_firecrawl() -> Provider[AsyncFirecrawlApp]:
     """Inject raw Firecrawl client dependency."""
-
     return Provide[ApplicationContainer.firecrawl_client]
 
 
 def inject_http() -> Provider[Any]:
     """Inject raw HTTP client dependency."""
-
     return Provide[ApplicationContainer.http_client]
 
 
@@ -811,20 +769,17 @@ class DependencyContext:
 
     async def __aenter__(self) -> ApplicationContainer:
         """Initialize dependencies."""
-
         self.container = await initialize_container(self.config)
         return self.container
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         """Cleanup dependencies."""
-
         await shutdown_container()
 
 
 # Wire modules for automatic dependency injection
 def wire_modules() -> None:
     """Wire modules for dependency injection."""
-
     container = get_container()
     if container:
         # Wire commonly used modules

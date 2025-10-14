@@ -22,7 +22,6 @@ logger = logging.getLogger(__name__)
 
 def _resolve_tavily_client() -> type[_TavilyClient]:
     """Return the Tavily client class, raising when the integration is missing."""
-
     try:
         module = importlib.import_module("tavily")
     except ModuleNotFoundError as exc:  # pragma: no cover - optional dependency
@@ -38,7 +37,6 @@ def _resolve_tavily_client() -> type[_TavilyClient]:
 
 def _build_error_response(query: str, error: Exception) -> dict[str, Any]:
     """Format a uniform error payload for MCP clients."""
-
     return {
         "query": query,
         "results": [],
@@ -75,7 +73,6 @@ def register_tools(mcp) -> None:
         Returns:
             Search results with URLs, extracted content, and metadata.
         """
-
         try:
             if ctx:
                 await ctx.info(f"Web search: '{query}' (depth={search_depth})")
@@ -140,7 +137,6 @@ def register_tools(mcp) -> None:
         Returns:
             Detailed search results with expanded metadata.
         """
-
         try:
             if ctx:
                 await ctx.info(f"Advanced search: '{query}'")

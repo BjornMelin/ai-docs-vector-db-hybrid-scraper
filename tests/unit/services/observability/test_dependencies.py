@@ -10,12 +10,10 @@ class TestObservabilityService:
 
     def setup_method(self) -> None:
         """Set up test fixtures before each test method."""
-
         dependencies.get_observability_service.cache_clear()
 
     def test_service_initialises_observability(self) -> None:
         """Test that the observability service initializes correctly."""
-
         with (
             patch(
                 "src.services.observability.dependencies.initialize_observability",
@@ -40,7 +38,6 @@ class TestObservabilityService:
 
     async def test_record_ai_operation_metrics(self) -> None:
         """Test recording AI operation metrics."""
-
         service = {"enabled": True}
         with patch(
             "src.services.observability.dependencies.record_ai_operation"
@@ -58,7 +55,6 @@ class TestObservabilityService:
 
     async def test_track_ai_cost_metrics_disabled(self) -> None:
         """Test tracking AI cost metrics when service is disabled."""
-
         service = {"enabled": False}
         with patch("src.services.observability.dependencies.track_cost") as track_cost:
             await dependencies.track_ai_cost_metrics(

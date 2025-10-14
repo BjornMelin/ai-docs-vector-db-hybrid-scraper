@@ -108,7 +108,6 @@ class _IntegrationRequestHandler(BaseHTTPRequestHandler):
 @pytest.fixture(scope="session")
 def integration_server() -> Iterator[str]:
     """Start a lightweight HTTP server for integration tests."""
-
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.bind(("127.0.0.1", 0))
         host, port = sock.getsockname()

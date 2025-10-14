@@ -81,7 +81,6 @@ async def get_document(
     Returns:
         Canonical document record constructed from the vector payload.
     """
-
     payload = await execute_service_call(
         operation="documents.get",
         logger=logger,
@@ -114,7 +113,6 @@ async def delete_document(
     Returns:
         Operation response describing the deletion outcome.
     """
-
     deleted = await execute_service_call(
         operation="documents.delete",
         logger=logger,
@@ -195,7 +193,6 @@ async def list_collections(
     Returns:
         Mapping containing collection names and total count.
     """
-
     collections = await execute_service_call(
         operation="documents.list_collections",
         logger=logger,
@@ -208,7 +205,6 @@ async def list_collections(
 
 def _maybe_to_dict(metadata: Mapping[str, Any] | None) -> dict[str, Any] | None:
     """Convert metadata to a concrete dictionary if provided."""
-
     if metadata is None:
         return None
     return dict(metadata)
@@ -219,7 +215,6 @@ def _to_document_record(
     collection: str,
 ) -> DocumentRecord:
     """Normalize raw payloads returned by the vector service."""
-
     metadata = dict(payload)
     content = metadata.pop("content", None)
     document_id = metadata.pop("id", None)

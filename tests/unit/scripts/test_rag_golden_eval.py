@@ -61,7 +61,6 @@ class _DummyRagas(RagasEvaluator):
 @pytest.mark.asyncio
 async def test_evaluate_examples_and_aggregation() -> None:
     """The evaluator computes deterministic, reproducible metrics."""
-
     examples = [
         GoldenExample(
             query="How should operators rotate API keys?",
@@ -195,7 +194,6 @@ async def test_evaluate_examples_and_aggregation() -> None:
 @pytest.mark.asyncio
 async def test_evaluate_examples_handles_missing_records() -> None:
     """Empty retrieval results produce zeroed metrics without crashing."""
-
     example = GoldenExample(
         query="Missing context",
         expected_answer="No answer",
@@ -234,7 +232,6 @@ async def test_evaluate_examples_handles_missing_records() -> None:
 
 def test_load_dataset_raises_on_invalid_json(tmp_path: Path) -> None:
     """Malformed JSON should raise a descriptive error."""
-
     dataset_path = tmp_path / "broken.jsonl"
     dataset_path.write_text("{invalid json}\n", encoding="utf-8")
     with pytest.raises(ValueError):
@@ -243,7 +240,6 @@ def test_load_dataset_raises_on_invalid_json(tmp_path: Path) -> None:
 
 def test_dataset_validator_detects_missing_metadata(tmp_path: Path) -> None:
     """Dataset validator should fail when required metadata keys are absent."""
-
     dataset_path = tmp_path / "dataset.jsonl"
     record = {
         "query": "test",
@@ -281,7 +277,6 @@ def test_load_cost_controls_handles_missing_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Missing config files should yield None and empty config."""
-
     monkeypatch.chdir(tmp_path)
     max_samples, config = _load_cost_controls()
     assert max_samples is None
@@ -292,7 +287,6 @@ def test_load_thresholds_filters_numeric_values(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Threshold loader should ignore non-numeric entries and coerce floats."""
-
     config_dir = tmp_path / "config"
     config_dir.mkdir()
     budgets_path = config_dir / "eval_budgets.yml"
@@ -316,7 +310,6 @@ max_latency_ms: 1500.5
 
 def test_enforce_thresholds_returns_empty_list_when_no_thresholds() -> None:
     """No configured thresholds should produce no failures."""
-
     assert _enforce_thresholds({"similarity_avg": 1.0}, {}) == []
 
 
@@ -324,7 +317,6 @@ def test_load_cost_controls_coerces_integer(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Cost control loader should parse integer max samples."""
-
     config_dir = tmp_path / "config"
     config_dir.mkdir()
     costs_path = config_dir / "eval_costs.yml"

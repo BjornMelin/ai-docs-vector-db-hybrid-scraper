@@ -7,7 +7,6 @@ from src.mcp_tools.utils.provider_metadata import normalize_provider_catalog
 
 def test_normalize_with_manager_data_merges_models():
     """Manager metadata should update model details while keeping fallbacks."""
-
     manager_catalog = {
         "openai": {
             "model": "text-embedding-3-small",
@@ -32,7 +31,6 @@ def test_normalize_with_manager_data_merges_models():
 
 def test_normalize_uses_fallback_when_manager_missing():
     """When manager lacks provider, defaults should be returned."""
-
     providers = normalize_provider_catalog({})
     names = {provider.name for provider in providers}
 
@@ -48,7 +46,6 @@ def test_normalize_uses_fallback_when_manager_missing():
 
 def test_normalize_preserves_unknown_provider():
     """Providers without fallbacks should still be returned with raw data."""
-
     manager_catalog = {
         "custom-provider": {
             "model": "acme-embed-v1",

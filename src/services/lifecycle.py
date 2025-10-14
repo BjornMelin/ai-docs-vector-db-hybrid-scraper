@@ -32,15 +32,12 @@ class LifecycleTracker:
 
     def _mark_initialized(self) -> None:
         """Mark the service as initialized."""
-
         self._initialized = True
 
     def _mark_uninitialized(self) -> None:
         """Mark the service as uninitialized."""
-
         self._initialized = False
 
     def is_initialized(self) -> bool:
         """Implement :meth:`ServiceLifecycle.is_initialized`."""
-
         return self._initialized

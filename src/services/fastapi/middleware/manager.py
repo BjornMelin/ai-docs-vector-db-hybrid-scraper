@@ -77,7 +77,6 @@ _FUNCTION_REGISTRY: dict[str, Callable[..., Any]] = {
 
 def _default_stack_names() -> tuple[str, ...]:
     """Return the canonical middleware ordering for the defaults alias."""
-
     names: list[str] = []
     if "correlation" in _CLASS_REGISTRY:
         names.append("correlation")
@@ -110,7 +109,6 @@ def apply_named_stack(app: Starlette, middleware_names: Iterable[str]) -> list[s
     Returns:
         List of successfully applied middleware identifiers.
     """
-
     applied: list[str] = []
     for name in middleware_names:
         if name == "defaults":
@@ -132,7 +130,6 @@ def apply_named_stack(app: Starlette, middleware_names: Iterable[str]) -> list[s
 
 def apply_defaults(app: Starlette) -> None:
     """Apply a sensible production stack with minimal knobs."""
-
     apply_named_stack(app, _default_stack_names())
 
 

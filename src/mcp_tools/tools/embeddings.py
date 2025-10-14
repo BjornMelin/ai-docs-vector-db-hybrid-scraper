@@ -49,7 +49,6 @@ def register_tools(
         Auto-selects the best embedding model based on cost,
         performance, and availability.
         """
-
         if ctx:
             await ctx.info(
                 f"Generating embeddings for {len(request.texts)} texts using model: "
@@ -127,7 +126,6 @@ def register_tools(
 
         Returns information about supported models, costs, and current status.
         """
-
         if ctx:
             await ctx.info("Retrieving available embedding providers")
 
@@ -151,7 +149,6 @@ def register_tools(
 
 def _extract_total_tokens(result: Any) -> int | None:
     """Safely extract total token count from embedding result."""
-
     if isinstance(result, dict):
         tokens = result.get("tokens") or result.get("total_tokens")
         if tokens is None:
@@ -174,7 +171,6 @@ def _safe_estimate_cost(
     provider_name: str,
 ) -> float | None:
     """Estimate embedding cost using the manager when supported."""
-
     try:
         cost_map = embedding_manager.estimate_cost(list(texts), provider_name)
     except Exception:  # pragma: no cover - defensive guard
@@ -199,7 +195,6 @@ def _get_normalized_providers(
     embedding_manager: Any,
 ) -> list[EmbeddingProviderInfo]:
     """Return provider metadata with caching and fallbacks."""
-
     now = datetime.now(tz=UTC)
     if (
         _PROVIDER_CACHE.data is not None
@@ -222,7 +217,6 @@ def _get_normalized_providers(
 
 def _normalize_dense_embeddings(data: Any) -> list[list[float]]:
     """Coerce embedding payloads to a float matrix, dropping invalid rows."""
-
     if not isinstance(data, list):
         return []
 
@@ -240,7 +234,6 @@ def _normalize_dense_embeddings(data: Any) -> list[list[float]]:
 
 def _normalize_sparse_embeddings(data: Any) -> list[list[float]] | None:
     """Return sparse embeddings when they align with the expected schema."""
-
     if not isinstance(data, list):
         return None
 

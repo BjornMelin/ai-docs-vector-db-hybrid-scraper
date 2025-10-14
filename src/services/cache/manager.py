@@ -23,7 +23,6 @@ logger = logging.getLogger(__name__)
 
 def _log_extra(event: str, **metadata: Any) -> dict[str, Any]:
     """Return logging extras enriched with trace metadata."""
-
     metadata.setdefault("component", "cache.manager")
     return log_extra_with_trace(event, **metadata)
 
@@ -44,19 +43,16 @@ class _PatternClearableCache(Protocol):
 
     async def clear_pattern(self, pattern: str) -> int:  # pragma: no cover - protocol
         """Remove keys matching ``pattern``."""
-
         ...
 
     async def scan_keys(self, pattern: str) -> list[str]:  # pragma: no cover - protocol
         """Return keys matching ``pattern``."""
-
         ...
 
     async def delete_many(  # pragma: no cover - protocol
         self, keys: list[str]
     ) -> dict[str, bool]:
         """Delete a batch of keys."""
-
         ...
 
 
@@ -84,7 +80,6 @@ class CacheManager:
             enable_specialized_caches: Toggle creation of embedding/search helpers.
             distributed_cache: Preconfigured Dragonfly cache instance.
         """
-
         self.key_prefix = key_prefix
         self.distributed_ttl_seconds = distributed_ttl_seconds or DEFAULT_TTLS.copy()
 
@@ -131,13 +126,11 @@ class CacheManager:
 
     async def initialize(self) -> None:
         """Initialise the underlying Dragonfly cache connection."""
-
         if self._distributed_cache is not None:
             await self._distributed_cache.initialize()
 
     async def cleanup(self) -> None:
         """Cleanup routine delegating to ``close`` for lifecycle symmetry."""
-
         await self.close()
 
     @property
@@ -147,7 +140,6 @@ class CacheManager:
         Returns:
             Dragonfly cache or ``None`` when caching is disabled.
         """
-
         return self._distributed_cache
 
     @property
@@ -157,7 +149,6 @@ class CacheManager:
         Returns:
             Embedding cache helper or ``None`` when disabled.
         """
-
         return self._embedding_cache
 
     @property
@@ -167,7 +158,6 @@ class CacheManager:
         Returns:
             Search cache helper or ``None`` when disabled.
         """
-
         return self._search_cache
 
     @trace_function("cache.manager.get")
@@ -187,7 +177,6 @@ class CacheManager:
         Returns:
             Cached object or the provided default.
         """
-
         cache_key = self._get_cache_key(key, cache_type)
         distributed = self._distributed_cache
         if distributed is None:
@@ -195,11 +184,10 @@ class CacheManager:
 
         try:
             result = await distributed.get(cache_key)
-        except (ConnectionError, OSError, TimeoutError) as exc:
+        except (ConnectionError, OSError, TimeoutError):
             logger.exception(
-                "Distributed cache get error for key %s: %s",
+                "Distributed cache get error for key %s",
                 cache_key,
-                exc,
                 extra=_log_extra(
                     "cache.manager.get",
                     key=cache_key,
@@ -234,7 +222,6 @@ class CacheManager:
         Returns:
             ``True`` if the operation succeeded, otherwise ``False``.
         """
-
         cache_key = self._get_cache_key(key, cache_type)
         distributed = self._distributed_cache
         if distributed is None:
@@ -243,11 +230,10 @@ class CacheManager:
         effective_ttl = ttl or self.distributed_ttl_seconds.get(cache_type, 3600)
         try:
             return await distributed.set(cache_key, value, ttl=effective_ttl)
-        except (ConnectionError, OSError, TimeoutError) as exc:
+        except (ConnectionError, OSError, TimeoutError):
             logger.exception(
-                "Distributed cache set error for key %s: %s",
+                "Distributed cache set error for key %s",
                 cache_key,
-                exc,
                 extra=_log_extra(
                     "cache.manager.set",
                     key=cache_key,
@@ -269,7 +255,6 @@ class CacheManager:
         Returns:
             ``True`` when the entry was deleted successfully.
         """
-
         cache_key = self._get_cache_key(key, cache_type)
         distributed = self._distributed_cache
         if distributed is None:
@@ -277,11 +262,10 @@ class CacheManager:
 
         try:
             return await distributed.delete(cache_key)
-        except (ConnectionError, OSError, TimeoutError) as exc:
+        except (ConnectionError, OSError, TimeoutError):
             logger.exception(
-                "Distributed cache delete error for key %s: %s",
+                "Distributed cache delete error for key %s",
                 cache_key,
-                exc,
                 extra=_log_extra(
                     "cache.manager.delete",
                     key=cache_key,
@@ -299,7 +283,6 @@ class CacheManager:
         Returns:
             ``True`` when the clear request completed without errors.
         """
-
         if cache_type is None:
             return await self._clear_all_distributed()
         return await self._clear_specific_cache_type(cache_type)
@@ -310,7 +293,6 @@ class CacheManager:
         Returns:
             Number of keys removed (``-1`` when unknown).
         """
-
         distributed = self._distributed_cache
         if distributed is None:
             return 0
@@ -341,7 +323,6 @@ class CacheManager:
         Returns:
             Number of keys deleted.
         """
-
         distributed = self._distributed_cache
         if distributed is None:
             return 0
@@ -370,7 +351,6 @@ class CacheManager:
         Returns:
             Dictionary with manager metadata and cache statistics.
         """
-
         stats: dict[str, Any] = {"manager": {"enabled_layers": []}}
 
         distributed = self._distributed_cache
@@ -404,7 +384,6 @@ class CacheManager:
         Returns:
             Dictionary containing compression and connection details.
         """
-
         stats: dict[str, Any] = {}
         distributed = self._distributed_cache
         if isinstance(distributed, DragonflyCache):
@@ -418,22 +397,19 @@ class CacheManager:
 
     async def close(self) -> None:
         """Close Dragonfly connection."""
-
         distributed = self._distributed_cache
         if not isinstance(distributed, DragonflyCache):
             return
         try:
             await distributed.close()
-        except (ConnectionError, OSError, TimeoutError) as exc:
+        except (ConnectionError, OSError, TimeoutError):
             logger.exception(
-                "Error closing distributed cache: %s",
-                exc,
+                "Error closing distributed cache",
                 extra=_log_extra("cache.manager.close"),
             )
 
     async def _clear_all_distributed(self) -> bool:
         """Clear entire distributed cache safely."""
-
         distributed = self._distributed_cache
         if distributed is None:
             return True
@@ -442,10 +418,9 @@ class CacheManager:
             try:
                 await distributed.clear()
                 return True
-            except (ConnectionError, OSError, TimeoutError) as exc:
+            except (ConnectionError, OSError, TimeoutError):
                 logger.exception(
-                    "Distributed cache clear error: %s",
-                    exc,
+                    "Distributed cache clear error",
                     extra=_log_extra("cache.manager.clear_all"),
                 )
                 return False
@@ -465,7 +440,6 @@ class CacheManager:
 
     async def _clear_specific_cache_type(self, cache_type: CacheType) -> bool:
         """Clear keys matching the supplied cache type."""
-
         distributed = self._distributed_cache
         if distributed is None:
             return True
@@ -498,13 +472,11 @@ class CacheManager:
 
     def _get_cache_key(self, key: str, cache_type: CacheType) -> str:
         """Return hashed cache key scoped by ``cache_type``."""
-
         digest = hashlib.sha256(key.encode("utf-8")).hexdigest()
         return f"{cache_type.value}:{digest}"
 
     def _record_cache_hit(self, cache_type: CacheType) -> None:
         """Annotate tracing spans for cache hits."""
-
         set_span_attributes(
             {
                 "cache.result": "hit",
@@ -515,7 +487,6 @@ class CacheManager:
 
     def _record_cache_miss(self, cache_type: CacheType) -> None:
         """Annotate tracing spans for cache misses."""
-
         set_span_attributes(
             {
                 "cache.result": "miss",

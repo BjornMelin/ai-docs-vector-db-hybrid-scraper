@@ -177,7 +177,6 @@ class TestNormalLoad:
 
         async def cached_search_workload(**_kwargs):
             """Workload that repeats queries to test caching."""
-
             query = random.choice(repeated_queries)
             return await mock_load_test_service.search_documents(query=query, **_kwargs)
 
@@ -200,7 +199,6 @@ class TestNormalLoad:
 
     def _simulate_normal_traffic(self, **__kwargs):
         """Simulate normal traffic patterns."""
-
         operations = [
             ("search", 0.6),
             ("add_document", 0.2),
@@ -222,7 +220,6 @@ class TestNormalLoad:
 
     def _get_phase_metrics(self, metrics, start_time: float, duration: float) -> dict:
         """Extract metrics for a specific phase."""
-
         # Filter metrics by time window
         # Note: This is simplified - in real implementation would use timestamps
         start_idx = int(start_time * 10)  # Assuming ~10 requests/second

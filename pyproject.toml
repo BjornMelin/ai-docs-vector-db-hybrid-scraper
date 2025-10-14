@@ -252,6 +252,7 @@ extend-exclude = [".github", "**/*.md", "**/*.yml", "**/*.yaml"]
 
 [tool.ruff.lint]
 select = [
+    "D",      # pydocstyle - docstring formatting
     "E",   # pycodestyle errors
     "W",   # pycodestyle warnings
     "F",   # pyflakes
@@ -287,6 +288,20 @@ ignore = [
     "COM819", # trailing comma prohibited
     "TRY003", # Long messages outside exception class
     "ERA001", # commented out code (too noisy)
+    "TRY301", # Raise to an inner function
+    "TRY300", # Consider moving to else (can change semantics)
+    "RET505", # superfluous-else-return
+    "PLR0912", # too-many-branches
+    "PLR0913", # too-many-arguments
+    "PLR0915", # too-many-statements
+    "FBT001",  # boolean-type-hint-positional-argument
+    "FBT002",  # boolean-default-value-positional-argument
+    "SLF001",  # private-member-access
+    "TC001",   # typing-only-first-party-import
+    "TC002",   # typing-only-third-party-import
+    "TC003",   # typing-only-standard-library-import
+    "SIM300",  # yoda-conditions
+    "C408",    # unnecessary-collection-call
 ]
 
 fixable = ["ALL"]
@@ -515,6 +530,7 @@ disable = [
     "redefined-outer-name", # W0621 - Common when fixtures redefine names
     "pointless-string-statement", # W0105 - Duplicate docstrings in test classes
     "line-too-long", # C0301 - Test code often has long lines due to complex setup
+    "unnecessary-ellipsis", # W1401 - Unnecessary ellipsis in test code
 ]
 
 [dependency-groups]

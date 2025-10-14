@@ -24,7 +24,6 @@ logger = logging.getLogger(__name__)
 
 def _raise_openai_api_key_not_configured() -> None:
     """Raise EmbeddingServiceError for missing OpenAI API key."""
-
     msg = "OpenAI API key not configured"
     raise EmbeddingServiceError(msg)
 
@@ -84,7 +83,6 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):  # pylint: disable=too-many-in
             max_retries: Retry attempts configured on the OpenAI client.
             timeout: Optional request timeout passed to the OpenAI client.
         """
-
         super().__init__(model_name)
         self.api_key = api_key
         self._client: AsyncOpenAI | None = None
@@ -117,7 +115,6 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):  # pylint: disable=too-many-in
     @trace_function()
     async def initialize(self) -> None:
         """Initialize the OpenAI client for embedding operations."""
-
         if self._initialized:
             return
 
@@ -140,7 +137,6 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):  # pylint: disable=too-many-in
 
     async def cleanup(self) -> None:
         """Cleanup OpenAI client by clearing the cached instance."""
-
         client = self._client
         self._client = None
         self._initialized = False
@@ -168,7 +164,6 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):  # pylint: disable=too-many-in
         Raises:
             EmbeddingServiceError: If not initialized or API call fails
         """
-
         start = time.perf_counter()
         success = True
         token_summary: TokenSummary = {
@@ -217,7 +212,6 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):  # pylint: disable=too-many-in
             EmbeddingServiceError: If the provider is not initialized or the
             OpenAI client is unavailable.
         """
-
         if not self._initialized:
             msg = "Provider not initialized"
             raise EmbeddingServiceError(msg)
@@ -316,7 +310,6 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):  # pylint: disable=too-many-in
         Returns:
             OpenAI embeddings response
         """
-
         if self._client is None:
             msg = "OpenAI client not initialized"
             raise EmbeddingServiceError(msg)
@@ -326,7 +319,6 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):  # pylint: disable=too-many-in
     @property
     def cost_per_token(self) -> float:
         """Get cost per token."""
-
         config = self._model_configs[self.model_name]
         return config["cost_per_million"] / 1_000_000
 
@@ -344,7 +336,6 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):  # pylint: disable=too-many-in
         Returns:
             Cost in USD
         """
-
         return token_count * self.cost_per_token
 
     def _get_token_encoder(self) -> Any:
@@ -353,7 +344,6 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):  # pylint: disable=too-many-in
         Returns:
             The tokenizer capable of encoding inputs for the configured model.
         """
-
         if self._token_encoder is None:
             try:
                 self._token_encoder = tiktoken.encoding_for_model(self.model_name)
@@ -374,7 +364,6 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):  # pylint: disable=too-many-in
         Returns:
             Estimated token count based on the configured encoder.
         """
-
         if not texts:
             return 0
         encoder = self._get_token_encoder()
@@ -393,7 +382,6 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):  # pylint: disable=too-many-in
             usage: Usage payload returned by the OpenAI SDK (may be absent).
             batch: Text batch corresponding to the current response.
         """
-
         if usage:
             prompt = getattr(usage, "prompt_tokens", None)
             completion = getattr(usage, "completion_tokens", None)
@@ -436,7 +424,6 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):  # pylint: disable=too-many-in
             EmbeddingServiceError: If the provider is not initialized or the
             custom ID configuration does not match the number of texts.
         """
-
         if not self._initialized:
             msg = "Provider not initialized"
             raise EmbeddingServiceError(msg)
@@ -482,7 +469,6 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):  # pylint: disable=too-many-in
 
     async def _upload_file(self, file: Any, purpose: Literal["batch"]) -> Any:
         """Upload a file to OpenAI."""
-
         if self._client is None:
             msg = "OpenAI client not initialized"
             raise EmbeddingServiceError(msg)
@@ -496,7 +482,6 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):  # pylint: disable=too-many-in
         completion_window: Literal["24h"],
     ) -> Any:
         """Create a batch embedding job."""
-
         if self._client is None:
             msg = "OpenAI client not initialized"
             raise EmbeddingServiceError(msg)
@@ -521,7 +506,6 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):  # pylint: disable=too-many-in
             EmbeddingServiceError: If the payload cannot be uploaded or the
             batch submission fails.
         """
-
         temp_file: str | None = None
 
         try:

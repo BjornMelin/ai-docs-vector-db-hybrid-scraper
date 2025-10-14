@@ -18,7 +18,6 @@ logger = logging.getLogger(__name__)
 
 def _log_extra(event: str, **metadata: Any) -> dict[str, Any]:
     """Return structured logging extras enriched with trace identifiers."""
-
     metadata.setdefault("component", "cache.dragonfly")
     return log_extra_with_trace(event, **metadata)
 
@@ -46,7 +45,6 @@ class DragonflyCache(CacheInterface[Any]):
             client: Optional preconfigured redis client instance. When
                 provided the cache will not manage the client's lifecycle.
         """
-
         self.redis_url = redis_url
         self.default_ttl = default_ttl
         self.key_prefix = key_prefix
@@ -72,29 +70,24 @@ class DragonflyCache(CacheInterface[Any]):
     @property
     def client(self) -> redis.Redis:
         """Return the underlying async redis client."""
-
         return self._client
 
     def _format_key(self, key: str) -> str:
         """Apply the configured prefix to ``key`` when present."""
-
         return f"{self.key_prefix}{key}" if self.key_prefix else key
 
     def _serialize(self, value: Any) -> bytes:
         """Serialise ``value`` to bytes using JSON encoding."""
-
         return json.dumps(value, separators=(",", ":"), ensure_ascii=False).encode(
             "utf-8"
         )
 
     def _deserialize(self, payload: bytes) -> Any:
         """Deserialize cached payload back into a Python object."""
-
         return json.loads(payload.decode("utf-8"))
 
     async def initialize(self) -> None:
         """Verify connectivity with the backing Dragonfly instance."""
-
         try:
             await self.client.ping()
         except RedisError:  # pragma: no cover - network dependant
@@ -107,7 +100,6 @@ class DragonflyCache(CacheInterface[Any]):
     @trace_function("cache.dragonfly.get")
     async def get(self, key: str) -> Any | None:
         """Return cached value for ``key`` or ``None`` when missing."""
-
         try:
             result = await self.client.get(self._format_key(key))
         except RedisError:
@@ -125,7 +117,6 @@ class DragonflyCache(CacheInterface[Any]):
     @trace_function("cache.dragonfly.set")
     async def set(self, key: str, value: Any, ttl: int | None = None) -> bool:
         """Store ``value`` under ``key`` with an optional TTL."""
-
         expiry = ttl if ttl is not None else self.default_ttl
         try:
             payload = self._serialize(value)
@@ -151,7 +142,6 @@ class DragonflyCache(CacheInterface[Any]):
 
     async def delete(self, key: str) -> bool:
         """Delete ``key`` from the distributed cache."""
-
         try:
             return bool(await self.client.delete(self._format_key(key)))
         except RedisError:
@@ -164,7 +154,6 @@ class DragonflyCache(CacheInterface[Any]):
 
     async def exists(self, key: str) -> bool:
         """Return whether ``key`` exists in Dragonfly."""
-
         try:
             return bool(await self.client.exists(self._format_key(key)))
         except RedisError:
@@ -172,13 +161,11 @@ class DragonflyCache(CacheInterface[Any]):
 
     async def clear(self) -> int:
         """Remove all keys managed by this cache instance."""
-
         pattern = f"{self.key_prefix}*" if self.key_prefix else None
         return await self.clear_pattern(pattern or "*")
 
     async def clear_pattern(self, pattern: str) -> int:
         """Remove keys matching ``pattern`` within Dragonfly."""
-
         deleted = 0
         full_pattern = pattern
         if self.key_prefix and not pattern.startswith(self.key_prefix):
@@ -200,7 +187,6 @@ class DragonflyCache(CacheInterface[Any]):
 
     async def scan_keys(self, pattern: str, count: int = 200) -> list[str]:
         """Return keys matching ``pattern`` without deleting them."""
-
         keys: list[str] = []
         full_pattern = pattern
         if self.key_prefix and not pattern.startswith(self.key_prefix):
@@ -224,7 +210,6 @@ class DragonflyCache(CacheInterface[Any]):
 
     async def size(self) -> int:
         """Return an approximate count of cached entries."""
-
         try:
             if self.key_prefix:
                 count = 0
@@ -243,7 +228,6 @@ class DragonflyCache(CacheInterface[Any]):
 
     async def ttl(self, key: str) -> int:
         """Return remaining TTL for ``key`` in seconds."""
-
         try:
             ttl_value = await self.client.ttl(self._format_key(key))
         except RedisError:
@@ -257,7 +241,6 @@ class DragonflyCache(CacheInterface[Any]):
 
     async def expire(self, key: str, ttl: int) -> bool:
         """Apply a TTL to an existing key."""
-
         try:
             return bool(await self.client.expire(self._format_key(key), ttl))
         except RedisError:
@@ -270,7 +253,6 @@ class DragonflyCache(CacheInterface[Any]):
 
     async def mget(self, keys: list[str]) -> list[Any | None]:
         """Fetch multiple keys at once using MGET."""
-
         try:
             full_keys = [self._format_key(key) for key in keys]
             results = await self.client.mget(full_keys)
@@ -292,7 +274,6 @@ class DragonflyCache(CacheInterface[Any]):
 
     async def mset(self, mapping: dict[str, Any], ttl: int | None = None) -> bool:
         """Store multiple keys atomically, optionally applying a TTL."""
-
         if not mapping:
             return True
 
@@ -326,7 +307,6 @@ class DragonflyCache(CacheInterface[Any]):
 
     async def delete_many(self, keys: list[str]) -> dict[str, bool]:
         """Delete multiple keys in a single pipelined operation."""
-
         if not keys:
             return {}
 
@@ -351,6 +331,5 @@ class DragonflyCache(CacheInterface[Any]):
 
     async def close(self) -> None:
         """Close the underlying client when this instance owns it."""
-
         if self._owns_client:
             await self.client.aclose()

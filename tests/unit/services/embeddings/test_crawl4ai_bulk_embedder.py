@@ -47,7 +47,6 @@ def create_httpx_response(
     url: str, content: str, status_code: int = 200
 ) -> httpx.Response:
     """Build an HTTPX response object for sitemap stubs."""
-
     request = httpx.Request("GET", url)
     return httpx.Response(
         status_code=status_code, content=content.encode("utf-8"), request=request
@@ -88,7 +87,6 @@ def stub_async_client(
 @pytest.fixture
 def mock_config() -> MagicMock:
     """Return a configuration stub with embedding defaults."""
-
     config = MagicMock(spec=Settings)
     config.openai = MagicMock(dimensions=1536, model="text-embedding-3-small")
     config.fastembed = MagicMock(
@@ -101,7 +99,6 @@ def mock_config() -> MagicMock:
 @pytest.fixture
 def sample_urls() -> list[str]:
     """Sample URLs reused across tests."""
-
     return [
         "https://example.com/page1",
         "https://example.com/page2",
@@ -112,7 +109,6 @@ def sample_urls() -> list[str]:
 @pytest.fixture
 def sample_state_data() -> dict[str, Any]:
     """Serialized state payload used for load/save tests."""
-
     return {
         "urls_to_process": ["https://example.com/page3"],
         "completed_urls": ["https://example.com/page1"],
@@ -163,7 +159,6 @@ def embedder_factory(
     tmp_path: Path,
 ) -> Callable[..., BulkEmbedderHarness]:
     """Build BulkEmbedder instances with isolated state files."""
-
     counter = 0
 
     def factory(**overrides: Any) -> BulkEmbedderHarness:
@@ -1084,7 +1079,6 @@ class TestAsyncMain:
 
 def test_bulk_embedder_errors_subclass_service_error() -> None:
     """Ensure bulk embedder custom exceptions derive from ServiceError."""
-
     assert issubclass(ScrapingError, ServiceError)
     assert issubclass(ContentExtractionError, ServiceError)
     assert issubclass(ChunkGenerationError, ServiceError)

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from src.services.embeddings.base import EmbeddingProvider
 from src.services.embeddings.fastembed_provider import FastEmbedProvider
@@ -36,8 +36,8 @@ logger = logging.getLogger(__name__)
 class ProviderRegistry:
     """Manages embedding provider lifecycle and tier lookups."""
 
-    _DEFAULT_RERANKER_MODEL = "BAAI/bge-reranker-v2-m3"
-    _DEFAULT_TIER_MAP: dict[str, str] = {
+    _DEFAULT_RERANKER_MODEL: ClassVar[str] = "BAAI/bge-reranker-v2-m3"
+    _DEFAULT_TIER_MAP: ClassVar[dict[str, str]] = {
         "fast": "fastembed",
         "balanced": "fastembed",
         "best": "openai",
@@ -60,7 +60,6 @@ class ProviderRegistry:
     @property
     def providers(self) -> dict[str, EmbeddingProvider]:
         """Expose mutable provider dictionary for compatibility."""
-
         return self._providers
 
     @providers.setter
@@ -70,23 +69,19 @@ class ProviderRegistry:
     @property
     def reranker(self) -> Any:
         """Return initialized reranker instance if available."""
-
         return self._reranker
 
     @property
     def reranker_model(self) -> str:
         """Expose reranker model identifier."""
-
         return self._reranker_model
 
     def set_factories(self, factories: ProviderFactories) -> None:
         """Update provider factories at runtime (useful for tests)."""
-
         self._factories = factories
 
     async def initialize(self) -> dict[str, EmbeddingProvider]:
         """Initialize available providers and optional reranker."""
-
         self._providers.clear()
 
         if getattr(self._config.openai, "api_key", None):
@@ -107,13 +102,12 @@ class ProviderRegistry:
 
     async def cleanup(self) -> None:
         """Clean up all registered providers."""
-
         for name, provider in list(self._providers.items()):
             try:
                 await provider.cleanup()
                 logger.info("Cleaned up %s provider", name)
-            except (RuntimeError, ConnectionError, TimeoutError) as exc:
-                logger.exception("Error cleaning up %s provider: %s", name, exc)
+            except (RuntimeError, ConnectionError, TimeoutError):
+                logger.exception("Error cleaning up %s provider", name)
         self._providers.clear()
         self._reranker = None
 
@@ -121,7 +115,6 @@ class ProviderRegistry:
         self, provider_name: str | None, quality_tier: QualityTier | None
     ) -> EmbeddingProvider:
         """Resolve provider by explicit name or quality tier mapping."""
-
         if provider_name:
             provider = self._providers.get(provider_name)
             if not provider:
@@ -162,7 +155,6 @@ class ProviderRegistry:
 
     def _initialize_reranker(self) -> None:
         """Lazily initialize reranker if dependency present."""
-
         if FlagReranker is None:
             return
         try:

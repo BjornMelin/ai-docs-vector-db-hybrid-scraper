@@ -32,7 +32,6 @@ class ValidationSummary:
 
 def _iter_files(root: Path, patterns: Sequence[str]) -> Iterable[Path]:
     """Yield files under *root* that match any of the glob *patterns*."""
-
     for pattern in patterns:
         yield from root.rglob(pattern)
 
@@ -57,7 +56,6 @@ def _validate_files(
     Returns:
         A :class:`ValidationSummary` recording file counts and parse errors.
     """
-
     errors: list[str] = []
     checked = 0
 
@@ -73,7 +71,6 @@ def _validate_files(
 
 def validate_json_files(root: Path) -> ValidationSummary:
     """Validate that JSON files under *root* parse correctly."""
-
     return _validate_files(
         root,
         ("*.json",),
@@ -85,7 +82,6 @@ def validate_json_files(root: Path) -> ValidationSummary:
 
 def validate_yaml_files(root: Path) -> ValidationSummary:
     """Validate that YAML files under *root* parse correctly."""
-
     return _validate_files(
         root,
         ("*.yml", "*.yaml"),
@@ -101,7 +97,6 @@ def validate_templates(
     environment: str | None,
 ) -> ValidationSummary:
     """Validate configuration templates for required keys."""
-
     errors: list[str] = []
     checked = 0
 
@@ -178,7 +173,6 @@ def validate_templates(
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     """Return parsed command line arguments."""
-
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--config-root",
@@ -203,7 +197,6 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 
 def main(argv: Sequence[str] | None = None) -> int:
     """Execute validation and return the appropriate exit code."""
-
     args = parse_args(argv)
 
     config_root = args.config_root

@@ -1,6 +1,4 @@
-"""
-Production middleware package, consolidated and library-first.
-"""
+"""Production middleware package, consolidated and library-first."""
 
 from .compression import BrotliCompressionMiddleware, CompressionMiddleware
 from .correlation import generate_correlation_id, get_correlation_id, set_correlation_id

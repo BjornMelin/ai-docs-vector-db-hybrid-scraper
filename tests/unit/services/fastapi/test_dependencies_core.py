@@ -34,7 +34,6 @@ async def test_get_vector_service_uses_container(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Vector service should be resolved from the application container."""
-
     service = _InitialisableService()
 
     class _Container:
@@ -170,7 +169,6 @@ async def test_get_health_checker_returns_singleton(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """`get_health_checker` should memoise the constructed manager."""
-
     manager = MagicMock(spec=HealthCheckManager)
     build_mock = MagicMock(return_value=manager)
     monkeypatch.setattr(
@@ -197,7 +195,6 @@ async def test_get_health_checker_handles_reinitialization(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Subsequent calls should reuse cached manager even after failure."""
-
     manager = MagicMock(spec=HealthCheckManager)
 
     def _build_manager(*_args: object, **_kwargs: object) -> HealthCheckManager:

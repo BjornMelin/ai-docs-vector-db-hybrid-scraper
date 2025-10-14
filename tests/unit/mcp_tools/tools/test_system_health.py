@@ -23,7 +23,6 @@ def registered_tools(
     mocker: MockerFixture,
 ) -> tuple[dict[str, Callable[..., Any]], HealthCheckManager]:
     """Register the system health tools with mocked dependencies."""
-
     mock_mcp = mocker.MagicMock()
     tools: dict[str, Callable[..., Any]] = {}
 
@@ -42,7 +41,6 @@ def registered_tools(
 @pytest.fixture()
 def mock_context(mocker: MockerFixture):
     """Provide a stub MCP context."""
-
     ctx = mocker.MagicMock()
     ctx.info = mocker.AsyncMock()
     ctx.error = mocker.AsyncMock()
@@ -56,7 +54,6 @@ async def test_get_system_health_uses_manager(
     mocker: MockerFixture,
 ) -> None:
     """Overall health should be retrieved from the health manager."""
-
     tools, health_manager = registered_tools
     health_manager.get_overall_health = mocker.AsyncMock(
         return_value={"overall_status": "healthy"}
@@ -76,7 +73,6 @@ async def test_get_process_info_returns_check_metadata(
     mocker: MockerFixture,
 ) -> None:
     """Process info should surface system resource metadata."""
-
     tools, health_manager = registered_tools
     resource_snapshot = {
         "psutil_available": True,
@@ -118,7 +114,6 @@ async def test_get_process_info_handles_missing_psutil(
     mocker: MockerFixture,
 ) -> None:
     """Process info should degrade gracefully when psutil is unavailable."""
-
     tools, health_manager = registered_tools
     mocker.patch("src.mcp_tools.tools.system_health.psutil", None)
     health_manager.check_single = mocker.AsyncMock(

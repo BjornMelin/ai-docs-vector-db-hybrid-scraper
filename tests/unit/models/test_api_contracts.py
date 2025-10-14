@@ -22,7 +22,6 @@ from src.models.search import SearchRequest
 @pytest.fixture
 def base_search_payload() -> dict[str, object]:
     """Provide a minimal search payload for reuse."""
-
     return {"query": "search docs", "collection": "documentation"}
 
 
@@ -33,7 +32,6 @@ class TestSearchRequest:
         self, base_search_payload: Mapping[str, object]
     ) -> None:
         """The helper should normalise string payloads."""
-
         request = SearchRequest.from_input(
             "vector databases", collection="guides", limit=25
         )
@@ -47,7 +45,6 @@ class TestSearchRequest:
         self, base_search_payload: Mapping[str, object]
     ) -> None:
         """Passing an existing model applies overrides immutably."""
-
         original = SearchRequest.model_validate(base_search_payload)
         updated = SearchRequest.from_input(original, limit=50, enable_rag=True)
 
@@ -70,7 +67,6 @@ class TestSearchRequest:
         base_search_payload: Mapping[str, object],
     ) -> None:
         """Sparse-compatible vector types must include a sparse_vector payload."""
-
         payload = dict(base_search_payload)
         payload["vector_type"] = vector_type
         payload["sparse_vector"] = sparse_vector
@@ -82,7 +78,6 @@ class TestSearchRequest:
         self, base_search_payload: Mapping[str, object]
     ) -> None:
         """Dense strategy cannot run with a sparse-only vector type."""
-
         payload = dict(base_search_payload)
         payload["vector_type"] = VectorType.SPARSE
         payload["sparse_vector"] = {0: 1.0}
@@ -95,7 +90,6 @@ class TestSearchRequest:
         self, base_search_payload: Mapping[str, object]
     ) -> None:
         """Filter keys must match the allowed pattern."""
-
         payload = dict(base_search_payload)
         payload["filters"] = {"invalid key": "value"}
 
@@ -107,7 +101,6 @@ class TestSearchRequest:
         base_search_payload: Mapping[str, object],
     ) -> None:
         """Dangerous patterns inside filter values are blocked."""
-
         payload = dict(base_search_payload)
         payload["filters"] = {"title": "DROP TABLE users"}
 
@@ -119,7 +112,6 @@ class TestSearchRequest:
         base_search_payload: Mapping[str, object],
     ) -> None:
         """force_dimension requires the dense vector to have matching size."""
-
         payload = dict(base_search_payload)
         payload["query_vector"] = [0.1, 0.2]
         payload["force_dimension"] = 3
@@ -133,7 +125,6 @@ class TestDocumentContracts:
 
     def test_document_upsert_request_defaults(self) -> None:
         """DocumentUpsertRequest applies sensible defaults."""
-
         payload = DocumentUpsertRequest(content="Doc body")
 
         assert payload.collection == "documentation"
@@ -141,7 +132,6 @@ class TestDocumentContracts:
 
     def test_document_operation_response_defaults(self) -> None:
         """DocumentOperationResponse returns success by default."""
-
         response = DocumentOperationResponse(id="doc-123", message="stored")
 
         assert response.status == "success"
@@ -149,7 +139,6 @@ class TestDocumentContracts:
 
     def test_document_list_response_structure(self) -> None:
         """DocumentListResponse normalises nested document records."""
-
         record = DocumentRecord(id="doc-1", content="body", metadata={"source": "test"})
         response = DocumentListResponse(
             documents=[record],
@@ -179,7 +168,6 @@ class TestSearchRecord:
 
     def test_from_payload_handles_plain_dict(self) -> None:
         """Missing identifiers are generated automatically."""
-
         payload = SearchRecord.from_payload({"content": "hello world", "score": 0.5})
 
         assert isinstance(payload.id, str) and payload.id
@@ -188,7 +176,6 @@ class TestSearchRecord:
 
     def test_parse_list_normalises_iterable(self) -> None:
         """parse_list accepts heterogeneous payloads."""
-
         result = SearchRecord.parse_list(
             [
                 {"id": "d1", "content": "doc", "score": 0.9},
@@ -204,7 +191,6 @@ class TestSearchRecord:
 
     def test_from_vector_match_extracts_payload_fields(self) -> None:
         """Vector matches are converted to SearchRecord."""
-
         match = _MatchStub(
             id="match-1",
             payload={"content": "body text", "collection": "docs"},
@@ -221,7 +207,6 @@ class TestSearchRecord:
 
     def test_from_payload_rejects_unsupported_type(self) -> None:
         """Unsupported payload types raise TypeError."""
-
         with pytest.raises(TypeError):
             SearchRecord.from_payload(object())
 
@@ -231,13 +216,11 @@ class TestSearchResponse:
 
     def test_requires_mandatory_fields(self) -> None:
         """Validation fails when mandatory fields are missing."""
-
         with pytest.raises(ValidationError):
             SearchResponse.model_validate({"records": []})
 
     def test_forbids_extra_fields(self) -> None:
         """Extra attributes are rejected by the schema."""
-
         with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
             SearchResponse.model_validate(
                 {

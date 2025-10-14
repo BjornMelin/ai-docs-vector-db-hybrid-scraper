@@ -283,7 +283,6 @@ class TestBreakingPointAnalysis:
 
             async def analyze_response_time_degradation(self):
                 """Analyze how response times degrade under increasing load."""
-
                 # Progressive load tests to see response time degradation
                 load_levels = [
                     {"users": 10, "rps": 5, "name": "baseline"},

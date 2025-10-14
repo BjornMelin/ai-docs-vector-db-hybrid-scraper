@@ -42,7 +42,6 @@ class PlaywrightProvider(BrowserProvider):
 
     async def initialize(self) -> None:
         """Start Playwright and launch configured browser."""
-
         if self._settings.stealth is StealthMode.REBROWSER:
             raise BrowserProviderError(
                 "rebrowser stealth mode is not available in this deployment",
@@ -65,7 +64,6 @@ class PlaywrightProvider(BrowserProvider):
 
     async def close(self) -> None:
         """Dispose browser and Playwright runtime."""
-
         if self._browser:
             await self._browser.close()
             self._browser = None
@@ -77,7 +75,6 @@ class PlaywrightProvider(BrowserProvider):
         self, page: Page, actions: Sequence[Mapping[str, Any]]
     ) -> None:
         """Execute a series of actions on the given page."""
-
         for action in actions:
             action_type = action.get("type")
             if action_type == "click" and "selector" in action:
@@ -91,7 +88,6 @@ class PlaywrightProvider(BrowserProvider):
 
     async def scrape(self, request: ScrapeRequest) -> BrowserResult:
         """Run a Playwright session."""
-
         if self._browser is None:  # pragma: no cover - lifecycle guard
             raise RuntimeError("Provider not initialized")
 

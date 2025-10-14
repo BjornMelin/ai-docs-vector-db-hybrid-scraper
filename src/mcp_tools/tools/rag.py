@@ -70,7 +70,6 @@ class RAGMetricsResponse(BaseModel):
 
 def _ensure_rag_enabled(config: Settings) -> None:
     """Validate that RAG is enabled in the active configuration."""
-
     if not config.rag.enable_rag:
         msg = "RAG is not enabled in the configuration"
         raise RuntimeError(msg)
@@ -78,7 +77,6 @@ def _ensure_rag_enabled(config: Settings) -> None:
 
 def _build_rag_service_request(request: RAGAnswerRequest) -> RAGRequest:
     """Translate the MCP request model to the service-layer request."""
-
     return RAGRequest(
         query=request.query,
         top_k=request.top_k,
@@ -91,7 +89,6 @@ def _build_rag_service_request(request: RAGAnswerRequest) -> RAGRequest:
 
 def _build_rag_answer_response(result: RAGResult) -> RAGAnswerResponse:
     """Convert a RAG generator result into the MCP response schema."""
-
     sources = None
     if result.sources:
         sources = [source.model_dump() for source in result.sources]
@@ -128,7 +125,6 @@ def register_tools(
         Returns:
             RAGAnswerResponse: Generated answer with metadata and sources
         """
-
         config = get_settings()
 
         _ensure_rag_enabled(config)
@@ -157,7 +153,6 @@ def register_tools(
         Raises:
             RuntimeError: If metrics retrieval fails
         """
-
         config = get_settings()
 
         _ensure_rag_enabled(config)
@@ -188,7 +183,6 @@ def register_tools(
         Raises:
             RuntimeError: If configuration test fails
         """
-
         config = get_settings()
 
         results = {
@@ -227,7 +221,6 @@ def register_tools(
         Raises:
             RuntimeError: If cache clearing fails
         """
-
         config = get_settings()
 
         if not config.rag.enable_rag:

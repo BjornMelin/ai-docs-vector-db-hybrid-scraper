@@ -115,7 +115,6 @@ def _convert_to_internal_request(request: RAGRequest) -> InternalRAGRequest:
     Returns:
         InternalRAGRequest: Request formatted for the generator implementation.
     """
-
     if request.search_results:
         top_k = request.max_context_results or len(request.search_results)
     else:
@@ -145,7 +144,6 @@ def _format_sources(request: RAGRequest, result: Any) -> list[dict[str, Any]] | 
     Returns:
         list[dict[str, Any]] | None: Formatted source metadata when available.
     """
-
     include_sources = request.include_sources
     if include_sources is not None and not include_sources:
         return None
@@ -154,18 +152,16 @@ def _format_sources(request: RAGRequest, result: Any) -> list[dict[str, Any]] | 
     if not raw_sources:
         return None
 
-    formatted: list[dict[str, Any]] = []
-    for source in raw_sources:
-        formatted.append(
-            {
-                "source_id": getattr(source, "source_id", ""),
-                "title": getattr(source, "title", ""),
-                "url": getattr(source, "url", None),
-                "relevance_score": getattr(source, "score", None),
-                "excerpt": getattr(source, "excerpt", None),
-            }
-        )
-    return formatted
+    return [
+        {
+            "source_id": getattr(source, "source_id", ""),
+            "title": getattr(source, "title", ""),
+            "url": getattr(source, "url", None),
+            "relevance_score": getattr(source, "score", None),
+            "excerpt": getattr(source, "excerpt", None),
+        }
+        for source in raw_sources
+    ]
 
 
 def _format_metrics(result: Any) -> dict[str, Any] | None:
@@ -177,7 +173,6 @@ def _format_metrics(result: Any) -> dict[str, Any] | None:
     Returns:
         dict[str, Any] | None: Metrics serialised into primitives if present.
     """
-
     metrics = getattr(result, "metrics", None)
     if metrics is None:
         return None
@@ -210,7 +205,6 @@ async def generate_rag_answer(
         ExternalServiceError: If the generator reports a failure.
         NetworkError: If a downstream network issue occurs.
     """
-
     try:
         generator = rag_generator or await get_rag_generator()
         internal_request = _convert_to_internal_request(request)
@@ -247,7 +241,6 @@ async def get_rag_metrics(rag_generator: Any | None = None) -> dict[str, Any]:
     Returns:
         dict[str, Any]: Metrics describing recent generator performance.
     """
-
     try:
         generator = rag_generator or await get_rag_generator()
         metrics = generator.get_metrics()
@@ -268,7 +261,6 @@ async def clear_rag_cache(rag_generator: Any | None = None) -> dict[str, str]:
     Returns:
         dict[str, str]: Status payload describing the outcome of the cache clear.
     """
-
     try:
         generator = rag_generator or await get_rag_generator()
         generator.clear_cache()

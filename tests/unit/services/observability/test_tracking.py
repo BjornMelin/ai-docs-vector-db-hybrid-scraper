@@ -19,7 +19,6 @@ from src.services.observability.tracking import (
 @pytest.fixture(autouse=True)
 def _reset_singletons() -> Iterator[None]:
     """Ensure global trackers are clean for each test."""
-
     get_ai_tracker().reset()
     get_correlation_manager().clear()
     yield

@@ -75,7 +75,6 @@ async def warm_cache(
     Returns:
         CacheWarmResponse: Summary of embedding and search warmup activity.
     """
-
     search_executor: Callable[[str, str], Awaitable[list[dict[str, Any]]]] | None = None
     vector_service: VectorStoreService | None = None
     try:

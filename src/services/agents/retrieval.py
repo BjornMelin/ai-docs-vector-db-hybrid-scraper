@@ -71,7 +71,6 @@ class RetrievalHelper:
         Returns:
             Sequence of ``RetrievedDocument`` items sorted by similarity score.
         """
-
         service = await self._resolve_service()
         records = await service.search_documents(
             query.collection,

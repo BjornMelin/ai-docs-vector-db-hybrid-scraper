@@ -101,7 +101,6 @@ class TestContextTyping:
 
     def test_models_have_proper_validation(self):
         """Verify request models have proper field validation."""
-
         # Test SearchRequest validation
         with pytest.raises(ValidationError):
             SearchRequest(

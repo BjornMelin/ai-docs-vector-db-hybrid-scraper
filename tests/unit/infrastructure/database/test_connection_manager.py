@@ -35,7 +35,6 @@ class _FailingSession(_DummySession):
 @pytest.fixture()
 def tracer_fixture(mocker: MockerFixture) -> tuple[Any, Any, Any]:
     """Patch OpenTelemetry tracer and histogram for deterministic assertions."""
-
     span = mocker.MagicMock()
     span_cm = mocker.MagicMock()
     span_cm.__enter__.return_value = span
@@ -88,8 +87,7 @@ async def test_initialize_creates_engine_and_session_factory(
     config_factory,
     configure_engine: Callable[[Callable[[], Any]], Any],
 ) -> None:
-    """initialize should configure the async engine and session factory."""
-
+    """Initialize should configure the async engine and session factory."""
     settings = config_factory(
         database={
             "database_url": "sqlite+aiosqlite:///:memory:",
@@ -116,8 +114,7 @@ async def test_session_records_success(
     configure_engine: Callable[[Callable[[], Any]], Any],
     tracer_fixture: tuple[Any, Any, Any],
 ) -> None:
-    """session should commit work and publish telemetry on success."""
-
+    """Session should commit work and publish telemetry on success."""
     tracer, span, histogram = tracer_fixture
     settings = config_factory(
         database={
@@ -159,8 +156,7 @@ async def test_session_records_failure_on_exception(
     configure_engine: Callable[[Callable[[], Any]], Any],
     tracer_fixture: tuple[Any, Any, Any],
 ) -> None:
-    """session should rollback and record failure telemetry when errors occur."""
-
+    """Session should rollback and record failure telemetry when errors occur."""
     tracer, span, histogram = tracer_fixture
     settings = config_factory(
         database={
@@ -204,7 +200,6 @@ async def test_get_performance_metrics_returns_snapshot(
     configure_engine: Callable[[Callable[[], Any]], Any],
 ) -> None:
     """get_performance_metrics should surface pool stats and telemetry metadata."""
-
     settings = config_factory(
         database={
             "database_url": "sqlite+aiosqlite:///:memory:",

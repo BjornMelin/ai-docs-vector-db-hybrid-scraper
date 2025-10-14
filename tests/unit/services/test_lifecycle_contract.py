@@ -25,20 +25,17 @@ class DummyService(BaseService):
 
     def __init__(self) -> None:
         """Initialize dummy counters."""
-
         super().__init__(config=None)
         self.init_calls = 0
         self.cleanup_calls = 0
 
     async def initialize(self) -> None:
         """Simulate resource initialization and mark service ready."""
-
         self.init_calls += 1
         self._mark_initialized()
 
     async def cleanup(self) -> None:
         """Simulate resource cleanup and mark service uninitialized."""
-
         self.cleanup_calls += 1
         self._mark_uninitialized()
 
@@ -54,26 +51,22 @@ class DummyProvider(BrowserProvider):
 
     async def initialize(self) -> None:
         """Mark the provider as initialized."""
-
         self._initialized = True
 
     async def close(self) -> None:
         """Mark the provider as uninitialized."""
-
         self._initialized = False
 
     async def scrape(
         self, request: ScrapeRequest
     ) -> BrowserResult:  # pragma: no cover - not used
         """Raise to highlight this helper should not be invoked in tests."""
-
         raise NotImplementedError from None
 
 
 @pytest.mark.asyncio
 async def test_base_service_lifecycle() -> None:
     """Ensure BaseService lifecycle flags toggle during initialize/cleanup."""
-
     service = DummyService()
     assert not service.is_initialized()
 
@@ -88,7 +81,6 @@ async def test_base_service_lifecycle() -> None:
 @pytest.mark.asyncio
 async def test_browser_router_lifecycle_marks_initialized() -> None:
     """Validate browser router propagates lifecycle markers to providers."""
-
     provider = DummyProvider()
     router = BrowserRouter(
         settings=RouterSettings(

@@ -49,7 +49,6 @@ class ValidationReport:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the dataclass to a JSON-serialisable dictionary."""
-
         payload = asdict(self)
         payload["checks"] = [asdict(check) for check in self.checks]
         return payload
@@ -57,7 +56,6 @@ class ValidationReport:
 
 def _numpy_checks() -> tuple[CheckResult, str, dict[str, Any]]:
     """Perform numpy checks and return result, version, and blas info."""
-
     import numpy as np
 
     np.random.seed(42)
@@ -85,7 +83,6 @@ def _numpy_checks() -> tuple[CheckResult, str, dict[str, Any]]:
 
 def _scipy_checks() -> tuple[CheckResult, str]:
     """Perform scipy checks and return result and version."""
-
     import scipy  # pyright: ignore[reportMissingTypeStubs]
     from scipy import linalg  # pyright: ignore[reportMissingTypeStubs]
 
@@ -97,7 +94,6 @@ def _scipy_checks() -> tuple[CheckResult, str]:
 
 def _sklearn_checks() -> tuple[list[CheckResult], str]:
     """Perform sklearn checks and return results and version."""
-
     import numpy as np
     from sklearn.cluster import KMeans
     from sklearn.decomposition import PCA
@@ -139,7 +135,6 @@ def _sklearn_checks() -> tuple[list[CheckResult], str]:
 
 def run_cpu_validation() -> ValidationReport:
     """Execute the CPU validation harness and return a structured report."""
-
     checks: list[CheckResult] = []
     numpy_version: str | None = None
     scipy_version: str | None = None
@@ -148,7 +143,6 @@ def run_cpu_validation() -> ValidationReport:
 
     def _append_linalg_failure(check_id: str, exc: Exception) -> None:
         """Append a failure result while attempting to classify LinAlg errors."""
-
         detail = str(exc)
         try:
             import numpy as _np
@@ -212,7 +206,6 @@ def run_cpu_validation() -> ValidationReport:
 
 def main() -> int:
     """Main entry point for the CPU validation script."""
-
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--output",

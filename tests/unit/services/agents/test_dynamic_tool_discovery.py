@@ -70,7 +70,6 @@ def _make_discovery(
 @pytest.mark.asyncio
 async def test_refresh_respects_ttl_and_force_flag() -> None:
     """Cache refresh should respect TTL and allow forced updates."""
-
     primary_tools = [
         DummyTool(
             name="hybrid_search",
@@ -109,7 +108,6 @@ async def test_refresh_respects_ttl_and_force_flag() -> None:
 @pytest.mark.asyncio
 async def test_capability_metadata_and_type_detection() -> None:
     """Discovery should classify tool schemas into capability types."""
-
     tools = [
         DummyTool(
             name="semantic_search",
@@ -139,7 +137,6 @@ async def test_capability_metadata_and_type_detection() -> None:
 @pytest.mark.asyncio
 async def test_get_capabilities_returns_copy() -> None:
     """Callers should receive an immutable snapshot of cached capabilities."""
-
     tools = [DummyTool(name="ops", description="Operations tool")]
     discovery = _make_discovery(DummyClient({"primary": tools}))
     await discovery.refresh(force=True)
@@ -152,7 +149,6 @@ async def test_get_capabilities_returns_copy() -> None:
 @pytest.mark.asyncio
 async def test_cache_hit_telemetry(monkeypatch: pytest.MonkeyPatch) -> None:
     """Cache hits should emit telemetry events with correct metadata."""
-
     tools = [DummyTool(name="ops", description="Operations tool")]
     client = DummyClient({"primary": tools})
     telemetry: list[dict[str, Any]] = []

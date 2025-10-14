@@ -34,7 +34,6 @@ class StubMCP:
 @pytest.mark.asyncio
 async def test_enhanced_crawl_delegates_to_router() -> None:
     """enhanced_5_tier_crawl should pass a UnifiedScrapingRequest to the manager."""
-
     mcp = StubMCP()
     manager = MagicMock()
     manager.scrape_url = AsyncMock(
@@ -75,7 +74,6 @@ async def test_enhanced_crawl_delegates_to_router() -> None:
 @pytest.mark.asyncio
 async def test_enhanced_crawl_validates_url() -> None:
     """Invalid URLs should raise ValueError before delegating."""
-
     mcp = StubMCP()
     manager = MagicMock()
     manager.scrape_url = AsyncMock()

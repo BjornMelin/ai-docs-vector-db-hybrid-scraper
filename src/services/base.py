@@ -22,7 +22,6 @@ class BaseService(ABC, LifecycleTracker, ServiceLifecycle):
         Args:
             config: Unified configuration
         """
-
         self.config = config
         self._client: object | None = None
         LifecycleTracker.__init__(self)
@@ -38,7 +37,6 @@ class BaseService(ABC, LifecycleTracker, ServiceLifecycle):
     @asynccontextmanager
     async def context(self):
         """Context manager for service lifecycle."""
-
         try:
             await self.initialize()
             yield self
@@ -47,7 +45,6 @@ class BaseService(ABC, LifecycleTracker, ServiceLifecycle):
 
     def _validate_initialized(self) -> None:
         """Ensure service is initialized."""
-
         if not self.is_initialized():
             msg = (
                 f"{self.__class__.__name__} not initialized. "
@@ -57,12 +54,10 @@ class BaseService(ABC, LifecycleTracker, ServiceLifecycle):
 
     async def __aenter__(self):
         """Async context manager entry."""
-
         await self.initialize()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Async context manager exit."""
-
         await self.cleanup()
         return False

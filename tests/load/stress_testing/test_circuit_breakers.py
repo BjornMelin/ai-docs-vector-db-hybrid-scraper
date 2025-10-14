@@ -172,7 +172,6 @@ class TestCircuitBreakers:
     @pytest.mark.asyncio
     async def test_circuit_breaker_trigger_points(self, load_test_runner):
         """Test circuit breaker trigger points under increasing failure rates."""
-
         # Configure circuit breaker
         cb_config = CircuitBreakerConfig(
             failure_threshold=5,
@@ -321,7 +320,6 @@ class TestCircuitBreakers:
     @pytest.mark.asyncio
     async def test_circuit_breaker_recovery_behavior(self, load_test_runner):
         """Test circuit breaker recovery behavior after service restoration."""
-
         # Configure circuit breaker with shorter timeout for testing
         cb_config = CircuitBreakerConfig(
             failure_threshold=3,

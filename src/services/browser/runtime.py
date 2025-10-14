@@ -66,7 +66,6 @@ def classify_exception(exc: BaseException) -> ErrorClass:
     The taxonomy keeps labels low-cardinality for Prometheus while preserving
     enough signal for routing/triage.
     """
-
     if isinstance(exc, httpx.HTTPStatusError):
         status = exc.response.status_code
         if status in (429, 503):
@@ -92,7 +91,6 @@ async def measure(
     On success, records latency and increments success counter. On exception,
     increments failure counter with a classified error and re-raises.
     """
-
     labels = {"provider": provider.value, "operation": operation}
     start = time.perf_counter()
     try:
@@ -131,7 +129,6 @@ async def execute_with_retry(
         max_wait: Maximum backoff seconds.
         retry_on: Exception types considered transient.
     """
-
     async with measure(provider=provider, operation=operation):
         try:
             async for attempt in AsyncRetrying(

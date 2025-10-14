@@ -14,7 +14,6 @@ from src.models.search import SearchRequest
 @pytest.fixture
 def base_payload() -> dict[str, object]:
     """Provide a reusable payload for mutation in tests."""
-
     return {"query": "find docs"}
 
 

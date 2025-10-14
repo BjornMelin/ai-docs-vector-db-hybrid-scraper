@@ -64,7 +64,6 @@ class _StubPipeline:
 @pytest.mark.asyncio
 async def test_orchestrator_handles_parallel_queries() -> None:
     """The orchestrator should sustain high concurrency with stubbed pipeline."""
-
     matches = [
         SearchRecord(
             id=f"doc-{i}",

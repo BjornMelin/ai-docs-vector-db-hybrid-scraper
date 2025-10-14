@@ -15,7 +15,6 @@ from src.config import SecurityConfig, get_settings, refresh_settings
 @pytest.fixture(autouse=True)
 def _reset_settings(config_factory) -> Generator[None, None, None]:
     """Ensure each test starts with a pristine settings cache."""
-
     refresh_settings()
     yield
     refresh_settings()
@@ -24,7 +23,6 @@ def _reset_settings(config_factory) -> Generator[None, None, None]:
 @pytest.fixture()
 def client(config_factory) -> TestClient:
     """Provide a FastAPI test client with the configuration router registered."""
-
     refresh_settings(
         settings=config_factory(
             mode=get_settings().mode,
@@ -38,7 +36,6 @@ def client(config_factory) -> TestClient:
 
 def test_read_settings_returns_snapshot(client: TestClient) -> None:
     """GET /config should return a sanitized settings snapshot."""
-
     response = client.get("/config")
     assert response.status_code == status.HTTP_200_OK
     payload = response.json()
@@ -51,7 +48,6 @@ def test_read_settings_returns_snapshot(client: TestClient) -> None:
 
 def test_read_status_reports_unified_configuration(client: TestClient) -> None:
     """GET /config/status mirrors the active settings state."""
-
     response = client.get("/config/status")
     assert response.status_code == status.HTTP_200_OK
     payload = response.json()
@@ -61,7 +57,6 @@ def test_read_status_reports_unified_configuration(client: TestClient) -> None:
 
 def test_refresh_endpoint_applies_overrides(client: TestClient) -> None:
     """POST /config/refresh should rebuild settings with overrides applied."""
-
     response = client.post(
         "/config/refresh",
         json={"overrides": {"app_name": "Refreshed App"}},
@@ -76,7 +71,6 @@ def test_api_key_required_blocks_requests(
     config_factory, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """API key protected endpoints should reject requests without credentials."""
-
     secure_settings = config_factory(
         security=SecurityConfig(
             api_key_required=True, api_keys=["super-secret"], api_key_header="X-API-Key"
@@ -98,7 +92,6 @@ def test_read_settings_handles_invalid_snapshot(
     monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Configuration snapshot endpoint sanitizes malformed settings."""
-
     app = FastAPI()
     app.include_router(config_router.router)
 

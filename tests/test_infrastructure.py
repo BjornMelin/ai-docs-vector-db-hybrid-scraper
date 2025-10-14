@@ -178,7 +178,6 @@ class TestRespxIntegration:
     @pytest.mark.asyncio
     async def test_respx_mock_fixture(self, respx_mock):
         """Test respx mock fixture with pre-configured routes."""
-
         async with httpx.AsyncClient() as client:
             # Test pre-configured OpenAI route
             response = await client.post("https://api.openai.com/v1/embeddings")

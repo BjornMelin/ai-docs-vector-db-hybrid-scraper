@@ -10,7 +10,6 @@ from src.mcp_services.document_service import DocumentService
 @pytest.fixture()
 def dependency_set() -> dict[str, MagicMock]:
     """Return a mapping of mocked dependencies for the service."""
-
     return {
         "vector_service": MagicMock(),
         "cache_manager": MagicMock(),
@@ -24,7 +23,6 @@ def test_document_service_registers_tools(
     dependency_set: dict[str, MagicMock],
 ) -> None:
     """Verify that tool modules are called with the injected dependencies."""
-
     dependencies = dependency_set
     with (
         patch("src.mcp_tools.tools.documents.register_tools") as documents_register,
@@ -74,7 +72,6 @@ def test_document_service_registers_tools(
 
 def test_get_mcp_server_returns_instance(dependency_set: dict[str, MagicMock]) -> None:
     """DocumentService exposes the FastMCP instance via get_mcp_server."""
-
     service = DocumentService(
         vector_service=dependency_set["vector_service"],
         cache_manager=dependency_set["cache_manager"],
@@ -89,7 +86,6 @@ def test_get_mcp_server_returns_instance(dependency_set: dict[str, MagicMock]) -
 @pytest.mark.asyncio()
 async def test_get_service_info(dependency_set: dict[str, MagicMock]) -> None:
     """Service metadata reflects capabilities and status."""
-
     service = DocumentService(
         vector_service=dependency_set["vector_service"],
         cache_manager=dependency_set["cache_manager"],

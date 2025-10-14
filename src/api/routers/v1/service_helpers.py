@@ -37,7 +37,6 @@ async def execute_service_call(  # noqa: UP047
             unexpected error occurs. Unexpected failures are logged and converted to a
             500 response with ``error_detail`` as the message.
     """
-
     try:
         return await coroutine_factory()
     except HTTPException:

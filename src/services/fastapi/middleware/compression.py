@@ -1,5 +1,4 @@
-"""
-Compression middleware thin wrappers.
+"""Compression middleware thin wrappers.
 
 Prefer battle-tested implementations:
 - Starlette's GZipMiddleware for gzip.

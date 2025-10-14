@@ -57,7 +57,6 @@ class BrowserResult:
         elapsed_ms: int | None = None,
     ) -> BrowserResult:
         """Factory helper for failed attempts."""
-
         meta: MutableMapping[str, Any] = {
             "error": error,
             **({} if metadata is None else dict(metadata)),

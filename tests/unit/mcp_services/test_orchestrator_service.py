@@ -15,7 +15,6 @@ def orchestrator_fixture() -> tuple[
     OrchestratorService, MagicMock, MagicMock, dict[str, AsyncMock]
 ]:
     """Build an orchestrator with fully mocked dependencies."""
-
     search_service = SimpleNamespace(
         get_service_info=AsyncMock(
             return_value={"service": "search", "status": "active"}

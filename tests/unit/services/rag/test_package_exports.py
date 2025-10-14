@@ -53,7 +53,6 @@ def test_rag_package_exports_resolve_types(
     Returns:
         None: This test asserts each export is discoverable at the package boundary.
     """
-
     exported_object = getattr(rag_module, export_name)
 
     assert exported_object is expected_object
@@ -65,7 +64,6 @@ def test_rag_all_exports_alignment() -> None:
     Returns:
         None: This test ensures the module contract remains deliberate.
     """
-
     assert isinstance(rag_module.__all__, tuple)
 
     with pytest.raises(TypeError):
@@ -82,7 +80,6 @@ def test_compression_stats_dataclass_behaviour() -> None:
     Returns:
         None: This test validates the ratios remain accessible to callers.
     """
-
     stats = CompressionStats(documents_processed=10, tokens_before=100, tokens_after=40)
 
     assert stats.reduction_ratio == pytest.approx(0.6)
@@ -102,7 +99,6 @@ def test_compression_stats_edge_cases(
     tokens_before: int, tokens_after: int, expected_ratio: float
 ) -> None:
     """Ensure ``CompressionStats`` handles non-positive token counts safely."""
-
     stats = CompressionStats(tokens_before=tokens_before, tokens_after=tokens_after)
 
     assert stats.reduction_ratio == expected_ratio

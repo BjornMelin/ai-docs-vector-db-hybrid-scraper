@@ -24,7 +24,6 @@ class DatasetValidationError(Exception):
 
 def load_dataset_records(path: Path) -> list[dict[str, Any]]:
     """Return all JSON objects contained in the file."""
-
     rows: list[dict[str, Any]] = []
     with path.open(encoding="utf-8") as handle:
         for index, line in enumerate(handle, start=1):
@@ -41,7 +40,6 @@ def load_dataset_records(path: Path) -> list[dict[str, Any]]:
 
 def validate_dataset(path: Path) -> None:
     """Validate that the dataset satisfies structural constraints."""
-
     rows = load_dataset_records(path)
     if not rows:
         raise DatasetValidationError("Dataset is empty")
@@ -74,7 +72,6 @@ def validate_dataset(path: Path) -> None:
 
 def main() -> None:
     """CLI entrypoint that validates the provided dataset file."""
-
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("dataset", type=Path, help="Path to the dataset JSONL file")
     args = parser.parse_args()

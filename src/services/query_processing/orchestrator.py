@@ -179,7 +179,6 @@ class SearchOrchestrator(BaseService):
         features_used: list[str],
     ) -> tuple[str, str | None]:
         """Expand a query when the feature is enabled."""
-
         if not request.enable_expansion:
             return query, None
 
@@ -199,7 +198,6 @@ class SearchOrchestrator(BaseService):
         features_used: list[str],
     ) -> list[SearchRecord]:
         """Apply personalized ranking when enabled and results are available."""
-
         if not (request.enable_personalization and records):
             return records
         preferences = request.user_preferences or {}
@@ -244,7 +242,6 @@ class SearchOrchestrator(BaseService):
         features_used: list[str],
     ) -> tuple[str | None, float | None, list[dict[str, Any]] | None]:
         """Generate RAG outputs when enabled and capable."""
-
         if not (
             context.request.enable_rag
             and self._rag_config is not None
@@ -277,7 +274,6 @@ class SearchOrchestrator(BaseService):
         Returns:
             Collection name to use for the search.
         """
-
         if request.collection:
             return request.collection
 
@@ -301,7 +297,6 @@ class SearchOrchestrator(BaseService):
         collection: str,
     ) -> dict[str, Any] | None:
         """Generate a RAG answer using the LangGraph pipeline."""
-
         if self._rag_config is None:
             return None
 

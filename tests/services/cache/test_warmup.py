@@ -43,7 +43,6 @@ class _StubEmbeddingManager:
 @pytest.mark.asyncio()
 async def test_warm_caches_generates_missing_embeddings(fakeredis_cache) -> None:
     """warm_caches should generate embeddings for uncached queries."""
-
     manager = CacheManager(distributed_cache=fakeredis_cache)
     stub_embedding_manager = _StubEmbeddingManager()
 
@@ -61,7 +60,6 @@ async def test_warm_caches_generates_missing_embeddings(fakeredis_cache) -> None
 @pytest.mark.asyncio()
 async def test_warm_caches_skips_when_manager_missing() -> None:
     """warm_caches should report skipped embeddings when manager is absent."""
-
     manager = CacheManager(enable_distributed_cache=False)
     summary = await warm_caches(
         manager,
@@ -77,7 +75,6 @@ async def test_warm_caches_warms_search_with_executor(
     fakeredis_cache,
 ) -> None:
     """warm_caches should warm search cache entries when executor is provided."""
-
     manager = CacheManager(distributed_cache=fakeredis_cache)
 
     async def execute(query: str, collection: str) -> list[dict[str, Any]]:

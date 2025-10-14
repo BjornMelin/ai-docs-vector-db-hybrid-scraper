@@ -67,7 +67,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         async_qdrant_client: AsyncQdrantClient,
     ) -> None:
         """Initialize the VectorStoreService."""
-
         super().__init__(config)
         self.collection_name: str | None = None
         self._async_client: AsyncQdrantClient | None = async_qdrant_client
@@ -82,7 +81,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
 
     async def initialize(self) -> None:
         """Initialize Qdrant clients and embeddings."""
-
         if self.is_initialized():
             return
 
@@ -123,7 +121,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
 
     async def cleanup(self) -> None:
         """Release Qdrant clients and embeddings."""
-
         self._vector_store = None
         self._sync_client = None
         self._async_client = None
@@ -135,7 +132,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
     @property
     def embedding_dimension(self) -> int:
         """Return the dimensionality of the dense embeddings."""
-
         if self._embedding_dimension is None:
             msg = "FastEmbed embeddings have not been initialized"
             raise EmbeddingServiceError(msg)
@@ -143,7 +139,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
 
     async def ensure_collection(self, schema: CollectionSchema) -> None:
         """Ensure a collection with the supplied schema exists."""
-
         client = self._require_async_client()
         if await client.collection_exists(schema.name):
             return
@@ -177,27 +172,23 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
 
     async def drop_collection(self, name: str) -> None:
         """Drop a collection if it exists."""
-
         client = self._require_async_client()
         await client.delete_collection(name)
 
     async def list_collections(self) -> list[str]:
         """Return the identifiers for all collections."""
-
         client = self._require_async_client()
         response = await client.get_collections()
         return [collection.name for collection in response.collections]
 
     async def get_collection_info(self, name: str) -> Mapping[str, Any]:
         """Fetch raw collection metadata."""
-
         client = self._require_async_client()
         info = await client.get_collection(collection_name=name)
         return _serialize_collection_info(info)
 
     async def get_payload_index_summary(self, name: str) -> Mapping[str, Any]:
         """Return a payload index summary for the supplied collection."""
-
         info = await self.get_collection_info(name)
         payload_schema = info.get("payload_schema", {})
         indexed_fields = sorted(payload_schema.keys())
@@ -214,7 +205,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         definitions: Mapping[str, models.PayloadSchemaType],
     ) -> Mapping[str, Any]:
         """Ensure payload indexes with the requested schemas exist."""
-
         client = self._require_async_client()
         summary = await self.get_payload_index_summary(name)
         existing_schema: Mapping[str, Mapping[str, Any]] = summary.get(
@@ -232,7 +222,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
 
     async def drop_payload_indexes(self, name: str, fields: Iterable[str]) -> None:
         """Drop payload indexes for the given fields if present."""
-
         client = self._require_async_client()
         summary = await self.get_payload_index_summary(name)
         existing_fields = set(summary.get("indexed_fields", []))
@@ -246,7 +235,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
 
     async def collection_stats(self, name: str) -> Mapping[str, Any]:
         """Return statistics for a collection."""
-
         client = self._require_async_client()
         info = await client.get_collection(collection_name=name)
         return _serialize_collection_info(info)
@@ -258,7 +246,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         metadata: Mapping[str, Any] | None = None,
     ) -> str:
         """Add a single document and return its identifier."""
-
         document_id = str(uuid4())
         normalized_metadata = dict(metadata or {})
         normalized_metadata.setdefault("doc_id", document_id)
@@ -296,7 +283,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         batch_size: int | None = None,
     ) -> None:
         """Upsert a batch of documents via LangChain vector store."""
-
         if not documents:
             return
 
@@ -373,7 +359,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         filters: Mapping[str, Any] | None = None,
     ) -> None:
         """Delete points by identifiers or filter."""
-
         client = self._require_async_client()
         if ids:
             await client.delete(
@@ -397,7 +382,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         batch_size: int | None = None,
     ) -> None:
         """Insert or update pre-embedded vectors."""
-
         if not records:
             return
 
@@ -441,7 +425,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         document_id: str,
     ) -> Mapping[str, Any] | None:
         """Fetch a document payload by identifier."""
-
         client = self._require_async_client()
         records = await client.retrieve(
             collection_name=collection,
@@ -457,7 +440,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
 
     async def delete_document(self, collection: str, document_id: str) -> bool:
         """Delete a document by identifier."""
-
         before = await self.get_document(collection, document_id)
         if before is None:
             return False
@@ -472,7 +454,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         offset: str | None = None,
     ) -> tuple[list[dict[str, Any]], str | None]:
         """List documents with pagination support."""
-
         client = self._require_async_client()
         points, next_offset = await client.scroll(
             collection_name=collection,
@@ -489,7 +470,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
 
     async def embed_query(self, query: str) -> Sequence[float]:
         """Generate an embedding for the supplied query."""
-
         try:
             if self._dense_embeddings is None:
                 msg = "FastEmbed embeddings have not been initialized"
@@ -505,7 +485,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
 
     async def embed_documents(self, texts: Sequence[str]) -> list[list[float]]:
         """Generate embeddings for documents."""
-
         try:
             if self._dense_embeddings is None:
                 msg = "FastEmbed embeddings have not been initialized"
@@ -531,7 +510,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         normalize_scores: bool | None = None,
     ) -> list[SearchRecord]:  # pylint: disable=too-many-arguments
         """Execute a dense similarity search with optional grouping."""
-
         vector = await self.embed_query(query)
         records, grouping_applied = await self._query_with_optional_grouping(
             collection,
@@ -558,7 +536,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         filters: Mapping[str, Any] | None = None,
     ) -> list[SearchRecord]:
         """Perform a similarity search using a precomputed vector."""
-
         records, _ = await self._query_with_optional_grouping(
             collection,
             vector,
@@ -581,7 +558,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         filters: Mapping[str, Any] | None = None,
     ) -> list[SearchRecord]:  # pylint: disable=too-many-arguments
         """Perform a hybrid search over dense and sparse representations."""
-
         dense_payload = dense_vector
         sparse_payload_mapping = sparse_vector
         mode = self._retrieval_mode
@@ -691,7 +667,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         filters: Mapping[str, Any] | None = None,
     ) -> list[SearchRecord]:
         """Return records related to supplied positive examples."""
-
         if not positive_ids and vector is None:
             msg = "`positive_ids` or `vector` must be provided for recommend"
             raise ValueError(msg)
@@ -719,7 +694,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
 
     def _require_async_client(self) -> AsyncQdrantClient:
         """Return the async Qdrant client."""
-
         if self._async_client is None:
             msg = "VectorStoreService not initialized"
             raise RuntimeError(msg)
@@ -727,7 +701,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
 
     def _require_vector_store(self, collection: str) -> QdrantVectorStore:
         """Return the vector store for the collection."""
-
         if self._vector_store is None:
             msg = "VectorStoreService not initialized"
             raise RuntimeError(msg)
@@ -737,7 +710,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
 
     def _require_qdrant_config(self) -> Any:
         """Return the Qdrant configuration."""
-
         cfg = getattr(self.config, "qdrant", None)
         if cfg is None:
             msg = "Qdrant configuration missing"
@@ -746,18 +718,16 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
 
     def _resolve_retrieval_mode(self) -> SearchStrategy:
         """Determine the retrieval mode based on settings and provider."""
-
         embedding_cfg = getattr(self.config, "embedding", None)
         mode = getattr(embedding_cfg, "retrieval_mode", None)
         if isinstance(mode, SearchStrategy):
             return mode
-        if hasattr(self.config, "get_effective_search_strategy"):
+        if self.config and hasattr(self.config, "get_effective_search_strategy"):
             return cast(SearchStrategy, self.config.get_effective_search_strategy())
         return SearchStrategy.DENSE
 
     def _resolve_dense_model(self) -> str:
         """Return the configured dense embedding model identifier."""
-
         embedding_cfg = getattr(self.config, "embedding", None)
         candidate = getattr(embedding_cfg, "dense_model", None)
         if isinstance(candidate, str) and candidate:
@@ -767,7 +737,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
 
     def _resolve_sparse_model(self) -> str | None:
         """Return the configured sparse embedding model identifier, if any."""
-
         embedding_cfg = getattr(self.config, "embedding", None)
         candidate = getattr(embedding_cfg, "sparse_model", None)
         if isinstance(candidate, str) and candidate:
@@ -788,7 +757,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         overfetch_multiplier: float | None,
     ) -> tuple[list[SearchRecord], bool]:  # pylint: disable=too-many-arguments,too-many-locals
         """Query with optional grouping support."""
-
         cfg = self._require_qdrant_config()
         grouping_enabled = bool(group_by) and bool(
             getattr(cfg, "enable_grouping", False)
@@ -864,7 +832,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         filters: Mapping[str, Any] | None,
     ) -> tuple[list[SearchRecord], bool]:  # pylint: disable=too-many-arguments
         """Query with server-side grouping."""
-
         client = self._require_async_client()
         cfg = self._require_qdrant_config()
         if not getattr(cfg, "enable_grouping", False):
@@ -925,7 +892,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         limit: int,
     ) -> list[SearchRecord]:
         """Group matches client-side."""
-
         groups: dict[str, list[SearchRecord]] = {}
         for record in records:
             metadata: dict[str, Any] = dict(record.metadata or {})
@@ -970,7 +936,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         grouping_applied: bool,
     ) -> list[SearchRecord]:
         """Annotate matches with grouping metadata."""
-
         if not group_by:
             return records
         for rank, record in enumerate(records, start=1):
@@ -992,7 +957,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
         self, records: list[SearchRecord], *, enabled: bool | None
     ) -> list[SearchRecord]:  # pylint: disable=too-many-branches,too-many-return-statements
         """Normalize match scores."""
-
         if not records:
             return records
 
@@ -1055,7 +1019,6 @@ class VectorStoreService(BaseService):  # pylint: disable=too-many-public-method
 
     def _build_sync_client(self, cfg: Any) -> QdrantClient:
         """Build the synchronous Qdrant client."""
-
         timeout = getattr(cfg, "timeout", 30)
         return QdrantClient(
             url=str(getattr(cfg, "url", "http://localhost:6333")),
@@ -1078,7 +1041,6 @@ def _document_to_record(
     score: float,
 ) -> SearchRecord:
     """Convert a LangChain document into a canonical search record."""
-
     metadata: dict[str, Any] = dict(document.metadata or {})
     metadata.setdefault("page_content", document.page_content)
     identifier = (
@@ -1105,7 +1067,6 @@ def _document_to_record(
 
 def _scored_point_to_record(collection: str, point: Any) -> SearchRecord:
     """Convert a Qdrant scored point into a canonical search record."""
-
     payload: dict[str, Any] = dict(getattr(point, "payload", {}) or {})
     score = float(getattr(point, "score", 0.0) or 0.0)
     record_payload = {
@@ -1126,7 +1087,6 @@ def _scored_point_to_record(collection: str, point: Any) -> SearchRecord:
 
 def _serialize_collection_info(info: Any) -> Mapping[str, Any]:
     """Serialize collection info."""
-
     config = getattr(info, "config", None)
     payload_schema = (
         cast(dict[str, Any], getattr(config, "payload_schema", {})) if config else {}
@@ -1146,7 +1106,6 @@ def _schema_matches(
     existing: Mapping[str, Any] | None, schema: models.PayloadSchemaType
 ) -> bool:
     """Check if schema matches existing."""
-
     if not existing:
         return False
     return existing.get("type") == schema.value if isinstance(schema, Enum) else False
@@ -1154,7 +1113,6 @@ def _schema_matches(
 
 def _distance_from_string(name: str) -> models.Distance:
     """Convert distance name to enum."""
-
     mapping = {
         "cosine": models.Distance.COSINE,
         "dot": models.Distance.DOT,
@@ -1166,7 +1124,6 @@ def _distance_from_string(name: str) -> models.Distance:
 
 def _filter_from_mapping(filters: Mapping[str, Any] | None) -> models.Filter | None:
     """Convert mapping to Qdrant filter."""
-
     if not filters:
         return None
     must_conditions = []

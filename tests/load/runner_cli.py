@@ -127,7 +127,6 @@ ARGUMENT_DEFINITIONS: tuple[tuple[tuple[str, ...], dict[str, Any]], ...] = (
 
 def build_argument_parser() -> argparse.ArgumentParser:
     """Build the command-line argument parser for the load test runner."""
-
     parser = argparse.ArgumentParser(
         description="AI Documentation Vector DB Load Test Runner"
     )
@@ -140,7 +139,6 @@ def build_argument_parser() -> argparse.ArgumentParser:
 
 def configure_logging(verbose: bool) -> None:
     """Configure logging verbosity for both standard logging and Locust."""
-
     log_level = logging.DEBUG if verbose else logging.INFO
     logging.getLogger().setLevel(log_level)
     setup_logging(log_level, None)
@@ -148,14 +146,12 @@ def configure_logging(verbose: bool) -> None:
 
 def configure_runner_output(runner: LoadTestRunner, output_dir: str) -> None:
     """Ensure the runner's output directory exists and is configured."""
-
     runner.results_dir = Path(output_dir)
     runner.results_dir.mkdir(exist_ok=True)
 
 
 def build_base_config(runner: LoadTestRunner, args: argparse.Namespace) -> dict:
     """Create the base configuration for load tests using CLI arguments."""
-
     base_config = runner.default_configs.get(
         args.config, runner.default_configs["light"]
     ).copy()
@@ -176,7 +172,6 @@ def build_base_config(runner: LoadTestRunner, args: argparse.Namespace) -> dict:
 
 def _require_argument(value: object, message: str) -> None:
     """Ensure a required CLI argument is provided, exiting with an error if missing."""
-
     if value:
         return
 
@@ -188,7 +183,6 @@ def execute_mode(
     args: argparse.Namespace, runner: LoadTestRunner, config: dict
 ) -> dict:
     """Execute the selected mode and return the resulting payload."""
-
     mode = args.mode
 
     if mode == "locust":
@@ -223,7 +217,6 @@ def execute_mode(
 
 def print_summary(mode: str, result: dict[str, object]) -> None:
     """Render a concise summary of the load test execution."""
-
     print("\n" + "=" * 60)
     print(f"Load Test Summary - Mode: {mode}")
     print("=" * 60)
@@ -262,7 +255,6 @@ def print_summary(mode: str, result: dict[str, object]) -> None:
 
 def should_exit_with_error(result: dict[str, object]) -> bool:
     """Determine whether the process should exit with a non-zero status."""
-
     status = result.get("status")
     if status == "failed":
         return True
@@ -277,7 +269,6 @@ logger = logging.getLogger(__name__)
 
 def main() -> None:
     """Main entry point for load test runner."""
-
     parser = build_argument_parser()
     args = parser.parse_args()
 

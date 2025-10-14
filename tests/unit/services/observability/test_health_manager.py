@@ -26,7 +26,6 @@ from src.services.observability.health_manager import (
 @pytest.fixture()
 def configured_settings(config_factory):
     """Provide settings with all optional providers enabled."""
-
     return config_factory(
         qdrant={"url": "http://localhost:6333", "api_key": "test", "timeout": 5.0},
         cache={
@@ -50,13 +49,11 @@ class _StubHealthCheck(HealthCheck):
 
     def __init__(self, name: str, result: HealthCheckResult):
         """Create a stubbed health check."""
-
         super().__init__(name)
         self._result = result
 
     async def check(self) -> HealthCheckResult:
         """Return the pre-configured result."""
-
         await asyncio.sleep(0)
         return self._result
 
@@ -64,7 +61,6 @@ class _StubHealthCheck(HealthCheck):
 @pytest.mark.asyncio()
 async def test_health_manager_aggregates_status() -> None:
     """Health manager should aggregate results and compute overall status."""
-
     config = HealthCheckConfig()
     manager = HealthCheckManager(config)
     manager.add_health_check(
@@ -102,7 +98,6 @@ def test_build_health_manager_includes_expected_checks(
     configured_settings, mocker: MockerFixture
 ) -> None:
     """Building the manager wires up configured dependency checks."""
-
     mocker.patch(
         "src.services.observability.health_manager.AsyncQdrantClient", autospec=True
     )
@@ -141,7 +136,6 @@ def test_build_health_manager_includes_expected_checks(
 
 def test_build_health_manager_skips_openai_when_disabled(config_factory) -> None:
     """OpenAI checks should be omitted when another embedding provider is used."""
-
     settings = config_factory(
         embedding_provider=EmbeddingProvider.FASTEMBED,
         crawl_provider=CrawlProvider.CRAWL4AI,
@@ -159,7 +153,6 @@ def test_build_health_manager_skips_openai_when_disabled(config_factory) -> None
 @pytest.mark.asyncio()
 async def test_rag_health_check_skips_when_disabled(config_factory) -> None:
     """RAG configuration check should skip when the feature is disabled."""
-
     settings = config_factory(rag={"enable_rag": False})
     check = RAGConfigurationHealthCheck(settings)
 
@@ -172,7 +165,6 @@ async def test_rag_health_check_skips_when_disabled(config_factory) -> None:
 @pytest.mark.asyncio()
 async def test_rag_health_check_flags_missing_model(config_factory) -> None:
     """RAG configuration check should report missing required fields."""
-
     settings = config_factory(rag={"enable_rag": True, "model": ""})
     check = RAGConfigurationHealthCheck(settings)
 
@@ -185,7 +177,6 @@ async def test_rag_health_check_flags_missing_model(config_factory) -> None:
 @pytest.mark.asyncio()
 async def test_rag_health_check_reports_healthy(config_factory) -> None:
     """RAG configuration check should report healthy when configured."""
-
     settings = config_factory(rag={"enable_rag": True, "model": "gpt-4o"})
     check = RAGConfigurationHealthCheck(settings)
 
@@ -200,7 +191,6 @@ async def test_application_metadata_health_check_degraded_without_name(
     config_factory,
 ) -> None:
     """Application metadata check should degrade when required metadata is empty."""
-
     settings = config_factory(app_name="")
     check = ApplicationMetadataHealthCheck(settings)
 
@@ -215,7 +205,6 @@ async def test_application_metadata_health_check_reports_metadata(
     config_factory,
 ) -> None:
     """Application metadata check should expose configured metadata."""
-
     settings = config_factory(app_name="Docs App", version="1.2.3")
     check = ApplicationMetadataHealthCheck(settings)
 
@@ -231,7 +220,6 @@ async def test_dragonfly_health_check_reports_metadata(
     mocker: MockerFixture,
 ) -> None:
     """Dragonfly health check should report version and client metrics."""
-
     fake_client = fakeredis_aioredis.FakeRedis(decode_responses=True)
     mocker.patch(
         "src.services.observability.health_manager.redis.from_url",
@@ -263,7 +251,6 @@ async def test_dragonfly_health_check_handles_ping_failure(
     mocker: MockerFixture,
 ) -> None:
     """Dragonfly health check should mark the service unhealthy when ping fails."""
-
     fake_client = fakeredis_aioredis.FakeRedis(decode_responses=True)
     mocker.patch(
         "src.services.observability.health_manager.redis.from_url",
@@ -283,7 +270,6 @@ async def test_dragonfly_health_check_handles_ping_failure(
 @pytest.mark.asyncio()
 async def test_health_manager_check_single_returns_result() -> None:
     """Health manager should run a named check and track the latest result."""
-
     config = HealthCheckConfig()
     expected = HealthCheckResult(
         name="single",
@@ -309,12 +295,10 @@ async def test_health_manager_check_all_handles_exceptions() -> None:
 
         def __init__(self, name: str) -> None:
             """Initialize the failing check with a name."""
-
             super().__init__(name)
 
         async def check(self) -> HealthCheckResult:
             """Raise an error to simulate probe failure."""
-
             raise RuntimeError("boom")
 
     config = HealthCheckConfig()

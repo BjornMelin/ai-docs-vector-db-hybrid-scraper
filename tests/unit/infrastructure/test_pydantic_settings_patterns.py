@@ -1,6 +1,7 @@
 """Unit tests for the configuration loader.
 
-The suite exercises the pydantic-settings integration."""
+The suite exercises the pydantic-settings integration.
+"""
 
 # pylint: disable=no-member
 
@@ -26,7 +27,6 @@ from src.config.models import (
 @pytest.fixture(autouse=True)
 def _clean_config_cache() -> Iterator[None]:
     """Ensure global config cache does not leak between tests."""
-
     refresh_settings()
     yield
     refresh_settings()
@@ -55,7 +55,6 @@ def test_config_loads_env_values_and_nested_sections(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """Environment variables, including nested keys, populate the Settings model."""
-
     overrides = _path_overrides(tmp_path)
     monkeypatch.setenv("AI_DOCS_APP_NAME", "env-app")
     monkeypatch.setenv("AI_DOCS_ENVIRONMENT", "staging")
@@ -99,7 +98,6 @@ def test_config_requires_provider_keys_outside_testing(
     provider_kwargs: dict[str, object], expected_message: str
 ) -> None:
     """Production/staging configs should enforce provider-specific API keys."""
-
     payload: dict[str, object] = {"environment": Environment.PRODUCTION}
     payload.update(provider_kwargs)
 
@@ -111,7 +109,6 @@ def test_config_requires_provider_keys_outside_testing(
 
 def test_config_allows_missing_provider_keys_in_testing_environment() -> None:
     """Testing configs bypass provider key validation for ease of local development."""
-
     config = Settings.model_validate(
         {
             "environment": Environment.TESTING,
@@ -129,7 +126,6 @@ def test_config_allows_missing_provider_keys_in_testing_environment() -> None:
 
 def test_config_nested_credentials_and_urls(tmp_path: Path) -> None:
     """Nested credentials and URLs should be preserved without side effects."""
-
     overrides = _path_overrides(tmp_path)
     config = Settings.model_validate(
         {
@@ -154,7 +150,6 @@ def test_config_nested_credentials_and_urls(tmp_path: Path) -> None:
 
 def test_config_feature_flags_and_helpers(tmp_path: Path) -> None:
     """Feature flags control optional capabilities without mode profiles."""
-
     overrides = _path_overrides(tmp_path)
     config = Settings.model_validate(
         {
@@ -185,7 +180,6 @@ def test_config_feature_flags_and_helpers(tmp_path: Path) -> None:
 
 def test_global_config_cache_and_reset(tmp_path: Path) -> None:
     """Global helpers should manage cached configuration instances predictably."""
-
     overrides = _path_overrides(tmp_path)
     refresh_settings()
 

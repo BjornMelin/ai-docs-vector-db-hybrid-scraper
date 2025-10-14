@@ -140,7 +140,6 @@ class LogContext:
 
 def bind_log_context(**context: Any) -> contextvars.Token[Mapping[str, Any]]:
     """Bind contextual data for subsequent log records and return a token."""
-
     current = dict(_LOG_CONTEXT.get())
     current.update(context)
     return _LOG_CONTEXT.set(current)
@@ -148,19 +147,16 @@ def bind_log_context(**context: Any) -> contextvars.Token[Mapping[str, Any]]:
 
 def reset_log_context(token: contextvars.Token[Mapping[str, Any]]) -> None:
     """Restore the log context captured by :func:`bind_log_context`."""
-
     _LOG_CONTEXT.reset(token)
 
 
 def clear_log_context() -> None:
     """Remove all contextual metadata from subsequent log records."""
-
     _LOG_CONTEXT.set(_EMPTY_CONTEXT)
 
 
 def with_service_context(service_name: str) -> LogContext:
     """Return a context manager that sets the service attribute for logs."""
-
     return LogContext(service=service_name)
 
 
@@ -185,7 +181,6 @@ def configure_logging(
         json_console: When ``True`` the console handler emits JSON instead of text.
         force: When ``True`` existing managed handlers are replaced.
     """
-
     config = settings or get_settings()
 
     resolved_level = (level or config.log_level.value).upper()
@@ -237,7 +232,6 @@ def configure_logging(
 
 def _ensure_record_factory() -> None:
     """Ensure the log record factory is wrapped."""
-
     if _FACTORY_WRAPPED.get():
         return
 
@@ -266,7 +260,6 @@ def _build_console_handler(
     enable_color: bool | None, json_console: bool
 ) -> logging.Handler:
     """Build a console handler for logging."""
-
     stream = logging.StreamHandler(sys.stderr)
     formatter: logging.Formatter
 
@@ -302,7 +295,6 @@ def _build_console_handler(
 
 def _build_file_handler(path: str | os.PathLike[str]) -> logging.Handler:
     """Build a file handler for logging."""
-
     file_path = Path(path)
     file_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -318,7 +310,6 @@ def _build_file_handler(path: str | os.PathLike[str]) -> logging.Handler:
 
 def _finalize_handler(handler: logging.Handler) -> None:
     """Finalize a logging handler by adding filters and a sentinel."""
-
     setattr(handler, _ROOT_SENTINEL, True)
     handler.addFilter(ContextFilter())
     handler.addFilter(RedactionFilter())
@@ -326,7 +317,6 @@ def _finalize_handler(handler: logging.Handler) -> None:
 
 def _tune_library_loggers(level_value: int) -> None:
     """Tune loggers for external libraries."""
-
     if level_value <= logging.DEBUG:
         return
 

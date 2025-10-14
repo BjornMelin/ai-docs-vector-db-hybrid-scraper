@@ -40,7 +40,6 @@ class DummyVectorStoreService:
 @pytest.mark.asyncio
 async def test_fetch_uses_vector_service_directly() -> None:
     """Helper should normalise vector store results without the retired manager."""
-
     helper = RetrievalHelper(cast(VectorStoreService, DummyVectorStoreService()))
     query = RetrievalQuery(
         collection="docs",

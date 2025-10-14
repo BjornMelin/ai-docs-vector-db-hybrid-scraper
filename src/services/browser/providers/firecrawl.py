@@ -37,7 +37,6 @@ class FirecrawlProvider(BrowserProvider):
 
     async def initialize(self) -> None:
         """Instantiate the AsyncFirecrawl client."""
-
         api_key = self._settings.api_key or os.getenv(
             "AI_DOCS__BROWSER__FIRECRAWL__API_KEY"
         )
@@ -53,12 +52,10 @@ class FirecrawlProvider(BrowserProvider):
 
     async def close(self) -> None:
         """Firecrawl client does not expose a close hook."""
-
         self._client = None
 
     def _coerce_timeout(self, raw_timeout: Any) -> float:
         """Normalize Firecrawl timeout override to a positive float."""
-
         try:
             timeout = float(raw_timeout)
         except (TypeError, ValueError) as exc:  # pragma: no cover - defensive guard
@@ -91,7 +88,6 @@ class FirecrawlProvider(BrowserProvider):
         self, request: ScrapeRequest
     ) -> tuple[list[str], dict[str, Any], float]:
         """Build format list, provider options, and effective timeout."""
-
         metadata = request.metadata or {}
         provider_meta = metadata.get("firecrawl")
         custom_formats: Sequence[str] | None = None
@@ -155,7 +151,6 @@ class FirecrawlProvider(BrowserProvider):
 
     async def scrape(self, request: ScrapeRequest) -> BrowserResult:
         """Call the Firecrawl scrape endpoint."""
-
         if self._client is None:  # pragma: no cover - guarded by lifecycle
             raise RuntimeError("Provider not initialized")
 
@@ -186,7 +181,6 @@ class FirecrawlProvider(BrowserProvider):
         self, url: str, *, limit: int | None = None, **overrides: Any
     ) -> dict[str, Any]:
         """Invoke Firecrawl crawl endpoint with retry + metrics."""
-
         if self._client is None:  # pragma: no cover - lifecycle guard
             raise RuntimeError("Provider not initialized")
 
@@ -217,7 +211,6 @@ class FirecrawlProvider(BrowserProvider):
         self, query: str, *, limit: int = 3, timeout: int | None = None
     ) -> dict[str, Any]:
         """Call Firecrawl search endpoint and return raw result dict."""
-
         if self._client is None:
             raise RuntimeError("Provider not initialized")
 
@@ -242,7 +235,6 @@ class FirecrawlProvider(BrowserProvider):
 
     async def start_crawl(self, url: str, *, limit: int = 10) -> Any:
         """Start an async crawl and return job descriptor (SDK model/dict)."""
-
         if self._client is None:
             raise RuntimeError("Provider not initialized")
 
@@ -260,7 +252,6 @@ class FirecrawlProvider(BrowserProvider):
 
     async def get_crawl_status(self, job_id: str) -> Any:
         """Fetch crawl job status from Firecrawl."""
-
         if self._client is None:
             raise RuntimeError("Provider not initialized")
 
@@ -285,7 +276,6 @@ class FirecrawlProvider(BrowserProvider):
         timeout: int | None = None,
     ) -> Any:
         """Submit a batch scrape job and wait for results via SDK convenience."""
-
         if self._client is None:
             raise RuntimeError("Provider not initialized")
 

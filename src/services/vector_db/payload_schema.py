@@ -42,7 +42,6 @@ _HASH_DIGEST_SIZE = 16
 
 def compute_content_hash(content: str) -> str:
     """Return a deterministic blake2b hash for the supplied content."""
-
     normalized = content.encode("utf-8")
     return blake2b(normalized, digest_size=_HASH_DIGEST_SIZE).hexdigest()
 
@@ -79,7 +78,6 @@ def ensure_canonical_payload(
         CanonicalPayload comprised of a deterministic point identifier and
         the normalized payload mapping.
     """
-
     payload: dict[str, Any] = dict(raw_metadata or {})
     payload.setdefault("content", content)
 

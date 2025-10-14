@@ -26,7 +26,6 @@ ObservabilityConfigDep = Annotated[
 @lru_cache
 def get_observability_service() -> dict[str, Any]:
     """Initialize observability once and expose tracers/meters to routes."""
-
     config = get_observability_config()
     enabled = initialize_observability(config)
 

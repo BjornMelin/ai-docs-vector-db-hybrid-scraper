@@ -110,7 +110,6 @@ class _StubGenerator:
 @pytest.mark.asyncio
 async def test_end_to_end_query_generates_answer() -> None:
     """Full orchestrator run should return an answer with confidence metadata."""
-
     matches = [
         SearchRecord(
             id="doc-1",
@@ -168,7 +167,6 @@ async def test_end_to_end_query_generates_answer() -> None:
 @pytest.mark.asyncio
 async def test_end_to_end_handles_empty_retrieval() -> None:
     """Orchestrator should degrade gracefully when retrieval yields nothing."""
-
     vector_service = _StubVectorService(matches=[], collection="docs")
     await vector_service.initialize()
 

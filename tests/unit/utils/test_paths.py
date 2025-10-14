@@ -27,7 +27,6 @@ def test_get_cache_dir_returns_path(
     resolver: Callable[[str], Path],
 ) -> None:
     """User cache dir is derived from platformdirs and resolves to a path."""
-
     expected = resolver("cache")
 
     def fake_user_cache_dir(app_name: str, appauthor: None) -> str:
@@ -46,7 +45,6 @@ def test_get_config_dir_uses_platformdirs(
     resolver: Callable[[str], Path],
 ) -> None:
     """Config dir helper proxies through platformdirs."""
-
     expected = resolver("config")
 
     def fake_user_config_dir(app_name: str, appauthor: None) -> str:
@@ -65,7 +63,6 @@ def test_get_data_dir_uses_platformdirs(
     resolver: Callable[[str], Path],
 ) -> None:
     """Data dir helper proxies through platformdirs."""
-
     expected = resolver("data")
 
     def fake_user_data_dir(app_name: str, appauthor: None) -> str:
@@ -84,7 +81,6 @@ def test_get_log_dir_uses_platformdirs(
     resolver: Callable[[str], Path],
 ) -> None:
     """Log dir helper proxies through platformdirs."""
-
     expected = resolver("logs")
 
     def fake_user_log_dir(app_name: str, appauthor: None) -> str:
@@ -103,7 +99,6 @@ def test_normalize_path_expands_user(
     resolver: Callable[[str], Path],
 ) -> None:
     """normalize_path resolves user home tokens."""
-
     home = resolver("home")
     monkeypatch.setenv("HOME", str(home))
     path = paths.normalize_path("~/data")
@@ -113,6 +108,5 @@ def test_normalize_path_expands_user(
 
 def test_normalize_path_accepts_path_instances(tmp_path: Path) -> None:
     """Passing a Path instance returns its resolved equivalent."""
-
     target = (tmp_path / "store").resolve()
     assert paths.normalize_path(target) == target

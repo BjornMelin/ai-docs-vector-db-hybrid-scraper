@@ -246,7 +246,6 @@ if __name__ == "__main__":
 
 async def _collect_health_summary(config: Settings) -> dict[str, Any]:
     """Run configured health checks and return the aggregated summary."""
-
     manager = build_health_manager(config)
     await manager.check_all()
     return manager.get_health_summary()

@@ -21,10 +21,12 @@ class DummyContentType:
     value: str
 
     def __hash__(self) -> int:
+        """Hash based on value for use in dict keys."""
         return hash(self.value)
 
 
 def test_build_params_from_crawl_extracts_defaults() -> None:
+    """Crawl results should populate expected build parameters."""
     crawl_result = {
         "url": "https://example.com/doc",
         "title": "Example Doc",
@@ -55,6 +57,7 @@ def test_build_params_from_crawl_extracts_defaults() -> None:
 
 
 def test_build_text_documents_merges_metadata() -> None:
+    """Document metadata should be merged with build parameters."""
     params = DocumentBuildParams(
         doc_id="doc-123",
         tenant="documentation",
@@ -98,6 +101,7 @@ def test_build_text_documents_merges_metadata() -> None:
 
 
 def test_build_text_documents_applies_enrichment_metadata() -> None:
+    """Enrichment metadata should be translated into expected fields."""
     primary = DummyContentType("guide")
     secondary = DummyContentType("cheatsheet")
     enriched = SimpleNamespace(

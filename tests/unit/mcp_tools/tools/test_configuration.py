@@ -36,7 +36,6 @@ class DummyConfig:
 @pytest.fixture
 def mock_mcp():
     """Return a mock MCP instance that records registered tools."""
-
     api = MagicMock()
     registry: dict[str, Any] = {}
 
@@ -52,14 +51,12 @@ def mock_mcp():
 @pytest.fixture
 def dummy_config():
     """Return a dummy configuration object."""
-
     return DummyConfig()
 
 
 @pytest.fixture
 def patched_get_config(monkeypatch: pytest.MonkeyPatch, dummy_config: DummyConfig):
     """Patch ``get_settings`` to return the dummy configuration."""
-
     monkeypatch.setattr(
         configuration_module, "load_unified_config", lambda: dummy_config
     )
@@ -85,7 +82,6 @@ class TestConfigurationTools:
         patched_get_config,
     ) -> None:
         """Global configuration export should mask sensitive keys."""
-
         configuration_module.register_tools(mock_mcp, vector_service=MagicMock())
         get_config_tool = mock_mcp._registered["get_settings"]
 
@@ -105,7 +101,6 @@ class TestConfigurationTools:
         dummy_config: DummyConfig,
     ) -> None:
         """Requesting an explicit key should return sanitized data."""
-
         configuration_module.register_tools(mock_mcp, vector_service=MagicMock())
         get_config_tool = mock_mcp._registered["get_settings"]
 
@@ -124,7 +119,6 @@ class TestConfigurationTools:
         patched_grouping_probe,
     ) -> None:
         """Validation should surface provider and grouping warnings."""
-
         client_manager = MagicMock()
         configuration_module.register_tools(
             mock_mcp,
@@ -144,6 +138,5 @@ class TestConfigurationTools:
 
     def test_tools_registered(self, mock_mcp: MagicMock, patched_get_config) -> None:
         """Registering configuration tools should expose two MCP endpoints."""
-
         configuration_module.register_tools(mock_mcp, vector_service=MagicMock())
         assert set(mock_mcp._registered.keys()) == {"get_settings", "validate_config"}

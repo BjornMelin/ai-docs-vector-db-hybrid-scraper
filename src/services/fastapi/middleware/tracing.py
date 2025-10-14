@@ -1,5 +1,4 @@
-"""
-Request/response logging with correlation IDs.
+"""Request/response logging with correlation IDs.
 
 - Uses asgi-correlation-id context to tag logs and responses.
 - Keep name `TracingMiddleware` for compatibility; OTel should be enabled

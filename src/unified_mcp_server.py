@@ -36,7 +36,6 @@ def initialize_monitoring_system(
     dragonfly_url: str | None,
 ) -> HealthCheckManager | None:
     """Set up the health monitoring system using application configuration."""
-
     monitoring_config = getattr(settings, "monitoring", None)
     monitoring_enabled = bool(getattr(monitoring_config, "enabled", True))
 
@@ -64,7 +63,6 @@ def setup_fastmcp_monitoring(
     health_manager: HealthCheckManager,
 ) -> None:
     """Attach monitoring metadata to the FastMCP server."""
-
     if not getattr(config.monitoring, "include_system_metrics", False):
         return
     _MONITORING_STATE[id(server)] = health_manager
@@ -77,7 +75,6 @@ async def run_periodic_health_checks(
     interval_seconds: float,
 ) -> None:
     """Periodically execute all registered health checks."""
-
     while True:
         await health_manager.check_all()
         await asyncio.sleep(interval_seconds)
@@ -86,7 +83,6 @@ async def run_periodic_health_checks(
 @asynccontextmanager
 async def managed_lifespan(server: FastMCP[Any]) -> AsyncIterator[None]:  # pylint: disable=too-many-locals
     """Server lifecycle management with lazy initialization."""
-
     config = get_settings()
     configure_logging(settings=config)
     monitoring_tasks: list[asyncio.Task[Any]] = []

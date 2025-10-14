@@ -71,7 +71,6 @@ def fixture_tool_module_factory() -> Callable[..., SimpleNamespace]:
     ) -> SimpleNamespace:
         def register(mcp: Any, **kwargs: Any) -> None:
             """Record the module registration or simulate a failure path."""
-
             del mcp, kwargs
             if raises is not None:
                 raise raises

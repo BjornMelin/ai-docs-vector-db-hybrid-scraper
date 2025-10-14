@@ -66,7 +66,6 @@ def _operation_payload(  # pylint: disable=too-many-arguments
     Returns:
         dict[str, Any]: Structured payload used for in-memory aggregation.
     """
-
     return {
         "operation": operation_type,
         "provider": provider,
@@ -122,7 +121,6 @@ class AIOperationTracker:
             cost_usd: Optional monetary cost of the operation.
             success: Flag indicating whether the call succeeded.
         """
-
         labels = {
             "operation": operation,
             "provider": provider,
@@ -146,7 +144,6 @@ class AIOperationTracker:
 
     def snapshot(self) -> dict[str, dict[str, float]]:
         """Return an immutable snapshot of aggregated operation statistics."""
-
         with self._lock:
             return {
                 name: {
@@ -161,7 +158,6 @@ class AIOperationTracker:
 
     def reset(self) -> None:
         """Clear all recorded statistics."""
-
         with self._lock:
             self._stats.clear()
 
@@ -180,7 +176,6 @@ class PerformanceTracker:
         Args:
             label: Identifier used to group durations.
         """
-
         start = time.perf_counter()
         try:
             yield
@@ -191,7 +186,6 @@ class PerformanceTracker:
 
     def summary(self) -> dict[str, float]:
         """Return average duration per tracked label."""
-
         with self._lock:
             return {
                 label: (sum(values) / len(values)) if values else 0.0
@@ -211,7 +205,6 @@ class TraceCorrelationManager:
         Args:
             **context: Key-value pairs to append to the correlation state.
         """
-
         existing = getattr(self._local, "context", {})
         merged = {**existing, **context}
         self._local.context = merged
@@ -222,13 +215,11 @@ class TraceCorrelationManager:
 
     def get_context(self) -> dict[str, Any]:
         """Return a shallow copy of the stored correlation context."""
-
         return getattr(self._local, "context", {}).copy()
 
     @contextmanager
     def correlated_operation(self, **context: Any) -> Any:
         """Temporarily extend the correlation context within a block."""
-
         previous = self.get_context()
         self.set_context(**context)
         try:
@@ -238,7 +229,6 @@ class TraceCorrelationManager:
 
     def clear(self) -> None:
         """Remove any stored correlation metadata."""
-
         self._local.context = {}
 
 
@@ -279,7 +269,6 @@ def record_ai_operation(  # pylint: disable=too-many-arguments
         completion_tokens: Optional completion token count.
         attributes: Optional additional span attributes to set.
     """
-
     current_span = trace.get_current_span()
     if current_span and current_span.get_span_context().is_valid:
         span_attrs: dict[str, Any] = {
@@ -321,7 +310,6 @@ def track_cost(
     cost_usd: float,
 ) -> None:
     """Record a cost-only event in the global tracker."""
-
     record_ai_operation(
         operation_type=operation_type,
         provider=provider,
@@ -348,7 +336,6 @@ def track_llm_call(
         cost_usd: Optional cost for the call.
         metadata: Optional tracing metadata to append to the span.
     """
-
     start = time.perf_counter()
     with span(
         "ai.llm.call",
@@ -373,7 +360,6 @@ def track_embedding_generation(
     cost_usd: float | None = None,
 ) -> None:
     """Trace and record an embedding generation pass."""
-
     start = time.perf_counter()
     attributes: dict[str, Any] = {"ai.provider": provider, "ai.model": model}
     if batch_size is not None:
@@ -397,7 +383,6 @@ def track_vector_search(
     result_count: int | None = None,
 ) -> None:
     """Trace and record vector search latency."""
-
     start = time.perf_counter()
     attributes: dict[str, Any] = {
         "vector.collection": collection,
@@ -423,7 +408,6 @@ def track_rag_pipeline(
     stages: dict[str, float] | None = None,
 ) -> None:
     """Trace and record an entire RAG pipeline execution."""
-
     attributes: dict[str, Any] = {
         "ai.provider": provider,
         "ai.model": model,

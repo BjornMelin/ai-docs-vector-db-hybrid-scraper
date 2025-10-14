@@ -40,7 +40,6 @@ logger = logging.getLogger(__name__)
 
 def _log_extra(event: str, **metadata: Any) -> dict[str, Any]:
     """Return structured logging extras enriched with trace identifiers."""
-
     metadata.setdefault("component", "observability.health")
     return log_extra_with_trace(event, **metadata)
 
@@ -71,7 +70,6 @@ class HealthCheckConfig(BaseModel):
         Returns:
             Parsed health check configuration.
         """
-
         dragonfly_enabled = bool(
             getattr(settings.cache, "enable_dragonfly_cache", False)
         )
@@ -122,7 +120,6 @@ class HealthCheck(ABC):
             name: Unique identifier for the health probe.
             timeout_seconds: Maximum duration allowed for the probe.
         """
-
         self.name = name
         self.timeout_seconds = timeout_seconds
 
@@ -139,7 +136,6 @@ class HealthCheck(ABC):
         Returns:
             Completed health check result or timeout failure.
         """
-
         start_time = time.time()
         try:
             result = await asyncio.wait_for(coro, timeout=self.timeout_seconds)
@@ -182,18 +178,15 @@ class QdrantHealthCheck(HealthCheck):
             name: Unique health check name.
             timeout_seconds: Probe timeout budget in seconds.
         """
-
         super().__init__(name, timeout_seconds)
         self._client = client
 
     async def check(self) -> HealthCheckResult:
         """Confirm Qdrant availability by listing collections."""
-
         return await self._execute_with_timeout(self._perform_qdrant_check())
 
     async def _perform_qdrant_check(self) -> HealthCheckResult:
         """Execute the Qdrant health probe."""
-
         try:
             cluster_info = await self._client.get_collections()
             collections = getattr(cluster_info, "collections", [])
@@ -247,18 +240,15 @@ class DragonflyHealthCheck(HealthCheck):
         timeout_seconds: float = 5.0,
     ) -> None:
         """Initialize the Dragonfly health probe."""
-
         super().__init__(name, timeout_seconds)
         self._dragonfly_url = dragonfly_url
 
     async def check(self) -> HealthCheckResult:
         """Ping the cache service and gather key metrics."""
-
         return await self._execute_with_timeout(self._perform_dragonfly_check())
 
     async def _perform_dragonfly_check(self) -> HealthCheckResult:
         """Execute the Dragonfly health probe."""
-
         redis_client = None
         try:
             redis_client = redis.from_url(self._dragonfly_url)
@@ -315,19 +305,16 @@ class OpenAIHealthCheck(HealthCheck):
         timeout_seconds: float = 5.0,
     ) -> None:
         """Initialize the OpenAI health probe."""
-
         super().__init__(name, timeout_seconds)
         self._model = model
         self._client = AsyncOpenAI(api_key=api_key, max_retries=2)
 
     async def check(self) -> HealthCheckResult:
         """List available models to validate API access."""
-
         return await self._execute_with_timeout(self._perform_openai_check())
 
     async def _perform_openai_check(self) -> HealthCheckResult:
         """Execute the OpenAI health probe."""
-
         try:
             response = await self._client.responses.create(
                 model=self._model,
@@ -377,7 +364,6 @@ class HTTPHealthCheck(HealthCheck):
         headers: dict[str, str] | None = None,
     ) -> None:
         """Initialize the HTTP health probe."""
-
         if name is None:
             parsed = urlparse(url)
             name = f"http_{parsed.netloc}"
@@ -389,12 +375,10 @@ class HTTPHealthCheck(HealthCheck):
 
     async def check(self) -> HealthCheckResult:
         """Perform an HTTP GET request and evaluate the status."""
-
         return await self._execute_with_timeout(self._perform_http_check())
 
     async def _perform_http_check(self) -> HealthCheckResult:
         """Execute the HTTP health probe."""
-
         timeout = aiohttp.ClientTimeout(total=self.timeout_seconds)
         try:
             async with (
@@ -453,7 +437,6 @@ class FirecrawlHealthCheck(HTTPHealthCheck):
         timeout_seconds: float = 5.0,
     ) -> None:
         """Initialize the Firecrawl health probe."""
-
         headers: dict[str, str] | None = None
         if api_key:
             headers = {"Authorization": f"Bearer {api_key}"}
@@ -467,7 +450,6 @@ class FirecrawlHealthCheck(HTTPHealthCheck):
 
     async def check(self) -> HealthCheckResult:
         """Skip the probe when no API key is configured."""
-
         if not self._headers:
             return HealthCheckResult(
                 name=self.name,
@@ -492,7 +474,6 @@ class SystemResourceHealthCheck(HealthCheck):
         timeout_seconds: float = 5.0,
     ) -> None:
         """Initialize the system resource probe."""
-
         super().__init__(name, timeout_seconds)
         self._cpu_threshold = cpu_threshold
         self._memory_threshold = memory_threshold
@@ -500,12 +481,10 @@ class SystemResourceHealthCheck(HealthCheck):
 
     async def check(self) -> HealthCheckResult:
         """Inspect CPU, memory, and disk utilisation."""
-
         return await self._execute_with_timeout(self._perform_system_check())
 
     async def _perform_system_check(self) -> HealthCheckResult:
         """Execute the system resource probe."""
-
         if psutil is None:  # pragma: no cover - psutil optional
             return HealthCheckResult(
                 name=self.name,
@@ -561,18 +540,15 @@ class ApplicationMetadataHealthCheck(HealthCheck):
         timeout_seconds: float = 5.0,
     ) -> None:
         """Initialize the application metadata probe."""
-
         super().__init__(name, timeout_seconds)
         self._settings = settings
 
     async def check(self) -> HealthCheckResult:
         """Return basic application metadata."""
-
         return await self._execute_with_timeout(self._collect_metadata())
 
     async def _collect_metadata(self) -> HealthCheckResult:
         """Collect metadata and flag missing configuration."""
-
         metadata = {
             "app_name": self._settings.app_name,
             "version": self._settings.version,
@@ -610,18 +586,15 @@ class RAGConfigurationHealthCheck(HealthCheck):
         timeout_seconds: float = 5.0,
     ) -> None:
         """Initialize the RAG configuration probe."""
-
         super().__init__(name, timeout_seconds)
         self._settings = settings
 
     async def check(self) -> HealthCheckResult:
         """Validate RAG configuration state."""
-
         return await self._execute_with_timeout(self._validate_rag_settings())
 
     async def _validate_rag_settings(self) -> HealthCheckResult:
         """Validate configuration required to enable RAG."""
-
         rag_settings = self._settings.rag
         metadata = {
             "enabled": rag_settings.enable_rag,
@@ -668,7 +641,6 @@ class HealthCheckManager:
 
     def __init__(self, config: HealthCheckConfig) -> None:
         """Initialize the health check manager."""
-
         self.config = config
         self._health_checks: list[HealthCheck] = []
         self._last_results: dict[str, HealthCheckResult] = {}
@@ -679,7 +651,6 @@ class HealthCheckManager:
         Args:
             health_check: Health check instance to register with the manager.
         """
-
         self._health_checks.append(health_check)
 
     def add_checks(self, checks: Iterable[HealthCheck]) -> None:
@@ -688,7 +659,6 @@ class HealthCheckManager:
         Args:
             checks: Iterable of health check instances to register.
         """
-
         for check in checks:
             self.add_health_check(check)
 
@@ -698,7 +668,6 @@ class HealthCheckManager:
         Returns:
             Mapping of health check names to their most recent results.
         """
-
         if not self._health_checks:
             return {}
 
@@ -732,7 +701,6 @@ class HealthCheckManager:
             The resulting :class:`HealthCheckResult` if the probe exists, otherwise
             ``None``.
         """
-
         for check in self._health_checks:
             if check.name == check_name:
                 result = await check.check()
@@ -746,7 +714,6 @@ class HealthCheckManager:
         Returns:
             Snapshot mapping of health check names to their latest results.
         """
-
         return self._last_results.copy()
 
     def get_overall_status(self) -> HealthStatus:
@@ -755,7 +722,6 @@ class HealthCheckManager:
         Returns:
             Aggregate status derived from the latest check results.
         """
-
         if not self._last_results:
             return HealthStatus.UNKNOWN
 
@@ -776,7 +742,6 @@ class HealthCheckManager:
         Returns:
             Dictionary containing aggregate status and individual check details.
         """
-
         return {
             "overall_status": self.get_overall_status().value,
             "timestamp": time.time(),
@@ -798,7 +763,6 @@ class HealthCheckManager:
         Returns:
             Tuple of registered health check names in insertion order.
         """
-
         return tuple(check.name for check in self._health_checks)
 
     async def get_overall_health(self) -> dict[str, Any]:
@@ -807,7 +771,6 @@ class HealthCheckManager:
         Returns:
             Aggregated health summary produced after executing all checks.
         """
-
         await self.check_all()
         return self.get_health_summary()
 
@@ -828,7 +791,6 @@ def build_health_manager(
     Returns:
         Initialized health check manager with configured probes.
     """
-
     config = HealthCheckConfig.from_unified_config(settings)
     manager = HealthCheckManager(config)
 

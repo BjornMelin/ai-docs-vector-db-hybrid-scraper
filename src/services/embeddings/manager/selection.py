@@ -40,7 +40,6 @@ class SelectionEngine:
 
     def analyze(self, texts: list[str]) -> TextAnalysis:
         """Analyze input texts to determine selection heuristics."""
-
         if not texts:
             return TextAnalysis(
                 total_length=0,
@@ -141,7 +140,6 @@ class SelectionEngine:
         params: RecommendationParams,
     ) -> dict[str, Any]:
         """Recommend best provider/model combination."""
-
         candidates: list[dict[str, Any]] = []
         for provider_name, provider in providers.items():
             for model in self._models_for_provider(provider_name, provider):

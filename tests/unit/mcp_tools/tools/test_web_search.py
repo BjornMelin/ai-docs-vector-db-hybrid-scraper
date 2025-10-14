@@ -12,7 +12,6 @@ from src.mcp_tools.tools.web_search import register_tools
 @pytest.fixture(autouse=True)
 def mock_security_validator(monkeypatch):
     """Provide a permissive MLSecurityValidator stub."""
-
     validator = Mock()
     validator.validate_query_string.side_effect = lambda value: f"safe:{value}"
 
@@ -26,7 +25,6 @@ def mock_security_validator(monkeypatch):
 @pytest.fixture
 def fake_tavily(monkeypatch):
     """Stub Tavily client capturing interactions."""
-
     calls: dict[str, object] = {}
 
     class _FakeTavilyClient:  # pylint: disable=too-few-public-methods
@@ -60,7 +58,6 @@ async def test_web_search_success(
     fake_mcp, monkeypatch, fake_tavily, mock_security_validator
 ):
     """web_search returns formatted Tavily payload and logs via context."""
-
     monkeypatch.setenv("TAVILY_API_KEY", "test-key")
     ctx = AsyncMock()
     ctx.info = AsyncMock()
@@ -105,7 +102,6 @@ async def test_web_search_success(
 @pytest.mark.asyncio
 async def test_web_search_missing_api_key(fake_mcp, monkeypatch, fake_tavily):
     """web_search returns error details when API key is absent."""
-
     monkeypatch.delenv("TAVILY_API_KEY", raising=False)
     ctx = AsyncMock()
     ctx.info = AsyncMock()
@@ -128,7 +124,6 @@ async def test_advanced_web_search_uses_advanced_depth(
     fake_mcp, monkeypatch, fake_tavily
 ):
     """advanced_web_search forces advanced depth and includes answer data."""
-
     monkeypatch.setenv("TAVILY_API_KEY", "another-key")
     ctx = AsyncMock()
     ctx.info = AsyncMock()

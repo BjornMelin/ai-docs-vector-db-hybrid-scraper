@@ -10,7 +10,6 @@ from typing import Any, cast
 
 def _ensure_module(name: str) -> types.ModuleType:
     """Return an existing module or register a new stub module."""
-
     module = sys.modules.get(name)
     if module is None:
         module = types.ModuleType(name)
@@ -20,7 +19,6 @@ def _ensure_module(name: str) -> types.ModuleType:
 
 def _set_attributes(module: types.ModuleType, attributes: dict[str, object]) -> None:
     """Assign attributes to a module if they are missing."""
-
     for attr_name, attr_value in attributes.items():
         if not hasattr(module, attr_name):
             setattr(module, attr_name, attr_value)
@@ -44,7 +42,6 @@ class _ChatPromptTemplate:
 
 def _register_client_stubs() -> None:
     """Register stubs for client SDKs leveraged by the RAG pipeline."""
-
     firecrawl = _ensure_module("firecrawl")
     _set_attributes(
         firecrawl,
@@ -70,7 +67,6 @@ def _register_client_stubs() -> None:
 
 def _register_langchain_core_stubs() -> None:
     """Register core LangChain modules required for RAG tests."""
-
     langchain = cast(Any, _ensure_module("langchain"))
     retrievers = cast(Any, _ensure_module("langchain.retrievers"))
     document_compressors = cast(
@@ -188,7 +184,6 @@ def _register_langchain_core_stubs() -> None:
 
 def _register_langchain_community_stubs() -> None:
     """Register LangChain community modules used by the RAG pipeline."""
-
     community = cast(Any, _ensure_module("langchain_community"))
     community_embeddings = cast(Any, _ensure_module("langchain_community.embeddings"))
     fastembed = cast(Any, _ensure_module("langchain_community.embeddings.fastembed"))
@@ -214,7 +209,6 @@ def _register_langchain_community_stubs() -> None:
 
 def _register_crawl4ai_stubs() -> None:
     """Register Crawl4AI modules required for crawling stubs."""
-
     crawl4ai = _ensure_module("crawl4ai")
     _set_attributes(
         crawl4ai,
@@ -285,7 +279,6 @@ def _register_crawl4ai_stubs() -> None:
 
 def _register_miscellaneous_stubs() -> None:
     """Register additional third-party stubs referenced by the tests."""
-
     tiktoken = _ensure_module("tiktoken")
     _set_attributes(tiktoken, {})
 
@@ -295,7 +288,6 @@ def _register_miscellaneous_stubs() -> None:
 
 def register_rag_dependency_stubs() -> None:
     """Register all optional dependency stubs needed for the RAG tests."""
-
     _register_client_stubs()
     _register_langchain_core_stubs()
     _register_langchain_community_stubs()

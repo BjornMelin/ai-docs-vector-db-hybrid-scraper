@@ -369,7 +369,6 @@ def create_load_test_runner(host: str = "http://localhost:8000") -> Environment:
     Returns:
         Configured Locust environment
     """
-
     setup_logging("INFO", None)
 
     # Create environment

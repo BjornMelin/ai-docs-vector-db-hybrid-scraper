@@ -42,7 +42,6 @@ class SystemService:
         Args:
             name: Service name for MCP registration
         """
-
         self.mcp = FastMCP(
             name,
             instructions="""
@@ -68,7 +67,6 @@ class SystemService:
         Returns:
             Configured FastMCP server for this service
         """
-
         return self.mcp
 
     async def get_service_info(self) -> dict[str, Any]:
@@ -77,7 +75,6 @@ class SystemService:
         Returns:
             Service metadata and capability information
         """
-
         return {
             "service": "system",
             "version": "2.0",

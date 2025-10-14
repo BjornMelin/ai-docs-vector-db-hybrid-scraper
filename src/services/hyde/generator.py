@@ -82,7 +82,6 @@ class HypotheticalDocumentGenerator(BaseService):
         Raises:
             EmbeddingServiceError: If OpenAI client unavailable
         """
-
         if self._initialized:
             return
 

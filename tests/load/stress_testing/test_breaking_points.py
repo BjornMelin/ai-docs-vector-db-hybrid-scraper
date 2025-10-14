@@ -545,7 +545,6 @@ class TestBreakingPoints:
     @pytest.mark.asyncio
     async def test_recovery_time_measurement(self, load_test_runner):
         """Measure system recovery time after hitting breaking point."""
-
         # Recovery phases
 
         # Mock service with recovery behavior

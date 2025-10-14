@@ -17,7 +17,6 @@ from src.services.observability.health_manager import HealthCheckResult, HealthS
 @pytest.fixture()
 def deployment(mocker: pytest.MockFixture) -> BlueGreenDeployment:
     """Provide a deployment manager with stubbed dependencies."""
-
     manager = BlueGreenDeployment(qdrant_service=object(), cache_manager=object())
     manager._initialized = True
     mocker.patch.object(manager, "_persist_environment_state", mocker.AsyncMock())
@@ -29,7 +28,6 @@ async def test_switch_environments_requires_healthy_target(
     deployment: BlueGreenDeployment,
 ) -> None:
     """Switching should fail when the target environment is unhealthy."""
-
     deployment._blue_env.active = True
     deployment._green_env.health = None
 
@@ -44,7 +42,6 @@ async def test_switch_environments_succeeds_when_healthy(
     mocker: pytest.MockFixture,
 ) -> None:
     """Switching should succeed when the target environment is healthy."""
-
     deployment._blue_env.active = True
     deployment._green_env.health = HealthCheckResult(
         name="green_deployment",
@@ -69,7 +66,6 @@ async def test_perform_health_checks_sets_unhealthy_state(
     mocker: pytest.MockFixture,
 ) -> None:
     """Health checks should mark the environment unhealthy after repeated failures."""
-
     env = BlueGreenEnvironment(name="blue", active=False)
     config = BlueGreenConfig(deployment_id="dep", target_version="1.0.0")
 
@@ -92,7 +88,6 @@ async def test_get_deployment_metrics_uses_health_metadata(
     deployment: BlueGreenDeployment,
 ) -> None:
     """Deployment metrics should include health-derived information."""
-
     deployment._blue_env.health = HealthCheckResult(
         name="blue",
         status=HealthStatus.HEALTHY,

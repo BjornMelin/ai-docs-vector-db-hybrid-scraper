@@ -42,7 +42,6 @@ class BrowserProvider(abc.ABC):
     @contextlib.asynccontextmanager
     async def lifecycle(self) -> AsyncIterator[BrowserProvider]:
         """Async context manager managing provider lifecycle."""
-
         await self.initialize()
         try:
             yield self
@@ -53,7 +52,6 @@ class BrowserProvider(abc.ABC):
         self, request: ScrapeRequest, error: Exception, *, elapsed_ms: int | None = None
     ) -> BrowserResult:
         """Create a standardized failure result and re-raise BrowserProviderError."""
-
         message = str(error)
         return BrowserResult.failure(
             url=request.url,
@@ -65,7 +63,6 @@ class BrowserProvider(abc.ABC):
 
     async def run(self, request: ScrapeRequest) -> BrowserResult:
         """Measure execution and normalize errors."""
-
         start = time.perf_counter()
         try:
             result = await self.scrape(request)

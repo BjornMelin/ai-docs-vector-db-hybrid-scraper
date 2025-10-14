@@ -46,6 +46,7 @@ class LoadTestRunner:
     """Main load test runner with multiple execution modes."""
 
     def __init__(self):
+        """Initialize load test runner."""
         self.results_dir = Path("load_test_results")
         self.results_dir.mkdir(exist_ok=True)
 
@@ -680,7 +681,6 @@ class LoadTestRunner:
 
     def _validate_command_security(self, cmd: list[str]) -> None:
         """Perform security validation on the command."""
-
         self._ensure_command_structure(cmd)
         self._ensure_allowed_executable(cmd[0])
         self._validate_command_components(cmd)
@@ -688,7 +688,6 @@ class LoadTestRunner:
 
     def _ensure_command_structure(self, cmd: list[str]) -> None:
         """Ensure the command is a non-empty list."""
-
         if not isinstance(cmd, list):
             msg = "Command must be a list"
             raise TypeError(msg)
@@ -699,14 +698,12 @@ class LoadTestRunner:
 
     def _ensure_allowed_executable(self, executable: str) -> None:
         """Validate that the command executable is explicitly allowed."""
-
         if executable not in ALLOWED_EXECUTABLES:
             msg = f"Executable '{executable}' not allowed"
             raise ValueError(msg)
 
     def _validate_command_components(self, cmd: list[str]) -> None:
         """Validate each component of the command string."""
-
         tests_path = str(PROJECT_ROOT / "tests")
 
         for component in cmd:
@@ -714,7 +711,6 @@ class LoadTestRunner:
 
     def _validate_command_component(self, component: object, tests_path: str) -> None:
         """Validate individual command component for type and content."""
-
         if not isinstance(component, str):
             msg = "All command components must be strings"
             raise TypeError(msg)
@@ -730,7 +726,6 @@ class LoadTestRunner:
 
     def _validate_command_lengths(self, cmd: list[str]) -> None:
         """Validate command length to prevent overflow attacks."""
-
         if len(cmd) > MAX_CMD_ARGUMENTS:
             msg = f"Command too long (maximum {MAX_CMD_ARGUMENTS} arguments)"
             raise ValueError(msg)

@@ -428,7 +428,6 @@ class TestSpikeLoad:
 
     def _spike_aware_operation(self, **_kwargs):
         """Operation that adapts to spike conditions."""
-
         # Simulate different behavior during spikes
         concurrent_users = _kwargs.get("concurrent_users", 50)
 

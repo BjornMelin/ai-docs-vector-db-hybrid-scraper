@@ -18,7 +18,6 @@ class TestCacheTools:
     @pytest.fixture
     def mock_cache_manager(self):
         """Create a mock cache manager with async methods."""
-
         cache_manager = MagicMock()
         cache_manager.clear_all = AsyncMock(return_value=50)
         cache_manager.clear_pattern = AsyncMock(return_value=50)
@@ -35,7 +34,6 @@ class TestCacheTools:
     @pytest.fixture
     def mock_context(self):
         """Create a mock context for testing."""
-
         ctx = MagicMock()
         ctx.info = AsyncMock()
         ctx.debug = AsyncMock()
@@ -62,7 +60,6 @@ class TestCacheTools:
     @pytest.mark.asyncio()
     async def test_clear_cache_all(self, mock_cache_manager, mock_context):
         """Clearing all cache entries should succeed and log progress."""
-
         _, tools = self._register_tools(mock_cache_manager)
         clear_cache = tools["clear_cache"]
 
@@ -78,7 +75,6 @@ class TestCacheTools:
     @pytest.mark.asyncio()
     async def test_clear_cache_pattern(self, mock_cache_manager, mock_context):
         """Clearing a specific pattern should call ``clear_pattern``."""
-
         _, tools = self._register_tools(mock_cache_manager)
         clear_cache = tools["clear_cache"]
 
@@ -92,7 +88,6 @@ class TestCacheTools:
     @pytest.mark.asyncio()
     async def test_get_cache_stats(self, mock_cache_manager, mock_context):
         """Retrieving cache stats should normalise data and log context."""
-
         _, tools = self._register_tools(mock_cache_manager)
         get_cache_stats = tools["get_cache_stats"]
 
@@ -108,7 +103,6 @@ class TestCacheTools:
     @pytest.mark.asyncio()
     async def test_cache_error_handling(self, mock_cache_manager, mock_context):
         """Errors from the cache manager should bubble up with logging."""
-
         mock_cache_manager.clear_all.side_effect = RuntimeError("cache offline")
         _, tools = self._register_tools(mock_cache_manager)
         clear_cache = tools["clear_cache"]
@@ -121,7 +115,6 @@ class TestCacheTools:
     @pytest.mark.asyncio()
     async def test_cache_stats_error_handling(self, mock_cache_manager, mock_context):
         """Stats failures should propagate and emit error logs."""
-
         mock_cache_manager.get_stats.side_effect = RuntimeError("stats offline")
         _, tools = self._register_tools(mock_cache_manager)
         get_cache_stats = tools["get_cache_stats"]
@@ -133,7 +126,6 @@ class TestCacheTools:
 
     def test_tool_registration(self, mock_cache_manager):
         """Both cache tools should be registered."""
-
         mock_mcp, _ = self._register_tools(mock_cache_manager)
         assert mock_mcp.tool.call_count == 2
 
@@ -142,7 +134,6 @@ class TestCacheTools:
         self, mock_cache_manager, mock_context
     ) -> None:
         """Both tools should emit informational logs via context."""
-
         _, tools = self._register_tools(mock_cache_manager)
         clear_cache = tools["clear_cache"]
         get_cache_stats = tools["get_cache_stats"]
@@ -157,7 +148,6 @@ class TestCacheTools:
         self, mock_cache_manager, mock_context
     ) -> None:
         """Verify the cache manager methods are invoked as expected."""
-
         _, tools = self._register_tools(mock_cache_manager)
         clear_cache = tools["clear_cache"]
         get_cache_stats = tools["get_cache_stats"]

@@ -9,7 +9,6 @@ from src.mcp_services.analytics_service import AnalyticsService
 
 def test_initializes_with_vector_service() -> None:
     """Constructor should wire FastMCP tools with the provided vector service."""
-
     vector_service = Mock(name="VectorStoreService")
 
     with patch(
@@ -27,7 +26,6 @@ def test_initializes_with_vector_service() -> None:
 @pytest.mark.asyncio()
 async def test_get_service_info_returns_expected_payload() -> None:
     """Service info should surface declared capabilities and status."""
-
     vector_service = Mock()
     with patch("src.mcp_services.analytics_service.analytics.register_tools"):
         service = AnalyticsService(vector_service=vector_service)
@@ -48,7 +46,6 @@ async def test_get_service_info_returns_expected_payload() -> None:
 
 def test_get_mcp_server_exposes_fastmcp_instance() -> None:
     """The getter should return the configured FastMCP server."""
-
     vector_service = Mock()
     with patch("src.mcp_services.analytics_service.analytics.register_tools"):
         service = AnalyticsService("analytics-test", vector_service=vector_service)

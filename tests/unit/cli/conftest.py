@@ -181,7 +181,6 @@ def sample_batch_files(tmp_path):
 @pytest.fixture
 def mock_completion_items():
     """Mock completion items for auto-completion testing."""
-
     return [
         CompletionItem("collection1", help="Collection: collection1"),
         CompletionItem("collection2", help="Collection: collection2"),
@@ -192,7 +191,6 @@ def mock_completion_items():
 @pytest.fixture
 def event_loop():
     """Provide a dedicated event loop for async tests."""
-
     loop = asyncio.new_event_loop()
     try:
         yield loop
@@ -223,7 +221,6 @@ def rich_output_capturer():
 
         def get_plain_output(self) -> str:
             """Get output without ANSI escape codes."""
-
             buffer = StringIO()
             plain_console = Console(file=buffer, no_color=True, width=80)
             plain_console.print(self.get_output(), end="")

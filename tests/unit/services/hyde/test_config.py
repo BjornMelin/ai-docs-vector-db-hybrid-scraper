@@ -660,7 +660,6 @@ class TestHyDEConfigIntegration:
 
     def test_from_unified_config(self):
         """Test creating HyDEConfig from unified configuration."""
-
         # Mock unified HyDE config
         unified_config = Mock()
         unified_config.enable_hyde = False

@@ -48,7 +48,6 @@ class AdaptiveSearchState:
 
     def record(self, ef_value: int, results: Any, elapsed_ms: float) -> None:
         """Update tracking with a new EF attempt."""
-
         self.best_ef = ef_value
         self.best_results = results
         self.search_times_ms.append(elapsed_ms)
@@ -57,7 +56,6 @@ class AdaptiveSearchState:
     @property
     def final_search_time(self) -> float:
         """Return the most recent search time in milliseconds."""
-
         return self.search_times_ms[-1] if self.search_times_ms else 0.0
 
 
@@ -174,7 +172,6 @@ class HNSWOptimizer(BaseService):
         context: AdaptiveSearchContext,
     ) -> dict[str, Any] | None:
         """Execute cached EF search if available."""
-
         cached_entry = self.adaptive_ef_cache.get(cache_key)
         if not cached_entry:
             return None
@@ -216,7 +213,6 @@ class HNSWOptimizer(BaseService):
         context: AdaptiveSearchContext,
     ) -> None:
         """Iteratively search with increasing EF until the time budget is met."""
-
         config = context.config
         current_ef = config.min_ef
         while current_ef <= config.max_ef:
@@ -255,7 +251,6 @@ class HNSWOptimizer(BaseService):
         log_context: str,
     ) -> tuple[float, Any] | None:
         """Execute a query and capture elapsed time in milliseconds."""
-
         start_time = time.time()
         try:
             results = await client.query_points(
@@ -280,7 +275,6 @@ class HNSWOptimizer(BaseService):
     @staticmethod
     def _should_stop(search_time_ms: float, config: AdaptiveEfConfig) -> bool:
         """Determine whether the search should stop based on budget usage."""
-
         if config.time_budget_ms <= 0:
             return True
         return search_time_ms >= config.time_budget_ms * 0.8
@@ -293,7 +287,6 @@ class HNSWOptimizer(BaseService):
         config: AdaptiveEfConfig,
     ) -> int | None:
         """Calculate the next EF value or signal completion."""
-
         if current_ef >= config.max_ef:
             return None
 
@@ -309,7 +302,6 @@ class HNSWOptimizer(BaseService):
 
     def _store_adaptive_cache(self, cache_key: str, state: AdaptiveSearchState) -> None:
         """Persist adaptive search findings and enforce cache size limits."""
-
         self.adaptive_ef_cache[cache_key] = {
             "optimal_ef": state.best_ef,
             "expected_time_ms": state.final_search_time,
@@ -335,7 +327,6 @@ class HNSWOptimizer(BaseService):
         source: str,
     ) -> dict[str, Any]:
         """Construct the response payload from adaptive search data."""
-
         best_results = state.best_results.points if state.best_results else []
         final_time = state.final_search_time
         return {
@@ -354,7 +345,6 @@ class HNSWOptimizer(BaseService):
     @staticmethod
     def _budget_utilization(search_time_ms: float, time_budget_ms: int) -> float:
         """Compute time budget utilization percentage."""
-
         if time_budget_ms <= 0:
             return 0.0
         return (search_time_ms / time_budget_ms) * 100
@@ -371,7 +361,6 @@ class HNSWOptimizer(BaseService):
         Returns:
             HNSW configuration dictionary
         """
-
         # Collection-specific optimization profiles
         configs = {
             "api_reference": {
@@ -444,7 +433,6 @@ class HNSWOptimizer(BaseService):
         Returns:
             Optimization results and recommendations
         """
-
         self.logger.info(
             "Optimizing HNSW parameters for collection %s (type: %s)",
             collection_name,
@@ -513,7 +501,6 @@ class HNSWOptimizer(BaseService):
         Returns:
             Current HNSW configuration
         """
-
         try:
             # Access vector configuration
             vectors_config = collection_info.config.params.vectors
@@ -550,7 +537,6 @@ class HNSWOptimizer(BaseService):
         Returns:
             True if update is recommended
         """
-
         # Check significant differences
         m_diff = abs(current.get("m", 16) - recommended.get("m", 16))
         ef_construct_diff = abs(
@@ -572,7 +558,6 @@ class HNSWOptimizer(BaseService):
         Returns:
             Estimated improvements
         """
-
         current_m = current.get("m", 16)
         current_ef = current.get("ef_construct", 128)
         recommended_m = recommended.get("m", 16)
@@ -627,7 +612,6 @@ class HNSWOptimizer(BaseService):
         Returns:
             Performance metrics
         """
-
         search_times = []
 
         for query_vector in test_queries[:10]:  # Limit to 10 queries for performance
@@ -682,7 +666,6 @@ class HNSWOptimizer(BaseService):
         Returns:
             Cache statistics
         """
-
         return {
             "adaptive_ef_cache_size": len(self.adaptive_ef_cache),
             "performance_cache_size": len(self.performance_cache),

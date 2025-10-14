@@ -184,29 +184,24 @@ class Settings(BaseSettings):
 
     def is_development(self) -> bool:
         """Return True when running in development environment."""
-
         return self.environment is Environment.DEVELOPMENT
 
     def is_production(self) -> bool:
         """Return True when running in production environment."""
-
         return self.environment is Environment.PRODUCTION
 
     def get_effective_chunking_strategy(self) -> ChunkingStrategy:
         """Return the configured chunking strategy."""
-
         return getattr(self.chunking, "strategy", ChunkingStrategy.BASIC)
 
     def get_effective_search_strategy(self) -> SearchStrategy:
         """Return the configured search strategy."""
-
         if hasattr(self.embedding, "retrieval_mode"):
             return self.embedding.retrieval_mode
         return SearchStrategy.DENSE
 
     def get_feature_flags(self) -> dict[str, bool]:
         """Return the active feature flags for the unified application."""
-
         return {
             "advanced_monitoring": self.enable_advanced_monitoring,
             "deployment_features": self.enable_deployment_features,
@@ -219,14 +214,12 @@ class Settings(BaseSettings):
 
 def ensure_runtime_directories(settings: Settings) -> None:
     """Create runtime directories required by the application."""
-
     for directory in (settings.data_dir, settings.cache_dir, settings.logs_dir):
         directory.mkdir(parents=True, exist_ok=True)
 
 
 def load_settings(**overrides: Any) -> Settings:
     """Instantiate settings from the environment without caching."""
-
     settings = Settings(**overrides)
     ensure_runtime_directories(settings)
     return settings
@@ -237,7 +230,6 @@ _ACTIVE_SETTINGS: Settings | None = None
 
 def get_settings() -> Settings:
     """Return the cached application settings instance."""
-
     global _ACTIVE_SETTINGS
     if _ACTIVE_SETTINGS is None:
         _ACTIVE_SETTINGS = load_settings()
@@ -258,7 +250,6 @@ def refresh_settings(
     Returns:
         The newly cached settings instance.
     """
-
     global _ACTIVE_SETTINGS
     if settings is not None and overrides:
         msg = "Provide either a concrete settings instance or overrides, not both."
@@ -277,7 +268,6 @@ def validate_settings_payload(
     payload: dict[str, Any], *, base: dict[str, Any] | None = None
 ) -> tuple[bool, list[str], Settings | None]:
     """Validate configuration data using the Settings model."""
-
     merged: dict[str, Any] = {
         "environment": Environment.DEVELOPMENT,
         "debug": False,
@@ -303,7 +293,6 @@ def validate_settings_payload(
 
 def load_settings_from_file(path: Path) -> Settings:
     """Load settings overrides from a JSON or YAML file."""
-
     if not path.exists():
         msg = f"Configuration file not found: {path}"
         raise FileNotFoundError(msg)

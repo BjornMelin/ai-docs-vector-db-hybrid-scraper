@@ -14,7 +14,6 @@ from src.services.fastapi.middleware.security import (
 
 def test_security_middleware_applies_default_headers() -> None:
     """Test that SecurityMiddleware applies default headers."""
-
     app = FastAPI()
     app.add_middleware(SecurityMiddleware)
 
@@ -32,7 +31,6 @@ def test_security_middleware_applies_default_headers() -> None:
 
 def test_security_middleware_respects_extra_headers() -> None:
     """Test that extra headers are added to defaults."""
-
     app = FastAPI()
     app.add_middleware(
         SecurityMiddleware,
@@ -50,7 +48,6 @@ def test_security_middleware_respects_extra_headers() -> None:
 
 def test_enable_global_rate_limit_enforces_limits() -> None:
     """Test that rate limiting is enforced."""
-
     app = FastAPI()
     limiter = enable_global_rate_limit(
         app,
@@ -73,7 +70,6 @@ def test_enable_global_rate_limit_enforces_limits() -> None:
 
 def test_enable_global_rate_limit_respects_disabled_flag() -> None:
     """Rate limiting is skipped when disabled in configuration."""
-
     app = FastAPI()
     limiter = enable_global_rate_limit(
         app,

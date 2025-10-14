@@ -483,7 +483,6 @@ class TestSystemMonitoring:
     @pytest.mark.asyncio
     async def test_comprehensive_system_monitoring(self, load_test_runner):
         """Test comprehensive monitoring of system resources during stress."""
-
         monitor = SystemMonitor(collection_interval=0.5)
         metrics_collector = MetricsCollector()
 
@@ -708,7 +707,6 @@ class TestSystemMonitoring:
     @pytest.mark.asyncio
     async def test_performance_degradation_detection(self, load_test_runner):
         """Test detection of performance degradation patterns."""
-
         metrics_collector = MetricsCollector()
         metrics_collector.start_collection()
 
