@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
+from pathlib import Path
 from typing import Any, Self
 
 from pydantic import (  # pyright: ignore[reportMissingImports]
@@ -26,6 +27,14 @@ class Environment(str, Enum):
     TESTING = "testing"
     STAGING = "staging"
     PRODUCTION = "production"
+
+
+class DeploymentStrategy(str, Enum):
+    """Deployment strategies supported by the orchestrator."""
+
+    GITHUB_ACTIONS = "github_actions"
+    DOCKER_COMPOSE = "docker_compose"
+    KUBERNETES = "kubernetes"
 
 
 class LogLevel(str, Enum):
@@ -167,14 +176,6 @@ class FusionAlgorithm(str, Enum):
     NORMALIZED = "normalized"
 
 
-class DeploymentTier(str, Enum):
-    """Deployment tiers available to the platform."""
-
-    PERSONAL = "personal"
-    PROFESSIONAL = "professional"
-    ENTERPRISE = "enterprise"
-
-
 class MCPTransport(str, Enum):
     """Transport mechanisms supported by MCP clients."""
 
@@ -239,6 +240,64 @@ class MCPClientConfig(BaseModel):
 
 
 #### Configuration sections ####
+
+
+class DeploymentConfig(BaseModel):
+    """Unified deployment configuration options."""
+
+    default_strategy: DeploymentStrategy = Field(
+        default=DeploymentStrategy.GITHUB_ACTIONS,
+        description="Strategy to use when no override is supplied.",
+    )
+    enabled_strategies: set[DeploymentStrategy] = Field(
+        default_factory=lambda: set(DeploymentStrategy),
+        description="Strategies enabled for the current environment.",
+    )
+    workflow_file: Path = Field(
+        default=Path(".github/workflows/release.yml"),
+        description=(
+            "GitHub Actions workflow used when selecting the github_actions strategy."
+        ),
+    )
+    compose_file: Path = Field(
+        default=Path("docker-compose.yml"),
+        description="docker compose manifest invoked by the docker_compose strategy.",
+    )
+    kubernetes_manifest_dir: Path = Field(
+        default=Path("k8s"),
+        description=(
+            "Directory containing Kubernetes manifests for the kubernetes strategy."
+        ),
+    )
+
+    @field_validator("enabled_strategies", mode="after")
+    @classmethod
+    def validate_enabled_strategies(
+        cls, value: set[DeploymentStrategy]
+    ) -> set[DeploymentStrategy]:
+        """Ensure at least one strategy is enabled."""
+
+        if not value:
+            msg = "enabled_strategies must include at least one deployment strategy"
+            raise ValueError(msg)
+        return value
+
+    def is_enabled(self, strategy: DeploymentStrategy) -> bool:
+        """Return True when the strategy is permitted."""
+
+        return strategy in self.enabled_strategies
+
+    def resolve_entrypoint(self, strategy: DeploymentStrategy) -> Path:
+        """Return the canonical entrypoint for the selected strategy."""
+
+        if strategy is DeploymentStrategy.GITHUB_ACTIONS:
+            return self.workflow_file
+        if strategy is DeploymentStrategy.DOCKER_COMPOSE:
+            return self.compose_file
+        if strategy is DeploymentStrategy.KUBERNETES:
+            return self.kubernetes_manifest_dir
+        msg = f"Unsupported deployment strategy: {strategy}"
+        raise ValueError(msg)
 
 
 class CacheConfig(BaseModel):
@@ -760,41 +819,6 @@ class RAGConfig(BaseModel):
     )
 
 
-class DeploymentConfig(BaseModel):
-    """Deployment feature flags and metadata."""
-
-    tier: DeploymentTier = Field(
-        default=DeploymentTier.ENTERPRISE, description="Deployment tier"
-    )
-    enable_feature_flags: bool = Field(default=True, description="Enable feature flags")
-    flagsmith_api_key: str | None = Field(default=None, description="Flagsmith API key")
-    flagsmith_environment_key: str | None = Field(
-        default=None, description="Flagsmith environment key"
-    )
-    flagsmith_api_url: str = Field(
-        default="https://edge.api.flagsmith.com/api/v1/", description="Flagsmith URL"
-    )
-    enable_deployment_services: bool = Field(
-        default=True, description="Enable deployment services"
-    )
-    enable_ab_testing: bool = Field(default=True, description="Enable A/B testing")
-    enable_blue_green: bool = Field(
-        default=True, description="Enable blue-green deployments"
-    )
-    enable_canary: bool = Field(default=True, description="Enable canary deployments")
-    enable_monitoring: bool = Field(
-        default=True, description="Enable deployment monitoring"
-    )
-
-    @field_validator("flagsmith_api_key", mode="before")
-    @classmethod
-    def validate_flagsmith_key(cls, value: str | None) -> str | None:
-        if value and not value.startswith(("fs_", "env_")):
-            msg = "Flagsmith API key must start with 'fs_' or 'env_'"
-            raise ValueError(msg)
-        return value
-
-
 class DocumentationSite(BaseModel):
     """Documentation site crawl configuration."""
 
@@ -813,8 +837,6 @@ __all__ = [
     "CircuitBreakerConfig",
     "CrawlProvider",
     "DatabaseConfig",
-    "DeploymentConfig",
-    "DeploymentTier",
     "DocumentStatus",
     "DocumentationSite",
     "EmbeddingConfig",

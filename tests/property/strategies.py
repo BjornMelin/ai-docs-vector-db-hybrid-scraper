@@ -14,7 +14,6 @@ import hypothesis.strategies as st
 from src.config.models import (
     ChunkingStrategy,
     CrawlProvider,
-    DeploymentTier,
     EmbeddingProvider,
     Environment,
     LogLevel,
@@ -45,13 +44,6 @@ def openai_api_keys(draw) -> str:
 def firecrawl_api_keys(draw) -> str:
     """Generate valid Firecrawl API keys."""
     return draw(api_keys(prefix="fc-", min_length=20))
-
-
-@st.composite
-def flagsmith_api_keys(draw) -> str:
-    """Generate valid Flagsmith API keys."""
-    prefix = draw(st.sampled_from(["fs_", "env_"]))
-    return draw(api_keys(prefix=prefix, min_length=20))
 
 
 @st.composite
@@ -371,27 +363,6 @@ def circuit_breaker_configurations(draw) -> dict[str, Any]:
 
 
 @st.composite
-def deployment_configurations(draw) -> dict[str, Any]:
-    """Generate valid deployment configurations."""
-    tier = draw(st.sampled_from(list(DeploymentTier)))
-
-    return {
-        "tier": tier,
-        "enable_feature_flags": draw(st.booleans()),
-        "flagsmith_api_key": draw(st.one_of(st.none(), flagsmith_api_keys())),
-        "flagsmith_environment_key": draw(
-            st.one_of(st.none(), st.text(min_size=20, max_size=64))
-        ),
-        "flagsmith_api_url": draw(http_urls(schemes=["https"])),
-        "enable_deployment_services": draw(st.booleans()),
-        "enable_ab_testing": draw(st.booleans()),
-        "enable_blue_green": draw(st.booleans()),
-        "enable_canary": draw(st.booleans()),
-        "enable_monitoring": draw(st.booleans()),
-    }
-
-
-@st.composite
 def rag_configurations(draw) -> dict[str, Any]:
     """Generate valid RAG configurations."""
     return {
@@ -453,7 +424,6 @@ def complete_configurations(draw) -> dict[str, Any]:
         "qdrant": draw(qdrant_configurations()),
         "openai": draw(openai_configurations()),
         "chunking": draw(chunk_configurations()),
-        "deployment": draw(deployment_configurations()),
         "rag": draw(rag_configurations()),
         "documentation_sites": draw(
             st.lists(documentation_sites(), min_size=0, max_size=5)

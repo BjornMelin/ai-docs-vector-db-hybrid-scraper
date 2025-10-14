@@ -13,7 +13,12 @@ from typing import TypedDict
 import pytest
 from pydantic import ValidationError
 
-from src.config import Settings, get_settings, refresh_settings
+from src.config import (
+    Settings,
+    ensure_runtime_directories,
+    get_settings,
+    refresh_settings,
+)
 from src.config.models import (
     ChunkingStrategy,
     CrawlProvider,
@@ -70,6 +75,7 @@ def test_config_loads_env_values_and_nested_sections(
     monkeypatch.setenv("AI_DOCS_LOGS_DIR", str(overrides["logs_dir"]))
 
     config = Settings()
+    ensure_runtime_directories(config)
     snapshot = config.model_dump()
 
     assert config.app_name == "env-app"
@@ -124,7 +130,7 @@ def test_config_allows_missing_provider_keys_in_testing_environment() -> None:
     assert config.embedding_provider is EmbeddingProvider.OPENAI
     assert config.crawl_provider is CrawlProvider.FIRECRAWL
     assert snapshot["openai"]["api_key"] is None
-    assert snapshot["firecrawl"]["api_key"] is None
+    assert snapshot["browser"]["firecrawl"]["api_key"] in (None, "")
 
 
 def test_config_nested_credentials_and_urls(tmp_path: Path) -> None:
@@ -135,7 +141,7 @@ def test_config_nested_credentials_and_urls(tmp_path: Path) -> None:
         {
             "environment": Environment.TESTING,
             "openai": {"api_key": "sk-live"},
-            "firecrawl": {"api_key": "fc-live"},
+            "browser": {"firecrawl": {"api_key": "fc-live"}},
             "qdrant": {"api_key": "qd-live", "url": "http://qdrant:6333"},
             "cache": {"dragonfly_url": "redis://redis:6379/1"},
             "data_dir": overrides["data_dir"],
@@ -146,7 +152,7 @@ def test_config_nested_credentials_and_urls(tmp_path: Path) -> None:
     snapshot = config.model_dump()
 
     assert snapshot["openai"]["api_key"] == "sk-live"
-    assert snapshot["firecrawl"]["api_key"] == "fc-live"
+    assert snapshot["browser"]["firecrawl"]["api_key"] == "fc-live"
     assert snapshot["qdrant"]["api_key"] == "qd-live"
     assert snapshot["qdrant"]["url"] == "http://qdrant:6333"
     assert snapshot["cache"]["dragonfly_url"] == "redis://redis:6379/1"
@@ -160,8 +166,6 @@ def test_config_feature_flags_and_helpers(tmp_path: Path) -> None:
         {
             "environment": Environment.TESTING,
             "enable_advanced_monitoring": False,
-            "enable_deployment_features": False,
-            "enable_ab_testing": True,
             "observability": {"enabled": True},
             "chunking": {"strategy": ChunkingStrategy.ENHANCED},
             "embedding": {"search_strategy": SearchStrategy.HYBRID},
@@ -175,8 +179,6 @@ def test_config_feature_flags_and_helpers(tmp_path: Path) -> None:
 
     assert feature_flags == {
         "advanced_monitoring": False,
-        "deployment_features": False,
-        "a_b_testing": True,
         "comprehensive_observability": True,
     }
     assert config.get_effective_chunking_strategy() is ChunkingStrategy.ENHANCED

@@ -79,12 +79,6 @@ class Settings(BaseSettings):
     enable_advanced_monitoring: bool = Field(
         default=True, description="Enable advanced monitoring features"
     )
-    enable_deployment_features: bool = Field(
-        default=True, description="Enable deployment and operations APIs"
-    )
-    enable_ab_testing: bool = Field(
-        default=False, description="Enable A/B testing and experimentation"
-    )
 
     # Paths
     data_dir: Path = Field(default=Path("data"), description="Data directory")
@@ -160,7 +154,8 @@ class Settings(BaseSettings):
         default_factory=ObservabilityConfig, description="Observability configuration"
     )
     deployment: DeploymentConfig = Field(
-        default_factory=DeploymentConfig, description="Deployment configuration"
+        default_factory=DeploymentConfig,
+        description="Deployment orchestration settings",
     )
     documentation_sites: list[DocumentationSite] = Field(
         default_factory=list, description="Documentation sites to crawl"
@@ -209,8 +204,6 @@ class Settings(BaseSettings):
 
         return {
             "advanced_monitoring": self.enable_advanced_monitoring,
-            "deployment_features": self.enable_deployment_features,
-            "a_b_testing": self.enable_ab_testing,
             "comprehensive_observability": bool(
                 getattr(self.observability, "enabled", False)
             ),

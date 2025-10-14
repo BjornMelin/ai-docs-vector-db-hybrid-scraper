@@ -24,8 +24,6 @@ from src.config.models import (
     ChunkingConfig,
     CircuitBreakerConfig,
     CrawlProvider,
-    DeploymentConfig,
-    DeploymentTier,
     DocumentationSite,
     EmbeddingProvider,
     Environment,
@@ -41,10 +39,8 @@ from .strategies import (
     chunk_configurations,
     circuit_breaker_configurations,
     complete_configurations,
-    deployment_configurations,
     documentation_sites,
     firecrawl_api_keys,
-    flagsmith_api_keys,
     http_urls,
     invalid_api_keys,
     invalid_chunk_configurations,
@@ -338,62 +334,6 @@ class TestCircuitBreakerConfigProperties:
             CircuitBreakerConfig(failure_threshold=invalid_threshold)
 
 
-class TestDeploymentConfigProperties:
-    """Property-based tests for DeploymentConfig."""
-
-    @given(deployment_configurations())
-    def test_deployment_config_valid_properties(self, config_data: dict[str, Any]):
-        """Test that valid deployment configurations create valid objects."""
-        config = DeploymentConfig(**config_data)
-        deployment_data = config.model_dump()
-
-        # Verify tier validation
-        assert isinstance(config.tier, DeploymentTier)
-        assert config.tier in {
-            DeploymentTier.PERSONAL,
-            DeploymentTier.PROFESSIONAL,
-            DeploymentTier.ENTERPRISE,
-        }
-
-        # Verify boolean flags
-        assert isinstance(deployment_data["enable_feature_flags"], bool)
-        assert isinstance(deployment_data["enable_deployment_services"], bool)
-        assert isinstance(deployment_data["enable_ab_testing"], bool)
-        assert isinstance(deployment_data["enable_blue_green"], bool)
-        assert isinstance(deployment_data["enable_canary"], bool)
-        assert isinstance(deployment_data["enable_monitoring"], bool)
-
-    @given(
-        st.text().filter(
-            lambda x: x.lower() not in ["personal", "professional", "enterprise"]
-        )
-    )
-    def test_deployment_tier_validation_failure(self, invalid_tier: str):
-        """Test that invalid tiers are rejected."""
-        assume(len(invalid_tier) > 0)  # Non-empty strings only
-
-        with pytest.raises(ValidationError):
-            DeploymentConfig(tier=cast(Any, invalid_tier))
-
-    @given(flagsmith_api_keys())
-    def test_flagsmith_api_key_validation_success(self, valid_key: str):
-        """Test that valid Flagsmith API keys are accepted."""
-        config = DeploymentConfig(flagsmith_api_key=valid_key)
-        assert config.flagsmith_api_key == valid_key
-
-    @given(invalid_api_keys())
-    def test_flagsmith_api_key_validation_failure(self, invalid_key: str):
-        """Test that invalid Flagsmith API keys are rejected."""
-        assume(
-            not invalid_key.startswith(("fs_", "env_")) and len(invalid_key) > 0
-        )  # Empty strings pass validation
-
-        with pytest.raises(
-            ValidationError, match="Flagsmith API key must start with 'fs_' or 'env_'"
-        ):
-            DeploymentConfig(flagsmith_api_key=invalid_key)
-
-
 class TestRAGConfigProperties:
     """Property-based tests for RAGConfig."""
 
@@ -531,7 +471,6 @@ class TestCompleteConfigProperties:
         assert isinstance(config.qdrant, QdrantConfig)
         assert isinstance(config.openai, OpenAIConfig)
         assert isinstance(config.chunking, ChunkingConfig)
-        assert isinstance(config.deployment, DeploymentConfig)
         assert isinstance(config.performance, PerformanceConfig)
         assert isinstance(config.rag, RAGConfig)
 
@@ -737,10 +676,6 @@ class TestConfigPropertyInvariants:
         firecrawl_key = firecrawl_data.get("api_key")
         if firecrawl_key:
             assert firecrawl_key.startswith("fc-")
-
-        flagsmith_key = settings_data["deployment"].get("flagsmith_api_key")
-        if flagsmith_key:
-            assert flagsmith_key.startswith(("fs_", "env_"))
 
 
 # Mutation testing specific tests

@@ -42,7 +42,7 @@ dependencies = [
     "crawl4ai[all]>=0.7.4,<0.8.0",
     "firecrawl>=4.3.7,<5.0.0",
     "qdrant-client[fastembed]>=1.15.1,<2.0",
-    "openai>=1.105.0,<2.0.0",  # browser-use requires less <2.0.0
+    "openai>=1.105.0,<2.0.0", # browser-use requires less <2.0.0
     "fastembed>=0.7.3,<0.7.4",
     "FlagEmbedding>=1.3.5,<2.0.0",
     "numpy>=2.2.2,<2.3.0",
@@ -103,14 +103,11 @@ dependencies = [
     "opentelemetry-exporter-otlp>=1.37.0,<2.0.0",
 ]
 
-
-[project.optional-dependencies]
+[dependency-groups]
 eval = [
     "ragas>=0.3.3,<1.0.0",
     "datasets>=2.18.0,<5.0.0",
 ]
-
-# Development dependencies
 dev = [
     "pytest>=8.4.2,<9.0.0",
     "pytest-asyncio>=1.2.0,<2.0.0",
@@ -120,16 +117,19 @@ dev = [
     "pytest-timeout>=2.4.0,<3.0.0",
     "pytest-xdist>=3.8.0,<4.0.0",
     "pytest-benchmark>=5.1.0,<6.0.0",
+    "pytest-randomly>=4.0.1,<5.0.0",
     "hypothesis>=6.140.0,<7.0.0",
     "mutmut>=3.3.1,<4.0.0",
-    "fakeredis>=2.31.3,<3.0.0",
-    "coverage>=7.6.0,<8.0.0",
-    "ruff>=0.13.1,<0.15.0",
-    "pylint>=3.3.8,<4.1.0",
-    "pyright>=1.1.379,<2.0.0",
+    "fakeredis>=2.32.0,<3.0.0",
+    "coverage>=7.10.7,<8.0.0",
+    "ruff>=0.14.0,<0.15.0",
+    "pylint>=4.0.0,<5.0.0",
+    "pyright>=1.1.406,<2.0.0",
+    "deptry>=0.23.1,<1.0.0",
     "locust>=2.37.10,<3.0.0",
     "respx>=0.22.0",
     "typer>=0.12.3,<0.20.0",
+    "vulture>=2.14,<3.0.0",
 ]
 
 # Documentation
@@ -205,8 +205,10 @@ gpu = [
     "bitsandbytes>=0.44.0,<1.0.0",
     "xformers>=0.0.32.post1,<0.0.33",
     "triton>=3.0.0,<4.0.0",
-    "flash-attn>=2.6.0,<3.0.0",
     "deepspeed>=0.14.0,<1.0.0",
+    # flash-attn requires torch wheels at runtime; uv 0.7.x lacks the
+    # extra-build-dependencies feature so torch remains co-installed via the group.
+    "flash-attn>=2.6.3",
 ]
 
 server = [
@@ -218,11 +220,6 @@ server = [
 
 web = [
     "tavily-python>=0.7.12",
-]
-
-# All optional dependencies
-all = [
-    "ai-docs-vector-db-hybrid-scraper[dev,contract,accessibility,llm,observability,parsing,dataframe,docs,gpu,eval,server,web]",
 ]
 
 [project.urls]
@@ -453,25 +450,8 @@ package = true
 # UV performance optimizations
 compile-bytecode = true
 link-mode = "copy" # Better for Docker builds
-upgrade-package = [
-    "pip",
-    "setuptools",
-    "wheel",
-    "hatchling",
-] # Keep core tools updated
-resolution = "highest" # Prefer latest compatible versions
-python-preference = "managed" # Better Python version management
-
-# Python 3.11-3.13 compatibility constraints
-constraint-dependencies = [
-    "setuptools>=70.0.0", # Ensure Python 3.13 compatible setuptools
-    "hatchling>=1.25.0",  # Ensure Python 3.13 compatible hatchling
-]
-
-[tool.uv.extra-build-dependencies]
-flash-attn = [
-    { requirement = "torch", match-runtime = true },
-]
+default-groups = ["dev"]
+preview = true
 
 
 # ===== Dependency Groups =====
@@ -498,15 +478,3 @@ disable = [
     "line-too-long", # C0301 - Test code often has long lines due to complex setup
 ]
 
-[dependency-groups]
-dev = [
-    "coverage>=7.10.7",
-    "deptry>=0.23.1",
-    "pylint>=4.0.0",
-    "pyright>=1.1.406",
-    "pytest>=8.4.2",
-    "pytest-randomly>=4.0.1",
-    "pytest-xdist>=3.8.0",
-    "ruff>=0.14.0",
-    "vulture>=2.14",
-]
