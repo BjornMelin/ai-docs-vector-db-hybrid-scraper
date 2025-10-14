@@ -17,9 +17,18 @@ from qdrant_client.models import (
 from src.config.loader import Settings
 from src.services.base import BaseService
 from src.services.errors import QdrantServiceError
+from src.services.observability.tracing import log_extra_with_trace
 
 
 logger = logging.getLogger(__name__)
+
+
+def _log_extra(event: str, **metadata: Any) -> dict[str, Any]:
+    """Return structured logging extras enriched with trace metadata."""
+
+    metadata.setdefault("component", "qdrant.alias_manager")
+    return log_extra_with_trace(event, **metadata)
+
 
 # Valid collection/alias name pattern (alphanumeric, underscore, hyphen)
 VALID_NAME_PATTERN = re.compile(r"^[a-zA-Z0-9_-]+$")
@@ -106,7 +115,15 @@ class QdrantAliasManager(BaseService):
             # Check if alias exists
             if await self.alias_exists(alias_name):
                 if not force:
-                    logger.warning("Alias %s already exists", alias_name)
+                    logger.warning(
+                        "Alias %s already exists",
+                        alias_name,
+                        extra=_log_extra(
+                            "qdrant.alias.exists",
+                            alias=alias_name,
+                            collection=collection_name,
+                        ),
+                    )
                     return False
 
                 # Delete existing alias
@@ -124,10 +141,26 @@ class QdrantAliasManager(BaseService):
                 ]
             )
 
-            logger.info("Created alias %s -> %s", alias_name, collection_name)
+            logger.info(
+                "Created alias %s -> %s",
+                alias_name,
+                collection_name,
+                extra=_log_extra(
+                    "qdrant.alias.create",
+                    alias=alias_name,
+                    collection=collection_name,
+                ),
+            )
 
         except Exception as e:
-            logger.exception("Failed to create alias")
+            logger.exception(
+                "Failed to create alias",
+                extra=_log_extra(
+                    "qdrant.alias.create",
+                    alias=alias_name,
+                    collection=collection_name,
+                ),
+            )
             msg = f"Failed to create alias: {e}"
             raise QdrantServiceError(msg) from e
         return True
@@ -153,12 +186,23 @@ class QdrantAliasManager(BaseService):
         self.validate_name(alias_name, "Alias name")
         self.validate_name(new_collection, "Collection name")
 
+        old_collection: str | None = None
+
         try:
             # Get current collection
             old_collection = await self.get_collection_for_alias(alias_name)
 
             if old_collection == new_collection:
-                logger.warning("Alias already points to target collection")
+                logger.warning(
+                    "Alias already points to target collection",
+                    extra=_log_extra(
+                        "qdrant.alias.switch",
+                        alias=alias_name,
+                        old_collection=old_collection,
+                        new_collection=new_collection,
+                        skipped=True,
+                    ),
+                )
                 return None
 
             # Atomic switch
@@ -192,6 +236,13 @@ class QdrantAliasManager(BaseService):
                 alias_name,
                 old_collection,
                 new_collection,
+                extra=_log_extra(
+                    "qdrant.alias.switch",
+                    alias=alias_name,
+                    old_collection=old_collection,
+                    new_collection=new_collection,
+                    deleted_old=delete_old,
+                ),
             )
 
             # Optionally delete old collection
@@ -199,7 +250,15 @@ class QdrantAliasManager(BaseService):
                 await self.safe_delete_collection(old_collection)
 
         except Exception as e:
-            logger.exception("Failed to switch alias")
+            logger.exception(
+                "Failed to switch alias",
+                extra=_log_extra(
+                    "qdrant.alias.switch",
+                    alias=alias_name,
+                    old_collection=old_collection,
+                    new_collection=new_collection,
+                ),
+            )
             msg = f"Failed to switch alias: {e}"
             raise QdrantServiceError(msg) from e
         return old_collection
@@ -226,13 +285,23 @@ class QdrantAliasManager(BaseService):
                 ]
             )
 
-            logger.info("Deleted alias %s", alias_name)
+            logger.info(
+                "Deleted alias %s",
+                alias_name,
+                extra=_log_extra("qdrant.alias.delete", alias=alias_name),
+            )
 
         except (OSError, PermissionError):
-            logger.exception("Failed to delete alias")
+            logger.exception(
+                "Failed to delete alias",
+                extra=_log_extra("qdrant.alias.delete", alias=alias_name),
+            )
             return False
         except Exception:  # pragma: no cover - defensive path
-            logger.exception("Unexpected error deleting alias")
+            logger.exception(
+                "Unexpected error deleting alias",
+                extra=_log_extra("qdrant.alias.delete", alias=alias_name),
+            )
             return False
         return True
 
@@ -268,8 +337,11 @@ class QdrantAliasManager(BaseService):
             return {
                 alias.alias_name: alias.collection_name for alias in aliases.aliases
             }
-        except (ConnectionError, OSError, PermissionError, Exception):
-            logger.exception("Failed to list aliases")
+        except (PermissionError, Exception):
+            logger.exception(
+                "Failed to list aliases",
+                extra=_log_extra("qdrant.alias.list"),
+            )
             return {}
 
     async def safe_delete_collection(
@@ -287,18 +359,33 @@ class QdrantAliasManager(BaseService):
         # Check if any alias points to this collection
         aliases = await self.list_aliases()
         if collection_name in aliases.values():
-            logger.warning("Collection %s still has aliases", collection_name)
+            logger.warning(
+                "Collection %s still has aliases",
+                collection_name,
+                extra=_log_extra(
+                    "qdrant.collection.delete", collection=collection_name, skipped=True
+                ),
+            )
             return
 
         logger.info(
             "Deleting collection %s after grace period of %d minutes",
             collection_name,
             grace_period_minutes,
+            extra=_log_extra(
+                "qdrant.collection.delete",
+                collection=collection_name,
+                grace_minutes=grace_period_minutes,
+            ),
         )
 
         await asyncio.sleep(grace_period_minutes * 60)
         await self.client.delete_collection(collection_name)
-        logger.info("Collection %s deleted", collection_name)
+        logger.info(
+            "Collection %s deleted",
+            collection_name,
+            extra=_log_extra("qdrant.collection.delete", collection=collection_name),
+        )
 
     async def clone_collection_schema(self, source: str, target: str) -> bool:
         """Clone collection schema from source to target.
@@ -339,10 +426,22 @@ class QdrantAliasManager(BaseService):
                         field_type=field_schema.data_type,
                     )
 
-            logger.info("Cloned collection schema from %s to %s", source, target)
+            logger.info(
+                "Cloned collection schema from %s to %s",
+                source,
+                target,
+                extra=_log_extra(
+                    "qdrant.collection.clone", source=source, target=target
+                ),
+            )
 
         except Exception as e:
-            logger.exception("Failed to clone collection schema")
+            logger.exception(
+                "Failed to clone collection schema",
+                extra=_log_extra(
+                    "qdrant.collection.clone", source=source, target=target
+                ),
+            )
             msg = f"Failed to clone collection schema: {e}"
             raise QdrantServiceError(msg) from e
         return True
@@ -406,7 +505,17 @@ class QdrantAliasManager(BaseService):
 
                 total_copied += len(records)
                 logger.debug(
-                    "Copied %d points from %s to %s", total_copied, source, target
+                    "Copied %d points from %s to %s",
+                    total_copied,
+                    source,
+                    target,
+                    extra=_log_extra(
+                        "qdrant.collection.copy",
+                        source=source,
+                        target=target,
+                        copied=total_copied,
+                        total=total_points,
+                    ),
                 )
 
                 # Call progress callback if provided
@@ -414,10 +523,20 @@ class QdrantAliasManager(BaseService):
                     try:
                         await progress_callback(total_copied, total_points)
                     except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
-                        logger.warning("Progress callback failed: %s", e)
+                        logger.warning(
+                            "Progress callback failed: %s",
+                            e,
+                            extra=_log_extra(
+                                "qdrant.collection.copy", source=source, target=target
+                            ),
+                        )
                     except Exception as e:  # pragma: no cover - defensive path
                         logger.warning(
-                            "Progress callback raised unexpected error: %s", e
+                            "Progress callback raised unexpected error: %s",
+                            e,
+                            extra=_log_extra(
+                                "qdrant.collection.copy", source=source, target=target
+                            ),
                         )
 
                 # Check limit
@@ -429,10 +548,30 @@ class QdrantAliasManager(BaseService):
                 if offset is None:
                     break
 
-            logger.info("Copied %d points from %s to %s", total_copied, source, target)
+            logger.info(
+                "Copied %d points from %s to %s",
+                total_copied,
+                source,
+                target,
+                extra=_log_extra(
+                    "qdrant.collection.copy",
+                    source=source,
+                    target=target,
+                    copied=total_copied,
+                    total=total_points,
+                ),
+            )
 
         except Exception as e:
-            logger.exception("Failed to copy collection data")
+            logger.exception(
+                "Failed to copy collection data",
+                extra=_log_extra(
+                    "qdrant.collection.copy",
+                    source=source,
+                    target=target,
+                    copied=locals().get("total_copied", 0),
+                ),
+            )
             msg = f"Failed to copy collection data: {e}"
             raise QdrantServiceError(msg) from e
         return total_copied
@@ -493,6 +632,13 @@ class QdrantAliasManager(BaseService):
                 return False, "Quantization configuration mismatch"
 
         except Exception as e:
-            logger.exception("Failed to validate collection compatibility")
+            logger.exception(
+                "Failed to validate collection compatibility",
+                extra=_log_extra(
+                    "qdrant.collection.validate",
+                    collection1=collection1,
+                    collection2=collection2,
+                ),
+            )
             return False, f"Validation error: {e!s}"
         return True, "Collections are compatible"

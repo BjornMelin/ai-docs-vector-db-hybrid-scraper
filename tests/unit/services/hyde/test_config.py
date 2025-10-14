@@ -1,11 +1,37 @@
 """Tests for HyDE configuration models."""
 
+from typing import cast
 from unittest.mock import Mock
 
 import pytest
 from pydantic import ValidationError
 
 from src.services.hyde.config import HyDEConfig, HyDEMetricsConfig, HyDEPromptConfig
+
+
+def _test_field_validation(
+    config_class: type, field_name: str, valid_values: list, invalid_cases: list[tuple]
+) -> None:
+    """Helper to test field validation for valid and invalid values."""
+    # Valid values
+    for value in valid_values:
+        config_class(**{field_name: value})
+
+    # Invalid values
+    for invalid_value, expected_message in invalid_cases:
+        with pytest.raises(ValidationError) as exc_info:
+            config_class(**{field_name: invalid_value})
+        assert expected_message in str(exc_info.value)
+
+
+def _test_prompt_formatting(
+    prompt_data: dict, prompt_key: str, test_query: str
+) -> None:
+    """Helper to test that a prompt template can be formatted."""
+    prompt = cast(str, prompt_data[prompt_key])
+    formatted = prompt.format(query=test_query)
+    assert test_query in formatted
+    assert formatted != prompt
 
 
 class TestHyDEConfig:
@@ -108,194 +134,122 @@ class TestHyDEConfig:
 
     def test_validation_num_generations(self):
         """Test validation for num_generations field."""
-        # Valid values
-        HyDEConfig(num_generations=1)
-        HyDEConfig(num_generations=5)
-        HyDEConfig(num_generations=10)
-
-        # Invalid values
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(num_generations=0)
-        assert "greater than or equal to 1" in str(exc_info.value)
-
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(num_generations=11)
-        assert "less than or equal to 10" in str(exc_info.value)
+        _test_field_validation(
+            HyDEConfig,
+            "num_generations",
+            [1, 5, 10],
+            [(0, "greater than or equal to 1"), (11, "less than or equal to 10")],
+        )
 
     def test_validation_generation_temperature(self):
         """Test validation for generation_temperature field."""
-        # Valid values
-        HyDEConfig(generation_temperature=0.0)
-        HyDEConfig(generation_temperature=0.7)
-        HyDEConfig(generation_temperature=1.0)
-
-        # Invalid values
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(generation_temperature=-0.1)
-        assert "greater than or equal to 0" in str(exc_info.value)
-
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(generation_temperature=1.1)
-        assert "less than or equal to 1" in str(exc_info.value)
+        _test_field_validation(
+            HyDEConfig,
+            "generation_temperature",
+            [0.0, 0.7, 1.0],
+            [(-0.1, "greater than or equal to 0"), (1.1, "less than or equal to 1")],
+        )
 
     def test_validation_max_generation_tokens(self):
         """Test validation for max_generation_tokens field."""
-        # Valid values
-        HyDEConfig(max_generation_tokens=50)
-        HyDEConfig(max_generation_tokens=200)
-        HyDEConfig(max_generation_tokens=500)
-
-        # Invalid values
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(max_generation_tokens=49)
-        assert "greater than or equal to 50" in str(exc_info.value)
-
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(max_generation_tokens=501)
-        assert "less than or equal to 500" in str(exc_info.value)
+        _test_field_validation(
+            HyDEConfig,
+            "max_generation_tokens",
+            [50, 200, 500],
+            [(49, "greater than or equal to 50"), (501, "less than or equal to 500")],
+        )
 
     def test_validation_generation_timeout_seconds(self):
         """Test validation for generation_timeout_seconds field."""
-        # Valid values
-        HyDEConfig(generation_timeout_seconds=1)
-        HyDEConfig(generation_timeout_seconds=10)
-        HyDEConfig(generation_timeout_seconds=60)
-
-        # Invalid values
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(generation_timeout_seconds=0)
-        assert "greater than or equal to 1" in str(exc_info.value)
-
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(generation_timeout_seconds=61)
-        assert "less than or equal to 60" in str(exc_info.value)
+        _test_field_validation(
+            HyDEConfig,
+            "generation_timeout_seconds",
+            [1, 10, 60],
+            [(0, "greater than or equal to 1"), (61, "less than or equal to 60")],
+        )
 
     def test_validation_hyde_prefetch_limit(self):
         """Test validation for hyde_prefetch_limit field."""
-        # Valid values
-        HyDEConfig(hyde_prefetch_limit=10)
-        HyDEConfig(hyde_prefetch_limit=50)
-        HyDEConfig(hyde_prefetch_limit=200)
-
-        # Invalid values
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(hyde_prefetch_limit=9)
-        assert "greater than or equal to 10" in str(exc_info.value)
-
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(hyde_prefetch_limit=201)
-        assert "less than or equal to 200" in str(exc_info.value)
+        _test_field_validation(
+            HyDEConfig,
+            "hyde_prefetch_limit",
+            [10, 50, 200],
+            [(9, "greater than or equal to 10"), (201, "less than or equal to 200")],
+        )
 
     def test_validation_query_prefetch_limit(self):
         """Test validation for query_prefetch_limit field."""
-        # Valid values
-        HyDEConfig(query_prefetch_limit=10)
-        HyDEConfig(query_prefetch_limit=30)
-        HyDEConfig(query_prefetch_limit=100)
-
-        # Invalid values
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(query_prefetch_limit=9)
-        assert "greater than or equal to 10" in str(exc_info.value)
-
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(query_prefetch_limit=101)
-        assert "less than or equal to 100" in str(exc_info.value)
+        _test_field_validation(
+            HyDEConfig,
+            "query_prefetch_limit",
+            [10, 30, 100],
+            [(9, "greater than or equal to 10"), (101, "less than or equal to 100")],
+        )
 
     def test_validation_hyde_weight_in_fusion(self):
         """Test validation for hyde_weight_in_fusion field."""
-        # Valid values
-        HyDEConfig(hyde_weight_in_fusion=0.0)
-        HyDEConfig(hyde_weight_in_fusion=0.6)
-        HyDEConfig(hyde_weight_in_fusion=1.0)
-
-        # Invalid values
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(hyde_weight_in_fusion=-0.1)
-        assert "greater than or equal to 0" in str(exc_info.value)
-
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(hyde_weight_in_fusion=1.1)
-        assert "less than or equal to 1" in str(exc_info.value)
+        _test_field_validation(
+            HyDEConfig,
+            "hyde_weight_in_fusion",
+            [0.0, 0.6, 1.0],
+            [(-0.1, "greater than or equal to 0"), (1.1, "less than or equal to 1")],
+        )
 
     def test_validation_cache_ttl_seconds(self):
         """Test validation for cache_ttl_seconds field."""
-        # Valid values
-        HyDEConfig(cache_ttl_seconds=300)
-        HyDEConfig(cache_ttl_seconds=3600)
-        HyDEConfig(cache_ttl_seconds=86400)
-
-        # Invalid values
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(cache_ttl_seconds=299)
-        assert "greater than or equal to 300" in str(exc_info.value)
-
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(cache_ttl_seconds=86401)
-        assert "less than or equal to 86400" in str(exc_info.value)
+        _test_field_validation(
+            HyDEConfig,
+            "cache_ttl_seconds",
+            [300, 3600, 86400],
+            [
+                (299, "greater than or equal to 300"),
+                (86401, "less than or equal to 86400"),
+            ],
+        )
 
     def test_validation_max_concurrent_generations(self):
         """Test validation for max_concurrent_generations field."""
-        # Valid values
-        HyDEConfig(max_concurrent_generations=1)
-        HyDEConfig(max_concurrent_generations=5)
-        HyDEConfig(max_concurrent_generations=10)
-
-        # Invalid values
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(max_concurrent_generations=0)
-        assert "greater than or equal to 1" in str(exc_info.value)
-
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(max_concurrent_generations=11)
-        assert "less than or equal to 10" in str(exc_info.value)
+        _test_field_validation(
+            HyDEConfig,
+            "max_concurrent_generations",
+            [1, 5, 10],
+            [(0, "greater than or equal to 1"), (11, "less than or equal to 10")],
+        )
 
     def test_validation_min_generation_length(self):
         """Test validation for min_generation_length field."""
-        # Valid values
-        HyDEConfig(min_generation_length=10)
-        HyDEConfig(min_generation_length=20)
-        HyDEConfig(min_generation_length=100)
-
-        # Invalid values
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(min_generation_length=9)
-        assert "greater than or equal to 10" in str(exc_info.value)
-
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(min_generation_length=101)
-        assert "less than or equal to 100" in str(exc_info.value)
+        _test_field_validation(
+            HyDEConfig,
+            "min_generation_length",
+            [10, 20, 100],
+            [(9, "greater than or equal to 10"), (101, "less than or equal to 100")],
+        )
 
     def test_validation_diversity_threshold(self):
         """Test validation for diversity_threshold field."""
-        # Valid values
-        HyDEConfig(diversity_threshold=0.0)
-        HyDEConfig(diversity_threshold=0.3)
-        HyDEConfig(diversity_threshold=1.0)
-
-        # Invalid values
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(diversity_threshold=-0.1)
-        assert "greater than or equal to 0" in str(exc_info.value)
-
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(diversity_threshold=1.1)
-        assert "less than or equal to 1" in str(exc_info.value)
+        _test_field_validation(
+            HyDEConfig,
+            "diversity_threshold",
+            [0.0, 0.3, 1.0],
+            [(-0.1, "greater than or equal to 0"), (1.1, "less than or equal to 1")],
+        )
 
     def test_json_schema_extra(self):
         """Test that JSON schema extra example is accessible."""
-        config = HyDEConfig()
-        example = config.model_config.get("json_schema_extra", {}).get("example", {})
+        schema_config = getattr(HyDEConfig, "model_config", {})
+        json_schema_extra = schema_config.get("json_schema_extra", {})
+        example = json_schema_extra.get("example", {})
+        assert isinstance(example, dict)
 
-        assert example["enable_hyde"] is True
-        assert example["num_generations"] == 5
-        assert example["generation_temperature"] == 0.7
-        assert example["max_generation_tokens"] == 200
-        assert example["generation_model"] == "gpt-3.5-turbo"
-        assert example["hyde_prefetch_limit"] == 50
-        assert example["query_prefetch_limit"] == 30
-        assert example["cache_ttl_seconds"] == 3600
-        assert example["parallel_generation"] is True
+        assert example.get("enable_hyde") is True
+        assert example.get("num_generations") == 5
+        assert example.get("generation_temperature") == 0.7
+        assert example.get("max_generation_tokens") == 200
+        assert example.get("generation_model") == "gpt-3.5-turbo"
+        assert example.get("hyde_prefetch_limit") == 50
+        assert example.get("query_prefetch_limit") == 30
+        assert example.get("cache_ttl_seconds") == 3600
+        assert example.get("parallel_generation") is True
 
     def test_serialization(self):
         """Test config serialization and deserialization."""
@@ -389,23 +343,13 @@ class TestHyDEPromptConfig:
         """Test that prompt templates can be formatted with query."""
         config = HyDEPromptConfig()
         test_query = "How to use API authentication?"
+        prompt_data = config.model_dump()
 
         # Test each prompt template can be formatted
-        technical_formatted = config.technical_prompt.format(query=test_query)
-        assert test_query in technical_formatted
-        assert technical_formatted != config.technical_prompt
-
-        code_formatted = config.code_prompt.format(query=test_query)
-        assert test_query in code_formatted
-        assert code_formatted != config.code_prompt
-
-        tutorial_formatted = config.tutorial_prompt.format(query=test_query)
-        assert test_query in tutorial_formatted
-        assert tutorial_formatted != config.tutorial_prompt
-
-        general_formatted = config.general_prompt.format(query=test_query)
-        assert test_query in general_formatted
-        assert general_formatted != config.general_prompt
+        _test_prompt_formatting(prompt_data, "technical_prompt", test_query)
+        _test_prompt_formatting(prompt_data, "code_prompt", test_query)
+        _test_prompt_formatting(prompt_data, "tutorial_prompt", test_query)
+        _test_prompt_formatting(prompt_data, "general_prompt", test_query)
 
     def test_keyword_lists_not_empty(self):
         """Test that keyword lists are not empty."""
@@ -532,46 +476,34 @@ class TestHyDEMetricsConfig:
 
     def test_validation_control_group_percentage(self):
         """Test validation for control_group_percentage field."""
-        # Valid values
-        HyDEMetricsConfig(control_group_percentage=0.0)
-        HyDEMetricsConfig(control_group_percentage=0.5)
-        HyDEMetricsConfig(control_group_percentage=1.0)
-
-        # Invalid values
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEMetricsConfig(control_group_percentage=-0.1)
-        assert "greater than or equal to 0" in str(exc_info.value)
-
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEMetricsConfig(control_group_percentage=1.1)
-        assert "less than or equal to 1" in str(exc_info.value)
+        _test_field_validation(
+            HyDEMetricsConfig,
+            "control_group_percentage",
+            [0.0, 0.5, 1.0],
+            [(-0.1, "greater than or equal to 0"), (1.1, "less than or equal to 1")],
+        )
 
     def test_validation_metrics_export_interval(self):
         """Test validation for metrics_export_interval field."""
-        # Valid values
-        HyDEMetricsConfig(metrics_export_interval=60)
-        HyDEMetricsConfig(metrics_export_interval=300)
-        HyDEMetricsConfig(metrics_export_interval=3600)
-
-        # Invalid values
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEMetricsConfig(metrics_export_interval=59)
-        assert "greater than or equal to 60" in str(exc_info.value)
-
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEMetricsConfig(metrics_export_interval=3601)
-        assert "less than or equal to 3600" in str(exc_info.value)
+        _test_field_validation(
+            HyDEMetricsConfig,
+            "metrics_export_interval",
+            [60, 300, 3600],
+            [(59, "greater than or equal to 60"), (3601, "less than or equal to 3600")],
+        )
 
     def test_json_schema_extra(self):
         """Test that JSON schema extra example is accessible."""
-        config = HyDEMetricsConfig()
-        example = config.model_config.get("json_schema_extra", {}).get("example", {})
+        schema_config = getattr(HyDEMetricsConfig, "model_config", {})
+        json_schema_extra = schema_config.get("json_schema_extra", {})
+        example = json_schema_extra.get("example", {})
+        assert isinstance(example, dict)
 
-        assert example["track_generation_time"] is True
-        assert example["track_cache_hits"] is True
-        assert example["track_search_quality"] is True
-        assert example["ab_testing_enabled"] is False
-        assert example["control_group_percentage"] == 0.5
+        assert example.get("track_generation_time") is True
+        assert example.get("track_cache_hits") is True
+        assert example.get("track_search_quality") is True
+        assert example.get("ab_testing_enabled") is False
+        assert example.get("control_group_percentage") == 0.5
 
     def test_ab_testing_configuration(self):
         """Test A/B testing configuration combinations."""

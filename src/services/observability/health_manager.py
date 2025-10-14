@@ -22,6 +22,7 @@ from redis import asyncio as redis
 from redis.exceptions import ConnectionError as RedisConnectionError, RedisError
 
 from src.config.models import EmbeddingProvider
+from src.services.observability.tracing import log_extra_with_trace
 
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
@@ -35,6 +36,13 @@ except ImportError:  # pragma: no cover - graceful fallback
 
 
 logger = logging.getLogger(__name__)
+
+
+def _log_extra(event: str, **metadata: Any) -> dict[str, Any]:
+    """Return structured logging extras enriched with trace identifiers."""
+
+    metadata.setdefault("component", "observability.health")
+    return log_extra_with_trace(event, **metadata)
 
 
 class HealthCheckConfig(BaseModel):
@@ -841,6 +849,7 @@ def build_health_manager(
         if psutil is None:
             logger.warning(
                 "Skipping system resource health check; psutil dependency missing",
+                extra=_log_extra("health.system", dependency="psutil", skipped=True),
             )
         else:
             manager.add_health_check(
@@ -907,7 +916,10 @@ def build_health_manager(
             )
         )
     else:
-        logger.debug("Skipping Firecrawl health check; no API URL configured")
+        logger.debug(
+            "Skipping Firecrawl health check; no API URL configured",
+            extra=_log_extra("health.firecrawl", skipped=True),
+        )
 
     for service_name, service_url in settings.monitoring.external_services.items():
         manager.add_health_check(

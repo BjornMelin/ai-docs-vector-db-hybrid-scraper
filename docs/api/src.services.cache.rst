@@ -44,22 +44,6 @@ src.services.cache.manager module
    :show-inheritance:
    :undoc-members:
 
-src.services.cache.metrics module
----------------------------------
-
-.. automodule:: src.services.cache.metrics
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-src.services.cache.patterns module
-----------------------------------
-
-.. automodule:: src.services.cache.patterns
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 src.services.cache.search\_cache module
 ---------------------------------------
 

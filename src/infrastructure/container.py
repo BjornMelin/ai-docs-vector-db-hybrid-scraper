@@ -542,21 +542,6 @@ class ApplicationContainer(DeclarativeContainer):
         _create_http_client,
     )
 
-    qdrant_provider = Singleton(
-        "src.infrastructure.clients.qdrant_client.QdrantClientProvider",
-        qdrant_client=qdrant_client,
-    )
-
-    firecrawl_provider = Singleton(
-        "src.infrastructure.clients.firecrawl_client.FirecrawlClientProvider",
-        firecrawl_client=firecrawl_client,
-    )
-
-    http_provider = Singleton(
-        "src.infrastructure.clients.http_client.HTTPClientProvider",
-        http_client=http_client,
-    )
-
     cache_manager = Singleton(
         _create_cache_manager,
         config=config,
@@ -733,24 +718,6 @@ async def shutdown_container() -> None:
 
 
 # Dependency injection decorators and functions for easy access
-def inject_qdrant_provider():
-    """Inject Qdrant client provider dependency."""
-
-    return Provide[ApplicationContainer.qdrant_provider]
-
-
-def inject_firecrawl_provider():
-    """Inject Firecrawl client provider dependency."""
-
-    return Provide[ApplicationContainer.firecrawl_provider]
-
-
-def inject_http_provider():
-    """Inject HTTP client provider dependency."""
-
-    return Provide[ApplicationContainer.http_provider]
-
-
 def inject_parallel_processing_system():
     """Inject parallel processing system dependency."""
 

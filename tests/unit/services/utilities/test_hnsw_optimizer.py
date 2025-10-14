@@ -8,7 +8,7 @@ import pytest
 
 from src.config import Settings
 from src.services.errors import QdrantServiceError
-from src.services.utilities.hnsw_optimizer import HNSWOptimizer
+from src.services.utilities.hnsw_optimizer import AdaptiveEfConfig, HNSWOptimizer
 
 
 class TestError(Exception):
@@ -31,6 +31,8 @@ class TestHNSWOptimizer:
         service._client = MagicMock()
         service._client.query_points = AsyncMock()
         service._client.get_collection = AsyncMock()
+        service.get_client = AsyncMock(return_value=service._client)
+        service.is_initialized = MagicMock(side_effect=lambda: service._initialized)
         return service
 
     @pytest.fixture
@@ -81,6 +83,16 @@ class TestHNSWOptimizer:
         assert optimizer._initialized is False
 
     @pytest.mark.asyncio
+    async def test_initialize_readiness_error(self, optimizer, _mock_qdrant_service):
+        """Test initialization when is_initialized raises an exception."""
+        _mock_qdrant_service.is_initialized.side_effect = RuntimeError("Check failed")
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await optimizer.initialize()
+
+        assert "Check failed" in str(exc_info.value)
+
+    @pytest.mark.asyncio
     async def test_adaptive_ef_retrieve_success(self, optimizer, _mock_qdrant_service):
         """Test successful adaptive ef retrieval."""
         optimizer._initialized = True
@@ -91,13 +103,16 @@ class TestHNSWOptimizer:
         _mock_qdrant_service._client.query_points.return_value = mock_result
 
         query_vector = [0.1, 0.2, 0.3]
-        result = await optimizer.adaptive_ef_retrieve(
-            collection_name="test_collection",
-            query_vector=query_vector,
+        config = AdaptiveEfConfig(
             time_budget_ms=100,
             min_ef=50,
             max_ef=200,
             target_limit=10,
+        )
+        result = await optimizer.adaptive_ef_retrieve(
+            collection_name="test_collection",
+            query_vector=query_vector,
+            config=config,
         )
 
         assert "results" in result
@@ -129,12 +144,11 @@ class TestHNSWOptimizer:
         _mock_qdrant_service._client.query_points.return_value = mock_result
 
         query_vector = [0.1, 0.2, 0.3]
+        config = AdaptiveEfConfig(time_budget_ms=100, min_ef=50, max_ef=200)
         result = await optimizer.adaptive_ef_retrieve(
             collection_name="test_collection",
             query_vector=query_vector,
-            time_budget_ms=100,
-            min_ef=50,
-            max_ef=200,
+            config=config,
         )
 
         assert result["ef_used"] == 75
@@ -158,13 +172,16 @@ class TestHNSWOptimizer:
         _mock_qdrant_service._client.query_points.side_effect = slow_query
 
         query_vector = [0.1, 0.2, 0.3]
-        result = await optimizer.adaptive_ef_retrieve(
-            collection_name="test_collection",
-            query_vector=query_vector,
+        config = AdaptiveEfConfig(
             time_budget_ms=50,  # Small budget
             min_ef=50,
             max_ef=200,
             step_size=25,
+        )
+        result = await optimizer.adaptive_ef_retrieve(
+            collection_name="test_collection",
+            query_vector=query_vector,
+            config=config,
         )
 
         # Should stop early due to budget
@@ -642,13 +659,16 @@ class TestHNSWOptimizer:
         _mock_qdrant_service._client.query_points.side_effect = mock_query_with_timing
 
         query_vector = [0.1, 0.2, 0.3]
-        result = await optimizer.adaptive_ef_retrieve(
-            collection_name="test_collection",
-            query_vector=query_vector,
+        config = AdaptiveEfConfig(
             time_budget_ms=100,
             min_ef=50,
             max_ef=200,
             step_size=50,
+        )
+        result = await optimizer.adaptive_ef_retrieve(
+            collection_name="test_collection",
+            query_vector=query_vector,
+            config=config,
         )
 
         # Should have stopped before reaching max_ef due to time budget

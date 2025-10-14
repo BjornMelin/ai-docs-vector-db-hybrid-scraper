@@ -14,6 +14,8 @@ try:
 except ImportError:
     CacheManager = None  # type: ignore[assignment]
 
+from pydantic import ValidationError
+
 from src.config.loader import Settings
 from src.config.models import CacheType, EmbeddingConfig as SettingsEmbeddingConfig
 from src.services.embeddings.base import EmbeddingProvider
@@ -36,6 +38,26 @@ else:  # pragma: no cover - runtime fallback for optional cache dependency
     EmbeddingCache = Any
 
 logger = logging.getLogger(__name__)
+
+
+def _normalize_benchmarks(raw: Any) -> dict[str, dict[str, Any]]:
+    """Convert benchmark mappings to plain dictionaries."""
+
+    if not raw:
+        return {}
+
+    normalized: dict[str, dict[str, Any]] = {}
+    for name, entry in dict(raw).items():
+        if hasattr(entry, "model_dump"):
+            normalized[name] = dict(entry.model_dump())
+        elif isinstance(entry, dict):
+            normalized[name] = dict(entry)
+        else:
+            normalized[name] = {
+                "model_name": getattr(entry, "model_name", name),
+                "provider": getattr(entry, "provider", ""),
+            }
+    return normalized
 
 
 class EmbeddingManager:
@@ -107,8 +129,8 @@ class EmbeddingManager:
             self.cache_manager = cast(CacheManagerType, generated_cache_manager)
 
         # Load model benchmarks and selection configuration from config
-        self._benchmarks: dict[str, dict[str, Any]] = getattr(
-            config.embedding, "model_benchmarks", {}
+        self._benchmarks: dict[str, dict[str, Any]] = _normalize_benchmarks(
+            getattr(config.embedding, "model_benchmarks", {})
         )
         self._smart_config = getattr(config.embedding, "smart_selection", None)
         self._usage = UsageTracker(self._smart_config, budget_limit)
@@ -423,25 +445,59 @@ class EmbeddingManager:
         Raises:
             FileNotFoundError: If benchmark file doesn't exist
             json.JSONDecodeError: If file contains invalid JSON
-            pydantic.ValidationError: If data doesn't match expected schema
+            ValueError: If data is missing required embedding configuration or fails
+                validation
         """
         # Load and validate benchmark configuration
         benchmark_path = Path(benchmark_file)
         with benchmark_path.open("r", encoding="utf-8") as f:
             benchmark_data = json.load(f)
 
-        embedding_config = SettingsEmbeddingConfig.model_validate(
-            benchmark_data.get("embedding", {})
-        )
+        if not isinstance(benchmark_data, dict) or "embedding" not in benchmark_data:
+            msg = "Benchmark file must contain an 'embedding' section"
+            raise ValueError(msg)
+
+        embedding_section = benchmark_data["embedding"]
+        if not isinstance(embedding_section, dict):
+            msg = "'embedding' section must be a mapping"
+            raise ValueError(msg)
+
+        previous_benchmarks = self._benchmarks.copy()
+        previous_smart_config = self._smart_config
+        previous_selection = self._selection
+        previous_usage = self._usage
+
+        try:
+            embedding_config = SettingsEmbeddingConfig.model_validate(embedding_section)
+            normalized_benchmarks = _normalize_benchmarks(
+                getattr(embedding_config, "model_benchmarks", {})
+            )
+            smart_config = getattr(embedding_config, "smart_selection", None)
+            selection_engine = SelectionEngine(smart_config, normalized_benchmarks)
+            if previous_usage is None:
+                usage_tracker = UsageTracker(smart_config, self._budget_limit)
+            else:
+                previous_usage.set_smart_config(smart_config)
+                usage_tracker = previous_usage
+        except ValidationError as exc:
+            self._benchmarks = previous_benchmarks
+            self._smart_config = previous_smart_config
+            self._selection = previous_selection
+            self._usage = previous_usage
+            msg = "Invalid embedding benchmark configuration"
+            raise ValueError(msg) from exc
+        except Exception:
+            self._benchmarks = previous_benchmarks
+            self._smart_config = previous_smart_config
+            self._selection = previous_selection
+            self._usage = previous_usage
+            raise
 
         # Update manager's benchmarks and selection configuration
-        self._benchmarks = getattr(embedding_config, "model_benchmarks", {}) or {}
-        self._smart_config = getattr(embedding_config, "smart_selection", None)
-        self._selection = SelectionEngine(self._smart_config, self._benchmarks)
-        if self._usage is None:
-            self._usage = UsageTracker(self._smart_config, self._budget_limit)
-        else:
-            self._usage.set_smart_config(self._smart_config)
+        self._benchmarks = normalized_benchmarks
+        self._smart_config = smart_config
+        self._selection = selection_engine
+        self._usage = usage_tracker
         self._pipeline.set_selection_engine(self._selection)
         self._pipeline.set_smart_config(self._smart_config)
         self._pipeline.set_usage_tracker(self._usage)

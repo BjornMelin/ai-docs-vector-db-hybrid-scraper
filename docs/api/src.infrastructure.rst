@@ -7,7 +7,6 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
-   src.infrastructure.clients
    src.infrastructure.database
 
 Submodules

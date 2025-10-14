@@ -59,7 +59,7 @@ def manager_setup(
         vector_store_service=lambda: vector_service_mock,
     )
     get_container_mock = lambda: container  # noqa: E731
-    init_mock = AsyncMock(return_value=container)
+    ensure_mock = AsyncMock(return_value=container)
     shutdown_mock = AsyncMock()
 
     monkeypatch.setattr(
@@ -67,8 +67,8 @@ def manager_setup(
         get_container_mock,
     )
     monkeypatch.setattr(
-        "src.manage_vector_db.initialize_container",
-        init_mock,
+        "src.manage_vector_db.ensure_container",
+        ensure_mock,
     )
     monkeypatch.setattr(
         "src.manage_vector_db.shutdown_container",
@@ -79,8 +79,9 @@ def manager_setup(
 
     return SimpleNamespace(
         manager=manager,
-        init_mock=init_mock,
+        init_mock=ensure_mock,
         shutdown_mock=shutdown_mock,
+        shutdown_manager=shutdown_mock,
         vector_service=vector_service_mock,
     )
 
@@ -290,6 +291,24 @@ def test_cli_stats_prints_table() -> None:
     assert "Total Collections" in result.output
     manager_stub.get_database_stats.assert_awaited_once()
     manager_stub.cleanup.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_shutdown_manager_success(manager_setup: SimpleNamespace) -> None:
+    """Test successful shutdown manager."""
+    # Simulate successful shutdown
+    manager_setup.shutdown_manager.return_value = True
+    result = await manager_setup.shutdown_manager()
+    assert result is True
+
+
+@pytest.mark.asyncio
+async def test_shutdown_manager_failure(manager_setup: SimpleNamespace) -> None:
+    """Test failed shutdown manager."""
+    # Simulate failed shutdown
+    manager_setup.shutdown_manager.return_value = False
+    result = await manager_setup.shutdown_manager()
+    assert result is False
 
 
 def test_collection_errors_subclass_qdrant_service_error() -> None:
