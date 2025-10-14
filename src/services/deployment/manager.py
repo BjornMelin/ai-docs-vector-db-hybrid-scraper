@@ -18,8 +18,20 @@ from src.services.observability import get_tracer
 from src.services.observability.tracing import log_extra_with_trace
 
 
+def find_project_root(start: Path, marker: str = "pyproject.toml") -> Path:
+    """Return the nearest ancestor directory containing the marker file."""
+    current = start.resolve()
+    while True:
+        if (current / marker).is_file():
+            return current
+        if current.parent == current:
+            msg = f"Could not find {marker} for path {start}"
+            raise FileNotFoundError(msg)
+        current = current.parent
+
+
 LOGGER = logging.getLogger(__name__)
-_PROJECT_ROOT = Path(__file__).resolve().parents[3]
+_PROJECT_ROOT = find_project_root(Path(__file__))
 _ENV_OVERRIDE = "AI_DOCS_DEPLOYMENT_STRATEGY"
 
 
@@ -117,6 +129,7 @@ class DeploymentManager:
         with self._tracer.start_as_current_span("deployment.execute_plan") as span:
             span.set_attribute("deployment.strategy", plan.strategy.value)
             for command in plan.commands:
+                self._validate_command(command)
                 command_str = " ".join(command)
                 LOGGER.info(
                     "Executing deployment command",
@@ -141,12 +154,36 @@ class DeploymentManager:
     @staticmethod
     def _default_runner(command: Command) -> int:
         """Run a deployment command using subprocess."""
+        DeploymentManager._validate_command(command)
         completed: CompletedProcess[bytes] = run(  # noqa: S603
             command,
             check=False,
             cwd=_PROJECT_ROOT,
         )
         return completed.returncode
+
+    @staticmethod
+    def _validate_command(command: Command) -> None:
+        """Ensure command arguments are safe for subprocess execution."""
+        if not command:
+            msg = "Deployment command must contain at least one argument"
+            raise ValueError(msg)
+        for index, part in enumerate(command):
+            if not isinstance(part, str):
+                msg = (
+                    "Deployment command arguments must be strings; "
+                    f"got {type(part).__name__} at position {index}"
+                )
+                raise TypeError(msg)
+            if part != part.strip():
+                msg = "Deployment command arguments must not include surrounding spaces"
+                raise ValueError(msg)
+            if not part:
+                msg = "Deployment command arguments must not be empty"
+                raise ValueError(msg)
+            if any(char in part for char in ("\n", "\r", "\x00")):
+                msg = "Deployment command arguments must not contain control characters"
+                raise ValueError(msg)
 
     def _resolve_strategy(
         self, override: DeploymentStrategy | str | None
@@ -271,7 +308,10 @@ class DeploymentManager:
             msg = f"Invalid GitHub Actions workflow at {entrypoint}: {exc}"
             raise ValueError(msg) from exc
         if not isinstance(workflow, dict):
-            msg = "Workflow must deserialize into a mapping"
+            msg = (
+                "Workflow must deserialize into a mapping, "
+                f"got {type(workflow).__name__}"
+            )
             raise TypeError(msg)
         jobs = workflow.get("jobs")
         if not isinstance(jobs, dict):

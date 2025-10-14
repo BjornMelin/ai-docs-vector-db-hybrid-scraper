@@ -12,6 +12,7 @@ from src.config.models import DeploymentConfig, DeploymentStrategy, Environment
 from src.services.deployment.manager import (
     DeploymentExecutionError,
     DeploymentManager,
+    find_project_root,
 )
 
 
@@ -19,7 +20,7 @@ def _settings_for(deployment: DeploymentConfig) -> tuple[DeploymentManager, Path
     """Return a deployment manager bound to a testing settings instance."""
     settings = load_settings(environment=Environment.TESTING, deployment=deployment)
     manager = DeploymentManager(settings)
-    project_root = Path(__file__).resolve().parents[4]
+    project_root = find_project_root(Path(__file__))
     return manager, project_root
 
 
@@ -82,7 +83,7 @@ def test_validate_plan_raises_for_missing_compose(tmp_path: Path) -> None:
 
 
 def test_execute_plan_invokes_runner_for_each_command() -> None:
-    """Executing a plan should call the runner for every command."""
+    """Verify the runner executes each command in the deployment plan in sequence."""
     manager, _ = _settings_for(DeploymentConfig())
     plan = manager.build_plan(DeploymentStrategy.GITHUB_ACTIONS)
     executed: list[tuple[str, ...]] = []
