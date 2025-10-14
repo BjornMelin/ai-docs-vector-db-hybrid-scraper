@@ -386,6 +386,7 @@ class VectorDBUser(HttpUser):
     wait_time = between(1, 5)  # Wait 1-5 seconds between tasks
 
     def __init__(self, environment: Environment, **kwargs: Any):
+        """Initialize user with metrics tracking."""
         super().__init__(environment, **kwargs)
         self.tasks = list(self._WEIGHTED_TASKS)
 
@@ -492,6 +493,7 @@ class LoadTestMetricsCollector:
     """Enhanced metrics collector for load testing."""
 
     def __init__(self):
+        """Initialize metrics collector state."""
         self.test_start_time = None
         self.test_end_time = None
         self.user_metrics = []
