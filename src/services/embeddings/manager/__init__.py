@@ -502,11 +502,11 @@ class EmbeddingManager:
         self._pipeline.set_smart_config(self._smart_config)
         self._pipeline.set_usage_tracker(self._usage)
 
-        log_message = (
-            "Loaded custom benchmarks from "
-            f"{benchmark_path.name} with {len(self._benchmarks)} models"
+        logger.info(
+            "Loaded custom benchmarks from %s with %d models",
+            benchmark_path.name,
+            len(self._benchmarks),
         )
-        logger.info(log_message)
 
     def estimate_cost(
         self,
