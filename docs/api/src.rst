@@ -13,7 +13,6 @@ Subpackages
    src.cli
    src.config
    src.infrastructure
-   src.mcp_services
    src.mcp_tools
    src.models
    src.security
