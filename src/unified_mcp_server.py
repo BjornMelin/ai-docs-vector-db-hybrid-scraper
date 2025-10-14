@@ -18,6 +18,8 @@ from src.config.loader import get_settings
 from src.config.models import CrawlProvider, EmbeddingProvider
 from src.infrastructure.bootstrap import container_session
 from src.mcp_tools.tool_registry import register_all_tools
+from src.services.browser.unified_manager import UnifiedBrowserManager
+from src.services.content_intelligence.service import ContentIntelligenceService
 from src.services.logging_config import configure_logging
 from src.services.observability.health_manager import (
     HealthCheckConfig,
@@ -152,8 +154,11 @@ async def managed_lifespan(server: FastMCP[Any]) -> AsyncIterator[None]:  # pyli
             logger.info("Registering MCP tools...")
             vector_service = container.vector_store_service()
             cache_manager = container.cache_manager()
-            crawl_manager = container.browser_manager()
-            content_service = container.content_intelligence_service()
+            crawl_manager = cast(UnifiedBrowserManager, container.browser_manager())
+            content_service = cast(
+                ContentIntelligenceService,
+                container.content_intelligence_service(),
+            )
             project_storage = container.project_storage()
             embedding_manager = container.embedding_manager()
 

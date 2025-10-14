@@ -70,6 +70,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **[MCP]:** Enforced explicit dependency injection for MCP tools and services,
   removing service locator helpers and requiring startup wiring to supply all
   shared managers.
+- **[MCP]:** Simplified the MCP server architecture by removing the
+  `mcp_services` abstraction layer. Tool modules are now registered directly,
+  reducing boilerplate and improving clarity.
 - **[Cache]:** Standardised the Dragonfly-only cache stack, replacing Redis
   wrappers, reintroducing cache warmup utilities, and updating health checks and
   docs to reflect the streamlined architecture.
