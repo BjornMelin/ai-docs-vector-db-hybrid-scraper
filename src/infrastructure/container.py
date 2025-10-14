@@ -21,7 +21,6 @@ from langchain_mcp_adapters.sessions import Connection  # type: ignore
 from qdrant_client import AsyncQdrantClient
 
 from src.config.models import CacheType, MCPClientConfig, MCPServerConfig, MCPTransport
-from src.services.browser.unified_manager import UnifiedBrowserManager
 from src.services.cache.embedding_cache import EmbeddingCache
 from src.services.cache.manager import CacheManager
 from src.services.cache.search_cache import SearchResultCache
@@ -40,6 +39,10 @@ from src.services.vector_db.service import VectorStoreService
 
 if TYPE_CHECKING:
     from firecrawl import AsyncFirecrawlApp  # type: ignore[attr-defined]
+
+    from src.services.browser.unified_manager import UnifiedBrowserManager
+else:  # pragma: no cover - optional dependency
+    UnifiedBrowserManager = Any  # type: ignore[assignment]
 
 
 Configuration = providers.Configuration  # pylint: disable=c-extension-no-member
@@ -284,10 +287,28 @@ def _create_content_intelligence_service(
     return service
 
 
-def _create_browser_manager(config: Any) -> UnifiedBrowserManager:
-    """Instantiate the UnifiedBrowserManager using required dependencies."""
+def _create_browser_manager(config: Any) -> UnifiedBrowserManager | None:
+    """Instantiate the UnifiedBrowserManager when optional deps are available."""
 
-    return UnifiedBrowserManager(config)
+    try:
+        module = importlib.import_module("src.services.browser.unified_manager")
+    except ModuleNotFoundError as exc:
+        logger.info(
+            "Browser integrations unavailable (missing dependency: %s); "
+            "skipping UnifiedBrowserManager initialization",
+            exc.name,
+        )
+        return None
+
+    manager_cls = getattr(module, "UnifiedBrowserManager", None)
+    if manager_cls is None or not callable(manager_cls):
+        logger.warning(
+            "Unified browser module missing manager class; skipping initialization",
+        )
+        return None
+
+    manager_type = cast("type[UnifiedBrowserManager]", manager_cls)
+    return manager_type(config)
 
 
 def _create_rag_generator(
