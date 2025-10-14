@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import time
+from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
@@ -16,6 +17,30 @@ from src.services.errors import QdrantServiceError
 logger = logging.getLogger(__name__)
 
 
+@dataclass
+class AdaptiveSearchState:
+    """Track adaptive EF search progress."""
+
+    best_ef: int
+    best_results: Any | None = None
+    search_times_ms: list[float] = field(default_factory=list)
+    tested_ef_values: list[int] = field(default_factory=list)
+
+    def record(self, ef_value: int, results: Any, elapsed_ms: float) -> None:
+        """Update tracking with a new EF attempt."""
+
+        self.best_ef = ef_value
+        self.best_results = results
+        self.search_times_ms.append(elapsed_ms)
+        self.tested_ef_values.append(ef_value)
+
+    @property
+    def final_search_time(self) -> float:
+        """Return the most recent search time in milliseconds."""
+
+        return self.search_times_ms[-1] if self.search_times_ms else 0.0
+
+
 class HNSWOptimizer(BaseService):
     """Intelligent HNSW parameter optimization for Qdrant collections."""
 
@@ -26,7 +51,6 @@ class HNSWOptimizer(BaseService):
             config: Unified configuration
             qdrant_service: QdrantService instance
         """
-
         super().__init__(config)
         self.config = config
         self.qdrant_service = qdrant_service
@@ -89,131 +113,261 @@ class HNSWOptimizer(BaseService):
         Returns:
             Search results with optimal ef value used
         """
-        cache_key = f"{collection_name}:{time_budget_ms}:{min_ef}:{max_ef}"
+        cache_key = self._make_adaptive_cache_key(
+            collection_name, time_budget_ms, min_ef, max_ef
+        )
+        client = await self.qdrant_service.get_client()
 
-        # Check cache for similar queries
-        if cache_key in self.adaptive_ef_cache:
-            cached_ef = self.adaptive_ef_cache[cache_key]["optimal_ef"]
-            self.logger.debug(
-                "Using cached optimal EF %d for collection %s",
-                cached_ef,
-                collection_name,
-            )
+        cached = await self._try_cached_search(
+            client,
+            cache_key,
+            collection_name,
+            query_vector,
+            target_limit,
+            time_budget_ms,
+        )
+        if cached is not None:
+            return cached
 
-            # Use cached ef directly
-            start_time = time.time()
-            client = await self.qdrant_service.get_client()
-            results = await client.query_points(
-                collection_name=collection_name,
-                query=query_vector,
-                using="dense",
-                limit=target_limit,
-                params=models.SearchParams(hnsw_ef=cached_ef, exact=False),
-                with_payload=True,
-                with_vectors=False,
-            )
-            search_time_ms = (time.time() - start_time) * 1000
-
-            return {
-                "results": results.points,
-                "ef_used": cached_ef,
-                "search_time_ms": search_time_ms,
-                "time_budget_ms": time_budget_ms,
-                "budget_utilized_percent": (search_time_ms / time_budget_ms) * 100,
-                "source": "cache",
-            }
-
-        # Adaptive ef selection algorithm
-        current_ef = min_ef
-        best_ef = min_ef
-        best_results = None
-        search_times = []
-        ef_values_tested = []
-
+        state = AdaptiveSearchState(best_ef=min_ef)
         self.logger.debug(
             "Starting adaptive EF for %s with budget %dms",
             collection_name,
             time_budget_ms,
         )
+        await self._run_adaptive_search(
+            client=client,
+            state=state,
+            collection_name=collection_name,
+            query_vector=query_vector,
+            time_budget_ms=time_budget_ms,
+            min_ef=min_ef,
+            max_ef=max_ef,
+            step_size=step_size,
+            target_limit=target_limit,
+        )
 
+        self._store_adaptive_cache(cache_key, state)
+
+        return self._build_adaptive_response(
+            state=state, time_budget_ms=time_budget_ms, source="adaptive"
+        )
+
+    def _make_adaptive_cache_key(
+        self, collection_name: str, time_budget_ms: int, min_ef: int, max_ef: int
+    ) -> str:
+        """Generate cache key for adaptive EF lookups."""
+        return f"{collection_name}:{time_budget_ms}:{min_ef}:{max_ef}"
+
+    async def _try_cached_search(
+        self,
+        client: Any,
+        cache_key: str,
+        collection_name: str,
+        query_vector: list[float],
+        target_limit: int,
+        time_budget_ms: int,
+    ) -> dict[str, Any] | None:
+        """Execute cached EF search if available."""
+
+        cached_entry = self.adaptive_ef_cache.get(cache_key)
+        if not cached_entry:
+            return None
+
+        cached_ef = cached_entry["optimal_ef"]
+        self.logger.debug(
+            "Using cached optimal EF %d for collection %s",
+            cached_ef,
+            collection_name,
+        )
+
+        timed_query = await self._query_points_with_timing(
+            client,
+            collection_name,
+            query_vector,
+            target_limit,
+            cached_ef,
+            context=f"Cached search at EF {cached_ef}",
+        )
+
+        if timed_query is None:
+            return None
+
+        search_time_ms, results = timed_query
+        return {
+            "results": results.points,
+            "ef_used": cached_ef,
+            "search_time_ms": search_time_ms,
+            "time_budget_ms": time_budget_ms,
+            "budget_utilized_percent": self._budget_utilization(
+                search_time_ms, time_budget_ms
+            ),
+            "source": "cache",
+        }
+
+    async def _run_adaptive_search(
+        self,
+        *,
+        client: Any,
+        state: AdaptiveSearchState,
+        collection_name: str,
+        query_vector: list[float],
+        time_budget_ms: int,
+        min_ef: int,
+        max_ef: int,
+        step_size: int,
+        target_limit: int,
+    ) -> None:
+        """Iteratively search with increasing EF until the time budget is met."""
+
+        current_ef = min_ef
         while current_ef <= max_ef:
-            start_time = time.time()
-
-            try:
-                client = await self.qdrant_service.get_client()
-                results = await client.query_points(
-                    collection_name=collection_name,
-                    query=query_vector,
-                    using="dense",
-                    limit=target_limit,
-                    params=models.SearchParams(hnsw_ef=current_ef, exact=False),
-                    with_payload=True,
-                    with_vectors=False,
-                )
-
-                search_time_ms = (time.time() - start_time) * 1000
-                search_times.append(search_time_ms)
-                ef_values_tested.append(current_ef)
-
-                self.logger.debug("EF %d: %.1fms", current_ef, search_time_ms)
-
-                # Update best results
-                best_ef = current_ef
-                best_results = results
-
-                # Check if we can continue within budget
-                if search_time_ms >= time_budget_ms * 0.8:
-                    # Close to budget limit, stop here
-                    self.logger.debug(
-                        "Stopping at EF %d due to time budget", current_ef
-                    )
-                    break
-                if search_time_ms < time_budget_ms * 0.5:
-                    # Well within budget, try higher ef
-                    current_ef = min(current_ef + step_size, max_ef)
-                else:
-                    # Moderate time usage, try smaller increment
-                    current_ef = min(current_ef + (step_size // 2), max_ef)
-
-            except (ValueError, TypeError) as exc:
-                self._log_or_propagate(exc, f"Search at EF {current_ef}")
-                break
-            except Exception as exc:  # noqa: BLE001 - fallback for client errors
-                self._log_or_propagate(exc, f"Search at EF {current_ef}")
+            timed_query = await self._query_points_with_timing(
+                client,
+                collection_name,
+                query_vector,
+                target_limit,
+                current_ef,
+                context=f"Search at EF {current_ef}",
+            )
+            if timed_query is None:
                 break
 
-        final_search_time = search_times[-1] if search_times else 0
+            search_time_ms, results = timed_query
+            self.logger.debug("EF %d: %.1fms", current_ef, search_time_ms)
+            state.record(current_ef, results, search_time_ms)
 
-        # Cache the optimal ef for similar future queries
+            if self._should_stop(search_time_ms, time_budget_ms):
+                self.logger.debug("Stopping at EF %d due to time budget", current_ef)
+                break
+
+            next_ef = self._next_ef(
+                current_ef=current_ef,
+                elapsed_ms=search_time_ms,
+                time_budget_ms=time_budget_ms,
+                step_size=step_size,
+                max_ef=max_ef,
+            )
+            if next_ef is None:
+                break
+            current_ef = next_ef
+
+    async def _query_points_with_timing(
+        self,
+        client: Any,
+        collection_name: str,
+        query_vector: list[float],
+        target_limit: int,
+        ef_value: int,
+        *,
+        context: str,
+    ) -> tuple[float, Any] | None:
+        """Execute a query and capture elapsed time in milliseconds."""
+
+        start_time = time.time()
+        try:
+            results = await client.query_points(
+                collection_name=collection_name,
+                query=query_vector,
+                using="dense",
+                limit=target_limit,
+                params=models.SearchParams(hnsw_ef=ef_value, exact=False),
+                with_payload=True,
+                with_vectors=False,
+            )
+        except (ValueError, TypeError) as exc:
+            self._log_or_propagate(exc, context)
+            return None
+        except Exception as exc:  # noqa: BLE001 - fallback for client errors
+            self._log_or_propagate(exc, context)
+            return None
+
+        elapsed_ms = (time.time() - start_time) * 1000
+        return elapsed_ms, results
+
+    @staticmethod
+    def _should_stop(search_time_ms: float, time_budget_ms: int) -> bool:
+        """Determine whether the search should stop based on budget usage."""
+
+        if time_budget_ms <= 0:
+            return True
+        return search_time_ms >= time_budget_ms * 0.8
+
+    @staticmethod
+    def _next_ef(
+        *,
+        current_ef: int,
+        elapsed_ms: float,
+        time_budget_ms: int,
+        step_size: int,
+        max_ef: int,
+    ) -> int | None:
+        """Calculate the next EF value or signal completion."""
+
+        if current_ef >= max_ef:
+            return None
+
+        if time_budget_ms <= 0 or elapsed_ms < time_budget_ms * 0.5:
+            increment = step_size
+        else:
+            increment = max(step_size // 2, 1)
+
+        next_ef = min(current_ef + increment, max_ef)
+        if next_ef == current_ef:
+            return None
+        return next_ef
+
+    def _store_adaptive_cache(self, cache_key: str, state: AdaptiveSearchState) -> None:
+        """Persist adaptive search findings and enforce cache size limits."""
+
         self.adaptive_ef_cache[cache_key] = {
-            "optimal_ef": best_ef,
-            "expected_time_ms": final_search_time,
-            "tested_ef_values": ef_values_tested,
-            "tested_times_ms": search_times,
+            "optimal_ef": state.best_ef,
+            "expected_time_ms": state.final_search_time,
+            "tested_ef_values": state.tested_ef_values,
+            "tested_times_ms": state.search_times_ms,
             "timestamp": time.time(),
         }
 
-        # Limit cache size
-        if len(self.adaptive_ef_cache) > 100:
-            # Remove oldest entries
-            oldest_key = min(
-                self.adaptive_ef_cache.keys(),
-                key=lambda k: self.adaptive_ef_cache[k]["timestamp"],
-            )
-            del self.adaptive_ef_cache[oldest_key]
+        if len(self.adaptive_ef_cache) <= 100:
+            return
 
+        oldest_key = min(
+            self.adaptive_ef_cache.keys(),
+            key=lambda key: self.adaptive_ef_cache[key]["timestamp"],
+        )
+        del self.adaptive_ef_cache[oldest_key]
+
+    def _build_adaptive_response(
+        self,
+        *,
+        state: AdaptiveSearchState,
+        time_budget_ms: int,
+        source: str,
+    ) -> dict[str, Any]:
+        """Construct the response payload from adaptive search data."""
+
+        best_results = state.best_results.points if state.best_results else []
+        final_time = state.final_search_time
         return {
-            "results": best_results.points if best_results else [],
-            "ef_used": best_ef,
-            "search_time_ms": final_search_time,
+            "results": best_results,
+            "ef_used": state.best_ef,
+            "search_time_ms": final_time,
             "time_budget_ms": time_budget_ms,
-            "budget_utilized_percent": (final_search_time / time_budget_ms) * 100
-            if time_budget_ms > 0
-            else 0,
-            "ef_progression": ef_values_tested,
-            "time_progression": search_times,
-            "source": "adaptive",
+            "budget_utilized_percent": self._budget_utilization(
+                final_time, time_budget_ms
+            ),
+            "ef_progression": state.tested_ef_values,
+            "time_progression": state.search_times_ms,
+            "source": source,
         }
+
+    @staticmethod
+    def _budget_utilization(search_time_ms: float, time_budget_ms: int) -> float:
+        """Compute time budget utilization percentage."""
+
+        if time_budget_ms <= 0:
+            return 0.0
+        return (search_time_ms / time_budget_ms) * 100
 
     def get_collection_specific_hnsw_config(
         self, collection_type: str

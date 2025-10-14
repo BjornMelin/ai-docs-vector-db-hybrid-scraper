@@ -12,6 +12,20 @@ from src.services.hyde.config import HyDEConfig, HyDEMetricsConfig, HyDEPromptCo
 class TestHyDEConfig:
     """Tests for HyDEConfig model."""
 
+    def _test_field_validation(
+        self, field_name: str, valid_values: list, invalid_cases: list[tuple]
+    ) -> None:
+        """Helper to test field validation for valid and invalid values."""
+        # Valid values
+        for value in valid_values:
+            HyDEConfig(**{field_name: value})
+
+        # Invalid values
+        for invalid_value, expected_message in invalid_cases:
+            with pytest.raises(ValidationError) as exc_info:
+                HyDEConfig(**{field_name: invalid_value})
+            assert expected_message in str(exc_info.value)
+
     def test_default_config(self):
         """Test default HyDE configuration."""
         config = HyDEConfig()
@@ -109,179 +123,94 @@ class TestHyDEConfig:
 
     def test_validation_num_generations(self):
         """Test validation for num_generations field."""
-        # Valid values
-        HyDEConfig(num_generations=1)
-        HyDEConfig(num_generations=5)
-        HyDEConfig(num_generations=10)
-
-        # Invalid values
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(num_generations=0)
-        assert "greater than or equal to 1" in str(exc_info.value)
-
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(num_generations=11)
-        assert "less than or equal to 10" in str(exc_info.value)
+        self._test_field_validation(
+            "num_generations",
+            [1, 5, 10],
+            [(0, "greater than or equal to 1"), (11, "less than or equal to 10")],
+        )
 
     def test_validation_generation_temperature(self):
         """Test validation for generation_temperature field."""
-        # Valid values
-        HyDEConfig(generation_temperature=0.0)
-        HyDEConfig(generation_temperature=0.7)
-        HyDEConfig(generation_temperature=1.0)
-
-        # Invalid values
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(generation_temperature=-0.1)
-        assert "greater than or equal to 0" in str(exc_info.value)
-
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(generation_temperature=1.1)
-        assert "less than or equal to 1" in str(exc_info.value)
+        self._test_field_validation(
+            "generation_temperature",
+            [0.0, 0.7, 1.0],
+            [(-0.1, "greater than or equal to 0"), (1.1, "less than or equal to 1")],
+        )
 
     def test_validation_max_generation_tokens(self):
         """Test validation for max_generation_tokens field."""
-        # Valid values
-        HyDEConfig(max_generation_tokens=50)
-        HyDEConfig(max_generation_tokens=200)
-        HyDEConfig(max_generation_tokens=500)
-
-        # Invalid values
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(max_generation_tokens=49)
-        assert "greater than or equal to 50" in str(exc_info.value)
-
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(max_generation_tokens=501)
-        assert "less than or equal to 500" in str(exc_info.value)
+        self._test_field_validation(
+            "max_generation_tokens",
+            [50, 200, 500],
+            [(49, "greater than or equal to 50"), (501, "less than or equal to 500")],
+        )
 
     def test_validation_generation_timeout_seconds(self):
         """Test validation for generation_timeout_seconds field."""
-        # Valid values
-        HyDEConfig(generation_timeout_seconds=1)
-        HyDEConfig(generation_timeout_seconds=10)
-        HyDEConfig(generation_timeout_seconds=60)
-
-        # Invalid values
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(generation_timeout_seconds=0)
-        assert "greater than or equal to 1" in str(exc_info.value)
-
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(generation_timeout_seconds=61)
-        assert "less than or equal to 60" in str(exc_info.value)
+        self._test_field_validation(
+            "generation_timeout_seconds",
+            [1, 10, 60],
+            [(0, "greater than or equal to 1"), (61, "less than or equal to 60")],
+        )
 
     def test_validation_hyde_prefetch_limit(self):
         """Test validation for hyde_prefetch_limit field."""
-        # Valid values
-        HyDEConfig(hyde_prefetch_limit=10)
-        HyDEConfig(hyde_prefetch_limit=50)
-        HyDEConfig(hyde_prefetch_limit=200)
-
-        # Invalid values
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(hyde_prefetch_limit=9)
-        assert "greater than or equal to 10" in str(exc_info.value)
-
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(hyde_prefetch_limit=201)
-        assert "less than or equal to 200" in str(exc_info.value)
+        self._test_field_validation(
+            "hyde_prefetch_limit",
+            [10, 50, 200],
+            [(9, "greater than or equal to 10"), (201, "less than or equal to 200")],
+        )
 
     def test_validation_query_prefetch_limit(self):
         """Test validation for query_prefetch_limit field."""
-        # Valid values
-        HyDEConfig(query_prefetch_limit=10)
-        HyDEConfig(query_prefetch_limit=30)
-        HyDEConfig(query_prefetch_limit=100)
-
-        # Invalid values
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(query_prefetch_limit=9)
-        assert "greater than or equal to 10" in str(exc_info.value)
-
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(query_prefetch_limit=101)
-        assert "less than or equal to 100" in str(exc_info.value)
+        self._test_field_validation(
+            "query_prefetch_limit",
+            [10, 30, 100],
+            [(9, "greater than or equal to 10"), (101, "less than or equal to 100")],
+        )
 
     def test_validation_hyde_weight_in_fusion(self):
         """Test validation for hyde_weight_in_fusion field."""
-        # Valid values
-        HyDEConfig(hyde_weight_in_fusion=0.0)
-        HyDEConfig(hyde_weight_in_fusion=0.6)
-        HyDEConfig(hyde_weight_in_fusion=1.0)
-
-        # Invalid values
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(hyde_weight_in_fusion=-0.1)
-        assert "greater than or equal to 0" in str(exc_info.value)
-
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(hyde_weight_in_fusion=1.1)
-        assert "less than or equal to 1" in str(exc_info.value)
+        self._test_field_validation(
+            "hyde_weight_in_fusion",
+            [0.0, 0.6, 1.0],
+            [(-0.1, "greater than or equal to 0"), (1.1, "less than or equal to 1")],
+        )
 
     def test_validation_cache_ttl_seconds(self):
         """Test validation for cache_ttl_seconds field."""
-        # Valid values
-        HyDEConfig(cache_ttl_seconds=300)
-        HyDEConfig(cache_ttl_seconds=3600)
-        HyDEConfig(cache_ttl_seconds=86400)
-
-        # Invalid values
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(cache_ttl_seconds=299)
-        assert "greater than or equal to 300" in str(exc_info.value)
-
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(cache_ttl_seconds=86401)
-        assert "less than or equal to 86400" in str(exc_info.value)
+        self._test_field_validation(
+            "cache_ttl_seconds",
+            [300, 3600, 86400],
+            [
+                (299, "greater than or equal to 300"),
+                (86401, "less than or equal to 86400"),
+            ],
+        )
 
     def test_validation_max_concurrent_generations(self):
         """Test validation for max_concurrent_generations field."""
-        # Valid values
-        HyDEConfig(max_concurrent_generations=1)
-        HyDEConfig(max_concurrent_generations=5)
-        HyDEConfig(max_concurrent_generations=10)
-
-        # Invalid values
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(max_concurrent_generations=0)
-        assert "greater than or equal to 1" in str(exc_info.value)
-
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(max_concurrent_generations=11)
-        assert "less than or equal to 10" in str(exc_info.value)
+        self._test_field_validation(
+            "max_concurrent_generations",
+            [1, 5, 10],
+            [(0, "greater than or equal to 1"), (11, "less than or equal to 10")],
+        )
 
     def test_validation_min_generation_length(self):
         """Test validation for min_generation_length field."""
-        # Valid values
-        HyDEConfig(min_generation_length=10)
-        HyDEConfig(min_generation_length=20)
-        HyDEConfig(min_generation_length=100)
-
-        # Invalid values
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(min_generation_length=9)
-        assert "greater than or equal to 10" in str(exc_info.value)
-
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(min_generation_length=101)
-        assert "less than or equal to 100" in str(exc_info.value)
+        self._test_field_validation(
+            "min_generation_length",
+            [10, 20, 100],
+            [(9, "greater than or equal to 10"), (101, "less than or equal to 100")],
+        )
 
     def test_validation_diversity_threshold(self):
         """Test validation for diversity_threshold field."""
-        # Valid values
-        HyDEConfig(diversity_threshold=0.0)
-        HyDEConfig(diversity_threshold=0.3)
-        HyDEConfig(diversity_threshold=1.0)
-
-        # Invalid values
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(diversity_threshold=-0.1)
-        assert "greater than or equal to 0" in str(exc_info.value)
-
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEConfig(diversity_threshold=1.1)
-        assert "less than or equal to 1" in str(exc_info.value)
+        self._test_field_validation(
+            "diversity_threshold",
+            [0.0, 0.3, 1.0],
+            [(-0.1, "greater than or equal to 0"), (1.1, "less than or equal to 1")],
+        )
 
     def test_json_schema_extra(self):
         """Test that JSON schema extra example is accessible."""
@@ -487,6 +416,20 @@ class TestHyDEPromptConfig:
 class TestHyDEMetricsConfig:
     """Tests for HyDEMetricsConfig model."""
 
+    def _test_field_validation(
+        self, field_name: str, valid_values: list, invalid_cases: list[tuple]
+    ) -> None:
+        """Helper to test field validation for valid and invalid values."""
+        # Valid values
+        for value in valid_values:
+            HyDEMetricsConfig(**{field_name: value})
+
+        # Invalid values
+        for invalid_value, expected_message in invalid_cases:
+            with pytest.raises(ValidationError) as exc_info:
+                HyDEMetricsConfig(**{field_name: invalid_value})
+            assert expected_message in str(exc_info.value)
+
     def test_default_metrics_config(self):
         """Test default metrics configuration."""
         config = HyDEMetricsConfig()
@@ -540,35 +483,19 @@ class TestHyDEMetricsConfig:
 
     def test_validation_control_group_percentage(self):
         """Test validation for control_group_percentage field."""
-        # Valid values
-        HyDEMetricsConfig(control_group_percentage=0.0)
-        HyDEMetricsConfig(control_group_percentage=0.5)
-        HyDEMetricsConfig(control_group_percentage=1.0)
-
-        # Invalid values
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEMetricsConfig(control_group_percentage=-0.1)
-        assert "greater than or equal to 0" in str(exc_info.value)
-
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEMetricsConfig(control_group_percentage=1.1)
-        assert "less than or equal to 1" in str(exc_info.value)
+        self._test_field_validation(
+            "control_group_percentage",
+            [0.0, 0.5, 1.0],
+            [(-0.1, "greater than or equal to 0"), (1.1, "less than or equal to 1")],
+        )
 
     def test_validation_metrics_export_interval(self):
         """Test validation for metrics_export_interval field."""
-        # Valid values
-        HyDEMetricsConfig(metrics_export_interval=60)
-        HyDEMetricsConfig(metrics_export_interval=300)
-        HyDEMetricsConfig(metrics_export_interval=3600)
-
-        # Invalid values
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEMetricsConfig(metrics_export_interval=59)
-        assert "greater than or equal to 60" in str(exc_info.value)
-
-        with pytest.raises(ValidationError) as exc_info:
-            HyDEMetricsConfig(metrics_export_interval=3601)
-        assert "less than or equal to 3600" in str(exc_info.value)
+        self._test_field_validation(
+            "metrics_export_interval",
+            [60, 300, 3600],
+            [(59, "greater than or equal to 60"), (3601, "less than or equal to 3600")],
+        )
 
     def test_json_schema_extra(self):
         """Test that JSON schema extra example is accessible."""
