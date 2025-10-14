@@ -38,6 +38,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Refactor
 
+- **[Core]:** Removed the `BaseService` and `LifecycleTracker` abstractions, delegating
+  all service lifecycle management to the central dependency injection container.
+- **[Tests]:** Consolidated and streamlined test fixtures by creating a unified
+  `MockFactory` for all external service mocks, improving test code reusability
+  and maintainability.
 - Wrapped the Firecrawl and Qdrant client adapters in protocol-driven wrappers with
   OpenTelemetry spans, structured logging, and stricter typing to align with the
   unified observability contract.
@@ -70,6 +75,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **[MCP]:** Enforced explicit dependency injection for MCP tools and services,
   removing service locator helpers and requiring startup wiring to supply all
   shared managers.
+- **[MCP]:** Simplified the MCP server architecture by removing the
+  `mcp_services` abstraction layer. Tool modules are now registered directly,
+  reducing boilerplate and improving clarity.
 - **[Cache]:** Standardised the Dragonfly-only cache stack, replacing Redis
   wrappers, reintroducing cache warmup utilities, and updating health checks and
   docs to reflect the streamlined architecture.

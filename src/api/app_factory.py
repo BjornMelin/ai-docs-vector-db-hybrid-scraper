@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import importlib.util
 import logging
 import os
 from collections.abc import Awaitable, Callable
@@ -394,18 +393,6 @@ def _cache_initialization_enabled(settings: Settings) -> bool:
     return bool(getattr(cache_config, "enable_caching", False))
 
 
-def _content_intelligence_available() -> bool:
-    """Return ``True`` when the optional content intelligence module is importable.
-
-    Returns:
-        bool: ``True`` if the module is available in the environment.
-    """
-    return (
-        importlib.util.find_spec("src.services.content_intelligence.service")
-        is not None
-    )
-
-
 async def _ensure_database_ready(settings: Settings) -> None:
     """Ensure vector and cache backends are warmed up for usage.
 
@@ -440,12 +427,7 @@ async def _initialize_services(settings: Settings) -> None:
     else:
         logger.debug("Skipping cache initialization; caching disabled in configuration")
 
-    if _content_intelligence_available():
-        service_initializers["content_intelligence"] = (
-            resolve_content_intelligence_service
-        )
-    else:
-        logger.debug("Content intelligence module unavailable; skipping initializer")
+    service_initializers["content_intelligence"] = resolve_content_intelligence_service
 
     for service_name, initializer in service_initializers.items():
         try:

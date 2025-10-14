@@ -21,14 +21,6 @@ Subpackages
 Submodules
 ----------
 
-services.base module
---------------------
-
-.. automodule:: services.base
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 services.errors module
 ----------------------
 

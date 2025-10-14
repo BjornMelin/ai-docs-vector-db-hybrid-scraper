@@ -10,7 +10,6 @@ from typing import Any, cast
 
 import numpy as np
 
-from src.services.base import BaseService
 from src.services.cache.embedding_cache import EmbeddingCache
 from src.services.cache.search_cache import SearchResultCache
 from src.services.embeddings.manager import EmbeddingManager
@@ -24,7 +23,7 @@ from .generator import HypotheticalDocumentGenerator
 logger = logging.getLogger(__name__)
 
 
-class HyDEQueryEngine(BaseService):
+class HyDEQueryEngine:
     """HyDE search engine with vector store integration."""
 
     _CACHE_PROVIDER = "hyde"
@@ -54,7 +53,6 @@ class HyDEQueryEngine(BaseService):
             openai_api_key: OpenAI API key for document generation.
 
         """
-        super().__init__(None)
         self.config = config
         self.prompt_config = prompt_config
         self.metrics_config = metrics_config
@@ -80,10 +78,11 @@ class HyDEQueryEngine(BaseService):
         # A/B testing support
         self.control_group_searches = 0
         self.treatment_group_searches = 0
+        self._initialized = False
 
     async def initialize(self) -> None:
         """Initialize all components."""
-        if self._initialized:
+        if self.is_initialized():
             return
 
         try:
@@ -104,6 +103,10 @@ class HyDEQueryEngine(BaseService):
         except Exception as e:
             msg = "Failed to initialize HyDE engine"
             raise EmbeddingServiceError(msg) from e
+
+    def is_initialized(self) -> bool:
+        """Return True when the engine has successfully initialized."""
+        return self._initialized
 
     async def cleanup(self) -> None:
         """Cleanup all components."""
@@ -141,7 +144,9 @@ class HyDEQueryEngine(BaseService):
             EmbeddingServiceError: If search fails
 
         """
-        self._validate_initialized()
+        if not self.is_initialized():
+            msg = "HyDE query engine is not initialized"
+            raise EmbeddingServiceError(msg)
 
         start_time = time.time()
         self.search_count += 1

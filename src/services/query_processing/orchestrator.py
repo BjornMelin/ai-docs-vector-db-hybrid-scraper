@@ -16,7 +16,6 @@ from typing import Any, cast
 
 from src.contracts.retrieval import SearchRecord, SearchResponse
 from src.models.search import SearchRequest
-from src.services.base import BaseService
 from src.services.rag.langgraph_pipeline import LangGraphRAGPipeline
 from src.services.rag.models import RAGConfig as ServiceRAGConfig
 from src.services.vector_db.service import VectorStoreService
@@ -47,7 +46,7 @@ class _RAGInvocationContext:
     collection: str
 
 
-class SearchOrchestrator(BaseService):
+class SearchOrchestrator:
     """Coordinate query expansion, vector search, ranking, and optional RAG.
 
     This orchestrator serves as the central hub for search operations,
@@ -68,10 +67,10 @@ class SearchOrchestrator(BaseService):
             vector_store_service: Service for vector database operations.
             rag_config: Configuration for RAG (optional).
         """
-        super().__init__(None)
         self._vector_store_service: VectorStoreService = vector_store_service
         self._rag_config = rag_config
         self._rag_pipeline: LangGraphRAGPipeline | None = None
+        self._initialized = False
 
     async def initialize(self) -> None:
         """Initialize all dependent services.
@@ -79,7 +78,7 @@ class SearchOrchestrator(BaseService):
         This method initializes the vector store service, expansion service,
         and ranking service, ensuring they are ready for search operations.
         """
-        if self._initialized:
+        if self.is_initialized():
             return
         await self._vector_store_service.initialize()
         self._initialized = True
@@ -92,6 +91,10 @@ class SearchOrchestrator(BaseService):
         """
         self._initialized = False
         await self._vector_store_service.cleanup()
+
+    def is_initialized(self) -> bool:
+        """Return True when the orchestrator finished initialization."""
+        return self._initialized
 
     async def search(self, request: SearchRequest) -> SearchResponse:
         """Execute a search operation.
@@ -106,7 +109,9 @@ class SearchOrchestrator(BaseService):
         Returns:
             Search response containing results and metadata.
         """
-        self._validate_initialized()
+        if not self.is_initialized():
+            msg = "Search orchestrator is not initialized"
+            raise RuntimeError(msg)
         start_time = time.perf_counter()
 
         processed_query = request.query.strip()

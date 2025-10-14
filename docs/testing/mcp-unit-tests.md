@@ -6,17 +6,13 @@ This document captures the consolidated unit-test approach for the maintained MC
 
 ## Feature Coverage Map
 
-| Feature Surface           | Key Behaviour                                                                                                      | Unit Tests                                                                                                                                                                    |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Search tool suite         | FastMCP search entrypoints (`search_documents`, `search_similar`) calling the consolidated vector service adapters | `tests/unit/mcp_tools/test_search_tools.py`                                                                                                                                   |
-| Tool registry             | Aggregated tool registration and optional dependency handling                                                      | `tests/unit/mcp_tools/test_tool_registry.py`                                                                                                                                  |
-| Request validation        | Pydantic model bounds and defaults for core request types                                                          | `tests/unit/mcp_tools/test_requests.py`                                                                                                                                       |
-| Document service          | Registers document, collection, project, crawling, and content intelligence tools                                  | `tests/unit/mcp_services/test_services.py::test_document_service_registers_modules`                                                                                           |
-| Analytics service         | Tool wiring and observability helper exposure                                                                      | `tests/unit/mcp_services/test_services.py::test_analytics_service_registers_modules`, `tests/unit/mcp_services/test_services.py::test_analytics_service_observability_tools`  |
-| Search service            | Search tool wiring for consolidated `search`, `search_tools`, `query_processing_tools`, and `web_search` modules   | `tests/unit/mcp_services/test_services.py::test_search_service_registers_modules`, `tests/unit/mcp_tools/test_search_tools.py`                                                |
-| System service            | System tool wiring (health, configuration, cost estimation, embeddings) and guard rails                            | `tests/unit/mcp_services/test_services.py::test_system_service_registers_modules`, `tests/unit/mcp_services/test_services.py::test_register_methods_raise_when_uninitialized` |
-| Orchestrator service      | Initialization, agentic orchestration wiring, orchestration tool surface, guard rails for partial dependency state | `tests/unit/mcp_services/test_services.py::test_orchestrator_service_*`                                                                                                       |
-| Unified MCP server config | Streaming config guard rails and configuration validation                                                          | `tests/unit/mcp_services/test_unified_mcp_server.py`                                                                                                                          |
+| Feature Surface           | Key Behaviour                                                                              | Unit Tests                                     |
+| ------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------- |
+| Search tool suite         | FastMCP search entrypoints (`search_documents`, `search_similar`) calling vector services   | `tests/unit/mcp_tools/test_search_tools.py`     |
+| Tool registry             | Aggregated tool registration and optional dependency handling                              | `tests/unit/mcp_tools/test_tool_registry.py`    |
+| Request validation        | Pydantic model bounds and defaults for core request types                                  | `tests/unit/mcp_tools/test_requests.py`         |
+| Unified MCP server config | Streaming config guard rails and configuration validation                                   | `tests/unit/test_unified_mcp_server.py`         |
+| MCP server lifespan       | Container wiring, dependency resolution, and monitoring task orchestration                 | `tests/integration/mcp/test_server_lifespan.py` |
 
 ## Decision Record DR-001: Consolidate MCP Suites
 
@@ -54,8 +50,6 @@ trims boilerplate and keeps guard-rail expectations explicit in a data-driven ta
 | ------------ | ------------------------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------ | ---------------- | ---------- | ------------------------------------------------ | ---------------------- |
 | MCP Tools    | Document tool flows depend on complex external managers that remain untested in unit scope. | Medium   | Failure scenarios in `documents.register_tools` are only smoke-tested; deeper integration covered elsewhere. | Medium           | High       | Reference external services (crawl, embeddings). | See DR-001.            |
 | MCP Tools    | Agentic RAG optional module skipped when dependencies missing.                              | Low      | Logging-only coverage; downstream behaviour validated in integration tests.                                  | Low              | Low        | Optional dependency import.                      | See DR-001.            |
-| MCP Services | Orchestrator domain service initialization mocked to avoid heavy dependency graphs.         | Medium   | Async task fan-out not simulated; validated via integration.                                                 | Medium           | Medium     | Relies on FastMCP + service stack.               | See DR-001.            |
-| MCP Services | Analytics observability tools return static payloads until richer fixtures exist.           | Low      | Unit tests assert contract only; behaviour validated via observability smoke tests.                          | Medium           | Medium     | Depends on observability adapters.               | See DR-001.            |
 
 ## References
 

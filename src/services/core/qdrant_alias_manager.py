@@ -15,7 +15,6 @@ from qdrant_client.models import (
 )
 
 from src.config.loader import Settings
-from src.services.base import BaseService
 from src.services.errors import QdrantServiceError
 from src.services.observability.tracing import log_extra_with_trace
 
@@ -34,7 +33,7 @@ VALID_NAME_PATTERN = re.compile(r"^[a-zA-Z0-9_-]+$")
 MAX_NAME_LENGTH = 255
 
 
-class QdrantAliasManager(BaseService):
+class QdrantAliasManager:
     """Manage Qdrant collection aliases for zero-downtime updates."""
 
     def __init__(
@@ -48,9 +47,8 @@ class QdrantAliasManager(BaseService):
             config: Unified configuration
             client: Qdrant client instance
         """
-        super().__init__(config)
+        self.config = config
         self.client = client
-        self._initialized = True  # Already initialized via client
 
     @staticmethod
     def validate_name(name: str | None, name_type: str = "name") -> None:
@@ -87,6 +85,11 @@ class QdrantAliasManager(BaseService):
         Note: Persistent task queue jobs continue running independently.
         """
         # No local cleanup needed as tasks are managed by task queue
+
+    @staticmethod
+    def is_initialized() -> bool:
+        """Return True as the manager relies on an injected client."""
+        return True
 
     async def create_alias(
         self, alias_name: str, collection_name: str, force: bool = False

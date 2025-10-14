@@ -19,15 +19,13 @@ pytest_plugins = [
     "tests.fixtures.async_fixtures",
     "tests.fixtures.async_isolation",
     "tests.fixtures.configuration",
-    "tests.fixtures.external_services",
-    "tests.fixtures.mock_factories",
+    "tests.fixtures.factories",
     "tests.fixtures.observability",
     "tests.fixtures.test_data_observability",
     "tests.fixtures.test_utils_observability",
     "tests.fixtures.parallel_config",
     "tests.fixtures.redis",
     "tests.fixtures.test_data",
-    "tests.fixtures.http_mocks",
 ]
 
 _ALLOWED_SKIP_PREFIXES: tuple[str, ...] = (

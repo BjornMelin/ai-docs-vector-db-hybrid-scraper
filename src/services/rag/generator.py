@@ -15,7 +15,6 @@ from langchain_core.retrievers import BaseRetriever
 from langchain_core.runnables import RunnableConfig
 from langchain_openai import ChatOpenAI
 
-from src.services.base import BaseService
 from src.services.errors import EmbeddingServiceError
 
 from .models import (
@@ -31,7 +30,7 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 
-class RAGGenerator(BaseService):
+class RAGGenerator:
     """Generate answers from retrieved context using LangChain primitives."""
 
     _DEFAULT_PROMPT = ChatPromptTemplate.from_messages(
@@ -57,8 +56,7 @@ class RAGGenerator(BaseService):
         retriever: BaseRetriever,
         chat_model: ChatOpenAI | None = None,
     ) -> None:
-        """Init generator with config, retriever, and optional chat model."""
-        super().__init__(None)
+        """Initialize the RAG generator with configuration and components."""
         self._config = config
         self._retriever = retriever
         self._chat_model = chat_model
@@ -86,6 +84,10 @@ class RAGGenerator(BaseService):
         """Register LangChain callback handlers for downstream execution."""
         self._callbacks = list(callbacks)
 
+    def is_initialized(self) -> bool:
+        """Return True when a chat model instance is available."""
+        return self._chat_model is not None
+
     async def initialize(self) -> None:
         """Prepare the chat model and executable chain."""
         if self.is_initialized():
@@ -100,13 +102,11 @@ class RAGGenerator(BaseService):
                 params["max_tokens"] = self._config.max_tokens
             self._chat_model = cast(ChatOpenAI, ChatOpenAI(**params))  # type: ignore[call-arg]
 
-        self._mark_initialized()
         logger.info("RAG generator initialized using LangChain components")
 
     async def cleanup(self) -> None:
         """Release cached model instances."""
         self._chat_model = None
-        self._mark_uninitialized()
 
     @property
     def llm_client_available(self) -> bool:
@@ -121,7 +121,9 @@ class RAGGenerator(BaseService):
         self, request: RAGRequest
     ) -> RAGResult:
         """Generate an answer based on retrieval results."""
-        self._validate_initialized()
+        if not self.is_initialized():
+            msg = "RAG generator is not initialized"
+            raise EmbeddingServiceError(msg)
 
         llm = self._chat_model
         if llm is None:

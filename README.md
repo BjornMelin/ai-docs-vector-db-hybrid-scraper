@@ -69,6 +69,10 @@ flowchart LR
         rest["REST / CLI clients"]
     end
 
+    subgraph mcp_server["FastMCP server"]
+        registry["Tool registry (register_all_tools)"]
+    end
+
     subgraph api["FastAPI application"]
         router["Mode-aware routers"]
         factory["Service factory"]
@@ -91,26 +95,31 @@ flowchart LR
         health["Health & diagnostics"]
     end
 
-    mcp --> api
+    mcp --> registry
+    registry --> processing
     rest --> api
     api --> processing
     processing --> crawl
     processing --> embed
     processing --> search
-    processing --> queue
     crawl --> firecrawl["Firecrawl API"]
     crawl --> crawl4ai["Crawl4AI"]
     crawl --> browseruse["browser-use / Playwright"]
     embed --> openai["OpenAI"]
     embed --> fastembed["FastEmbed / FlagEmbedding"]
     search --> qdrant
-    queue --> redis
     processing --> redis
     api --> metrics
     metrics --> observability
     processing --> health
     health --> observability
 ```
+
+The FastMCP server now registers tool modules directly through
+``register_all_tools``. Dependencies are resolved once from the shared
+``ApplicationContainer`` and provided to the tool registrars without an
+intermediate services layer, keeping the runtime surface minimal and
+maintainable.
 
 The observability surface relies entirely on the OpenTelemetry and Prometheus
 stack: FastAPI and MCP emit spans and metrics that flow into the collector,
@@ -219,8 +228,8 @@ search.[^qdrant-hybrid]
 - The FastMCP server (`src/unified_mcp_server.py`) registers search, document, embedding, scraping, analytics, cache, and content intelligence tool modules (`src/mcp_tools/`).
   MCP tooling now expects dependencies to be supplied explicitly—services resolve
   once from the dependency-injector container during startup and are passed into
-  `register_tools()` and service constructors instead of relying on runtime
-  service-locator helpers.
+  the tool ``register_tools()`` functions rather than through intermediate
+  service wrappers.
 - Developer CLI (`scripts/dev.py`) manages services, testing profiles, benchmarks, linting, and type checking.
 - Example notebooks and scripts under `examples/` demonstrate agentic RAG flows and advanced search orchestration.
 

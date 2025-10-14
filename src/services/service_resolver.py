@@ -192,26 +192,19 @@ async def get_vector_store_service() -> VectorStoreService:
     recovery_timeout=30.0,
 )
 async def get_content_intelligence_service() -> Any:
-    """Return the optional content intelligence service instance.
+    """Return the content intelligence service instance.
 
     Returns:
         Any: The content intelligence service registered in the container.
 
     Raises:
-        RuntimeError: If the optional content intelligence service is unavailable.
+        RuntimeError: If the content intelligence service is unavailable.
     """
-    service = await _resolve_service(
+    return await _resolve_service(
         name="content_intelligence_service",
         supplier=lambda container: container.content_intelligence_service(),
-        optional=True,
+        optional=False,
     )
-    if service is None:
-        msg = (
-            "Content intelligence service unavailable; ensure optional "
-            "dependencies are installed"
-        )
-        raise RuntimeError(msg)
-    return service
 
 
 async def get_mcp_client() -> MultiServerMCPClient:
@@ -249,18 +242,11 @@ async def get_crawl_manager() -> Any:
     Raises:
         RuntimeError: If the browser manager is unavailable.
     """
-    manager = await _resolve_service(
+    return await _resolve_service(
         name="browser_manager",
         supplier=lambda container: container.browser_manager(),
-        optional=True,
+        optional=False,
     )
-    if manager is None:
-        msg = (
-            "Unified browser manager is unavailable; enable browser features or "
-            "install the optional dependencies"
-        )
-        raise RuntimeError(msg)
-    return manager
 
 
 @circuit_breaker(

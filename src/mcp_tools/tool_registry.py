@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from fastmcp import FastMCP
 
+from src.services.browser.unified_manager import UnifiedBrowserManager
 from src.services.cache.manager import CacheManager
+from src.services.content_intelligence.service import ContentIntelligenceService
 from src.services.core.project_storage import ProjectStorage
 from src.services.embeddings.manager import EmbeddingManager
 from src.services.observability.health_manager import HealthCheckManager
@@ -24,8 +25,8 @@ async def register_all_tools(  # pylint: disable=too-many-arguments
     *,
     vector_service: VectorStoreService,
     cache_manager: CacheManager,
-    crawl_manager: Any,
-    content_intelligence_service: Any,
+    crawl_manager: UnifiedBrowserManager,
+    content_intelligence_service: ContentIntelligenceService,
     project_storage: ProjectStorage,
     embedding_manager: EmbeddingManager,
     health_manager: HealthCheckManager | None,
