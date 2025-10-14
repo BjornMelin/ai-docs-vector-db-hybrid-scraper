@@ -12,6 +12,7 @@ from langchain.retrievers.document_compressors import DocumentCompressorPipeline
 from langchain_core.callbacks.base import BaseCallbackHandler
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
+from langchain_openai import ChatOpenAI
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
@@ -80,10 +81,10 @@ class DummyGenerator(RAGGenerator):
         self._config = value
 
     async def initialize(self) -> None:  # pragma: no cover - trivial
-        self._mark_initialized()
+        self._chat_model = cast(ChatOpenAI, object())
 
     async def cleanup(self) -> None:  # pragma: no cover - trivial
-        self._mark_uninitialized()
+        self._chat_model = None
 
     def register_callbacks(
         self, callbacks: Sequence[BaseCallbackHandler]

@@ -31,14 +31,6 @@ Subpackages
 Submodules
 ----------
 
-src.services.base module
-------------------------
-
-.. automodule:: src.services.base
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 src.services.service_resolver module
 
 .. automodule:: src.services.service_resolver

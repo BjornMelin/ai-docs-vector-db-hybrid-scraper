@@ -38,6 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Refactor
 
+- **[Core]:** Removed the `BaseService` and `LifecycleTracker` abstractions, delegating
+  all service lifecycle management to the central dependency injection container.
 - Wrapped the Firecrawl and Qdrant client adapters in protocol-driven wrappers with
   OpenTelemetry spans, structured logging, and stricter typing to align with the
   unified observability contract.

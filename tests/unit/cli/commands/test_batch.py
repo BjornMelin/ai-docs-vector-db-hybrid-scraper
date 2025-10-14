@@ -85,7 +85,7 @@ def test_complete_collection_name_handles_errors(
         async def cleanup(self) -> None:  # pragma: no cover - nothing to clean
             return None
 
-    monkeypatch.setattr(batch_module, "_init_vector_manager", _VectorDBStub())
+    monkeypatch.setattr(batch_module, "_init_vector_manager", lambda: _VectorDBStub())
     ctx = click.Context(batch_module.batch, obj={"config": object()})
     param = cast(click.Parameter, None)
 
@@ -230,7 +230,7 @@ def test_create_collections_enqueues_operations(
         async def cleanup(self) -> None:
             return None
 
-    monkeypatch.setattr(batch_module, "_init_vector_manager", _VectorDBStub())
+    monkeypatch.setattr(batch_module, "_init_vector_manager", lambda: _VectorDBStub())
 
     queue_instances: list[_QueueStub] = []
 
