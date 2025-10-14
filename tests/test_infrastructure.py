@@ -64,48 +64,44 @@ class TestBasicInfrastructure:
 class TestMockFactories:
     """Test mock factory infrastructure."""
 
-    def test_external_service_factory(self, external_service_factory):
+    def test_external_service_factory(self, mock_factory):
         """Test external service mock factory."""
-        # Test OpenAI client creation
-        openai_client = external_service_factory.create_openai_client()
+        openai_client = mock_factory.create_openai_client()
         assert hasattr(openai_client, "embeddings")
         assert hasattr(openai_client.embeddings, "create")
         assert hasattr(openai_client, "responses")
         assert hasattr(openai_client.responses, "create")
 
-        # Test Qdrant client creation
-        qdrant_client = external_service_factory.create_qdrant_client()
+        qdrant_client = mock_factory.create_qdrant_client()
         assert hasattr(qdrant_client, "create_collection")
         assert hasattr(qdrant_client, "search")
 
-    def test_data_factory(self, data_factory):
+    def test_data_factory(self, mock_factory):
         """Test data mock factory."""
-        # Test embedding points creation
-        points = data_factory.create_embedding_points(count=3, vector_size=384)
+        points = mock_factory.build_embedding_points(count=3, vector_size=384)
         assert len(points) == 3
         assert all(len(point["vector"]) == 384 for point in points)
         assert all("payload" in point for point in points)
 
-        # Test crawl response creation
-        response = data_factory.create_crawl_response(success=True)
+        response = mock_factory.build_crawl_response(success=True)
         assert response["status_code"] == 200
         assert "html" in response
         assert "metadata" in response
 
-    def test_mock_openai_factory(self, mock_openai_factory):
+    def test_mock_openai_factory(self, mock_factory):
         """Test OpenAI mock factory fixture."""
-        client = mock_openai_factory(embedding_dim=512, model="custom-model")
+        client = mock_factory.create_openai_client(
+            embedding_dim=512, model="custom-model"
+        )
+        assert hasattr(client.embeddings, "create")
 
-        # Verify configuration
-        # The actual verification would depend on how the mock is set up
-        assert client is not None
-
-    def test_mock_qdrant_factory(self, mock_qdrant_factory):
+    def test_mock_qdrant_factory(self, mock_factory):
         """Test Qdrant mock factory fixture."""
-        client = mock_qdrant_factory(vector_size=512, collection_exists=False)
-
-        # Verify configuration
-        assert client is not None
+        client = mock_factory.create_qdrant_client(
+            vector_size=512, collection_exists=False
+        )
+        assert hasattr(client, "collection_exists")
+        assert callable(client.collection_exists)
 
 
 @pytest.mark.asyncio
@@ -176,11 +172,10 @@ class TestRespxIntegration:
     """Test respx HTTP mocking integration."""
 
     @pytest.mark.asyncio
-    async def test_respx_mock_fixture(self, respx_mock):
+    async def test_respx_mock_fixture(self, mock_factory):
         """Test respx mock fixture with pre-configured routes."""
 
-        async with httpx.AsyncClient() as client:
-            # Test pre-configured OpenAI route
+        async with mock_factory.mock_http(), httpx.AsyncClient() as client:
             response = await client.post("https://api.openai.com/v1/embeddings")
             assert response.status_code == 200
 
@@ -189,7 +184,6 @@ class TestRespxIntegration:
             assert len(data["data"]) > 0
             assert "embedding" in data["data"][0]
 
-            # Test generic test endpoint
             response = await client.get("https://test.example.com")
             assert response.status_code == 200
             assert "Test content" in response.text

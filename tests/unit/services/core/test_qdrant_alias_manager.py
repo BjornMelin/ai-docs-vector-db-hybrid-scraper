@@ -6,7 +6,6 @@ import pytest
 from qdrant_client.models import CreateAliasOperation, DeleteAliasOperation
 
 from src.config import Settings
-from src.services.base import BaseService
 from src.services.core.qdrant_alias_manager import (
     MAX_NAME_LENGTH,
     VALID_NAME_PATTERN,
@@ -148,10 +147,6 @@ class TestQdrantAliasManager:
             client=mock_client,
         )
 
-    def test_inheritance(self, alias_manager):
-        """Test that QdrantAliasManager inherits from BaseService."""
-        assert isinstance(alias_manager, BaseService)
-
     def test_init(self, mock_config, mock_client):
         """Test QdrantAliasManager initialization."""
         manager = QdrantAliasManager(
@@ -161,7 +156,7 @@ class TestQdrantAliasManager:
 
         assert manager.config == mock_config
         assert manager.client == mock_client
-        assert manager._initialized is True  # Already initialized via client
+        assert manager.is_initialized() is True
 
     @pytest.mark.asyncio
     async def test_initialize_no_op(self, alias_manager):
@@ -170,7 +165,7 @@ class TestQdrantAliasManager:
         await alias_manager.initialize()
 
         # State should remain unchanged
-        assert alias_manager._initialized is True
+        assert alias_manager.is_initialized() is True
 
     @pytest.mark.asyncio
     async def test_cleanup_no_tasks(self, alias_manager):
