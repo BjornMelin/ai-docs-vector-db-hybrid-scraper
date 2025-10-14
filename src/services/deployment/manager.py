@@ -40,7 +40,6 @@ class DeploymentPlan:
 
     def formatted_commands(self) -> tuple[str, ...]:
         """Return shell-friendly command strings."""
-
         return tuple(" ".join(parts) for parts in self.commands)
 
 
@@ -49,7 +48,6 @@ class DeploymentExecutionError(RuntimeError):
 
     def __init__(self, command: Command, exit_code: int) -> None:
         """Store the failing command and exit code."""
-
         self.command = command
         self.exit_code = exit_code
         message = f"Command '{' '.join(command)}' exited with status {exit_code}"
@@ -61,7 +59,6 @@ class DeploymentManager:
 
     def __init__(self, settings: Settings) -> None:
         """Initialise the deployment manager with application settings."""
-
         self._settings = settings
         self._tracer = get_tracer(__name__)
 
@@ -69,7 +66,6 @@ class DeploymentManager:
         self, override: DeploymentStrategy | str | None = None
     ) -> DeploymentPlan:
         """Return the deployment plan for the active strategy."""
-
         with self._tracer.start_as_current_span("deployment.build_plan") as span:
             strategy = self._resolve_strategy(override)
             span.set_attribute("deployment.strategy", strategy.value)
@@ -98,7 +94,6 @@ class DeploymentManager:
 
     def validate_plan(self, plan: DeploymentPlan) -> None:
         """Validate that the plan's entrypoint is ready for execution."""
-
         if plan.strategy is DeploymentStrategy.GITHUB_ACTIONS:
             self._validate_github_actions(plan.entrypoint)
             return
@@ -118,7 +113,6 @@ class DeploymentManager:
         runner: CommandRunner | None = None,
     ) -> None:
         """Execute the plan by invoking each command sequentially."""
-
         command_runner = runner or self._default_runner
         with self._tracer.start_as_current_span("deployment.execute_plan") as span:
             span.set_attribute("deployment.strategy", plan.strategy.value)
@@ -147,7 +141,6 @@ class DeploymentManager:
     @staticmethod
     def _default_runner(command: Command) -> int:
         """Run a deployment command using subprocess."""
-
         completed: CompletedProcess[bytes] = run(  # noqa: S603
             command,
             check=False,
@@ -159,7 +152,6 @@ class DeploymentManager:
         self, override: DeploymentStrategy | str | None
     ) -> DeploymentStrategy:
         """Resolve the deployment strategy accounting for overrides."""
-
         candidate: DeploymentStrategy | None
         if override is None:
             env_override = os.getenv(_ENV_OVERRIDE)
@@ -178,7 +170,6 @@ class DeploymentManager:
         value: DeploymentStrategy | str | None,
     ) -> DeploymentStrategy | None:
         """Convert a raw value into a DeploymentStrategy."""
-
         if value is None:
             return None
         if isinstance(value, DeploymentStrategy):
@@ -192,7 +183,6 @@ class DeploymentManager:
 
     def _resolve_entrypoint(self, strategy: DeploymentStrategy) -> Path:
         """Return the filesystem entrypoint for the given strategy."""
-
         config_entry = self._settings.deployment.resolve_entrypoint(strategy)
         return (
             config_entry if config_entry.is_absolute() else _PROJECT_ROOT / config_entry
@@ -200,7 +190,6 @@ class DeploymentManager:
 
     def _description_for(self, strategy: DeploymentStrategy) -> str:
         """Return a human-readable description for the strategy."""
-
         if strategy is DeploymentStrategy.GITHUB_ACTIONS:
             return "Deploy via GitHub Actions release workflow and tagged versions."
         if strategy is DeploymentStrategy.DOCKER_COMPOSE:
@@ -214,7 +203,6 @@ class DeploymentManager:
         self, strategy: DeploymentStrategy, entrypoint: Path
     ) -> tuple[tuple[tuple[str, ...], ...], tuple[str, ...]]:
         """Return commands and operator notes for the strategy."""
-
         if strategy is DeploymentStrategy.GITHUB_ACTIONS:
             commands: tuple[tuple[str, ...], ...] = (
                 ("git", "tag", "vX.Y.Z"),
@@ -274,7 +262,6 @@ class DeploymentManager:
     @staticmethod
     def _validate_github_actions(entrypoint: Path) -> None:
         """Ensure the GitHub Actions workflow exists and is well-formed."""
-
         if not entrypoint.is_file():
             msg = f"GitHub Actions workflow not found at {entrypoint}"
             raise ValueError(msg)
@@ -284,12 +271,15 @@ class DeploymentManager:
             msg = f"Invalid GitHub Actions workflow at {entrypoint}: {exc}"
             raise ValueError(msg) from exc
         if not isinstance(workflow, dict):
-            msg = "Workflow must deserialize into a mapping"
-            raise ValueError(msg)
+            msg = (
+                f"Workflow must deserialize into a mapping, got "
+                f"{type(workflow).__name__}"
+            )
+            raise TypeError(msg)
         jobs = workflow.get("jobs")
         if not isinstance(jobs, dict):
             msg = "Workflow requires a jobs section"
-            raise ValueError(msg)
+            raise TypeError(msg)
         required_jobs = {"prepare", "quality", "build-artifacts"}
         missing = required_jobs.difference(jobs)
         if missing:
@@ -300,7 +290,6 @@ class DeploymentManager:
     @staticmethod
     def _validate_docker_compose(entrypoint: Path) -> None:
         """Ensure the docker compose manifest is structurally sound."""
-
         if not entrypoint.is_file():
             msg = f"docker compose file not found at {entrypoint}"
             raise ValueError(msg)
@@ -311,11 +300,11 @@ class DeploymentManager:
             raise ValueError(msg) from exc
         if not isinstance(manifest, dict):
             msg = "docker compose manifest must be a mapping"
-            raise ValueError(msg)
+            raise TypeError(msg)
         services = manifest.get("services")
         if not isinstance(services, dict):
             msg = "docker compose manifest must define services"
-            raise ValueError(msg)
+            raise TypeError(msg)
         required_services = {"qdrant", "app"}
         missing = required_services.difference(services)
         if missing:
@@ -326,7 +315,6 @@ class DeploymentManager:
     @staticmethod
     def _validate_kubernetes(entrypoint: Path) -> None:
         """Ensure Kubernetes manifests exist and reference valid resources."""
-
         if not entrypoint.is_dir():
             msg = f"Kubernetes manifest directory not found at {entrypoint}"
             raise ValueError(msg)
@@ -341,7 +329,7 @@ class DeploymentManager:
             raise ValueError(msg) from exc
         if not isinstance(config, dict):
             msg = "kustomization manifest must be a mapping"
-            raise ValueError(msg)
+            raise TypeError(msg)
         resources = config.get("resources")
         if not isinstance(resources, list) or not resources:
             msg = "kustomization manifest must list at least one resource"

@@ -1,3 +1,5 @@
+"""Unit tests for the deployment manager service."""
+
 from __future__ import annotations
 
 from dataclasses import replace
@@ -15,7 +17,6 @@ from src.services.deployment.manager import (
 
 def _settings_for(deployment: DeploymentConfig) -> tuple[DeploymentManager, Path]:
     """Return a deployment manager bound to a testing settings instance."""
-
     settings = load_settings(environment=Environment.TESTING, deployment=deployment)
     manager = DeploymentManager(settings)
     project_root = Path(__file__).resolve().parents[4]
@@ -24,7 +25,6 @@ def _settings_for(deployment: DeploymentConfig) -> tuple[DeploymentManager, Path
 
 def test_build_plan_defaults_to_release_workflow() -> None:
     """The default deployment plan should surface the release workflow."""
-
     manager, project_root = _settings_for(DeploymentConfig())
 
     plan = manager.build_plan()
@@ -39,7 +39,6 @@ def test_build_plan_honours_environment_override(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Environment overrides should select the requested strategy."""
-
     manager, _ = _settings_for(DeploymentConfig())
 
     monkeypatch.setenv("AI_DOCS_DEPLOYMENT_STRATEGY", "docker_compose")
@@ -52,7 +51,6 @@ def test_build_plan_honours_environment_override(
 
 def test_disabled_strategy_raises() -> None:
     """Disabled strategies should raise a ValueError when requested."""
-
     deployment = DeploymentConfig(
         default_strategy=DeploymentStrategy.GITHUB_ACTIONS,
         enabled_strategies={DeploymentStrategy.GITHUB_ACTIONS},
@@ -66,7 +64,6 @@ def test_disabled_strategy_raises() -> None:
 @pytest.mark.parametrize("strategy", list(DeploymentStrategy))
 def test_validate_plan_handles_available_assets(strategy: DeploymentStrategy) -> None:
     """Validation should succeed for supported strategies with valid assets."""
-
     manager, _ = _settings_for(DeploymentConfig())
 
     plan = manager.build_plan(strategy)
@@ -76,7 +73,6 @@ def test_validate_plan_handles_available_assets(strategy: DeploymentStrategy) ->
 
 def test_validate_plan_raises_for_missing_compose(tmp_path: Path) -> None:
     """Validation should fail when the docker compose file is missing."""
-
     manager, _ = _settings_for(DeploymentConfig())
     plan = manager.build_plan(DeploymentStrategy.DOCKER_COMPOSE)
     invalid_plan = replace(plan, entrypoint=tmp_path / "missing-compose.yml")
@@ -87,7 +83,6 @@ def test_validate_plan_raises_for_missing_compose(tmp_path: Path) -> None:
 
 def test_execute_plan_invokes_runner_for_each_command() -> None:
     """Executing a plan should call the runner for every command."""
-
     manager, _ = _settings_for(DeploymentConfig())
     plan = manager.build_plan(DeploymentStrategy.GITHUB_ACTIONS)
     executed: list[tuple[str, ...]] = []
@@ -103,7 +98,6 @@ def test_execute_plan_invokes_runner_for_each_command() -> None:
 
 def test_execute_plan_raises_on_failed_command() -> None:
     """Non-zero exit codes should raise a DeploymentExecutionError."""
-
     manager, _ = _settings_for(DeploymentConfig())
     plan = manager.build_plan(DeploymentStrategy.GITHUB_ACTIONS)
 

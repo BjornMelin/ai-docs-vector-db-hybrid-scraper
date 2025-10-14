@@ -452,7 +452,6 @@ def cmd_services(args: argparse.Namespace) -> int:
 
 def cmd_deploy(args: argparse.Namespace) -> int:
     """Render and optionally execute the active deployment plan."""
-
     from src.config.loader import get_settings
     from src.services.deployment import DeploymentExecutionError, DeploymentManager
 

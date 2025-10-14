@@ -1,3 +1,5 @@
+"""Tests for the `dev deploy` CLI command."""
+
 from __future__ import annotations
 
 import importlib
@@ -13,13 +15,11 @@ from src.services.deployment.manager import DeploymentPlan
 @pytest.fixture(autouse=True)
 def reload_dev_module() -> None:
     """Reload the dev module to avoid cached parser state between tests."""
-
     importlib.reload(dev)
 
 
 def test_deploy_command_outputs_plan(capsys: pytest.CaptureFixture[str]) -> None:
     """The deploy subcommand should print the default deployment plan."""
-
     exit_code = dev.main(["deploy"])
 
     assert exit_code == 0
@@ -32,7 +32,6 @@ def test_deploy_command_accepts_override(
     capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The deploy subcommand should honour --strategy overrides."""
-
     monkeypatch.delenv("AI_DOCS_DEPLOYMENT_STRATEGY", raising=False)
 
     exit_code = dev.main(["deploy", "--strategy", "docker_compose"])
@@ -47,7 +46,6 @@ def test_deploy_command_apply_executes_plan(
     capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The deploy subcommand should validate and execute when --apply is set."""
-
     sentinel_settings = object()
     plan = DeploymentPlan(
         strategy=DeploymentStrategy.GITHUB_ACTIONS,

@@ -511,5 +511,6 @@ disable = [
     "pointless-string-statement", # W0105 - Duplicate docstrings in test classes
     "line-too-long", # C0301 - Test code often has long lines due to complex setup
     "unnecessary-ellipsis", # W1401 - Unnecessary ellipsis in test code
+    "import-outside-toplevel", # C0415 - import-outside-toplevel
 ]
 
