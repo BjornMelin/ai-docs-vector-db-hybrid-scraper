@@ -36,21 +36,29 @@ class HNSWOptimizer(BaseService):
         self.performance_cache = {}
         self.adaptive_ef_cache = {}
 
+    def _is_qdrant_ready(self) -> bool:
+        """Normalize whatever form of readiness the service exposes."""
+        readiness = getattr(self.qdrant_service, "is_initialized", None)
+        if callable(readiness):
+            return bool(readiness())
+        if readiness is not None:
+            return bool(readiness)
+        return bool(getattr(self.qdrant_service, "_initialized", False))
+
+    def _log_or_propagate(
+        self, exc: Exception, context: str, *, rethrow_cancelled: bool = True
+    ) -> None:
+        """Log exception as warning or propagate if cancelled."""
+        if rethrow_cancelled and isinstance(exc, asyncio.CancelledError):
+            raise exc
+        self.logger.warning("%s failed: %s", context, exc)
+
     async def initialize(self) -> None:
         """Initialize optimizer."""
         if self._initialized:
             return
 
-        # Validate that qdrant service is initialized
-        readiness = getattr(self.qdrant_service, "is_initialized", None)
-        if callable(readiness):
-            is_ready = readiness()
-        elif readiness is not None:
-            is_ready = bool(readiness)
-        else:
-            is_ready = bool(getattr(self.qdrant_service, "_initialized", False))
-
-        if not is_ready:
+        if not self._is_qdrant_ready():
             msg = "QdrantService must be initialized before HNSWOptimizer"
             raise QdrantServiceError(msg)
 
@@ -81,7 +89,6 @@ class HNSWOptimizer(BaseService):
         Returns:
             Search results with optimal ef value used
         """
-
         cache_key = f"{collection_name}:{time_budget_ms}:{min_ef}:{max_ef}"
 
         # Check cache for similar queries
@@ -168,15 +175,11 @@ class HNSWOptimizer(BaseService):
                     # Moderate time usage, try smaller increment
                     current_ef = min(current_ef + (step_size // 2), max_ef)
 
-            except (ValueError, TypeError, UnicodeDecodeError) as exc:
-                self.logger.warning("Search failed at EF %d: %s", current_ef, exc)
+            except (ValueError, TypeError) as exc:
+                self._log_or_propagate(exc, f"Search at EF {current_ef}")
                 break
             except Exception as exc:  # noqa: BLE001 - fallback for client errors
-                if isinstance(
-                    exc, asyncio.CancelledError
-                ):  # pragma: no cover - propagate cancellations
-                    raise
-                self.logger.warning("Search failed at EF %d: %s", current_ef, exc)
+                self._log_or_propagate(exc, f"Search at EF {current_ef}")
                 break
 
         final_search_time = search_times[-1] if search_times else 0
@@ -508,14 +511,10 @@ class HNSWOptimizer(BaseService):
                 search_times.append(search_time_ms)
 
             except (ValueError, ConnectionError, TimeoutError, RuntimeError) as exc:
-                self.logger.warning("Performance test query failed: %s", exc)
+                self._log_or_propagate(exc, "Performance test query")
                 continue
             except Exception as exc:  # noqa: BLE001 - tolerate transport errors
-                if isinstance(
-                    exc, asyncio.CancelledError
-                ):  # pragma: no cover - propagate cancellations
-                    raise
-                self.logger.warning("Performance test query failed: %s", exc)
+                self._log_or_propagate(exc, "Performance test query")
                 continue
 
         if search_times:

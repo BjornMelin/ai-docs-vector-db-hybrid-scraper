@@ -60,7 +60,7 @@ async def warm_caches(
             missing = await embedding_cache.warm_cache(
                 list(embedding_queries),
                 model=config.dense_model,
-                provider=config.provider.value,
+                provider=config.provider,
             )
             summary["embeddings"]["already_cached"] = len(embedding_queries) - len(
                 missing

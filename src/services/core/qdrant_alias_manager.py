@@ -337,7 +337,7 @@ class QdrantAliasManager(BaseService):
             return {
                 alias.alias_name: alias.collection_name for alias in aliases.aliases
             }
-        except (ConnectionError, OSError, PermissionError, Exception):
+        except (PermissionError, Exception):
             logger.exception(
                 "Failed to list aliases",
                 extra=_log_extra("qdrant.alias.list"),
