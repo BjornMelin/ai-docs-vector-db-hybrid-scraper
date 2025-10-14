@@ -20,10 +20,12 @@ from langchain_mcp_adapters.sessions import Connection  # type: ignore
 from qdrant_client import AsyncQdrantClient
 
 from src.config.models import CacheType, MCPClientConfig, MCPServerConfig, MCPTransport
+from src.services.browser.unified_manager import UnifiedBrowserManager
 from src.services.cache.embedding_cache import EmbeddingCache
 from src.services.cache.manager import CacheManager
 from src.services.cache.search_cache import SearchResultCache
 from src.services.circuit_breaker import CircuitBreakerManager
+from src.services.content_intelligence.service import ContentIntelligenceService
 from src.services.core.project_storage import ProjectStorage
 from src.services.embeddings.manager import EmbeddingManager
 from src.services.hyde.config import (
@@ -251,25 +253,10 @@ def _create_content_intelligence_service(
     config: Any,
     embedding_manager: Any,
     cache_manager: Any,
-) -> Any | None:
-    """Lazily instantiate the ContentIntelligenceService if available."""
+) -> ContentIntelligenceService:
+    """Instantiate the ContentIntelligenceService using required dependencies."""
 
-    try:
-        module = importlib.import_module("src.services.content_intelligence.service")
-    except ModuleNotFoundError:
-        logger.debug(
-            "Content intelligence service unavailable; optional dependency missing"
-        )
-        return None
-
-    service_cls = getattr(module, "ContentIntelligenceService", None)
-    if service_cls is None:
-        logger.warning(
-            "Content intelligence module does not expose ContentIntelligenceService"
-        )
-        return None
-
-    service = service_cls(
+    service = ContentIntelligenceService(
         config=config,
         embedding_manager=embedding_manager,
         cache_manager=cache_manager,
@@ -277,23 +264,10 @@ def _create_content_intelligence_service(
     return service
 
 
-def _create_browser_manager(config: Any) -> Any | None:
-    """Instantiate the UnifiedBrowserManager if optional dependencies exist."""
+def _create_browser_manager(config: Any) -> UnifiedBrowserManager:
+    """Instantiate the UnifiedBrowserManager using required dependencies."""
 
-    try:
-        module = importlib.import_module("src.services.browser.unified_manager")
-    except ModuleNotFoundError:
-        logger.debug("UnifiedBrowserManager unavailable; optional dependency missing")
-        return None
-
-    manager_cls = getattr(module, "UnifiedBrowserManager", None)
-    if manager_cls is None:
-        logger.warning(
-            "Unified browser module does not define UnifiedBrowserManager class"
-        )
-        return None
-
-    return manager_cls(config)
+    return UnifiedBrowserManager(config)
 
 
 def _create_rag_generator(
@@ -471,12 +445,10 @@ async def _initialize_service_graph(container: "ApplicationContainer") -> None:
     await _maybe_initialize(
         container.content_intelligence_service(),
         "content_intelligence_service",
-        required=False,
     )
     await _maybe_initialize(
         container.browser_manager(),
         "browser_manager",
-        required=False,
     )
     await _maybe_initialize(
         container.rag_generator(),
