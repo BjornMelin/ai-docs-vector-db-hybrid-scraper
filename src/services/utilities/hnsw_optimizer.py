@@ -10,7 +10,6 @@ import numpy as np
 from qdrant_client import models
 
 from src.config.loader import Settings
-from src.services.base import BaseService
 from src.services.errors import QdrantServiceError
 
 
@@ -61,7 +60,7 @@ class AdaptiveSearchState:
         return self.search_times_ms[-1] if self.search_times_ms else 0.0
 
 
-class HNSWOptimizer(BaseService):
+class HNSWOptimizer:
     """Intelligent HNSW parameter optimization for Qdrant collections."""
 
     def __init__(self, config: Settings, qdrant_service: Any):
@@ -71,7 +70,6 @@ class HNSWOptimizer(BaseService):
             config: Unified configuration
             qdrant_service: QdrantService instance
         """
-        super().__init__(config)
         self.config = config
         self.qdrant_service = qdrant_service
         self.logger = logger
@@ -79,6 +77,12 @@ class HNSWOptimizer(BaseService):
         # Performance tracking
         self.performance_cache = {}
         self.adaptive_ef_cache = {}
+        self._initialized = False
+
+    def is_initialized(self) -> bool:
+        """Return whether the optimizer has been initialized."""
+
+        return self._initialized
 
     def _is_qdrant_ready(self) -> bool:
         """Normalize whatever form of readiness the service exposes."""
@@ -99,7 +103,7 @@ class HNSWOptimizer(BaseService):
 
     async def initialize(self) -> None:
         """Initialize optimizer."""
-        if self._initialized:
+        if self.is_initialized():
             return
 
         if not self._is_qdrant_ready():

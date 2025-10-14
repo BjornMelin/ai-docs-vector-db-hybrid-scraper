@@ -11,7 +11,6 @@ from typing import Any
 from openai import AsyncOpenAI
 from pydantic import BaseModel
 
-from src.services.base import BaseService
 from src.services.errors import EmbeddingServiceError
 
 from .config import HyDEConfig, HyDEPromptConfig
@@ -31,9 +30,12 @@ class GenerationResult(BaseModel):
     diversity_score: float = 0.0
 
 
-class HypotheticalDocumentGenerator(BaseService):
+class HypotheticalDocumentGenerator:
     """Generate hypothetical documents for HyDE using LLM."""
 
+    # pylint: disable=too-many-instance-attributes
+
+    # pylint: disable=too-many-arguments
     def __init__(
         self,
         config: HyDEConfig,
@@ -42,7 +44,7 @@ class HypotheticalDocumentGenerator(BaseService):
         *,
         max_retries: int = 3,
         timeout: float | None = None,
-    ):
+    ) -> None:
         """Initialize generator.
 
         Args:
@@ -53,13 +55,13 @@ class HypotheticalDocumentGenerator(BaseService):
             timeout: Optional request timeout for OpenAI requests.
 
         """
-        super().__init__(None)
         self.config = config
         self.prompt_config = prompt_config
         self._api_key = api_key
         self._max_retries = max_retries
         self._timeout = timeout
         self._llm_client: AsyncOpenAI | None = None
+        self._initialized = False
 
         # Metrics tracking
         self.generation_count = 0
@@ -83,7 +85,7 @@ class HypotheticalDocumentGenerator(BaseService):
             EmbeddingServiceError: If OpenAI client unavailable
         """
 
-        if self._initialized:
+        if self.is_initialized():
             return
 
         if not self._api_key:
@@ -104,6 +106,11 @@ class HypotheticalDocumentGenerator(BaseService):
             msg = f"Failed to initialize HyDE generator: {exc}"
             raise EmbeddingServiceError(msg) from exc
 
+    def is_initialized(self) -> bool:
+        """Return True when the generator holds a live OpenAI client."""
+
+        return self._initialized and self._llm_client is not None
+
     async def cleanup(self) -> None:
         """Cleanup generator resources.
 
@@ -123,6 +130,7 @@ class HypotheticalDocumentGenerator(BaseService):
                     await result
         logger.info("HyDE document generator cleaned up")
 
+    # pylint: disable=too-many-locals
     async def generate_documents(
         self,
         query: str,
@@ -148,7 +156,9 @@ class HypotheticalDocumentGenerator(BaseService):
             EmbeddingServiceError: If generation fails or LLM is unavailable
 
         """
-        self._validate_initialized()
+        if not self.is_initialized():
+            msg = "HyDE generator is not initialized"
+            raise EmbeddingServiceError(msg)
 
         start_time = time.time()
 

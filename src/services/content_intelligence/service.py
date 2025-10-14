@@ -19,7 +19,6 @@ except ImportError:
     redis = None
 
 from src.config.loader import Settings
-from src.services.base import BaseService
 from src.services.errors import APIError
 
 from .classifiers import ContentClassifier
@@ -41,7 +40,7 @@ from .quality_assessor import QualityAssessor
 logger = logging.getLogger(__name__)
 
 
-class ContentIntelligenceService(BaseService):  # pylint: disable=too-many-instance-attributes
+class ContentIntelligenceService:  # pylint: disable=too-many-instance-attributes
     """Content Intelligence Service for adaptive extraction.
 
     Provides lightweight semantic analysis, quality assessment, and automatic
@@ -63,7 +62,7 @@ class ContentIntelligenceService(BaseService):  # pylint: disable=too-many-insta
             cache_manager: Optional CacheManager for result caching
 
         """
-        super().__init__(config)
+        self.config = config
         self.embedding_manager = embedding_manager
         self.cache_manager = cache_manager
 
@@ -76,6 +75,7 @@ class ContentIntelligenceService(BaseService):  # pylint: disable=too-many-insta
         self._analysis_count = 0
         self._total_processing_time = 0.0
         self._cache_hits = 0
+        self._initialized = False
 
         # Site-specific adaptation rules (can be extended)
         self._adaptation_rules = {
@@ -138,6 +138,18 @@ class ContentIntelligenceService(BaseService):  # pylint: disable=too-many-insta
             msg = f"Content intelligence initialization failed: {e}"
             raise APIError(msg) from e
 
+    def is_initialized(self) -> bool:
+        """Return True when dependent components are ready."""
+
+        return self._initialized
+
+    def _ensure_initialized(self) -> None:
+        """Raise an APIError if the service has not been initialized."""
+
+        if not self.is_initialized():
+            msg = "ContentIntelligenceService is not initialized"
+            raise APIError(msg)
+
     async def cleanup(self) -> None:
         """Cleanup all content intelligence components."""
         try:
@@ -166,7 +178,7 @@ class ContentIntelligenceService(BaseService):  # pylint: disable=too-many-insta
             ContentAnalysisResponse: Complete analysis results
 
         """
-        self._validate_initialized()
+        self._ensure_initialized()
         start_time = time.time()
 
         try:
@@ -231,7 +243,7 @@ class ContentIntelligenceService(BaseService):  # pylint: disable=too-many-insta
             QualityScore: Comprehensive quality assessment
 
         """
-        self._validate_initialized()
+        self._ensure_initialized()
 
         try:
             return await self.quality_assessor.assess_quality(
@@ -270,7 +282,7 @@ class ContentIntelligenceService(BaseService):  # pylint: disable=too-many-insta
             ContentClassification: Content type classification results
 
         """
-        self._validate_initialized()
+        self._ensure_initialized()
 
         try:
             return await self.classifier.classify_content(
@@ -309,7 +321,7 @@ class ContentIntelligenceService(BaseService):  # pylint: disable=too-many-insta
             ContentMetadata: Enriched metadata
         """
 
-        self._validate_initialized()
+        self._ensure_initialized()
 
         try:
             return await self.metadata_extractor.extract_metadata(
@@ -345,7 +357,7 @@ class ContentIntelligenceService(BaseService):  # pylint: disable=too-many-insta
             list[AdaptationRecommendation]: List of adaptation recommendations
         """
 
-        self._validate_initialized()
+        self._ensure_initialized()
 
         try:
             recommendations = []
