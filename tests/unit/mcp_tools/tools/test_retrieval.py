@@ -18,9 +18,12 @@ class StubMCP:
     """Stub FastMCP server recording registered tools."""
 
     def __init__(self) -> None:
+        """Initialize the stub MCP with an empty tool registry."""
         self.tools: dict[str, Callable[..., Any]] = {}
 
     def tool(self, *_, **__):  # pragma: no cover
+        """Decorator to register a tool function by name."""
+
         def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
             self.tools[func.__name__] = func
             return func

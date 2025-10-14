@@ -7,6 +7,7 @@ from src.services.embeddings.fastembed_provider import FastEmbedProvider
 
 @pytest.mark.asyncio
 async def test_generate_embeddings_returns_dense_vectors() -> None:
+    """Ensure generate_embeddings returns dense vectors."""
     provider = FastEmbedProvider()
     await provider.initialize()
 
@@ -19,6 +20,7 @@ async def test_generate_embeddings_returns_dense_vectors() -> None:
 
 @pytest.mark.asyncio
 async def test_generate_sparse_embeddings_optional_dependency() -> None:
+    """Ensure generate_sparse_embeddings returns sparse vectors when available."""
     provider = FastEmbedProvider()
     await provider.initialize()
 
@@ -35,6 +37,7 @@ async def test_generate_sparse_embeddings_optional_dependency() -> None:
 
 @pytest.mark.asyncio
 async def test_cleanup_releases_resources() -> None:
+    """Ensure resources are released after cleanup."""
     provider = FastEmbedProvider()
     await provider.initialize()
     await provider.cleanup()

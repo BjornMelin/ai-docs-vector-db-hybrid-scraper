@@ -1,5 +1,4 @@
-"""Observability-specific fixtures for testing distributed tracing, metrics,
-and monitoring.
+"""Observability-specific fixtures for testing distributed tracing, metrics, and monitoring.
 
 This module provides reusable fixtures and infrastructure for testing
 observability components across the distributed system.
@@ -57,6 +56,7 @@ class MockDistributedTracer:
     """Mock distributed tracer for testing tracing scenarios."""
 
     def __init__(self):
+        """Initialize mock tracer with empty span storage."""
         self.spans: list[TraceSpan] = []
         self.current_span: TraceSpan | None = None
         self.trace_storage: dict[str, list[TraceSpan]] = {}
@@ -133,6 +133,7 @@ class MockMetricsCollector:
     """Mock metrics collector for testing metrics scenarios."""
 
     def __init__(self):
+        """Initialize mock collector with empty metrics storage."""
         self.metrics: list[Metric] = []
 
     def record_counter(
@@ -199,6 +200,7 @@ class MockStructuredLogger:
     """Mock structured logger for testing logging scenarios."""
 
     def __init__(self, service_name: str):
+        """Initialize mock logger for service."""
         self.service_name = service_name
         self.logs: list[LogEntry] = []
 

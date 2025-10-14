@@ -38,6 +38,7 @@ class VectorServiceFake:
     """Vector service stub returning deterministic matches."""
 
     def __init__(self, matches: list[SearchRecord]) -> None:
+        """Initialize stub with deterministic matches."""
         self._matches = matches
         self._initialized = False
         self.config = SimpleNamespace(
@@ -45,12 +46,15 @@ class VectorServiceFake:
         )
 
     async def initialize(self) -> None:  # pragma: no cover - simple stub
+        """Mark service as initialized."""
         self._initialized = True
 
     async def cleanup(self) -> None:  # pragma: no cover - simple stub
+        """Mark service as uninitialized."""
         self._initialized = False
 
     def is_initialized(self) -> bool:
+        """Return initialization state."""
         return self._initialized
 
     async def search_documents(
@@ -59,9 +63,11 @@ class VectorServiceFake:
         query: str,
         **_: Any,
     ) -> list[SearchRecord]:
+        """Return predetermined match list."""
         return list(self._matches)
 
     async def list_collections(self) -> list[str]:  # pragma: no cover
+        """Return static collection list."""
         return ["docs"]
 
 
@@ -72,26 +78,32 @@ class DummyGenerator(RAGGenerator):
     call_count: int = 0
 
     def __init__(self, config: RAGConfig, retriever: BaseRetriever) -> None:
+        """Initialize dummy generator with config and retriever."""
         self._callbacks: list[BaseCallbackHandler] = []
         super().__init__(config=config, retriever=retriever, chat_model=None)
 
     @RAGGenerator.config.setter
     def config(self, value: RAGConfig) -> None:  # type: ignore[override]
+        """Set configuration value."""
         self._config = value
 
     async def initialize(self) -> None:  # pragma: no cover - trivial
+        """Mark generator as initialized."""
         self._mark_initialized()
 
     async def cleanup(self) -> None:  # pragma: no cover - trivial
+        """Mark generator as uninitialized."""
         self._mark_uninitialized()
 
     def register_callbacks(
         self, callbacks: Sequence[BaseCallbackHandler]
     ) -> None:  # pragma: no cover - trivial
+        """Register callbacks for tracing."""
         self._callbacks = list(callbacks)
         DummyGenerator.last_callbacks = list(callbacks)
 
     async def generate_answer(self, request: RAGRequest) -> RAGResult:
+        """Return a static answer based on the input query and retriever state."""
         if not self.is_initialized():
             raise RuntimeError("DummyGenerator must be initialized before use")
         DummyGenerator.call_count += 1
@@ -141,6 +153,7 @@ def dummy_generator_factory(
 
 @pytest.mark.asyncio
 async def test_pipeline_returns_answer_with_retriever_results() -> None:
+    """Verify pipeline generates answer from retriever results with correct metadata."""
     match = SearchRecord(
         id="doc-1",
         score=0.9,
@@ -196,6 +209,7 @@ async def test_pipeline_returns_answer_with_retriever_results() -> None:
 
 @pytest.mark.asyncio
 async def test_pipeline_uses_prefetched_records_when_retrieval_empty() -> None:
+    """Verify pipeline uses prefetched records when search returns empty."""
     service = VectorServiceFake([])
     pipeline = LangGraphRAGPipeline(
         cast(VectorStoreService, service),
@@ -236,6 +250,7 @@ async def test_pipeline_uses_prefetched_records_when_retrieval_empty() -> None:
 
 
 def test_rag_tracing_callback_records_token_usage() -> None:
+    """Verify callback records LLM token usage in telemetry spans."""
     exporter = InMemorySpanExporter()
     provider = TracerProvider()
     provider.add_span_processor(SimpleSpanProcessor(exporter))
@@ -271,6 +286,7 @@ def test_rag_tracing_callback_records_token_usage() -> None:
 
 @pytest.mark.asyncio
 async def test_pipeline_returns_generation_payload(monkeypatch) -> None:
+    """Verify pipeline returns complete generation payload with sources."""
     match = SearchRecord(
         id="doc-1",
         score=0.9,
@@ -313,6 +329,7 @@ async def test_pipeline_returns_generation_payload(monkeypatch) -> None:
 
 @pytest.mark.asyncio
 async def test_pipeline_populates_retriever_compression_stats(monkeypatch) -> None:
+    """Verify pipeline captures document compression statistics."""
     monkeypatch.setattr(
         "src.services.rag.langgraph_pipeline.LangGraphRAGPipeline._build_compressor",
         lambda self, config: DocumentCompressorPipeline(transformers=[]),

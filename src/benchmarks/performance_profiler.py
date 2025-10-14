@@ -21,23 +21,45 @@ logger = logging.getLogger(__name__)
 
 
 class QueryClassifierProtocol(Protocol):
-    async def classify_query(self, query: str) -> Any: ...
+    """Protocol defining query classification interface."""
+
+    async def classify_query(self, query: str) -> Any:
+        """Classify query and return classification result."""
+        ...
 
 
 class ModelSelectorProtocol(Protocol):
-    async def select_optimal_model(self, classification: Any) -> Any: ...
+    """Protocol defining model selection interface."""
+
+    async def select_optimal_model(self, classification: Any) -> Any:
+        """Select optimal model based on classification."""
+        ...
 
 
 class AdaptiveFusionTunerProtocol(Protocol):
+    """Protocol defining adaptive fusion weight computation interface."""
+
     async def compute_adaptive_weights(
         self, classification: Any, session_id: str
-    ) -> Any: ...
+    ) -> Any:
+        """Compute adaptive weights for fusion based on classification."""
+        ...
 
 
 class SpladeProviderProtocol(Protocol):
-    async def generate_sparse_vector(self, query: str) -> Any: ...
-    def clear_cache(self) -> None: ...
-    def get_cache_stats(self) -> dict[str, Any]: ...
+    """Protocol defining SPLADE sparse vector generation interface."""
+
+    async def generate_sparse_vector(self, query: str) -> Any:
+        """Generate sparse vector representation for query."""
+        ...
+
+    def clear_cache(self) -> None:
+        """Clear internal cache."""
+        ...
+
+    def get_cache_stats(self) -> dict[str, Any]:
+        """Return cache statistics."""
+        ...
 
 
 class AdvancedHybridSearchService(Protocol):
@@ -191,7 +213,12 @@ class PerformanceProfiler:  # pylint: disable=too-many-instance-attributes
         search_service: AdvancedHybridSearchService,
         test_queries: list[SearchRequest],
     ) -> None:
-        """Execute queries while profiling is active."""
+        """Execute queries while profiling is active.
+
+        Args:
+            search_service: Search service to profile.
+            test_queries: Test queries to execute.
+        """
         # Execute a subset of queries for profiling
         profiling_queries = test_queries[: min(20, len(test_queries))]
 
@@ -213,7 +240,7 @@ class PerformanceProfiler:  # pylint: disable=too-many-instance-attributes
                 logger.debug("Query execution failed during profiling: %s", exc)
 
     async def _monitor_resources(self) -> None:  # pylint: disable=too-many-locals
-        """Monitor system resources continuously."""
+        """Monitor system resources continuously during profiling."""
         self.profiling_active = True
         self.resource_snapshots = []
 
@@ -282,7 +309,16 @@ class PerformanceProfiler:  # pylint: disable=too-many-instance-attributes
     def _analyze_profiling_results(
         self, duration: float, start_time: datetime, end_time: datetime
     ) -> ProfilingResults:
-        """Analyze collected resource snapshots."""
+        """Analyze collected resource snapshots.
+
+        Args:
+            duration: Total profiling duration in seconds.
+            start_time: Profiling start timestamp.
+            end_time: Profiling end timestamp.
+
+        Returns:
+            Profiling results with metrics and insights.
+        """
         if not self.resource_snapshots:
             return ProfilingResults(
                 duration_seconds=duration,
@@ -366,7 +402,14 @@ class PerformanceProfiler:  # pylint: disable=too-many-instance-attributes
         )
 
     def _detect_memory_leak(self, memory_values: list[float]) -> bool:
-        """Detect potential memory leaks based on memory growth pattern."""
+        """Detect potential memory leaks based on memory growth pattern.
+
+        Args:
+            memory_values: Memory measurements over time.
+
+        Returns:
+            True if memory leak pattern detected.
+        """
         if len(memory_values) < 10:
             return False
 
@@ -379,7 +422,11 @@ class PerformanceProfiler:  # pylint: disable=too-many-instance-attributes
         return growth_rate > 0.1  # 10% growth suggests potential leak
 
     def _identify_bottlenecks(self) -> list[dict[str, Any]]:
-        """Identify performance bottleneck periods."""
+        """Identify performance bottleneck periods.
+
+        Returns:
+            List of bottleneck periods with timing and severity.
+        """
         bottlenecks = []
 
         if len(self.resource_snapshots) < 5:
@@ -432,7 +479,16 @@ class PerformanceProfiler:  # pylint: disable=too-many-instance-attributes
     def _generate_warnings(
         self, avg_cpu: float, peak_memory: float, memory_growth: float
     ) -> list[str]:
-        """Generate resource usage warnings."""
+        """Generate resource usage warnings.
+
+        Args:
+            avg_cpu: Average CPU utilization percentage.
+            peak_memory: Peak memory usage in MB.
+            memory_growth: Memory growth during profiling in MB.
+
+        Returns:
+            List of warning messages.
+        """
         warnings = []
 
         if avg_cpu > 70:
@@ -454,7 +510,16 @@ class PerformanceProfiler:  # pylint: disable=too-many-instance-attributes
     def _generate_optimization_suggestions(
         self, avg_cpu: float, peak_memory: float, bottlenecks: list[dict[str, Any]]
     ) -> list[str]:
-        """Generate performance optimization suggestions."""
+        """Generate performance optimization suggestions.
+
+        Args:
+            avg_cpu: Average CPU utilization percentage.
+            peak_memory: Peak memory usage in MB.
+            bottlenecks: Identified bottleneck periods.
+
+        Returns:
+            List of optimization suggestions.
+        """
         suggestions = []
 
         if avg_cpu > 60:
@@ -490,7 +555,11 @@ class PerformanceProfiler:  # pylint: disable=too-many-instance-attributes
         return suggestions
 
     def get_resource_timeline(self) -> list[dict[str, Any]]:
-        """Get detailed resource usage timeline."""
+        """Get detailed resource usage timeline.
+
+        Returns:
+            Timeline of resource snapshots with timestamps and metrics.
+        """
         return [
             {
                 "timestamp": snapshot.timestamp,
@@ -505,5 +574,5 @@ class PerformanceProfiler:  # pylint: disable=too-many-instance-attributes
         ]
 
     def clear_snapshots(self) -> None:
-        """Clear collected resource snapshots."""
+        """Clear collected resource snapshots to free memory."""
         self.resource_snapshots = []

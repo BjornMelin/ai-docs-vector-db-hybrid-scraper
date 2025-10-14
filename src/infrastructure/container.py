@@ -593,7 +593,8 @@ class ApplicationContainer(DeclarativeContainer):
 class ContainerManager:
     """Manager for dependency injection container lifecycle."""
 
-    def __init__(self):
+    def __init__(self) -> None:
+        """Initialize container manager."""
         self.container: ApplicationContainer | None = None
         self._initialized = False
 
@@ -628,7 +629,14 @@ class ContainerManager:
             logger.info("Dependency injection container shutdown")
 
     def _config_to_dict(self, config: Any) -> dict:
-        """Convert config object to dictionary for dependency-injector."""
+        """Convert config object to dictionary for dependency-injector.
+
+        Args:
+            config: Configuration object to convert.
+
+        Returns:
+            Dictionary representation of config.
+        """
         try:
             # Try to convert using model_dump if it's a Pydantic model
             if hasattr(config, "model_dump"):

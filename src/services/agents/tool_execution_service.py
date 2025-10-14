@@ -108,6 +108,7 @@ class ToolExecutionService:
         max_attempts: int = _DEFAULT_MAX_ATTEMPTS,
         backoff_seconds: float = _DEFAULT_BACKOFF_SECONDS,
     ) -> None:
+        """Initialize tool execution service with MCP client and retry configuration."""
         if callable(client):
             self._client_factory = client
             self._client: MultiServerMCPClient | None = None

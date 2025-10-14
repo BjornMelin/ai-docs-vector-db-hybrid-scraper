@@ -144,6 +144,7 @@ class BulkEmbedderHarness(BulkEmbedder):
         container: Any | None = None,
         test_context: EmbedderTestContext,
     ) -> None:
+        """Initialize test harness with test context."""
         super().__init__(
             config=config,
             collection_name=collection_name,
@@ -206,6 +207,7 @@ class TestProcessingState:
     """ProcessingState behaviour."""
 
     def test_defaults(self) -> None:
+        """Test that ProcessingState initializes with expected defaults."""
         state = ProcessingState()
         assert state.urls_to_process == []
         assert state.completed_urls == []
@@ -214,6 +216,7 @@ class TestProcessingState:
         assert state.collection_name == "bulk_embeddings"
 
     def test_from_mapping(self, sample_state_data: dict[str, Any]) -> None:
+        """Test that ProcessingState deserializes from dict correctly."""
         state = ProcessingState.model_validate(sample_state_data)
         assert state.urls_to_process == ["https://example.com/page3"]
         assert state.completed_urls == ["https://example.com/page1"]
@@ -232,6 +235,7 @@ class TestStatePersistence:
         tmp_path: Path,
         sample_state_data: dict[str, Any],
     ) -> None:
+        """Test that state loads from JSON file correctly."""
         state_file = tmp_path / "state.json"
         state_file.write_text(json.dumps(sample_state_data), encoding="utf-8")
 
@@ -245,6 +249,7 @@ class TestStatePersistence:
         embedder_factory: Callable[..., BulkEmbedderHarness],
         tmp_path: Path,
     ) -> None:
+        """Test that invalid JSON raises JSONDecodeError."""
         state_file = tmp_path / "invalid.json"
         state_file.write_text("{not valid json", encoding="utf-8")
 
@@ -256,6 +261,7 @@ class TestStatePersistence:
         embedder_factory: Callable[..., BulkEmbedderHarness],
         tmp_path: Path,
     ) -> None:
+        """Test that state persists to JSON file correctly."""
         embedder = embedder_factory()
         embedder.state.completed_urls = ["https://example.com/test"]
         embedder.state.total_chunks_processed = 5
@@ -275,6 +281,7 @@ class TestServiceInitialization:
         self,
         embedder_factory: Callable[..., BulkEmbedderHarness],
     ) -> None:
+        """Test that initialize_services wires vector service + crawl manager."""
         embedder = embedder_factory()
         ctx = embedder.test_context
 
@@ -302,6 +309,7 @@ class TestUrlLoading:
         embedder_factory: Callable[..., BulkEmbedderHarness],
         tmp_path: Path,
     ) -> None:
+        """Test that URLs load from text file, skipping comments."""
         embedder = embedder_factory()
         urls_file = tmp_path / "urls.txt"
         urls_file.write_text(
@@ -326,6 +334,7 @@ https://example.com/page3
         embedder_factory: Callable[..., BulkEmbedderHarness],
         tmp_path: Path,
     ) -> None:
+        """Test that URLs extract from CSV url column."""
         embedder = embedder_factory()
         csv_file = tmp_path / "urls.csv"
         csv_file.write_text(
@@ -348,6 +357,7 @@ https://example.com/page2,Page 2
         embedder_factory: Callable[..., BulkEmbedderHarness],
         tmp_path: Path,
     ) -> None:
+        """Test that URLs parse from JSON arrays or objects with url key."""
         embedder = embedder_factory()
         json_file = tmp_path / "urls.json"
         json_file.write_text(
@@ -384,6 +394,7 @@ https://example.com/page2,Page 2
         embedder_factory: Callable[..., BulkEmbedderHarness],
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        """Test that URLs extract from XML sitemap urlset."""
         embedder = embedder_factory()
         sitemap_url = "https://example.com/sitemap.xml"
         sitemap_xml = """<?xml version="1.0" encoding="UTF-8"?>
@@ -409,6 +420,7 @@ https://example.com/page2,Page 2
         embedder_factory: Callable[..., BulkEmbedderHarness],
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        """Test that URLs aggregate from sitemap index referencing child sitemaps."""
         embedder = embedder_factory()
         index_url = "https://example.com/index.xml"
         child_url = "https://example.com/sitemap1.xml"
@@ -438,6 +450,7 @@ https://example.com/page2,Page 2
         embedder_factory: Callable[..., BulkEmbedderHarness],
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        """Test that HTTP errors when fetching sitemap propagate correctly."""
         embedder = embedder_factory()
         sitemap_url = "https://example.com/missing.xml"
         request = httpx.Request("GET", sitemap_url)
@@ -461,6 +474,7 @@ class TestProcessingPipeline:
         self,
         embedder_factory: Callable[..., BulkEmbedderHarness],
     ) -> None:
+        """Test that process_url scrapes, chunks, and upserts documents successfully."""
         embedder = embedder_factory()
         embedder.crawl_manager = AsyncMock()
         embedder.crawl_manager.scrape_url = AsyncMock(
@@ -527,6 +541,7 @@ class TestProcessingPipeline:
         self,
         embedder_factory: Callable[..., BulkEmbedderHarness],
     ) -> None:
+        """Test that process_url returns error dict when scraping fails."""
         embedder = embedder_factory()
         embedder.crawl_manager = AsyncMock()
         embedder.crawl_manager.scrape_url = AsyncMock(
@@ -544,6 +559,7 @@ class TestProcessingPipeline:
         self,
         embedder_factory: Callable[..., BulkEmbedderHarness],
     ) -> None:
+        """Test that process_url rejects pages with empty content."""
         embedder = embedder_factory()
         embedder.crawl_manager = AsyncMock()
         embedder.crawl_manager.scrape_url = AsyncMock(
@@ -564,6 +580,7 @@ class TestProcessingPipeline:
         self,
         embedder_factory: Callable[..., BulkEmbedderHarness],
     ) -> None:
+        """Test that process_url rejects content that yields zero chunks."""
         embedder = embedder_factory()
         embedder.crawl_manager = AsyncMock()
         embedder.crawl_manager.scrape_url = AsyncMock(
@@ -594,6 +611,7 @@ class TestBatchProcessing:
         embedder_factory: Callable[..., BulkEmbedderHarness],
         sample_urls: list[str],
     ) -> None:
+        """Test that batch processing updates completed URLs and chunk counters."""
         embedder = embedder_factory()
 
         async def mock_process(url: str) -> dict[str, Any]:
@@ -626,6 +644,7 @@ class TestBatchProcessing:
         self,
         embedder_factory: Callable[..., BulkEmbedderHarness],
     ) -> None:
+        """Test that batch processing checkpoints state when progress bar disabled."""
         embedder = embedder_factory()
 
         async def mock_process(url: str) -> dict[str, Any]:
@@ -648,6 +667,7 @@ class TestBatchProcessing:
         self,
         embedder_factory: Callable[..., BulkEmbedderHarness],
     ) -> None:
+        """Test batch processing raise exceptions then continues with remaining URLs."""
         embedder = embedder_factory()
 
         async def mock_process(url: str) -> dict[str, Any]:
@@ -678,6 +698,7 @@ class TestRunFlow:
         embedder_factory: Callable[..., BulkEmbedderHarness],
         sample_urls: list[str],
     ) -> None:
+        """Test that resume mode excludes URLs already in completed_urls."""
         embedder = embedder_factory()
         embedder.state.completed_urls = [sample_urls[0]]
         embedder.state.start_time = datetime.now(tz=UTC)
@@ -706,6 +727,7 @@ class TestRunFlow:
         embedder_factory: Callable[..., BulkEmbedderHarness],
         sample_urls: list[str],
     ) -> None:
+        """Test that non-resume mode processes all provided URLs regardless of state."""
         embedder = embedder_factory()
         embedder.state.completed_urls = [sample_urls[0]]
         embedder.state.start_time = datetime.now(tz=UTC)
@@ -733,6 +755,7 @@ class TestRunFlow:
         embedder_factory: Callable[..., BulkEmbedderHarness],
         sample_urls: list[str],
     ) -> None:
+        """Test that run returns early when all URLs are already completed."""
         embedder = embedder_factory()
         embedder.state.completed_urls = sample_urls.copy()
         embedder.state.start_time = datetime.now(tz=UTC)
@@ -759,6 +782,7 @@ class TestSummary:
         embedder_factory: Callable[..., BulkEmbedder],
         capsys: pytest.CaptureFixture[str],
     ) -> None:
+        """Test that summary output includes failed URLs with error messages."""
         embedder = embedder_factory()
         embedder.state.failed_urls = {
             "https://example.com/404": "404 Not Found",
@@ -780,6 +804,7 @@ class TestCLI:
     """CLI entrypoint tests."""
 
     def test_cli_with_urls(self) -> None:
+        """Test that CLI accepts multiple -u URL arguments."""
         with (
             patch("src.crawl4ai_bulk_embedder.asyncio.run") as mock_run,
             patch("src.crawl4ai_bulk_embedder.get_settings") as mock_get_config,
@@ -797,6 +822,7 @@ class TestCLI:
         mock_run.assert_called_once()
 
     def test_cli_with_file(self, tmp_path: Path) -> None:
+        """Test that CLI accepts -f file path argument."""
         urls_file = tmp_path / "urls.txt"
         urls_file.write_text("https://example.com/page1\n", encoding="utf-8")
 
@@ -814,6 +840,7 @@ class TestCLI:
         mock_run.assert_called_once()
 
     def test_cli_with_sitemap(self) -> None:
+        """Test that CLI accepts -s sitemap URL argument."""
         with (
             patch("src.crawl4ai_bulk_embedder.asyncio.run") as mock_run,
             patch("src.crawl4ai_bulk_embedder.get_settings") as mock_get_config,
@@ -828,6 +855,7 @@ class TestCLI:
         mock_run.assert_called_once()
 
     def test_cli_no_input(self) -> None:
+        """Test that CLI exits with error when no URL source is provided."""
         with (
             patch("src.crawl4ai_bulk_embedder.asyncio.run") as mock_run,
             patch("src.crawl4ai_bulk_embedder.get_settings") as mock_get_config,
@@ -842,6 +870,7 @@ class TestCLI:
         assert "Must provide URLs" in result.output
 
     def test_cli_with_all_options(self, tmp_path: Path) -> None:
+        """Test that CLI accepts all optional flags and parameters."""
         urls_file = tmp_path / "urls.txt"
         urls_file.write_text("https://example.com\n", encoding="utf-8")
         config_file = tmp_path / "config.json"
@@ -886,6 +915,7 @@ class TestAsyncMain:
         mock_config: MagicMock,
         tmp_path: Path,
     ) -> None:
+        """Test that async_main passes URL list to embedder.run correctly."""
         container = MagicMock()
         session_calls: dict[str, Any] = {"entered": 0, "exited": 0}
 
@@ -933,6 +963,7 @@ class TestAsyncMain:
         mock_config: MagicMock,
         tmp_path: Path,
     ) -> None:
+        """Test that async_main merges URLs from file and sitemap sources."""
         urls_file = tmp_path / "urls.txt"
         urls_file.write_text(
             "https://example.com/file1\nhttps://example.com/file2\n", encoding="utf-8"
@@ -997,6 +1028,7 @@ class TestAsyncMain:
         mock_config: MagicMock,
         tmp_path: Path,
     ) -> None:
+        """Test that async_main removes duplicate URLs before processing."""
         container = MagicMock()
         session_calls: dict[str, Any] = {"entered": 0, "exited": 0}
 
@@ -1043,6 +1075,7 @@ class TestAsyncMain:
         mock_config: MagicMock,
         tmp_path: Path,
     ) -> None:
+        """Test that async_main ensures container_session cleanup even on exception."""
         container = MagicMock()
         session_calls: dict[str, Any] = {"entered": 0, "exited": 0}
 

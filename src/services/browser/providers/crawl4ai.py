@@ -31,6 +31,7 @@ class Crawl4AIProvider(BrowserProvider):
     kind = ProviderKind.CRAWL4AI
 
     def __init__(self, context: ProviderContext, settings: Crawl4AISettings) -> None:
+        """Init Crawl4AI provider with crawler config and memory-adaptive dispatcher."""
         super().__init__(context)
         self._settings = settings
         self._crawler: AsyncWebCrawler | None = None

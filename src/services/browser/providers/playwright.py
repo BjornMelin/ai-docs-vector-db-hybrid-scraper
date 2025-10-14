@@ -35,6 +35,7 @@ class PlaywrightProvider(BrowserProvider):
     kind = ProviderKind.PLAYWRIGHT
 
     def __init__(self, context: ProviderContext, settings: PlaywrightSettings) -> None:
+        """Init Playwright provider with browser runtime and optional stealth config."""
         super().__init__(context)
         self._settings = settings
         self._playwright: Playwright | None = None

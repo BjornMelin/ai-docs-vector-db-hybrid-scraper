@@ -44,6 +44,7 @@ class RetrievalHelper:
         vector_service: VectorStoreService
         | Callable[[], Awaitable[VectorStoreService]],
     ) -> None:
+        """Initialize retrieval helper with vector service or lazy factory."""
         self._vector_service: VectorStoreService | None = None
         if callable(vector_service):
             self._vector_service_factory = vector_service

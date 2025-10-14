@@ -55,6 +55,7 @@ class FirecrawlSettings(BaseModel):
 
     @model_validator(mode="after")
     def validate_api_key(self) -> FirecrawlSettings:
+        """Validate Firecrawl API key format."""
         api_key = self.model_dump().get("api_key")
         if isinstance(api_key, str) and api_key and not api_key.startswith("fc-"):
             msg = "Firecrawl API key must start with 'fc-'"
@@ -91,6 +92,7 @@ class PlaywrightSettings(BaseModel):
 
     @model_validator(mode="after")
     def validate_captcha(self) -> PlaywrightSettings:
+        """Validate captcha provider configuration."""
         if (
             self.captcha_provider is not CaptchaProvider.NONE
             and not self.captcha_api_key

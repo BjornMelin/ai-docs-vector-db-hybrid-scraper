@@ -46,6 +46,7 @@ class BrowserRouter:
         browser_use: BrowserUseProvider,
         firecrawl: FirecrawlProvider,
     ) -> None:
+        """Initialize browser router with settings and provider instances."""
         self._settings = settings
         self._providers: OrderedDict[ProviderKind, BrowserProvider] = OrderedDict(
             {

@@ -35,9 +35,11 @@ class SearchService:
         logger.info("Search tools registered")
 
     def get_mcp_server(self) -> FastMCP:
+        """Return the FastMCP server instance."""
         return self.mcp
 
     async def get_service_info(self) -> dict[str, Any]:
+        """Return service metadata and capabilities."""
         return {
             "service": "search",
             "version": "3.0",

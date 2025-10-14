@@ -67,6 +67,7 @@ async def record_ai_operation_metrics(  # pylint: disable=too-many-arguments
     cost_usd: float | None = None,
     service: ObservabilityServiceDep,
 ) -> None:
+    """Record AI operation metrics if observability is enabled."""
     if not service["enabled"]:
         return
     record_ai_operation(
@@ -86,6 +87,7 @@ async def track_ai_cost_metrics(  # pylint: disable=too-many-arguments
     cost_usd: float,
     service: ObservabilityServiceDep,
 ) -> None:
+    """Track AI cost metrics if observability is enabled."""
     if not service["enabled"]:
         return
     track_cost(

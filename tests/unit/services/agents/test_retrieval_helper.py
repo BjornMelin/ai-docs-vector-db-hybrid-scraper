@@ -14,6 +14,7 @@ class DummyMatch:
     """Vector search result stub."""
 
     def __init__(self, identifier: str, score: float) -> None:
+        """Initialize a dummy match result."""
         self.id = identifier
         self.score = score
         self.metadata = {"title": f"Doc {identifier}"}
@@ -30,6 +31,7 @@ class DummyVectorStoreService:
         limit: int,
         filters: dict[str, Any] | None = None,
     ) -> list[DummyMatch]:
+        """Simulate a document search operation."""
         assert collection == "docs"
         assert query == "what is langgraph"
         assert limit == 3

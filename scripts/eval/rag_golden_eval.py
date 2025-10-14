@@ -21,6 +21,7 @@ import json
 import logging
 import os
 import re
+import typing
 from collections import defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -136,7 +137,7 @@ class SupportsSearchOrchestrator(Protocol):
 class RagasEvaluator:
     """Execute semantic metrics using ragas ≥0.3."""
 
-    _METRICS = [
+    _METRICS: typing.ClassVar[list] = [
         Faithfulness(),
         AnswerRelevancy(),
         ContextPrecision(),

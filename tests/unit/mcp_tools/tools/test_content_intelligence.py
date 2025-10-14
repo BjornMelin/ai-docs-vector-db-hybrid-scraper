@@ -34,18 +34,23 @@ class MockContext:
     """Mock context for testing."""
 
     def __init__(self):
+        """Initialize mock context with empty log storage."""
         self.logs = {"info": [], "debug": [], "warning": [], "error": []}
 
     async def info(self, msg: str):
+        """Capture info log message."""
         self.logs["info"].append(msg)
 
     async def debug(self, msg: str):
+        """Capture debug log message."""
         self.logs["debug"].append(msg)
 
     async def warning(self, msg: str):
+        """Capture warning log message."""
         self.logs["warning"].append(msg)
 
     async def error(self, msg: str):
+        """Capture error log message."""
         self.logs["error"].append(msg)
 
 

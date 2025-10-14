@@ -27,7 +27,10 @@ def _reset_singletons() -> Iterator[None]:
 
 
 class TestAIOperationTracker:
+    """Tests for AI operation tracking and metrics aggregation."""
+
     def test_records_operation(self) -> None:
+        """Verify tracker aggregates operation counts, tokens, and costs."""
         tracker = AIOperationTracker()
         tracker.record_operation(
             operation="llm",
@@ -58,6 +61,7 @@ class TestAIOperationTracker:
         assert tracker.snapshot() == {}
 
     def test_singleton_helpers(self) -> None:
+        """Verify singleton access and recording helper work correctly."""
         tracker = get_ai_tracker()
         record_ai_operation(
             operation_type="embedding",
@@ -68,6 +72,7 @@ class TestAIOperationTracker:
         assert "embedding" in tracker.snapshot()
 
     def test_thread_safe_recording(self) -> None:
+        """Verify concurrent recording maintains accurate counts."""
         tracker = AIOperationTracker()
 
         def _worker(success: bool) -> None:
@@ -90,6 +95,7 @@ class TestAIOperationTracker:
         assert snapshot["success_count"] == 200
 
     def test_track_cost_records_cost_only(self) -> None:
+        """Verify cost helper records cost without token counts."""
         tracker = get_ai_tracker()
         track_cost(
             operation_type="billing",
@@ -103,7 +109,10 @@ class TestAIOperationTracker:
 
 
 class TestPerformanceTracker:
+    """Tests for performance timing context manager."""
+
     def test_track_context_manager(self) -> None:
+        """Verify performance tracker records elapsed time for operations."""
         tracker = PerformanceTracker()
         with tracker.track("operation"):
             pass
@@ -112,7 +121,10 @@ class TestPerformanceTracker:
 
 
 class TestTraceCorrelationManager:
+    """Tests for trace correlation context management."""
+
     def test_context_management(self) -> None:
+        """Verify context can be set, retrieved, and nested."""
         manager = TraceCorrelationManager()
         manager.set_context(request_id="abc123")
         assert manager.get_context()["request_id"] == "abc123"
@@ -125,11 +137,13 @@ class TestTraceCorrelationManager:
         assert "agent" not in manager.get_context()
 
     def test_singleton(self) -> None:
+        """Verify singleton instance is consistent across calls."""
         manager = get_correlation_manager()
         manager.set_context(flow="testing")
         assert get_correlation_manager().get_context()["flow"] == "testing"
 
     def test_correlated_operation_restores_context_on_exception(self) -> None:
+        """Verify context is restored after an exception in correlated operation."""
         manager = TraceCorrelationManager()
         manager.set_context(request_id="req-1")
 

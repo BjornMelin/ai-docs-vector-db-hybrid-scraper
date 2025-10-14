@@ -39,7 +39,7 @@ class _PrecomputedEmbeddings(Embeddings):
                 embedding = self._sentence_embeddings[text]
             except KeyError as exc:  # pragma: no cover - dataset mismatch
                 msg = f"Missing embedding for sentence: {text!r}"
-                raise ValueError(msg) from exc
+                raise TypeError(msg) from exc
             embeddings.append(list(embedding))
         return embeddings
 
@@ -66,6 +66,16 @@ def _estimate_tokens(text: str) -> int:
 async def _run(
     dataset_path: Path, min_reduction: float, min_recall: float | None
 ) -> bool:
+    """Execute compression quality gate evaluation against dataset.
+
+    Args:
+        dataset_path: Path to evaluation dataset.
+        min_reduction: Minimum required token reduction ratio.
+        min_recall: Optional minimum recall threshold.
+
+    Returns:
+        True if quality thresholds met.
+    """
     samples = _load_dataset(dataset_path)
 
     total_tokens_before = 0

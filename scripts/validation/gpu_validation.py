@@ -225,7 +225,16 @@ def run_gpu_validation(
     torch_module=None,
     xformers_module=None,
 ) -> ValidationReport:
-    """Execute the GPU validation harness and return a structured report."""
+    """Execute the GPU validation harness and return a structured report.
+
+    Args:
+        require_gpu: Fail if GPU is unavailable (default True).
+        torch_module: Optional mock torch module for testing.
+        xformers_module: Optional mock xformers module for testing.
+
+    Returns:
+        Validation report with check results and metadata.
+    """
     checks: list[CheckResult] = []
     library_versions: dict[str, str | None] = {}
 

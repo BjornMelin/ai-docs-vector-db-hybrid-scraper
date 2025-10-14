@@ -23,6 +23,7 @@ class TestHybridAndSparseValidation:
     def test_sparse_strategy_requires_sparse_payload(
         self, base_payload: Mapping[str, object]
     ) -> None:
+        """Sparse search strategy requires sparse vector payload."""
         payload = dict(base_payload)
         payload.update(
             {"search_strategy": SearchStrategy.SPARSE, "vector_type": VectorType.SPARSE}
@@ -34,6 +35,7 @@ class TestHybridAndSparseValidation:
     def test_hybrid_request_with_sparse_vector_valid(
         self, base_payload: Mapping[str, object]
     ) -> None:
+        """Hybrid requests with sparse vector payload should be valid."""
         payload = dict(base_payload)
         payload.update(
             {
@@ -51,6 +53,7 @@ class TestHybridAndSparseValidation:
     def test_sparse_vector_weight_must_be_numeric(
         self, base_payload: Mapping[str, object]
     ) -> None:
+        """Sparse vector weights must be numeric."""
         payload = dict(base_payload)
         payload.update(
             {
@@ -69,6 +72,7 @@ class TestDenseVectorValidation:
     def test_query_vector_dimension_upper_bound(
         self, base_payload: Mapping[str, object]
     ) -> None:
+        """Query vector dimension upper bound enforcement."""
         payload = dict(base_payload)
         payload["query_vector"] = [0.1] * 5001
 
@@ -76,6 +80,7 @@ class TestDenseVectorValidation:
             SearchRequest.model_validate(payload)
 
     def test_query_vector_value_range(self, base_payload: Mapping[str, object]) -> None:
+        """Query vector values must be within allowed range."""
         payload = dict(base_payload)
         payload["query_vector"] = [0.1, 2e7]
 
@@ -87,6 +92,7 @@ class TestFilterValidation:
     """Filtering rules and protections."""
 
     def test_filter_list_length_limit(self, base_payload: Mapping[str, object]) -> None:
+        """Filter list length limit enforcement."""
         payload = dict(base_payload)
         payload["filters"] = {f"field_{idx}": "value" for idx in range(51)}
 
@@ -96,6 +102,7 @@ class TestFilterValidation:
     def test_exclude_filters_require_mappings(
         self, base_payload: Mapping[str, object]
     ) -> None:
+        """Exclude filters must be a list of mappings."""
         payload = dict(base_payload)
         payload["exclude_filters"] = ["not-a-mapping"]  # type: ignore[list-item]
 
@@ -105,6 +112,7 @@ class TestFilterValidation:
     def test_filter_groups_depth_limit(
         self, base_payload: Mapping[str, object]
     ) -> None:
+        """Filter groups nesting depth limit enforcement."""
         nested_group: dict[str, object] = {
             "operator": "and",
             "filters": [{"field": "lang", "value": "en"}],
@@ -125,6 +133,7 @@ class TestExtraFields:
     def test_extra_fields_are_rejected(
         self, base_payload: Mapping[str, object]
     ) -> None:
+        """Extra fields should cause validation to fail."""
         payload = dict(base_payload)
         payload["unexpected_field"] = "value"
 

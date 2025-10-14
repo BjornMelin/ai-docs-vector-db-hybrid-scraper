@@ -38,6 +38,7 @@ class CircuitBreakerResolver(Protocol):
     """Protocol for async factory returning a circuit breaker manager."""
 
     async def __call__(self) -> CircuitBreakerManager:  # pragma: no cover - typing only
+        """Return circuit breaker manager instance."""
         ...
 
 
@@ -191,6 +192,15 @@ class BulkheadMiddleware(BaseHTTPMiddleware):
         self._locks: dict[str, anyio.CapacityLimiter] = {}
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        """Dispatch request through concurrency limiter.
+
+        Args:
+            request: Incoming HTTP request.
+            call_next: Next middleware or handler.
+
+        Returns:
+            HTTP response.
+        """
         key = f"{request.method}:{request.url.path}"
         limiter = self._locks.setdefault(key, anyio.CapacityLimiter(self._max))
         async with limiter:

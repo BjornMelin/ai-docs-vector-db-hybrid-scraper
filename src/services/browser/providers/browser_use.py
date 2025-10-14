@@ -31,6 +31,7 @@ class BrowserUseProvider(BrowserProvider):
     kind = ProviderKind.BROWSER_USE
 
     def __init__(self, context: ProviderContext, settings: BrowserUseSettings) -> None:
+        """Initialize browser-use provider with settings and lazy dependency loading."""
         super().__init__(context)
         self._settings = settings
         self._deps: _BrowserUseDeps | None = None

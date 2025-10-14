@@ -53,6 +53,7 @@ class UsageTracker:
     def __init__(
         self, smart_config: Any | None = None, budget_limit: float | None = None
     ) -> None:
+        """Initialize usage tracker with optional budget constraints."""
         self._stats = UsageStats()
         self._smart_config = smart_config
         self._budget_limit = budget_limit

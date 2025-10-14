@@ -20,6 +20,7 @@ class LightweightProvider(BrowserProvider):
     kind = ProviderKind.LIGHTWEIGHT
 
     def __init__(self, context: ProviderContext, settings: LightweightSettings) -> None:
+        """Init lightweight HTTP scraper + httpx client and Trafilatura extraction."""
         super().__init__(context)
         self._settings = settings
         self._client: httpx.AsyncClient | None = None

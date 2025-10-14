@@ -35,6 +35,7 @@ class SelectionEngine:
     """Provides text analysis and smart provider recommendations."""
 
     def __init__(self, smart_config: Any | None, benchmarks: dict[str, dict[str, Any]]):
+        """Initialize selection engine with smart configuration and provider benchmarks."""
         self._smart_config = smart_config or {}
         self._benchmarks = benchmarks
 

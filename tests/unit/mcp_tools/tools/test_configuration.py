@@ -17,6 +17,7 @@ class DummyConfig:
     """Lightweight configuration stub compatible with the MCP tools."""
 
     def __init__(self) -> None:
+        """Initialize the dummy configuration with some preset values."""
         self.embedding_provider = SimpleNamespace(name="OPENAI")
         self.openai = SimpleNamespace(api_key=None)
         self.browser = SimpleNamespace(firecrawl=SimpleNamespace(api_key=None))
@@ -25,6 +26,7 @@ class DummyConfig:
         self.misc_setting = "value"
 
     def model_dump(self) -> dict[str, Any]:
+        """Return a dictionary representation of the configuration."""
         return {
             "openai": {"api_key": "secret-openai"},
             "qdrant": {"api_key": "secret-qdrant"},

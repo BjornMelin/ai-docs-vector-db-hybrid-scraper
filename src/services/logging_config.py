@@ -64,11 +64,20 @@ class ContextFilter(logging.Filter):
     __slots__ = ("_default_operation", "_default_service")
 
     def __init__(self, service: str = "-", operation: str = "-") -> None:
+        """Initialize context filter with default service and operation names."""
         super().__init__(name="ai_docs_context_filter")
         self._default_service = service
         self._default_operation = operation
 
     def filter(self, record: logging.LogRecord) -> bool:
+        """Inject context variables into log record.
+
+        Args:
+            record: Log record to augment with context.
+
+        Returns:
+            Always True to allow record propagation.
+        """
         context = dict(_LOG_CONTEXT.get())
         service = context.get("service", self._default_service)
         operation = context.get("operation", self._default_operation)
@@ -85,6 +94,14 @@ class RedactionFilter(logging.Filter):
     """Mask sensitive values from formatted log messages before emission."""
 
     def filter(self, record: logging.LogRecord) -> bool:
+        """Redact sensitive patterns from log message.
+
+        Args:
+            record: Log record to redact.
+
+        Returns:
+            Always True to allow record propagation.
+        """
         message = record.getMessage()
         redacted = message
         for pattern in _SECRET_PATTERNS:
@@ -99,6 +116,14 @@ class JsonFormatter(logging.Formatter):
     """Emit structured JSON log lines with contextual metadata."""
 
     def format(self, record: logging.LogRecord) -> str:
+        """Format log record as JSON.
+
+        Args:
+            record: Log record to format.
+
+        Returns:
+            JSON string representation of log record.
+        """
         payload: dict[str, Any] = {
             "timestamp": self.formatTime(record, datefmt="%Y-%m-%dT%H:%M:%S%z"),
             "level": record.levelname,
@@ -126,14 +151,17 @@ class LogContext:
     """Bind contextual metadata to log records within a managed scope."""
 
     def __init__(self, **context: Any) -> None:
+        """Initialize log context manager with metadata."""
         self._token: contextvars.Token[Mapping[str, Any]] | None = None
         self._context = context
 
     def __enter__(self) -> LogContext:
+        """Enter context and bind metadata to logs."""
         self._token = bind_log_context(**self._context)
         return self
 
     def __exit__(self, exc_type, exc, tb) -> None:
+        """Exit context and restore previous log metadata."""
         if self._token is not None:
             reset_log_context(self._token)
 
@@ -231,7 +259,7 @@ def configure_logging(
 
 
 def _ensure_record_factory() -> None:
-    """Ensure the log record factory is wrapped."""
+    """Ensure the log record factory is wrapped to inject context variables."""
     if _FACTORY_WRAPPED.get():
         return
 
@@ -309,14 +337,22 @@ def _build_file_handler(path: str | os.PathLike[str]) -> logging.Handler:
 
 
 def _finalize_handler(handler: logging.Handler) -> None:
-    """Finalize a logging handler by adding filters and a sentinel."""
+    """Finalize a logging handler by adding filters and a sentinel.
+
+    Args:
+        handler: Handler to finalize.
+    """
     setattr(handler, _ROOT_SENTINEL, True)
     handler.addFilter(ContextFilter())
     handler.addFilter(RedactionFilter())
 
 
 def _tune_library_loggers(level_value: int) -> None:
-    """Tune loggers for external libraries."""
+    """Tune loggers for external libraries.
+
+    Args:
+        level_value: Log level integer value.
+    """
     if level_value <= logging.DEBUG:
         return
 

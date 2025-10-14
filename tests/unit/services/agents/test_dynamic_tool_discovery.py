@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import Any, cast
 
 import pytest
-from langchain_mcp_adapters.client import MultiServerMCPClient
+from langchain_mcp_adapters.client import MultiServerMCPClient  # type: ignore[import]
 
 from src.services.agents.dynamic_tool_discovery import (
     DynamicToolDiscovery,
@@ -30,15 +30,19 @@ class DummySession:
     """Async context manager for MCP sessions returning deterministic tools."""
 
     def __init__(self, tools: list[DummyTool]) -> None:
+        """Initialize session with tool list."""
         self._tools = tools
 
     async def __aenter__(self) -> DummySession:
+        """Enter async context."""
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback) -> None:
-        return None
+        """Exit async context."""
+        return
 
     async def list_tools(self) -> list[DummyTool]:
+        """Return the predefined list of tools."""
         await asyncio.sleep(0)
         return self._tools
 
@@ -47,9 +51,11 @@ class DummyClient:
     """Multi-server client stub exposing session() and connections metadata."""
 
     def __init__(self, inventory: dict[str, list[DummyTool]]) -> None:
+        """Initialize the client with a server-to-tools mapping."""
         self.connections = inventory
 
     def session(self, server_name: str) -> DummySession:  # type: ignore[override]
+        """Get a session for the specified server."""
         return DummySession(self.connections[server_name])
 
 

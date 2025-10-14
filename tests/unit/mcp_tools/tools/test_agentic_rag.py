@@ -21,16 +21,19 @@ class StubGraphRunner:
         search_outcome: GraphSearchOutcome,
         analysis_outcome: GraphAnalysisOutcome,
     ) -> None:
+        """Initialize stub runner with predetermined outcomes."""
         self._search_outcome = search_outcome
         self._analysis_outcome = analysis_outcome
         self.run_search_calls: list[dict[str, Any]] = []
         self.run_analysis_calls: list[dict[str, Any]] = []
 
     async def run_search(self, **kwargs: Any) -> GraphSearchOutcome:
+        """Record search call and return predetermined outcome."""
         self.run_search_calls.append(kwargs)
         return self._search_outcome
 
     async def run_analysis(self, **kwargs: Any) -> GraphAnalysisOutcome:
+        """Record analysis call and return predetermined outcome."""
         self.run_analysis_calls.append(kwargs)
         return self._analysis_outcome
 
@@ -39,10 +42,14 @@ class StubMCP:
     """Stub FastMCP server recording registered tools."""
 
     def __init__(self) -> None:
+        """Initialize stub MCP server with empty tool registry."""
         self.tools: dict[str, Callable[..., Any]] = {}
 
     def tool(self, *_, name: str, **__):  # pragma: no cover - decorator wiring
+        """Decorator to register a tool function by name."""
+
         def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+            """Decorator to register a tool function by name."""
             self.tools[name] = func
             return func
 

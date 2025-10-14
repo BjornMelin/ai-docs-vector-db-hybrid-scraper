@@ -29,6 +29,7 @@ class DummyContext:
     """Minimal breaker context for testing."""
 
     def __init__(self, state: str = "closed") -> None:
+        """Initialize breaker context with state."""
         self.state = state
 
 
@@ -36,22 +37,27 @@ class DummyBreaker:
     """Async-compatible circuit breaker double."""
 
     def __init__(self, state: str = "closed") -> None:
+        """Initialize breaker with context."""
         self.context = DummyContext(state)
 
     async def __aenter__(self) -> DummyBreaker:
+        """Enter async context."""
         return self
 
-    async def __aexit__(self, exc_type, exc, tb) -> None:  # pragma: no cover - simple
-        return None
+    async def __aexit__(self, exc_type, exc, tb) -> None:
+        """Exit async context."""
+        return
 
 
 class DummyManager:
     """In-memory manager returning a shared dummy breaker."""
 
     def __init__(self) -> None:
+        """Initialize with a single shared breaker."""
         self.breaker = DummyBreaker()
 
     async def get_breaker(self, *_args, **_kwargs) -> DummyBreaker:
+        """Return the shared dummy breaker."""
         return self.breaker
 
 

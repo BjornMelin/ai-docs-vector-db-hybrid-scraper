@@ -80,6 +80,7 @@ async def test_orchestrate_workflow_delegates_to_graph_runner(
         OrchestratorService, MagicMock, MagicMock, dict[str, AsyncMock]
     ],
 ) -> None:
+    """Verify workflow orchestration delegates to the graph runner."""
     orchestrator, _, graph_runner, _ = orchestrator_fixture
 
     server = orchestrator.get_mcp_server()
@@ -113,6 +114,7 @@ async def test_orchestrate_workflow_handles_missing_runner(
         OrchestratorService, MagicMock, MagicMock, dict[str, AsyncMock]
     ],
 ) -> None:
+    """Verify error handling when graph runner is not initialized."""
     orchestrator, _, _, _ = orchestrator_fixture
     orchestrator._graph_runner = None  # type: ignore[attr-defined]
 
@@ -135,6 +137,7 @@ async def test_get_service_capabilities_aggregates_service_metadata(
         OrchestratorService, MagicMock, MagicMock, dict[str, AsyncMock]
     ],
 ) -> None:
+    """Verify aggregation of capabilities across all services."""
     orchestrator, _, _, services = orchestrator_fixture
     # Force analytics to raise to exercise error branch
     services["analytics"].side_effect = RuntimeError("telemetry offline")
@@ -156,6 +159,7 @@ async def test_optimize_service_performance_refreshes_discovery(
         OrchestratorService, MagicMock, MagicMock, dict[str, AsyncMock]
     ],
 ) -> None:
+    """Verify performance optimization triggers discovery refresh."""
     orchestrator, discovery, _, _ = orchestrator_fixture
 
     tool = await orchestrator.get_mcp_server().get_tool("optimize_service_performance")
@@ -174,6 +178,7 @@ async def test_optimize_service_performance_reports_missing_discovery(
         OrchestratorService, MagicMock, MagicMock, dict[str, AsyncMock]
     ],
 ) -> None:
+    """Verify error reporting when discovery is not initialized."""
     orchestrator, _, _, _ = orchestrator_fixture
     orchestrator._discovery = None  # type: ignore[attr-defined]
 
@@ -194,6 +199,7 @@ async def test_get_all_services_returns_metadata(
         OrchestratorService, MagicMock, MagicMock, dict[str, AsyncMock]
     ],
 ) -> None:
+    """Verify retrieval of metadata for all registered services."""
     orchestrator, _, _, _ = orchestrator_fixture
 
     info = await orchestrator.get_all_services()
@@ -208,6 +214,7 @@ async def test_get_service_info_static_payload(
         OrchestratorService, MagicMock, MagicMock, dict[str, AsyncMock]
     ],
 ) -> None:
+    """Verify static service info payload structure."""
     orchestrator, _, _, _ = orchestrator_fixture
 
     info = await orchestrator.get_service_info()
@@ -221,6 +228,7 @@ def test_get_mcp_server_returns_fastmcp_instance(
         OrchestratorService, MagicMock, MagicMock, dict[str, AsyncMock]
     ],
 ) -> None:
+    """Verify MCP server instance is returned correctly."""
     orchestrator, _, _, _ = orchestrator_fixture
 
     server = orchestrator.get_mcp_server()

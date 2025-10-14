@@ -41,6 +41,7 @@ async def generate_answer(
     Args:
         request: RAG generation request with query and search results
         config: Application configuration dependency
+        rag_generator: RAG generator service dependency
 
     Returns:
         RAGResponse: Generated answer with metadata and sources

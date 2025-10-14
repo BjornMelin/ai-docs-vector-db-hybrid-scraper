@@ -75,6 +75,8 @@ def _otel_modules(resource_factory: MagicMock | None = None) -> dict[str, object
 
 
 class TestInitializeObservability:
+    """Tests for observability initialisation logic."""
+
     def setup_method(self) -> None:
         """Reset the observability state between test cases."""
         init_module._STATE.tracer_provider = None

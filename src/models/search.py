@@ -574,7 +574,7 @@ class SearchRequest(BaseModel):
         filters = group.get("filters")
         if not isinstance(filters, Sequence) or isinstance(filters, str | bytes):
             msg = "Filter group must contain a list of filters"
-            raise ValueError(msg)
+            raise TypeError(msg)
         if len(filters) == 0:
             msg = "Filter group cannot be empty"
             raise ValueError(msg)

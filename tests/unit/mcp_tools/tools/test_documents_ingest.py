@@ -20,12 +20,15 @@ class DummyContentType:
     """Minimal content type record matching the enrichment interface."""
 
     def __init__(self, value: str):
+        """Initialize content type with string value."""
         self.value = value
 
     def __hash__(self) -> int:  # pragma: no cover - hashing required for dict keys
+        """Return hash of value for dict key usage."""
         return hash(self.value)
 
     def __eq__(self, other: object) -> bool:  # pragma: no cover - defensive
+        """Compare equality based on value."""
         if not isinstance(other, DummyContentType):
             return NotImplemented
         return self.value == other.value
@@ -35,18 +38,22 @@ class VectorServiceStub:
     """Async stub for VectorStoreService interactions used in tests."""
 
     def __init__(self) -> None:
+        """Initialize stub with mock methods."""
         self._initialized = False
         self.ensure_collection = AsyncMock()
         self.upsert_documents = AsyncMock()
 
     def is_initialized(self) -> bool:
+        """Return initialization state."""
         return self._initialized
 
     async def initialize(self) -> None:
+        """Mark service as initialized."""
         self._initialized = True
 
     @property
     def embedding_dimension(self) -> int:
+        """Return fixed embedding dimension."""
         return 1536
 
 
@@ -54,6 +61,7 @@ class DummyValidator:
     """URL validator stub returning the original URL."""
 
     def validate_url(self, url: str) -> str:
+        """Return URL without validation for testing."""
         return url
 
 
@@ -181,6 +189,7 @@ def documents_env(monkeypatch) -> SimpleNamespace:  # pylint: disable=too-many-l
 
 @pytest.mark.asyncio
 async def test_add_document_ingests_chunks(documents_env: SimpleNamespace) -> None:
+    """Verify add_document crawls URL, chunks content, and upserts with metadata."""
     request = DocumentRequest(url="https://example.com/doc")
     result = await documents_env.tools["add_document"](request, documents_env.context)
 
@@ -244,6 +253,7 @@ async def test_add_document_ingests_chunks(documents_env: SimpleNamespace) -> No
 async def test_add_document_returns_cached_result(
     documents_env: SimpleNamespace,
 ) -> None:
+    """Verify add_document skips processing when cached result exists."""
     cached_response = AddDocumentResponse(
         url="https://example.com/doc",
         title="Cached Title",
@@ -270,6 +280,7 @@ async def test_add_document_without_content_intelligence(
     documents_env: SimpleNamespace,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Verify document ingestion succeeds without content intelligence enrichment."""
     monkeypatch.setattr(
         documents,
         "_run_content_intelligence",
@@ -303,6 +314,7 @@ async def test_add_document_without_content_intelligence(
 async def test_add_documents_batch_captures_failures(
     documents_env: SimpleNamespace,
 ) -> None:
+    """Verify batch ingestion records partial failures without aborting."""
     success_payload = documents_env.crawl_manager.scrape_url.return_value
     documents_env.crawl_manager.scrape_url.side_effect = [
         success_payload,

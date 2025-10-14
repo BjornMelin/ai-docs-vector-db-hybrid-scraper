@@ -46,6 +46,7 @@ class DummyProvider(BrowserProvider):
     kind = ProviderKind.LIGHTWEIGHT
 
     def __init__(self) -> None:
+        """Initialize uninitialized provider."""
         super().__init__(ProviderContext(self.kind))
         self._initialized = False
 

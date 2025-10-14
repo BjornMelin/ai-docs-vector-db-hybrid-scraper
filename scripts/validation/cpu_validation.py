@@ -58,8 +58,8 @@ def _numpy_checks() -> tuple[CheckResult, str, dict[str, Any]]:
     """Perform numpy checks and return result, version, and blas info."""
     import numpy as np
 
-    np.random.seed(42)
-    matrix = np.random.rand(128, 64)
+    rng = np.random.default_rng(42)
+    matrix = rng.random((128, 64))
     gram = matrix @ matrix.T
     spectral_radius = float(np.linalg.eigvals(gram)[0].real)
     config_summary = np.__config__.show(mode="dicts")

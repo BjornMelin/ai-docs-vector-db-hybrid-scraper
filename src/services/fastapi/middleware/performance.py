@@ -32,6 +32,7 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
         self._fmt = f"{{:.{max(0, min(6, precision_ms))}f}}"
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        """Measure response time and inject X-Response-Time header."""
         start = time.perf_counter()
         response = await call_next(request)
         elapsed_ms = (time.perf_counter() - start) * 1000.0

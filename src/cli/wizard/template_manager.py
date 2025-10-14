@@ -100,7 +100,7 @@ class TemplateManager:
         data = json.loads(text)
         if not isinstance(data, dict):
             msg = f"Template asset {path} must contain a JSON object."
-            raise ValueError(msg)
+            raise TypeError(msg)
         return data
 
     def _merge_template(self, overrides: dict[str, Any]) -> dict[str, Any]:

@@ -286,6 +286,7 @@ class FakeServiceContainer:
     """Service container fake mirroring dependency providers."""
 
     def __init__(self) -> None:
+        """Init fakes."""
         self._vector = FakeVectorStoreService()
         self._cache = FakeCache()
         self._crawl = FakeCrawlManager()

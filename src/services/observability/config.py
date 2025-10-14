@@ -31,6 +31,7 @@ class ObservabilityConfig:  # pylint: disable=too-many-instance-attributes
     log_correlation: bool = False
 
     def resource_attributes(self) -> dict[str, str]:
+        """Return OpenTelemetry resource attributes for service identification."""
         return {
             "service.name": self.service_name,
             "service.version": self.service_version,
@@ -116,12 +117,14 @@ def get_resource_attributes(
 
 
 def _coerce_bool(value: str | bool) -> bool:
+    """Coerce environment variable string to boolean."""
     if isinstance(value, bool):
         return value
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _parse_headers(raw: str) -> MutableMapping[str, str]:
+    """Parse comma-separated key=value pairs into header mapping."""
     headers: dict[str, str] = {}
     for pair in raw.split(","):
         if "=" not in pair:

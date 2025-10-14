@@ -28,6 +28,7 @@ class LifecycleTracker:
     """Mixin that tracks initialized state for lifecycle-aware services."""
 
     def __init__(self) -> None:
+        """Initialize lifecycle tracker with uninitialized state."""
         self._initialized = False
 
     def _mark_initialized(self) -> None:

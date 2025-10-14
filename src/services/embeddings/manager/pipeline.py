@@ -80,6 +80,7 @@ class EmbeddingPipeline:
     """Coordinates embedding generation workflow."""
 
     def __init__(self, context: PipelineContext) -> None:
+        """Initialize embedding pipeline with aggregated dependencies."""
         self._config = context.config
         self._usage = context.usage
         self._selection = context.selection
@@ -205,6 +206,7 @@ class EmbeddingPipeline:
         text_analysis: TextAnalysis,
         options: GenerationOptions,
     ) -> ProviderSelection:
+        """Select embedding provider based on manual override, quality tier, or smart recommendation."""
         if options.provider_name:
             provider = self._providers.resolve(
                 options.provider_name, options.quality_tier

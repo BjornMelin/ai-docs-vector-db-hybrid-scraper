@@ -9,6 +9,7 @@ from src.config.models import Environment
 
 
 def test_validate_config_payload_success():
+    """Test successful validation of config payload."""
     ok, errors, settings = validate_settings_payload({"app_name": "Test App"})
 
     assert ok is True
@@ -18,6 +19,7 @@ def test_validate_config_payload_success():
 
 
 def test_validate_config_payload_failure_when_required_keys_missing():
+    """Test validation failure when required keys are missing."""
     ok, errors, settings = validate_settings_payload(
         {
             "embedding_provider": "openai",
@@ -35,6 +37,7 @@ def test_validate_config_payload_failure_when_required_keys_missing():
     [Environment.TESTING, Environment.DEVELOPMENT],
 )
 def test_validate_config_payload_respects_base_overrides(base_env: Environment):
+    """Test that base overrides are respected during validation."""
     ok, errors, settings = validate_settings_payload({}, base={"environment": base_env})
 
     assert ok is True

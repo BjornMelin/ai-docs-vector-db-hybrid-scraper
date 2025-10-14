@@ -86,15 +86,15 @@ def _collect_resource_snapshot() -> dict[str, Any]:
         raw_stats = get_stats()
         generation_stats: list[dict[str, int | None]] = []
         if isinstance(raw_stats, list):
-            for stat in raw_stats:
-                if isinstance(stat, dict):
-                    generation_stats.append(
-                        {
-                            "collections": stat.get("collections"),
-                            "collected": stat.get("collected"),
-                            "uncollectable": stat.get("uncollectable"),
-                        }
-                    )
+            generation_stats.extend(
+                {
+                    "collections": stat.get("collections"),
+                    "collected": stat.get("collected"),
+                    "uncollectable": stat.get("uncollectable"),
+                }
+                for stat in raw_stats
+                if isinstance(stat, dict)
+            )
         if generation_stats:
             gc_stats["generations"] = generation_stats
     snapshot["garbage_collector"] = gc_stats

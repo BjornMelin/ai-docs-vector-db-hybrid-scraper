@@ -168,6 +168,7 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_provider_keys(self) -> Settings:
+        """Validate that provider API keys are configured when required."""
         if self.environment == Environment.TESTING:
             return self
         openai_api_key = getattr(self.openai, "api_key", None)
@@ -183,19 +184,35 @@ class Settings(BaseSettings):
         return self
 
     def is_development(self) -> bool:
-        """Return True when running in development environment."""
+        """Return True when running in development environment.
+
+        Returns:
+            True if environment is development.
+        """
         return self.environment is Environment.DEVELOPMENT
 
     def is_production(self) -> bool:
-        """Return True when running in production environment."""
+        """Return True when running in production environment.
+
+        Returns:
+            True if environment is production.
+        """
         return self.environment is Environment.PRODUCTION
 
     def get_effective_chunking_strategy(self) -> ChunkingStrategy:
-        """Return the configured chunking strategy."""
+        """Return the configured chunking strategy.
+
+        Returns:
+            Active chunking strategy.
+        """
         return getattr(self.chunking, "strategy", ChunkingStrategy.BASIC)
 
     def get_effective_search_strategy(self) -> SearchStrategy:
-        """Return the configured search strategy."""
+        """Return the configured search strategy.
+
+        Returns:
+            Active search strategy.
+        """
         if hasattr(self.embedding, "retrieval_mode"):
             return self.embedding.retrieval_mode
         return SearchStrategy.DENSE

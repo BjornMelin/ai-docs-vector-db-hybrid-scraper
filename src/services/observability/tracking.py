@@ -32,6 +32,14 @@ class _OperationStats:
         cost_usd: float | None,
         success: bool,
     ) -> None:
+        """Record an AI operation metric.
+
+        Args:
+            duration_s: Duration in seconds.
+            tokens: Optional token count.
+            cost_usd: Optional cost in USD.
+            success: Whether operation succeeded.
+        """
         self.count += 1
         if success:
             self.success_count += 1
@@ -171,10 +179,13 @@ class PerformanceTracker:
 
     @contextmanager
     def track(self, label: str) -> Any:
-        """Context manager capturing execution duration under ``label``.
+        """Context manager capturing execution duration under label.
 
         Args:
             label: Identifier used to group durations.
+
+        Yields:
+            None.
         """
         start = time.perf_counter()
         try:
@@ -185,7 +196,11 @@ class PerformanceTracker:
                 self._durations[label].append(duration)
 
     def summary(self) -> dict[str, float]:
-        """Return average duration per tracked label."""
+        """Return average duration per tracked label.
+
+        Returns:
+            Mapping of label to average duration.
+        """
         with self._lock:
             return {
                 label: (sum(values) / len(values)) if values else 0.0
@@ -214,12 +229,23 @@ class TraceCorrelationManager:
                 active_span.set_attribute(f"correlation.{key}", value)
 
     def get_context(self) -> dict[str, Any]:
-        """Return a shallow copy of the stored correlation context."""
+        """Return a shallow copy of the stored correlation context.
+
+        Returns:
+            Current correlation context.
+        """
         return getattr(self._local, "context", {}).copy()
 
     @contextmanager
     def correlated_operation(self, **context: Any) -> Any:
-        """Temporarily extend the correlation context within a block."""
+        """Temporarily extend the correlation context within a block.
+
+        Args:
+            **context: Additional context to merge.
+
+        Yields:
+            Updated correlation context.
+        """
         previous = self.get_context()
         self.set_context(**context)
         try:

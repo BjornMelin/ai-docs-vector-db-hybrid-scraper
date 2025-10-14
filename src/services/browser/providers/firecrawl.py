@@ -31,6 +31,7 @@ class FirecrawlProvider(BrowserProvider):
     kind = ProviderKind.FIRECRAWL
 
     def __init__(self, context: ProviderContext, settings: FirecrawlSettings) -> None:
+        """Initialize Firecrawl provider with SDK client configuration."""
         super().__init__(context)
         self._settings = settings
         self._client: AsyncFirecrawlApp | None = None

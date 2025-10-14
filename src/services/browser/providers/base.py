@@ -25,6 +25,7 @@ class BrowserProvider(abc.ABC):
     kind: ProviderKind
 
     def __init__(self, context: ProviderContext) -> None:
+        """Initialize provider with runtime context."""
         self._context = context
 
     @abc.abstractmethod

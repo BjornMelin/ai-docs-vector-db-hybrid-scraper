@@ -26,6 +26,7 @@ class BaseLoadProfile(LoadTestShape, ABC):
     """Base class for load test profiles."""
 
     def __init__(self):
+        """Initialize the load profile with no start time."""
         super().__init__()
         self.start_time = None
 
@@ -50,6 +51,7 @@ class SteadyLoadProfile(BaseLoadProfile):
     """Steady load profile - constant number of users."""
 
     def __init__(self, users: int = 100, duration: int = 300, spawn_rate: float = 10):
+        """Initialize steady load profile with constant users."""
         super().__init__()
         self.users = users
         self.duration = duration
@@ -73,6 +75,7 @@ class RampUpLoadProfile(BaseLoadProfile):
         hold_time: int = 300,
         spawn_rate: float = 1,
     ):
+        """Initialize ramp-up profile with gradual user increase."""
         super().__init__()
         self.start_users = start_users
         self.end_users = end_users
@@ -107,6 +110,7 @@ class SpikeLoadProfile(BaseLoadProfile):
         recovery_time: int = 120,
         spawn_rate: float = 50,
     ):
+        """Initialize spike profile with sudden user increase."""
         super().__init__()
         self.baseline_users = baseline_users
         self.spike_users = spike_users
@@ -133,6 +137,7 @@ class StepLoadProfile(BaseLoadProfile):
     """Step load profile - increase users in steps."""
 
     def __init__(self, stages: list[LoadStage]):
+        """Initialize step profile with stage-based user levels."""
         super().__init__()
         self.stages = stages
 
@@ -159,6 +164,7 @@ class WaveLoadProfile(BaseLoadProfile):
         _total_duration: int = 1800,
         spawn_rate: float = 5,
     ):
+        """Initialize wave profile with sinusoidal user pattern."""
         super().__init__()
         self.min_users = min_users
         self.max_users = max_users
@@ -182,6 +188,7 @@ class DoubleSpike(BaseLoadProfile):
     """Double spike profile - two spikes with recovery."""
 
     def __init__(self):
+        """Initialize double spike profile with two separate spikes."""
         super().__init__()
         self.stages = [
             LoadStage(duration=120, users=50, spawn_rate=5, name="warmup"),
@@ -214,6 +221,7 @@ class BreakpointLoadProfile(BaseLoadProfile):
         max_users: int = 1000,
         spawn_rate: float = 5,
     ):
+        """Initialize breakpoint profile to find system limits."""
         super().__init__()
         self.start_users = start_users
         self.user_increment = user_increment

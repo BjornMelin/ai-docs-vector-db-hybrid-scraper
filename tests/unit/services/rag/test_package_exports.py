@@ -49,6 +49,7 @@ def test_rag_package_exports_resolve_types(
 
     Args:
         export_name: Symbol name published via :mod:`src.services.rag`.
+        expected_object: The expected object bound to the export name.
 
     Returns:
         None: This test asserts each export is discoverable at the package boundary.

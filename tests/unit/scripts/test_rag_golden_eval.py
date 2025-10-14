@@ -29,9 +29,11 @@ class _StubOrchestrator:
     """Simple orchestrator stub returning canned responses."""
 
     def __init__(self, fixtures: dict[str, SearchResponse]) -> None:
+        """Initialize the stub orchestrator with predefined fixtures."""
         self._fixtures = fixtures
 
     async def search(self, request) -> SearchResponse:  # pragma: no cover - wrapper
+        """Return a canned search response based on the query."""
         query = request.query
         try:
             return self._fixtures[query]
@@ -39,14 +41,16 @@ class _StubOrchestrator:
             raise AssertionError(f"Unexpected query: {query}") from exc
 
     async def cleanup(self) -> None:  # pragma: no cover - symmetrical no-op
-        return None
+        """Perform any necessary cleanup after search operations."""
+        return
 
 
 class _DummyRagas(RagasEvaluator):
     """Ragas evaluator stub that returns deterministic values."""
 
     def __init__(self, score: float = 0.8) -> None:
-        super().__init__(enabled=False)
+        """Initialize the dummy evaluator with a fixed score."""
+        # pylint: disable=super-init-not-called
         self._score = score
 
     def evaluate(  # type: ignore[override]
@@ -55,6 +59,7 @@ class _DummyRagas(RagasEvaluator):
         predicted_answer: str,
         contexts: Any,
     ) -> dict[str, float]:
+        """Return a fixed faithfulness score."""
         return {"faithfulness": self._score}
 
 
@@ -255,6 +260,7 @@ def test_dataset_validator_detects_missing_metadata(tmp_path: Path) -> None:
 
 
 def test_enforce_thresholds_detects_budget_failures() -> None:
+    """Threshold enforcement should identify metrics that exceed budgets."""
     aggregates = {
         "similarity_avg": 0.72,
         "processing_time_ms_avg": 1800.0,
@@ -310,7 +316,7 @@ max_latency_ms: 1500.5
 
 def test_enforce_thresholds_returns_empty_list_when_no_thresholds() -> None:
     """No configured thresholds should produce no failures."""
-    assert _enforce_thresholds({"similarity_avg": 1.0}, {}) == []
+    assert not _enforce_thresholds({"similarity_avg": 1.0}, {})
 
 
 def test_load_cost_controls_coerces_integer(

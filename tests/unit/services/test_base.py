@@ -22,6 +22,7 @@ class ConcreteService(BaseService):
     """Concrete implementation of BaseService for testing."""
 
     def __init__(self, config: Settings | None = None):
+        """Initialize with optional config and track init/cleanup calls."""
         super().__init__(config)
         self.init_called = False
         self.cleanup_called = False

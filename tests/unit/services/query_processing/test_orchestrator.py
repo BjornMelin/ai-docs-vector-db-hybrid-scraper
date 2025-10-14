@@ -18,19 +18,23 @@ class VectorServiceStub:
     """Minimal vector service stub with deterministic responses."""
 
     def __init__(self, collection: str = "documentation") -> None:
+        """Initialize stub with fixed collection name."""
         self._collection = collection
         self.config = SimpleNamespace(
             qdrant=SimpleNamespace(collection_name=collection)
         )
         self._initialized = False
 
-    async def initialize(self) -> None:  # pragma: no cover - simple stub
+    async def initialize(self) -> None:
+        """Set initialization flag."""
         self._initialized = True
 
-    async def cleanup(self) -> None:  # pragma: no cover - simple stub
+    async def cleanup(self) -> None:
+        """Clear initialization flag."""
         self._initialized = False
 
     def is_initialized(self) -> bool:
+        """Return current initialization state."""
         return self._initialized
 
     async def search_documents(
@@ -39,6 +43,7 @@ class VectorServiceStub:
         query: str,
         **kwargs: Any,
     ) -> list[SearchRecord]:
+        """Return a fixed search record for testing."""
         assert collection == self._collection
         assert kwargs.get("group_by") == "doc_id"
         record = SearchRecord(
@@ -61,6 +66,7 @@ class VectorServiceStub:
         return [record]
 
     async def list_collections(self) -> list[str]:
+        """Return configured collection name."""
         return [self._collection]
 
 

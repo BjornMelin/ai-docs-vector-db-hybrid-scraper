@@ -279,13 +279,15 @@ class AsyncContextManager:
     """Helper for testing async context managers."""
 
     def __init__(self, return_value=None):
+        """Initialize the async context manager with an optional return value."""
         self.return_value = return_value
 
     async def __aenter__(self):
+        """Enter the async context manager."""
         return self.return_value
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        pass
+        """Exit the async context manager."""
 
 
 @pytest.fixture

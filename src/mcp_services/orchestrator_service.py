@@ -37,6 +37,7 @@ class OrchestratorService:  # pylint: disable=too-many-instance-attributes
         graph_runner: GraphRunner | None = None,
         discovery: DynamicToolDiscovery | None = None,
     ) -> None:
+        """Initialize orchestrator service with domain services and LangGraph components."""
         instructions = (
             "Coordinate domain tools, surface orchestration telemetry, and expose "
             "LangGraph-based workflows for multi-service requests."
@@ -55,7 +56,9 @@ class OrchestratorService:  # pylint: disable=too-many-instance-attributes
         if self._discovery:
             try:
                 loop = asyncio.get_running_loop()
-                _refresh_task = loop.create_task(self._discovery.refresh(force=True))
+                self._refresh_task = loop.create_task(
+                    self._discovery.refresh(force=True)
+                )
             except RuntimeError:
                 logger.debug("Event loop not running; discovery refresh deferred")
         else:  # pragma: no cover - defensive branch

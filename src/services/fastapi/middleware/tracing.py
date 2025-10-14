@@ -34,6 +34,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
         max_body_bytes: int = 1024,
         trust_proxy: bool = False,
     ) -> None:
+        """Initialize tracing middleware with structured logging configuration."""
         super().__init__(app)
         self._log_req = log_request_body
         self._log_res = log_response_body
@@ -41,6 +42,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
         self._trust_proxy = trust_proxy
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        """Log request/response with correlation ID and inject timing headers."""
         cid = get_correlation_id(request)
         start = time.perf_counter()
 

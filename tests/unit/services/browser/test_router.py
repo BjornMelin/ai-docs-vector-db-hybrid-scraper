@@ -50,15 +50,18 @@ class StubProvider(BrowserProvider):
         self.calls = 0
 
     async def initialize(self) -> None:
+        """Initialize the stub provider."""
         if self._init_failures > 0:
             self._init_failures -= 1
             raise BrowserProviderError("init failure", provider=self.kind.value)
         self.initialized = True
 
     async def close(self) -> None:
+        """Close the stub provider."""
         self.initialized = False
 
     async def scrape(self, request: ScrapeRequest) -> BrowserResult:
+        """Simulate a scrape operation."""
         self.calls += 1
         if self._call_log is not None:
             self._call_log.append(self.kind)

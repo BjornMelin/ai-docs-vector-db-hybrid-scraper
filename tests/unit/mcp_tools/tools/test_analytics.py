@@ -13,6 +13,7 @@ from src.mcp_tools.tools.analytics import register_tools
 
 @pytest.fixture
 def mock_vector_service() -> Mock:
+    """Mock vector store service with collection stats."""
     service = Mock()
     service.is_initialized.return_value = True
     service.list_collections = AsyncMock(return_value=["c1", "c2"])
@@ -24,6 +25,7 @@ def mock_vector_service() -> Mock:
 
 @pytest.fixture
 def mock_context() -> Mock:
+    """Mock MCP context for logging."""
     ctx = Mock()
     ctx.info = AsyncMock()
     ctx.warning = AsyncMock()
@@ -32,6 +34,7 @@ def mock_context() -> Mock:
 
 @pytest.fixture
 async def registered_tools(mock_vector_service: Mock) -> dict[str, Callable]:
+    """Register analytics tools and capture handlers."""
     mock_mcp = MagicMock()
     tools: dict[str, Callable] = {}
 
@@ -49,6 +52,7 @@ async def test_get_analytics_includes_performance_and_costs(
     registered_tools: dict[str, Callable],
     mock_context: Mock,
 ) -> None:
+    """Verify analytics includes performance and cost data."""
     request = AnalyticsRequest(include_performance=True, include_costs=True)
 
     response = await registered_tools["get_analytics"](request, mock_context)
@@ -65,6 +69,7 @@ async def test_get_analytics_handles_collection_failure(
     mock_vector_service: Mock,
     mock_context: Mock,
 ) -> None:
+    """Verify graceful handling of collection stat failures."""
     mock_vector_service.list_collections.return_value = ["c1"]
     mock_vector_service.collection_stats.side_effect = RuntimeError("boom")
 
@@ -82,6 +87,7 @@ async def test_get_system_health_reports_unhealthy(
     mock_vector_service: Mock,
     mock_context: Mock,
 ) -> None:
+    """Verify health check detects offline services."""
     mock_vector_service.list_collections.side_effect = RuntimeError("offline")
 
     response = await registered_tools["get_system_health"](mock_context)

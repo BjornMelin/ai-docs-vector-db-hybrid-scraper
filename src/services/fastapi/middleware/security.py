@@ -50,6 +50,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             self._headers.update(extra_headers)
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        """Inject security headers without overwriting existing response headers."""
         response = await call_next(request)
         for k, v in self._headers.items():
             response.headers.setdefault(k, v)

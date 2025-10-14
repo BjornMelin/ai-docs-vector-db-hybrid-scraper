@@ -54,7 +54,14 @@ _OP_AGENT_RETRIEVAL = "agent.graph.retrieval"
 
 
 def _serialise_document(document: Any) -> dict[str, Any]:
-    """Return a JSON-serialisable representation of a retrieval document."""
+    """Return a JSON-serialisable representation of a retrieval document.
+
+    Args:
+        document: Document to serialise.
+
+    Returns:
+        Dictionary with id, score, and metadata.
+    """
     identifier = getattr(document, "id", None)
     score = float(getattr(document, "score", 0.0))
     metadata = getattr(document, "metadata", None)

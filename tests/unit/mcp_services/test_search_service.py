@@ -11,10 +11,12 @@ from src.mcp_services.search_service import SearchService
 
 @pytest.fixture()
 def vector_service() -> MagicMock:
+    """Mock vector store service."""
     return MagicMock(name="VectorStoreService")
 
 
 def test_registers_retrieval_and_web_tools(vector_service: MagicMock) -> None:
+    """Verify search service registers retrieval and web search tools."""
     with (
         patch("src.mcp_services.search_service.retrieval.register_tools") as retrieval,
         patch("src.mcp_services.search_service.web_search.register_tools") as web,
@@ -26,6 +28,7 @@ def test_registers_retrieval_and_web_tools(vector_service: MagicMock) -> None:
 
 
 def test_get_mcp_server_exposes_fastmcp(vector_service: MagicMock) -> None:
+    """Verify get_mcp_server returns FastMCP instance."""
     with (
         patch("src.mcp_services.search_service.retrieval.register_tools"),
         patch("src.mcp_services.search_service.web_search.register_tools"),
@@ -39,6 +42,7 @@ def test_get_mcp_server_exposes_fastmcp(vector_service: MagicMock) -> None:
 
 @pytest.mark.asyncio()
 async def test_get_service_info_reports_capabilities(vector_service: MagicMock) -> None:
+    """Verify service info includes search capabilities."""
     with (
         patch("src.mcp_services.search_service.retrieval.register_tools"),
         patch("src.mcp_services.search_service.web_search.register_tools"),
