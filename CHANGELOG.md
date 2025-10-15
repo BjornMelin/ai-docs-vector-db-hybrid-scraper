@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added curated router presets in `config/browser-routing-rules.json` so crawling tiers reuse the canonical RouterSettings model.
+- Added Locust-powered load testing scenarios (`tests/load/locustfile.py`) and a
+  `python scripts/dev.py load` helper for consistent execution.
 - Introduced a unified deployment manager (`src/services/deployment/manager.py`) and
   `python scripts/dev.py deploy` command that selects GitHub Actions, Docker
   Compose, or Kubernetes flows via configuration and environment overrides.
@@ -60,6 +62,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **[Tests]:** Consolidated and streamlined test fixtures by creating a unified
   `MockFactory` for all external service mocks, improving test code reusability
   and maintainability.
+- **[Tests]:** Restored FastAPI middleware coverage with focused unit suites and
+  validated the SlowAPI integration against expected behaviour.
 - Wrapped the Firecrawl and Qdrant client adapters in protocol-driven wrappers with
   OpenTelemetry spans, structured logging, and stricter typing to align with the
   unified observability contract.

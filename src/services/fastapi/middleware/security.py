@@ -1,11 +1,4 @@
-"""Security headers and rate-limiting glue.
-
-- Injects conservative security headers.
-- Provides a function to enable SlowAPI global rate limits with Redis.
-
-References:
-- SlowAPI docs (Limiter, SlowAPIMiddleware).
-"""
+"""Security headers and rate-limiting glue for FastAPI/Starlette apps."""
 
 from __future__ import annotations
 
@@ -20,6 +13,7 @@ from starlette.applications import Starlette
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
+from starlette.types import ASGIApp
 
 from src.config.loader import get_settings
 from src.config.security import SecurityConfig
@@ -39,7 +33,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
     def __init__(
         self,
-        app: Callable,
+        app: ASGIApp,
         *,
         extra_headers: Mapping[str, str] | None = None,
     ) -> None:

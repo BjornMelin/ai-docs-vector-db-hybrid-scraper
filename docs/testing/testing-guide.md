@@ -259,6 +259,17 @@ def test_search_performance(benchmark):
     assert benchmark.stats["mean"] < 0.1  # 100ms budget
 ```
 
+### Load Testing with Locust
+Run scenario-based load tests against a running FastAPI instance using Locust:
+
+```bash
+python scripts/dev.py load --host http://localhost:8000 --users 50 --spawn-rate 5 --run-time 10m
+```
+
+The Locust scenarios live in `tests/load/locustfile.py` and replay RAG search
+queries from the golden dataset. Disable headless mode with
+`python scripts/dev.py load --no-headless` to launch the Locust web UI.
+
 ### Memory Profiling
 ```python
 import tracemalloc

@@ -244,6 +244,39 @@ def cmd_benchmark(args: argparse.Namespace) -> int:
     return run_command(command)
 
 
+def cmd_load(args: argparse.Namespace) -> int:
+    """Execute Locust load tests against the FastAPI deployment."""
+
+    if not _ensure_uv_available():
+        return 1
+
+    command: list[str] = [
+        "uv",
+        "run",
+        "locust",
+        "-f",
+        str(Path("tests/load/locustfile.py")),
+        "--host",
+        args.host,
+        "-u",
+        str(args.users),
+        "-r",
+        str(args.spawn_rate),
+    ]
+
+    if args.headless:
+        command.append("--headless")
+        if args.run_time:
+            command.extend(["--run-time", args.run_time])
+    elif args.run_time:
+        command.extend(["--run-time", args.run_time])
+
+    if args.web_port is not None:
+        command.extend(["--web-port", str(args.web_port)])
+
+    return run_command(command)
+
+
 def _import_check(module: str) -> bool:
     """Safely test whether a module can be imported."""
     try:
@@ -665,6 +698,42 @@ def build_parser() -> argparse.ArgumentParser:
         help="Directory where per-suite benchmark JSON reports should be written.",
     )
     benchmark_parser.set_defaults(func=cmd_benchmark)
+
+    load_parser = subparsers.add_parser("load", help="Run Locust load tests")
+    load_parser.add_argument(
+        "--host",
+        default="http://localhost:8000",
+        help="Base URL of the FastAPI deployment under test.",
+    )
+    load_parser.add_argument(
+        "--users",
+        type=int,
+        default=10,
+        help="Number of concurrent simulated users.",
+    )
+    load_parser.add_argument(
+        "--spawn-rate",
+        type=float,
+        default=2.0,
+        help="User spawn rate per second.",
+    )
+    load_parser.add_argument(
+        "--run-time",
+        help="Optional duration for headless runs (e.g. '5m').",
+    )
+    load_parser.add_argument(
+        "--no-headless",
+        dest="headless",
+        action="store_false",
+        help="Launch the Locust web UI instead of running headless.",
+    )
+    load_parser.add_argument(
+        "--web-port",
+        type=int,
+        default=8089,
+        help="Port for the Locust web UI (ignored when headless).",
+    )
+    load_parser.set_defaults(func=cmd_load, headless=True)
 
     validate_parser = subparsers.add_parser(
         "validate", help="Validate project configuration"
