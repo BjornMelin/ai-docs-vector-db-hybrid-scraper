@@ -61,7 +61,7 @@ uv run mkdocs build --strict
 | Category | Location | Marker |
 | --- | --- | --- |
 | Unit | `tests/unit/` | `@pytest.mark.unit` |
-| Integration | `tests/integration/` | `@pytest.mark.integration` |
+| Service integration | `tests/services/` | `@pytest.mark.service` |
 | End-to-end | `tests/e2e/` | `@pytest.mark.e2e` |
 
 Common commands:

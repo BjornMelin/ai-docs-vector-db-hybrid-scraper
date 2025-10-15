@@ -72,16 +72,13 @@ async def test_search_functionality(search_service):
 tests/
 ├── conftest.py                 # Root fixtures
 ├── unit/                       # Fast, isolated tests
-│   ├── models/test_user.py
-│   ├── services/test_auth.py
-│   └── utils/test_helpers.py
-├── integration/               # Cross-boundary tests
-│   ├── api/test_endpoints.py
-│   └── services/test_workflows.py
-├── e2e/                      # End-to-end tests
-│   └── journeys/test_user_flows.py
-└── performance/             # Performance tests
-    └── benchmarks/test_search_performance.py
+│   ├── config/test_config_models_complete.py
+│   └── services/test_logging_config.py
+├── services/                  # Service integration shims
+│   └── cache/test_cache_manager_behavior.py
+├── data_quality/             # Dataset validation harnesses
+├── scripts/                  # CLI regression coverage
+└── utils/                    # Shared helper tests
 ```
 
 ### Naming Conventions

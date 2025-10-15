@@ -39,8 +39,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Published the consolidated MCP test strategy doc (`docs/testing/mcp-unit-tests.md`) capturing the coverage map, decision
   record, and technical debt register for the new suites.
 
+### Removed
+
+- Removed the legacy benchmark orchestrator package (`src/benchmarks`) and Sphinx pages that referenced retired performance flows.
+- Deleted integration, load, performance, and MCP request unit suites that targeted deprecated search and middleware signatures.
+
 ### Refactor
 
+- Hardened FastAPI middleware wiring (`src/services/fastapi/middleware/compression.py`, `security.py`) and realigned the developer benchmark command to the evaluation harness (`scripts/dev.py`, `scripts/README.md`).
 - Simplified configuration surfaces by removing deployment tier toggles,
   updating property-based strategies, and pruning mocks so settings and tools
   expose only maintained runtime services.
@@ -274,6 +280,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Tests
 
+- Updated docs and contributor guidance to reference the evaluation harness and service-level suites after pruning integration, load, and performance tests.
 - Removed deployment configuration property suites and legacy MCP mock tooling,
   focusing property-based checks on maintained settings and vector surfaces.
 - Updated HyDE configuration tests to guard against missing schema keys and
@@ -283,6 +290,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Quality gates
 
+- Ruff (`uv run ruff check --fix src/services/fastapi/middleware/compression.py src/services/fastapi/middleware/security.py tests/fixtures/__init__.py scripts/dev.py`), Pyright, Pylint, and `uv run pytest -q tests/unit/services/test_logging_config.py` passed for the updated middleware, fixture namespace, and CLI changes.
 - Ruff, Pylint, Pyright, and
   `pytest -q -n auto --maxfail=1 --randomly-seed=321852 tests/unit/services/hyde/test_config.py`
   passed on cache and infrastructure client modules.

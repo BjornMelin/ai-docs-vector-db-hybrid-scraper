@@ -19,7 +19,7 @@ The CLI exposes subcommands for the day-to-day workflows:
 | Run quick unit tests            | `python scripts/dev.py test --profile quick`              |
 | Run integration tests           | `python scripts/dev.py test --profile integration`        |
 | Full suite with coverage        | `python scripts/dev.py test --profile ci`                 |
-| Performance benchmarks          | `python scripts/dev.py benchmark`                         |
+| Performance evaluation harness  | `python scripts/dev.py benchmark`                         |
 | Start Qdrant services           | `python scripts/dev.py services start`                    |
 | Start monitoring stack          | `python scripts/dev.py services start --stack monitoring` |
 | Validate configuration and docs | `python scripts/dev.py validate --check-docs`             |

@@ -141,8 +141,11 @@ def _resolve_storage_uri(config: SecurityConfig) -> str | None:
     )
 
 
-async def _rate_limited(_: Request, exc: RateLimitExceeded) -> JSONResponse:
+async def _rate_limited(_: Request, exc: Exception) -> JSONResponse:
     """Default SlowAPI rate-limit handler."""
+    if not isinstance(exc, RateLimitExceeded):
+        raise TypeError("Unexpected exception type for rate limit handler") from exc
+
     # Safely derive headers to satisfy type checks and preserve metadata if available.
     headers: dict[str, str] = {}
     retry_after = getattr(exc, "retry_after", None)

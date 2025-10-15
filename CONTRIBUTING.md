@@ -202,8 +202,9 @@ gaining full security and regression coverage when it matters.
 ```plaintext
 tests/
 ├── unit/                 # Unit tests for individual components
-├── integration/          # Integration tests for full workflows
-├── performance/          # Performance benchmarks
+├── services/             # Narrow integration shims
+├── contracts/            # API/DTO schema checks
+├── data_quality/         # Dataset validators
 └── fixtures/            # Test data and fixtures
 ```
 
@@ -555,11 +556,16 @@ Our community has achieved remarkable database optimization results:
 1. **Performance Improvements**
 
    ```bash
-   # Run performance benchmarks
-   uv run python scripts/benchmark_query_api.py
+   # Run baseline evaluation harness
+   uv run python scripts/eval/rag_golden_eval.py \
+       --dataset tests/data/rag/golden_set.jsonl \
+       --output artifacts/rag_golden_report.json
 
-   # Validate RAG regression harness outputs
-   uv run python scripts/eval/rag_golden_eval.py --metrics-allowlist config/metrics_allowlist.json
+   # Export focused metrics snapshot
+   uv run python scripts/eval/rag_golden_eval.py \
+       --dataset tests/data/rag/golden_set.jsonl \
+       --metrics-allowlist config/metrics_allowlist.json \
+       --output artifacts/rag_metrics_snapshot.json
 
    # Profile specific components
    uv run python -m cProfile -o profile.stats your_optimization.py
@@ -576,7 +582,9 @@ Our community has achieved remarkable database optimization results:
 
    ```bash
    # Run comprehensive benchmarks
-   uv run python scripts/run_hybrid_search_benchmark.py
+   uv run python scripts/eval/rag_golden_eval.py \
+       --dataset tests/data/rag/golden_set.jsonl \
+       --output artifacts/rag_golden_report.json
 
    # Generate performance reports
    uv run python scripts/benchmark_lightweight_tier.py --output-report
@@ -629,8 +637,10 @@ When contributing research-related issues, use these labels:
    # Install additional research dependencies
    uv add pytest-benchmark memory-profiler line-profiler
 
-   # Run baseline benchmarks
-   uv run python scripts/benchmark_query_api.py --baseline
+   # Run baseline evaluation
+   uv run python scripts/eval/rag_golden_eval.py \
+       --dataset tests/data/rag/golden_set.jsonl \
+       --output artifacts/rag_golden_report.json
    ```
 
 2. **Explore current optimizations**
