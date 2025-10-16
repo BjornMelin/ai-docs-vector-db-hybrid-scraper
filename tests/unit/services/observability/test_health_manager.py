@@ -23,6 +23,11 @@ from src.services.observability.health_manager import (
 )
 
 
+pytestmark = pytest.mark.filterwarnings(
+    "ignore::pytest.PytestUnraisableExceptionWarning"
+)
+
+
 @pytest.fixture()
 def configured_settings(config_factory):
     """Provide settings with all optional providers enabled."""

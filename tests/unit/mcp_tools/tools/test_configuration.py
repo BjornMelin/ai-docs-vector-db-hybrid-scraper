@@ -13,6 +13,11 @@ import pytest
 from src.mcp_tools.tools import configuration as configuration_module
 
 
+pytestmark = pytest.mark.filterwarnings(
+    "ignore::pytest.PytestUnraisableExceptionWarning"
+)
+
+
 class DummyConfig:
     """Lightweight configuration stub compatible with the MCP tools."""
 
