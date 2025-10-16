@@ -241,6 +241,7 @@ packages = ["src"]
 line-length = 88
 target-version = "py312"
 include = ["*.py", "*.pyi"]
+src = ["src", "tests", "examples", "scripts"]
 extend-exclude = [".github", "**/*.md", "**/*.yml", "**/*.yaml"]
 
 [tool.ruff.lint]
@@ -510,6 +511,8 @@ flash-attn = [{ requirement = "torch", match-runtime = true }]
 extension-pkg-allow-list = ["pydantic"]
 reports = false
 score = true
+recursive = true
+py-version = "3.12"
 
 [tool.pylint.messages_control]
 # Conservative disable list - only genuinely problematic rules
