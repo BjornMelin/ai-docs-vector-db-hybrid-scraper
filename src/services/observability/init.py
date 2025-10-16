@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Iterable, Mapping
+from contextlib import suppress
 from dataclasses import dataclass
 from typing import Any, Protocol, cast, runtime_checkable
 
@@ -184,6 +185,8 @@ def initialize_observability(
     if _STATE.tracer_provider is not None:
         return True  # already initialized
 
+    tracer_provider: Any | None = None
+    meter_provider: Any | None = None
     try:
         from opentelemetry import (  # pyright: ignore[reportMissingImports]
             metrics,
@@ -211,49 +214,62 @@ def initialize_observability(
             BatchSpanProcessor,
             ConsoleSpanExporter,
         )  # pyright: ignore[reportMissingImports]
+
+        resource = Resource.create(runtime_config.resource_attributes())
+
+        tracer_provider = TracerProvider(resource=resource)
+        span_exporter = OTLPSpanExporter(
+            endpoint=runtime_config.otlp_endpoint,
+            headers=dict(runtime_config.otlp_headers),
+            insecure=runtime_config.insecure_transport,
+        )
+        tracer_provider.add_span_processor(BatchSpanProcessor(span_exporter))
+        if runtime_config.console_exporter:
+            tracer_provider.add_span_processor(
+                BatchSpanProcessor(ConsoleSpanExporter())
+            )
+
+        trace.set_tracer_provider(tracer_provider)
+        _STATE.tracer_provider = tracer_provider
+
+        if runtime_config.metrics_enabled:
+            metric_reader = PeriodicExportingMetricReader(
+                OTLPMetricExporter(
+                    endpoint=runtime_config.otlp_endpoint,
+                    headers=dict(runtime_config.otlp_headers),
+                    insecure=runtime_config.insecure_transport,
+                )
+            )
+            meter_provider = MeterProvider(
+                resource=resource,
+                metric_readers=[metric_reader],
+            )
+            metrics.set_meter_provider(meter_provider)
+            _STATE.meter_provider = meter_provider
+        else:
+            _STATE.meter_provider = None
+
+        _configure_instrumentations(runtime_config.instrumentations)
+        LOGGER.info(
+            "Observability initialized - service=%s endpoint=%s",
+            runtime_config.service_name,
+            runtime_config.otlp_endpoint,
+        )
+        return True
     except ImportError as exc:  # pragma: no cover - validation guard
         LOGGER.warning("OpenTelemetry SDK not installed: %s", exc)
         return False
-
-    resource = Resource.create(runtime_config.resource_attributes())
-
-    tracer_provider = TracerProvider(resource=resource)
-    span_exporter = OTLPSpanExporter(
-        endpoint=runtime_config.otlp_endpoint,
-        headers=dict(runtime_config.otlp_headers),
-        insecure=runtime_config.insecure_transport,
-    )
-    tracer_provider.add_span_processor(BatchSpanProcessor(span_exporter))
-    if runtime_config.console_exporter:
-        tracer_provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
-
-    trace.set_tracer_provider(tracer_provider)
-    _STATE.tracer_provider = tracer_provider
-
-    if runtime_config.metrics_enabled:
-        metric_reader = PeriodicExportingMetricReader(
-            OTLPMetricExporter(
-                endpoint=runtime_config.otlp_endpoint,
-                headers=dict(runtime_config.otlp_headers),
-                insecure=runtime_config.insecure_transport,
-            )
-        )
-        meter_provider = MeterProvider(
-            resource=resource,
-            metric_readers=[metric_reader],
-        )
-        metrics.set_meter_provider(meter_provider)
-        _STATE.meter_provider = meter_provider
-    else:
+    except Exception as exc:
+        LOGGER.exception("Failed to initialize observability", exc_info=exc)
+        if tracer_provider is not None:
+            with suppress(Exception):
+                tracer_provider.shutdown()
+        if meter_provider is not None:
+            with suppress(Exception):
+                meter_provider.shutdown()
+        _STATE.tracer_provider = None
         _STATE.meter_provider = None
-
-    _configure_instrumentations(runtime_config.instrumentations)
-    LOGGER.info(
-        "Observability initialized - service=%s endpoint=%s",
-        runtime_config.service_name,
-        runtime_config.otlp_endpoint,
-    )
-    return True
+        return False
 
 
 def shutdown_observability() -> None:
