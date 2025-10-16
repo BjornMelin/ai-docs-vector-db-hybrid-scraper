@@ -407,7 +407,12 @@ class GraphRunner:  # pylint: disable=too-many-instance-attributes
         try:
             await self._discovery.refresh()
             capabilities = list(self._discovery.get_capabilities())
-        except Exception as exc:  # pragma: no cover - defensive guard
+        except (
+            RuntimeError,
+            AttributeError,
+            ValueError,
+            ImportError,
+        ) as exc:  # pragma: no cover - defensive guard
             logger.warning("Tool discovery failed: %s", exc, exc_info=True)
             errors = list(state.get("errors", []))
             errors.append(

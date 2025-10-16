@@ -19,7 +19,7 @@ sys.path.insert(0, str(project_root))
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "AI Docs Vector DB Hybrid Scraper"
-copyright = "2025, BjornMelin"
+copyright = "2025, BjornMelin"  # pylint: disable=redefined-builtin  # noqa: A001
 author = "BjornMelin"
 version = "0.1.0"
 release = "0.1.0"

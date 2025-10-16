@@ -28,11 +28,11 @@ from src.services.fastapi.middleware.security import (
 @pytest.fixture(name="app")
 def fixture_app() -> FastAPI:
     """Return a FastAPI application wired with a simple health endpoint."""
-
     application = FastAPI()
 
     @application.get("/health")
     def health_check() -> PlainTextResponse:
+        """Return a plain text response indicating the application is healthy."""
         return PlainTextResponse("ok")
 
     return application
@@ -40,7 +40,6 @@ def fixture_app() -> FastAPI:
 
 def test_security_middleware_injects_headers(app: FastAPI) -> None:
     """SecurityMiddleware applies default and custom headers."""
-
     app.add_middleware(SecurityMiddleware, extra_headers={"X-Test-Header": "1"})
 
     with TestClient(app) as client:
@@ -54,7 +53,6 @@ def test_security_middleware_injects_headers(app: FastAPI) -> None:
 
 def test_enable_global_rate_limit_disabled(app: FastAPI) -> None:
     """When disabled, rate limiting returns None and clears state."""
-
     config = SecurityConfig(enable_rate_limiting=False)
     limiter = enable_global_rate_limit(app, config=config)
 
@@ -64,7 +62,6 @@ def test_enable_global_rate_limit_disabled(app: FastAPI) -> None:
 
 def test_enable_global_rate_limit_enabled(app: FastAPI) -> None:
     """When enabled, rate limiting attaches middleware and limiter state."""
-
     config = SecurityConfig(
         enable_rate_limiting=True,
         default_rate_limit=5,
@@ -80,7 +77,6 @@ def test_enable_global_rate_limit_enabled(app: FastAPI) -> None:
 
 def test_resolve_storage_uri_with_password() -> None:
     """Redis passwords are injected into the Redis URI when configured."""
-
     credential = "dummy-token"
     config = SecurityConfig(
         redis_url="redis://redis.example.com:6379/0",
@@ -93,7 +89,6 @@ def test_resolve_storage_uri_with_password() -> None:
 
 def test_rate_limited_handler_formats_response() -> None:
     """_rate_limited converts SlowAPI exceptions into JSON responses."""
-
     limit = Limit(
         limit=parse_rate_limit("5/minute"),
         key_func=lambda *_args, **_kwargs: "127.0.0.1",

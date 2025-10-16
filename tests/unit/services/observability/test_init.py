@@ -41,10 +41,12 @@ class _TraceAPI:
     """Capture tracer provider registrations."""
 
     def __init__(self) -> None:
+        """Initialize the trace API."""
         self.providers: list[Any] = []
         self.provider: Any | None = None
 
     def set_tracer_provider(self, provider: Any) -> None:
+        """Set the tracer provider."""
         self.providers.append(provider)
         self.provider = provider  # type: ignore[attr-defined]
 
@@ -53,10 +55,12 @@ class _MetricsAPI:
     """Capture meter provider registrations."""
 
     def __init__(self) -> None:
+        """Initialize the metrics API."""
         self.providers: list[Any] = []
         self.provider: Any | None = None
 
     def set_meter_provider(self, provider: Any) -> None:
+        """Set the meter provider."""
         self.providers.append(provider)
         self.provider = provider  # type: ignore[attr-defined]
 
