@@ -23,7 +23,12 @@ def test_brotli_fallback_is_gzip_subclass() -> None:
     """Brotli middleware falls back to gzip-compatible behaviour."""
     from starlette.middleware.gzip import GZipMiddleware
 
-    assert issubclass(BrotliCompressionMiddleware, GZipMiddleware)
+    try:
+        from brotli_asgi import BrotliMiddleware as ActualBrotli
+    except ImportError:  # pragma: no cover - optional dependency unavailable
+        assert issubclass(BrotliCompressionMiddleware, GZipMiddleware)
+    else:
+        assert BrotliCompressionMiddleware is ActualBrotli
 
 
 def test_compression_applies_gzip_encoding() -> None:
