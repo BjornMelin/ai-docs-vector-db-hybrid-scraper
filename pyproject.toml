@@ -525,4 +525,8 @@ disable = [
     "line-too-long",              # C0301 - Test code often has long lines due to complex setup
     "unnecessary-ellipsis",       # W1401 - Unnecessary ellipsis in test code
     "import-outside-toplevel",    # C0415 - import-outside-toplevel
+    # Globally relax complexity thresholds to focus lint on correctness issues
+    "too-many-arguments",         # R0913 - allowed by design in some service APIs
+    "too-many-locals",            # R0914 - complex operations in limited modules
+    "too-many-branches",          # R0912 - controlled complexity in orchestrators
 ]
