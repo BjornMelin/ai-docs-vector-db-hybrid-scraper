@@ -152,7 +152,15 @@ class QdrantAliasManager:
                 ),
             )
 
-        except Exception as e:
+        except (
+            ConnectionError,
+            OSError,
+            PermissionError,
+            RuntimeError,
+            AttributeError,
+            ValueError,
+            Exception,
+        ) as e:
             logger.exception(
                 "Failed to create alias",
                 extra=_log_extra(
@@ -248,7 +256,15 @@ class QdrantAliasManager:
             if delete_old and old_collection:
                 await self.safe_delete_collection(old_collection)
 
-        except Exception as e:
+        except (
+            ConnectionError,
+            OSError,
+            PermissionError,
+            RuntimeError,
+            AttributeError,
+            ValueError,
+            Exception,
+        ) as e:
             logger.exception(
                 "Failed to switch alias",
                 extra=_log_extra(
@@ -317,6 +333,8 @@ class QdrantAliasManager:
             ValueError,
         ):
             return False
+        except Exception:  # noqa: BLE001 - tolerate unexpected client failures
+            return False
 
     async def get_collection_for_alias(self, alias_name: str) -> str | None:
         """Get collection name that alias points to."""
@@ -334,6 +352,8 @@ class QdrantAliasManager:
             ValueError,
         ):
             return None
+        except Exception:  # noqa: BLE001 - tolerate unexpected client failures
+            return None
         return None
 
     async def list_aliases(self) -> dict[str, str]:
@@ -347,7 +367,20 @@ class QdrantAliasManager:
             return {
                 alias.alias_name: alias.collection_name for alias in aliases.aliases
             }
-        except (PermissionError, Exception):
+        except (
+            PermissionError,
+            ConnectionError,
+            OSError,
+            RuntimeError,
+            AttributeError,
+            ValueError,
+        ):
+            logger.exception(
+                "Failed to list aliases",
+                extra=_log_extra("qdrant.alias.list"),
+            )
+            return {}
+        except Exception:
             logger.exception(
                 "Failed to list aliases",
                 extra=_log_extra("qdrant.alias.list"),
@@ -443,6 +476,22 @@ class QdrantAliasManager:
                 ),
             )
 
+        except (
+            ConnectionError,
+            OSError,
+            PermissionError,
+            RuntimeError,
+            AttributeError,
+            ValueError,
+        ) as e:
+            logger.exception(
+                "Failed to clone collection schema",
+                extra=_log_extra(
+                    "qdrant.collection.clone", source=source, target=target
+                ),
+            )
+            msg = f"Failed to clone collection schema: {e}"
+            raise QdrantServiceError(msg) from e
         except Exception as e:
             logger.exception(
                 "Failed to clone collection schema",
@@ -506,8 +555,7 @@ class QdrantAliasManager:
 
                 # Upsert to target collection
                 await self.client.upsert(
-                    collection_name=target,
-                    points=cast(Any, records),
+                    collection_name=target, points=cast(Any, records)
                 )
 
                 total_copied += len(records)
@@ -549,6 +597,14 @@ class QdrantAliasManager:
                                 "qdrant.collection.copy", source=source, target=target
                             ),
                         )
+                    except Exception as e:  # pylint: disable=broad-except # pragma: no cover - diagnostic guard # noqa: BLE001
+                        logger.warning(
+                            "Progress callback raised error: %s",
+                            e,
+                            extra=_log_extra(
+                                "qdrant.collection.copy", source=source, target=target
+                            ),
+                        )
 
                 # Check limit
                 if limit and total_copied >= limit:
@@ -573,7 +629,15 @@ class QdrantAliasManager:
                 ),
             )
 
-        except Exception as e:
+        except (
+            ConnectionError,
+            OSError,
+            PermissionError,
+            RuntimeError,
+            AttributeError,
+            ValueError,
+            Exception,
+        ) as e:
             logger.exception(
                 "Failed to copy collection data",
                 extra=_log_extra(
@@ -641,7 +705,15 @@ class QdrantAliasManager:
             if (quant1 is None) != (quant2 is None):
                 return False, "Quantization configuration mismatch"
 
-        except Exception as e:
+        except (
+            ConnectionError,
+            OSError,
+            PermissionError,
+            RuntimeError,
+            AttributeError,
+            ValueError,
+            Exception,
+        ) as e:
             logger.exception(
                 "Failed to validate collection compatibility",
                 extra=_log_extra(
