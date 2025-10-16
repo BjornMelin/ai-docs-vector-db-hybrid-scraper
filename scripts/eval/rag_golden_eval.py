@@ -1,10 +1,8 @@
-"""Evaluate the RAG pipeline against the golden dataset with structured metrics.
+"""Evaluate RAG pipeline against golden dataset.
 
-This script executes the LangGraph-backed search orchestrator for every
-entry in the golden dataset and captures three layers of evaluation:
-
-* Deterministic baselines (string similarity + retrieval precision/recall)
-* Semantic Ragas metrics (faithfulness, answer relevancy, context recall/precision)
+Runs search orchestrator on golden dataset examples and computes:
+- Deterministic metrics (similarity, precision, recall)
+- Semantic metrics (faithfulness, relevancy, context precision/recall)
 
 Usage:
     uv run python scripts/eval/rag_golden_eval.py \
@@ -31,17 +29,15 @@ from pathlib import Path
 from statistics import fmean
 from typing import TYPE_CHECKING, Any, Protocol
 
+import openai
 import yaml
-from openai import AsyncOpenAI
 from ragas import EvaluationDataset
 from ragas.embeddings import OpenAIEmbeddings as RagasOpenAIEmbeddings
 from ragas.evaluation import evaluate as ragas_evaluate
-from ragas.llms.base import (
-    OpenAI as RagasOpenAI,  # pyright: ignore[reportPrivateImportUsage]
-)
+from ragas.llms.base import llm_factory
 from ragas.metrics import AnswerRelevancy, ContextPrecision, ContextRecall, Faithfulness
-
 from scripts.eval.dataset_validator import DatasetValidationError, load_dataset_records
+
 from src.config import get_settings
 from src.infrastructure.bootstrap import container_session, ensure_container
 
@@ -157,28 +153,24 @@ class RagasEvaluator:
             max_retries: Maximum retry attempts for API calls.
             timeout: Optional timeout in seconds for API calls.
         """
+        # Build common client configuration
         client_kwargs: dict[str, Any] = {"api_key": api_key}
         if max_retries is not None:
             client_kwargs["max_retries"] = max_retries
         if timeout is not None:
             client_kwargs["timeout"] = timeout
 
-        self._llm = RagasOpenAI(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
-            # pyright: ignore[reportCallIssue]
-            model=llm_model,
-            **client_kwargs,
-        )
-        embedding_client = AsyncOpenAI(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
-            # pyright: ignore[reportCallIssue]
-            api_key=api_key,
-            max_retries=max_retries,
-            timeout=timeout,
+        # Initialize LLM for semantic evaluation
+        os.environ["OPENAI_API_KEY"] = api_key
+        self._llm = llm_factory(llm_model)
+
+        # Initialize embeddings client (requires sync OpenAI client)
+        embedding_client = openai.OpenAI(
+            api_key=api_key, max_retries=max_retries, timeout=timeout
         )
         self._embedding_client = embedding_client
-        self._embeddings = RagasOpenAIEmbeddings(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
-            # pyright: ignore[reportCallIssue]
-            client=embedding_client,
-            model=embedding_model,
+        self._embeddings = RagasOpenAIEmbeddings(
+            client=embedding_client, model=embedding_model
         )
 
     def evaluate(
@@ -189,23 +181,28 @@ class RagasEvaluator:
     ) -> dict[str, float]:
         """Evaluate semantic metrics for a single example."""
         try:
+            # Prepare evaluation dataset in ragas format
             dataset = EvaluationDataset.from_list(
                 [
                     {
-                        "question": example.query,
-                        "answer": predicted_answer,
-                        "contexts": list(contexts),
-                        "ground_truth": [example.expected_answer],
+                        "user_input": example.query,
+                        "response": predicted_answer,
+                        "retrieved_contexts": list(contexts),
+                        "reference": example.expected_answer,
                         "reference_contexts": list(example.expected_contexts or []),
                     }
                 ]
             )
+
+            # Run ragas evaluation
             result = ragas_evaluate(
                 dataset=dataset,
                 metrics=self._METRICS,
                 llm=self._llm,
                 embeddings=self._embeddings,
             )
+
+            # Extract and normalize scores
             raw_scores = self._normalise_scores(result)
             scores: dict[str, float] = {}
             for metric in self._METRICS:
@@ -344,9 +341,7 @@ def _enforce_thresholds(
         if latency > required_latency:
             failures.append(
                 _format_threshold_failure(
-                    "processing_time_ms_avg",
-                    latency,
-                    required_latency,
+                    "processing_time_ms_avg", latency, required_latency
                 )
             )
 
@@ -409,11 +404,14 @@ def _compute_similarity(predicted: str, expected: str) -> float:
 
 def _extract_reference(record: dict[str, Any]) -> str | None:
     """Best-effort extraction of a reference identifier from a search record."""
+    # Check metadata fields first
     metadata = record.get("metadata") or {}
     for key in ("doc_path", "source_path", "reference", "uri"):
         candidate = metadata.get(key)
         if candidate:
             return str(candidate)
+
+    # Fall back to record-level identifiers
     if record.get("group_id"):
         return str(record["group_id"])
     return record.get("id")
@@ -429,10 +427,14 @@ def _compute_retrieval_metrics(
     if not records:
         return {"precision_at_k": 0.0, "recall_at_k": 0.0, "hit_rate": 0.0, "mrr": 0.0}
 
+    # Normalize expected references for comparison
     expected = {ref.lower() for ref in example.references}
+
+    # Extract and normalize retrieved references
     ranked_refs = [_extract_reference(record) for record in records]
     ranked_refs = [ref.lower() for ref in ranked_refs if ref]
 
+    # Compute top-k precision and recall
     top_k = ranked_refs[: max(1, k)]
     hits = [ref for ref in top_k if ref in expected]
 
@@ -440,6 +442,7 @@ def _compute_retrieval_metrics(
     recall = len(hits) / len(expected) if expected else 0.0
     hit_rate = 1.0 if hits else 0.0
 
+    # Compute mean reciprocal rank
     reciprocal_rank = 0.0
     for index, ref in enumerate(ranked_refs, start=1):
         if ref in expected:
@@ -459,8 +462,10 @@ def _aggregate_metrics(results: Sequence[ExampleResult]) -> dict[str, Any]:
     if not results:
         return {}
 
+    # Collect similarity scores
     similarity_scores = [item.metrics.similarity for item in results]
 
+    # Group retrieval and ragas metrics by type
     retrieval_bucket: dict[str, list[float]] = defaultdict(list)
     ragas_bucket: dict[str, list[float]] = defaultdict(list)
 
@@ -470,6 +475,7 @@ def _aggregate_metrics(results: Sequence[ExampleResult]) -> dict[str, Any]:
         for key, value in result.metrics.ragas.items():
             ragas_bucket[key].append(value)
 
+    # Compute aggregate statistics
     aggregates: dict[str, Any] = {
         "examples": len(results),
         "similarity_avg": fmean(similarity_scores) if similarity_scores else 0.0,
@@ -500,6 +506,7 @@ async def _evaluate_examples(
     search_request_cls, _, _ = _load_search_components()
 
     for example in examples:
+        # Prepare search request
         request_overrides: dict[str, Any] = {
             "enable_rag": True,
             "limit": limit,
@@ -509,23 +516,29 @@ async def _evaluate_examples(
 
         request_payload = {"query": example.query, **request_overrides}
         request = search_request_cls(**request_payload)
+
+        # Execute search
         response: SearchResponse = await orchestrator.search(request)
 
+        # Extract predicted answer and contexts
         predicted = response.generated_answer or " ".join(
             record.content for record in response.records
         )
         contexts = [record.content for record in response.records]
 
+        # Compute deterministic metrics
         similarity = _compute_similarity(predicted, example.expected_answer)
         retrieval_metrics = _compute_retrieval_metrics(
             example, [record.model_dump() for record in response.records], k=limit
         )
 
+        # Compute semantic metrics with optional limiting
         if max_semantic_samples is not None and len(results) >= max_semantic_samples:
             ragas_scores = {}
         else:
             ragas_scores = ragas_evaluator.evaluate(example, predicted, contexts)
 
+        # Build result object
         result = ExampleResult(
             example=example,
             predicted_answer=predicted,
@@ -588,14 +601,18 @@ def _write_output(payload: dict[str, Any], output_path: Path | None) -> None:
 async def _run(args: argparse.Namespace) -> None:
     """Execute the evaluation harness with provided CLI arguments."""
     # pylint: disable=too-many-locals, too-many-statements
+
+    # Load and validate dataset
     dataset_path = Path(args.dataset)
     examples = _load_dataset(dataset_path)
 
+    # Configure semantic evaluation limits
     default_max_samples, _ = _load_cost_controls()
     semantic_sample_cap = args.max_semantic_samples
     if semantic_sample_cap is None:
         semantic_sample_cap = default_max_samples
 
+    # Setup API clients
     settings = get_settings()
     api_key = os.getenv("OPENAI_API_KEY") or getattr(settings.openai, "api_key", None)
     if not api_key:
@@ -612,6 +629,7 @@ async def _run(args: argparse.Namespace) -> None:
         args.ragas_embedding_model,
     )
 
+    # Execute evaluation
     async with container_session(force_reload=True):
         orchestrator = await _load_orchestrator()
         try:
@@ -625,12 +643,15 @@ async def _run(args: argparse.Namespace) -> None:
         finally:
             await orchestrator.cleanup()
 
+    # Aggregate and validate results
     aggregates = _aggregate_metrics(results)
     thresholds = _load_thresholds()
     gating_failures = _enforce_thresholds(aggregates, thresholds)
     if gating_failures:
         for failure in gating_failures:
             logger.error("Evaluation budget failure: %s", failure)
+
+    # Generate report
     report = EvaluationReport(
         results=results,
         aggregates=aggregates,
@@ -644,6 +665,7 @@ async def _run(args: argparse.Namespace) -> None:
 
 
 def _build_arg_parser() -> argparse.ArgumentParser:
+    """Build the argument parser for the evaluation harness."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--dataset",

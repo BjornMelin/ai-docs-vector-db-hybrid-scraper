@@ -7,7 +7,6 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import pytest
-
 from scripts.eval.rag_golden_eval import (
     ExampleMetrics,
     ExampleResult,

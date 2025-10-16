@@ -9,7 +9,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langchain_core.documents import Document
-
 from scripts.eval.rag_compression_eval import (
     _build_documents,
     _estimate_tokens,
@@ -22,17 +21,19 @@ class _StubVectorService:
     """Stub vector store service for testing."""
 
     def __init__(self) -> None:
+        """Initialize the stub vector store service."""
         self.collection_name: str | None = None
         self.config = MagicMock()  # Add config attribute
 
     async def cleanup(self) -> None:
-        pass
+        """Cleanup the stub vector store service."""
 
     def is_initialized(self) -> bool:
+        """Check if the stub vector store service is initialized."""
         return True
 
     async def initialize(self) -> None:
-        pass
+        """Initialize the stub vector store service."""
 
 
 def _install_vector_service_stub(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -43,6 +44,7 @@ def _install_vector_service_stub(monkeypatch: pytest.MonkeyPatch) -> None:
         *,
         settings: Any | None = None,
     ) -> _StubVectorService:
+        """Fake load vector service function for testing purposes."""
         service = _StubVectorService()
         if collection_override:
             service.collection_name = collection_override
@@ -55,6 +57,7 @@ def _install_vector_service_stub(monkeypatch: pytest.MonkeyPatch) -> None:
 
     @asynccontextmanager
     async def _fake_container_session(*_args, **_kwargs):
+        """Fake container session function for testing purposes."""
         yield
 
     monkeypatch.setattr(
@@ -73,7 +76,7 @@ async def test_load_vector_service_no_override() -> None:
             new_callable=AsyncMock,
         ) as mock_ensure_container,
     ):
-        # Setup mocks
+        """Test loading vector service with collection override."""
         mock_config = MagicMock()
         mock_settings.return_value = mock_config
         mock_container = MagicMock()
@@ -102,7 +105,7 @@ async def test_load_vector_service_with_override() -> None:
             new_callable=AsyncMock,
         ) as mock_ensure_container,
     ):
-        # Setup mocks
+        """Test loading vector service without collection override."""
         mock_config = MagicMock()
         mock_settings.return_value = mock_config
         mock_container = MagicMock()
