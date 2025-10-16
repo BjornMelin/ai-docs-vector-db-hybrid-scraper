@@ -294,7 +294,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Quality gates
 
-- Ruff (`uv run ruff check --fix src/services/fastapi/middleware/compression.py src/services/fastapi/middleware/security.py tests/fixtures/__init__.py scripts/dev.py`), Pyright, Pylint, and `uv run pytest -q tests/unit/services/test_logging_config.py` passed for the updated middleware, fixture namespace, and CLI changes.
+- Ruff (`uv run ruff check --fix src/services/fastapi/middleware/compression.py src/services/fastapi/middleware/security.py tests/fixtures/__init__.py scripts/dev.py`),
+  Pyright, Pylint, and `uv run pytest -q tests/unit/services/test_logging_config.py` passed for the updated middleware, fixture namespace, and CLI changes.
 - Ruff, Pylint, Pyright, and
   `pytest -q -n auto --maxfail=1 --randomly-seed=321852 tests/unit/services/hyde/test_config.py`
   passed on cache and infrastructure client modules.
