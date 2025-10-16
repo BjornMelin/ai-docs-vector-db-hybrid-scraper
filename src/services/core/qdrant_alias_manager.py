@@ -308,7 +308,14 @@ class QdrantAliasManager:
         try:
             aliases = await self.client.get_aliases()
             return any(alias.alias_name == alias_name for alias in aliases.aliases)
-        except (ConnectionError, OSError, PermissionError, Exception):
+        except (
+            ConnectionError,
+            OSError,
+            PermissionError,
+            RuntimeError,
+            AttributeError,
+            ValueError,
+        ):
             return False
 
     async def get_collection_for_alias(self, alias_name: str) -> str | None:
@@ -318,7 +325,14 @@ class QdrantAliasManager:
             for alias in aliases.aliases:
                 if alias.alias_name == alias_name:
                     return alias.collection_name
-        except (ConnectionError, OSError, PermissionError, Exception):
+        except (
+            ConnectionError,
+            OSError,
+            PermissionError,
+            RuntimeError,
+            AttributeError,
+            ValueError,
+        ):
             return None
         return None
 
@@ -523,7 +537,11 @@ class QdrantAliasManager:
                                 "qdrant.collection.copy", source=source, target=target
                             ),
                         )
-                    except Exception as e:  # pragma: no cover - defensive path
+                    except (
+                        AttributeError,
+                        ValueError,
+                        TypeError,
+                    ) as e:  # pragma: no cover - defensive path
                         logger.warning(
                             "Progress callback raised unexpected error: %s",
                             e,

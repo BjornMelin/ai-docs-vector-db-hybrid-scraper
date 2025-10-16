@@ -157,7 +157,11 @@ async def _probe_grouping_support(
                 sync_query = cast(Callable[[], bool], raw_probe)
                 return bool(sync_query())
             return bool(raw_probe)
-    except Exception as exc:  # pragma: no cover - defensive guardrail
+    except (
+        RuntimeError,
+        AttributeError,
+        ValueError,
+    ) as exc:  # pragma: no cover - defensive guardrail
         logger.warning("Failed to probe grouping support: %s", exc)
         return None
     return None

@@ -39,12 +39,7 @@ from ragas.evaluation import evaluate as ragas_evaluate
 from ragas.llms.base import (
     OpenAI as RagasOpenAI,  # pyright: ignore[reportPrivateImportUsage]
 )
-from ragas.metrics import (
-    AnswerRelevancy,
-    ContextPrecision,
-    ContextRecall,
-    Faithfulness,
-)
+from ragas.metrics import AnswerRelevancy, ContextPrecision, ContextRecall, Faithfulness
 
 from scripts.eval.dataset_validator import DatasetValidationError, load_dataset_records
 from src.config import get_settings
@@ -61,7 +56,7 @@ else:  # pragma: no cover - runtime typing fallback
     SearchOrchestrator = Any
 
 
-LOGGER = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 # Ragas imports are optional to keep the harness runnable in offline mode.
 # They are resolved lazily inside ``RagasEvaluator``.
@@ -225,8 +220,12 @@ class RagasEvaluator:
                         scores[metric_name] = float(raw_scores[key])
                         break
             return scores
-        except Exception as exc:  # pragma: no cover - defensive guard
-            LOGGER.warning(
+        except (
+            RuntimeError,
+            ValueError,
+            OSError,
+        ) as exc:  # pragma: no cover - defensive guard
+            logger.warning(
                 "Ragas evaluation failed for query '%s': %s",
                 example.query,
                 exc,
@@ -277,11 +276,11 @@ def _load_yaml(path: Path) -> dict[str, Any]:
     try:
         with path.open(encoding="utf-8") as handle:
             data = yaml.safe_load(handle) or {}
-    except Exception as exc:  # pragma: no cover - defensive
-        LOGGER.warning("Failed to load YAML config at %s: %s", path, exc)
+    except (OSError, yaml.YAMLError) as exc:  # pragma: no cover - defensive
+        logger.warning("Failed to load YAML config at %s: %s", path, exc)
         return {}
     if not isinstance(data, dict):
-        LOGGER.warning("YAML config at %s is not a mapping; ignoring", path)
+        logger.warning("YAML config at %s is not a mapping; ignoring", path)
         return {}
     return data
 
@@ -583,7 +582,7 @@ def _write_output(payload: dict[str, Any], output_path: Path | None) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", encoding="utf-8") as handle:
         json.dump(payload, handle, indent=2, ensure_ascii=False)
-    LOGGER.info("Report written to %s", output_path)
+    logger.info("Report written to %s", output_path)
 
 
 async def _run(args: argparse.Namespace) -> None:
@@ -607,7 +606,7 @@ async def _run(args: argparse.Namespace) -> None:
         llm_model=args.ragas_llm_model,
         embedding_model=args.ragas_embedding_model,
     )
-    LOGGER.info(
+    logger.info(
         "Semantic metrics enabled with llm=%s embedding=%s",
         args.ragas_llm_model,
         args.ragas_embedding_model,
@@ -631,7 +630,7 @@ async def _run(args: argparse.Namespace) -> None:
     gating_failures = _enforce_thresholds(aggregates, thresholds)
     if gating_failures:
         for failure in gating_failures:
-            LOGGER.error("Evaluation budget failure: %s", failure)
+            logger.error("Evaluation budget failure: %s", failure)
     report = EvaluationReport(
         results=results,
         aggregates=aggregates,

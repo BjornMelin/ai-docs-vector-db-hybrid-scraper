@@ -30,7 +30,6 @@ class SearchExample:
 
 def _load_examples(path: Path) -> list[SearchExample]:
     """Load golden dataset queries from disk."""
-
     if not path.exists():
         return [
             SearchExample(
@@ -68,14 +67,12 @@ class SearchUser(HttpUser):
 
     def on_start(self) -> None:
         """Prime the dataset iterator and configure default headers."""
-
         self._examples = itertools.cycle(random.sample(_EXAMPLES, len(_EXAMPLES)))
         self.client.headers.update({"Content-Type": "application/json"})
 
     @task(4)
     def search(self) -> None:
         """Execute a search request using an example query."""
-
         example = next(self._examples)
         response = self.client.post(
             "/api/v1/search",
@@ -92,6 +89,5 @@ class SearchUser(HttpUser):
     @task(1)
     def list_collections(self) -> None:
         """Enumerate vector collections for observability checks."""
-
         response = self.client.get("/api/v1/collections", name="GET /collections")
         response.raise_for_status()

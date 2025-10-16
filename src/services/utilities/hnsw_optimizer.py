@@ -268,7 +268,7 @@ class HNSWOptimizer:
         except (ValueError, TypeError) as exc:
             self._log_or_propagate(exc, log_context)
             return None
-        except Exception as exc:
+        except (OSError, AttributeError, RuntimeError) as exc:
             self._log_or_propagate(exc, log_context)
             return None
 
@@ -644,7 +644,7 @@ class HNSWOptimizer:
             except (ValueError, ConnectionError, TimeoutError, RuntimeError) as exc:
                 self._log_or_propagate(exc, "Performance test query")
                 continue
-            except Exception as exc:
+            except (OSError, AttributeError, TypeError) as exc:
                 self._log_or_propagate(exc, "Performance test query")
                 continue
 

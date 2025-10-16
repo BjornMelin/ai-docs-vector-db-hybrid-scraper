@@ -444,7 +444,7 @@ async def _maybe_cleanup(service: Any, name: str) -> None:
         result = cleaner()
         if asyncio.iscoroutine(result):
             await result
-    except Exception:  # pragma: no cover - defensive
+    except (RuntimeError, AttributeError, TypeError):  # pragma: no cover - defensive
         logger.debug("Error during cleanup for service '%s'", name, exc_info=True)
 
 
@@ -505,7 +505,11 @@ async def _run_task_factories(factories: list[Any]) -> None:
             result = factory()
             if asyncio.iscoroutine(result):
                 await result
-        except Exception:  # pragma: no cover - defensive
+        except (
+            RuntimeError,
+            AttributeError,
+            TypeError,
+        ):  # pragma: no cover - defensive
             logger.debug("Container task execution failed", exc_info=True)
 
 

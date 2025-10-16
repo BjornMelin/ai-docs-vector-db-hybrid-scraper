@@ -30,7 +30,7 @@ def find_project_root(start: Path, marker: str = "pyproject.toml") -> Path:
         current = current.parent
 
 
-LOGGER = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 _PROJECT_ROOT = find_project_root(Path(__file__))
 _ENV_OVERRIDE = "AI_DOCS_DEPLOYMENT_STRATEGY"
 
@@ -93,7 +93,7 @@ class DeploymentManager:
                 notes=notes,
                 available=available,
             )
-            LOGGER.info(
+            logger.info(
                 "Resolved deployment plan",
                 extra=log_extra_with_trace(
                     "deployment.build_plan",
@@ -131,7 +131,7 @@ class DeploymentManager:
             for command in plan.commands:
                 self._validate_command(command)
                 command_str = " ".join(command)
-                LOGGER.info(
+                logger.info(
                     "Executing deployment command",
                     extra=log_extra_with_trace(
                         "deployment.execute_plan", command=command_str
@@ -155,7 +155,7 @@ class DeploymentManager:
     def _default_runner(command: Command) -> int:
         """Run a deployment command using subprocess."""
         DeploymentManager._validate_command(command)
-        completed: CompletedProcess[bytes] = run(  # noqa: S603
+        completed: CompletedProcess[bytes] = run(
             command,
             check=False,
             cwd=_PROJECT_ROOT,

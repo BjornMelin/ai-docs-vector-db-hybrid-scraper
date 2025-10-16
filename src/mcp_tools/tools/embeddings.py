@@ -173,7 +173,11 @@ def _safe_estimate_cost(
     """Estimate embedding cost using the manager when supported."""
     try:
         cost_map = embedding_manager.estimate_cost(list(texts), provider_name)
-    except Exception:  # pragma: no cover - defensive guard
+    except (
+        RuntimeError,
+        AttributeError,
+        ValueError,
+    ):  # pragma: no cover - defensive guard
         logger.debug("Embedding cost estimation unavailable", exc_info=True)
         return None
 
@@ -206,7 +210,11 @@ def _get_normalized_providers(
     raw_catalog: dict[str, dict[str, Any]] = {}
     try:
         raw_catalog = embedding_manager.get_provider_info() or {}
-    except Exception:  # pragma: no cover - defensive guard
+    except (
+        RuntimeError,
+        AttributeError,
+        ValueError,
+    ):  # pragma: no cover - defensive guard
         logger.debug("Failed to fetch provider info from manager", exc_info=True)
 
     normalized = normalize_provider_catalog(raw_catalog)

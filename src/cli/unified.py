@@ -47,7 +47,7 @@ def _run_command(
         msg = "shell execution is not permitted for CLI commands"
         raise ValueError(msg)
     normalized = _normalize_command(command)
-    return subprocess.run(  # noqa: S603
+    return subprocess.run(
         normalized,
         check=check,
         capture_output=capture_output,
@@ -68,7 +68,7 @@ def cli():
 
 @cli.command()
 @click.option("--reload/--no-reload", default=True)
-@click.option("--host", default="0.0.0.0")  # noqa: S104
+@click.option("--host", default="0.0.0.0")
 @click.option("--port", default=8000)
 def dev(reload: bool, host: str, port: int):
     """Start development server using the unified configuration."""
@@ -175,7 +175,7 @@ def quality(skip_format: bool, fix_lint: bool):
 
 
 @cli.command()
-@click.option("--host", default="0.0.0.0")  # noqa: S104
+@click.option("--host", default="0.0.0.0")
 @click.option("--port", default=8001)
 def docs(host: str, port: int):
     """Serve documentation locally."""

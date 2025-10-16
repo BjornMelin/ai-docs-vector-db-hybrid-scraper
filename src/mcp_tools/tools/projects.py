@@ -91,7 +91,12 @@ def register_tools(
                 try:
                     stats = await service.collection_stats(collection)
                     project.setdefault("stats", dict(stats))
-                except Exception as exc:  # pragma: no cover - service errors
+                except (
+                    RuntimeError,
+                    ConnectionError,
+                    ValueError,
+                    AttributeError,
+                ) as exc:  # pragma: no cover - service errors
                     logger.warning(
                         "Failed to fetch stats for collection %s: %s", collection, exc
                     )

@@ -177,7 +177,13 @@ class ProviderRegistry:
                 dimensions=self._config.openai.dimensions,
             )
             await provider.initialize()
-        except Exception as exc:  # pragma: no cover - aligns with legacy behavior
+        except (
+            ImportError,
+            RuntimeError,
+            OSError,
+            ValueError,
+            TypeError,
+        ) as exc:  # pragma: no cover - aligns with legacy behavior
             logger.warning("Failed to initialize OpenAI provider: %s", exc)
             return
         self._providers["openai"] = provider
@@ -191,7 +197,13 @@ class ProviderRegistry:
         try:
             provider = self._factories.fastembed_cls(model_name=model)
             await provider.initialize()
-        except Exception as exc:  # pragma: no cover - aligns with legacy behavior
+        except (
+            ImportError,
+            RuntimeError,
+            OSError,
+            ValueError,
+            TypeError,
+        ) as exc:  # pragma: no cover - aligns with legacy behavior
             logger.warning("Failed to initialize FastEmbed provider: %s", exc)
             return
         self._providers["fastembed"] = provider
