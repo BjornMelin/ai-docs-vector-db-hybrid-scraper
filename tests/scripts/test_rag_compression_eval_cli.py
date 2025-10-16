@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from typing import Any
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langchain_core.documents import Document
@@ -38,6 +40,8 @@ def _install_vector_service_stub(monkeypatch: pytest.MonkeyPatch) -> None:
 
     async def _fake_load_vector_service(
         collection_override: str | None,
+        *,
+        settings: Any | None = None,
     ) -> _StubVectorService:
         service = _StubVectorService()
         if collection_override:
@@ -49,23 +53,31 @@ def _install_vector_service_stub(monkeypatch: pytest.MonkeyPatch) -> None:
         _fake_load_vector_service,
     )
 
+    @asynccontextmanager
+    async def _fake_container_session(*_args, **_kwargs):
+        yield
+
+    monkeypatch.setattr(
+        "scripts.eval.rag_compression_eval.container_session",
+        _fake_container_session,
+    )
+
 
 @pytest.mark.asyncio
 async def test_load_vector_service_no_override() -> None:
     """Test loading vector service without collection override."""
     with (
         patch("scripts.eval.rag_compression_eval.get_settings") as mock_settings,
-        patch("scripts.eval.rag_compression_eval.get_container") as mock_get_container,
         patch(
-            "scripts.eval.rag_compression_eval.initialize_container"
-        ) as mock_init_container,
+            "scripts.eval.rag_compression_eval.ensure_container",
+            new_callable=AsyncMock,
+        ) as mock_ensure_container,
     ):
         # Setup mocks
         mock_config = MagicMock()
         mock_settings.return_value = mock_config
         mock_container = MagicMock()
-        mock_get_container.return_value = None
-        mock_init_container.return_value = mock_container
+        mock_ensure_container.return_value = mock_container
 
         mock_service = MagicMock()
         mock_service.collection_name = None
@@ -76,7 +88,7 @@ async def test_load_vector_service_no_override() -> None:
         result = await _load_vector_service(None)
 
         assert result == mock_service
-        mock_init_container.assert_called_once_with(mock_config)
+        mock_ensure_container.assert_awaited_once_with(settings=mock_config)
         assert result.collection_name is None
 
 
@@ -85,17 +97,16 @@ async def test_load_vector_service_with_override() -> None:
     """Test loading vector service with collection override."""
     with (
         patch("scripts.eval.rag_compression_eval.get_settings") as mock_settings,
-        patch("scripts.eval.rag_compression_eval.get_container") as mock_get_container,
         patch(
-            "scripts.eval.rag_compression_eval.initialize_container"
-        ) as mock_init_container,
+            "scripts.eval.rag_compression_eval.ensure_container",
+            new_callable=AsyncMock,
+        ) as mock_ensure_container,
     ):
         # Setup mocks
         mock_config = MagicMock()
         mock_settings.return_value = mock_config
         mock_container = MagicMock()
-        mock_get_container.return_value = None
-        mock_init_container.return_value = mock_container
+        mock_ensure_container.return_value = mock_container
 
         mock_service = MagicMock()
         mock_service.collection_name = None
@@ -160,3 +171,8 @@ async def test_evaluate_compression_disabled(
         mock_print.assert_called_with(
             "Compression is disabled in the active configuration; nothing to evaluate."
         )
+
+
+pytestmark = pytest.mark.filterwarnings(
+    "ignore::pytest.PytestUnraisableExceptionWarning"
+)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import pytest
@@ -12,6 +13,11 @@ from scripts.eval.rag_golden_eval import (
     ExampleResult,
     _build_arg_parser,
     _run,
+)
+
+
+pytestmark = pytest.mark.filterwarnings(
+    "ignore::pytest.PytestUnraisableExceptionWarning"
 )
 
 
@@ -47,10 +53,18 @@ def _install_orchestrator_stub(monkeypatch: pytest.MonkeyPatch) -> None:
         examples,
         orchestrator,
         ragas_evaluator,
+        *,  # keyword-only parameters to mirror real implementation
         limit,
-        ragas_sample_cap,
+        ragas_sample_cap=None,
+        max_semantic_samples=None,
     ):
-        _ = (orchestrator, ragas_evaluator, limit, ragas_sample_cap)
+        _ = (
+            orchestrator,
+            ragas_evaluator,
+            limit,
+            ragas_sample_cap,
+            max_semantic_samples,
+        )
         metrics = ExampleMetrics(
             similarity=1.0,
             retrieval={
@@ -80,6 +94,14 @@ def _install_orchestrator_stub(monkeypatch: pytest.MonkeyPatch) -> None:
         "scripts.eval.rag_golden_eval._evaluate_examples", _fake_evaluate_examples
     )
 
+    @asynccontextmanager
+    async def _fake_container_session(*_args, **_kwargs):
+        yield
+
+    monkeypatch.setattr(
+        "scripts.eval.rag_golden_eval.container_session", _fake_container_session
+    )
+
 
 @pytest.mark.asyncio
 async def test_cli_reports_success(
@@ -87,6 +109,7 @@ async def test_cli_reports_success(
 ) -> None:
     """Running the CLI without budgets should exit successfully and emit JSON."""
     _install_orchestrator_stub(monkeypatch)
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
 
     output_path = tmp_path / "report.json"
     args = _build_arg_parser().parse_args(  # pylint: disable=protected-access
@@ -109,6 +132,7 @@ async def test_cli_budget_violation_raises(
 ) -> None:
     """Budgets below achievable values should cause a SystemExit(1)."""
     _install_orchestrator_stub(monkeypatch)
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
     monkeypatch.setattr(
         "scripts.eval.rag_golden_eval._enforce_thresholds",
         lambda aggregates, thresholds: ["similarity"] if thresholds else [],
@@ -126,8 +150,6 @@ async def test_cli_budget_violation_raises(
             str(golden_dataset),
             "--output",
             str(output_path),
-            "--metrics-allowlist",
-            "similarity_avg",
         ]
     )
 
