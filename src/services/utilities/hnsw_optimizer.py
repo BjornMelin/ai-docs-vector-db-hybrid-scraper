@@ -271,6 +271,9 @@ class HNSWOptimizer:
         except (OSError, AttributeError, RuntimeError) as exc:
             self._log_or_propagate(exc, log_context)
             return None
+        except Exception as exc:  # noqa: BLE001  # pragma: no cover - defensive catch-all
+            self._log_or_propagate(exc, log_context)
+            return None
 
         elapsed_ms = (time.time() - start_time) * 1000
         return elapsed_ms, results
@@ -645,6 +648,9 @@ class HNSWOptimizer:
                 self._log_or_propagate(exc, "Performance test query")
                 continue
             except (OSError, AttributeError, TypeError) as exc:
+                self._log_or_propagate(exc, "Performance test query")
+                continue
+            except Exception as exc:  # noqa: BLE001  # pragma: no cover - defensive guard
                 self._log_or_propagate(exc, "Performance test query")
                 continue
 
