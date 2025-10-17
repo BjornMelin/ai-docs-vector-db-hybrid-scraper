@@ -147,6 +147,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Ragas evaluator modernized: switched to `ragas.llms.base.llm_factory` for the
+  evaluator LLM and to `ragas.embeddings.OpenAIEmbeddings(client=openai.OpenAI(),
+  model=...)` for embeddings; updated `EvaluationDataset` construction to the
+  SingleTurnSample schema (`user_input`, `response`, `retrieved_contexts`,
+  `reference`, `reference_contexts`). Removed previous lint/typing ignores in
+  `scripts/eval/rag_golden_eval.py` and documented the workflow in
+  `docs/testing/evaluation-harness.md`. Also bumped the eval dependency group to
+  `ragas>=0.3.5` in `pyproject.toml`.
+
 - Updated configuration templates to embed router overrides and normalised Prometheus metrics ports to match the FastAPI `/metrics` endpoint.
 - CLI commands, wizard utilities, and tests now emit technical, emoji-free
   messaging aligned with the canonical `SearchRecord` workflow, ensuring
