@@ -1,7 +1,7 @@
 [project]
 name = "ai-docs-vector-db-hybrid-scraper"
 version = "0.1.0"
-description = "Hybrid AI documentation scraping system combining Crawl4AI (bulk) + Firecrawl MCP (on-demand) with Qdrant vector database for Claude Desktop/Code integration"
+description = "Hybrid AI documentation scraping system combining Crawl4AI (bulk) + Firecrawl MCP (on-demand) with Qdrant vector database for Codex/Claude Code/Gemini CLI, and more integration"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.11,<3.12"
@@ -42,7 +42,8 @@ dependencies = [
     "crawl4ai[all]>=0.7.4,<0.8.0",
     "firecrawl>=4.3.7,<5.0.0",
     "qdrant-client[fastembed]>=1.15.1,<2.0",
-    "openai>=1.105.0,<2.0.0",                          # browser-use requires less <2.0.0
+    # browser-use requires less openai<2.0.0
+    "openai>=1.105.0,<2.0.0",
     "fastembed>=0.7.3,<0.7.4",
     "FlagEmbedding>=1.3.5,<2.0.0",
     "numpy>=2.2.2,<2.3.0",
