@@ -268,9 +268,7 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
             collection,
             [
                 TextDocument(
-                    id=document_id,
-                    content=content,
-                    metadata=normalized_metadata,
+                    id=document_id, content=content, metadata=normalized_metadata
                 )
             ],
         )
@@ -851,7 +849,11 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
                 with_payload=True,
                 with_vectors=False,
             )
-        except Exception:  # pragma: no cover - driver-specific fallbacks
+        except (
+            RuntimeError,
+            ValueError,
+            OSError,
+        ):  # pragma: no cover - driver-specific fallbacks
             return [], False
 
         records: list[SearchRecord] = []

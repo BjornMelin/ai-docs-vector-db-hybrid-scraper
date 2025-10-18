@@ -6,10 +6,10 @@ import logging
 
 from fastmcp import FastMCP
 
+from src.infrastructure.project_storage import ProjectStorage
 from src.services.browser.unified_manager import UnifiedBrowserManager
 from src.services.cache.manager import CacheManager
 from src.services.content_intelligence.service import ContentIntelligenceService
-from src.services.core.project_storage import ProjectStorage
 from src.services.embeddings.manager import EmbeddingManager
 from src.services.observability.health_manager import HealthCheckManager
 from src.services.vector_db.service import VectorStoreService

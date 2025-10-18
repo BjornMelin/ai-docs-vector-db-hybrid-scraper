@@ -23,9 +23,9 @@ JSON_CONFIG_PATH = CONFIG_FIXTURE_DIR / "sample.json"
 YAML_CONFIG_PATH = CONFIG_FIXTURE_DIR / "sample.yaml"
 
 # Test constants to avoid hardcoded sensitive values
-TEST_SECRET_VALUE = "test_secret"  # noqa: S105
-TEST_PASS_VALUE = "test_password"  # noqa: S105
-TEST_TOKEN_VALUE = "test_secret_token"  # noqa: S105
+TEST_SECRET_VALUE = "test_secret"
+TEST_PASS_VALUE = "test_password"
+TEST_TOKEN_VALUE = "test_secret_token"
 
 
 class TestConfigCommandGroup:

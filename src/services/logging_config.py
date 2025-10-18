@@ -19,12 +19,6 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Any
 
-
-try:
-    import colorlog  # pyright: ignore[reportMissingImports]
-except ImportError:  # pragma: no cover - optional dependency
-    colorlog = None
-
 from src.config.loader import Settings, get_settings
 
 
@@ -192,7 +186,6 @@ def with_service_context(service_name: str) -> LogContext:
 def configure_logging(
     level: str | None = None,
     *,
-    enable_color: bool | None = None,
     log_file: str | os.PathLike[str] | None = None,
     json_console: bool = False,
     force: bool = False,
@@ -202,9 +195,6 @@ def configure_logging(
 
     Args:
         level: Desired root log level. Defaults to the configured log level.
-        enable_color: Whether to enable color output for the console handler. If
-            ``None``, color is enabled only when :mod:`colorlog` is available and
-            the stream is a TTY.
         log_file: Optional file path for structured log output.
         json_console: When ``True`` the console handler emits JSON instead of text.
         force: When ``True`` existing managed handlers are replaced.
@@ -235,7 +225,7 @@ def configure_logging(
     target_log_file = log_file or getattr(config, "log_file", None)
 
     if not has_managed_handler:
-        console_handler = _build_console_handler(enable_color, json_console)
+        console_handler = _build_console_handler(json_console)
         _finalize_handler(console_handler)
         root_logger.addHandler(console_handler)
 
@@ -285,33 +275,13 @@ def _ensure_record_factory() -> None:
     _FACTORY_WRAPPED.set(True)
 
 
-def _build_console_handler(
-    enable_color: bool | None, json_console: bool
-) -> logging.Handler:
+def _build_console_handler(json_console: bool) -> logging.Handler:
     """Build a console handler for logging."""
     stream = logging.StreamHandler(sys.stderr)
     formatter: logging.Formatter
 
-    resolved_enable_color = enable_color
-    if resolved_enable_color is None:
-        resolved_enable_color = bool(
-            colorlog and getattr(stream.stream, "isatty", lambda: False)()
-        )
-
     if json_console:
         formatter = JsonFormatter()
-    elif resolved_enable_color and colorlog is not None:
-        formatter = colorlog.ColoredFormatter(  # type: ignore[no-untyped-call]
-            "%(log_color)s" + _DEFAULT_CONSOLE_FORMAT,
-            datefmt="%Y-%m-%d %H:%M:%S",
-            log_colors={
-                "DEBUG": "cyan",
-                "INFO": "green",
-                "WARNING": "yellow",
-                "ERROR": "red",
-                "CRITICAL": "bold_red",
-            },
-        )
     else:
         formatter = logging.Formatter(
             _DEFAULT_CONSOLE_FORMAT,

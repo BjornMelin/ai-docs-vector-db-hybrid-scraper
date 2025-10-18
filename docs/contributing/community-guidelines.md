@@ -265,8 +265,10 @@ benchmark_result = {
    # Set up benchmarking environment
    ./scripts/setup-research-env.sh
    
-   # Run baseline benchmarks
-   uv run python scripts/benchmark_query_api.py --baseline
+   # Run baseline evaluation
+   uv run python scripts/eval/rag_golden_eval.py \
+       --dataset tests/data/rag/golden_set.jsonl \
+       --output artifacts/rag_golden_report.json
    ```
 
 4. **Submit Research Proposal**
@@ -305,42 +307,24 @@ benchmark_result = {
 ##### Creating Standard Benchmarks
 
 ```python
-# Example benchmark contribution
-from ai_docs_scraper.benchmarks import BaseBenchmark
+# Example evaluation record
+from scripts.eval.rag_golden_eval import GoldenExample
 
-class ConnectionPoolOptimizationBenchmark(BaseBenchmark):
-    """Benchmark for database connection pool optimization research."""
-    
-    def __init__(self, config: BenchmarkConfig):
-        super().__init__(config)
-        self.test_scenarios = [
-            "steady_state_load",
-            "burst_traffic",
-            "gradual_ramp_up",
-            "mixed_workload"
-        ]
-    
-    async def run_benchmark(self) -> BenchmarkResult:
-        """Run comprehensive connection pool optimization benchmark."""
-        results = {}
-        
-        for scenario in self.test_scenarios:
-            # Run scenario with baseline configuration
-            baseline = await self.run_scenario(scenario, "baseline_config")
-            
-            # Run scenario with optimized configuration
-            optimized = await self.run_scenario(scenario, "optimized_config")
-            
-            # Calculate improvement metrics
-            improvement = self.calculate_improvement(baseline, optimized)
-            results[scenario] = improvement
-        
-        return BenchmarkResult(
-            scenarios=results,
-            summary=self.generate_summary(results),
-            methodology=self.get_methodology(),
-            reproducibility=self.get_reproducibility_info()
-        )
+example = GoldenExample(
+    query="Improve connection pooling throughput",
+    expected_answer="Use async connections with tuned pool size",
+    expected_contexts=["See connection pooling guide"],
+    references=["docs/operations/pooling.md"],
+    metadata={"collection": "operations", "category": "performance"},
+)
+```
+
+Append examples like this to a JSONL dataset and run:
+
+```bash
+uv run python scripts/eval/rag_golden_eval.py \
+  --dataset research/benchmarks/connection_pool.jsonl \
+  --output artifacts/connection_pool_report.json
 ```
 
 ##### Benchmark Validation Process

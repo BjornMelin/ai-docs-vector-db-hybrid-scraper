@@ -6,8 +6,10 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Iterable, Mapping
+from contextlib import suppress
 from dataclasses import dataclass
-from typing import Any, Protocol, cast, runtime_checkable
+from importlib import import_module
+from typing import TYPE_CHECKING, Any, Protocol, cast, runtime_checkable
 
 from .config import (
     DEFAULT_INSTRUMENTATIONS,
@@ -26,7 +28,50 @@ class SettingsLike(Protocol):
     observability: Any
 
 
-LOGGER = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
+
+
+# Instrumentation registry intentionally uses string-based imports so optional
+# extras remain truly optional while passing static analysis.
+_INSTRUMENTATION_SPECS: dict[str, tuple[str, str, dict[str, Any]]] = {
+    "fastapi": (
+        "opentelemetry.instrumentation.fastapi",
+        "FastAPIInstrumentor",
+        {},
+    ),
+    "httpx": (
+        "opentelemetry.instrumentation.httpx",
+        "HTTPXClientInstrumentor",
+        {},
+    ),
+    "requests": (
+        "opentelemetry.instrumentation.requests",
+        "RequestsInstrumentor",
+        {},
+    ),
+    "logging": (
+        "opentelemetry.instrumentation.logging",
+        "LoggingInstrumentor",
+        {"set_logging_format": True},
+    ),
+}
+
+if TYPE_CHECKING:
+
+    class _SupportsInstrument(Protocol):
+        """Protocol describing minimal instrumentation interface."""
+
+        def instrument(self, **kwargs: Any) -> None:
+            """Apply instrumentation to target with given configuration."""
+
+else:
+
+    class _SupportsInstrument:  # pragma: no cover - runtime placeholder
+        """Runtime placeholder matching `_SupportsInstrument` protocol."""
+
+        def instrument(self, **_: Any) -> None:
+            """Raise NotImplementedError for runtime instrumentation."""
+            raise NotImplementedError
 
 
 @dataclass
@@ -114,7 +159,7 @@ def _from_settings(settings: SettingsLike) -> ObservabilityConfig:
 def _coerce_config(
     config: ObservabilityConfig | SettingsLike | None,
 ) -> ObservabilityConfig:
-    """Normalize configuration inputs for observability initialization."""
+    """Normalize supported inputs for observability initialization."""
     if config is None:
         return get_observability_config()
     if isinstance(config, ObservabilityConfig):
@@ -132,35 +177,22 @@ def _configure_instrumentations(instrumentations: Iterable[str]) -> None:
         instrumentations: Collection of instrumentation module names to enable.
     """
     for name in instrumentations:
+        spec = _INSTRUMENTATION_SPECS.get(name)
+        if spec is None:
+            logger.debug("Unknown instrumentation '%s' requested", name)
+            continue
+
         try:
-            if name == "fastapi":
-                from opentelemetry.instrumentation.fastapi import (  # type: ignore[import-not-found]
-                    FastAPIInstrumentor,  # pyright: ignore[reportMissingImports]
-                )
-
-                FastAPIInstrumentor().instrument()
-            elif name == "httpx":
-                from opentelemetry.instrumentation.httpx import (  # type: ignore[import-not-found]
-                    HTTPXClientInstrumentor,  # pyright: ignore[reportMissingImports]
-                )
-
-                HTTPXClientInstrumentor().instrument()
-            elif name == "requests":
-                from opentelemetry.instrumentation.requests import (  # type: ignore[import-not-found]
-                    RequestsInstrumentor,  # pyright: ignore[reportMissingImports]
-                )
-
-                RequestsInstrumentor().instrument()
-            elif name == "logging":
-                from opentelemetry.instrumentation.logging import (  # type: ignore[import-not-found]
-                    LoggingInstrumentor,  # pyright: ignore[reportMissingImports]
-                )
-
-                LoggingInstrumentor().instrument(set_logging_format=True)
-            else:
-                LOGGER.debug("Unknown instrumentation '%s' requested", name)
+            module_path, attr_name, kwargs = spec
+            instrumentor_cls = getattr(import_module(module_path), attr_name)
+            instrumentor = cast("_SupportsInstrument", instrumentor_cls())
+            instrumentor.instrument(**kwargs)
         except ImportError:
-            LOGGER.warning("Instrumentation '%s' not installed", name)
+            logger.warning("Instrumentation '%s' not installed", name)
+        except Exception as exc:
+            logger.exception(
+                "Failed to configure instrumentation '%s'", name, exc_info=exc
+            )
 
 
 def initialize_observability(
@@ -178,82 +210,86 @@ def initialize_observability(
     """
     runtime_config = _coerce_config(config)
     if not runtime_config.enabled:
-        LOGGER.info("Observability disabled via configuration")
+        logger.info("Observability disabled via configuration")
         return False
 
     if _STATE.tracer_provider is not None:
         return True  # already initialized
 
+    tracer_provider: Any | None = None
+    meter_provider: Any | None = None
     try:
-        from opentelemetry import (  # pyright: ignore[reportMissingImports]
-            metrics,
-            trace,
+        from opentelemetry import metrics, trace
+        from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
+            OTLPMetricExporter,
         )
-        from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (  # type: ignore[import-not-found]
-            OTLPMetricExporter,  # pyright: ignore[reportMissingImports]
+        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
+            OTLPSpanExporter,
         )
-        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (  # type: ignore[import-not-found]
-            OTLPSpanExporter,  # pyright: ignore[reportMissingImports]
-        )
-        from opentelemetry.sdk.metrics import (  # pyright: ignore[reportMissingImports]
-            MeterProvider,  # type: ignore[import-not-found]
-        )
-        from opentelemetry.sdk.metrics.export import (  # type: ignore[import-not-found]
-            PeriodicExportingMetricReader,  # pyright: ignore[reportMissingImports]
-        )
-        from opentelemetry.sdk.resources import (  # pyright: ignore[reportMissingImports]
-            Resource,  # type: ignore[import-not-found]
-        )
-        from opentelemetry.sdk.trace import (  # pyright: ignore[reportMissingImports]
-            TracerProvider,  # type: ignore[import-not-found]
-        )
-        from opentelemetry.sdk.trace.export import (  # type: ignore[import-not-found]
+        from opentelemetry.sdk.metrics import MeterProvider
+        from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+        from opentelemetry.sdk.resources import Resource
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import (
             BatchSpanProcessor,
             ConsoleSpanExporter,
-        )  # pyright: ignore[reportMissingImports]
-    except ImportError as exc:  # pragma: no cover - validation guard
-        LOGGER.warning("OpenTelemetry SDK not installed: %s", exc)
-        return False
+        )
 
-    resource = Resource.create(runtime_config.resource_attributes())
+        resource = Resource.create(runtime_config.resource_attributes())
 
-    tracer_provider = TracerProvider(resource=resource)
-    span_exporter = OTLPSpanExporter(
-        endpoint=runtime_config.otlp_endpoint,
-        headers=dict(runtime_config.otlp_headers),
-        insecure=runtime_config.insecure_transport,
-    )
-    tracer_provider.add_span_processor(BatchSpanProcessor(span_exporter))
-    if runtime_config.console_exporter:
-        tracer_provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
-
-    trace.set_tracer_provider(tracer_provider)
-    _STATE.tracer_provider = tracer_provider
-
-    if runtime_config.metrics_enabled:
-        metric_reader = PeriodicExportingMetricReader(
-            OTLPMetricExporter(
-                endpoint=runtime_config.otlp_endpoint,
-                headers=dict(runtime_config.otlp_headers),
-                insecure=runtime_config.insecure_transport,
+        tracer_provider = TracerProvider(resource=resource)
+        span_exporter = OTLPSpanExporter(
+            endpoint=runtime_config.otlp_endpoint,
+            headers=dict(runtime_config.otlp_headers),
+            insecure=runtime_config.insecure_transport,
+        )
+        tracer_provider.add_span_processor(BatchSpanProcessor(span_exporter))
+        if runtime_config.console_exporter:
+            tracer_provider.add_span_processor(
+                BatchSpanProcessor(ConsoleSpanExporter())
             )
-        )
-        meter_provider = MeterProvider(
-            resource=resource,
-            metric_readers=[metric_reader],
-        )
-        metrics.set_meter_provider(meter_provider)
-        _STATE.meter_provider = meter_provider
-    else:
-        _STATE.meter_provider = None
 
-    _configure_instrumentations(runtime_config.instrumentations)
-    LOGGER.info(
-        "Observability initialized - service=%s endpoint=%s",
-        runtime_config.service_name,
-        runtime_config.otlp_endpoint,
-    )
-    return True
+        trace.set_tracer_provider(tracer_provider)
+        _STATE.tracer_provider = tracer_provider
+
+        if runtime_config.metrics_enabled:
+            metric_reader = PeriodicExportingMetricReader(
+                OTLPMetricExporter(
+                    endpoint=runtime_config.otlp_endpoint,
+                    headers=dict(runtime_config.otlp_headers),
+                    insecure=runtime_config.insecure_transport,
+                )
+            )
+            meter_provider = MeterProvider(
+                resource=resource,
+                metric_readers=[metric_reader],
+            )
+            metrics.set_meter_provider(meter_provider)
+            _STATE.meter_provider = meter_provider
+        else:
+            _STATE.meter_provider = None
+
+        _configure_instrumentations(runtime_config.instrumentations)
+        logger.info(
+            "Observability initialized - service=%s endpoint=%s",
+            runtime_config.service_name,
+            runtime_config.otlp_endpoint,
+        )
+        return True
+    except ImportError as exc:  # pragma: no cover - validation guard
+        logger.warning("OpenTelemetry SDK not installed: %s", exc)
+        return False
+    except Exception as exc:
+        logger.exception("Failed to initialize observability", exc_info=exc)
+        if tracer_provider is not None:
+            with suppress(Exception):
+                tracer_provider.shutdown()
+        if meter_provider is not None:
+            with suppress(Exception):
+                meter_provider.shutdown()
+        _STATE.tracer_provider = None
+        _STATE.meter_provider = None
+        return False
 
 
 def shutdown_observability() -> None:

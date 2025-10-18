@@ -56,7 +56,7 @@ docker run --rm -v qdrant_data:/data -v "$PWD/backups":/backup alpine \
 1. Build and push the updated image.
 2. `docker compose pull && docker compose up -d --no-deps app`
 3. Monitor health endpoints.
-4. Re-run integration smoke tests (`uv run pytest tests/integration/rag/test_pipeline.py -q`).
+4. Re-run the evaluation harness (`python scripts/dev.py benchmark --suite performance`).
 
 ## 2. CI/CD Workflows
 

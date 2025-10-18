@@ -23,7 +23,7 @@ infrastructure.database.connection\_affinity module
 infrastructure.database.connection\_manager module
 --------------------------------------------------
 
-.. automodule:: infrastructure.database.connection_manager
+.. automodule:: infrastructure.connection_manager
    :members:
    :show-inheritance:
    :undoc-members:

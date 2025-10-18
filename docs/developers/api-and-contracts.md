@@ -153,6 +153,23 @@ MCP tooling consumes the same DTOs. Contract coverage lives in
 `tests/unit/services/vector_db/test_service.py`, and
 `tests/unit/models/test_search_request.py`.
 
+### MCP Tooling Response Models
+
+MCP server APIs now expose a single, final surface under
+`src/mcp_tools/models/responses.py`. Only the active DTOs remain:
+
+- `AnalyticsResponse`, `SystemHealthResponse`
+- `CacheClearResponse`, `CacheStatsResponse`
+- `CollectionInfo`, `CollectionOperationResponse`, `ReindexCollectionResponse`
+- `AddDocumentResponse`, `DocumentBatchResponse`
+- `EmbeddingGenerationResponse`, `EmbeddingProviderInfo`
+- `OperationStatus`, `ProjectInfo`, `GenericDictResponse`
+- `ContentIntelligenceResult`
+
+Import `ContentType` and other content-intelligence enums directly from
+`src/services/content_intelligence/models.py`; no compatibility re-export is
+provided by the MCP layer.
+
 ## 3. Enterprise Extensions
 
 Enterprise deployments mount additional routers for LangGraph workflows and MCP

@@ -6,7 +6,6 @@ import json
 from pathlib import Path
 
 import pytest
-
 from scripts.ci import validate_config
 
 
@@ -40,6 +39,29 @@ def test_validate_templates_handles_environment_mismatch(tmp_path: Path) -> None
     """Environment enforcement should catch template mismatches."""
     templates_dir = tmp_path / "config" / "templates"
     templates_dir.mkdir(parents=True)
+    (templates_dir / "base.json").write_text(
+        json.dumps(
+            {
+                "environment": "development",
+                "cache": {},
+                "qdrant": {},
+                "performance": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+    (templates_dir / "profiles.json").write_text(
+        json.dumps(
+            {
+                "development": {
+                    "overrides": {
+                        "environment": "production",
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
     (templates_dir / "development.json").write_text(
         json.dumps(
             {"environment": "production", "cache": {}, "qdrant": {}, "performance": {}}

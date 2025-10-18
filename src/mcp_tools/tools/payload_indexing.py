@@ -6,7 +6,7 @@ import logging
 from collections.abc import Mapping
 from datetime import UTC, datetime
 from time import perf_counter
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 from fastmcp import Context
@@ -93,16 +93,27 @@ def _normalise_summary(
 def register_tools(
     mcp,
     *,
-    vector_service: VectorStoreService,
+    vector_service: VectorStoreService | Any,
 ) -> None:
     """Register payload indexing helpers with the MCP server."""
     validator = MLSecurityValidator.from_unified_config()
+
+    async def _resolve_service() -> VectorStoreService:
+        """Resolve the vector store service from the provided vector_service."""
+        if isinstance(vector_service, VectorStoreService):
+            return vector_service
+        candidate = getattr(vector_service, "get_vector_store_service", None)
+        if candidate is not None:
+            resolved = await candidate()
+            return cast(VectorStoreService, resolved)
+        return cast(VectorStoreService, vector_service)
 
     @mcp.tool()
     async def create_payload_indexes(
         collection_name: str,
         ctx: Context,
     ) -> GenericDictResponse:
+        """Create payload indexes for a collection."""
         request_id = str(uuid4())
         await ctx.info(
             f"Creating payload indexes for collection: {collection_name} "
@@ -110,7 +121,7 @@ def register_tools(
         )
 
         safe_name = validator.validate_collection_name(collection_name)
-        service = vector_service
+        service = await _resolve_service()
         collections = await service.list_collections()
         if safe_name not in collections:
             msg = f"Collection '{safe_name}' not found"
@@ -129,7 +140,7 @@ def register_tools(
     ) -> GenericDictResponse:
         """List existing payload indexes for a collection."""
         safe_name = validator.validate_collection_name(collection_name)
-        service = vector_service
+        service = await _resolve_service()
         summary = await service.get_payload_index_summary(safe_name)
         count = summary["indexed_fields_count"]
         await ctx.info(f"Collection {safe_name} exposes {count} payload indexes")
@@ -148,7 +159,7 @@ def register_tools(
         )
 
         safe_name = validator.validate_collection_name(collection_name)
-        service = vector_service
+        service = await _resolve_service()
 
         before = await service.get_payload_index_summary(safe_name)
         await service.drop_payload_indexes(safe_name, _INDEX_DEFINITIONS.keys())
@@ -178,15 +189,12 @@ def register_tools(
     ) -> GenericDictResponse:
         """Benchmark filtered search performance on a collection."""
         if ctx:
-            await ctx.info(
-                "Benchmarking filtered search on %s",  # type: ignore[arg-type]
-                collection_name,
-            )
+            await ctx.info(f"Benchmarking filtered search on {collection_name}")
 
         safe_name = validator.validate_collection_name(collection_name)
         clean_query = validator.validate_query_string(query)
 
-        service = vector_service
+        service = await _resolve_service()
 
         start = perf_counter()
         matches = await service.search_documents(

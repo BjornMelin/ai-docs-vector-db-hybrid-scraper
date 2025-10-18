@@ -16,7 +16,7 @@ from .tracing import get_tracer
 from .tracking import get_ai_tracker, record_ai_operation, track_cost
 
 
-LOGGER = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 ObservabilityConfigDep = Annotated[
     ObservabilityConfig, Depends(get_observability_config)
@@ -40,8 +40,11 @@ def get_observability_service() -> dict[str, Any]:
 
 
 def trace_noop() -> Any:  # pragma: no cover - trivial fallback
+    """Return a no-op tracer for fallback when observability is disabled."""
+
     class _Tracer:
         def start_as_current_span(self, *_args: Any, **_kwargs: Any):
+            """Return null context for no-op tracing."""
             return nullcontext()
 
     return _Tracer()
@@ -51,6 +54,7 @@ ObservabilityServiceDep = Annotated[dict[str, Any], Depends(get_observability_se
 
 
 def ai_tracer_dep(service: ObservabilityServiceDep) -> Any:
+    """Extract AI tracer from observability service dependency."""
     return service["tracer"]
 
 

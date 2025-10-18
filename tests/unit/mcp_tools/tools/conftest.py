@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import sys
 import types
-from types import SimpleNamespace
+from dataclasses import dataclass
+from typing import Any, ClassVar
 
 import pytest
 
@@ -13,44 +14,88 @@ def _install_agents_stub() -> None:
     """Install a lightweight stub for ``src.services.agents`` if missing."""
     if "src.services.agents" in sys.modules:
         return
+    try:
+        import importlib
+
+        importlib.import_module("src.services.agents")
+    except ImportError:
+        pass
+    else:
+        return
 
     module = types.ModuleType("src.services.agents")
 
-    class QueryOrchestrator:
-        """Minimal query orchestrator stub used in tests."""
+    @dataclass
+    class GraphSearchOutcome:
+        """Minimal search outcome payload."""
 
-        def __init__(self) -> None:
-            self.is_initialized = False
-            self._history: list[tuple[str, dict[str, object]]] = []
+        success: bool
+        session_id: str
+        answer: str | None
+        confidence: float | None
+        results: list[Any]
+        tools_used: list[str]
+        reasoning: list[str]
+        metrics: dict[str, Any]
+        errors: list[dict[str, Any]]
 
-        async def initialize(self, deps: object) -> None:
-            self.is_initialized = True
-            # pylint: disable=attribute-defined-outside-init
-            self._deps = deps  # pragma: no cover - debug aid
+    @dataclass
+    class GraphAnalysisOutcome:
+        """Minimal analysis outcome payload."""
 
-        async def orchestrate_query(self, **kwargs) -> dict[str, object]:  # type: ignore[override]
-            self._history.append(("query", kwargs))
-            return {
-                "success": True,
-                "results": [],
-                "orchestration_plan": {},
-                "tools_used": [],
-                "reasoning": "stub",
-                "metrics": {},
-            }
+        success: bool
+        analysis_id: str
+        summary: str
+        insights: dict[str, Any]
+        recommendations: list[str]
+        confidence: float | None
+        metrics: dict[str, Any]
+        errors: list[dict[str, Any]]
 
-    def create_agent_dependencies(**kwargs) -> SimpleNamespace:  # type: ignore[override]
-        session_state = SimpleNamespace(preferences={})
-        return SimpleNamespace(session_state=session_state, kwargs=kwargs)
+    class GraphRunner:
+        """Minimal GraphRunner facade for tooling tests."""
 
-    async def orchestrate_tools(
-        *_args, **_kwargs
-    ) -> dict[str, object]:  # pragma: no cover - simple stub
-        return {}
+        COMPONENTS: ClassVar[tuple[None, None, None]] = (None, None, None)
 
-    module.QueryOrchestrator = QueryOrchestrator  # type: ignore[attr-defined]
-    module.create_agent_dependencies = create_agent_dependencies  # type: ignore[attr-defined]
-    module.orchestrate_tools = orchestrate_tools  # type: ignore[attr-defined]
+        @classmethod
+        def build_components(cls) -> tuple[None, None, None, GraphRunner]:
+            """Return stubbed components and runner instance."""
+            return (*cls.COMPONENTS, cls())
+
+        async def run_search(
+            self, **_kwargs: Any
+        ) -> GraphSearchOutcome:  # pragma: no cover - unused default
+            """Fallback run implementation returning empty success."""
+            return GraphSearchOutcome(
+                success=True,
+                session_id="noop",
+                answer=None,
+                confidence=None,
+                results=[],
+                tools_used=[],
+                reasoning=[],
+                metrics={},
+                errors=[],
+            )
+
+        async def run_analysis(
+            self, **_kwargs: Any
+        ) -> GraphAnalysisOutcome:  # pragma: no cover - unused default
+            """Fallback analysis implementation returning empty success."""
+            return GraphAnalysisOutcome(
+                success=True,
+                analysis_id="noop",
+                summary="",
+                insights={},
+                recommendations=[],
+                confidence=None,
+                metrics={},
+                errors=[],
+            )
+
+    module.GraphRunner = GraphRunner  # type: ignore[attr-defined]
+    module.GraphSearchOutcome = GraphSearchOutcome  # type: ignore[attr-defined]
+    module.GraphAnalysisOutcome = GraphAnalysisOutcome  # type: ignore[attr-defined]
 
     sys.modules["src.services.agents"] = module
 

@@ -319,6 +319,28 @@ class TestSafeResponse:
         assert "/home/" not in result["error"]
         assert "****/user/private/config.json" in result["error"]
 
+    def test_safe_response_sanitizes_windows_paths(self):
+        """Test safe_response masks Windows style file paths."""
+        result = safe_response(
+            False, error="Failed to open C:\\Users\\alice\\secret.txt"
+        )
+
+        error_text = result["error"]
+        assert "C:\\" not in error_text
+        assert "****\\Users\\alice\\" in error_text
+        assert error_text.endswith(".txt")
+
+    def test_safe_response_handles_multiple_paths(self):
+        """Test safe_response masks each path occurrence in a message."""
+        message = "Could not load /etc/app/config.yaml and /var/log/app/error.log"
+        result = safe_response(False, error=message)
+
+        error_text = result["error"]
+        assert "****/app/config.yaml" in error_text
+        assert "****/log/app/error.log" in error_text
+        assert "/etc/" not in error_text
+        assert "/var/log" not in error_text
+
 
 class TestRetryAsync:
     """Test cases for retry_async decorator."""
@@ -839,9 +861,10 @@ class TestErrorIntegration:
 
         # Should log the error
         mock_logger.warning.assert_called_once()
-        log_call = mock_logger.warning.call_args[0][0]
-        assert "MCP error" in log_call
-        assert "Test tool error" in log_call
+        log_args, log_kwargs = mock_logger.warning.call_args
+        assert "MCP error" in log_args[0]
+        assert str(log_args[2]) == "Test tool error"
+        assert not log_kwargs
 
         # Should return safe response
         assert result["success"] is False

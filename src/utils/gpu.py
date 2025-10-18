@@ -35,7 +35,7 @@ def _load_torch() -> Any | None:
         return None
     try:
         return import_module("torch")
-    except Exception as exc:
+    except (ImportError, ModuleNotFoundError) as exc:
         logger.info("Torch import failed: %s", exc)
         return None
 

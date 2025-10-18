@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import cast
 
 import pytest
-
 from scripts.eval import seed_qdrant
 from scripts.eval.seed_qdrant import _load_corpus, _seed_collection
 

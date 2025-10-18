@@ -107,7 +107,11 @@ class SearchRequest(BaseModel):
         default="documentation", min_length=1, description="Target collection"
     )
     limit: int = Field(10, ge=1, le=1000, description="Maximum results to return")
-    offset: int = Field(0, ge=0, description="Results offset for pagination")
+    offset: int = Field(
+        default=0,
+        ge=0,
+        description="Results offset for pagination",
+    )
 
     # Vector search parameters
     query_vector: list[float] | None = Field(

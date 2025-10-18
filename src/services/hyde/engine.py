@@ -320,7 +320,11 @@ class HyDEQueryEngine:
                 self._hyde_embedding_dimensions = self.vector_store.embedding_dimension
             except EmbeddingServiceError:
                 return None
-            except Exception:  # pragma: no cover - defensive catch for provider quirks
+            except (
+                AttributeError,
+                RuntimeError,
+                TypeError,
+            ):  # pragma: no cover - defensive catch for provider quirks
                 return None
 
         return self._hyde_embedding_dimensions

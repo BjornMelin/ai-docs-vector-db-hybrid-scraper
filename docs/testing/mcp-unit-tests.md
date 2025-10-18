@@ -8,11 +8,11 @@ This document captures the consolidated unit-test approach for the maintained MC
 
 | Feature Surface           | Key Behaviour                                                                              | Unit Tests                                     |
 | ------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------- |
-| Search tool suite         | FastMCP search entrypoints (`search_documents`, `search_similar`) calling vector services   | `tests/unit/mcp_tools/test_search_tools.py`     |
+| Search tool suite         | FastMCP search entrypoints (`search_documents`, `search_similar`) calling vector services   | `tests/unit/mcp_tools/tools/test_retrieval.py`  |
 | Tool registry             | Aggregated tool registration and optional dependency handling                              | `tests/unit/mcp_tools/test_tool_registry.py`    |
-| Request validation        | Pydantic model bounds and defaults for core request types                                  | `tests/unit/mcp_tools/test_requests.py`         |
+| Request validation        | Pydantic model bounds and defaults for core request types                                  | `tests/unit/mcp_tools/models/test_requests.py`  |
 | Unified MCP server config | Streaming config guard rails and configuration validation                                   | `tests/unit/test_unified_mcp_server.py`         |
-| MCP server lifespan       | Container wiring, dependency resolution, and monitoring task orchestration                 | `tests/integration/mcp/test_server_lifespan.py` |
+| MCP server lifecycle      | Container wiring, dependency resolution, and monitoring task orchestration                 | `tests/unit/test_unified_mcp_server.py`         |
 
 ## Decision Record DR-001: Consolidate MCP Suites
 

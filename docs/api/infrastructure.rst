@@ -12,6 +12,14 @@ Subpackages
 Submodules
 ----------
 
+infrastructure.project\_storage module
+--------------------------------------
+
+.. automodule:: infrastructure.project_storage
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 infrastructure.shared module
 ----------------------------
 

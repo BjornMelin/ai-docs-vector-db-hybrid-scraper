@@ -16,7 +16,7 @@ from starlette.requests import Request
 try:
     # As provided by the library.
     from asgi_correlation_id import correlation_id as _cid  # type: ignore
-except Exception:  # Library optional at runtime
+except ImportError:  # Library optional at runtime
     _cid = None
 
 

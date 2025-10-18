@@ -44,15 +44,15 @@ class ToolExecutionError(RuntimeError):
         self.server_name = server_name
 
 
-class ToolExecutionInvalidArgument(ToolExecutionError):  # noqa: N818
+class ToolExecutionInvalidArgument(ToolExecutionError):
     """Raised when invalid arguments are provided to a tool call."""
 
 
-class ToolExecutionTimeout(ToolExecutionError):  # noqa: N818
+class ToolExecutionTimeout(ToolExecutionError):
     """Raised when a tool call exceeds its read timeout."""
 
 
-class ToolExecutionFailure(ToolExecutionError):  # noqa: N818
+class ToolExecutionFailure(ToolExecutionError):
     """Raised when the remote tool reports an error payload."""
 
 

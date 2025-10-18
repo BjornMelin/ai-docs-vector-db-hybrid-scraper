@@ -4,16 +4,9 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from crawl4ai import (  # pyright: ignore[reportMissingTypeStubs]
-    AsyncWebCrawler,
-    BrowserConfig,
-    CacheMode,
-    CrawlerRunConfig,
-)
-from crawl4ai.async_dispatcher import (  # pyright: ignore[reportMissingTypeStubs]
-    MemoryAdaptiveDispatcher,
-)
-from crawl4ai.models import CrawlResult  # pyright: ignore[reportMissingTypeStubs]
+from crawl4ai import AsyncWebCrawler, BrowserConfig, CacheMode, CrawlerRunConfig
+from crawl4ai.async_dispatcher import MemoryAdaptiveDispatcher
+from crawl4ai.models import CrawlResult
 
 from src.config.browser import Crawl4AISettings
 from src.services.browser.models import BrowserResult, ProviderKind, ScrapeRequest

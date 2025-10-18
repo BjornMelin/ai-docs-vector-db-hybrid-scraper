@@ -126,7 +126,11 @@ def _torch_device_checks(
     except _tensor_exception_types(torch_module) as exc:  # pragma: no cover
         detail = f"{type(exc).__name__}: {exc}"
         checks.append(CheckResult("torch-matmul", "failed", detail))
-    except Exception as exc:  # pragma: no cover - surfaced in tests
+    except (
+        TypeError,
+        AttributeError,
+        ValueError,
+    ) as exc:  # pragma: no cover - surfaced in tests
         detail = f"UnexpectedError[{type(exc).__name__}]: {exc}"
         checks.append(CheckResult("torch-matmul", "failed", detail))
 
@@ -136,7 +140,11 @@ def _torch_device_checks(
         reserved = getattr(torch_module.cuda, "memory_reserved", lambda *_: None)(0)
         detail = f"allocated={allocated} reserved={reserved}"
         checks.append(CheckResult("torch-memory", "passed", detail))
-    except Exception as exc:  # pragma: no cover - surfaced in tests
+    except (
+        RuntimeError,
+        TypeError,
+        AttributeError,
+    ) as exc:  # pragma: no cover - surfaced in tests
         checks.append(CheckResult("torch-memory", "warning", str(exc)))
 
     return checks, {
@@ -174,7 +182,12 @@ def _xformers_checks(torch_module, xformers_module, require_gpu: bool) -> CheckR
         value = torch_module.randn((1, 4, 64), device=device, dtype=dtype)
         _ = ops.memory_efficient_attention(query, key, value)
         return CheckResult("xformers", "passed", "Memory efficient attention executed")
-    except Exception as exc:  # pragma: no cover - surfaced in tests
+    except (
+        RuntimeError,
+        TypeError,
+        AttributeError,
+        ValueError,
+    ) as exc:  # pragma: no cover - surfaced in tests
         return CheckResult("xformers", "failed", str(exc))
 
 
@@ -213,7 +226,12 @@ def _import_only_check(
     except ModuleNotFoundError:
         status = "failed" if require_gpu else "warning"
         return CheckResult(name, status, f"{module_name} not installed"), None
-    except Exception as exc:  # pragma: no cover - surfaced in integration runs
+    except (
+        ImportError,
+        AttributeError,
+        TypeError,
+        ValueError,
+    ) as exc:  # pragma: no cover - surfaced in integration runs
         status = "failed" if require_gpu else "warning"
         detail = f"{module_name} import error [{type(exc).__name__}]: {exc}"
         return CheckResult(name, status, detail), None

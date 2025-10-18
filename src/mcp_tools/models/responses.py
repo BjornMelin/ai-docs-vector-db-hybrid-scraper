@@ -1,35 +1,8 @@
 """Response models for MCP server tools."""
 
-from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
-
-from src.contracts.retrieval import SearchRecord
-from src.services.content_intelligence.models import ContentType as _ContentType
-
-
-# Re-export ContentType for backward compatibility with earlier imports.
-ContentType = _ContentType
-
-
-class CrawlResult(BaseModel):
-    """Result from crawling a single page"""
-
-    url: str = Field(..., description="Page URL")
-    title: str = Field(default="", description="Page title")
-    content: str = Field(default="", description="Page content")
-    word_count: int = Field(default=0, description="Word count")
-    success: bool = Field(default=False, description="Success status")
-    site_name: str = Field(default="", description="Site name")
-    depth: int = Field(default=0, description="Crawl depth")
-    crawl_timestamp: str = Field(
-        default_factory=lambda: datetime.now(tz=UTC).isoformat(),
-        description="Crawl timestamp",
-    )
-    links: list[str] = Field(default_factory=list, description="Extracted links")
-    metadata: dict = Field(default_factory=dict, description="Page metadata")
-    error: str | None = Field(default=None, description="Error message if failed")
 
 
 # ---------------------------------------------------------------------------
@@ -145,45 +118,6 @@ class CollectionOperationResponse(OperationStatus):
 
 
 # ---------------------------------------------------------------------------
-# Deployment / Aliases
-# ---------------------------------------------------------------------------
-
-
-class AliasesResponse(BaseModel):
-    """Mapping of alias -> collection returned by deployment.list_aliases."""
-
-    aliases: dict[str, str]
-
-
-class ABTestAnalysisMetrics(BaseModel):
-    """Key performance metrics calculated for an A/B experiment."""
-
-    variant_a_conversion: float | None = None
-    variant_b_conversion: float | None = None
-    p_value: float | None = None
-
-    model_config = ConfigDict(extra="allow")
-
-
-class ABTestAnalysisResponse(BaseModel):
-    """Response model for deployment.analyze_ab_test."""
-
-    experiment_id: str
-    concluded: bool
-    metrics: ABTestAnalysisMetrics | None = None
-    recommendation: str | None = None
-
-
-class CanaryStatusResponse(BaseModel):
-    """Deployment canary status."""
-
-    deployment_id: str
-    status: str
-    started_at: str | None = None
-    metrics: dict[str, Any] | None = None
-
-
-# ---------------------------------------------------------------------------
 # Documents / Embeddings / Projects / Misc
 # ---------------------------------------------------------------------------
 
@@ -246,12 +180,6 @@ class ProjectInfo(BaseModel):
 # list_projects returns list[ProjectInfo]
 
 
-class ConfigValidationResponse(OperationStatus):
-    """Result of utilities.validate_configuration."""
-
-    errors: list[str] | None = None
-
-
 # ---------------------------------------------------------------------------
 # Batch operations
 # ---------------------------------------------------------------------------
@@ -263,59 +191,6 @@ class DocumentBatchResponse(BaseModel):
     successful: list[AddDocumentResponse]
     failed: list[str]
     total: int
-
-    @property
-    def success_count(self) -> int:  # pragma: no cover
-        return len(self.successful)
-
-    @property
-    def failure_count(self) -> int:  # pragma: no cover
-        return len(self.failed)
-
-
-# ---------------------------------------------------------------------------
-# Advanced HyDE Search
-# ---------------------------------------------------------------------------
-
-
-class HyDEConfig(BaseModel):
-    """Configuration parameters for HyDE (Hypothetical Document Embedding) search.
-
-    Defines the settings used for generating hypothetical documents and controlling
-    the search behavior in advanced HyDE operations.
-    """
-
-    domain: str | None = None
-    num_generations: int
-    temperature: float
-    enable_ab_testing: bool | None = None
-    use_cache: bool | None = None
-
-
-class SearchMetrics(BaseModel):
-    """Metrics collected during search operations.
-
-    Captures performance and behavioral data from search executions to enable
-    monitoring, optimization, and debugging of search functionality.
-    """
-
-    search_time_ms: float
-    results_found: int
-    reranking_applied: bool | None = None
-    cache_used: bool | None = None
-    generation_parameters: dict[str, Any] | None = None
-
-
-class HyDEAdvancedResponse(BaseModel):
-    """Full response for advanced HyDE search tool."""
-
-    request_id: str
-    query: str
-    collection: str
-    hyde_config: HyDEConfig
-    results: list[dict[str, Any]]
-    metrics: SearchMetrics
-    ab_test_results: dict[str, Any] | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -337,99 +212,5 @@ class ContentIntelligenceResult(BaseModel):
         default=False, description="Whether result was retrieved from cache"
     )
     error: str | None = Field(default=None, description="Error message if failed")
-
-    model_config = ConfigDict(extra="allow")
-
-
-# ---------------------------------------------------------------------------
-# Query Processing Responses
-# ---------------------------------------------------------------------------
-
-
-class QueryIntentResult(BaseModel):
-    """Result of query intent classification."""
-
-    model_config = ConfigDict(use_enum_values=True, extra="allow")
-
-
-class QueryPreprocessingResult(BaseModel):
-    """Result of query preprocessing."""
-
-    model_config = ConfigDict(extra="allow")
-
-
-class SearchStrategyResult(BaseModel):
-    """Result of search strategy selection."""
-
-    model_config = ConfigDict(use_enum_values=True, extra="allow")
-
-
-class QueryProcessingResponse(BaseModel):
-    """Complete response from query processing pipeline."""
-
-    success: bool = Field(default=True, description="Whether processing succeeded")
-    results: list[SearchRecord] = Field(
-        default_factory=list, description="Search results"
-    )
-    total_results: int = Field(default=0, description="Total number of results")
-
-    # Processing results
-    intent_classification: QueryIntentResult | None = Field(
-        default=None, description="Intent classification results"
-    )
-    preprocessing_result: QueryPreprocessingResult | None = Field(
-        default=None, description="Preprocessing results"
-    )
-    strategy_selection: SearchStrategyResult | None = Field(
-        default=None, description="Strategy selection results"
-    )
-
-    # Performance metrics
-    total_processing_time_ms: float = Field(
-        default=0.0, description="Total processing time"
-    )
-    search_time_ms: float = Field(default=0.0, description="Search execution time")
-    strategy_selection_time_ms: float = Field(
-        default=0.0, description="Strategy selection time"
-    )
-
-    # Quality indicators
-    confidence_score: float = Field(
-        default=0.0, description="Overall confidence in results"
-    )
-    quality_score: float = Field(default=0.0, description="Estimated result quality")
-
-    # Processing details
-    processing_steps: list[str] = Field(
-        default_factory=list, description="Steps taken during processing"
-    )
-    fallback_used: bool = Field(
-        default=False, description="Whether fallback strategy was used"
-    )
-    cache_hit: bool = Field(default=False, description="Whether result was cached")
-
-    # Error handling
-    error: str | None = Field(default=None, description="Error message if failed")
-    warnings: list[str] = Field(default_factory=list, description="Warning messages")
-
-    model_config = ConfigDict(extra="allow")
-
-
-class QueryAnalysisResponse(BaseModel):
-    """Response from query analysis without search execution."""
-
-    query: str = Field(..., description="Original query")
-    preprocessing_result: QueryPreprocessingResult | None = Field(
-        default=None, description="Preprocessing analysis"
-    )
-    intent_classification: QueryIntentResult | None = Field(
-        default=None, description="Intent classification analysis"
-    )
-    strategy_selection: SearchStrategyResult | None = Field(
-        default=None, description="Recommended strategy selection"
-    )
-    processing_time_ms: float = Field(
-        default=0.0, description="Analysis processing time"
-    )
 
     model_config = ConfigDict(extra="allow")

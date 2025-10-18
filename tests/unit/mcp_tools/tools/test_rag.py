@@ -20,6 +20,11 @@ from src.services.rag.models import (
 )
 
 
+pytestmark = pytest.mark.filterwarnings(
+    "ignore::pytest.PytestUnraisableExceptionWarning"
+)
+
+
 @pytest.fixture()
 def configured_app(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     """Provide a configuration object with RAG enabled for tests."""

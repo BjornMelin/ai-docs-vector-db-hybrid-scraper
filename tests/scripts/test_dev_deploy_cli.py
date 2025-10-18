@@ -6,8 +6,8 @@ import importlib
 from pathlib import Path
 
 import pytest
-
 import scripts.dev as dev
+
 from src.config.models import DeploymentStrategy
 from src.services.deployment.manager import DeploymentPlan
 

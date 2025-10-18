@@ -20,6 +20,14 @@ src.infrastructure.container module
    :show-inheritance:
    :undoc-members:
 
+src.infrastructure.project\_storage module
+------------------------------------------
+
+.. automodule:: src.infrastructure.project_storage
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 src.infrastructure.shared module
 --------------------------------
 

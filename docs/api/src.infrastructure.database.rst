@@ -7,7 +7,7 @@ Submodules
 src.infrastructure.database.connection\_manager module
 ------------------------------------------------------
 
-.. automodule:: src.infrastructure.database.connection_manager
+.. automodule:: src.infrastructure.connection_manager
    :members:
    :show-inheritance:
    :undoc-members:

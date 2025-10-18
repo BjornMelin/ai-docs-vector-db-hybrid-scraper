@@ -1,4 +1,4 @@
-"""Evaluate the LangChain-based contextual compression pipeline."""
+"""Evaluate LangChain contextual compression pipeline."""
 
 # pylint: disable=duplicate-code
 
@@ -96,7 +96,9 @@ async def _evaluate(  # pylint: disable=too-many-locals
     config = get_settings()
     exit_stack = AsyncExitStack()
     vector_service: VectorStoreService | None = None
+
     try:
+        # Initialize vector service
         load_service = _load_vector_service
         if Mock is not None and isinstance(load_service, Mock):
             vector_service = await load_service(collection_override)
@@ -106,6 +108,7 @@ async def _evaluate(  # pylint: disable=too-many-locals
             )
             vector_service = await load_service(collection_override, settings=config)
 
+        # Check compression configuration
         rag_config = config.rag
         if not rag_config.compression_enabled:
             print(
@@ -114,6 +117,7 @@ async def _evaluate(  # pylint: disable=too-many-locals
             )
             return
 
+        # Setup compression pipeline
         fastembed_config = getattr(vector_service.config, "fastembed", None)
         model_name = getattr(fastembed_config, "dense_model", None)
         embeddings = FastEmbedEmbeddings(
@@ -129,9 +133,11 @@ async def _evaluate(  # pylint: disable=too-many-locals
             ]
         )
 
+        # Load evaluation dataset
         with dataset_path.open(encoding="utf-8") as handle:
             dataset = json.load(handle)
 
+        # Initialize metrics tracking
         total_samples = 0
         recall_hits = 0
         recall_total = 0
@@ -139,6 +145,7 @@ async def _evaluate(  # pylint: disable=too-many-locals
         aggregate_tokens_after = 0
         aggregate_documents_compressed = 0
 
+        # Process each evaluation sample
         for entry in dataset:
             query = str(entry.get("query", "")).strip()
             raw_documents = entry.get("documents") or []
@@ -148,6 +155,8 @@ async def _evaluate(  # pylint: disable=too-many-locals
             documents = _build_documents(raw_documents)
             compressed_docs = compressor.compress_documents(documents, query=query)
             total_samples += 1
+
+            # Calculate token metrics
             tokens_before = sum(_estimate_tokens(doc.page_content) for doc in documents)
             tokens_after = sum(
                 _estimate_tokens(doc.page_content) for doc in compressed_docs
@@ -158,6 +167,7 @@ async def _evaluate(  # pylint: disable=too-many-locals
                 0, len(documents) - len(compressed_docs)
             )
 
+            # Calculate recall metrics
             relevant_phrases = entry.get("relevant_phrases")
             if isinstance(relevant_phrases, list) and relevant_phrases:
                 recall_total += len(relevant_phrases)
@@ -169,7 +179,9 @@ async def _evaluate(  # pylint: disable=too-many-locals
                     for phrase in relevant_phrases
                     if phrase and phrase in compressed_text
                 )
+
     finally:
+        # Cleanup resources
         if vector_service is not None:
             await vector_service.cleanup()
         await exit_stack.aclose()

@@ -51,7 +51,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
                 body = await request.body()
                 body = body[: self._max]
                 body_str = body.decode("utf-8", errors="replace")
-            except Exception:
+            except (AttributeError, TypeError, UnicodeDecodeError, RuntimeError):
                 body_str = "<unavailable>"
         else:
             body_str = None  # type: ignore[assignment]
@@ -100,7 +100,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
             size = None
             try:
                 size = len(response.body)  # type: ignore[attr-defined]
-            except Exception:
+            except (AttributeError, TypeError):
                 size = None
             logger.info(
                 "response",

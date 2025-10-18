@@ -1,4 +1,4 @@
-"""Seed the golden_eval Qdrant collection with deterministic documents."""
+"""Seed Qdrant collection with deterministic documents."""
 
 from __future__ import annotations
 
@@ -27,12 +27,14 @@ def _seed_collection(
     recreate: bool,
 ) -> None:
     """Create or refresh the collection using FastEmbed embeddings."""
+    # Extract texts and generate embeddings
     texts = [record["text"] for record in corpus]
     embedder = TextEmbedding(model_name=model_name)
     embeddings = list(embedder.embed(texts))
     if not embeddings:
         raise RuntimeError("Corpus is empty; aborting seed.")
 
+    # Create collection if requested
     vector_size = len(embeddings[0])
     if recreate:
         client.recreate_collection(
@@ -43,6 +45,7 @@ def _seed_collection(
             ),
         )
 
+    # Build point structures for upsert
     points = []
     for record, vector in zip(corpus, embeddings, strict=False):
         payload = {
@@ -59,6 +62,7 @@ def _seed_collection(
             )
         )
 
+    # Insert points into collection
     client.upsert(collection_name=collection_name, points=points)
 
 

@@ -64,7 +64,7 @@ def test_configure_logging_installs_managed_handlers(tmp_path: Path) -> None:
     """Test that configure_logging installs managed handlers."""
     log_path = tmp_path / "logs" / "service.log"
 
-    configure_logging(level="DEBUG", enable_color=False, log_file=log_path, force=True)
+    configure_logging(level="DEBUG", log_file=log_path, force=True)
 
     handlers = _managed_handlers()
     assert len(handlers) == 2
@@ -84,10 +84,10 @@ def test_configure_logging_installs_managed_handlers(tmp_path: Path) -> None:
 
 def test_configure_logging_is_idempotent() -> None:
     """Test that configure_logging is idempotent."""
-    configure_logging(level="INFO", enable_color=False, force=True)
+    configure_logging(level="INFO", force=True)
     first_handlers = list(_managed_handlers())
 
-    configure_logging(level="INFO", enable_color=False)
+    configure_logging(level="INFO")
     second_handlers = list(_managed_handlers())
 
     assert len(second_handlers) == len(first_handlers)
@@ -96,7 +96,7 @@ def test_configure_logging_is_idempotent() -> None:
 
 def test_configure_logging_json_console() -> None:
     """Test that configure_logging sets JSON console formatter."""
-    configure_logging(level="INFO", json_console=True, enable_color=False, force=True)
+    configure_logging(level="INFO", json_console=True, force=True)
 
     console_handler = next(
         h for h in _managed_handlers() if isinstance(h, logging.StreamHandler)
@@ -106,7 +106,7 @@ def test_configure_logging_json_console() -> None:
 
 def test_log_context_binds_service_and_operation() -> None:
     """Test that LogContext binds service and operation."""
-    configure_logging(level="INFO", enable_color=False, force=True)
+    configure_logging(level="INFO", force=True)
     record_factory = logging.getLogRecordFactory()
 
     with LogContext(service="Indexer", operation="sync"):
@@ -118,7 +118,7 @@ def test_log_context_binds_service_and_operation() -> None:
 
 def test_with_service_context_resets_after_exit() -> None:
     """Test that with_service_context resets after exit."""
-    configure_logging(level="INFO", enable_color=False, force=True)
+    configure_logging(level="INFO", force=True)
     record_factory = logging.getLogRecordFactory()
 
     with with_service_context("Embedder"):
@@ -133,7 +133,7 @@ def test_with_service_context_resets_after_exit() -> None:
 
 def test_bind_and_clear_log_context() -> None:
     """Test binding and clearing log context."""
-    configure_logging(level="INFO", enable_color=False, force=True)
+    configure_logging(level="INFO", force=True)
     token = bind_log_context(request_id="abc123")
     try:
         record = logging.getLogRecordFactory()(
@@ -153,7 +153,7 @@ def test_bind_and_clear_log_context() -> None:
 
 def test_redaction_filter_masks_sensitive_values() -> None:
     """Test that RedactionFilter masks sensitive values."""
-    configure_logging(level="INFO", enable_color=False, force=True)
+    configure_logging(level="INFO", force=True)
     handler = logging.StreamHandler(StringIO())
     handler.addFilter(logging_config.RedactionFilter())
 

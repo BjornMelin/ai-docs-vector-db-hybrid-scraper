@@ -72,16 +72,13 @@ async def test_search_functionality(search_service):
 tests/
 ├── conftest.py                 # Root fixtures
 ├── unit/                       # Fast, isolated tests
-│   ├── models/test_user.py
-│   ├── services/test_auth.py
-│   └── utils/test_helpers.py
-├── integration/               # Cross-boundary tests
-│   ├── api/test_endpoints.py
-│   └── services/test_workflows.py
-├── e2e/                      # End-to-end tests
-│   └── journeys/test_user_flows.py
-└── performance/             # Performance tests
-    └── benchmarks/test_search_performance.py
+│   ├── config/test_config_models_complete.py
+│   └── services/test_logging_config.py
+├── services/                  # Service integration shims
+│   └── cache/test_cache_manager_behavior.py
+├── data_quality/             # Dataset validation harnesses
+├── scripts/                  # CLI regression coverage
+└── utils/                    # Shared helper tests
 ```
 
 ### Naming Conventions
@@ -261,6 +258,17 @@ def test_search_performance(benchmark):
     assert len(result) > 0
     assert benchmark.stats["mean"] < 0.1  # 100ms budget
 ```
+
+### Load Testing with Locust
+Run scenario-based load tests against a running FastAPI instance using Locust:
+
+```bash
+python scripts/dev.py load --host http://localhost:8000 --users 50 --spawn-rate 5 --run-time 10m
+```
+
+The Locust scenarios live in `tests/load/locustfile.py` and replay RAG search
+queries from the golden dataset. Disable headless mode with
+`python scripts/dev.py load --no-headless` to launch the Locust web UI.
 
 ### Memory Profiling
 ```python

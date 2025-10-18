@@ -24,10 +24,8 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
     from .types import QualityTier
 
 
-try:  # pragma: no cover - optional dependency
-    from FlagEmbedding import FlagReranker
-except ImportError:  # pragma: no cover - optional dependency
-    FlagReranker = None
+_FLAG_RERANKER_UNSET = object()
+FlagReranker = _FLAG_RERANKER_UNSET  # Runtime cache for optional dependency
 
 
 logger = logging.getLogger(__name__)
@@ -156,10 +154,18 @@ class ProviderRegistry:
 
     def _initialize_reranker(self) -> None:
         """Lazily initialize reranker if dependency present."""
-        if FlagReranker is None:
+        reranking_config = getattr(self._config, "reranking", None)
+        if not getattr(reranking_config, "enabled", False):
+            return
+        configured_model = getattr(reranking_config, "model", None)
+        if configured_model:
+            self._reranker_model = str(configured_model)
+
+        reranker_cls = _load_flag_reranker()
+        if reranker_cls is None:
             return
         try:
-            self._reranker = FlagReranker(self._reranker_model, use_fp16=True)
+            self._reranker = reranker_cls(self._reranker_model, use_fp16=True)
             logger.info("Reranker initialized with model %s", self._reranker_model)
         except (
             ImportError,
@@ -177,7 +183,13 @@ class ProviderRegistry:
                 dimensions=self._config.openai.dimensions,
             )
             await provider.initialize()
-        except Exception as exc:  # pragma: no cover - aligns with legacy behavior
+        except (
+            ImportError,
+            RuntimeError,
+            OSError,
+            ValueError,
+            TypeError,
+        ) as exc:  # pragma: no cover - aligns with legacy behavior
             logger.warning("Failed to initialize OpenAI provider: %s", exc)
             return
         self._providers["openai"] = provider
@@ -191,7 +203,34 @@ class ProviderRegistry:
         try:
             provider = self._factories.fastembed_cls(model_name=model)
             await provider.initialize()
-        except Exception as exc:  # pragma: no cover - aligns with legacy behavior
+        except (
+            ImportError,
+            RuntimeError,
+            OSError,
+            ValueError,
+            TypeError,
+        ) as exc:  # pragma: no cover - aligns with legacy behavior
             logger.warning("Failed to initialize FastEmbed provider: %s", exc)
             return
         self._providers["fastembed"] = provider
+
+
+def _load_flag_reranker() -> Any | None:
+    """Import and cache the optional FlagEmbedding reranker."""
+    global FlagReranker  # pylint: disable=global-statement
+
+    if FlagReranker is None:
+        return None
+    if FlagReranker is not _FLAG_RERANKER_UNSET:
+        return FlagReranker
+
+    try:
+        from FlagEmbedding import (
+            FlagReranker as _FlagReranker,  # type: ignore[import-not-found]
+        )
+    except ImportError:
+        FlagReranker = None
+        return None
+
+    FlagReranker = _FlagReranker
+    return FlagReranker

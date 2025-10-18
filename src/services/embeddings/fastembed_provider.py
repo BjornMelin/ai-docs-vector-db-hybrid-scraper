@@ -6,9 +6,8 @@ import asyncio
 import logging
 import time
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any
-
-from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
+from importlib import import_module
+from typing import TYPE_CHECKING, Any, cast
 
 from src.services.errors import EmbeddingServiceError
 from src.services.observability.tracing import trace_function
@@ -18,15 +17,20 @@ from .base import EmbeddingProvider
 
 
 if TYPE_CHECKING:  # pragma: no cover - typing aid
-    from langchain_qdrant import FastEmbedSparse as FastEmbedSparseType
+    from langchain_community.embeddings.fastembed import (
+        FastEmbedEmbeddings as _FastEmbedEmbeddings,
+    )
+    from langchain_qdrant import FastEmbedSparse as _FastEmbedSparse
 else:  # pragma: no cover - runtime fallback
-    FastEmbedSparseType = Any
+    _FastEmbedEmbeddings = Any
+    _FastEmbedSparse = Any
 
-try:  # pragma: no cover - optional sparse dependency
-    from langchain_qdrant import FastEmbedSparse as FastEmbedSparseRuntime
-except ModuleNotFoundError:  # pragma: no cover - defer sparse usage checks
-    FastEmbedSparseRuntime = None  # type: ignore[assignment]
-
+# Runtime handles cached for reuse and monkeypatching in tests.
+FastEmbedEmbeddings = cast(type[_FastEmbedEmbeddings] | None, None)
+_SPARSE_RUNTIME_UNSET = object()
+FastEmbedSparseRuntime = cast(
+    type[_FastEmbedSparse] | None | object, _SPARSE_RUNTIME_UNSET
+)
 
 logger = logging.getLogger(__name__)
 
@@ -53,8 +57,8 @@ class FastEmbedProvider(EmbeddingProvider):
         """
         super().__init__(model_name)
         self._doc_embed_type = doc_embed_type
-        self._dense: FastEmbedEmbeddings | None = None
-        self._sparse: FastEmbedSparseType | None = None
+        self._dense: _FastEmbedEmbeddings | None = None
+        self._sparse: _FastEmbedSparse | None = None
         self._sparse_model_name = sparse_model or self._DEFAULT_SPARSE_MODEL
         self._initialized = False
 
@@ -64,7 +68,8 @@ class FastEmbedProvider(EmbeddingProvider):
         if self._initialized:
             return
 
-        self._dense = FastEmbedEmbeddings(
+        dense_cls = _load_fastembed_embeddings()
+        self._dense = dense_cls(
             model_name=self.model_name,
             doc_embed_type=self._doc_embed_type,  # type: ignore[arg-type]
         )
@@ -82,7 +87,7 @@ class FastEmbedProvider(EmbeddingProvider):
         logger.debug("FastEmbed provider cleaned up")
 
     @property
-    def langchain_embeddings(self) -> FastEmbedEmbeddings:
+    def langchain_embeddings(self) -> _FastEmbedEmbeddings:
         """Expose the underlying LangChain embedding instance."""
         if self._dense is None:
             msg = "FastEmbedProvider has not been initialized"
@@ -136,11 +141,13 @@ class FastEmbedProvider(EmbeddingProvider):
         if not self._initialized:
             msg = "FastEmbedProvider has not been initialized"
             raise EmbeddingServiceError(msg)
-        if FastEmbedSparseRuntime is None:
+
+        sparse_runtime = _load_fastembed_sparse_runtime()
+        if sparse_runtime is None:
             msg = "langchain-qdrant is required for sparse embeddings"
             raise EmbeddingServiceError(msg)
         if self._sparse is None:
-            self._sparse = FastEmbedSparseRuntime(model_name=self._sparse_model_name)
+            self._sparse = sparse_runtime(self._sparse_model_name)
 
         start = time.perf_counter()
         success = True
@@ -173,7 +180,7 @@ class FastEmbedProvider(EmbeddingProvider):
 
     @property
     def cost_per_token(self) -> float:
-        """Local embeddings are cost-free."""
+        """Return the per-token cost for FastEmbed operations."""
         return 0.0
 
     @property
@@ -182,3 +189,52 @@ class FastEmbedProvider(EmbeddingProvider):
         if self._dense is None:
             return 512
         return getattr(self._dense, "max_length", 512)
+
+
+def _load_fastembed_embeddings() -> type[_FastEmbedEmbeddings]:
+    """Import and cache the FastEmbed dense embedding implementation."""
+    global FastEmbedEmbeddings  # pylint: disable=global-statement
+
+    if FastEmbedEmbeddings is not None:
+        return FastEmbedEmbeddings
+
+    try:
+        module = import_module("langchain_community.embeddings.fastembed")
+    except ModuleNotFoundError as exc:
+        msg = (
+            "langchain-community with FastEmbed support is required. "
+            "Install via `pip install langchain-community[fastembed]`."
+        )
+        raise EmbeddingServiceError(msg) from exc
+
+    candidate = getattr(module, "FastEmbedEmbeddings", None)
+    if candidate is None:
+        msg = "FastEmbedEmbeddings not available in langchain_community."
+        raise EmbeddingServiceError(msg)
+
+    FastEmbedEmbeddings = cast(type[_FastEmbedEmbeddings], candidate)
+    return FastEmbedEmbeddings
+
+
+def _load_fastembed_sparse_runtime() -> type[_FastEmbedSparse] | None:
+    """Import and cache the optional sparse embedding implementation."""
+    global FastEmbedSparseRuntime  # pylint: disable=global-statement
+
+    if FastEmbedSparseRuntime is None:
+        return None
+    if FastEmbedSparseRuntime is not _SPARSE_RUNTIME_UNSET:
+        return cast(type[_FastEmbedSparse], FastEmbedSparseRuntime)
+
+    try:
+        module = import_module("langchain_qdrant")
+    except ModuleNotFoundError:
+        FastEmbedSparseRuntime = None
+        return None
+
+    candidate = getattr(module, "FastEmbedSparse", None)
+    if candidate is None:
+        FastEmbedSparseRuntime = None
+        return None
+
+    FastEmbedSparseRuntime = cast(type[_FastEmbedSparse], candidate)
+    return FastEmbedSparseRuntime

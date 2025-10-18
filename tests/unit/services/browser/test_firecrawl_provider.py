@@ -70,7 +70,10 @@ async def test_firecrawl_scrape_and_search(monkeypatch: pytest.MonkeyPatch) -> N
     """Test FirecrawlProvider scrape and search methods with stubbed client."""
     # Patch AsyncFirecrawl class used by provider
     monkeypatch.setattr(
-        firecrawl_module, "AsyncFirecrawlApp", _StubAsyncFirecrawl, raising=True
+        firecrawl_module,
+        "_firecrawl_client_factory",
+        lambda: _StubAsyncFirecrawl,
+        raising=True,
     )
     calls: list[dict[str, Any]] = []
 
@@ -107,7 +110,10 @@ async def test_firecrawl_scrape_respects_request_timeout(
 ) -> None:
     """Provider should forward request timeout in seconds to Firecrawl SDK."""
     monkeypatch.setattr(
-        firecrawl_module, "AsyncFirecrawlApp", _StubAsyncFirecrawl, raising=True
+        firecrawl_module,
+        "_firecrawl_client_factory",
+        lambda: _StubAsyncFirecrawl,
+        raising=True,
     )
     monkeypatch.setattr(
         firecrawl_module, "execute_with_retry", _passthrough_retry, raising=True
@@ -135,7 +141,10 @@ async def test_firecrawl_scrape_prefers_smaller_metadata_timeout(
 ) -> None:
     """Metadata timeout should be clamped by router request budget."""
     monkeypatch.setattr(
-        firecrawl_module, "AsyncFirecrawlApp", _StubAsyncFirecrawl, raising=True
+        firecrawl_module,
+        "_firecrawl_client_factory",
+        lambda: _StubAsyncFirecrawl,
+        raising=True,
     )
     monkeypatch.setattr(
         firecrawl_module, "execute_with_retry", _passthrough_retry, raising=True
@@ -167,7 +176,10 @@ async def test_firecrawl_scrape_rejects_invalid_metadata_timeout(
 ) -> None:
     """Non-numeric metadata timeout should raise a provider error."""
     monkeypatch.setattr(
-        firecrawl_module, "AsyncFirecrawlApp", _StubAsyncFirecrawl, raising=True
+        firecrawl_module,
+        "_firecrawl_client_factory",
+        lambda: _StubAsyncFirecrawl,
+        raising=True,
     )
     monkeypatch.setattr(
         firecrawl_module, "execute_with_retry", _passthrough_retry, raising=True

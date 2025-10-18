@@ -76,7 +76,6 @@ class DummyGenerator(RAGGenerator):
     """Generator stub producing static answers without LLM calls."""
 
     last_callbacks: Sequence[BaseCallbackHandler] | None = None
-    call_count: int = 0
 
     def __init__(self, config: RAGConfig, retriever: BaseRetriever) -> None:
         """Initialize dummy generator with config and retriever."""
@@ -107,7 +106,6 @@ class DummyGenerator(RAGGenerator):
         """Return a static answer based on the input query and retriever state."""
         if not self.is_initialized():
             raise RuntimeError("DummyGenerator must be initialized before use")
-        DummyGenerator.call_count += 1
         document = None
         if isinstance(self._retriever, _StaticDocumentRetriever):
             document = next(iter(self._retriever._documents), None)
@@ -120,24 +118,10 @@ class DummyGenerator(RAGGenerator):
             excerpt=document.page_content if document else "",
             score=float(document.metadata.get("score", 0.0)) if document else 0.0,
         )
-        answer_prefix = "Answer to"
         confidence = 0.9
         sources = [source]
-        if DummyGenerator.call_count == 3:
-            answer_prefix = "Answer for"
-            confidence = 0.87
-            base_score = float(source.score or 0.0)
-            sources.append(
-                SourceAttribution(
-                    source_id=f"{source.source_id}-summary",
-                    title=f"{source.title} Summary" if source.title else "Summary",
-                    url=source.url,
-                    excerpt=f"Summary for {request.query}",
-                    score=max(0.0, base_score - 0.03),
-                )
-            )
         return RAGResult(
-            answer=f"{answer_prefix} {request.query}",
+            answer=f"Answer to {request.query}",
             confidence_score=confidence,
             sources=sources,
             generation_time_ms=1.0,
@@ -323,9 +307,17 @@ async def test_pipeline_returns_generation_payload(monkeypatch) -> None:
     )
 
     assert result is not None
-    assert result["answer"].startswith("Answer for")
-    assert result["confidence"] == pytest.approx(0.87)
-    assert len(result["sources"]) == 2
+    assert result["answer"] == "Answer to langgraph"
+    assert result["confidence"] == pytest.approx(0.9)
+    assert result["sources"] == [
+        {
+            "source_id": "doc-1",
+            "title": "LangGraph",
+            "url": "https://example.test/langgraph",
+            "excerpt": "LangGraph overview",
+            "score": 0.9,
+        }
+    ]
 
 
 @pytest.mark.asyncio

@@ -66,7 +66,7 @@ When `Settings.agentic.max_parallel_tools > 1`, the execution node spawns parall
 
 - Unit tests for dependency wiring: `tests/unit/services/fastapi/test_dependencies_core.py` ensures FastAPI dependencies surface a configured `GraphRunner`.
 - Tool discovery coverage: `tests/unit/services/browser/test_unified_manager.py` exercises capability hydration for browser automation tools.
-- End-to-end graph behaviour is validated through integration targets under `tests/integration/rag/` (invoke orchestrator, assert on aggregated answers and metrics).
+- End-to-end graph behaviour is validated through the RAG evaluation harness (`python scripts/dev.py benchmark --suite performance`) and focused service tests under `tests/unit/services/rag/`.
 
 ## Extension Checklist
 

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Protocol, cast
 
 import anyio
 import pytest
@@ -17,12 +17,21 @@ from src.services.fastapi.middleware.timeout import (
 )
 
 
+class CircuitBreakerManagerProtocol(Protocol):
+    """Typed subset representing the breaker manager contract."""
+
+    async def get_breaker(self, *args: Any, **kwargs: Any) -> Any:
+        """Return an async context manager for breaker operations."""
+
+
 if TYPE_CHECKING:  # pragma: no cover - typing hint only
     from src.services.circuit_breaker.circuit_breaker_manager import (
-        CircuitBreakerManager,
+        CircuitBreakerManager as _RealCircuitBreakerManager,
     )
+
+    CircuitBreakerManager = _RealCircuitBreakerManager
 else:  # pragma: no cover - runtime fallback when optional dep missing
-    CircuitBreakerManager = Any  # type: ignore[assignment]
+    CircuitBreakerManager = CircuitBreakerManagerProtocol
 
 
 class DummyContext:
@@ -200,16 +209,27 @@ async def test_timeout_middleware_resolver_used_once(
 
 
 @pytest.mark.anyio
-async def test_bulkhead_middleware_tracks_limiters() -> None:
-    """Bulkhead middleware should memoize limiters by method/path."""
+async def test_bulkhead_middleware_enforces_concurrency_limit() -> None:
+    """Bulkhead middleware should cap concurrent requests per endpoint."""
     middleware = BulkheadMiddleware(lambda *_: None, max_concurrent=1)
 
+    active = 0
+    peak = 0
+
     async def call_next(_request: Request) -> Response:
+        nonlocal active, peak
+        active += 1
+        peak = max(peak, active)
+        await anyio.sleep(0)
+        active -= 1
         return JSONResponse({"ok": True})
 
-    request = _build_request()
-    response = await middleware.dispatch(request, call_next)
+    async def execute_request() -> None:
+        response = await middleware.dispatch(_build_request(), call_next)
+        assert response.status_code == 200
 
-    assert response.status_code == 200
-    assert middleware._locks  # pylint: disable=protected-access
-    assert "GET:/" in middleware._locks  # pylint: disable=protected-access
+    async with anyio.create_task_group() as task_group:
+        task_group.start_soon(execute_request)
+        task_group.start_soon(execute_request)
+
+    assert peak == 1

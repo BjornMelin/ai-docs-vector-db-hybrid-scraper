@@ -630,11 +630,7 @@ def main(  # pylint: disable=too-many-arguments,too-many-positional-arguments
     config = get_settings()
 
     # Setup logging
-    configure_logging(
-        level="DEBUG" if verbose else "INFO",
-        enable_color=True,
-        settings=config,
-    )
+    configure_logging(level="DEBUG" if verbose else "INFO", settings=config)
     if config_path is not None:
         logger.debug("CLI config path provided: %s", config_path)
 

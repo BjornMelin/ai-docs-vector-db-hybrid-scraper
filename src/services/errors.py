@@ -193,15 +193,41 @@ def safe_response(success: bool, **kwargs) -> dict[str, Any]:
         raw_error = kwargs.get("error", "Unknown error")
         error = str(raw_error)
 
-        # Don't expose internal paths or sensitive info
-        error = re.sub(r"([A-Za-z]:)?[/\\][^\s]+", "/****/", error)
-        for pattern in (r"api[_-]?key", r"token", r"password", r"secret"):
-            error = re.sub(pattern, "***", error, flags=re.IGNORECASE)
+        error = _sanitize_error_message(error)
 
         response["error"] = error
         response["error_type"] = kwargs.get("error_type", "general")
 
     return response
+
+
+def _sanitize_error_message(message: str) -> str:
+    """Sanitize sensitive substrings within an error message."""
+    sanitized = _mask_path_segments(message)
+    for pattern in (r"api[_-]?key", r"token", r"password", r"secret"):
+        sanitized = re.sub(pattern, "***", sanitized, flags=re.IGNORECASE)
+    return sanitized
+
+
+def _mask_path_segments(message: str) -> str:
+    """Mask the leading segment of file system paths in a message."""
+    path_pattern = re.compile(r"((?:[A-Za-z]:)?[\\/](?:[^\\\s:]+[\\/])*[^\\\s:]+)")
+
+    def _replace(match: re.Match[str]) -> str:
+        original = match.group(0)
+        separator = "\\" if "\\" in original else "/"
+        normalized = original.replace("\\", "/")
+        parts = [part for part in normalized.split("/") if part]
+        if not parts:
+            return "****"
+
+        masked_parts = ["****", *parts[1:]]
+        sanitized_path = "/".join(masked_parts)
+        if separator == "\\":
+            sanitized_path = sanitized_path.replace("/", "\\")
+        return sanitized_path
+
+    return re.sub(path_pattern, _replace, message)
 
 
 def retry_async(

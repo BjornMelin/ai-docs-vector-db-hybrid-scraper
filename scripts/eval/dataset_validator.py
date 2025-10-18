@@ -1,4 +1,4 @@
-"""Validate the golden dataset for structural correctness."""
+"""Validate golden dataset structural correctness."""
 
 from __future__ import annotations
 
@@ -40,26 +40,35 @@ def load_dataset_records(path: Path) -> list[dict[str, Any]]:
 
 def validate_dataset(path: Path) -> None:
     """Validate that the dataset satisfies structural constraints."""
+    # Load and check dataset existence
     rows = load_dataset_records(path)
     if not rows:
         raise DatasetValidationError("Dataset is empty")
 
+    # Validate each row structure
     for index, payload in enumerate(rows, start=1):
+        # Check required top-level keys
         missing = REQUIRED_KEYS - payload.keys()
         if missing:
             raise DatasetValidationError(f"Row {index} missing keys: {sorted(missing)}")
+
+        # Validate expected_contexts structure
         if not isinstance(payload["expected_contexts"], list) or not all(
             isinstance(item, str) for item in payload["expected_contexts"]
         ):
             raise DatasetValidationError(
                 f"Row {index} expected_contexts must be a list of strings"
             )
+
+        # Validate references structure
         if not isinstance(payload["references"], list) or not all(
             isinstance(item, str) for item in payload["references"]
         ):
             raise DatasetValidationError(
                 f"Row {index} references must be a list of strings"
             )
+
+        # Validate metadata structure
         metadata = payload["metadata"]
         if not isinstance(metadata, dict):
             raise DatasetValidationError(f"Row {index} metadata must be an object")

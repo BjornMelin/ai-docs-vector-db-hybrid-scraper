@@ -19,7 +19,7 @@ from opentelemetry import trace
 from opentelemetry.trace import Span, SpanContext, Status, StatusCode
 
 
-LOGGER = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 DEFAULT_TRACER_NAME = "ai-docs.observability"
 
 FuncT = TypeVar("FuncT", bound=Callable[..., Any])
@@ -133,7 +133,7 @@ def set_span_attributes(attributes: Mapping[str, Any]) -> None:
     """Attach attributes to the active span when recording."""
     current_span = trace.get_current_span()
     if not current_span or not current_span.is_recording():
-        LOGGER.debug("No active span when attempting to set attributes")
+        logger.debug("No active span when attempting to set attributes")
         return
     _apply_attributes(current_span, attributes)
 
