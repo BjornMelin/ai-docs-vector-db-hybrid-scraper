@@ -29,6 +29,7 @@ from pathlib import Path
 from statistics import fmean
 from typing import TYPE_CHECKING, Any, Protocol
 
+import httpx
 import openai
 import yaml
 from ragas import EvaluationDataset
@@ -36,6 +37,16 @@ from ragas.embeddings import OpenAIEmbeddings as RagasOpenAIEmbeddings
 from ragas.evaluation import evaluate as ragas_evaluate
 from ragas.llms.base import llm_factory
 from ragas.metrics import AnswerRelevancy, ContextPrecision, ContextRecall, Faithfulness
+
+try:  # pragma: no cover - import compatibility for openai SDK variants
+    from openai import OpenAIError
+except ImportError:  # pragma: no cover - fallback for legacy openai package
+    from openai.error import OpenAIError  # type: ignore[attr-defined]
+
+try:  # pragma: no cover - ragas may expose custom exception hierarchy
+    from ragas.exceptions import RagasException
+except ImportError:  # pragma: no cover - default to RuntimeError when unavailable
+    RagasException = RuntimeError  # type: ignore[assignment]
 from scripts.eval.dataset_validator import DatasetValidationError, load_dataset_records
 
 from src.config import get_settings
@@ -221,6 +232,9 @@ class RagasEvaluator:
             RuntimeError,
             ValueError,
             OSError,
+            OpenAIError,
+            httpx.HTTPError,
+            RagasException,
         ) as exc:  # pragma: no cover - defensive guard
             logger.warning(
                 "Ragas evaluation failed for query '%s': %s",
