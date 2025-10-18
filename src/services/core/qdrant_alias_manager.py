@@ -3,8 +3,8 @@
 import asyncio
 import logging
 import re
-from collections.abc import Callable
-from typing import Any, cast
+from collections.abc import Awaitable, Callable
+from typing import Any, TypeVar, cast
 
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.models import (
@@ -20,6 +20,19 @@ from src.services.observability.tracing import log_extra_with_trace
 
 
 logger = logging.getLogger(__name__)
+
+_EXPECTED_QDRANT_ERRORS: tuple[type[BaseException], ...] = (
+    ConnectionError,
+    OSError,
+    PermissionError,
+    RuntimeError,
+    AttributeError,
+    ValueError,
+)
+
+_T = TypeVar("_T")
+_MISSING = object()
+MetadataSupplier = Callable[[], dict[str, Any]]
 
 
 def _log_extra(event: str, **metadata: Any) -> dict[str, Any]:
@@ -91,6 +104,111 @@ class QdrantAliasManager:
         """Return True as the manager relies on an injected client."""
         return True
 
+    async def _execute_with_handling(
+        self,
+        operation: Callable[[], Awaitable[_T]],
+        *,
+        action: str,
+        log_event: str,
+        metadata: dict[str, Any] | MetadataSupplier | None = None,
+        log_message: str | None = None,
+        unexpected_log_message: str | None = None,
+        default: object = _MISSING,
+        default_factory: Callable[[], _T] | None = None,
+        expected_handler: Callable[[BaseException], _T] | None = None,
+        unexpected_handler: Callable[[BaseException], _T] | None = None,
+        log_expected: bool = True,
+    ) -> _T:
+        """Execute an async operation with shared Qdrant exception handling.
+
+        Args:
+            operation: Coroutine factory to execute.
+            action: Human-readable verb for error messages.
+            log_event: Structured logging event name.
+            metadata: Static metadata dict or callable returning metadata per failure.
+            log_message: Optional log message for handled exceptions.
+            unexpected_log_message: Optional log message for unexpected exceptions.
+            default: Optional default value to return on handled exceptions.
+            default_factory: Factory invoked to produce default result on handled
+                exceptions. Mutually exclusive with ``default``.
+            expected_handler: Callback generating a result for handled exceptions.
+            unexpected_handler: Callback generating a result for unexpected exceptions.
+            log_expected: Whether to log handled exceptions.
+
+        Returns:
+            Result of ``operation`` or fallback value.
+
+        Raises:
+            QdrantServiceError: Raised when no fallback handles the exception.
+        """
+        provided_fallbacks = [
+            default is not _MISSING,
+            default_factory is not None,
+            expected_handler is not None,
+        ]
+        if sum(provided_fallbacks) > 1:
+            msg = "Provide only one of default, default_factory, or expected_handler."
+            raise ValueError(msg)
+        if unexpected_handler is not None and (
+            default is not _MISSING or default_factory is not None
+        ):
+            msg = (
+                "Unexpected handler cannot be combined with default or default_factory."
+            )
+            raise ValueError(msg)
+
+        def _resolve_metadata() -> dict[str, Any]:
+            if metadata is None:
+                return {}
+            if callable(metadata):
+                return metadata()
+            return metadata
+
+        expected_message = log_message or f"Failed to {action}"
+        unexpected_message = (
+            unexpected_log_message or f"{expected_message} (unexpected error)"
+        )
+
+        def _handle_failure(
+            exc: BaseException, handler: Callable[[BaseException], _T] | None
+        ) -> _T:
+            if handler is not None:
+                return handler(exc)
+            if default is not _MISSING:
+                return cast(_T, default)
+            if default_factory is not None:
+                return default_factory()
+            raise QdrantServiceError(f"Failed to {action}: {exc}") from exc
+
+        captured_exc: BaseException | None = None
+        handler_for_failure: Callable[[BaseException], _T] | None = None
+
+        try:
+            return await operation()
+        except Exception as exc:  # pragma: no cover - consolidated handling
+            if isinstance(exc, asyncio.CancelledError):
+                raise
+            if isinstance(exc, _EXPECTED_QDRANT_ERRORS):
+                if log_expected:
+                    logger.exception(
+                        expected_message,
+                        extra=_log_extra(log_event, **_resolve_metadata()),
+                    )
+                captured_exc = exc
+                handler_for_failure = expected_handler
+            else:
+                logger.exception(
+                    unexpected_message,
+                    extra=_log_extra(log_event, **_resolve_metadata()),
+                )
+                captured_exc = exc
+                handler_for_failure = unexpected_handler
+
+        if captured_exc is None:
+            msg = "Operation completed without result or exception."
+            raise RuntimeError(msg)
+        return _handle_failure(captured_exc, handler_for_failure)
+
     async def create_alias(
         self, alias_name: str, collection_name: str, force: bool = False
     ) -> bool:
@@ -111,8 +229,7 @@ class QdrantAliasManager:
         self.validate_name(alias_name, "Alias name")
         self.validate_name(collection_name, "Collection name")
 
-        try:
-            # Check if alias exists
+        async def _create() -> bool:
             if await self.alias_exists(alias_name):
                 if not force:
                     logger.warning(
@@ -125,11 +242,8 @@ class QdrantAliasManager:
                         ),
                     )
                     return False
-
-                # Delete existing alias
                 await self.delete_alias(alias_name)
 
-            # Create new alias
             await self.client.update_collection_aliases(
                 change_aliases_operations=[
                     CreateAliasOperation(
@@ -151,27 +265,15 @@ class QdrantAliasManager:
                     collection=collection_name,
                 ),
             )
+            return True
 
-        except (
-            ConnectionError,
-            OSError,
-            PermissionError,
-            RuntimeError,
-            AttributeError,
-            ValueError,
-            Exception,
-        ) as e:
-            logger.exception(
-                "Failed to create alias",
-                extra=_log_extra(
-                    "qdrant.alias.create",
-                    alias=alias_name,
-                    collection=collection_name,
-                ),
-            )
-            msg = f"Failed to create alias: {e}"
-            raise QdrantServiceError(msg) from e
-        return True
+        return await self._execute_with_handling(
+            _create,
+            action="create alias",
+            log_event="qdrant.alias.create",
+            metadata=lambda: {"alias": alias_name, "collection": collection_name},
+            log_message="Failed to create alias",
+        )
 
     async def switch_alias(
         self, alias_name: str, new_collection: str, delete_old: bool = False
@@ -195,8 +297,8 @@ class QdrantAliasManager:
 
         old_collection: str | None = None
 
-        try:
-            # Get current collection
+        async def _switch() -> str | None:
+            nonlocal old_collection
             old_collection = await self.get_collection_for_alias(alias_name)
 
             if old_collection == new_collection:
@@ -212,10 +314,8 @@ class QdrantAliasManager:
                 )
                 return None
 
-            # Atomic switch
             operations = []
 
-            # Delete old alias
             if old_collection:
                 operations.append(
                     DeleteAliasOperation(
@@ -223,17 +323,14 @@ class QdrantAliasManager:
                     )
                 )
 
-            # Create new alias
             operations.append(
                 CreateAliasOperation(
                     create_alias=CreateAlias(
-                        alias_name=alias_name,
-                        collection_name=new_collection,
+                        alias_name=alias_name, collection_name=new_collection
                     )
                 )
             )
 
-            # Execute atomically
             await self.client.update_collection_aliases(
                 change_aliases_operations=operations
             )
@@ -252,31 +349,22 @@ class QdrantAliasManager:
                 ),
             )
 
-            # Optionally delete old collection
             if delete_old and old_collection:
                 await self.safe_delete_collection(old_collection)
 
-        except (
-            ConnectionError,
-            OSError,
-            PermissionError,
-            RuntimeError,
-            AttributeError,
-            ValueError,
-            Exception,
-        ) as e:
-            logger.exception(
-                "Failed to switch alias",
-                extra=_log_extra(
-                    "qdrant.alias.switch",
-                    alias=alias_name,
-                    old_collection=old_collection,
-                    new_collection=new_collection,
-                ),
-            )
-            msg = f"Failed to switch alias: {e}"
-            raise QdrantServiceError(msg) from e
-        return old_collection
+            return old_collection
+
+        return await self._execute_with_handling(
+            _switch,
+            action="switch alias",
+            log_event="qdrant.alias.switch",
+            metadata=lambda: {
+                "alias": alias_name,
+                "old_collection": old_collection,
+                "new_collection": new_collection,
+            },
+            log_message="Failed to switch alias",
+        )
 
     async def delete_alias(self, alias_name: str) -> bool:
         """Delete an alias.
@@ -290,7 +378,8 @@ class QdrantAliasManager:
         Raises:
             QdrantServiceError: If operation fails
         """
-        try:
+
+        async def _delete() -> bool:
             await self.client.update_collection_aliases(
                 change_aliases_operations=[
                     DeleteAliasOperation(
@@ -304,57 +393,52 @@ class QdrantAliasManager:
                 alias_name,
                 extra=_log_extra("qdrant.alias.delete", alias=alias_name),
             )
+            return True
 
-        except (OSError, PermissionError):
-            logger.exception(
-                "Failed to delete alias",
-                extra=_log_extra("qdrant.alias.delete", alias=alias_name),
-            )
-            return False
-        except Exception:  # pragma: no cover - defensive path
-            logger.exception(
-                "Unexpected error deleting alias",
-                extra=_log_extra("qdrant.alias.delete", alias=alias_name),
-            )
-            return False
-        return True
+        return await self._execute_with_handling(
+            _delete,
+            action="delete alias",
+            log_event="qdrant.alias.delete",
+            metadata=lambda: {"alias": alias_name},
+            log_message="Failed to delete alias",
+            unexpected_log_message="Unexpected error deleting alias",
+            default=False,
+        )
 
     async def alias_exists(self, alias_name: str) -> bool:
         """Check if an alias exists."""
-        try:
+
+        async def _exists() -> bool:
             aliases = await self.client.get_aliases()
             return any(alias.alias_name == alias_name for alias in aliases.aliases)
-        except (
-            ConnectionError,
-            OSError,
-            PermissionError,
-            RuntimeError,
-            AttributeError,
-            ValueError,
-        ):
-            return False
-        except Exception:  # noqa: BLE001 - tolerate unexpected client failures
-            return False
+
+        return await self._execute_with_handling(
+            _exists,
+            action="check alias existence",
+            log_event="qdrant.alias.exists",
+            metadata=lambda: {"alias": alias_name},
+            default=False,
+            log_expected=False,
+        )
 
     async def get_collection_for_alias(self, alias_name: str) -> str | None:
         """Get collection name that alias points to."""
-        try:
+
+        async def _resolve() -> str | None:
             aliases = await self.client.get_aliases()
             for alias in aliases.aliases:
                 if alias.alias_name == alias_name:
                     return alias.collection_name
-        except (
-            ConnectionError,
-            OSError,
-            PermissionError,
-            RuntimeError,
-            AttributeError,
-            ValueError,
-        ):
             return None
-        except Exception:  # noqa: BLE001 - tolerate unexpected client failures
-            return None
-        return None
+
+        return await self._execute_with_handling(
+            _resolve,
+            action="resolve alias collection",
+            log_event="qdrant.alias.resolve",
+            metadata=lambda: {"alias": alias_name},
+            default=None,
+            log_expected=False,
+        )
 
     async def list_aliases(self) -> dict[str, str]:
         """List all aliases and their collections.
@@ -362,30 +446,20 @@ class QdrantAliasManager:
         Returns:
             Dictionary mapping alias names to collection names
         """
-        try:
+
+        async def _list() -> dict[str, str]:
             aliases = await self.client.get_aliases()
             return {
                 alias.alias_name: alias.collection_name for alias in aliases.aliases
             }
-        except (
-            PermissionError,
-            ConnectionError,
-            OSError,
-            RuntimeError,
-            AttributeError,
-            ValueError,
-        ):
-            logger.exception(
-                "Failed to list aliases",
-                extra=_log_extra("qdrant.alias.list"),
-            )
-            return {}
-        except Exception:
-            logger.exception(
-                "Failed to list aliases",
-                extra=_log_extra("qdrant.alias.list"),
-            )
-            return {}
+
+        return await self._execute_with_handling(
+            _list,
+            action="list aliases",
+            log_event="qdrant.alias.list",
+            log_message="Failed to list aliases",
+            default_factory=dict,
+        )
 
     async def safe_delete_collection(
         self, collection_name: str, grace_period_minutes: int = 60
@@ -426,30 +500,20 @@ class QdrantAliasManager:
         logger.info(
             "Collection %s deleted",
             collection_name,
-            extra=_log_extra("qdrant.collection.delete", collection=collection_name),
+            extra=_log_extra(
+                "qdrant.collection.delete",
+                collection=collection_name,
+                grace_minutes=grace_period_minutes,
+            ),
         )
 
     async def clone_collection_schema(self, source: str, target: str) -> bool:
-        """Clone collection schema from source to target.
+        """Clone collection schema from source to target."""
 
-        Args:
-            source: Source collection name
-            target: Target collection name
-
-        Returns:
-            True if successful
-
-        Raises:
-            QdrantServiceError: If operation fails
-        """
-        try:
-            # Get source collection info
+        async def _clone() -> bool:
             source_info = await self.client.get_collection(source)
-
-            # Extract vector configs
             vectors_config = source_info.config.params.vectors
 
-            # Create target collection with same config
             await self.client.create_collection(
                 collection_name=target,
                 vectors_config=cast(Any, vectors_config),
@@ -475,33 +539,15 @@ class QdrantAliasManager:
                     "qdrant.collection.clone", source=source, target=target
                 ),
             )
+            return True
 
-        except (
-            ConnectionError,
-            OSError,
-            PermissionError,
-            RuntimeError,
-            AttributeError,
-            ValueError,
-        ) as e:
-            logger.exception(
-                "Failed to clone collection schema",
-                extra=_log_extra(
-                    "qdrant.collection.clone", source=source, target=target
-                ),
-            )
-            msg = f"Failed to clone collection schema: {e}"
-            raise QdrantServiceError(msg) from e
-        except Exception as e:
-            logger.exception(
-                "Failed to clone collection schema",
-                extra=_log_extra(
-                    "qdrant.collection.clone", source=source, target=target
-                ),
-            )
-            msg = f"Failed to clone collection schema: {e}"
-            raise QdrantServiceError(msg) from e
-        return True
+        return await self._execute_with_handling(
+            _clone,
+            action="clone collection schema",
+            log_event="qdrant.collection.clone",
+            metadata=lambda: {"source": source, "target": target},
+            log_message="Failed to clone collection schema",
+        )
 
     async def copy_collection_data(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         self,
@@ -530,18 +576,21 @@ class QdrantAliasManager:
         self.validate_name(source, "Source collection name")
         self.validate_name(target, "Target collection name")
 
-        try:
-            # Get total count for progress reporting
+        total_copied = 0
+        total_points = 0
+
+        async def _copy() -> int:
+            """Copy collection data."""
+            nonlocal total_copied, total_points
             source_info = await self.client.get_collection(source)
             total_points = source_info.points_count or 0
 
             if limit and total_points > limit:
                 total_points = limit
-            total_copied = 0
+
             offset = None
 
             while True:
-                # Scroll through source collection
                 records, next_offset = await self.client.scroll(
                     collection_name=source,
                     limit=batch_size,
@@ -553,7 +602,6 @@ class QdrantAliasManager:
                 if not records:
                     break
 
-                # Upsert to target collection
                 await self.client.upsert(
                     collection_name=target, points=cast(Any, records)
                 )
@@ -573,7 +621,6 @@ class QdrantAliasManager:
                     ),
                 )
 
-                # Call progress callback if provided
                 if progress_callback:
                     try:
                         await progress_callback(total_copied, total_points)
@@ -585,11 +632,7 @@ class QdrantAliasManager:
                                 "qdrant.collection.copy", source=source, target=target
                             ),
                         )
-                    except (
-                        AttributeError,
-                        ValueError,
-                        TypeError,
-                    ) as e:  # pragma: no cover - defensive path
+                    except (AttributeError, ValueError, TypeError) as e:
                         logger.warning(
                             "Progress callback raised unexpected error: %s",
                             e,
@@ -606,11 +649,9 @@ class QdrantAliasManager:
                             ),
                         )
 
-                # Check limit
                 if limit and total_copied >= limit:
                     break
 
-                # Update offset
                 offset = next_offset
                 if offset is None:
                     break
@@ -629,27 +670,20 @@ class QdrantAliasManager:
                 ),
             )
 
-        except (
-            ConnectionError,
-            OSError,
-            PermissionError,
-            RuntimeError,
-            AttributeError,
-            ValueError,
-            Exception,
-        ) as e:
-            logger.exception(
-                "Failed to copy collection data",
-                extra=_log_extra(
-                    "qdrant.collection.copy",
-                    source=source,
-                    target=target,
-                    copied=locals().get("total_copied", 0),
-                ),
-            )
-            msg = f"Failed to copy collection data: {e}"
-            raise QdrantServiceError(msg) from e
-        return total_copied
+            return total_copied
+
+        return await self._execute_with_handling(
+            _copy,
+            action="copy collection data",
+            log_event="qdrant.collection.copy",
+            metadata=lambda: {
+                "source": source,
+                "target": target,
+                "copied": total_copied,
+                "total": total_points,
+            },
+            log_message="Failed to copy collection data",
+        )
 
     async def validate_collection_compatibility(
         self, collection1: str, collection2: str
@@ -663,31 +697,17 @@ class QdrantAliasManager:
         Returns:
             Tuple of (is_compatible, message)
         """
-        try:
-            # Get collection info
+
+        async def _validate() -> tuple[bool, str]:
+            """Validate collection compatibility."""
             info1 = await self.client.get_collection(collection1)
             info2 = await self.client.get_collection(collection2)
-
-            # Check vector configs
-            vectors1 = info1.config.params.vectors
-            vectors2 = info2.config.params.vectors
-
-            # Convert to comparable format
-            def normalize_vectors(v):
-                if hasattr(v, "model_dump"):
-                    return v.model_dump()
-                return v
-
-            vectors1_norm = normalize_vectors(vectors1)
-            vectors2_norm = normalize_vectors(vectors2)
-
-            if vectors1_norm != vectors2_norm:
+            if info1.config.params.vectors != info2.config.params.vectors:
                 return (
                     False,
                     f"Vector configurations differ: {collection1} vs {collection2}",
                 )
 
-            # Check HNSW configs if present
             hnsw1 = info1.config.hnsw_config
             hnsw2 = info2.config.hnsw_config
 
@@ -698,29 +718,26 @@ class QdrantAliasManager:
             ):
                 return False, "HNSW configurations differ"
 
-            # Check quantization configs if present
             quant1 = info1.config.quantization_config
             quant2 = info2.config.quantization_config
 
             if (quant1 is None) != (quant2 is None):
                 return False, "Quantization configuration mismatch"
 
-        except (
-            ConnectionError,
-            OSError,
-            PermissionError,
-            RuntimeError,
-            AttributeError,
-            ValueError,
-            Exception,
-        ) as e:
-            logger.exception(
-                "Failed to validate collection compatibility",
-                extra=_log_extra(
-                    "qdrant.collection.validate",
-                    collection1=collection1,
-                    collection2=collection2,
-                ),
-            )
-            return False, f"Validation error: {e!s}"
-        return True, "Collections are compatible"
+            return True, "Collections are compatible"
+
+        def _as_validation_error(exc: BaseException) -> tuple[bool, str]:
+            return False, f"Validation error: {exc!s}"
+
+        return await self._execute_with_handling(
+            _validate,
+            action="validate collection compatibility",
+            log_event="qdrant.collection.validate",
+            metadata=lambda: {
+                "collection1": collection1,
+                "collection2": collection2,
+            },
+            log_message="Failed to validate collection compatibility",
+            expected_handler=_as_validation_error,
+            unexpected_handler=_as_validation_error,
+        )
