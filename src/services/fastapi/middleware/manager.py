@@ -15,6 +15,7 @@ This keeps the public surface tiny and library-focused.
 
 from __future__ import annotations
 
+import inspect
 from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -56,8 +57,26 @@ _CLASS_REGISTRY["compression"] = MiddlewareSpec(
 )
 
 if BrotliCompressionMiddleware is not CompressionMiddleware:
+    # Include "quality" only when supported to avoid import-time reg mutation in tests
+    brotli_kwargs: dict[str, Any] = {}
+    try:
+        signature = inspect.signature(BrotliCompressionMiddleware.__init__)
+        params = signature.parameters
+        if "quality" in params:
+            brotli_kwargs["quality"] = 4
+        else:
+            # Allow passing when implementation accepts **kwargs.
+            accepts_kwargs = any(
+                p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values()
+            )
+            if accepts_kwargs:
+                brotli_kwargs["quality"] = 4
+    except (ValueError, TypeError):
+        # Fallback: skip optional tuning if signature cannot be inspected.
+        brotli_kwargs = {}
+
     _CLASS_REGISTRY["brotli"] = MiddlewareSpec(
-        BrotliCompressionMiddleware, {"quality": 4}
+        BrotliCompressionMiddleware, brotli_kwargs
     )
 
 _CLASS_REGISTRY["security"] = MiddlewareSpec(SecurityMiddleware)
@@ -74,6 +93,7 @@ _FUNCTION_REGISTRY: dict[str, Callable[..., Any]] = {
     "rate_limiting": enable_global_rate_limit,
     "prometheus": setup_prometheus,
 }
+
 
 @contextmanager
 def override_registry(

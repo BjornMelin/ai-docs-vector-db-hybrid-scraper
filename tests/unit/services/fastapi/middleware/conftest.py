@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import inspect
 from collections.abc import Generator
 
 import pytest
@@ -15,14 +14,6 @@ from src.services.fastapi.middleware import manager as middleware_manager
 # Snapshot the baseline registries so every test starts from a clean slate.
 _BASE_CLASS_REGISTRY = middleware_manager._CLASS_REGISTRY.copy()
 _BASE_FUNCTION_REGISTRY = middleware_manager._FUNCTION_REGISTRY.copy()
-
-
-_brotli_spec = _BASE_CLASS_REGISTRY.get("brotli")
-if _brotli_spec is not None:
-    signature = inspect.signature(_brotli_spec.cls.__init__)
-    if "quality" not in signature.parameters:
-        _BASE_CLASS_REGISTRY.pop("brotli", None)
-        middleware_manager._CLASS_REGISTRY.pop("brotli", None)
 
 
 @pytest.fixture(autouse=True)
