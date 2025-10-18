@@ -21,15 +21,16 @@ CompressionMiddleware = GZipMiddleware
 
 
 try:
-    from brotli_asgi import (  # pyright: ignore[reportMissingImports]  # pylint: disable=import-error
-        BrotliMiddleware as _BrotliMiddleware,
+    from brotli_asgi import (
+        BrotliMiddleware as _BrotliMiddleware,  # pylint: disable=import-error  # pyright: ignore[reportAssignmentType]
     )
-except Exception:  # pragma: no cover - optional dependency fallback
+except ImportError:  # pragma: no cover - optional dependency fallback
 
     class _BrotliMiddleware(GZipMiddleware):
         """Fallback Brotli middleware using gzip when brotli is unavailable."""
 
         def __init__(self, app: ASGIApp, **kwargs: Any) -> None:
+            """Initialize the Brotli middleware."""
             super().__init__(app, **kwargs)
 
 

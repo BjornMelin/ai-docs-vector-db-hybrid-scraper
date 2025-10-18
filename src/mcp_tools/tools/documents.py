@@ -362,8 +362,7 @@ def register_tools(
     ) -> DocumentBatchResponse:
         """Add multiple documents in batch with optimized processing.
 
-        Processes multiple URLs concurrently with rate limiting and
-        progress tracking.
+        Processes multiple URLs concur + rate limiting and progress tracking.
         """
         successes: list[AddDocumentResponse] = []
         failures: list[str] = []
@@ -389,10 +388,23 @@ def register_tools(
                     failures.append(url)
 
         # Process all URLs concurrently
-        await asyncio.gather(
+        results = await asyncio.gather(
             *[process_url(url) for url in request.urls],
             return_exceptions=True,
         )
+
+        for url, outcome in zip(request.urls, results, strict=False):
+            if isinstance(outcome, Exception):
+                if url not in failures:
+                    failures.append(url)
+                await ctx.error(
+                    f"Unhandled error while processing document {url}: {outcome}"
+                )
+                logger.error(
+                    "Unhandled error while processing document %s",
+                    url,
+                    exc_info=(type(outcome), outcome, outcome.__traceback__),
+                )
 
         successes.sort(key=lambda x: x.chunks_created, reverse=True)
         return DocumentBatchResponse(

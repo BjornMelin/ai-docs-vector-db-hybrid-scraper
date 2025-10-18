@@ -69,7 +69,7 @@ class TestCollectionsTools:
         mock_mcp.tool.return_value = capture_tool
         register_tools(
             mock_mcp,
-            vector_service=mock_client_manager,
+            vector_service=mock_client_manager.vector_service,
             cache_manager=mock_client_manager.cache_manager,
         )
 
@@ -101,7 +101,7 @@ class TestCollectionsTools:
         mock_mcp.tool.return_value = capture_tool
         register_tools(
             mock_mcp,
-            vector_service=mock_client_manager,
+            vector_service=mock_client_manager.vector_service,
             cache_manager=mock_client_manager.cache_manager,
         )
 
@@ -129,7 +129,7 @@ class TestCollectionsTools:
         mock_mcp.tool.return_value = capture_tool
         register_tools(
             mock_mcp,
-            vector_service=mock_client_manager,
+            vector_service=mock_client_manager.vector_service,
             cache_manager=mock_client_manager.cache_manager,
         )
 
@@ -146,7 +146,6 @@ class TestCollectionsTools:
 
         mock_context.info.assert_called()
         mock_vector.delete_collection.assert_awaited_once_with("old_collection")
-        mock_client_manager.get_cache_manager.assert_awaited_once()
         mock_client_manager.cache_mock.clear_pattern.assert_awaited_once_with(
             "*:old_collection:*"
         )
@@ -169,7 +168,7 @@ class TestCollectionsTools:
         mock_mcp.tool.return_value = capture_tool
         register_tools(
             mock_mcp,
-            vector_service=mock_client_manager,
+            vector_service=mock_client_manager.vector_service,
             cache_manager=mock_client_manager.cache_manager,
         )
 
@@ -187,10 +186,8 @@ class TestCollectionsTools:
     async def test_collections_error_handling(self, mock_client_manager, mock_context):
         """Test collections error handling."""
         # Make qdrant service raise an exception
-        mock_vector = AsyncMock()
-        mock_vector.list_collections.side_effect = Exception("Service unavailable")
-        mock_client_manager.get_vector_store_service = AsyncMock(
-            return_value=mock_vector
+        mock_client_manager.vector_service.list_collections.side_effect = Exception(
+            "Service unavailable"
         )
 
         mock_mcp = MagicMock()
@@ -203,7 +200,7 @@ class TestCollectionsTools:
         mock_mcp.tool.return_value = capture_tool
         register_tools(
             mock_mcp,
-            vector_service=mock_client_manager,
+            vector_service=mock_client_manager.vector_service,
             cache_manager=mock_client_manager.cache_manager,
         )
 
@@ -252,7 +249,7 @@ class TestCollectionsTools:
         mock_mcp.tool.return_value = capture_tool
         register_tools(
             mock_mcp,
-            vector_service=mock_client_manager,
+            vector_service=mock_client_manager.vector_service,
             cache_manager=mock_client_manager.cache_manager,
         )
 
@@ -279,7 +276,7 @@ class TestCollectionsTools:
         mock_mcp = MagicMock()
         register_tools(
             mock_mcp,
-            vector_service=mock_client_manager,
+            vector_service=mock_client_manager.vector_service,
             cache_manager=mock_client_manager.cache_manager,
         )
 

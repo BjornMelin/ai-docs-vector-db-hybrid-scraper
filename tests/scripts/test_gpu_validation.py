@@ -5,7 +5,6 @@ from __future__ import annotations
 import types
 
 import pytest
-
 from scripts.validation import gpu_validation
 
 
@@ -93,8 +92,30 @@ class _FakeXformers:
     ops = Ops()
 
 
-def test_gpu_validation_fails_without_gpu() -> None:
+def test_gpu_validation_fails_without_gpu(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """The harness should fail when CUDA is required but unavailable."""
+    original_import = gpu_validation.importlib.import_module
+
+    def _fake_import(
+        name: str, package: str | None = None
+    ):  # pragma: no cover - deterministic
+        """Fake import function for testing purposes."""
+        if name in {
+            "flash_attn",
+            "flash_attn.flash_attn_interface",
+            "xformers",
+            "vllm",
+            "bitsandbytes",
+            "triton",
+            "deepspeed",
+        }:
+            raise ModuleNotFoundError(f"{name} missing")
+        return original_import(name, package)  # type: ignore[call-arg]
+
+    monkeypatch.setattr(gpu_validation.importlib, "import_module", _fake_import)
+
     report = gpu_validation.run_gpu_validation(
         require_gpu=True,
         torch_module=_FakeTorchNoGpu(),
@@ -119,8 +140,16 @@ def test_gpu_validation_warns_when_allowing_missing_gpu(
     def _fake_import(
         name: str, package: str | None = None
     ):  # pragma: no cover - deterministic
-        if name == "xformers":
-            raise ModuleNotFoundError("xformers missing")
+        """Fake import function for testing purposes."""
+        if name in {
+            "xformers",
+            "flash_attn",
+            "vllm",
+            "bitsandbytes",
+            "triton",
+            "deepspeed",
+        }:
+            raise ModuleNotFoundError(f"{name} missing")
         return original_import(name, package)  # type: ignore[call-arg]
 
     monkeypatch.setattr(gpu_validation.importlib, "import_module", _fake_import)
@@ -154,6 +183,7 @@ def test_gpu_validation_succeeds_with_fake_gpu(monkeypatch: pytest.MonkeyPatch) 
     original_import = gpu_validation.importlib.import_module
 
     def _fake_import(name: str, package: str | None = None):
+        """Fake import function for testing purposes."""
         if name in fake_modules:
             return fake_modules[name]
         return original_import(name, package)  # type: ignore[call-arg]

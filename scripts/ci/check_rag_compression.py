@@ -198,7 +198,12 @@ def main() -> int:
                 min_recall=args.min_recall,
             )
         )
-    except Exception as exc:  # pragma: no cover - CLI safeguard
+    except (
+        ValueError,
+        TypeError,
+        OSError,
+        RuntimeError,
+    ) as exc:  # pragma: no cover - CLI safeguard
         print(f"Compression quality gate failed: {exc}", file=sys.stderr)
         return 1
     return 0 if success else 1

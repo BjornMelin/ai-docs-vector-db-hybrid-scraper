@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 from pytest_mock import MockerFixture
 
-from src.infrastructure.database.connection_manager import DatabaseManager
+from src.infrastructure.connection_manager import DatabaseManager
 
 
 class _DummySession:
@@ -46,11 +46,11 @@ def tracer_fixture(mocker: MockerFixture) -> tuple[Any, Any, Any]:
     histogram = mocker.MagicMock()
 
     mocker.patch(
-        "src.infrastructure.database.connection_manager.trace.get_tracer",
+        "src.infrastructure.connection_manager.trace.get_tracer",
         return_value=tracer,
     )
     mocker.patch(
-        "src.infrastructure.database.connection_manager._QUERY_DURATION_HISTOGRAM",
+        "src.infrastructure.connection_manager._QUERY_DURATION_HISTOGRAM",
         histogram,
     )
 
@@ -69,11 +69,11 @@ def configure_engine(mocker: MockerFixture) -> Callable[[Callable[[], Any]], Any
             checked_out=mocker.Mock(return_value=1),
         )
         mocker.patch(
-            "src.infrastructure.database.connection_manager.create_async_engine",
+            "src.infrastructure.connection_manager.create_async_engine",
             return_value=engine,
         )
         mocker.patch(
-            "src.infrastructure.database.connection_manager.async_sessionmaker",
+            "src.infrastructure.connection_manager.async_sessionmaker",
             return_value=session_factory,
         )
         return engine
@@ -130,7 +130,7 @@ async def test_session_records_success(
     configure_engine(session_factory)
 
     mocker.patch(
-        "src.infrastructure.database.connection_manager.perf_counter",
+        "src.infrastructure.connection_manager.perf_counter",
         side_effect=[1.0, 1.05],
     )
 
@@ -172,7 +172,7 @@ async def test_session_records_failure_on_exception(
     configure_engine(session_factory)
 
     mocker.patch(
-        "src.infrastructure.database.connection_manager.perf_counter",
+        "src.infrastructure.connection_manager.perf_counter",
         side_effect=[1.0, 1.02],
     )
 

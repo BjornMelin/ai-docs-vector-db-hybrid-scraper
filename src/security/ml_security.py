@@ -202,7 +202,7 @@ class MLSecurityValidator:
             logger.warning("pip-audit found in unexpected location: %s", pip_audit_path)
 
         try:
-            result = subprocess.run(  # Validated executable path  # noqa: S603
+            result = subprocess.run(  # Validated executable path
                 [pip_audit_path, "--format", "json"],
                 capture_output=True,
                 text=True,
@@ -306,7 +306,7 @@ class MLSecurityValidator:
                     )
                 )
 
-            result = subprocess.run(  # Validated executable path  # noqa: S603
+            result = subprocess.run(  # Validated executable path
                 [
                     trivy_path,
                     "image",

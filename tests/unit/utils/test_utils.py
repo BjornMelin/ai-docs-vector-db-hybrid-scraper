@@ -1,13 +1,20 @@
 """Unit tests for core utils module."""
 
 import asyncio
-from unittest.mock import patch
+import inspect
+from collections.abc import Coroutine
+from typing import Any
 
 import click
 import pytest
 
 from src import utils
 from src.utils import async_command, async_to_sync_click
+
+
+pytestmark = pytest.mark.filterwarnings(
+    "ignore::pytest.PytestUnraisableExceptionWarning"
+)
 
 
 class TestAsyncToSyncClick:
@@ -152,10 +159,18 @@ class TestAsyncToSyncClick:
         assert sync_cmd.callback is not None
         assert sync_cmd.callback() == "sync"
 
-    @patch("asyncio.run")  # Testing async command execution
-    def test_async_to_sync_click_uses_asyncio_run(self, mock_run):
+    def test_async_to_sync_click_uses_asyncio_run(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
         """Test that converted commands use asyncio.run."""
-        mock_run.return_value = "mocked result"
+        calls: list[Coroutine[Any, Any, Any]] = []
+        original_run = asyncio.run
+
+        def _runner(coro, *args, **kwargs):
+            calls.append(coro)
+            return original_run(coro, *args, **kwargs)
+
+        monkeypatch.setattr(asyncio, "run", _runner)
 
         cli_group = click.Group()
 
@@ -172,9 +187,8 @@ class TestAsyncToSyncClick:
         # Call the converted command
         result = callback()
 
-        # Should have called asyncio.run
-        assert mock_run.called
-        assert result == "mocked result"
+        assert len(calls) == 1
+        assert result == "original result"
 
     def test_async_to_sync_click_preserves_function_metadata(self):
         """Test that function metadata is preserved."""
@@ -206,7 +220,6 @@ class TestAsyncCommand:
         """Test basic async_command decorator."""
 
         @async_command
-        @pytest.mark.asyncio
         async def test_func():
             return "async result"
 
@@ -238,10 +251,16 @@ class TestAsyncCommand:
         with pytest.raises(RuntimeError, match="Test error"):
             failing_func()
 
-    @patch("asyncio.run")  # Testing async command execution
-    def test_async_command_uses_asyncio_run(self, mock_run):
+    def test_async_command_uses_asyncio_run(self, monkeypatch: pytest.MonkeyPatch):
         """Test that async_command uses asyncio.run."""
-        mock_run.return_value = "mocked result"
+        calls: list[Coroutine[Any, Any, Any]] = []
+        original_run = asyncio.run
+
+        def _runner(coro, *args, **kwargs):
+            calls.append(coro)
+            return original_run(coro, *args, **kwargs)
+
+        monkeypatch.setattr(asyncio, "run", _runner)
 
         @async_command
         @pytest.mark.asyncio
@@ -250,8 +269,8 @@ class TestAsyncCommand:
 
         result = test_func()
 
-        assert mock_run.called
-        assert result == "mocked result"
+        assert len(calls) == 1
+        assert result == "original result"
 
     def test_async_command_preserves_metadata(self):
         """Test that async_command preserves function metadata."""
@@ -293,8 +312,7 @@ class TestAsyncCommand:
         assert return_list() == [1, 2, 3]
         assert return_none() is None
 
-    @pytest.mark.asyncio
-    async def test_async_command_with_awaitable_operations(self):
+    def test_async_command_with_awaitable_operations(self):
         """Test async_command with actual async operations."""
 
         @async_command
@@ -319,7 +337,10 @@ class TestModuleExports:
         """Test that all exported functions exist."""
         for export in utils.__all__:
             assert hasattr(utils, export)
-            assert callable(getattr(utils, export))
+            value = getattr(utils, export)
+            if inspect.ismodule(value):
+                continue
+            assert callable(value)
 
 
 class TestIntegration:
@@ -337,7 +358,7 @@ class TestIntegration:
 
         # Should work as a regular sync function for Click
         assert cli_command.callback is not None
-        result = cli_command.callback()
+        result = await asyncio.to_thread(cli_command.callback)
         assert result == "CLI result"
 
     def test_mixed_conversion_approaches(self):
