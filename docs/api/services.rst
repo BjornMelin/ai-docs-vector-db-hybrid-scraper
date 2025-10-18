@@ -10,7 +10,6 @@ Subpackages
    services.cache
    services.deployment
    services.content_intelligence
-   services.core
    services.embeddings
    services.fastapi
    services.hyde

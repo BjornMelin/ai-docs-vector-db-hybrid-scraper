@@ -1,30 +1,35 @@
 # ADR-XXXX: [Title]
 
-Date: YYYY-MM-DD
-
-## Status
-Proposed | Accepted | Deprecated | Superseded
+**Date:** YYYY-MM-DD  
+**Status:** Proposed | Accepted | Deprecated | Superseded  
+**Drivers:** [List drivers]
 
 ## Context
-What is the issue motivating this decision or change?
+
+[Describe the context of the decision]
 
 ## Decision
-What is the change that we're proposing or have agreed to implement?
+
+[Describe the decision that was made]
+
+### Decision Framework Scoring
+
+[Matrix (table) of decision framework scoring criteria showing the scores for each criterion for the final decision and the top alternative(s), highlight the final decision with a bold border]
 
 ## Consequences
-What becomes easier or more difficult to do and any risks introduced by the change that will need to be mitigated.
+
+[Describe the consequences, what becomes easier or more difficult to do and any risks introduced by the change that will need to be mitigated.]
 
 ## Alternatives Considered
-What other options were considered and why were they not chosen?
+
+[Describe the alternatives that were considered and why they were not chosen]
 
 ## Implementation Notes
-- Specific technical requirements
-- Dependencies and prerequisites
-- Risk mitigation strategies
+
+[List specific technical requirements, dependencies and prerequisites]
+[List risk mitigation strategies]
 
 ## References
-- Links to related research or documentation
-- Agent reports that informed this decision
 
----
-*Template based on Michael Nygard's ADR format*
+[List links to related research or documentation]
+[List agent reports that informed this decision and related ADRs]

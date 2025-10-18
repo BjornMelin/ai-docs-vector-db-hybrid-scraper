@@ -118,7 +118,12 @@ def register_tools(
             await service.list_collections()
             if ctx:
                 await ctx.info("Vector store service responded successfully")
-        except Exception as exc:  # pragma: no cover - defensive guard
+        except (
+            RuntimeError,
+            ConnectionError,
+            ValueError,
+            AttributeError,
+        ) as exc:  # pragma: no cover - defensive guard
             overall_status = "unhealthy"
             vector_status = SystemHealthServiceStatus(
                 status="unhealthy", error=str(exc)

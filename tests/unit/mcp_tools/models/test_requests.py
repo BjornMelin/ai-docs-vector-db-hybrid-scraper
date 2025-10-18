@@ -17,7 +17,7 @@ from src.mcp_tools.models.requests import (
     EmbeddingRequest,
     ProjectRequest,
 )
-from src.models.search import SearchRequest
+from src.models.search import SearchRequest, VectorType
 
 
 class TestSearchRequest:
@@ -89,6 +89,8 @@ class TestSearchRequest:
             search_strategy=SearchStrategy.SPARSE,
             fusion_algorithm=FusionAlgorithm.RRF,
             search_accuracy=SearchAccuracy.FAST,
+            vector_type=VectorType.SPARSE,
+            sparse_vector={0: 0.5},
             limit=10,
             offset=0,
         )

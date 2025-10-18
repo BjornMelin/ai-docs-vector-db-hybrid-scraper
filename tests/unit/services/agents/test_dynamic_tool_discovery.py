@@ -22,8 +22,8 @@ class DummyTool:
 
     name: str
     description: str
-    inputSchema: dict[str, Any] | None = None  # noqa: N815
-    outputSchema: dict[str, Any] | None = None  # noqa: N815
+    inputSchema: dict[str, Any] | None = None
+    outputSchema: dict[str, Any] | None = None
 
 
 class DummySession:

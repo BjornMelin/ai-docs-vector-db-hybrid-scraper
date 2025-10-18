@@ -10,6 +10,11 @@ from src.config import Settings
 from src.config.models import Environment, ObservabilityConfig
 
 
+pytestmark = pytest.mark.filterwarnings(
+    "ignore::pytest.PytestUnraisableExceptionWarning"
+)
+
+
 @pytest.fixture(name="default_config")
 def fixture_default_config() -> ObservabilityConfig:
     """Return the default observability configuration."""
