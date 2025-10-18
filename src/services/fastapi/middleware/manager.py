@@ -15,7 +15,9 @@ This keeps the public surface tiny and library-focused.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
+import inspect
+from collections.abc import Callable, Iterable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -55,8 +57,26 @@ _CLASS_REGISTRY["compression"] = MiddlewareSpec(
 )
 
 if BrotliCompressionMiddleware is not CompressionMiddleware:
+    # Include "quality" only when supported to avoid import-time reg mutation in tests
+    brotli_kwargs: dict[str, Any] = {}
+    try:
+        signature = inspect.signature(BrotliCompressionMiddleware.__init__)
+        params = signature.parameters
+        if "quality" in params:
+            brotli_kwargs["quality"] = 4
+        else:
+            # Allow passing when implementation accepts **kwargs.
+            accepts_kwargs = any(
+                p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values()
+            )
+            if accepts_kwargs:
+                brotli_kwargs["quality"] = 4
+    except (ValueError, TypeError):
+        # Fallback: skip optional tuning if signature cannot be inspected.
+        brotli_kwargs = {}
+
     _CLASS_REGISTRY["brotli"] = MiddlewareSpec(
-        BrotliCompressionMiddleware, {"quality": 4}
+        BrotliCompressionMiddleware, brotli_kwargs
     )
 
 _CLASS_REGISTRY["security"] = MiddlewareSpec(SecurityMiddleware)
@@ -73,6 +93,48 @@ _FUNCTION_REGISTRY: dict[str, Callable[..., Any]] = {
     "rate_limiting": enable_global_rate_limit,
     "prometheus": setup_prometheus,
 }
+
+
+@contextmanager
+def override_registry(
+    *,
+    classes: dict[str, MiddlewareSpec] | None = None,
+    functions: dict[str, Callable[..., Any]] | None = None,
+) -> Iterator[None]:
+    """Temporarily override registry entries and restore them afterwards.
+
+    Args:
+        classes: Mapping of middleware identifiers to replacement specs.
+        functions: Mapping of helper identifiers to replacement callables.
+    """
+    class_overrides = classes or {}
+    function_overrides = functions or {}
+    class_snapshot: dict[str, MiddlewareSpec | None] = {
+        name: _CLASS_REGISTRY.get(name) for name in class_overrides
+    }
+    function_snapshot: dict[str, Callable[..., Any] | None] = {
+        name: _FUNCTION_REGISTRY.get(name) for name in function_overrides
+    }
+    try:
+        _CLASS_REGISTRY.update(class_overrides)
+        _FUNCTION_REGISTRY.update(function_overrides)
+        yield
+    finally:
+        for name, previous in class_snapshot.items():
+            if previous is None:
+                _CLASS_REGISTRY.pop(name, None)
+            else:
+                _CLASS_REGISTRY[name] = previous
+        for name, previous in function_snapshot.items():
+            if previous is None:
+                _FUNCTION_REGISTRY.pop(name, None)
+            else:
+                _FUNCTION_REGISTRY[name] = previous
+
+
+def is_registered(name: str) -> bool:
+    """Return ``True`` when a middleware or helper is registered under ``name``."""
+    return name in _CLASS_REGISTRY or name in _FUNCTION_REGISTRY
 
 
 def _default_stack_names() -> tuple[str, ...]:
@@ -142,6 +204,8 @@ __all__ = [
     "apply_defaults",
     "apply_named_stack",
     "get_correlation_id",
+    "is_registered",
+    "override_registry",
 ]
 
 if "brotli" in _CLASS_REGISTRY:
