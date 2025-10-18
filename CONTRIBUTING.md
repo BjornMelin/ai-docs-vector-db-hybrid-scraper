@@ -645,7 +645,7 @@ When contributing research-related issues, use these labels:
 
 2. **Explore current optimizations**
 
-   - Review `src/infrastructure/database/connection_manager.py`
+   - Review `src/infrastructure/connection_manager.py`
    - Study the ML models in `src/infrastructure/database/load_monitor.py`
    - Review the evaluation harness under `scripts/eval/` and docs in `docs/testing/evaluation-harness.md`
 
