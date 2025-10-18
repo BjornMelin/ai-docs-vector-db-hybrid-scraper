@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable
 from types import SimpleNamespace
-from typing import Any, cast
+from typing import Any
 
 import click
 import pytest
@@ -55,9 +55,7 @@ class VectorManagerStub:
             msg = "fetching collection info failed"
             raise ValueError(msg)
         payload = self._collections.get(name)
-        if payload is None:
-            return None
-        return SimpleNamespace(**payload)
+        return None if payload is None else SimpleNamespace(**payload)
 
     async def create_collection(
         self, collection_name: str, *, vector_size: int
@@ -91,13 +89,18 @@ def rich_cli_stub() -> SimpleNamespace:
     """Provide a minimal Rich CLI stub that captures printed messages."""
 
     class _Console:
+        """Lightweight console stub that records printed values."""
+
         def __init__(self, sink: list[Any]):
             self._sink = sink
 
         def print(self, value: Any) -> None:
+            """Capture a Rich console print call."""
             self._sink.append(value)
 
     class _RichCLI(SimpleNamespace):
+        """Rich CLI replacement capturing printed messages and errors."""
+
         printed: list[Any]
         errors: list[tuple[str, str | None]]
         console: _Console
@@ -109,6 +112,7 @@ def rich_cli_stub() -> SimpleNamespace:
             super().__init__(console=console, printed=printed, errors=errors)
 
         def show_error(self, message: str, details: str | None = None) -> None:
+            """Record structured error output for later inspection."""
             self.errors.append((message, details))
 
     return _RichCLI()
@@ -126,6 +130,12 @@ def cli_obj(
 ) -> dict[str, Any]:
     """Build the Click context object consumed by database commands."""
     return {"rich_cli": rich_cli_stub, "config": config_stub}
+
+
+@pytest.fixture
+def collection_parameter() -> click.Parameter:
+    """Provide a concrete Click parameter instance for completion tests."""
+    return click.Option(["--collection-name"])
 
 
 def _patch_manager(
@@ -151,6 +161,7 @@ def _invoke(
 
 def test_complete_collection_name_filters_matches(
     monkeypatch: pytest.MonkeyPatch,
+    collection_parameter: click.Parameter,
 ) -> None:
     """Completion should return matching collection identifiers."""
     stub = VectorManagerStub(
@@ -161,36 +172,34 @@ def test_complete_collection_name_filters_matches(
     )
     _patch_manager(monkeypatch, lambda: stub)
     ctx = click.Context(database_module.database, obj={"config": object()})
-    param = cast(click.Parameter, None)
-
-    items = database_module.complete_collection_name(ctx, param, "a")
+    items = database_module.complete_collection_name(ctx, collection_parameter, "a")
 
     assert [item.value for item in items] == ["alpha"]
     assert stub.counters["cleanup"] == 1
 
 
-def test_complete_collection_name_returns_empty_without_config() -> None:
+def test_complete_collection_name_returns_empty_without_config(
+    collection_parameter: click.Parameter,
+) -> None:
     """Completion helper should short-circuit when no config is present."""
     ctx = click.Context(database_module.database, obj={})
-    param = cast(click.Parameter, None)
-
-    items = database_module.complete_collection_name(ctx, param, "test")
+    items = database_module.complete_collection_name(ctx, collection_parameter, "test")
 
     assert items == []
 
 
 def test_complete_collection_name_handles_manager_failure(
     monkeypatch: pytest.MonkeyPatch,
+    collection_parameter: click.Parameter,
 ) -> None:
     """Errors during completion should yield an empty suggestion list."""
     stub = VectorManagerStub(fail={"list"})
     _patch_manager(monkeypatch, lambda: stub)
     ctx = click.Context(database_module.database, obj={"config": object()})
-    param = cast(click.Parameter, None)
-
-    items = database_module.complete_collection_name(ctx, param, "a")
+    items = database_module.complete_collection_name(ctx, collection_parameter, "a")
 
     assert items == []
+    assert stub.counters["list"] == 1
     assert stub.counters["cleanup"] == 0  # Failure occurs before cleanup
 
 
@@ -361,6 +370,31 @@ def test_create_collection_succeeds(
     assert isinstance(panel, Panel)
     assert isinstance(panel.renderable, Text)
     assert "Dimension: 1024" in panel.renderable.plain
+
+
+def test_create_collection_invalid_dimension(
+    cli_runner: CliRunner,
+    monkeypatch: pytest.MonkeyPatch,
+    rich_cli_stub: SimpleNamespace,
+    cli_obj: dict[str, Any],
+) -> None:
+    """Invalid dimension values should raise errors and surface diagnostics."""
+    stub = VectorManagerStub(collections={})
+    _patch_manager(monkeypatch, lambda: stub)
+
+    invalid_dimensions = ["-1", "0", "notanint"]
+    for dim in invalid_dimensions:
+        result = _invoke(
+            cli_runner,
+            ["create", "alpha", "--dimension", dim],
+            obj=cli_obj,
+        )
+        assert result.exit_code != 0
+        error_found = any(
+            "dimension" in str(err).lower() or "invalid" in str(err).lower()
+            for err, _ in getattr(rich_cli_stub, "errors", [])
+        )
+        assert error_found or "invalid" in result.output.lower()
 
 
 def test_create_collection_aborts_when_exists(

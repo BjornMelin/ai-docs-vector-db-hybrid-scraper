@@ -13,7 +13,7 @@ from src.config.loader import Settings
 from src.config.models import EmbeddingProvider, Environment
 
 
-# pylint: disable=no-member
+# pylint: disable=no-member  # Dynamic Pydantic models expose attributes at runtime during tests.
 
 
 @pytest.fixture(autouse=True)
