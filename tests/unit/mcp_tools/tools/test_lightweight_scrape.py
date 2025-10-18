@@ -208,8 +208,9 @@ def test_convert_content_formats_handles_metadata(
 ) -> None:
     """Conversion helper should handle optional metadata gracefully."""
     result = functions["convert_formats"](
-        metadata or {},
+        "Hi",
         ["markdown", "html"] if "html" in expected else ["markdown"],
+        {"metadata": metadata} if metadata else {},
     )
 
     for key, value in expected.items():

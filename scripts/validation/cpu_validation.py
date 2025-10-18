@@ -83,8 +83,8 @@ def _numpy_checks() -> tuple[CheckResult, str, dict[str, Any]]:
 
 def _scipy_checks() -> tuple[CheckResult, str]:
     """Perform scipy checks and return result and version."""
-    import scipy  # pyright: ignore[reportMissingTypeStubs]
-    from scipy import linalg  # pyright: ignore[reportMissingTypeStubs]
+    import scipy
+    from scipy import linalg
 
     hilbert = linalg.hilbert(16)
     inv_norm = float(linalg.norm(linalg.inv(hilbert)))
@@ -145,12 +145,12 @@ def run_cpu_validation() -> ValidationReport:
         """Append a failure result while attempting to classify LinAlg errors."""
         detail = str(exc)
         try:
-            import numpy as _np
-        except Exception:  # pragma: no cover - import edge case
+            import numpy as np
+        except ImportError:  # pragma: no cover - import edge case
             checks.append(CheckResult(check_id, "failed", detail))
             return
 
-        lin_alg_error = getattr(_np.linalg, "LinAlgError", None)
+        lin_alg_error = getattr(np.linalg, "LinAlgError", None)
         if lin_alg_error and isinstance(exc, lin_alg_error):
             detail = f"LinAlgError: {exc}"
         checks.append(CheckResult(check_id, "failed", detail))
@@ -166,7 +166,11 @@ def run_cpu_validation() -> ValidationReport:
         checks.append(
             CheckResult("numpy-linear-algebra", "failed", f"ValueError: {exc}")
         )
-    except Exception as exc:  # pragma: no cover - exercised in tests
+    except (
+        RuntimeError,
+        TypeError,
+        AttributeError,
+    ) as exc:  # pragma: no cover - exercised in tests
         _append_linalg_failure("numpy-linear-algebra", exc)
 
     try:
@@ -176,7 +180,11 @@ def run_cpu_validation() -> ValidationReport:
         checks.append(CheckResult("scipy-linalg", "failed", f"ImportError: {exc}"))
     except ValueError as exc:  # pragma: no cover - exercised in tests
         checks.append(CheckResult("scipy-linalg", "failed", f"ValueError: {exc}"))
-    except Exception as exc:  # pragma: no cover - exercised in tests
+    except (
+        RuntimeError,
+        TypeError,
+        AttributeError,
+    ) as exc:  # pragma: no cover - exercised in tests
         _append_linalg_failure("scipy-linalg", exc)
 
     try:
@@ -186,7 +194,11 @@ def run_cpu_validation() -> ValidationReport:
         checks.append(CheckResult("sklearn-suite", "failed", f"ImportError: {exc}"))
     except ValueError as exc:  # pragma: no cover - exercised in tests
         checks.append(CheckResult("sklearn-suite", "failed", f"ValueError: {exc}"))
-    except Exception as exc:  # pragma: no cover - exercised in tests
+    except (
+        RuntimeError,
+        TypeError,
+        AttributeError,
+    ) as exc:  # pragma: no cover - exercised in tests
         checks.append(CheckResult("sklearn-suite", "failed", str(exc)))
 
     status = "passed" if all(check.status == "passed" for check in checks) else "failed"

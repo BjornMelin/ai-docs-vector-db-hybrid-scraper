@@ -65,7 +65,7 @@ def run_command(
     """Run a command and stream its output."""
     normalized = _normalize_command(command)
     print(f"$ {shlex.join(normalized)}")
-    result = subprocess.run(normalized, cwd=cwd, env=env, check=False, shell=False)  # noqa: S603
+    result = subprocess.run(normalized, cwd=cwd, env=env, check=False, shell=False)
     if result.returncode != 0:
         print(f"Command exited with status {result.returncode}", file=sys.stderr)
     return result.returncode
@@ -246,7 +246,6 @@ def cmd_benchmark(args: argparse.Namespace) -> int:
 
 def cmd_load(args: argparse.Namespace) -> int:
     """Execute Locust load tests against the FastAPI deployment."""
-
     if not _ensure_uv_available():
         return 1
 
@@ -335,7 +334,7 @@ def _validate_docs_links() -> list[tuple[Path, int, str]]:
 def _check_service_health(url: str) -> bool:
     """Return ``True`` when the given HTTP endpoint responds successfully."""
     try:
-        response = url_request.urlopen(url, timeout=5)  # noqa: S310
+        response = url_request.urlopen(url, timeout=5)
     except (url_error.URLError, ValueError):
         return False
 
@@ -415,7 +414,7 @@ def cmd_validate(args: argparse.Namespace) -> int:  # pylint: disable=too-many-b
 def _compose_base_command() -> list[str]:
     """Determine the docker compose executable to use."""
     if docker := shutil.which("docker"):
-        compose_probe = subprocess.run(  # noqa: S603
+        compose_probe = subprocess.run(
             _normalize_command([docker, "compose", "version"]),
             check=False,
             capture_output=True,

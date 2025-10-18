@@ -22,17 +22,6 @@ from src.services.agents.tool_execution_service import (
 )
 
 
-@pytest.fixture
-def operations(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, Any]]:
-    """Capture telemetry operations emitted during tests."""
-    ops: list[dict[str, Any]] = []
-    monkeypatch.setattr(
-        "src.services.agents.tool_execution_service.record_ai_operation",
-        lambda **payload: ops.append(payload),
-    )
-    return ops
-
-
 def build_config(
     server_names: Iterable[str], timeout_ms: int = 1000
 ) -> MCPClientConfig:
@@ -93,7 +82,7 @@ def stub_session(
 
 @pytest.mark.asyncio
 async def test_execute_tool_success(
-    monkeypatch: pytest.MonkeyPatch, operations: list[dict[str, Any]]
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Successful execution should return ToolExecutionResult and record telemetry."""
     call_tracker: dict[str, dict[str, Any]] = {}
@@ -119,8 +108,6 @@ async def test_execute_tool_success(
     assert result.result.structuredContent == {"value": 1}
     assert call_tracker["primary"]["payload"] == {"foo": "bar"}
     assert isinstance(call_tracker["primary"]["timeout"], float)
-    assert operations[-1]["operation_type"] == "mcp.tool.call"
-    assert operations[-1]["success"] is True
 
 
 @pytest.mark.asyncio
@@ -135,7 +122,7 @@ async def test_execute_tool_invalid_arguments() -> None:
 
 @pytest.mark.asyncio
 async def test_execute_tool_remote_failure(
-    monkeypatch: pytest.MonkeyPatch, operations: list[dict[str, Any]]
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Remote errors should raise ToolExecutionFailure and emit telemetry."""
 
@@ -152,17 +139,15 @@ async def test_execute_tool_remote_failure(
         staticmethod(stub_session(_handler)),
     )
 
-    with pytest.raises(ToolExecutionFailure):
+    with caplog.at_level("ERROR"), pytest.raises(ToolExecutionFailure):
         await service.execute_tool("demo", arguments={})
 
-    op_types = [op["operation_type"] for op in operations]
-    assert op_types.count("mcp.tool.call") == 1
-    assert op_types.count("mcp.tool.error.remote") == 1
+    assert "reported error on server 'primary'" in caplog.text
 
 
 @pytest.mark.asyncio
 async def test_execute_tool_timeout(
-    monkeypatch: pytest.MonkeyPatch, operations: list[dict[str, Any]]
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Timeouts should raise ToolExecutionTimeout after retry attempts."""
 
@@ -179,15 +164,15 @@ async def test_execute_tool_timeout(
         staticmethod(stub_session(_handler)),
     )
 
-    with pytest.raises(ToolExecutionTimeout):
+    with caplog.at_level("WARNING"), pytest.raises(ToolExecutionTimeout):
         await service.execute_tool("demo", arguments={})
 
-    assert all(op["operation_type"] == "mcp.tool.error.timeout" for op in operations)
+    assert "Timeout invoking MCP tool" in caplog.text
 
 
 @pytest.mark.asyncio
 async def test_execute_tool_moves_to_next_server(
-    monkeypatch: pytest.MonkeyPatch, operations: list[dict[str, Any]]
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Service should fall back to secondary servers when primaries fail."""
     responses: dict[str, CallToolResult] = {
@@ -210,16 +195,17 @@ async def test_execute_tool_moves_to_next_server(
         staticmethod(stub_session(_handler)),
     )
 
-    result = await service.execute_tool("demo", arguments={"value": 1})
+    with caplog.at_level("ERROR"):
+        result = await service.execute_tool("demo", arguments={"value": 1})
 
     assert result.server_name == "backup"
     assert result.result.structuredContent == {"ok": True}
-    assert any(op["provider"] == "backup" for op in operations)
+    assert "reported error on server 'primary'" in caplog.text
 
 
 @pytest.mark.asyncio
 async def test_execute_tool_records_unexpected_exceptions(
-    monkeypatch: pytest.MonkeyPatch, operations: list[dict[str, Any]]
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Unexpected exceptions should raise ToolExecutionError and log telemetry."""
 
@@ -236,11 +222,11 @@ async def test_execute_tool_records_unexpected_exceptions(
         staticmethod(stub_session(_handler)),
     )
 
-    with pytest.raises(ToolExecutionError) as exc:
+    with caplog.at_level("ERROR"), pytest.raises(ToolExecutionError) as exc:
         await service.execute_tool("demo", arguments={})
 
     assert exc.value.server_name == "primary"
-    assert operations[-1]["operation_type"] == "mcp.tool.error.exception"
+    assert "Unexpected failure invoking MCP tool" in caplog.text
 
 
 @pytest.mark.asyncio

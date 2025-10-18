@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-Runtime code lives in `src/` (FastAPI `api`, LangGraph `services`, CLI `cli`, MCP tooling `mcp_services`/`mcp_tools`). Configs and deploy assets: `config/`, `docker-compose.yml`, `k8s/`; automation lives in `scripts/`; docs in `docs/`; tests span unit, integration, performance,
+Runtime code lives in `src/` (FastAPI `api`, LangGraph `services`, CLI `cli`, MCP tooling `mcp_tools`). Configs and deploy assets: `config/`, `docker-compose.yml`, `k8s/`; automation lives in `scripts/`; docs in `docs/`; tests span unit, integration, performance,
 property, data_quality, scripts suites. `src/services` highlights: agents (LangGraph flows), analytics (search dashboards), browser (tiered scraping), cache (Dragonfly caches), circuit_breaker (resilience), content_intelligence (classifiers/metadata), core (project storage & Qdrant aliases),
 crawling (Firecrawl/Crawl4AI), embeddings (FastEmbed/OpenAI), fastapi (dependency wiring), functional (DI facades), hyde (HyDE augmentation), managers (platform managers), middleware (rate limiting), monitoring (metrics/health/telemetry), observability (tracing configs),
 processing (batch pipelines), query_processing (intent models + orchestrator), rag (pipeline/generator/retriever), utilities (HNSW tuning/rate limits), vector_db (Qdrant service layer).

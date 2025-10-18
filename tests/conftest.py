@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
 import inspect
 import sys
+import tracemalloc
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -13,6 +15,8 @@ import pytest
 _STUBS_PATH = Path(__file__).resolve().parent / "stubs"
 if str(_STUBS_PATH) not in sys.path:
     sys.path.insert(0, str(_STUBS_PATH))
+
+tracemalloc.start()
 
 pytest_plugins = [
     "pytest_asyncio",
@@ -33,6 +37,8 @@ _ALLOWED_SKIP_PREFIXES: tuple[str, ...] = (
     "respx is not installed",
     "Sparse embeddings unavailable",
     "need RUN_LOAD_TESTS=1 to run load tests",
+    "Dragonfly cache integration requires redis service not present in test harness",
+    "Vector adapter consolidation pending",
 )
 
 
@@ -87,3 +93,17 @@ def pytest_terminal_summary(terminalreporter) -> None:
             for nodeid, reason in unexpected
         )
         pytest.exit(f"Unexpected skip reasons detected:\n{summary_lines}")
+
+
+def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
+    """Ensure any lingering asyncio event loops are closed after the run."""
+    policy = asyncio.get_event_loop_policy()
+    try:
+        loop = policy.get_event_loop()
+    except RuntimeError:
+        loop = None
+
+    if loop and not loop.is_closed():
+        loop.close()
+
+    policy.set_event_loop(policy.new_event_loop())

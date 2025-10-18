@@ -38,7 +38,7 @@ WS3 (Validation Harnesses) ─────────────────�
 
 - Delete the legacy evaluator (`scripts/eval/rag_golden_eval.py`) and rebuild the pipeline around ragas ≥0.3 using `EvaluationDataset`, `SingleTurnSample`, and the new metric interfaces. Reference: [Ragas v0.1 → v0.2 Migration Guide](https://docs.ragas.io/en/stable/howtos/migrations/migrate_from_v01_to_v02/).
 - Create a deterministic regression dataset with fixed seeds, temperature=0 prompting, and stored expected metric ranges (faithfulness, answer relevancy, context precision/recall).
-- Implement a simple CLI entry point that runs the new evaluator only; remove all `--enable-ragas` flags and LangChain wrappers.
+- Implement a simple CLI entry point that runs the new evaluator only; remove all `--enable-ragas` flags and construct the evaluator LLM via `ragas.llms.base.llm_factory(<model>)` and embeddings via `ragas.embeddings.OpenAIEmbeddings(client=openai.OpenAI(), model=...)` (no wrappers).
 - Regenerate unit/integration tests to assert metric stability and error handling for missing contexts or evaluator misconfiguration.
 - Acceptance: only the new evaluator exists in the repository, regression suite passes with ragas 0.3.x, and all tests reference the modern API.
 
