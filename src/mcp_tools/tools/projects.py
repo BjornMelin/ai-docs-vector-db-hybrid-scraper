@@ -13,9 +13,9 @@ from fastmcp import Context
 
 from src.config.models import SearchStrategy
 from src.contracts.retrieval import SearchRecord
+from src.infrastructure.project_storage import ProjectStorage
 from src.mcp_tools.models.requests import ProjectRequest
 from src.mcp_tools.models.responses import OperationStatus, ProjectInfo
-from src.services.core.project_storage import ProjectStorage
 from src.services.vector_db.service import VectorStoreService
 from src.services.vector_db.types import CollectionSchema
 

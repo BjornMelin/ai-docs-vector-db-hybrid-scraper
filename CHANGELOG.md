@@ -48,6 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Refactor
 
+- **[Infrastructure]:** Relocated project storage to `src/infrastructure/project_storage.py`, removed the legacy `services/core` package with its alias manager, and updated MCP tooling plus DI wiring to use the new implementation.
 - Hardened FastAPI middleware wiring (`src/services/fastapi/middleware/compression.py`, `security.py`) and realigned the developer benchmark command to the evaluation harness (`scripts/dev.py`, `scripts/README.md`).
 - Simplified configuration surfaces by removing deployment tier toggles,
   updating property-based strategies, and pruning mocks so settings and tools
@@ -75,9 +76,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   usage pattern.
 - Hardened `CacheManager` warmup and stats helpers around Dragonfly adapters,
   preserving tracing context while removing implicit casts and unsafe cache clears.
-- Refined cache, alias management, and health observability to reuse the shared
-  tracing extras, unifying structured logging across `services/cache`,
-  `services/core/qdrant_alias_manager.py`, and `services/observability/health_manager.py`.
+- Refined cache and health observability to reuse the shared tracing extras,
+  unifying structured logging across `services/cache` and
+  `services/observability/health_manager.py`.
 - Hardened the embedding manager benchmark loader to require structured embedding
   sections, reuse benchmark normalisation, and restore prior selection state when
   validation fails.
@@ -96,9 +97,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **[MCP]:** Enforced explicit dependency injection for MCP tools and services,
   removing service locator helpers and requiring startup wiring to supply all
   shared managers.
-- **[MCP]:** Simplified the MCP server architecture by removing the
-  `mcp_services` abstraction layer. Tool modules are now registered directly,
-  reducing boilerplate and improving clarity.
+- **[MCP]:** Simplified the MCP server architecture by deleting the legacy MCP
+  services abstraction layer so tool modules register directly, reducing
+  boilerplate and improving clarity.
 - **[Cache]:** Standardised the Dragonfly-only cache stack, replacing Redis
   wrappers, reintroducing cache warmup utilities, and updating health checks and
   docs to reflect the streamlined architecture.
@@ -264,8 +265,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   destructive-operation confirmations using asyncio-backed stubs.
 - Simplified `pytest.ini` to enforce warnings-as-errors, strict markers, and a seeded pytest-randomly configuration that aligns
   with the new deterministic fixtures.
-- Rebuilt `tests/unit/mcp_tools` and `tests/unit/mcp_services` around async-aware stubs, shared MCP decorators, and focused
-  validation coverage while deleting the legacy duplicated suites.
+- Rebuilt `tests/unit/mcp_tools` around async-aware stubs, shared MCP decorators,
+  and focused validation coverage while deleting the legacy duplicated suites.
 - Centralized the MCP config and tool-module builders in `tests/unit/conftest.py`, parameterized streaming guard checks, and
   added coverage for empty hybrid-search results plus orchestrator partial-initialization guard rails.
 - Pinned the regression workflow `uv` dependency to `0.2.37` to stabilize CI setup.

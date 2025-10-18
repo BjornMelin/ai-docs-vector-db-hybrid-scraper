@@ -21,12 +21,12 @@ from langchain_mcp_adapters.sessions import Connection  # type: ignore
 from qdrant_client import AsyncQdrantClient
 
 from src.config.models import CacheType, MCPClientConfig, MCPServerConfig, MCPTransport
+from src.infrastructure.project_storage import ProjectStorage
 from src.services.cache.embedding_cache import EmbeddingCache
 from src.services.cache.manager import CacheManager
 from src.services.cache.search_cache import SearchResultCache
 from src.services.circuit_breaker import CircuitBreakerManager
 from src.services.content_intelligence.service import ContentIntelligenceService
-from src.services.core.project_storage import ProjectStorage
 from src.services.embeddings.manager import EmbeddingManager
 from src.services.hyde.config import (
     HyDEConfig as ServiceHyDEConfig,
