@@ -312,8 +312,7 @@ class TestAsyncCommand:
         assert return_list() == [1, 2, 3]
         assert return_none() is None
 
-    @pytest.mark.asyncio
-    async def test_async_command_with_awaitable_operations(self):
+    def test_async_command_with_awaitable_operations(self):
         """Test async_command with actual async operations."""
 
         @async_command
@@ -321,7 +320,7 @@ class TestAsyncCommand:
             await asyncio.sleep(0.01)  # Very short sleep for testing
             return "slept"
 
-        result = await asyncio.to_thread(async_sleep_func)
+        result = async_sleep_func()
         assert result == "slept"
 
 
