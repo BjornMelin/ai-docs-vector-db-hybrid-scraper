@@ -72,7 +72,12 @@ def async_client_calls(monkeypatch: pytest.MonkeyPatch) -> list[_StubAsyncClient
 
 
 def _prepare_initialized_provider() -> OpenAIEmbeddingProvider:
-    """Prepare an initialized provider."""
+    """Prepare an initialized provider.
+
+    This test-only helper bypasses the provider's normal initialize() flow
+    by directly setting _client and _initialized to put the provider into
+    a ready state for testing.
+    """
     provider = OpenAIEmbeddingProvider(api_key="sk-test")
     cast(Any, provider)._client = _StubAsyncClient()  # pylint: disable=protected-access
     cast(Any, provider)._initialized = True  # pylint: disable=protected-access

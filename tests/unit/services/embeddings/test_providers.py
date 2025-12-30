@@ -70,9 +70,7 @@ class _Settings:
 
 
 @pytest.mark.asyncio
-async def test_initialize_with_openai_and_fastembed(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+async def test_initialize_with_openai_and_fastembed() -> None:
     """Initialization registers both OpenAI and FastEmbed providers when configured."""
     settings = _Settings()
     reg = ProviderRegistry(settings)
@@ -90,9 +88,7 @@ async def test_initialize_with_openai_and_fastembed(
 
 
 @pytest.mark.asyncio
-async def test_initialize_without_openai_key(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+async def test_initialize_without_openai_key() -> None:
     """When OpenAI key is absent, only FastEmbed should register."""
     settings = _Settings()
     settings.openai.api_key = None
@@ -108,10 +104,8 @@ async def test_initialize_without_openai_key(
 
 
 @pytest.mark.asyncio
-async def test_initialize_fastembed_failure_logs_and_continues(
-    monkeypatch: pytest.MonkeyPatch, caplog
-) -> None:
-    """FastEmbed failure should be logged and not crash initialize() itself."""
+async def test_initialize_fastembed_failure_raises() -> None:
+    """FastEmbed failure should raise EmbeddingServiceError when no providers exist."""
     settings = _Settings()
     settings.openai.api_key = None  # ensure only fastembed path is attempted
     reg = ProviderRegistry(settings)
@@ -130,9 +124,7 @@ async def test_initialize_fastembed_failure_logs_and_continues(
 
 
 @pytest.mark.asyncio
-async def test_initialize_no_providers_raises(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+async def test_initialize_no_providers_raises() -> None:
     """If all initializations fail, registry raises user-facing error."""
 
     class _BadSettings(_Settings):
@@ -194,6 +186,28 @@ def test_resolve_by_name_and_tier() -> None:
         reg.resolve("unknown", None)
 
 
+def test_resolve_tier_falls_back_when_preferred_missing(caplog) -> None:
+    """When the preferred tier provider is missing, registry should fall back."""
+    from src.services.embeddings.manager.types import QualityTier
+
+    settings = _Settings()
+    reg = ProviderRegistry(settings)
+    reg.providers = {"openai": _StubProvider("openai", cost=0.00004)}
+
+    resolved = reg.resolve(None, QualityTier.FAST)
+    assert resolved.model_name == "openai"
+    assert any("Preferred provider" in record.message for record in caplog.records)
+
+
+def test_resolve_without_providers_raises() -> None:
+    """Without providers registered, resolve should raise a clear error."""
+    settings = _Settings()
+    reg = ProviderRegistry(settings)
+
+    with pytest.raises(EmbeddingServiceError, match="No providers registered"):
+        reg.resolve(None, None)
+
+
 @pytest.mark.asyncio
 async def test_cleanup_clears_all() -> None:
     """Cleanup iterates providers and clears registry state."""
@@ -203,3 +217,4 @@ async def test_cleanup_clears_all() -> None:
     reg.providers = {"fastembed": stub}
     await reg.cleanup()
     assert not reg.providers
+    assert stub.cleaned

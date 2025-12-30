@@ -172,16 +172,22 @@ class EmbeddingPipeline:
         provider_key = options.provider_name or getattr(
             self._config.embedding_provider, "value", "fastembed"
         )
-        model_name = (
-            self._config.openai.model
-            if provider_key == "openai"
-            else self._config.fastembed.dense_model
+        try:
+            provider = self._providers.resolve(provider_key, options.quality_tier)
+        except EmbeddingServiceError:  # pragma: no cover - defensive fallback
+            return None
+
+        model_name = provider.model_name
+        dimensions = provider.dimensions or (
+            self._config.openai.dimensions if provider_key == "openai" else 0
         )
+        if dimensions <= 0:
+            return None
         cached_embedding = await embedding_cache.get_embedding(
             text=texts[0],
             provider=provider_key,
             model=model_name,
-            dimensions=self._config.openai.dimensions,
+            dimensions=dimensions,
         )
         if cached_embedding is None:
             return None

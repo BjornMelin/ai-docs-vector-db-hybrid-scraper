@@ -51,14 +51,14 @@ class _FakeCache:
     def __init__(self, capacity: int = 2) -> None:
         """Initialize the fake cache."""
         self.capacity = capacity
-        self.entries: dict[tuple[str, str, int], list[float]] = {}
+        self.entries: dict[tuple[str, str, str, int], list[float]] = {}
         self.embedding_cache = self  # mimic cache manager attribute
 
     async def get_embedding(
         self, *, text: str, provider: str, model: str, dimensions: int
     ) -> list[float] | None:
         """Get the embedding from the cache."""
-        return self.entries.get((text, provider, dimensions))
+        return self.entries.get((text, provider, model, dimensions))
 
     async def set_embedding(
         self,
@@ -72,7 +72,7 @@ class _FakeCache:
         """Set the embedding in the cache."""
         if len(self.entries) >= self.capacity:
             self.entries.pop(next(iter(self.entries)))
-        self.entries[(text, provider, dimensions)] = embedding
+        self.entries[(text, provider, model, dimensions)] = embedding
 
 
 class _FakeSelectionEngine:
@@ -242,7 +242,7 @@ async def test_generate_returns_cached_embedding() -> None:
     """Single-text cache hits should bypass provider execution."""
     cache = _FakeCache()
     embedding = [1.0, 2.0, 3.0]
-    cache.entries[("hello", "fastembed", 1536)] = embedding
+    cache.entries[("hello", "fastembed", "fastembed-model", 3)] = embedding
 
     pipeline = _build_pipeline(cache_manager=cache)
     result = await pipeline.generate(["hello"], _default_options())

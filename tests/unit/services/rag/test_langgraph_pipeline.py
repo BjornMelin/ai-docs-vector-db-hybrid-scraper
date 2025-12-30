@@ -8,7 +8,7 @@ from types import SimpleNamespace
 from typing import Any, cast
 
 import pytest
-from langchain.retrievers.document_compressors import DocumentCompressorPipeline
+from langchain_classic.retrievers.document_compressors import DocumentCompressorPipeline
 from langchain_core.callbacks.base import BaseCallbackHandler
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever

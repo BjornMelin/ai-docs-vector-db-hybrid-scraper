@@ -19,12 +19,12 @@ __all__ = [
 
 if TYPE_CHECKING:  # pragma: no cover - import-time typing only
     from . import (
-        async_fixtures as async_fixtures,
-        async_isolation as async_isolation,
-        configuration as configuration,
-        factories as factories,
-        parallel_config as parallel_config,
-        test_data as test_data,
+        async_fixtures,
+        async_isolation,
+        configuration,
+        factories,
+        parallel_config,
+        test_data,
     )
 
 

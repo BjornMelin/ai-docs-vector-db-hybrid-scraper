@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import pytest
 from starlette.applications import Starlette
 
 from src.services.fastapi.middleware import manager
@@ -23,9 +22,7 @@ def _middleware_class_names(app: Starlette) -> list[str]:
     return names
 
 
-def test_apply_defaults_installs_expected_stack(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_apply_defaults_installs_expected_stack() -> None:
     """Test that apply_defaults installs the expected middleware stack."""
     called = False
 
@@ -34,7 +31,6 @@ def test_apply_defaults_installs_expected_stack(
         called = True
         return "instrumented"
 
-    monkeypatch.setattr(manager, "setup_prometheus", _fake_setup)
     app = Starlette()
 
     with manager.override_registry(functions={"prometheus": _fake_setup}):
@@ -57,7 +53,7 @@ def test_apply_defaults_installs_expected_stack(
         assert "CorrelationIdMiddleware" in names
 
 
-def test_apply_defaults_sets_limiter_state(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_apply_defaults_sets_limiter_state() -> None:
     """Test that apply_defaults sets the limiter state."""
     limiter_instance = object()
 
@@ -65,13 +61,11 @@ def test_apply_defaults_sets_limiter_state(monkeypatch: pytest.MonkeyPatch) -> N
         app.state.limiter = limiter_instance
         return limiter_instance
 
-    monkeypatch.setattr(manager, "enable_global_rate_limit", _fake_enable)
-    monkeypatch.setattr(manager, "setup_prometheus", lambda app, **_: None)
     app = Starlette()
     with manager.override_registry(
         functions={
             "rate_limiting": _fake_enable,
-            "prometheus": manager.setup_prometheus,
+            "prometheus": lambda app, **_: None,
         }
     ):
         manager.apply_defaults(app)
@@ -79,17 +73,13 @@ def test_apply_defaults_sets_limiter_state(monkeypatch: pytest.MonkeyPatch) -> N
     assert app.state.limiter is limiter_instance
 
 
-def test_apply_named_stack_returns_applied_names(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_apply_named_stack_returns_applied_names() -> None:
     """Test that apply_named_stack returns applied middleware names."""
-    monkeypatch.setattr(manager, "enable_global_rate_limit", lambda app, **_: None)
-    monkeypatch.setattr(manager, "setup_prometheus", lambda app, **_: None)
     app = Starlette()
     with manager.override_registry(
         functions={
-            "rate_limiting": manager.enable_global_rate_limit,
-            "prometheus": manager.setup_prometheus,
+            "rate_limiting": lambda app, **_: None,
+            "prometheus": lambda app, **_: None,
         }
     ):
         applied = manager.apply_named_stack(app, ["security", "performance", "unknown"])

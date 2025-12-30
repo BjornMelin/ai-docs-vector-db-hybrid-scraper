@@ -24,7 +24,9 @@ def test_brotli_fallback_is_gzip_subclass() -> None:
     from starlette.middleware.gzip import GZipMiddleware
 
     try:
-        from brotli_asgi import BrotliMiddleware as ActualBrotli
+        from brotli_asgi import (  # pyright: ignore[reportMissingImports]
+            BrotliMiddleware as ActualBrotli,
+        )
     except ImportError:  # pragma: no cover - optional dependency unavailable
         assert issubclass(BrotliCompressionMiddleware, GZipMiddleware)
     else:

@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+import os
 import sys
 import tracemalloc
 from collections.abc import Iterable
+from contextlib import suppress
 from pathlib import Path
 
 import pytest
@@ -16,7 +18,8 @@ _STUBS_PATH = Path(__file__).resolve().parent / "stubs"
 if str(_STUBS_PATH) not in sys.path:
     sys.path.insert(0, str(_STUBS_PATH))
 
-tracemalloc.start()
+if os.environ.get("ENABLE_TRACEMALLOC", "").lower() in ("1", "true", "yes"):
+    tracemalloc.start()
 
 pytest_plugins = [
     "pytest_asyncio",
@@ -34,6 +37,7 @@ pytest_plugins = [
 
 _ALLOWED_SKIP_PREFIXES: tuple[str, ...] = (
     "need --runslow option to run",
+    "need ragas extra installed",
     "respx is not installed",
     "Sparse embeddings unavailable",
     "need RUN_LOAD_TESTS=1 to run load tests",
@@ -103,7 +107,8 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
     except RuntimeError:
         loop = None
 
-    if loop and not loop.is_closed():
-        loop.close()
+    if loop is not None and not loop.is_closed():
+        with suppress(Exception):  # pragma: no cover - best-effort cleanup
+            loop.close()
 
     policy.set_event_loop(policy.new_event_loop())

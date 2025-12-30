@@ -165,8 +165,7 @@ The unified MCP server (`src/unified_mcp_server.py`) registers tools from
 3. Adopt streaming responses, FastMCP sessions, and in-memory transports for
    tests.
 
-Tests for MCP tooling live under `tests/unit/mcp_tools/` and
-`tests/unit/mcp_tools/`.
+Tests for MCP tooling live under `tests/unit/mcp_tools/`.
 
 ## 4. Extensibility Patterns
 

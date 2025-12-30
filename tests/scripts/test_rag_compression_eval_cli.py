@@ -17,6 +17,11 @@ from scripts.eval.rag_compression_eval import (
 )
 
 
+pytestmark = pytest.mark.filterwarnings(
+    "ignore::pytest.PytestUnraisableExceptionWarning"
+)
+
+
 class _StubVectorService:
     """Stub vector store service for testing."""
 
@@ -76,7 +81,6 @@ async def test_load_vector_service_no_override() -> None:
             new_callable=AsyncMock,
         ) as mock_ensure_container,
     ):
-        """Test loading vector service with collection override."""
         mock_config = MagicMock()
         mock_settings.return_value = mock_config
         mock_container = MagicMock()
@@ -87,7 +91,6 @@ async def test_load_vector_service_no_override() -> None:
         mock_service.is_initialized.return_value = True
         mock_container.vector_store_service.return_value = mock_service
 
-        # Test
         result = await _load_vector_service(None)
 
         assert result == mock_service
@@ -105,7 +108,6 @@ async def test_load_vector_service_with_override() -> None:
             new_callable=AsyncMock,
         ) as mock_ensure_container,
     ):
-        """Test loading vector service without collection override."""
         mock_config = MagicMock()
         mock_settings.return_value = mock_config
         mock_container = MagicMock()
@@ -116,7 +118,6 @@ async def test_load_vector_service_with_override() -> None:
         mock_service.is_initialized.return_value = True
         mock_container.vector_store_service.return_value = mock_service
 
-        # Test
         result = await _load_vector_service("test_collection")
 
         assert result == mock_service
@@ -174,8 +175,3 @@ async def test_evaluate_compression_disabled(
         mock_print.assert_called_with(
             "Compression is disabled in the active configuration; nothing to evaluate."
         )
-
-
-pytestmark = pytest.mark.filterwarnings(
-    "ignore::pytest.PytestUnraisableExceptionWarning"
-)

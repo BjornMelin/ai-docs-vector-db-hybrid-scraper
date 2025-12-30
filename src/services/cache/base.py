@@ -7,7 +7,7 @@ from typing import Generic, TypeVar
 T = TypeVar("T")
 
 
-class CacheInterface(Generic[T], ABC):  # noqa: UP046 - keep Generic[T] while targeting Py3.11
+class CacheInterface(Generic[T], ABC):
     """Abstract base class for cache implementations."""
 
     @abstractmethod

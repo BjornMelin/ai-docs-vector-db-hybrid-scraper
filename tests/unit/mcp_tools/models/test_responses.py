@@ -1,7 +1,6 @@
 """Unit tests for MCP response models."""
 
 import json
-from datetime import UTC, datetime
 from typing import Any
 
 import pytest
@@ -172,8 +171,3 @@ class TestEmbeddingGenerationResponse:
         )
         dumped = response.model_dump()
         assert dumped["cost_estimate"] == 1.23
-
-
-def _timestamp() -> str:
-    """Create ISO timestamp used for sanity checks."""
-    return datetime.now(tz=UTC).isoformat()

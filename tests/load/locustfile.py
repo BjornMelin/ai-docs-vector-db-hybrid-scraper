@@ -43,13 +43,26 @@ def _load_examples(path: Path) -> list[SearchExample]:
     examples: list[SearchExample] = []
     with path.open("r", encoding="utf-8") as handle:
         for line in handle:
-            payload = json.loads(line)
+            try:
+                payload = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+
+            try:
+                limit_raw = payload.get("limit", 5)
+                limit_val = int(limit_raw) if limit_raw is not None else 5
+            except (ValueError, TypeError):
+                limit_val = 5
+
+            filters_raw = payload.get("filters")
+            filters_val = dict(filters_raw) if isinstance(filters_raw, dict) else {}
+
             examples.append(
                 SearchExample(
                     query=str(payload.get("query", "hybrid search")),
                     collection=str(payload.get("collection", "documentation")),
-                    limit=int(payload.get("limit", 5)),
-                    filters=dict(payload.get("filters", {})),
+                    limit=limit_val,
+                    filters=filters_val,
                 )
             )
     return examples
@@ -57,7 +70,8 @@ def _load_examples(path: Path) -> list[SearchExample]:
 
 _DATASET_ENV = os.getenv("AI_DOCS_BENCHMARK_DATASET")
 _DATASET_PATH = Path(_DATASET_ENV).expanduser() if _DATASET_ENV else _DEFAULT_DATASET
-_EXAMPLES = _load_examples(_DATASET_PATH) or _load_examples(_DEFAULT_DATASET)
+_loaded_examples = _load_examples(_DATASET_PATH)
+_EXAMPLES = _loaded_examples if _loaded_examples else _load_examples(_DEFAULT_DATASET)
 
 
 class SearchUser(HttpUser):
@@ -67,7 +81,20 @@ class SearchUser(HttpUser):
 
     def on_start(self) -> None:
         """Prime the dataset iterator and configure default headers."""
-        self._examples = itertools.cycle(random.sample(_EXAMPLES, len(_EXAMPLES)))
+        if _EXAMPLES:
+            self._examples = itertools.cycle(random.sample(_EXAMPLES, len(_EXAMPLES)))
+        else:
+            # Fallback to a single default example when no data is available
+            self._examples = itertools.cycle(
+                [
+                    SearchExample(
+                        query="hybrid search",
+                        collection="documentation",
+                        limit=5,
+                        filters={},
+                    )
+                ]
+            )
         self.client.headers.update({"Content-Type": "application/json"})
 
     @task(4)

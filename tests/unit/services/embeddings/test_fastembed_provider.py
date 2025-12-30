@@ -241,3 +241,105 @@ async def test_generate_sparse_embeddings_dependency_required(
 
     with pytest.raises(EmbeddingServiceError, match="required for sparse embeddings"):
         await provider.generate_sparse_embeddings(["alpha"])
+
+
+def test_langchain_embeddings_property_requires_initialization() -> None:
+    """Accessing langchain_embeddings before initialization should raise."""
+    provider = FastEmbedProvider()
+
+    with pytest.raises(EmbeddingServiceError, match="not been initialized"):
+        _ = provider.langchain_embeddings
+
+
+@pytest.mark.asyncio
+async def test_initialize_is_idempotent() -> None:
+    """Repeated initialization should be a no-op after first init."""
+    provider = FastEmbedProvider(model_name="stub-model")
+
+    await provider.initialize()
+    await provider.initialize()
+
+    assert provider.embedding_dimension == 3
+
+
+@pytest.mark.asyncio
+async def test_generate_sparse_embeddings_empty_payload_short_circuits() -> None:
+    """Empty sparse payload should return without requiring initialization."""
+    provider = FastEmbedProvider()
+
+    assert await provider.generate_sparse_embeddings([]) == []
+
+
+def test_max_tokens_per_request_defaults_to_512_when_uninitialized() -> None:
+    """The provider should report a conservative default max token value."""
+    provider = FastEmbedProvider()
+
+    assert provider.max_tokens_per_request == 512
+
+
+def test_internal_loader_raises_when_dense_dependency_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Missing langchain-community fastembed module should raise a clear error."""
+    import src.services.embeddings.fastembed_provider as module
+
+    monkeypatch.setattr(module, "FastEmbedEmbeddings", None)
+
+    def _missing(_name: str):
+        raise ModuleNotFoundError("langchain_community.embeddings.fastembed")
+
+    monkeypatch.setattr(module, "import_module", _missing)
+
+    with pytest.raises(EmbeddingServiceError, match="langchain-community"):
+        module._load_fastembed_embeddings()
+
+
+def test_internal_loader_raises_when_dense_symbol_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Missing FastEmbedEmbeddings symbol should raise a clear error."""
+    import src.services.embeddings.fastembed_provider as module
+
+    monkeypatch.setattr(module, "FastEmbedEmbeddings", None)
+
+    class _NoFastEmbedModule:
+        """Minimal stub module without FastEmbedEmbeddings."""
+
+    monkeypatch.setattr(module, "import_module", lambda _name: _NoFastEmbedModule())
+
+    with pytest.raises(
+        EmbeddingServiceError, match="FastEmbedEmbeddings not available"
+    ):
+        module._load_fastembed_embeddings()
+
+
+def test_internal_sparse_runtime_loader_returns_none_when_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Sparse runtime loader should return None when langchain-qdrant is missing."""
+    import src.services.embeddings.fastembed_provider as module
+
+    monkeypatch.setattr(module, "FastEmbedSparseRuntime", module._SPARSE_RUNTIME_UNSET)
+
+    def _missing(_name: str):
+        raise ModuleNotFoundError("langchain_qdrant")
+
+    monkeypatch.setattr(module, "import_module", _missing)
+
+    assert module._load_fastembed_sparse_runtime() is None
+
+
+def test_internal_sparse_runtime_loader_returns_none_when_symbol_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Sparse runtime loader should return None when FastEmbedSparse is missing."""
+    import src.services.embeddings.fastembed_provider as module
+
+    monkeypatch.setattr(module, "FastEmbedSparseRuntime", module._SPARSE_RUNTIME_UNSET)
+
+    class _NoSparseModule:
+        """Minimal stub module without FastEmbedSparse."""
+
+    monkeypatch.setattr(module, "import_module", lambda _name: _NoSparseModule())
+
+    assert module._load_fastembed_sparse_runtime() is None

@@ -1,5 +1,5 @@
 """Integration tests for EmbeddingManager using lightweight fakes."""
-# pylint: too-many-instance-attributes
+# pylint: disable=too-many-instance-attributes
 
 from __future__ import annotations
 

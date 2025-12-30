@@ -73,7 +73,7 @@ async def _ensure_initialized(service: Any, *, name: str) -> Any:
 
 
 @overload
-async def _resolve_service(  # noqa: UP047
+async def _resolve_service(
     *,
     name: str,
     supplier: Callable[[ApplicationContainer], T],
@@ -83,7 +83,7 @@ async def _resolve_service(  # noqa: UP047
 
 
 @overload
-async def _resolve_service(  # noqa: UP047
+async def _resolve_service(
     *,
     name: str,
     supplier: Callable[[ApplicationContainer], T],
@@ -92,7 +92,7 @@ async def _resolve_service(  # noqa: UP047
 ) -> T | None: ...
 
 
-async def _resolve_service(  # noqa: UP047
+async def _resolve_service(
     *,
     name: str,
     supplier: Callable[[ApplicationContainer], T],

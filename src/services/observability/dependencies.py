@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 # pylint: disable=duplicate-code
-import logging
 from contextlib import nullcontext
 from functools import lru_cache
 from typing import Annotated, Any
@@ -15,8 +14,6 @@ from .init import initialize_observability
 from .tracing import get_tracer
 from .tracking import get_ai_tracker, record_ai_operation, track_cost
 
-
-logger = logging.getLogger(__name__)
 
 ObservabilityConfigDep = Annotated[
     ObservabilityConfig, Depends(get_observability_config)

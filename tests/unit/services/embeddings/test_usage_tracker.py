@@ -53,5 +53,5 @@ def test_daily_reset_on_date_change() -> None:
     # ensure_current_day via report()
     tracker.stats.last_reset_date = date.today() - timedelta(days=1)
     _ = tracker.report()
-    # Daily cost resets at boundary
-    assert tracker.stats.daily_cost in (0.0, 1.0)
+    # Daily cost resets at boundary (should be 0.0 after reset)
+    assert tracker.stats.daily_cost == 0.0

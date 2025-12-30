@@ -130,8 +130,7 @@ async def test_initialize_dependencies_invokes_container(
 
     await fastapi_dependencies.initialize_dependencies()
 
-    ensure_mock.assert_awaited_once()
-    ensure_mock.assert_awaited_with(settings="settings", force_reload=True)
+    ensure_mock.assert_awaited_once_with(settings="settings", force_reload=True)
 
 
 @pytest.mark.asyncio()

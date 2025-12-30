@@ -384,6 +384,9 @@ def test_create_collection_invalid_dimension(
 
     invalid_dimensions = ["-1", "0", "notanint"]
     for dim in invalid_dimensions:
+        # Clear stub errors from previous iteration
+        if hasattr(rich_cli_stub, "errors"):
+            rich_cli_stub.errors.clear()
         result = _invoke(
             cli_runner,
             ["create", "alpha", "--dimension", dim],

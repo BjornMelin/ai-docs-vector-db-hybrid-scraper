@@ -38,6 +38,7 @@ from ragas.evaluation import evaluate as ragas_evaluate
 from ragas.llms.base import llm_factory
 from ragas.metrics import AnswerRelevancy, ContextPrecision, ContextRecall, Faithfulness
 
+
 try:  # pragma: no cover - import compatibility for openai SDK variants
     from openai import OpenAIError
 except ImportError:  # pragma: no cover - fallback for legacy openai package

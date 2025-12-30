@@ -362,7 +362,7 @@ def register_tools(
     ) -> DocumentBatchResponse:
         """Add multiple documents in batch with optimized processing.
 
-        Processes multiple URLs concur + rate limiting and progress tracking.
+        Processes multiple URLs concurrently with rate limiting and progress tracking.
         """
         successes: list[AddDocumentResponse] = []
         failures: list[str] = []

@@ -190,6 +190,7 @@ async def database_session() -> AsyncGenerator[DatabaseSessionContext, None]:
         dragonfly_client = container.dragonfly_client()
     except (
         RuntimeError,
+        ImportError,
         AttributeError,
         ValueError,
     ):  # pragma: no cover - defensive logging

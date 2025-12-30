@@ -82,6 +82,35 @@ def _register_langchain_core_stubs() -> None:
     retrievers.document_compressors = document_compressors
     langchain.retrievers = retrievers
 
+    classic = cast(Any, _ensure_module("langchain_classic"))
+    classic_retrievers = cast(Any, _ensure_module("langchain_classic.retrievers"))
+    classic_document_compressors = cast(
+        Any, _ensure_module("langchain_classic.retrievers.document_compressors")
+    )
+    classic_contextual = cast(
+        Any, _ensure_module("langchain_classic.retrievers.contextual_compression")
+    )
+    _set_attributes(
+        classic_document_compressors,
+        {
+            "DocumentCompressorPipeline": type("DocumentCompressorPipeline", (), {}),
+            "EmbeddingsFilter": type("EmbeddingsFilter", (), {}),
+        },
+    )
+    _set_attributes(
+        classic_contextual,
+        {
+            "ContextualCompressionRetriever": type(
+                "ContextualCompressionRetriever", (), {}
+            ),
+        },
+    )
+    classic_retrievers.document_compressors = classic_document_compressors
+    classic_retrievers.contextual_compression = classic_contextual
+    classic.retrievers = classic_retrievers
+    if not hasattr(classic, "__path__"):
+        classic.__path__ = []  # type: ignore[attr-defined]
+
     callbacks_manager = cast(Any, _ensure_module("langchain_core.callbacks.manager"))
     _set_attributes(
         callbacks_manager,

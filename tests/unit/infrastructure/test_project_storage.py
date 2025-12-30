@@ -13,6 +13,7 @@ from src.infrastructure.project_storage import ProjectStorage, ProjectStorageErr
 def storage(tmp_path: Path) -> ProjectStorage:
     """Provide a storage instance backed by a temporary directory."""
     data_dir = tmp_path / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
     return ProjectStorage(data_dir=data_dir)
 
 
@@ -39,7 +40,8 @@ async def test_update_project_mutates_payload(storage: ProjectStorage) -> None:
     cached = await storage.load_projects()
     assert cached["proj-1"]["name"] == "New"
     assert "updated_at" in cached["proj-1"]
-    datetime.fromisoformat(cached["proj-1"]["updated_at"]).astimezone(UTC)
+    parsed = datetime.fromisoformat(cached["proj-1"]["updated_at"]).astimezone(UTC)
+    assert isinstance(parsed, datetime)
 
 
 async def test_update_missing_project_raises(storage: ProjectStorage) -> None:

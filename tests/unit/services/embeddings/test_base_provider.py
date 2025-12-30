@@ -1,5 +1,5 @@
 """Unit tests for the abstract embeddings provider contract."""
-# pylint: abstract-class-instantiated
+# pylint: disable=abstract-class-instantiated
 
 from __future__ import annotations
 

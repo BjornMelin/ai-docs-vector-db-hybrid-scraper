@@ -83,14 +83,20 @@ def test_cache_ttl_precedence(
     assert settings.cache.ttl_search_results == case.expected
 
 
-def test_cache_ttl_negative_values_rejected() -> None:
+def test_cache_ttl_negative_values_rejected(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     """Negative TTL values should fail validation with a ``ValidationError``."""
+    monkeypatch.chdir(tmp_path)
     with pytest.raises(ValidationError):
         Settings(cache=cast(Any, {"ttl_search_results": -1}))
 
 
-def test_chunk_overlap_validation() -> None:
+def test_chunk_overlap_validation(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     """Chunk overlap exceeding the chunk size should raise ``ValidationError``."""
+    monkeypatch.chdir(tmp_path)
     with pytest.raises(ValidationError) as exc_info:
         Settings(
             environment=Environment.TESTING,

@@ -85,7 +85,7 @@ def _reset_state() -> Generator[None, None, None]:
 @pytest.fixture(name="fake_otel")
 def fixture_fake_otel(  # pylint: disable=too-many-locals,too-many-statements
     monkeypatch: pytest.MonkeyPatch,
-) -> FakeOtelContext:
+) -> Generator[FakeOtelContext, None, None]:
     """Provide fake OpenTelemetry modules so imports remain local."""
     trace_api = _TraceAPI()
     metrics_api = _MetricsAPI()
@@ -125,11 +125,21 @@ def fixture_fake_otel(  # pylint: disable=too-many-locals,too-many-statements
             self.exporter = exporter
             self.__class__.instances.append(self)
 
+        @classmethod
+        def clear_instances(cls) -> None:
+            """Clear the instances list."""
+            cls.instances.clear()
+
     class _FakeConsoleSpanExporter:
         instances: ClassVar[list["_FakeConsoleSpanExporter"]] = []
 
         def __init__(self) -> None:
             self.__class__.instances.append(self)
+
+        @classmethod
+        def clear_instances(cls) -> None:
+            """Clear the instances list."""
+            cls.instances.clear()
 
     class _FakeTracerProvider:
         instances: ClassVar[list["_FakeTracerProvider"]] = []
@@ -146,6 +156,11 @@ def fixture_fake_otel(  # pylint: disable=too-many-locals,too-many-statements
         def shutdown(self) -> None:
             self.shutdown_called = True
 
+        @classmethod
+        def clear_instances(cls) -> None:
+            """Clear the instances list."""
+            cls.instances.clear()
+
     class _FakeMeterProvider:
         instances: ClassVar[list["_FakeMeterProvider"]] = []
 
@@ -158,12 +173,22 @@ def fixture_fake_otel(  # pylint: disable=too-many-locals,too-many-statements
         def shutdown(self) -> None:
             self.shutdown_called = True
 
+        @classmethod
+        def clear_instances(cls) -> None:
+            """Clear the instances list."""
+            cls.instances.clear()
+
     class _FakePeriodicExportingMetricReader:
         instances: ClassVar[list["_FakePeriodicExportingMetricReader"]] = []
 
         def __init__(self, exporter: Any) -> None:
             self.exporter = exporter
             self.__class__.instances.append(self)
+
+        @classmethod
+        def clear_instances(cls) -> None:
+            """Clear the instances list."""
+            cls.instances.clear()
 
     class _FakeOTLPSpanExporter:
         instances: ClassVar[list["_FakeOTLPSpanExporter"]] = []
@@ -305,7 +330,16 @@ def fixture_fake_otel(  # pylint: disable=too-many-locals,too-many-statements
     for name, module in modules.items():
         monkeypatch.setitem(sys.modules, name, module)
 
-    return FakeOtelContext(
+    # Clear any previous test's instances before yielding
+    _FakeBatchSpanProcessor.clear_instances()
+    _FakeConsoleSpanExporter.clear_instances()
+    _FakeTracerProvider.clear_instances()
+    _FakeMeterProvider.clear_instances()
+    _FakePeriodicExportingMetricReader.clear_instances()
+    _FakeOTLPSpanExporter.instances.clear()
+    _FakeOTLPMetricExporter.instances.clear()
+
+    yield FakeOtelContext(
         trace_api=trace_api,
         metrics_api=metrics_api,
         tracer_provider_cls=_FakeTracerProvider,
@@ -318,6 +352,15 @@ def fixture_fake_otel(  # pylint: disable=too-many-locals,too-many-statements
         resource_factory=_FakeResourceFactory,
         instrumentation_calls=instrumentation_calls,
     )
+
+    # Clean up instances after the test
+    _FakeBatchSpanProcessor.clear_instances()
+    _FakeConsoleSpanExporter.clear_instances()
+    _FakeTracerProvider.clear_instances()
+    _FakeMeterProvider.clear_instances()
+    _FakePeriodicExportingMetricReader.clear_instances()
+    _FakeOTLPSpanExporter.instances.clear()
+    _FakeOTLPMetricExporter.instances.clear()
 
 
 class TestConfigurationCoercion:

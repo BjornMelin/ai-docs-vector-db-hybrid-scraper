@@ -12,7 +12,7 @@ from fastapi import HTTPException
 T = TypeVar("T")
 
 
-async def execute_service_call(  # noqa: UP047
+async def execute_service_call(
     *,
     operation: str,
     logger: logging.Logger,

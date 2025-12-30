@@ -16,6 +16,11 @@ from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
 from langchain_core.documents import Document
 from langchain_qdrant import QdrantVectorStore, RetrievalMode
 from qdrant_client import AsyncQdrantClient, QdrantClient, models
+from qdrant_client.http.exceptions import (
+    ApiException,
+    ResponseHandlingException,
+    UnexpectedResponse,
+)
 
 from src.config.loader import Settings
 from src.config.models import (
@@ -671,22 +676,29 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
             raise ValueError(msg)
 
         client = self._require_async_client()
-        recommend_kwargs: dict[str, Any] = {
-            "collection_name": collection,
-            "limit": limit,
-            "with_payload": True,
-            "with_vectors": False,
-            "query_filter": _filter_from_mapping(filters),
-        }
+        positive: list[Any] = []
         if positive_ids:
-            recommend_kwargs["positive"] = list(positive_ids)
+            positive.extend(list(positive_ids))
         if vector is not None:
-            recommend_kwargs["query_vector"] = list(vector)
-        if recommend_kwargs["query_filter"] is None:
-            recommend_kwargs.pop("query_filter")
+            positive.append(list(vector))
 
-        results = await client.recommend(**recommend_kwargs)
-        return [_scored_point_to_record(collection, point) for point in results]
+        query_filter = _filter_from_mapping(filters)
+        response = await client.query_points(
+            collection_name=collection,
+            query=models.RecommendQuery(
+                recommend=models.RecommendInput(
+                    positive=positive,
+                )
+            ),
+            query_filter=query_filter,
+            limit=limit,
+            with_payload=True,
+            with_vectors=False,
+        )
+        return [
+            _scored_point_to_record(collection, point)
+            for point in getattr(response, "points", []) or []
+        ]
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -850,10 +862,10 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
                 with_vectors=False,
             )
         except (
-            RuntimeError,
-            ValueError,
-            OSError,
-        ):  # pragma: no cover - driver-specific fallbacks
+            ApiException,
+            UnexpectedResponse,
+            ResponseHandlingException,
+        ):  # pragma: no cover - qdrant client exceptions
             return [], False
 
         records: list[SearchRecord] = []

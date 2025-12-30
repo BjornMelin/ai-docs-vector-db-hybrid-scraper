@@ -47,7 +47,7 @@ def _seed_collection(
 
     # Build point structures for upsert
     points = []
-    for record, vector in zip(corpus, embeddings, strict=False):
+    for record, vector in zip(corpus, embeddings, strict=True):
         payload = {
             "doc_path": record["doc_path"],
             "category": record["metadata"].get("category"),
