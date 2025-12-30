@@ -1,0 +1,6 @@
+INHERIT: docs/build_config/mkdocs.yml
+
+# Resolve path settings relative to the repository root so `mkdocs build` works
+# without requiring `-f docs/build_config/mkdocs.yml`.
+docs_dir: docs
+site_dir: site

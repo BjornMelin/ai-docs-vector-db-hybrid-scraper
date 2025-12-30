@@ -53,7 +53,7 @@ jobs:
       - name: Run full pytest suite
         run: uv run python scripts/dev.py test --profile full --workers 0 --coverage --verbose
         env:
-          PYTEST_ADDOPTS: --disable-plugin pytest_benchmark
+          PYTEST_ADDOPTS: -p no:pytest_benchmark
 
       - name: Upload coverage
         if: always()

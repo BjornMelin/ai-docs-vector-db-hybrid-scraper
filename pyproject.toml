@@ -31,64 +31,76 @@ classifiers = [
 ]
 
 dependencies = [
-    "fastapi[standard]>=0.118.1,<0.120.0",
-    "starlette>=0.48.0,<0.49.0",
-    "uvicorn[standard]>=0.37.0,<0.38.0",
-    "pydantic>=2.12.0,<3.0.0",
-    "pydantic-settings>=2.11.0,<3.0.0",
-    "pyyaml>=6.0.2,<7.0.0",
-    "crawl4ai[all]>=0.7.4,<0.8.0",
-    "firecrawl>=4.3.7,<5.0.0",
-    "qdrant-client[fastembed]>=1.15.1,<2.0",
-    # browser-use requires less openai<2.0.0
-    "openai>=1.105.0,<2.0.0",
-    "fastembed>=0.7.3,<0.7.4",
+    "fastapi[standard]>=0.128.0,<1.0.0",
+    "starlette>=0.50.0,<1.0.0",
+    "uvicorn[standard]>=0.40.0,<1.0.0",
+    "pydantic>=2.12.5,<3.0.0",
+    "pydantic-settings>=2.12.0,<3.0.0",
+    "pyyaml>=6.0.3,<7.0.0",
+    "crawl4ai[all]>=0.7.8,<0.8.0",
+    "firecrawl>=4.12.0,<5.0.0",
+    "qdrant-client[fastembed]>=1.16.2,<2.0",
+    "openai>=2.14.0,<3.0.0",
+    "fastembed>=0.7.4,<0.8.0",
     "FlagEmbedding>=1.3.5,<2.0.0",
-    "numpy>=2.2.2,<2.4.0",
-    "scipy>=1.14.0,<2.0.0",
+    "numpy>=2.4.0,<2.5.0",
+    "scipy>=1.16.3,<2.0.0",
     "defusedxml>=0.7.1,<0.8.0",
-    "aiohttp>=3.12.15,<3.14.0",
-    "aiofiles>=24.1.0,<26.0.0",
+    "aiohttp>=3.12.15,<4.0.0",
+    "aiofiles>=25.1.0,<26.0.0",
     "tenacity>=9.1.2,<10.0.0",
-    "mcp>=1.14.1,<2.0.0",
-    "fastmcp>=2.12.3,<3.0.0",
-    "redis[hiredis]>=5.3.1,<7.0.0",
+    "mcp>=1.25.0,<2.0.0",
+    "fastmcp>=2.14.1,<3.0.0",
+    "redis[hiredis]>=5.3.1,<6.0.0",
     "slowapi>=0.1.9,<0.2.0",
-    "platformdirs>=4.3.8,<5.0.0",
-    "click>=8.2.1,<8.4.0",
-    "rich>=14.1.0,<15.0.0",
+    "platformdirs>=4.5.1,<5.0.0",
+    "click>=8.3.1,<9.0.0",
+    "rich>=14.2.0,<15.0.0",
     "questionary>=2.1.1,<3.0.0",
     "prometheus-client>=0.23.1,<0.24.0",
     "prometheus-fastapi-instrumentator>=7.1.0,<8.0.0",
-    "sqlalchemy>=2.0.43,<3.0.0",
-    "sqlmodel>=0.0.25,<0.0.28",
+    "sqlalchemy>=2.0.45,<3.0.0",
+    "sqlmodel>=0.0.31,<0.1.0",
     "httpx>=0.28.1,<0.29.0",
-    "browser-use>=0.8.0,<0.9.0",
-    "playwright>=1.55.0,<2.0.0",
+    "browser-use>=0.11.2,<0.12.0",
+    "playwright>=1.57.0,<2.0.0",
     "playwright-stealth>=2.0.0,<3.0.0",
-    "langchain-anthropic>=0.1.22,<1.0.0",
-    "langchain-google-genai>=2.1.12,<4.0.0",
+    "langchain-anthropic>=1.3.0,<2.0.0",
+    "langchain-google-genai>=4.1.2,<5.0.0",
     # dependency-injector wires core clients (OpenAI, Qdrant, Dragonfly, Firecrawl) via ApplicationContainer.
-    "dependency-injector>=4.48.2",
-    "scikit-learn>=1.7.2,<2.0.0",
-    "langchain>=0.3.27,<0.4.0",
-    "langchain-core>=0.3.78",
-    "langchain-community>=0.3.31,<0.4.0",
-    "langchain-qdrant>=0.2.1,<0.4.0",
-    "langchain-text-splitters>=0.3.11,<0.4.0",
-    "langchain-openai>=0.3.35,<1.0.0",
-    "langchain-mcp-adapters>=0.1.10,<0.2.0",
-    "langgraph>=0.6.8,<0.6.11",
+    "dependency-injector>=4.48.3",
+    "scikit-learn>=1.8.0,<2.0.0",
+    "langchain>=1.2.0,<2.0.0",
+    "langchain-core>=1.2.5,<2.0.0",
+    "langchain-community>=0.4.1,<1.0.0",
+    "langchain-classic>=1.0.1,<2.0.0",
+    "langchain-qdrant>=1.1.0,<2.0.0",
+    "langchain-text-splitters>=1.1.0,<2.0.0",
+    "langchain-openai>=1.1.6,<2.0.0",
+    "langchain-mcp-adapters>=0.2.1,<1.0.0",
+    "langgraph>=1.0.5,<2.0.0",
     "asgi-correlation-id>=4.3.4,<5.0.0",
     "purgatory>=3.0.1,<4.0.0",
     "aiolimiter>=1.2.1",
     "trafilatura>=2.0.0",
     "tiktoken>=0.12.0,<0.13.0",
-    "anyio>=4.4.0,<5.0.0",
-    "pydantic-core>=2.23.4,<3.0.0",
-    "opentelemetry-api>=1.37.0,<2.0.0",
-    "opentelemetry-sdk>=1.37.0,<2.0.0",
-    "opentelemetry-exporter-otlp>=1.37.0,<2.0.0",
+    "anyio>=4.12.0,<5.0.0",
+    "pydantic-core>=2.41.5,<3.0.0",
+    "opentelemetry-api>=1.39.1,<2.0.0",
+    "opentelemetry-sdk>=1.39.1,<2.0.0",
+    "opentelemetry-exporter-otlp>=1.39.1,<2.0.0",
+]
+
+[project.optional-dependencies]
+docs = [
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.7.1,<10.0.0",
+    "mkdocstrings>=1.0.0,<2.0.0",
+    "mkdocstrings-python>=2.0.1,<3.0.0",
+    "requests>=2.32.5,<3.0.0",
+    "pandas>=2.3.3,<3.0.0",
+    "plotly>=6.5.0,<7.0.0",
+    "streamlit>=1.52.2,<2.0.0",
 ]
 
 [dependency-groups]
@@ -115,51 +127,51 @@ dev = [
     "deptry>=0.23.1,<1.0.0",
     "locust>=2.37.10,<3.0.0",
     "respx>=0.22.0",
-    "typer>=0.12.3,<0.21.0",
+    "typer>=0.21.0,<0.22.0",
     "vulture>=2.14,<3.0.0",
 ]
 
 # Documentation
 docs = [
     "mkdocs>=1.6.1",
-    "mkdocs-material>=9.6.20",
-    "mkdocstrings>=0.30.1",
-    "mkdocstrings-python>=1.18.2",
-    "requests>=2.32.0,<3.0.0",
-    "pandas>=2.2.0,<3.0.0",
-    "plotly>=6.3.0,<7.0.0",
-    "streamlit>=1.39.0,<2.0.0",
+    "mkdocs-material>=9.7.1,<10.0.0",
+    "mkdocstrings>=1.0.0,<2.0.0",
+    "mkdocstrings-python>=2.0.1,<3.0.0",
+    "requests>=2.32.5,<3.0.0",
+    "pandas>=2.3.3,<3.0.0",
+    "plotly>=6.5.0,<7.0.0",
+    "streamlit>=1.52.2,<2.0.0",
 ]
 
 # Contract testing tools
 contract = [
-    "faker>=37.8.0,<38.0.0",
+    "faker>=40.1.0,<41.0.0",
 ]
 
 # Accessibility testing tools
 accessibility = [
     "axe-core-python>=0.1.0,<1.0.0",
-    "selenium>=4.35.0,<5.0.0",
+    "selenium>=4.39.0,<5.0.0",
     "playwright>=1.55.0,<2.0.0",
-    "beautifulsoup4>=4.13.5,<5.0.0",
+    "beautifulsoup4>=4.14.3,<5.0.0",
     "lxml>=5.3.0,<6.0.0",
 ]
 
 # LLM integrations (core AI functionality)
 llm = [
-    "langchain-anthropic>=0.3.20,<1.0.0",
-    "langchain-google-genai>=2.1.12,<4.0.0",
-    "sentence-transformers>=3,<6",
+    "langchain-anthropic>=1.3.0,<2.0.0",
+    "langchain-google-genai>=4.1.2,<5.0.0",
+    "sentence-transformers>=5.2.0,<6.0.0",
 ]
 
 # Observability and monitoring
 observability = [
-    "opentelemetry-instrumentation-fastapi>=0.58b0,<0.59.0",
-    "opentelemetry-instrumentation-httpx>=0.58b0,<0.59.0",
-    "opentelemetry-instrumentation-requests>=0.58b0,<0.59.0",
-    "opentelemetry-instrumentation-logging>=0.58b0,<0.59.0",
-    "opentelemetry-exporter-prometheus>=0.58b0,<0.59.0",
-    "opentelemetry-instrumentation-starlette>=0.58b0,<0.59.0",
+    "opentelemetry-instrumentation-fastapi>=0.60b1,<0.61.0",
+    "opentelemetry-instrumentation-httpx>=0.60b1,<0.61.0",
+    "opentelemetry-instrumentation-requests>=0.60b1,<0.61.0",
+    "opentelemetry-instrumentation-logging>=0.60b1,<0.61.0",
+    "opentelemetry-exporter-prometheus>=0.60b1,<0.61.0",
+    "opentelemetry-instrumentation-starlette>=0.60b1,<0.61.0",
     "psutil>=6.1.1",
 ]
 
@@ -173,21 +185,20 @@ obs = [
 # GPU acceleration (optional AI/ML performance boost)
 gpu = [
     # Core PyTorch stack (aligned with official compatibility matrix)
-    "torch>=2.8.0,<2.9.0",
-    "torchvision>=0.23.0,<0.24.0",
-    "torchaudio>=2.8.0,<2.9.0",
+    "torch>=2.9.1,<2.10.0",
+    "torchvision>=0.24.1,<0.25.0",
+    "torchaudio>=2.9.1,<2.10.0",
     # Inference libraries with readily available wheels
-    "transformers>=4.44.0,<5.0.0",
-    "accelerate>=0.34.0,<2.0.0",
-    "vllm>=0.10.0,<0.12.0",
+    "transformers>=4.57.3,<5.0.0",
+    "accelerate>=1.12.0,<2.0.0",
     # Optional optimization libs (may compile from source depending on platform)
-    "bitsandbytes>=0.44.0,<1.0.0",
-    "xformers>=0.0.32.post1,<0.0.33",
-    "triton>=3.0.0,<4.0.0",
-    "deepspeed>=0.14.0,<1.0.0",
+    "bitsandbytes>=0.49.0,<1.0.0",
+    "xformers>=0.0.33.post2,<0.0.34",
+    "triton>=3.5.0,<4.0.0",
+    "deepspeed>=0.18.3,<1.0.0",
     # flash-attn requires torch wheels at runtime; uv 0.7.x lacks the
     # extra-build-dependencies feature so torch remains co-installed via the group.
-    "flash-attn>=2.6.3",
+    "flash-attn>=2.8.3,<3.0.0",
 ]
 
 server = [
@@ -219,7 +230,7 @@ packages = ["src"]
 
 [tool.ruff]
 line-length = 88
-target-version = "py312"
+target-version = "py311"
 include = ["*.py", "*.pyi"]
 src = ["src", "tests", "examples", "scripts"]
 extend-exclude = [".github", "**/*.md", "**/*.yml", "**/*.yaml"]
@@ -487,7 +498,7 @@ extension-pkg-allow-list = ["pydantic"]
 reports = false
 score = true
 recursive = true
-py-version = "3.12"
+py-version = "3.11"
 
 [tool.pylint.messages_control]
 # Conservative disable list - only genuinely problematic rules
