@@ -28,17 +28,20 @@ class SearchExample:
     filters: dict[str, Any]
 
 
+_FALLBACK_EXAMPLES = [
+    SearchExample(
+        query="how to configure qdrant replication",
+        collection="documentation",
+        limit=5,
+        filters={},
+    )
+]
+
+
 def _load_examples(path: Path) -> list[SearchExample]:
     """Load golden dataset queries from disk."""
     if not path.exists():
-        return [
-            SearchExample(
-                query="how to configure qdrant replication",
-                collection="documentation",
-                limit=5,
-                filters={},
-            )
-        ]
+        return list(_FALLBACK_EXAMPLES)
 
     examples: list[SearchExample] = []
     with path.open("r", encoding="utf-8") as handle:
@@ -69,9 +72,14 @@ def _load_examples(path: Path) -> list[SearchExample]:
 
 
 _DATASET_ENV = os.getenv("AI_DOCS_BENCHMARK_DATASET")
-_DATASET_PATH = Path(_DATASET_ENV).expanduser() if _DATASET_ENV else _DEFAULT_DATASET
-_loaded_examples = _load_examples(_DATASET_PATH)
-_EXAMPLES = _loaded_examples if _loaded_examples else _load_examples(_DEFAULT_DATASET)
+_DATASET_PATH = Path(_DATASET_ENV).expanduser() if _DATASET_ENV else None
+if _DATASET_PATH and _DATASET_PATH.exists():
+    _EXAMPLES = _load_examples(_DATASET_PATH) or _load_examples(_DEFAULT_DATASET)
+else:
+    _EXAMPLES = _load_examples(_DEFAULT_DATASET)
+
+if not _EXAMPLES:
+    _EXAMPLES = list(_FALLBACK_EXAMPLES)
 
 
 class SearchUser(HttpUser):
@@ -116,5 +124,7 @@ class SearchUser(HttpUser):
     @task(1)
     def list_collections(self) -> None:
         """Enumerate vector collections for observability checks."""
-        response = self.client.get("/api/v1/collections", name="GET /collections")
+        response = self.client.get(
+            "/api/v1/collections", name="GET /api/v1/collections"
+        )
         response.raise_for_status()
