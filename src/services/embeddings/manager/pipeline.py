@@ -178,6 +178,8 @@ class EmbeddingPipeline:
             return None
 
         model_name = provider.model_name
+        # Prefer provider dimensions; fall back to OpenAI config only for OpenAI.
+        # For other providers without dimensions, use 0 to skip cache keying.
         dimensions = provider.dimensions or (
             self._config.openai.dimensions if provider_key == "openai" else 0
         )
