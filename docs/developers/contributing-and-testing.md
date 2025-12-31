@@ -101,8 +101,8 @@ path coverage is strongly encouraged for error handling.
 
 ### Coverage
 
-CI enforces the project-wide 80% threshold via the `ci` profile. Run it locally
-when adjusting critical paths.
+CI enforces the project-wide 70% threshold via the `ci` profile (see
+`scripts/dev.py`). Run it locally when adjusting critical paths.
 
 ## 4. Maintainer Tips
 
