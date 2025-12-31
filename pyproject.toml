@@ -131,8 +131,8 @@ dev = [
     "vulture>=2.14,<3.0.0",
 ]
 
-# Documentation
-docs = [
+# Documentation tooling (uv dependency group)
+docs-dev = [
     "mkdocs>=1.6.1",
     "mkdocs-material>=9.7.1,<10.0.0",
     "mkdocstrings>=1.0.0,<2.0.0",

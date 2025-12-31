@@ -120,7 +120,7 @@ uv build
 Documentation contributors:
 
 ```bash
-uv sync --frozen --group docs
+uv sync --frozen --group docs-dev
 uv run python scripts/dev.py validate --check-docs --strict
 uv run mkdocs build --strict
 ```
