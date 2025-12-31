@@ -30,9 +30,15 @@ class ProjectStorage:
             storage_path: Path to the project data file.
                 - If not provided, data is stored in the data_dir/projects.json file.
                 - When storage_path + data_dir provided, storage_path takes precedence.
+                - Relative storage_path values are resolved relative to data_dir.
         """
         base_dir = Path(data_dir)
-        target_path = Path(storage_path) if storage_path else base_dir / "projects.json"
+        if storage_path:
+            target_path = Path(storage_path)
+            if not target_path.is_absolute():
+                target_path = base_dir / target_path
+        else:
+            target_path = base_dir / "projects.json"
         target_path.parent.mkdir(parents=True, exist_ok=True)
 
         self._path = target_path
@@ -48,8 +54,17 @@ class ProjectStorage:
     async def save_project(self, project_id: str, project_data: dict[str, Any]) -> None:
         """Persist a single project definition."""
         async with self._lock:
-            self._cache[project_id] = project_data
-            await self._write_projects(self._cache)
+            now = datetime.now(UTC).isoformat()
+            previous = self._cache.get(project_id, {})
+            payload = dict(project_data)
+            if "created_at" not in payload:
+                payload["created_at"] = previous.get("created_at", now)
+            payload["updated_at"] = now
+
+            updated_cache = dict(self._cache)
+            updated_cache[project_id] = payload
+            await self._write_projects(updated_cache)
+            self._cache = updated_cache
 
     async def get_project(self, project_id: str) -> dict[str, Any] | None:
         """Return a previously cached project by identifier."""
@@ -69,15 +84,26 @@ class ProjectStorage:
                 msg = f"Project {project_id} not found"
                 raise ProjectStorageError(msg)
 
-            self._cache[project_id].update(updates)
-            self._cache[project_id]["updated_at"] = datetime.now(UTC).isoformat()
-            await self._write_projects(self._cache)
+            updated_cache = dict(self._cache)
+            updated_project = dict(updated_cache[project_id])
+            updated_project.update(updates)
+            updated_project["updated_at"] = datetime.now(UTC).isoformat()
+            updated_cache[project_id] = updated_project
+            await self._write_projects(updated_cache)
+            self._cache = updated_cache
 
     async def delete_project(self, project_id: str) -> None:
-        """Remove a project from storage."""
+        """Remove a project from storage.
+
+        Missing projects are ignored (idempotent delete).
+        """
         async with self._lock:
-            if self._cache.pop(project_id, None) is not None:
-                await self._write_projects(self._cache)
+            updated_cache = dict(self._cache)
+            if updated_cache.pop(project_id, None) is None:
+                return
+
+            await self._write_projects(updated_cache)
+            self._cache = updated_cache
 
     async def _read_projects(self) -> dict[str, dict[str, Any]]:
         """Read projects from disk."""

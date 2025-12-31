@@ -29,7 +29,11 @@ async def test_save_and_load_roundtrip(storage: ProjectStorage) -> None:
     await storage.save_project("proj-1", payload)
 
     cached = await storage.load_projects()
-    assert cached == {"proj-1": payload}
+    assert cached["proj-1"]["id"] == "proj-1"
+    assert cached["proj-1"]["name"] == "Test"
+    assert "created_at" in cached["proj-1"]
+    assert "updated_at" in cached["proj-1"]
+    assert payload == {"id": "proj-1", "name": "Test"}
 
 
 async def test_update_project_mutates_payload(storage: ProjectStorage) -> None:
@@ -42,6 +46,7 @@ async def test_update_project_mutates_payload(storage: ProjectStorage) -> None:
     assert "updated_at" in cached["proj-1"]
     parsed = datetime.fromisoformat(cached["proj-1"]["updated_at"]).astimezone(UTC)
     assert isinstance(parsed, datetime)
+    assert "created_at" in cached["proj-1"]
 
 
 async def test_update_missing_project_raises(storage: ProjectStorage) -> None:
@@ -56,6 +61,38 @@ async def test_delete_project(storage: ProjectStorage) -> None:
     await storage.delete_project("proj-1")
     cached = await storage.load_projects()
     assert "proj-1" not in cached
+
+
+async def test_cache_not_mutated_on_write_failure(
+    storage: ProjectStorage, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Cache updates only after a successful disk write."""
+    await storage.save_project("proj-1", {"id": "proj-1", "name": "Stable"})
+
+    async def _fail_write(*_args: object, **_kwargs: object) -> None:
+        raise ProjectStorageError("boom")
+
+    monkeypatch.setattr(storage, "_write_projects", _fail_write)
+
+    with pytest.raises(ProjectStorageError):
+        await storage.save_project("proj-2", {"id": "proj-2"})
+
+    assert await storage.get_project("proj-2") is None
+    stable_project = await storage.get_project("proj-1")
+    assert stable_project is not None
+    assert stable_project["name"] == "Stable"
+
+    with pytest.raises(ProjectStorageError):
+        await storage.update_project("proj-1", {"name": "Mutated"})
+
+    stable_project = await storage.get_project("proj-1")
+    assert stable_project is not None
+    assert stable_project["name"] == "Stable"
+
+    with pytest.raises(ProjectStorageError):
+        await storage.delete_project("proj-1")
+
+    assert await storage.get_project("proj-1") is not None
 
 
 async def test_load_projects_handles_corrupted_json(
