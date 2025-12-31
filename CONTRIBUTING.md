@@ -231,10 +231,10 @@ async def test_embedding_config_validation():
     assert config.rerank_top_k == 20
 ```
 
-#### Integration Tests
+#### Service Integration Tests
 
 ```python
-@pytest.mark.integration
+@pytest.mark.service
 @pytest.mark.asyncio
 async def test_full_scraping_pipeline():
     """Test complete advanced scraping and embedding pipeline."""
@@ -264,7 +264,7 @@ uv run pytest
 
 # Run specific test categories
 uv run pytest -m unit
-uv run pytest -m integration
+uv run pytest -m service
 uv run pytest -m benchmark
 
 # Run with coverage

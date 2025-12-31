@@ -32,7 +32,7 @@ async def test_calculate_price():
     price = calculate_price(100, 0.1)
     assert price == 90
 
-@pytest.mark.integration
+@pytest.mark.service
 async def test_payment_processing(payment_gateway_mock):
     """Tests integration with payment service."""
     result = await process_payment(payment_gateway_mock, 100)
@@ -382,7 +382,7 @@ uv run pytest
 
 # Run specific categories
 uv run pytest -m unit
-uv run pytest -m integration
+uv run pytest -m service
 uv run pytest -m e2e
 
 # Run in parallel
@@ -437,7 +437,7 @@ addopts = -ra -q --strict-markers
 testpaths = tests
 markers =
     unit: Unit tests
-    integration: Integration tests
+    service: Service integration tests
     e2e: End-to-end tests
     benchmark: Performance benchmarks
     memory: Memory tests

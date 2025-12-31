@@ -71,12 +71,12 @@ uv run python scripts/dev.py test --profile full            # all tests
 uv run python scripts/dev.py test --profile ci             # mirrors CI
 uv run pytest tests/test_example.py                        # specific file
 uv run pytest -k "search"                                  # pattern match
-uv run pytest -m integration                               # marker
+uv run pytest -m service                                   # marker
 uv run pytest -n auto                                      # parallel
 ```
 
 Pytest markers are declared in `pyproject.toml` to document custom tags (`unit`,
-`integration`, `e2e`, `slow`, etc.).
+`service`, `e2e`, `slow`, etc.).
 
 ### Async & Mocking Patterns
 
