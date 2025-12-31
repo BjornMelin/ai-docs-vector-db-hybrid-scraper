@@ -131,7 +131,7 @@ dev = [
     { name = "typer" },
     { name = "vulture" },
 ]
-docs = [
+docs-dev = [
     { name = "mkdocs" },
     { name = "mkdocs-material" },
     { name = "mkdocstrings" },
@@ -197,7 +197,7 @@ requires-dist = [
     { name = "crawl4ai", extras = ["all"], specifier = ">=0.7.8,<0.8.0" },
     { name = "defusedxml", specifier = ">=0.7.1,<0.8.0" },
     { name = "dependency-injector", specifier = ">=4.48.3" },
-    { name = "fastapi", extras = ["standard"], specifier = ">=0.128.0,<1.0.0" },
+    { name = "fastapi", extras = ["standard"], specifier = ">=0.127.0,<1.0.0" },
     { name = "fastembed", specifier = ">=0.7.4,<0.8.0" },
     { name = "fastmcp", specifier = ">=2.14.1,<3.0.0" },
     { name = "firecrawl", specifier = ">=4.12.0,<5.0.0" },
@@ -288,7 +288,7 @@ dev = [
     { name = "typer", specifier = ">=0.21.0,<0.22.0" },
     { name = "vulture", specifier = ">=2.14,<3.0.0" },
 ]
-docs = [
+docs-dev = [
     { name = "mkdocs", specifier = ">=1.6.1" },
     { name = "mkdocs-material", specifier = ">=9.7.1,<10.0.0" },
     { name = "mkdocstrings", specifier = ">=1.0.0,<2.0.0" },

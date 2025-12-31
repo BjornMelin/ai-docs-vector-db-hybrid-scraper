@@ -31,7 +31,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "fastapi[standard]>=0.128.0,<1.0.0",
+    "fastapi[standard]>=0.127.0,<1.0.0",
     "starlette>=0.50.0,<1.0.0",
     "uvicorn[standard]>=0.40.0,<1.0.0",
     "pydantic>=2.12.5,<3.0.0",
@@ -438,7 +438,7 @@ markers = [
     "embedding: Embedding-related tests",
     "endurance: mark test as endurance test",
     "fast: Fast unit tests (<100ms each)",
-    "integration: Integration tests (<5s each)",
+    "service: Service integration tests (<5s each)",
     "interactive: mark test as requiring interactive features",
     "input_validation: mark test as input validation test",
     "load: mark test as load test",
