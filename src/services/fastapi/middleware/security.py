@@ -137,6 +137,8 @@ def _resolve_storage_uri(config: SecurityConfig) -> str | None:
 
 async def _rate_limited(_: Request, exc: Exception) -> JSONResponse:
     """Default SlowAPI rate-limit handler."""
+    # Registered specifically for RateLimitExceeded (see enable_global_rate_limit),
+    # but handler signatures accept Exception; keep a defensive check for tests/misuse.
     if not isinstance(exc, RateLimitExceeded):
         raise TypeError("Unexpected exception type for rate limit handler") from exc
 
