@@ -198,3 +198,57 @@ async def test_firecrawl_scrape_rejects_invalid_metadata_timeout(
             )
     finally:
         await provider.close()
+
+
+@pytest.mark.asyncio
+async def test_firecrawl_crawl_site_returns_result(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """crawl_site should invoke client.crawl and return structured result."""
+    monkeypatch.setattr(
+        firecrawl_module,
+        "_firecrawl_client_factory",
+        lambda: _StubAsyncFirecrawl,
+        raising=True,
+    )
+    monkeypatch.setattr(
+        firecrawl_module, "execute_with_retry", _passthrough_retry, raising=True
+    )
+
+    settings = FirecrawlSettings(api_key="fc-test")
+    provider = FirecrawlProvider(ProviderContext(ProviderKind.FIRECRAWL), settings)
+    await provider.initialize()
+    try:
+        result = await provider.crawl_site("https://example.com", limit=5)
+        assert isinstance(result, dict)
+        assert result.get("status") == "completed"
+        assert "data" in result
+    finally:
+        await provider.close()
+
+
+@pytest.mark.asyncio
+async def test_firecrawl_start_crawl_returns_job_descriptor(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """start_crawl should return a job descriptor with job ID."""
+    monkeypatch.setattr(
+        firecrawl_module,
+        "_firecrawl_client_factory",
+        lambda: _StubAsyncFirecrawl,
+        raising=True,
+    )
+    monkeypatch.setattr(
+        firecrawl_module, "execute_with_retry", _passthrough_retry, raising=True
+    )
+
+    settings = FirecrawlSettings(api_key="fc-test")
+    provider = FirecrawlProvider(ProviderContext(ProviderKind.FIRECRAWL), settings)
+    await provider.initialize()
+    try:
+        result = await provider.start_crawl("https://example.com", limit=10)
+        assert isinstance(result, dict)
+        assert result.get("id") == "job123"
+        assert result.get("url") == "https://example.com"
+    finally:
+        await provider.close()
