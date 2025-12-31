@@ -3,35 +3,6 @@ source = src
 branch = True
 omit =
     */tests/*
-    */conftest.py
-    src/cli/*
-    src/crawl4ai_bulk_embedder.py
-    src/manage_vector_db.py
-    src/unified_mcp_server.py
-    src/infrastructure/container.py
-    src/infrastructure/connection_manager.py
-    src/services/processing/*
-    src/services/rag/api.py
-    src/services/rag/generator.py
-    src/services/vector_db/service.py
-    src/models/drift.py
-    src/mcp_tools/tools/cost_estimation.py
-    src/mcp_tools/tools/crawling.py
-    src/mcp_tools/tools/system_health.py
-    src/api/lifespan.py
-    src/api/routers/v1/cache.py
-    src/config/template_utils.py
-    src/services/fastapi/production_server.py
-    src/services/fastapi/routers/*
-    src/services/observability/health_manager.py
-    src/services/observability/tracking.py
-    src/services/query_processing/orchestrator.py
-    src/services/service_resolver.py
-    src/services/hyde/generator.py
-    src/services/rag/utils.py
-    src/mcp_tools/tools/retrieval.py
-    src/mcp_tools/tools/configuration.py
-    src/mcp_tools/tools/content_intelligence.py
 
 [report]
 exclude_lines =
