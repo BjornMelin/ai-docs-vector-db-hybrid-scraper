@@ -106,6 +106,9 @@ def override_registry(
     Args:
         classes: Mapping of middleware identifiers to replacement specs.
         functions: Mapping of helper identifiers to replacement callables.
+
+    Note:
+        Not thread-safe. Intended for single-threaded test isolation.
     """
     class_overrides = classes or {}
     function_overrides = functions or {}
