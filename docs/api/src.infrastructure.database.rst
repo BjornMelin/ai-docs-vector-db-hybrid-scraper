@@ -4,7 +4,7 @@ src.infrastructure.database package
 Submodules
 ----------
 
-src.infrastructure.database.connection\_manager module
+src.infrastructure.connection\_manager module
 ------------------------------------------------------
 
 .. automodule:: src.infrastructure.connection_manager
