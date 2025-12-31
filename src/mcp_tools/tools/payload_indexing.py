@@ -106,11 +106,17 @@ def register_tools(
 ) -> None:
     """Register payload indexing helpers with the MCP server."""
     validator = MLSecurityValidator.from_unified_config()
+    cached_service: VectorStoreService | None = None
 
     async def _resolve_service() -> VectorStoreService:
         """Resolve the vector store service from the provided vector_service."""
+        nonlocal cached_service
+        if cached_service is not None:
+            return cached_service
+
         if isinstance(vector_service, VectorStoreService):
-            return vector_service
+            cached_service = vector_service
+            return cached_service
 
         if not isinstance(vector_service, VectorStoreServiceProvider):
             msg = (
@@ -124,7 +130,8 @@ def register_tools(
             msg = "get_vector_store_service() returned None"
             raise ValueError(msg)
         if isinstance(resolved, VectorStoreService):
-            return resolved
+            cached_service = resolved
+            return cached_service
 
         required = (
             "list_collections",
@@ -141,7 +148,8 @@ def register_tools(
                 f"object; missing {missing} on {type(resolved).__name__}"
             )
             raise TypeError(msg)
-        return cast(VectorStoreService, resolved)
+        cached_service = cast(VectorStoreService, resolved)
+        return cached_service
 
     @mcp.tool()
     async def create_payload_indexes(
