@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import asyncio
 import inspect
 import os
 import sys
 import tracemalloc
 from collections.abc import Iterable
-from contextlib import suppress
 from pathlib import Path
 
 import pytest
@@ -97,16 +95,3 @@ def pytest_terminal_summary(terminalreporter) -> None:
             for nodeid, reason in unexpected
         )
         pytest.exit(f"Unexpected skip reasons detected:\n{summary_lines}")
-
-
-def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
-    """Ensure any lingering asyncio event loops are closed after the run."""
-    policy = asyncio.get_event_loop_policy()
-    try:
-        loop = policy.get_event_loop()
-    except RuntimeError:
-        loop = None
-
-    if loop is not None and not loop.is_closed():
-        with suppress(Exception):  # pragma: no cover - best-effort cleanup
-            loop.close()

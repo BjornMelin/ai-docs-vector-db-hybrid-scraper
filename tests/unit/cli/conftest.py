@@ -1,6 +1,5 @@
 """Enhanced fixtures for CLI testing."""
 
-import asyncio
 import json
 from io import StringIO
 from pathlib import Path
@@ -186,16 +185,6 @@ def mock_completion_items():
         CompletionItem("collection2", help="Collection: collection2"),
         CompletionItem("test_collection", help="Collection: test_collection"),
     ]
-
-
-@pytest.fixture
-def event_loop():
-    """Provide a dedicated event loop for async tests."""
-    loop = asyncio.new_event_loop()
-    try:
-        yield loop
-    finally:
-        loop.close()
 
 
 @pytest.fixture

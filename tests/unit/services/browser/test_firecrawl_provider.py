@@ -252,3 +252,118 @@ async def test_firecrawl_start_crawl_returns_job_descriptor(
         assert result.get("url") == "https://example.com"
     finally:
         await provider.close()
+
+
+@pytest.mark.asyncio
+async def test_firecrawl_get_crawl_status_returns_status(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """get_crawl_status should return job status from Firecrawl."""
+    monkeypatch.setattr(
+        firecrawl_module,
+        "_firecrawl_client_factory",
+        lambda: _StubAsyncFirecrawl,
+        raising=True,
+    )
+    monkeypatch.setattr(
+        firecrawl_module, "execute_with_retry", _passthrough_retry, raising=True
+    )
+
+    settings = FirecrawlSettings(api_key="fc-test")
+    provider = FirecrawlProvider(ProviderContext(ProviderKind.FIRECRAWL), settings)
+    await provider.initialize()
+    try:
+        result = await provider.get_crawl_status("job123")
+        assert isinstance(result, dict)
+        assert result.get("id") == "job123"
+        assert result.get("status") == "completed"
+    finally:
+        await provider.close()
+
+
+@pytest.mark.asyncio
+async def test_firecrawl_batch_scrape_processes_urls(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """batch_scrape should process multiple URLs and return results."""
+    monkeypatch.setattr(
+        firecrawl_module,
+        "_firecrawl_client_factory",
+        lambda: _StubAsyncFirecrawl,
+        raising=True,
+    )
+    monkeypatch.setattr(
+        firecrawl_module, "execute_with_retry", _passthrough_retry, raising=True
+    )
+
+    settings = FirecrawlSettings(api_key="fc-test")
+    provider = FirecrawlProvider(ProviderContext(ProviderKind.FIRECRAWL), settings)
+    await provider.initialize()
+    try:
+        urls = ["https://example.com/1", "https://example.com/2"]
+        result = await provider.batch_scrape(urls)
+        assert isinstance(result, dict)
+        assert result.get("status") == "completed"
+        assert result.get("total") == 2
+    finally:
+        await provider.close()
+
+
+@pytest.mark.asyncio
+async def test_firecrawl_rejects_zero_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Provider should reject timeout of 0 with appropriate error."""
+    monkeypatch.setattr(
+        firecrawl_module,
+        "_firecrawl_client_factory",
+        lambda: _StubAsyncFirecrawl,
+        raising=True,
+    )
+    monkeypatch.setattr(
+        firecrawl_module, "execute_with_retry", _passthrough_retry, raising=True
+    )
+
+    settings = FirecrawlSettings(api_key="fc-test")
+    provider = FirecrawlProvider(ProviderContext(ProviderKind.FIRECRAWL), settings)
+    await provider.initialize()
+    try:
+        with pytest.raises(BrowserProviderError):
+            await provider.scrape(
+                ScrapeRequest(
+                    url="https://example.com",
+                    metadata={"firecrawl": {"timeout": 0}},
+                )
+            )
+    finally:
+        await provider.close()
+
+
+@pytest.mark.asyncio
+async def test_firecrawl_rejects_negative_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Provider should reject negative timeout with appropriate error."""
+    monkeypatch.setattr(
+        firecrawl_module,
+        "_firecrawl_client_factory",
+        lambda: _StubAsyncFirecrawl,
+        raising=True,
+    )
+    monkeypatch.setattr(
+        firecrawl_module, "execute_with_retry", _passthrough_retry, raising=True
+    )
+
+    settings = FirecrawlSettings(api_key="fc-test")
+    provider = FirecrawlProvider(ProviderContext(ProviderKind.FIRECRAWL), settings)
+    await provider.initialize()
+    try:
+        with pytest.raises(BrowserProviderError):
+            await provider.scrape(
+                ScrapeRequest(
+                    url="https://example.com",
+                    metadata={"firecrawl": {"timeout": -5}},
+                )
+            )
+    finally:
+        await provider.close()
