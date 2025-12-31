@@ -110,5 +110,3 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
     if loop is not None and not loop.is_closed():
         with suppress(Exception):  # pragma: no cover - best-effort cleanup
             loop.close()
-
-    policy.set_event_loop(policy.new_event_loop())
