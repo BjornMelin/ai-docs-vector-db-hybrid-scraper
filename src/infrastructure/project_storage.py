@@ -43,7 +43,7 @@ class ProjectStorage:
         """Load all projects from disk into the in-memory cache."""
         async with self._lock:
             self._cache = await self._read_projects()
-            return self._cache.copy()
+            return {key: dict(value) for key, value in self._cache.items()}
 
     async def save_project(self, project_id: str, project_data: dict[str, Any]) -> None:
         """Persist a single project definition."""
@@ -53,11 +53,14 @@ class ProjectStorage:
 
     async def get_project(self, project_id: str) -> dict[str, Any] | None:
         """Return a previously cached project by identifier."""
-        return self._cache.get(project_id)
+        async with self._lock:
+            project = self._cache.get(project_id)
+            return dict(project) if project else None
 
     async def list_projects(self) -> list[dict[str, Any]]:
         """Return the cached project list."""
-        return list(self._cache.values())
+        async with self._lock:
+            return [dict(project) for project in self._cache.values()]
 
     async def update_project(self, project_id: str, updates: dict[str, Any]) -> None:
         """Apply partial updates to an existing project."""
