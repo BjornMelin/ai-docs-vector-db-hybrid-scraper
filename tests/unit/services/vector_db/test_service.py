@@ -295,3 +295,439 @@ async def test_hybrid_search_executes_hybrid_prefetch(
     assert len(results) == 1
     assert results[0].id == "hybrid"
     assert pytest.approx(results[0].score) == 0.73
+
+
+class TestSparseInitialization:
+    """Tests for sparse embedding initialization edge cases."""
+
+    @pytest.mark.asyncio
+    async def test_initialize_raises_without_sparse_model_for_hybrid(
+        self,
+        config_stub: object,
+        qdrant_client_mock: AsyncMock,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Hybrid retrieval should fail when sparse_model is missing."""
+        from src.config.models import SearchStrategy
+        from src.services.errors import EmbeddingServiceError
+        from src.services.vector_db.service import VectorStoreService
+
+        monkeypatch.setattr(
+            "src.services.vector_db.service.VectorStoreService._build_sync_client",
+            lambda self, cfg: MagicMock(),
+        )
+
+        config_stub.embedding.retrieval_mode = SearchStrategy.HYBRID
+        config_stub.embedding.sparse_model = None
+        config_stub.fastembed.sparse_model = None
+
+        service = VectorStoreService(
+            config=config_stub, async_qdrant_client=qdrant_client_mock
+        )
+
+        with pytest.raises(EmbeddingServiceError, match="sparse embedding model"):
+            await service.initialize()
+
+    @pytest.mark.asyncio
+    async def test_initialize_raises_without_sparse_model_for_sparse_mode(
+        self,
+        config_stub: object,
+        qdrant_client_mock: AsyncMock,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Pure sparse retrieval should also fail when sparse_model is absent."""
+        from src.config.models import SearchStrategy
+        from src.services.errors import EmbeddingServiceError
+        from src.services.vector_db.service import VectorStoreService
+
+        monkeypatch.setattr(
+            "src.services.vector_db.service.VectorStoreService._build_sync_client",
+            lambda self, cfg: MagicMock(),
+        )
+
+        config_stub.embedding.retrieval_mode = SearchStrategy.SPARSE
+        config_stub.embedding.sparse_model = None
+        config_stub.fastembed.sparse_model = None  # Use None instead of empty string
+
+        service = VectorStoreService(
+            config=config_stub, async_qdrant_client=qdrant_client_mock
+        )
+
+        with pytest.raises(EmbeddingServiceError, match="sparse embedding model"):
+            await service.initialize()
+
+    @pytest.mark.asyncio
+    async def test_initialize_raises_without_fastembed_sparse_runtime(
+        self,
+        config_stub: object,
+        qdrant_client_mock: AsyncMock,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Missing FastEmbedSparse runtime should produce informative error."""
+        from src.config.models import SearchStrategy
+        from src.services.errors import EmbeddingServiceError
+        from src.services.vector_db.service import VectorStoreService
+
+        monkeypatch.setattr(
+            "src.services.vector_db.service.VectorStoreService._build_sync_client",
+            lambda self, cfg: MagicMock(),
+        )
+
+        monkeypatch.setattr(
+            "src.services.vector_db.service.FastEmbedSparseRuntime", None
+        )
+        config_stub.embedding.retrieval_mode = SearchStrategy.HYBRID
+        config_stub.fastembed.sparse_model = "stub-sparse"
+
+        service = VectorStoreService(
+            config=config_stub, async_qdrant_client=qdrant_client_mock
+        )
+
+        with pytest.raises(EmbeddingServiceError, match="langchain-qdrant extras"):
+            await service.initialize()
+
+
+class TestEnsureCollectionSparseConfig:
+    """Tests for ensure_collection sparse vector configuration."""
+
+    @pytest.mark.asyncio
+    async def test_ensure_collection_creates_sparse_vectors_config(
+        self,
+        initialized_service: VectorStoreService,
+    ) -> None:
+        """When requires_sparse=True, should include sparse_vectors_config."""
+        client = initialized_service._async_client
+        assert isinstance(client, AsyncMock)
+        client.collection_exists.return_value = False
+
+        schema = CollectionSchema(
+            name="hybrid-collection", vector_size=3, requires_sparse=True
+        )
+        await initialized_service.ensure_collection(schema)
+
+        client.create_collection.assert_awaited_once()
+        call_kwargs = client.create_collection.call_args.kwargs
+        assert call_kwargs["collection_name"] == "hybrid-collection"
+        assert call_kwargs.get("sparse_vectors_config") is not None
+
+    @pytest.mark.asyncio
+    async def test_ensure_collection_omits_sparse_config_when_not_required(
+        self,
+        initialized_service: VectorStoreService,
+    ) -> None:
+        """When requires_sparse=False, sparse_vectors_config should be None."""
+        client = initialized_service._async_client
+        assert isinstance(client, AsyncMock)
+        client.collection_exists.return_value = False
+
+        schema = CollectionSchema(
+            name="dense-only", vector_size=3, requires_sparse=False
+        )
+        await initialized_service.ensure_collection(schema)
+
+        client.create_collection.assert_awaited_once()
+        call_kwargs = client.create_collection.call_args.kwargs
+        assert call_kwargs.get("sparse_vectors_config") is None
+
+
+class TestQueryWithServerGrouping:
+    """Tests for _query_with_server_grouping and grouping fallback."""
+
+    @pytest.mark.asyncio
+    async def test_query_with_server_grouping_success(
+        self,
+        initialized_service: VectorStoreService,
+    ) -> None:
+        """Successful server-side grouping should return grouped records."""
+        service = initialized_service
+        service.config.qdrant.enable_grouping = True
+
+        client = service._async_client
+        assert isinstance(client, AsyncMock)
+
+        mock_hit = SimpleNamespace(
+            id="doc-grouped",
+            score=0.88,
+            payload={"doc_id": "doc-grouped", "content": "grouped result"},
+        )
+        mock_group = SimpleNamespace(id="group-1", hits=[mock_hit])
+        client.query_points_groups = AsyncMock(
+            return_value=SimpleNamespace(groups=[mock_group])
+        )
+
+        records, applied = await service._query_with_server_grouping(
+            "documents",
+            [1.0, 2.0, 3.0],
+            group_by="doc_id",
+            group_size=1,
+            limit=10,
+            filters=None,
+        )
+
+        assert applied is True
+        assert len(records) == 1
+        assert records[0].id == "doc-grouped"
+        assert pytest.approx(records[0].score) == 0.88
+
+    @pytest.mark.asyncio
+    async def test_query_with_server_grouping_fallback_on_exception(
+        self,
+        initialized_service: VectorStoreService,
+    ) -> None:
+        """API exceptions should trigger fallback to empty result."""
+        from qdrant_client.http.exceptions import UnexpectedResponse
+
+        service = initialized_service
+        service.config.qdrant.enable_grouping = True
+
+        client = service._async_client
+        assert isinstance(client, AsyncMock)
+        client.query_points_groups = AsyncMock(
+            side_effect=UnexpectedResponse(
+                status_code=500,
+                reason_phrase="Internal Server Error",
+                content=b"error",
+                headers={},
+            )
+        )
+
+        records, applied = await service._query_with_server_grouping(
+            "documents",
+            [1.0, 2.0, 3.0],
+            group_by="doc_id",
+            group_size=1,
+            limit=10,
+            filters=None,
+        )
+
+        assert applied is False
+        assert records == []
+
+    @pytest.mark.asyncio
+    async def test_query_with_server_grouping_disabled_returns_empty(
+        self,
+        initialized_service: VectorStoreService,
+    ) -> None:
+        """When grouping is disabled, should return empty without querying."""
+        service = initialized_service
+        service.config.qdrant.enable_grouping = False
+
+        records, applied = await service._query_with_server_grouping(
+            "documents",
+            [1.0, 2.0, 3.0],
+            group_by="doc_id",
+            group_size=1,
+            limit=10,
+            filters=None,
+        )
+
+        assert applied is False
+        assert records == []
+
+
+class TestNormalizeScores:
+    """Tests for _normalize_scores method."""
+
+    def test_normalize_scores_returns_empty_for_empty_input(
+        self,
+        config_stub: object,
+        qdrant_client_mock: AsyncMock,
+    ) -> None:
+        """Empty record list should return empty list unchanged."""
+        service = VectorStoreService(
+            config=config_stub, async_qdrant_client=qdrant_client_mock
+        )
+
+        result = service._normalize_scores([], enabled=True)
+
+        assert result == []
+
+    def test_normalize_scores_disabled_returns_unchanged(
+        self,
+        config_stub: object,
+        qdrant_client_mock: AsyncMock,
+    ) -> None:
+        """When disabled, scores should remain unchanged."""
+        from src.contracts.retrieval import SearchRecord
+
+        service = VectorStoreService(
+            config=config_stub, async_qdrant_client=qdrant_client_mock
+        )
+
+        records = [
+            SearchRecord.from_payload(
+                {"id": "r1", "content": "a", "score": 0.8, "collection": "docs"}
+            ),
+            SearchRecord.from_payload(
+                {"id": "r2", "content": "b", "score": 0.5, "collection": "docs"}
+            ),
+        ]
+
+        result = service._normalize_scores(records, enabled=False)
+
+        assert result[0].score == 0.8
+        assert result[1].score == 0.5
+
+    def test_normalize_scores_min_max_strategy(
+        self,
+        config_stub: object,
+        qdrant_client_mock: AsyncMock,
+    ) -> None:
+        """MIN_MAX strategy should scale scores to 0-1 range."""
+        from src.config.models import ScoreNormalizationStrategy
+        from src.contracts.retrieval import SearchRecord
+
+        config_stub.query_processing.score_normalization_strategy = (
+            ScoreNormalizationStrategy.MIN_MAX
+        )
+
+        service = VectorStoreService(
+            config=config_stub, async_qdrant_client=qdrant_client_mock
+        )
+
+        records = [
+            SearchRecord.from_payload(
+                {"id": "r1", "content": "a", "score": 0.9, "collection": "docs"}
+            ),
+            SearchRecord.from_payload(
+                {"id": "r2", "content": "b", "score": 0.5, "collection": "docs"}
+            ),
+            SearchRecord.from_payload(
+                {"id": "r3", "content": "c", "score": 0.3, "collection": "docs"}
+            ),
+        ]
+
+        result = service._normalize_scores(records, enabled=True)
+
+        # min=0.3, max=0.9, span=0.6
+        # r1: (0.9-0.3)/0.6 = 1.0
+        # r2: (0.5-0.3)/0.6 = 0.333...
+        # r3: (0.3-0.3)/0.6 = 0.0
+        assert pytest.approx(result[0].score, rel=1e-2) == 1.0
+        assert pytest.approx(result[1].score, rel=1e-2) == 0.333
+        assert pytest.approx(result[2].score, rel=1e-2) == 0.0
+
+    def test_normalize_scores_min_max_all_same(
+        self,
+        config_stub: object,
+        qdrant_client_mock: AsyncMock,
+    ) -> None:
+        """When all scores are identical, MIN_MAX should return 1.0."""
+        from src.config.models import ScoreNormalizationStrategy
+        from src.contracts.retrieval import SearchRecord
+
+        config_stub.query_processing.score_normalization_strategy = (
+            ScoreNormalizationStrategy.MIN_MAX
+        )
+
+        service = VectorStoreService(
+            config=config_stub, async_qdrant_client=qdrant_client_mock
+        )
+
+        records = [
+            SearchRecord.from_payload(
+                {"id": "r1", "content": "a", "score": 0.7, "collection": "docs"}
+            ),
+            SearchRecord.from_payload(
+                {"id": "r2", "content": "b", "score": 0.7, "collection": "docs"}
+            ),
+        ]
+
+        result = service._normalize_scores(records, enabled=True)
+
+        assert result[0].score == 1.0
+        assert result[1].score == 1.0
+
+    def test_normalize_scores_z_score_strategy(
+        self,
+        config_stub: object,
+        qdrant_client_mock: AsyncMock,
+    ) -> None:
+        """Z_SCORE strategy should standardize scores around mean."""
+        from src.config.models import ScoreNormalizationStrategy
+        from src.contracts.retrieval import SearchRecord
+
+        config_stub.query_processing.score_normalization_strategy = (
+            ScoreNormalizationStrategy.Z_SCORE
+        )
+
+        service = VectorStoreService(
+            config=config_stub, async_qdrant_client=qdrant_client_mock
+        )
+
+        records = [
+            SearchRecord.from_payload(
+                {"id": "r1", "content": "a", "score": 1.0, "collection": "docs"}
+            ),
+            SearchRecord.from_payload(
+                {"id": "r2", "content": "b", "score": 0.5, "collection": "docs"}
+            ),
+            SearchRecord.from_payload(
+                {"id": "r3", "content": "c", "score": 0.0, "collection": "docs"}
+            ),
+        ]
+
+        result = service._normalize_scores(records, enabled=True)
+
+        # mean=0.5, std_dev≈0.408
+        # Normalized scores should sum to ~0 with symmetric distribution
+        scores = [r.score for r in result]
+        assert pytest.approx(sum(scores), abs=1e-6) == 0.0
+
+    def test_normalize_scores_z_score_all_same(
+        self,
+        config_stub: object,
+        qdrant_client_mock: AsyncMock,
+    ) -> None:
+        """When all scores are identical, Z_SCORE should return 0.0."""
+        from src.config.models import ScoreNormalizationStrategy
+        from src.contracts.retrieval import SearchRecord
+
+        config_stub.query_processing.score_normalization_strategy = (
+            ScoreNormalizationStrategy.Z_SCORE
+        )
+
+        service = VectorStoreService(
+            config=config_stub, async_qdrant_client=qdrant_client_mock
+        )
+
+        records = [
+            SearchRecord.from_payload(
+                {"id": "r1", "content": "a", "score": 0.6, "collection": "docs"}
+            ),
+            SearchRecord.from_payload(
+                {"id": "r2", "content": "b", "score": 0.6, "collection": "docs"}
+            ),
+        ]
+
+        result = service._normalize_scores(records, enabled=True)
+
+        assert result[0].score == 0.0
+        assert result[1].score == 0.0
+
+    def test_normalize_scores_none_strategy_returns_unchanged(
+        self,
+        config_stub: object,
+        qdrant_client_mock: AsyncMock,
+    ) -> None:
+        """NONE strategy should leave scores unchanged."""
+        from src.config.models import ScoreNormalizationStrategy
+        from src.contracts.retrieval import SearchRecord
+
+        config_stub.query_processing.score_normalization_strategy = (
+            ScoreNormalizationStrategy.NONE
+        )
+
+        service = VectorStoreService(
+            config=config_stub, async_qdrant_client=qdrant_client_mock
+        )
+
+        records = [
+            SearchRecord.from_payload(
+                {"id": "r1", "content": "a", "score": 0.85, "collection": "docs"}
+            ),
+        ]
+
+        result = service._normalize_scores(records, enabled=True)
+
+        assert result[0].score == 0.85
