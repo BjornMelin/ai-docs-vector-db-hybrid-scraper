@@ -218,6 +218,11 @@ class RagasEvaluator:
             client=embedding_client, model=embedding_model
         )
 
+    @property
+    def is_available(self) -> bool:
+        """Return True if ragas components are successfully initialized."""
+        return self._available
+
     def evaluate(
         self,
         example: GoldenExample,
@@ -680,7 +685,7 @@ async def _run(args: argparse.Namespace) -> None:
         llm_model=args.ragas_llm_model,
         embedding_model=args.ragas_embedding_model,
     )
-    if ragas_evaluator._available:
+    if ragas_evaluator.is_available:
         logger.info(
             "Semantic metrics enabled with llm=%s embedding=%s",
             args.ragas_llm_model,
