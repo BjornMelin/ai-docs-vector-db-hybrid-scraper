@@ -206,7 +206,7 @@ def _sanitize_error_message(message: str) -> str:
     sanitized = _mask_path_segments(message)
     patterns = (
         r"(?<![A-Za-z0-9])api[_-]?key(?![A-Za-z0-9])",
-        r"(?<![A-Za-z0-9_])token(?![A-Za-z0-9_])",
+        r"(?<![A-Za-z0-9])token(?![A-Za-z0-9])",
         r"(?<![A-Za-z0-9])password(?![A-Za-z0-9])",
         r"(?<![A-Za-z0-9])secret(?![A-Za-z0-9])",
     )
@@ -217,12 +217,17 @@ def _sanitize_error_message(message: str) -> str:
 
 def _mask_path_segments(message: str) -> str:
     """Mask the leading segment of file system paths in a message."""
-    path_pattern = re.compile(r"((?:[A-Za-z]:)?[\\/](?:[^\\\s:]+[\\/])*[^\\\s:]+)")
+    path_pattern = re.compile(r"((?:[A-Za-z]:)?[\\/]{1,2}(?:[^\\\s:]+[\\/])*[^\\\s:]+)")
 
     def _replace(match: re.Match[str]) -> str:
         original = match.group(0)
         separator = "\\" if "\\" in original else "/"
         normalized = original.replace("\\", "/")
+        unc_prefix = ""
+        if normalized.startswith("//"):
+            unc_prefix = "//"
+            normalized = normalized[2:]
+
         drive = ""
         if len(normalized) >= 2 and normalized[1] == ":" and normalized[0].isalpha():
             drive = normalized[:2]
@@ -233,7 +238,12 @@ def _mask_path_segments(message: str) -> str:
             return "****"
 
         filename = parts[-1]
-        sanitized_path = f"{drive}/****/{filename}" if drive else f"****/{filename}"
+        if drive:
+            sanitized_path = f"{drive}/****/{filename}"
+        elif unc_prefix:
+            sanitized_path = f"{unc_prefix}****/{filename}"
+        else:
+            sanitized_path = f"****/{filename}"
         if separator == "\\":
             sanitized_path = sanitized_path.replace("/", "\\")
         return sanitized_path
