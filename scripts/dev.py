@@ -270,7 +270,7 @@ def cmd_load(args: argparse.Namespace) -> int:
     elif args.run_time:
         command.extend(["--run-time", args.run_time])
 
-    if args.web_port is not None:
+    if not args.headless and args.web_port is not None:
         command.extend(["--web-port", str(args.web_port)])
 
     return run_command(command)
