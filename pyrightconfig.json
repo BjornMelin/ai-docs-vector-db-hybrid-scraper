@@ -2,5 +2,5 @@
   "venvPath": ".",
   "venv": ".venv",
   "include": ["src", "tests"],
-  "reportMissingTypeStubs": false
+  "reportMissingTypeStubs": "warning"
 }
