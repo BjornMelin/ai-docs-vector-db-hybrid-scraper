@@ -268,7 +268,7 @@ class HNSWOptimizer:
         except (ValueError, TypeError) as exc:
             self._log_or_propagate(exc, log_context)
             return None
-        except (OSError, AttributeError, RuntimeError) as exc:
+        except (OSError, RuntimeError, ConnectionError, TimeoutError) as exc:
             self._log_or_propagate(exc, log_context)
             return None
         except Exception as exc:  # noqa: BLE001  # pragma: no cover - defensive catch-all
@@ -649,7 +649,6 @@ class HNSWOptimizer:
                 continue
             except (
                 OSError,
-                AttributeError,
                 RuntimeError,
                 ConnectionError,
                 TimeoutError,
