@@ -680,11 +680,14 @@ async def _run(args: argparse.Namespace) -> None:
         llm_model=args.ragas_llm_model,
         embedding_model=args.ragas_embedding_model,
     )
-    logger.info(
-        "Semantic metrics enabled with llm=%s embedding=%s",
-        args.ragas_llm_model,
-        args.ragas_embedding_model,
-    )
+    if ragas_evaluator._available:
+        logger.info(
+            "Semantic metrics enabled with llm=%s embedding=%s",
+            args.ragas_llm_model,
+            args.ragas_embedding_model,
+        )
+    else:
+        logger.info("Semantic metrics disabled (ragas unavailable)")
 
     # Execute evaluation
     async with container_session(force_reload=True):
