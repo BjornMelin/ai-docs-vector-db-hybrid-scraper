@@ -8,6 +8,7 @@ import pytest
 
 from src.contracts.retrieval import SearchRecord
 from src.mcp_tools.tools.payload_indexing import register_tools
+from src.services.vector_db.service import VectorStoreService
 
 
 @pytest.fixture(autouse=True)
@@ -27,11 +28,13 @@ def mock_security_validator(monkeypatch):
 @pytest.fixture
 def mock_vector_service():
     """Create a mock VectorStoreService."""
-    service = Mock()
-    service.is_initialized.return_value = True
-    service.initialize = AsyncMock()
-    service.list_collections = AsyncMock(return_value=["test_collection"])
-    service.ensure_payload_indexes = AsyncMock(
+    service = VectorStoreService.__new__(VectorStoreService)
+    service.is_initialized = Mock(return_value=True)  # type: ignore[method-assign]
+    service.initialize = AsyncMock()  # type: ignore[method-assign]
+    service.list_collections = AsyncMock(  # type: ignore[method-assign]
+        return_value=["test_collection"]
+    )
+    service.ensure_payload_indexes = AsyncMock(  # type: ignore[method-assign]
         return_value={
             "indexed_fields_count": 5,
             "indexed_fields": [
@@ -45,7 +48,7 @@ def mock_vector_service():
             "payload_schema": {},
         }
     )
-    service.get_payload_index_summary = AsyncMock(
+    service.get_payload_index_summary = AsyncMock(  # type: ignore[method-assign]
         return_value={
             "indexed_fields_count": 5,
             "indexed_fields": [
@@ -59,9 +62,11 @@ def mock_vector_service():
             "payload_schema": {},
         }
     )
-    service.drop_payload_indexes = AsyncMock()
-    service.collection_stats = AsyncMock(return_value={"points_count": 5000})
-    service.search_documents = AsyncMock(
+    service.drop_payload_indexes = AsyncMock()  # type: ignore[method-assign]
+    service.collection_stats = AsyncMock(  # type: ignore[method-assign]
+        return_value={"points_count": 5000}
+    )
+    service.search_documents = AsyncMock(  # type: ignore[method-assign]
         return_value=[
             SearchRecord(
                 id="doc1",

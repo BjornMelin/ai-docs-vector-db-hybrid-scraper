@@ -6,7 +6,7 @@ import logging
 from collections.abc import Mapping
 from datetime import UTC, datetime
 from time import perf_counter
-from typing import Any, cast
+from typing import Any, Protocol, cast, runtime_checkable
 from uuid import uuid4
 
 from fastmcp import Context
@@ -31,6 +31,15 @@ _INDEX_DEFINITIONS: dict[str, models.PayloadSchemaType] = {
     "word_count": models.PayloadSchemaType.INTEGER,
     "crawl_timestamp": models.PayloadSchemaType.DATETIME,
 }
+
+
+@runtime_checkable
+class VectorStoreServiceProvider(Protocol):
+    """Protocol for objects that can provide a VectorStoreService instance."""
+
+    async def get_vector_store_service(self) -> VectorStoreService:
+        """Return the VectorStoreService instance."""
+        ...
 
 
 def _record_to_dict(record: SearchRecord) -> dict[str, Any]:
@@ -93,7 +102,7 @@ def _normalise_summary(
 def register_tools(
     mcp,
     *,
-    vector_service: VectorStoreService | Any,
+    vector_service: VectorStoreService | VectorStoreServiceProvider,
 ) -> None:
     """Register payload indexing helpers with the MCP server."""
     validator = MLSecurityValidator.from_unified_config()
@@ -102,11 +111,37 @@ def register_tools(
         """Resolve the vector store service from the provided vector_service."""
         if isinstance(vector_service, VectorStoreService):
             return vector_service
-        candidate = getattr(vector_service, "get_vector_store_service", None)
-        if candidate is not None:
-            resolved = await candidate()
-            return cast(VectorStoreService, resolved)
-        return cast(VectorStoreService, vector_service)
+
+        if not isinstance(vector_service, VectorStoreServiceProvider):
+            msg = (
+                "vector_service must be a VectorStoreService or implement "
+                "VectorStoreServiceProvider"
+            )
+            raise TypeError(msg)
+
+        resolved = await vector_service.get_vector_store_service()
+        if resolved is None:
+            msg = "get_vector_store_service() returned None"
+            raise ValueError(msg)
+        if isinstance(resolved, VectorStoreService):
+            return resolved
+
+        required = (
+            "list_collections",
+            "ensure_payload_indexes",
+            "get_payload_index_summary",
+            "drop_payload_indexes",
+            "collection_stats",
+            "search_documents",
+        )
+        missing = [name for name in required if not hasattr(resolved, name)]
+        if missing:
+            msg = (
+                "get_vector_store_service() must return a VectorStoreService-like "
+                f"object; missing {missing} on {type(resolved).__name__}"
+            )
+            raise TypeError(msg)
+        return cast(VectorStoreService, resolved)
 
     @mcp.tool()
     async def create_payload_indexes(
