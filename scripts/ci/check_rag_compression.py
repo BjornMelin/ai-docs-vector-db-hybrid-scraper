@@ -18,6 +18,7 @@ from langchain_classic.retrievers.document_compressors import (
 from langchain_community.document_transformers import EmbeddingsRedundantFilter
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
+from langchain_core.exceptions import LangChainException
 
 
 class _PrecomputedEmbeddings(Embeddings):
@@ -201,6 +202,7 @@ def main() -> int:
     except (
         ValueError,
         TypeError,
+        LangChainException,
         OSError,
         RuntimeError,
     ) as exc:  # pragma: no cover - CLI safeguard
