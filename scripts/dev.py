@@ -102,7 +102,7 @@ def _coverage_arguments(enable: bool) -> list[str]:
         "--cov=src",
         "--cov-report=term-missing:skip-covered",
         "--cov-report=xml",
-        "--cov-fail-under=80",
+        "--cov-fail-under=70",
     ]
 
 

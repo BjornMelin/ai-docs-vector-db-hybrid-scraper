@@ -19,7 +19,6 @@ import json
 import logging
 import os
 import re
-import typing
 from collections import defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -32,11 +31,6 @@ from typing import TYPE_CHECKING, Any, Protocol
 import httpx
 import openai
 import yaml
-from ragas import EvaluationDataset
-from ragas.embeddings import OpenAIEmbeddings as RagasOpenAIEmbeddings
-from ragas.evaluation import evaluate as ragas_evaluate
-from ragas.llms.base import llm_factory
-from ragas.metrics import AnswerRelevancy, ContextPrecision, ContextRecall, Faithfulness
 
 
 try:  # pragma: no cover - import compatibility for openai SDK variants
@@ -45,8 +39,10 @@ except ImportError:  # pragma: no cover - fallback for legacy openai package
     from openai.error import OpenAIError  # type: ignore[attr-defined]
 
 try:  # pragma: no cover - ragas may expose custom exception hierarchy
-    from ragas.exceptions import RagasException
-except ImportError:  # pragma: no cover - default to RuntimeError when unavailable
+    from ragas.exceptions import (  # pyright: ignore[reportMissingImports]
+        RagasException,
+    )
+except (ImportError, ModuleNotFoundError):  # pragma: no cover - ragas optional
     RagasException = RuntimeError  # type: ignore[assignment]
 from scripts.eval.dataset_validator import DatasetValidationError, load_dataset_records
 
@@ -140,13 +136,6 @@ class SupportsSearchOrchestrator(Protocol):
 class RagasEvaluator:
     """Execute semantic metrics using ragas ≥0.3."""
 
-    _METRICS: typing.ClassVar[list] = [
-        Faithfulness(),
-        AnswerRelevancy(),
-        ContextPrecision(),
-        ContextRecall(),
-    ]
-
     def __init__(  # pylint: disable=too-many-arguments
         self,
         *,
@@ -165,6 +154,50 @@ class RagasEvaluator:
             max_retries: Maximum retry attempts for API calls.
             timeout: Optional timeout in seconds for API calls.
         """
+        self._available = False
+        self._evaluation_dataset_cls: Any | None = None
+        self._ragas_evaluate: Any | None = None
+        self._metrics: list[Any] = []
+        self._llm: Any | None = None
+        self._embeddings: Any | None = None
+        self._embedding_client: Any | None = None
+
+        try:
+            from ragas import (  # pyright: ignore[reportMissingImports]
+                EvaluationDataset,
+            )
+            from ragas.embeddings import (  # pyright: ignore[reportMissingImports]
+                OpenAIEmbeddings as RagasOpenAIEmbeddings,
+            )
+            from ragas.evaluation import (  # pyright: ignore[reportMissingImports]
+                evaluate as ragas_evaluate,
+            )
+            from ragas.llms.base import (  # pyright: ignore[reportMissingImports]
+                llm_factory,
+            )
+            from ragas.metrics import (  # pyright: ignore[reportMissingImports]
+                AnswerRelevancy,
+                ContextPrecision,
+                ContextRecall,
+                Faithfulness,
+            )
+        except ModuleNotFoundError:
+            logger.info(
+                "Ragas is not installed; semantic evaluation metrics are disabled. "
+                "Install with `uv sync --extra eval` to enable."
+            )
+            return
+
+        self._available = True
+        self._evaluation_dataset_cls = EvaluationDataset
+        self._ragas_evaluate = ragas_evaluate
+        self._metrics = [
+            Faithfulness(),
+            AnswerRelevancy(),
+            ContextPrecision(),
+            ContextRecall(),
+        ]
+
         # Build common client configuration
         client_kwargs: dict[str, Any] = {"api_key": api_key}
         if max_retries is not None:
@@ -192,9 +225,18 @@ class RagasEvaluator:
         contexts: Sequence[str],
     ) -> dict[str, float]:
         """Evaluate semantic metrics for a single example."""
+        if not self._available:
+            return {}
+        if (
+            self._evaluation_dataset_cls is None
+            or self._ragas_evaluate is None
+            or self._llm is None
+            or self._embeddings is None
+        ):
+            return {}
         try:
             # Prepare evaluation dataset in ragas format
-            dataset = EvaluationDataset.from_list(
+            dataset = self._evaluation_dataset_cls.from_list(
                 [
                     {
                         "user_input": example.query,
@@ -207,9 +249,9 @@ class RagasEvaluator:
             )
 
             # Run ragas evaluation
-            result = ragas_evaluate(
+            result = self._ragas_evaluate(
                 dataset=dataset,
-                metrics=self._METRICS,
+                metrics=self._metrics,
                 llm=self._llm,
                 embeddings=self._embeddings,
             )
@@ -217,7 +259,7 @@ class RagasEvaluator:
             # Extract and normalize scores
             raw_scores = self._normalise_scores(result)
             scores: dict[str, float] = {}
-            for metric in self._METRICS:
+            for metric in self._metrics:
                 metric_name = getattr(metric, "name", metric.__class__.__name__).lower()
                 candidates = [
                     metric_name,

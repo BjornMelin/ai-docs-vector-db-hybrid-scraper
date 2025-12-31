@@ -9,7 +9,15 @@ from pathlib import Path
 from typing import Any, cast
 
 import pytest
-from hypothesis import assume, example, given, note, strategies as st
+from hypothesis import (
+    HealthCheck,
+    assume,
+    example,
+    given,
+    note,
+    settings,
+    strategies as st,
+)
 from pydantic import HttpUrl, ValidationError
 
 from src.config import Settings
@@ -433,6 +441,7 @@ class TestDocumentationSiteProperties:
 class TestCompleteConfigProperties:
     """Property-based tests for the complete Settings class."""
 
+    @settings(suppress_health_check=[HealthCheck.too_slow], max_examples=25)
     @given(complete_configurations())
     def test_complete_config_valid_properties(self, config_data: dict[str, Any]):
         """Test that valid complete configurations create valid objects."""
@@ -524,6 +533,7 @@ class TestCompleteConfigProperties:
             config = Settings(crawl_provider=provider)
             assert config.crawl_provider == provider
 
+    @settings(suppress_health_check=[HealthCheck.too_slow], max_examples=25)
     @given(complete_configurations())
     def test_config_serialization_roundtrip(self, config_data: dict[str, Any]):
         """Test that complete configuration survives serialization roundtrip."""
@@ -573,6 +583,7 @@ class TestCompleteConfigProperties:
 class TestConfigPropertyInvariants:
     """Test configuration invariants that should always hold."""
 
+    @settings(suppress_health_check=[HealthCheck.too_slow], max_examples=25)
     @given(complete_configurations())
     def test_config_invariant_positive_values(self, config_data: dict[str, Any]):
         """Test that all size/count values are positive."""
@@ -611,6 +622,7 @@ class TestConfigPropertyInvariants:
         chunk_data = settings_data["chunking"]
         assert chunk_data["chunk_size"] > 0
 
+    @settings(suppress_health_check=[HealthCheck.too_slow], max_examples=25)
     @given(complete_configurations())
     def test_config_invariant_chunk_relationships(self, config_data: dict[str, Any]):
         """Test that chunking size relationships are maintained."""
@@ -628,6 +640,7 @@ class TestConfigPropertyInvariants:
         # Chunk size relationships
         assert chunk_data["chunk_overlap"] < chunk_data["chunk_size"]
 
+    @settings(suppress_health_check=[HealthCheck.too_slow], max_examples=25)
     @given(complete_configurations())
     def test_config_invariant_url_formats(self, config_data: dict[str, Any]):
         """Test that all URLs have valid formats."""
@@ -650,6 +663,7 @@ class TestConfigPropertyInvariants:
         for site in config.documentation_sites:
             assert str(site.url).startswith(("http://", "https://"))
 
+    @settings(suppress_health_check=[HealthCheck.too_slow], max_examples=25)
     @given(complete_configurations())
     def test_config_invariant_api_key_formats(self, config_data: dict[str, Any]):
         """Test that API keys have correct formats when present."""

@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from langchain.retrievers.document_compressors import (
+from langchain_classic.retrievers.document_compressors import (
     DocumentCompressorPipeline,
     EmbeddingsFilter,
 )

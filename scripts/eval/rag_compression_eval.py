@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, cast
 from unittest.mock import Mock
 
-from langchain.retrievers.document_compressors import (
+from langchain_classic.retrievers.document_compressors import (
     DocumentCompressorPipeline,
     EmbeddingsFilter,
 )
@@ -21,9 +21,7 @@ from langchain_core.documents import Document
 
 try:
     from langchain_community.document_transformers import EmbeddingsRedundantFilter
-    from langchain_community.embeddings import (
-        FastEmbedEmbeddings,
-    )
+    from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
 except ModuleNotFoundError as exc:  # pragma: no cover - dependency guard
     raise ImportError(
         "FastEmbedEmbeddings requires the 'langchain-community' package."
@@ -107,6 +105,8 @@ async def _evaluate(  # pylint: disable=too-many-locals
                 container_session(settings=config, force_reload=True)
             )
             vector_service = await load_service(collection_override, settings=config)
+        if vector_service is None:
+            raise RuntimeError("Vector store service unavailable")
 
         # Check compression configuration
         rag_config = config.rag
