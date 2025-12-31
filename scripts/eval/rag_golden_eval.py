@@ -198,16 +198,16 @@ class RagasEvaluator:
             ContextRecall(),
         ]
 
-        # Build common client configuration
-        client_kwargs: dict[str, Any] = {"api_key": api_key}
-        if max_retries is not None:
-            client_kwargs["max_retries"] = max_retries
-        if timeout is not None:
-            client_kwargs["timeout"] = timeout
-
         # Initialize LLM for semantic evaluation
+        previous_api_key = os.environ.get("OPENAI_API_KEY")
         os.environ["OPENAI_API_KEY"] = api_key
-        self._llm = llm_factory(llm_model)
+        try:
+            self._llm = llm_factory(llm_model)
+        finally:
+            if previous_api_key is None:
+                os.environ.pop("OPENAI_API_KEY", None)
+            else:
+                os.environ["OPENAI_API_KEY"] = previous_api_key
 
         # Initialize embeddings client (requires sync OpenAI client)
         embedding_client = openai.OpenAI(
