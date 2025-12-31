@@ -58,7 +58,7 @@ def _load_examples(path: Path) -> list[SearchExample]:
                 limit_val = 5
 
             filters_raw = payload.get("filters")
-            filters_val = dict(filters_raw) if isinstance(filters_raw, dict) else {}
+            filters_val = filters_raw if isinstance(filters_raw, dict) else {}
 
             examples.append(
                 SearchExample(
@@ -71,7 +71,7 @@ def _load_examples(path: Path) -> list[SearchExample]:
     return examples
 
 
-_DATASET_ENV = os.getenv("AI_DOCS_BENCHMARK_DATASET")
+_DATASET_ENV = (os.getenv("AI_DOCS_BENCHMARK_DATASET") or "").strip()
 _DATASET_PATH = Path(_DATASET_ENV).expanduser() if _DATASET_ENV else None
 if _DATASET_PATH and _DATASET_PATH.exists():
     _EXAMPLES = _load_examples(_DATASET_PATH) or _load_examples(_DEFAULT_DATASET)
