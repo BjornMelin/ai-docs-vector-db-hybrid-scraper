@@ -190,6 +190,9 @@ async def database_session() -> AsyncGenerator[DatabaseSessionContext, None]:
         dragonfly_client = container.dragonfly_client()
     except (
         RuntimeError,
+        ConnectionError,
+        OSError,
+        TimeoutError,
         ImportError,
         AttributeError,
         ValueError,
@@ -201,6 +204,9 @@ async def database_session() -> AsyncGenerator[DatabaseSessionContext, None]:
         cache_manager = await resolve_cache_manager()
     except (
         RuntimeError,
+        ConnectionError,
+        OSError,
+        TimeoutError,
         ImportError,
         ValueError,
         AttributeError,
@@ -212,6 +218,9 @@ async def database_session() -> AsyncGenerator[DatabaseSessionContext, None]:
         vector_service = await resolve_vector_store_service()
     except (
         RuntimeError,
+        ConnectionError,
+        OSError,
+        TimeoutError,
         ImportError,
         ValueError,
         AttributeError,
