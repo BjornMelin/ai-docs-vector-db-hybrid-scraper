@@ -317,7 +317,7 @@ class TestSafeResponse:
         )
 
         assert "/home/" not in result["error"]
-        assert "****/user/private/config.json" in result["error"]
+        assert "****/config.json" in result["error"]
 
     def test_safe_response_sanitizes_windows_paths(self):
         """Test safe_response masks Windows style file paths."""
@@ -326,8 +326,9 @@ class TestSafeResponse:
         )
 
         error_text = result["error"]
-        assert "C:\\" not in error_text
-        assert "****\\Users\\alice\\" in error_text
+        assert "Users" not in error_text
+        assert "secret" not in error_text
+        assert "C:\\****\\***.txt" in error_text
         assert error_text.endswith(".txt")
 
     def test_safe_response_handles_multiple_paths(self):
@@ -336,10 +337,10 @@ class TestSafeResponse:
         result = safe_response(False, error=message)
 
         error_text = result["error"]
-        assert "****/app/config.yaml" in error_text
-        assert "****/log/app/error.log" in error_text
+        assert "****/config.yaml" in error_text
+        assert "****/error.log" in error_text
         assert "/etc/" not in error_text
-        assert "/var/log" not in error_text
+        assert "/var/" not in error_text
 
 
 class TestRetryAsync:

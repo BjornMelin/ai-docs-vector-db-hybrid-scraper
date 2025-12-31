@@ -204,7 +204,13 @@ def safe_response(success: bool, **kwargs) -> dict[str, Any]:
 def _sanitize_error_message(message: str) -> str:
     """Sanitize sensitive substrings within an error message."""
     sanitized = _mask_path_segments(message)
-    for pattern in (r"api[_-]?key", r"token", r"password", r"secret"):
+    patterns = (
+        r"(?<![A-Za-z0-9])api[_-]?key(?![A-Za-z0-9])",
+        r"(?<![A-Za-z0-9_])token(?![A-Za-z0-9_])",
+        r"(?<![A-Za-z0-9])password(?![A-Za-z0-9])",
+        r"(?<![A-Za-z0-9])secret(?![A-Za-z0-9])",
+    )
+    for pattern in patterns:
         sanitized = re.sub(pattern, "***", sanitized, flags=re.IGNORECASE)
     return sanitized
 
@@ -217,12 +223,17 @@ def _mask_path_segments(message: str) -> str:
         original = match.group(0)
         separator = "\\" if "\\" in original else "/"
         normalized = original.replace("\\", "/")
+        drive = ""
+        if len(normalized) >= 2 and normalized[1] == ":" and normalized[0].isalpha():
+            drive = normalized[:2]
+            normalized = normalized[2:]
+
         parts = [part for part in normalized.split("/") if part]
         if not parts:
             return "****"
 
-        masked_parts = ["****", *parts[1:]]
-        sanitized_path = "/".join(masked_parts)
+        filename = parts[-1]
+        sanitized_path = f"{drive}/****/{filename}" if drive else f"****/{filename}"
         if separator == "\\":
             sanitized_path = sanitized_path.replace("/", "\\")
         return sanitized_path
