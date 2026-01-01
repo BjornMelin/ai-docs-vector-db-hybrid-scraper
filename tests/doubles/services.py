@@ -18,7 +18,7 @@ class FakeCache:
     async def get(self, key: str) -> Any | None:
         """Retrieve a value from the fake cache."""
         value = self._store.get(key)
-        if value is not None:
+        if key in self._store:
             self._hits += 1
         else:
             self._misses += 1

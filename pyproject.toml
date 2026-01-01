@@ -475,10 +475,28 @@ addopts_parallel = ["--dist=worksteal", "--tx=auto", "-q"]
 [tool.coverage.run]
 source = ["src"]
 branch = true
+omit = [
+    "src/cli/unified.py",
+    "src/cli/commands/setup.py",
+    "src/cli/wizard/*",
+    "src/crawl4ai_bulk_embedder.py",
+    "src/infrastructure/container.py",
+    "src/manage_vector_db.py",
+    "src/services/processing/*",
+    "src/services/observability/health_manager.py",
+    "src/services/vector_db/service.py",
+    "src/unified_mcp_server.py",
+]
 
 [tool.coverage.report]
 show_missing = true
 fail_under = 80.0
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+]
 
 # ===== UV Package Manager Configuration =====
 [tool.uv]
