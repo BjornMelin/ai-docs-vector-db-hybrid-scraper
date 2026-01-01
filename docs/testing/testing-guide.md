@@ -74,10 +74,11 @@ tests/
 ├── unit/                       # Fast, isolated tests
 │   ├── config/test_config_models_complete.py
 │   └── services/test_logging_config.py
-├── services/                  # Service integration shims
+├── services/                  # Cross-service integration tests with mocked external dependencies
 │   └── cache/test_cache_manager_behavior.py
-├── data_quality/             # Dataset validation harnesses
-├── scripts/                  # CLI regression coverage
+├── data_quality/             # Dataset validation and semantic evaluation harnesses
+├── load/                      # Locust-based load and stress testing scenarios
+├── scripts/                   # CLI tool and developer workflow regression tests
 └── utils/                    # Shared helper tests
 ```
 

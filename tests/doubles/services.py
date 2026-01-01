@@ -131,10 +131,7 @@ class FakeCrawlManager:
         **kwargs: Any,
     ) -> list[dict[str, Any]]:
         """Simulate batch crawling."""
-        results = []
-        for url in urls:
-            results.append(await self.crawl(url))
-        return results
+        return [await self.crawl(url) for url in urls]
 
 
 @dataclass
@@ -161,28 +158,40 @@ class FakeEmbeddingManager:
 
 @dataclass
 class FakeProjectStorage:
-    """Project storage double for testing."""
+    """Project storage double for testing.
+
+    Mirrors the real ProjectStorage API from src/infrastructure/project_storage.py.
+    """
 
     _projects: dict[str, dict[str, Any]] = field(default_factory=dict)
 
-    async def save(self, project_id: str, data: dict[str, Any]) -> None:
-        """Save project data."""
-        self._projects[project_id] = data
+    async def load_projects(self) -> dict[str, dict[str, Any]]:
+        """Load all projects into cache and return a copy."""
+        return {key: dict(value) for key, value in self._projects.items()}
 
-    async def load(self, project_id: str) -> dict[str, Any] | None:
-        """Load project data."""
-        return self._projects.get(project_id)
+    async def save_project(self, project_id: str, project_data: dict[str, Any]) -> None:
+        """Persist a single project definition."""
+        self._projects[project_id] = dict(project_data)
 
-    async def delete(self, project_id: str) -> bool:
-        """Delete project data."""
-        if project_id in self._projects:
-            del self._projects[project_id]
-            return True
-        return False
+    async def get_project(self, project_id: str) -> dict[str, Any] | None:
+        """Return a project by identifier."""
+        project = self._projects.get(project_id)
+        return dict(project) if project else None
 
-    async def list_projects(self) -> list[str]:
-        """List all project IDs."""
-        return list(self._projects.keys())
+    async def list_projects(self) -> list[dict[str, Any]]:
+        """Return the list of all projects."""
+        return [dict(project) for project in self._projects.values()]
+
+    async def update_project(self, project_id: str, updates: dict[str, Any]) -> None:
+        """Apply partial updates to an existing project."""
+        if project_id not in self._projects:
+            msg = f"Project {project_id} not found"
+            raise KeyError(msg)
+        self._projects[project_id].update(updates)
+
+    async def delete_project(self, project_id: str) -> None:
+        """Remove a project from storage (idempotent)."""
+        self._projects.pop(project_id, None)
 
 
 @dataclass

@@ -193,8 +193,8 @@ async def database_session() -> AsyncGenerator[DatabaseSessionContext, None]:
         OSError,
         TimeoutError,
         ImportError,
-        AttributeError,
         ValueError,
+        AttributeError,
     ):  # pragma: no cover - defensive logging
         logger.debug("Dragonfly client unavailable", exc_info=True)
 

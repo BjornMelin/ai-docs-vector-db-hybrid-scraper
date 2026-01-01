@@ -131,7 +131,10 @@ dev = [
     "vulture>=2.14,<3.0.0",
 ]
 
-# Documentation tooling (uv dependency group)
+# Documentation tooling (uv dependency group).
+# Intentionally mirrors [project.optional-dependencies] docs above.
+# - `docs` supports `pip install .[docs]` for end-users building documentation.
+# - `docs-dev` supports `uv sync --group docs-dev` for uv-based dev workflows.
 docs-dev = [
     "mkdocs>=1.6.1",
     "mkdocs-material>=9.7.1,<10.0.0",

@@ -49,6 +49,7 @@ class PytestProfile:
 PYTEST_PROFILES: dict[str, PytestProfile] = {
     "quick": PytestProfile(("tests/unit", "-m", "not slow", "-q")),
     "unit": PytestProfile(("tests/unit", "-m", "unit or fast")),
+    "service": PytestProfile(("tests/services", "-m", "service")),
     "full": PytestProfile(("tests",)),
     "ci": PytestProfile(
         ("tests", "-m", "not local_only", "--maxfail=3"), forces_coverage=True

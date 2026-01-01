@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import inspect
 import os
 import sys
@@ -17,7 +18,8 @@ if str(_STUBS_PATH) not in sys.path:
     sys.path.insert(0, str(_STUBS_PATH))
 
 if os.environ.get("ENABLE_TRACEMALLOC", "").lower() in ("1", "true", "yes"):
-    tracemalloc.start()
+    with contextlib.suppress(RuntimeError):
+        tracemalloc.start()
 
 pytest_plugins = [
     "pytest_asyncio",

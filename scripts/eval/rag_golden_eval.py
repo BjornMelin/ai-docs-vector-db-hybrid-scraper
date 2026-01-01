@@ -232,13 +232,9 @@ class RagasEvaluator:
         """Evaluate semantic metrics for a single example."""
         if not self._available:
             return {}
-        if (
-            self._evaluation_dataset_cls is None
-            or self._ragas_evaluate is None
-            or self._llm is None
-            or self._embeddings is None
-        ):
-            return {}
+        # _available guarantees these are initialized; assert for type narrowing
+        assert self._evaluation_dataset_cls is not None
+        assert self._ragas_evaluate is not None
         try:
             # Prepare evaluation dataset in ragas format
             dataset = self._evaluation_dataset_cls.from_list(

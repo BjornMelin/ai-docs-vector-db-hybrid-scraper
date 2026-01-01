@@ -89,20 +89,8 @@ class SearchUser(HttpUser):
 
     def on_start(self) -> None:
         """Prime the dataset iterator and configure default headers."""
-        if _EXAMPLES:
-            self._examples = itertools.cycle(random.sample(_EXAMPLES, len(_EXAMPLES)))
-        else:
-            # Fallback to a single default example when no data is available
-            self._examples = itertools.cycle(
-                [
-                    SearchExample(
-                        query="hybrid search",
-                        collection="documentation",
-                        limit=5,
-                        filters={},
-                    )
-                ]
-            )
+        # _EXAMPLES is guaranteed to be non-empty by module-level initialization
+        self._examples = itertools.cycle(random.sample(_EXAMPLES, len(_EXAMPLES)))
         self.client.headers.update({"Content-Type": "application/json"})
 
     @task(4)
