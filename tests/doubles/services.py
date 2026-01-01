@@ -6,6 +6,8 @@ from dataclasses import dataclass, field
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
+from src.infrastructure.project_storage import ProjectStorageError
+
 
 @dataclass
 class FakeCache:
@@ -17,12 +19,14 @@ class FakeCache:
 
     async def get(self, key: str) -> Any | None:
         """Retrieve a value from the fake cache."""
-        value = self._store.get(key)
-        if key in self._store:
-            self._hits += 1
-        else:
+        try:
+            value = self._store[key]
+        except KeyError:
             self._misses += 1
-        return value
+            return None
+        else:
+            self._hits += 1
+            return value
 
     async def set(
         self,
@@ -155,6 +159,11 @@ class FakeEmbeddingManager:
         """Return embedding dimension."""
         return self._dimension
 
+    @property
+    def call_count(self) -> int:
+        """Return the number of embedding calls."""
+        return self._call_count
+
 
 @dataclass
 class FakeProjectStorage:
@@ -186,7 +195,7 @@ class FakeProjectStorage:
         """Apply partial updates to an existing project."""
         if project_id not in self._projects:
             msg = f"Project {project_id} not found"
-            raise KeyError(msg)
+            raise ProjectStorageError(msg)
         self._projects[project_id].update(updates)
 
     async def delete_project(self, project_id: str) -> None:
