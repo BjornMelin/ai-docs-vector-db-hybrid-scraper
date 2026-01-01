@@ -323,7 +323,7 @@ class TestStatusCommand:
     ):
         """Test status command when health check raises exception."""
         mock_get_config.return_value = mock_config
-        mock_collect_summary.side_effect = Exception("Health check failed")
+        mock_collect_summary.side_effect = RuntimeError("Health check failed")
 
         result = cli_runner.invoke(main, ["status"])
 

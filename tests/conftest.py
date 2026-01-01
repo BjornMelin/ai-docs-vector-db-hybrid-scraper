@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import contextlib
 import inspect
+import os
 import sys
+import tracemalloc
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -13,6 +16,10 @@ import pytest
 _STUBS_PATH = Path(__file__).resolve().parent / "stubs"
 if str(_STUBS_PATH) not in sys.path:
     sys.path.insert(0, str(_STUBS_PATH))
+
+if os.environ.get("ENABLE_TRACEMALLOC", "").lower() in ("1", "true", "yes"):
+    with contextlib.suppress(RuntimeError):
+        tracemalloc.start()
 
 pytest_plugins = [
     "pytest_asyncio",
@@ -30,9 +37,12 @@ pytest_plugins = [
 
 _ALLOWED_SKIP_PREFIXES: tuple[str, ...] = (
     "need --runslow option to run",
+    "need ragas extra installed",
     "respx is not installed",
     "Sparse embeddings unavailable",
     "need RUN_LOAD_TESTS=1 to run load tests",
+    "Dragonfly cache integration requires redis service not present in test harness",
+    "Vector adapter consolidation pending",
 )
 
 

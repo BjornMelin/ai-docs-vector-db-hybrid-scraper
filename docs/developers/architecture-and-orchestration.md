@@ -142,7 +142,7 @@ all tools fail.
 
 - Dependency wiring: `tests/unit/services/fastapi/test_dependencies_core.py`.
 - Tool discovery: `tests/unit/services/browser/test_unified_manager.py`.
-- End-to-end: `tests/integration/rag/` exercises full graph flows.
+- End-to-end: `python scripts/dev.py benchmark --suite performance` executes the maintained graph regression harness.
 
 ## 3. FastMCP Integration
 
@@ -165,8 +165,7 @@ The unified MCP server (`src/unified_mcp_server.py`) registers tools from
 3. Adopt streaming responses, FastMCP sessions, and in-memory transports for
    tests.
 
-Tests for MCP tooling live under `tests/unit/mcp_tools/` and
-`tests/integration/mcp/`.
+Tests for MCP tooling live under `tests/unit/mcp_tools/`.
 
 ## 4. Extensibility Patterns
 

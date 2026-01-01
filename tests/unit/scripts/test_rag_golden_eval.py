@@ -8,6 +8,12 @@ from typing import Any
 
 import pytest
 
+
+try:
+    import ragas  # pyright: ignore[reportMissingImports]  # noqa: F401
+except ModuleNotFoundError:
+    pytest.skip("need ragas extra installed", allow_module_level=True)
+
 from scripts.eval.dataset_validator import DatasetValidationError, validate_dataset
 from scripts.eval.rag_golden_eval import (
     EvaluationReport,
@@ -22,6 +28,7 @@ from scripts.eval.rag_golden_eval import (
     _load_thresholds,
     _render_report,
 )
+
 from src.contracts.retrieval import SearchRecord, SearchResponse
 
 

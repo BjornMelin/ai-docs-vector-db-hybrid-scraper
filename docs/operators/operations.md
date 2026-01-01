@@ -17,7 +17,7 @@
 ### Retrieval and RAG Self-Healing
 - Retry budgets derive from `agentic.max_retries` in `config/agentic.yml`; they apply separately per LangGraph stage (`discover`, `retrieve`, `execute`).
 - Persist checkpoints by selecting a durable saver in the dependency wiring; checkpoints land under `storage/langgraph-checkpoints/`.
-- Run `uv run pytest tests/integration/rag/test_pipeline.py -q` before changing retrieval configuration.
+- Run `python scripts/dev.py benchmark --suite performance` before changing retrieval configuration.
 
 ### Vector Database Stewardship
 - Nightly optimisation: `python scripts/dev.py vector optimize` merges Qdrant segments using thresholds in `config/vector_db.yml`.

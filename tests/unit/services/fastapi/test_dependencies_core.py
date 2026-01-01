@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import HTTPException
+from starlette.requests import Request
 
 from src.services import service_resolver
 from src.services.fastapi import dependencies as fastapi_dependencies
@@ -66,6 +67,37 @@ async def test_get_vector_service_maps_failure(monkeypatch: pytest.MonkeyPatch) 
 
 
 @pytest.mark.asyncio()
+async def test_get_embedding_manager_success(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Embedding manager should delegate to resolver when available."""
+    manager = object()
+    monkeypatch.setattr(
+        fastapi_dependencies,
+        "resolve_embedding_manager",
+        AsyncMock(return_value=manager),
+    )
+
+    resolved = await fastapi_dependencies.get_embedding_manager()
+
+    assert resolved is manager
+
+
+@pytest.mark.asyncio()
+async def test_get_embedding_manager_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Embedding manager failures should map to HTTP 503."""
+    monkeypatch.setattr(
+        fastapi_dependencies,
+        "resolve_embedding_manager",
+        AsyncMock(side_effect=RuntimeError("no embed")),
+    )
+
+    with pytest.raises(HTTPException) as err:
+        await fastapi_dependencies.get_embedding_manager()
+
+    assert err.value.status_code == 503
+    assert "Embedding manager not available" in err.value.detail
+
+
+@pytest.mark.asyncio()
 async def test_get_cache_manager_maps_failure(monkeypatch: pytest.MonkeyPatch) -> None:
     """Cache manager failures should raise HTTP 503 errors."""
 
@@ -83,6 +115,47 @@ async def test_get_cache_manager_maps_failure(monkeypatch: pytest.MonkeyPatch) -
 
     assert err.value.status_code == 503
     assert "Cache manager not available" in err.value.detail
+
+
+@pytest.mark.asyncio()
+async def test_initialize_dependencies_invokes_container(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Initializing dependencies should force container bootstrap."""
+    ensure_mock = AsyncMock()
+    monkeypatch.setattr(fastapi_dependencies, "ensure_container", ensure_mock)
+    monkeypatch.setattr(
+        fastapi_dependencies, "get_settings", MagicMock(return_value="settings")
+    )
+
+    await fastapi_dependencies.initialize_dependencies()
+
+    ensure_mock.assert_awaited_once_with(settings="settings", force_reload=True)
+
+
+@pytest.mark.asyncio()
+async def test_cleanup_dependencies_shuts_down_container(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Cleanup should invoke shutdown on the dependency container."""
+    shutdown_mock = AsyncMock()
+    monkeypatch.setattr(fastapi_dependencies, "shutdown_container", shutdown_mock)
+
+    await fastapi_dependencies.cleanup_dependencies()
+
+    shutdown_mock.assert_awaited_once()
+
+
+def test_get_config_dependency_returns_settings(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Config dependency should return cached settings."""
+    sentinel_settings = object()
+    monkeypatch.setattr(
+        fastapi_dependencies, "get_settings", MagicMock(return_value=sentinel_settings)
+    )
+
+    assert fastapi_dependencies.get_config_dependency() is sentinel_settings
 
 
 @pytest.mark.asyncio()
@@ -217,3 +290,44 @@ async def test_get_health_checker_handles_reinitialization(
     result = await fastapi_dependencies.get_health_checker()
 
     assert result is manager
+
+
+def test_get_correlation_id_dependency(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Correlation dependency should forward to middleware helper."""
+    monkeypatch.setattr(
+        fastapi_dependencies,
+        "get_correlation_id",
+        MagicMock(return_value="cid"),
+        raising=True,
+    )
+    scope = {"type": "http", "method": "GET", "path": "/", "headers": []}
+    request = Request(scope)
+
+    assert fastapi_dependencies.get_correlation_id_dependency(request) == "cid"
+
+
+def test_get_request_context_collects_metadata(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Request context helper should include correlation, client and headers."""
+    monkeypatch.setattr(
+        fastapi_dependencies,
+        "get_correlation_id",
+        MagicMock(return_value="cid"),
+        raising=True,
+    )
+    scope = {
+        "type": "http",
+        "method": "POST",
+        "path": "/items",
+        "headers": [(b"user-agent", b"pytest")],
+    }
+    request = Request(scope)
+
+    context = fastapi_dependencies.get_request_context(request)
+
+    assert context == {
+        "correlation_id": "cid",
+        "method": "POST",
+        "path": "/items",
+        "client_ip": "unknown",
+        "user_agent": "pytest",
+    }

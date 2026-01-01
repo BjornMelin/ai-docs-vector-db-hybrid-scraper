@@ -77,7 +77,7 @@ Supporting docs when you need more detail:
 
 ### Testing & Quality Gates
 
-- Unit tests live under `tests/unit/**`; mark integration suites with `@pytest.mark.integration`.
+- Unit tests live under `tests/unit/**`; mark service integration suites with `@pytest.mark.service`.
 - Required gates: `ruff format`, `ruff check`, `pylint`, `pyright`, `uv run pytest`.
 - Snapshot data belongs in `tests/fixtures/**`; avoid ad-hoc test assets.
 

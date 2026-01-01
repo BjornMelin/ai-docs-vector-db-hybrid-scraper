@@ -358,7 +358,12 @@ async def _ping_dragonfly() -> None:
         ping_result = dragonfly_client.ping()
         if asyncio.iscoroutine(ping_result):
             await ping_result
-    except Exception:  # pragma: no cover - optional dependency not available
+    except (
+        RuntimeError,
+        AttributeError,
+        OSError,
+        TypeError,
+    ):  # pragma: no cover - optional dependency not available
         logger.debug("Dragonfly ping failed during startup", exc_info=True)
 
 
@@ -374,7 +379,12 @@ async def _init_qdrant_client() -> None:
             result = get_collections()
             if asyncio.iscoroutine(result):
                 await result
-    except Exception:  # pragma: no cover - optional dependency not available
+    except (
+        RuntimeError,
+        AttributeError,
+        OSError,
+        TypeError,
+    ):  # pragma: no cover - optional dependency not available
         logger.debug("Qdrant readiness check failed during startup", exc_info=True)
 
 

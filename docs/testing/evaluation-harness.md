@@ -21,7 +21,15 @@ The corpus file mirrors every entry in the golden dataset, enabling reproducible
 ### 1.2 Dataset Validation
 
 - `scripts/eval/dataset_validator.py` enforces the schema for the golden dataset.
-- The regression harness (`scripts/eval/rag_golden_eval.py`) accepts `--metrics-allowlist` and falls back to configuration defaults when omitted.
+
+CLI flags for the harness (`scripts/eval/rag_golden_eval.py`):
+
+- `--dataset` (path, JSONL)
+- `--output` (optional path for report JSON)
+- `--limit` (top-k documents per query)
+- `--ragas-llm-model` (default: `gpt-4o-mini`)
+- `--ragas-embedding-model` (default: `text-embedding-3-small`)
+- `--max-semantic-samples` (cap for cost control; defaults from `config/eval_costs.yml`)
 
 ## 2. Evaluation Budgets and Cost Controls
 
@@ -38,6 +46,24 @@ Semantic evaluation uses ragas by default and is governed by:
 - CLI warnings reminding operators to set rate limits whenever API secrets are configured
 
 Run the semantic lane in CI only when secrets are provided; it publishes JSON artefacts but does not block merges by default.
+
+### 2.1 Semantic Scoring with Ragas ≥0.3
+
+- Version and install: `uv sync --group eval` (requires `ragas>=0.3.5`).
+- Credentials: set `OPENAI_API_KEY` for both LLM and embeddings.
+- LLM: constructed via `ragas.llms.base.llm_factory(<model>)` (no wrappers).
+- Embeddings: `ragas.embeddings.OpenAIEmbeddings(client=openai.OpenAI(), model=...)`.
+  Do not pass `AsyncOpenAI` to embeddings.
+- Dataset mapping (golden row → SingleTurnSample):
+  - `user_input` ← dataset `query`
+  - `response` ← predicted answer from pipeline
+  - `retrieved_contexts` ← retrieved record `content`
+  - `reference` ← dataset `expected_answer`
+  - `reference_contexts` ← dataset `expected_contexts`
+- Pitfalls avoided in this repo:
+  - Removed deprecated `LangchainLLMWrapper` usage (use `llm_factory`).
+  - Eliminated pyright/pylint ignore comments by aligning types and clients.
+  - Normalized schema keys to the SingleTurnSample format to prevent silent drops.
 
 ## 3. Observability Surfaces
 
@@ -98,4 +124,4 @@ Only metrics listed in `config/metrics_allowlist.json` are serialised by the har
 3. Optionally enable semantic scoring with cost guardrails.
 4. Review telemetry snapshots against the metrics allowlist.
 5. Export traces and metrics to dashboards, updating thresholds as necessary.
-6. Run regression tests (`pytest -q tests/unit/scripts/test_rag_golden_eval.py tests/integration`) to confirm threshold enforcement and failure-path coverage stay green.
+6. Run regression tests (`pytest -q tests/unit/scripts/test_rag_golden_eval.py tests/services`) or execute `python scripts/dev.py benchmark` to confirm threshold enforcement and failure-path coverage stay green.

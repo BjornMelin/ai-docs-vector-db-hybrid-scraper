@@ -21,18 +21,18 @@ if TYPE_CHECKING:
     from .retriever import CompressionStats, VectorServiceRetriever
 
 
-__all__: Final[tuple[str, ...]] = (
-    "AnswerMetrics",
-    "CompressionStats",
-    "LangGraphRAGPipeline",
-    "RAGConfig",
+__all__: Final[tuple[str, ...]] = (  # noqa: RUF022
     "RAGGenerator",
+    "LangGraphRAGPipeline",
+    "RagTracingCallback",
+    "VectorServiceRetriever",
+    "CompressionStats",
+    "RAGConfig",
     "RAGRequest",
     "RAGResult",
     "RAGServiceMetrics",
-    "RagTracingCallback",
+    "AnswerMetrics",
     "SourceAttribution",
-    "VectorServiceRetriever",
     "build_default_rag_config",
     "initialise_rag_generator",
 )

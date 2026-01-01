@@ -6,7 +6,7 @@ import logging
 from collections.abc import Mapping
 from datetime import UTC, datetime
 from time import perf_counter
-from typing import Any
+from typing import Any, Protocol, cast, runtime_checkable
 from uuid import uuid4
 
 from fastmcp import Context
@@ -31,6 +31,15 @@ _INDEX_DEFINITIONS: dict[str, models.PayloadSchemaType] = {
     "word_count": models.PayloadSchemaType.INTEGER,
     "crawl_timestamp": models.PayloadSchemaType.DATETIME,
 }
+
+
+@runtime_checkable
+class VectorStoreServiceProvider(Protocol):
+    """Protocol for objects that can provide a VectorStoreService instance."""
+
+    async def get_vector_store_service(self) -> VectorStoreService:
+        """Return the VectorStoreService instance."""
+        ...
 
 
 def _record_to_dict(record: SearchRecord) -> dict[str, Any]:
@@ -93,16 +102,61 @@ def _normalise_summary(
 def register_tools(
     mcp,
     *,
-    vector_service: VectorStoreService,
+    vector_service: VectorStoreService | VectorStoreServiceProvider,
 ) -> None:
     """Register payload indexing helpers with the MCP server."""
     validator = MLSecurityValidator.from_unified_config()
+    cached_service: VectorStoreService | None = None
+
+    async def _resolve_service() -> VectorStoreService:
+        """Resolve the vector store service from the provided vector_service."""
+        nonlocal cached_service
+        if cached_service is not None:
+            return cached_service
+
+        if isinstance(vector_service, VectorStoreService):
+            cached_service = vector_service
+            return cached_service
+
+        if not isinstance(vector_service, VectorStoreServiceProvider):
+            msg = (
+                "vector_service must be a VectorStoreService or implement "
+                "VectorStoreServiceProvider"
+            )
+            raise TypeError(msg)
+
+        resolved = await vector_service.get_vector_store_service()
+        if resolved is None:
+            msg = "get_vector_store_service() returned None"
+            raise ValueError(msg)
+        if isinstance(resolved, VectorStoreService):
+            cached_service = resolved
+            return cached_service
+
+        required = (
+            "list_collections",
+            "ensure_payload_indexes",
+            "get_payload_index_summary",
+            "drop_payload_indexes",
+            "collection_stats",
+            "search_documents",
+        )
+        missing = [name for name in required if not hasattr(resolved, name)]
+        if missing:
+            msg = (
+                "get_vector_store_service() must return a VectorStoreService-like "
+                f"object; missing {missing} on {type(resolved).__name__}"
+            )
+            raise TypeError(msg)
+        cached_service = cast(VectorStoreService, resolved)
+        return cached_service
 
     @mcp.tool()
     async def create_payload_indexes(
         collection_name: str,
         ctx: Context,
     ) -> GenericDictResponse:
+        """Create payload indexes for a collection."""
         request_id = str(uuid4())
         await ctx.info(
             f"Creating payload indexes for collection: {collection_name} "
@@ -110,7 +164,7 @@ def register_tools(
         )
 
         safe_name = validator.validate_collection_name(collection_name)
-        service = vector_service
+        service = await _resolve_service()
         collections = await service.list_collections()
         if safe_name not in collections:
             msg = f"Collection '{safe_name}' not found"
@@ -129,7 +183,7 @@ def register_tools(
     ) -> GenericDictResponse:
         """List existing payload indexes for a collection."""
         safe_name = validator.validate_collection_name(collection_name)
-        service = vector_service
+        service = await _resolve_service()
         summary = await service.get_payload_index_summary(safe_name)
         count = summary["indexed_fields_count"]
         await ctx.info(f"Collection {safe_name} exposes {count} payload indexes")
@@ -148,7 +202,7 @@ def register_tools(
         )
 
         safe_name = validator.validate_collection_name(collection_name)
-        service = vector_service
+        service = await _resolve_service()
 
         before = await service.get_payload_index_summary(safe_name)
         await service.drop_payload_indexes(safe_name, _INDEX_DEFINITIONS.keys())
@@ -178,15 +232,12 @@ def register_tools(
     ) -> GenericDictResponse:
         """Benchmark filtered search performance on a collection."""
         if ctx:
-            await ctx.info(
-                "Benchmarking filtered search on %s",  # type: ignore[arg-type]
-                collection_name,
-            )
+            await ctx.info(f"Benchmarking filtered search on {collection_name}")
 
         safe_name = validator.validate_collection_name(collection_name)
         clean_query = validator.validate_query_string(query)
 
-        service = vector_service
+        service = await _resolve_service()
 
         start = perf_counter()
         matches = await service.search_documents(

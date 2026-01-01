@@ -206,7 +206,7 @@ def _abort_collection_not_found(collection_name: str, rich_cli) -> None:
 @click.option(
     "--dimension",
     "-d",
-    type=int,
+    type=click.IntRange(min=1),
     default=1536,
     help="Vector dimension (default: 1536 for OpenAI)",
 )

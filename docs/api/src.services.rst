@@ -13,7 +13,6 @@ Subpackages
    src.services.circuit_breaker
    src.services.crawling
    src.services.content_intelligence
-   src.services.core
    src.services.embeddings
    src.services.fastapi
    src.services.hyde

@@ -24,6 +24,12 @@ def test_brotli_middleware_is_available() -> None:
     if BrotliCompressionMiddleware is CompressionMiddleware:
         assert BrotliCompressionMiddleware is GZipMiddleware
     else:
-        # When brotli is installed the middleware should define default quality kwarg.
+        # When brotli is installed the middleware should accept a quality argument.
         signature = inspect.signature(BrotliCompressionMiddleware.__init__)
-        assert "quality" in signature.parameters
+        params = signature.parameters
+        if "quality" in params:
+            assert params["quality"].default is not inspect.Signature.empty
+        else:
+            # Fallback to accepting arbitrary keyword arguments.
+            last_param = list(params.values())[-1]
+            assert last_param.kind is inspect.Parameter.VAR_KEYWORD

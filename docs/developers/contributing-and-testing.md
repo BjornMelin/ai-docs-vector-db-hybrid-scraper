@@ -51,7 +51,7 @@ uv build
 ### Documentation Verification
 
 ```bash
-uv sync --frozen --group docs
+uv sync --frozen --group docs-dev
 uv run python scripts/dev.py validate --check-docs --strict
 uv run mkdocs build --strict
 ```
@@ -61,7 +61,7 @@ uv run mkdocs build --strict
 | Category | Location | Marker |
 | --- | --- | --- |
 | Unit | `tests/unit/` | `@pytest.mark.unit` |
-| Integration | `tests/integration/` | `@pytest.mark.integration` |
+| Service integration | `tests/services/` | `@pytest.mark.service` |
 | End-to-end | `tests/e2e/` | `@pytest.mark.e2e` |
 
 Common commands:
@@ -71,12 +71,12 @@ uv run python scripts/dev.py test --profile full            # all tests
 uv run python scripts/dev.py test --profile ci             # mirrors CI
 uv run pytest tests/test_example.py                        # specific file
 uv run pytest -k "search"                                  # pattern match
-uv run pytest -m integration                               # marker
+uv run pytest -m service                                   # marker
 uv run pytest -n auto                                      # parallel
 ```
 
 Pytest markers are declared in `pyproject.toml` to document custom tags (`unit`,
-`integration`, `e2e`, `slow`, etc.).
+`service`, `e2e`, `slow`, etc.).
 
 ### Async & Mocking Patterns
 
@@ -101,8 +101,8 @@ path coverage is strongly encouraged for error handling.
 
 ### Coverage
 
-CI enforces the project-wide 80% threshold via the `ci` profile. Run it locally
-when adjusting critical paths.
+CI enforces the project-wide 70% threshold via the `ci` profile (see
+`scripts/dev.py`). Run it locally when adjusting critical paths.
 
 ## 4. Maintainer Tips
 

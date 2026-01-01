@@ -18,7 +18,7 @@ inputs:
 outputs:
   cache-hit:
     description: 'Whether cache was hit'
-    value: ${{ steps.cache.outputs.cache-hit }}
+    value: ${{ steps.setup-uv.outputs.cache-hit }}
 
 runs:
   using: 'composite'
@@ -28,23 +28,22 @@ runs:
       with:
         python-version: ${{ inputs.python-version }}
 
+    - name: Free disk space
+      shell: bash
+      run: |
+        set -euo pipefail
+        df -h
+        sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android || true
+        sudo apt-get clean || true
+        df -h
+
     - name: Install uv
+      id: setup-uv
       uses: astral-sh/setup-uv@b75a909f75acd358c2196fb9a5f1299a9a8868a4 # v6.7.0
       with:
         version: "0.8.19"
         enable-cache: true
         cache-dependency-glob: "**/uv.lock"
-
-    - name: Cache Python dependencies
-      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-      id: cache
-      with:
-        path: |
-          ~/.cache/uv
-          .venv
-        key: python-env-${{ runner.os }}-${{ inputs.python-version }}-${{ hashFiles('**/uv.lock', 'pyproject.toml') }}${{ inputs.cache-suffix }}
-        restore-keys: |
-          python-env-${{ runner.os }}-${{ inputs.python-version }}-
 
     - name: Install dependencies
       shell: bash
@@ -55,6 +54,9 @@ runs:
         else
           uv sync --frozen
         fi
+      env:
+        UV_COMPILE_BYTECODE: "0"
+        UV_LINK_MODE: "hardlink"
 
     - name: Verify installation
       shell: bash

@@ -88,7 +88,6 @@ def qdrant_client_mock() -> AsyncMock:
         config=SimpleNamespace(payload_schema={}),
     )
     client.scroll.return_value = ([], None)
-    client.recommend.return_value = []
     client.query_points = AsyncMock(return_value=SimpleNamespace(points=[]))
     return client
 

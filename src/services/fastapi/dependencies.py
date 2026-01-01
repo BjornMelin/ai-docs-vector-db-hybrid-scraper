@@ -188,19 +188,40 @@ async def database_session() -> AsyncGenerator[DatabaseSessionContext, None]:
     dragonfly_client = None
     try:
         dragonfly_client = container.dragonfly_client()
-    except Exception:  # pragma: no cover - defensive logging
+    except (
+        RuntimeError,
+        OSError,
+        TimeoutError,
+        ImportError,
+        ValueError,
+        AttributeError,
+    ):  # pragma: no cover - defensive logging
         logger.debug("Dragonfly client unavailable", exc_info=True)
 
     cache_manager: CacheManager | None = None
     try:
         cache_manager = await resolve_cache_manager()
-    except Exception:  # pragma: no cover - defensive logging
+    except (
+        RuntimeError,
+        OSError,
+        TimeoutError,
+        ImportError,
+        ValueError,
+        AttributeError,
+    ):  # pragma: no cover - defensive logging
         logger.debug("Cache manager unavailable during session", exc_info=True)
 
     vector_service: VectorStoreService | None = None
     try:
         vector_service = await resolve_vector_store_service()
-    except Exception:  # pragma: no cover - defensive logging
+    except (
+        RuntimeError,
+        OSError,
+        TimeoutError,
+        ImportError,
+        ValueError,
+        AttributeError,
+    ):  # pragma: no cover - defensive logging
         logger.debug("Vector service unavailable during session", exc_info=True)
 
     context = DatabaseSessionContext(

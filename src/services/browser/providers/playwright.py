@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from typing import Any, cast
 
-import playwright_stealth  # type: ignore[import]  # pyright: ignore[reportMissingTypeStubs]
+import playwright_stealth  # type: ignore[import]
 from playwright.async_api import (
     Browser,
     Error as PlaywrightError,

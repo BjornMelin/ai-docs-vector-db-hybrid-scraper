@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added curated router presets in `config/browser-routing-rules.json` so crawling tiers reuse the canonical RouterSettings model.
+- Added Locust-powered load testing scenarios (`tests/load/locustfile.py`) and a
+  `python scripts/dev.py load` helper for consistent execution.
 - Introduced a unified deployment manager (`src/services/deployment/manager.py`) and
   `python scripts/dev.py deploy` command that selects GitHub Actions, Docker
   Compose, or Kubernetes flows via configuration and environment overrides.
@@ -39,8 +41,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Published the consolidated MCP test strategy doc (`docs/testing/mcp-unit-tests.md`) capturing the coverage map, decision
   record, and technical debt register for the new suites.
 
+### Removed
+
+- Removed the legacy benchmark orchestrator package (`src/benchmarks`) and Sphinx pages that referenced retired performance flows.
+- Deleted integration, load, performance, and MCP request unit suites that targeted deprecated search and middleware signatures.
+
 ### Refactor
 
+- **[Infrastructure]:** Relocated project storage to `src/infrastructure/project_storage.py`, removed the legacy `services/core` package with its alias manager, and updated MCP tooling plus DI wiring to use the new implementation.
+- Hardened FastAPI middleware wiring (`src/services/fastapi/middleware/compression.py`, `security.py`) and realigned the developer benchmark command to the evaluation harness (`scripts/dev.py`, `scripts/README.md`).
 - Simplified configuration surfaces by removing deployment tier toggles,
   updating property-based strategies, and pruning mocks so settings and tools
   expose only maintained runtime services.
@@ -54,6 +63,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **[Tests]:** Consolidated and streamlined test fixtures by creating a unified
   `MockFactory` for all external service mocks, improving test code reusability
   and maintainability.
+- **[Tests]:** Restored FastAPI middleware coverage with focused unit suites and
+  validated the SlowAPI integration against expected behaviour.
 - Wrapped the Firecrawl and Qdrant client adapters in protocol-driven wrappers with
   OpenTelemetry spans, structured logging, and stricter typing to align with the
   unified observability contract.
@@ -65,9 +76,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   usage pattern.
 - Hardened `CacheManager` warmup and stats helpers around Dragonfly adapters,
   preserving tracing context while removing implicit casts and unsafe cache clears.
-- Refined cache, alias management, and health observability to reuse the shared
-  tracing extras, unifying structured logging across `services/cache`,
-  `services/core/qdrant_alias_manager.py`, and `services/observability/health_manager.py`.
+- Refined cache and health observability to reuse the shared tracing extras,
+  unifying structured logging across `services/cache` and
+  `services/observability/health_manager.py`.
 - Hardened the embedding manager benchmark loader to require structured embedding
   sections, reuse benchmark normalisation, and restore prior selection state when
   validation fails.
@@ -86,9 +97,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **[MCP]:** Enforced explicit dependency injection for MCP tools and services,
   removing service locator helpers and requiring startup wiring to supply all
   shared managers.
-- **[MCP]:** Simplified the MCP server architecture by removing the
-  `mcp_services` abstraction layer. Tool modules are now registered directly,
-  reducing boilerplate and improving clarity.
+- **[MCP]:** Simplified the MCP server architecture by deleting the legacy MCP
+  services abstraction layer so tool modules register directly, reducing
+  boilerplate and improving clarity.
 - **[Cache]:** Standardised the Dragonfly-only cache stack, replacing Redis
   wrappers, reintroducing cache warmup utilities, and updating health checks and
   docs to reflect the streamlined architecture.
@@ -136,6 +147,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   tools to thin facades over the unified routing service.
 
 ### Changed
+
+- Ragas evaluator modernized: switched to `ragas.llms.base.llm_factory` for the
+  evaluator LLM and to `ragas.embeddings.OpenAIEmbeddings(client=openai.OpenAI(),
+  model=...)` for embeddings; updated `EvaluationDataset` construction to the
+  SingleTurnSample schema (`user_input`, `response`, `retrieved_contexts`,
+  `reference`, `reference_contexts`). Removed previous lint/typing ignores in
+  `scripts/eval/rag_golden_eval.py` and documented the workflow in
+  `docs/testing/evaluation-harness.md`. Also bumped the eval dependency group to
+  `ragas>=0.3.5` in `pyproject.toml`.
 
 - Updated configuration templates to embed router overrides and normalised Prometheus metrics ports to match the FastAPI `/metrics` endpoint.
 - CLI commands, wizard utilities, and tests now emit technical, emoji-free
@@ -245,8 +265,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   destructive-operation confirmations using asyncio-backed stubs.
 - Simplified `pytest.ini` to enforce warnings-as-errors, strict markers, and a seeded pytest-randomly configuration that aligns
   with the new deterministic fixtures.
-- Rebuilt `tests/unit/mcp_tools` and `tests/unit/mcp_services` around async-aware stubs, shared MCP decorators, and focused
-  validation coverage while deleting the legacy duplicated suites.
+- Rebuilt `tests/unit/mcp_tools` around async-aware stubs, shared MCP decorators,
+  and focused validation coverage while deleting the legacy duplicated suites.
 - Centralized the MCP config and tool-module builders in `tests/unit/conftest.py`, parameterized streaming guard checks, and
   added coverage for empty hybrid-search results plus orchestrator partial-initialization guard rails.
 - Pinned the regression workflow `uv` dependency to `0.2.37` to stabilize CI setup.
@@ -274,6 +294,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Tests
 
+- Updated docs and contributor guidance to reference the evaluation harness and service-level suites after pruning integration, load, and performance tests.
 - Removed deployment configuration property suites and legacy MCP mock tooling,
   focusing property-based checks on maintained settings and vector surfaces.
 - Updated HyDE configuration tests to guard against missing schema keys and
@@ -283,6 +304,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Quality gates
 
+- Ruff (`uv run ruff check --fix src/services/fastapi/middleware/compression.py src/services/fastapi/middleware/security.py tests/fixtures/__init__.py scripts/dev.py`),
+  Pyright, Pylint, and `uv run pytest -q tests/unit/services/test_logging_config.py` passed for the updated middleware, fixture namespace, and CLI changes.
 - Ruff, Pylint, Pyright, and
   `pytest -q -n auto --maxfail=1 --randomly-seed=321852 tests/unit/services/hyde/test_config.py`
   passed on cache and infrastructure client modules.

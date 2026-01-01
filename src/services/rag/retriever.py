@@ -7,7 +7,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Self, cast
 
-from langchain.retrievers.document_compressors import (
+from langchain_classic.retrievers.document_compressors import (
     DocumentCompressorPipeline,
     EmbeddingsFilter,
 )
@@ -22,7 +22,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 try:
     from langchain_community.document_transformers import EmbeddingsRedundantFilter
-    from langchain_community.embeddings import FastEmbedEmbeddings
+    from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
 except ModuleNotFoundError as exc:  # pragma: no cover - dependency guard
     raise ImportError(
         "FastEmbedEmbeddings requires the 'langchain-community' package."

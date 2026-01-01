@@ -7,8 +7,10 @@ import warnings
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import Any, NotRequired, Required, TypedDict
 
-from langchain.retrievers import ContextualCompressionRetriever
-from langchain.retrievers.document_compressors import (
+from langchain_classic.retrievers.contextual_compression import (
+    ContextualCompressionRetriever,
+)
+from langchain_classic.retrievers.document_compressors import (
     DocumentCompressorPipeline,
     EmbeddingsFilter,
 )

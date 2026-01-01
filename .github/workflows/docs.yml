@@ -41,17 +41,6 @@ jobs:
           cache-suffix: "-docs"
           install-dev: 'false'
 
-      - name: Install uv if missing
-        run: |
-          if ! command -v uv >/dev/null 2>&1; then
-            curl -LsSf https://astral.sh/uv/install.sh | sh
-            export PATH="$HOME/.local/bin:$PATH"
-            echo "$HOME/.local/bin" >> $GITHUB_PATH
-          fi
-
-      - name: Ensure uv is available
-        run: uv --version
-
       - name: Install documentation dependencies
         run: uv sync --frozen --extra docs
 

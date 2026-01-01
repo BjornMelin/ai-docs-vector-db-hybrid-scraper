@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-Runtime code lives in `src/` (FastAPI `api`, LangGraph `services`, CLI `cli`, MCP tooling `mcp_services`/`mcp_tools`). Configs and deploy assets: `config/`, `docker-compose.yml`, `k8s/`; automation lives in `scripts/`; docs in `docs/`; tests span unit, integration, performance,
+Runtime code lives in `src/` (FastAPI `api`, LangGraph `services`, CLI `cli`, MCP tooling `mcp_tools`). Configs and deploy assets: `config/`, `docker-compose.yml`, `k8s/`; automation lives in `scripts/`; docs in `docs/`; tests span unit, integration, performance,
 property, data_quality, scripts suites. `src/services` highlights: agents (LangGraph flows), analytics (search dashboards), browser (tiered scraping), cache (Dragonfly caches), circuit_breaker (resilience), content_intelligence (classifiers/metadata), core (project storage & Qdrant aliases),
 crawling (Firecrawl/Crawl4AI), embeddings (FastEmbed/OpenAI), fastapi (dependency wiring), functional (DI facades), hyde (HyDE augmentation), managers (platform managers), middleware (rate limiting), monitoring (metrics/health/telemetry), observability (tracing configs),
 processing (batch pipelines), query_processing (intent models + orchestrator), rag (pipeline/generator/retriever), utilities (HNSW tuning/rate limits), vector_db (Qdrant service layer).
@@ -20,8 +20,8 @@ and run `uv run ruff format .`, `uv run ruff check . --fix`, `uv run pylint --fa
 
 ## Testing Guidelines
 
-Pytest modules follow `test_*.py`; fixtures and corpora live in `tests/fixtures/` and `tests/data_quality/`. Run `python scripts/dev.py test --profile unit` (or other profiles) or `uv run pytest -q tests/integration/rag/test_pipeline.py` when iterating.
-Tag flows with `pytest.ini` markers such as `@pytest.mark.integration`, `@pytest.mark.performance`, `@pytest.mark.rag`, and keep runs deterministic via stubs and cached embeddings.
+Pytest modules follow `test_*.py`; fixtures and corpora live in `tests/fixtures/` and `tests/data_quality/`. Run `python scripts/dev.py test --profile unit` (or other profiles) or `python scripts/dev.py benchmark --suite performance` when iterating.
+Tag flows with `pytest.ini` markers such as `@pytest.mark.service`, `@pytest.mark.performance`, `@pytest.mark.rag`, and keep runs deterministic via stubs and cached embeddings.
 When exercising optional integrations, prefer `pytest.importorskip`, focused mocks (e.g., `MockerFixture`), and shared fixtures over ad-hoc `sys.modules` shims. Required dependencies (those under `[project]`) must be imported directly so tests validate real APIs.
 
 ## Commit & Pull Request Guidelines

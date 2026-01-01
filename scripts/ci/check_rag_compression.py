@@ -11,13 +11,14 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from langchain.retrievers.document_compressors import (
+from langchain_classic.retrievers.document_compressors import (
     DocumentCompressorPipeline,
     EmbeddingsFilter,
 )
 from langchain_community.document_transformers import EmbeddingsRedundantFilter
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
+from langchain_core.exceptions import LangChainException
 
 
 class _PrecomputedEmbeddings(Embeddings):
@@ -198,7 +199,13 @@ def main() -> int:
                 min_recall=args.min_recall,
             )
         )
-    except Exception as exc:  # pragma: no cover - CLI safeguard
+    except (
+        ValueError,
+        TypeError,
+        LangChainException,
+        OSError,
+        RuntimeError,
+    ) as exc:  # pragma: no cover - CLI safeguard
         print(f"Compression quality gate failed: {exc}", file=sys.stderr)
         return 1
     return 0 if success else 1

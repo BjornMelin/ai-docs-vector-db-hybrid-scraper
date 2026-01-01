@@ -34,9 +34,9 @@ def pytest_collection_modifyitems(_config, items):
         if "cli" in str(item.fspath):
             item.add_marker(pytest.mark.cli)
 
-        # Auto-mark integration tests
+        # Auto-mark service integration tests
         if "integration" in str(item.fspath):
-            item.add_marker(pytest.mark.integration)
+            item.add_marker(pytest.mark.service)
 
         # Auto-mark tests using specific fixtures
         if hasattr(item, "fixturenames"):

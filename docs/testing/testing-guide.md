@@ -32,7 +32,7 @@ async def test_calculate_price():
     price = calculate_price(100, 0.1)
     assert price == 90
 
-@pytest.mark.integration
+@pytest.mark.service
 async def test_payment_processing(payment_gateway_mock):
     """Tests integration with payment service."""
     result = await process_payment(payment_gateway_mock, 100)
@@ -72,16 +72,14 @@ async def test_search_functionality(search_service):
 tests/
 ├── conftest.py                 # Root fixtures
 ├── unit/                       # Fast, isolated tests
-│   ├── models/test_user.py
-│   ├── services/test_auth.py
-│   └── utils/test_helpers.py
-├── integration/               # Cross-boundary tests
-│   ├── api/test_endpoints.py
-│   └── services/test_workflows.py
-├── e2e/                      # End-to-end tests
-│   └── journeys/test_user_flows.py
-└── performance/             # Performance tests
-    └── benchmarks/test_search_performance.py
+│   ├── config/test_config_models_complete.py
+│   └── services/test_logging_config.py
+├── services/                  # Cross-service integration tests with mocked external dependencies
+│   └── cache/test_cache_manager_behavior.py
+├── data_quality/             # Dataset validation and semantic evaluation harnesses
+├── load/                      # Locust-based load and stress testing scenarios
+├── scripts/                   # CLI tool and developer workflow regression tests
+└── utils/                    # Shared helper tests
 ```
 
 ### Naming Conventions
@@ -262,6 +260,17 @@ def test_search_performance(benchmark):
     assert benchmark.stats["mean"] < 0.1  # 100ms budget
 ```
 
+### Load Testing with Locust
+Run scenario-based load tests against a running FastAPI instance using Locust:
+
+```bash
+python scripts/dev.py load --host http://localhost:8000 --users 50 --spawn-rate 5 --run-time 10m
+```
+
+The Locust scenarios live in `tests/load/locustfile.py` and replay RAG search
+queries from the golden dataset. Disable headless mode with
+`python scripts/dev.py load --no-headless` to launch the Locust web UI.
+
 ### Memory Profiling
 ```python
 import tracemalloc
@@ -374,7 +383,7 @@ uv run pytest
 
 # Run specific categories
 uv run pytest -m unit
-uv run pytest -m integration
+uv run pytest -m service
 uv run pytest -m e2e
 
 # Run in parallel
@@ -429,7 +438,7 @@ addopts = -ra -q --strict-markers
 testpaths = tests
 markers =
     unit: Unit tests
-    integration: Integration tests
+    service: Service integration tests
     e2e: End-to-end tests
     benchmark: Performance benchmarks
     memory: Memory tests

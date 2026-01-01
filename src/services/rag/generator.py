@@ -93,14 +93,13 @@ class RAGGenerator:
         if self.is_initialized():
             return
 
-        if self._chat_model is None:
-            params: dict[str, Any] = {
-                "model": self._config.model,
-                "temperature": self._config.temperature,
-            }
-            if self._config.max_tokens is not None:
-                params["max_tokens"] = self._config.max_tokens
-            self._chat_model = cast(ChatOpenAI, ChatOpenAI(**params))  # type: ignore[call-arg]
+        params: dict[str, Any] = {
+            "model": self._config.model,
+            "temperature": self._config.temperature,
+        }
+        if self._config.max_tokens is not None:
+            params["max_tokens"] = self._config.max_tokens
+        self._chat_model = cast(ChatOpenAI, ChatOpenAI(**params))  # type: ignore[call-arg]
 
         logger.info("RAG generator initialized using LangChain components")
 
@@ -125,9 +124,7 @@ class RAGGenerator:
             msg = "RAG generator is not initialized"
             raise EmbeddingServiceError(msg)
 
-        llm = self._chat_model
-        if llm is None:
-            raise EmbeddingServiceError("Chat model is not initialized")
+        llm = cast(ChatOpenAI, self._chat_model)
 
         start_time = time.perf_counter()
         max_tokens = request.max_tokens or self._config.max_tokens

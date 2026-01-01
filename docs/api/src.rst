@@ -9,7 +9,6 @@ Subpackages
 
    src.api
    src.architecture
-   src.benchmarks
    src.cli
    src.config
    src.infrastructure

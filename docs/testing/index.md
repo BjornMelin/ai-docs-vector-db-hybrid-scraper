@@ -16,7 +16,7 @@ uv run pytest
 
 # Run specific test categories
 uv run pytest -m unit                    # Unit tests only
-uv run pytest -m integration             # Integration tests only
+uv run pytest -m service                 # Service integration tests only
 uv run pytest -m e2e                     # End-to-end tests only
 
 # Run tests in parallel
@@ -41,6 +41,6 @@ uv run pytest tests/specific/test.py::test_function -xvs
 
 1. Write unit tests first (TDD)
 2. Run tests locally: `uv run pytest -m unit`
-3. Run integration tests: `uv run pytest -m integration`
+3. Run service integration tests: `uv run pytest -m service`
 4. Check coverage: `uv run python scripts/dev.py test --profile ci`
 5. Run full suite before PR: `uv run pytest`

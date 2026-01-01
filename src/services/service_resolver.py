@@ -56,7 +56,11 @@ async def _ensure_initialized(service: Any, *, name: str) -> Any:
     if callable(is_initialized):
         try:
             needs_initialization = not bool(is_initialized())
-        except Exception:  # pragma: no cover - defensive guard
+        except (
+            RuntimeError,
+            AttributeError,
+            TypeError,
+        ):  # pragma: no cover - defensive guard
             needs_initialization = True
     elif callable(initializer):
         needs_initialization = True
@@ -69,7 +73,7 @@ async def _ensure_initialized(service: Any, *, name: str) -> Any:
 
 
 @overload
-async def _resolve_service(  # noqa: UP047
+async def _resolve_service(
     *,
     name: str,
     supplier: Callable[[ApplicationContainer], T],
@@ -79,7 +83,7 @@ async def _resolve_service(  # noqa: UP047
 
 
 @overload
-async def _resolve_service(  # noqa: UP047
+async def _resolve_service(
     *,
     name: str,
     supplier: Callable[[ApplicationContainer], T],
@@ -88,7 +92,7 @@ async def _resolve_service(  # noqa: UP047
 ) -> T | None: ...
 
 
-async def _resolve_service(  # noqa: UP047
+async def _resolve_service(
     *,
     name: str,
     supplier: Callable[[ApplicationContainer], T],

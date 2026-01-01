@@ -268,7 +268,10 @@ class HNSWOptimizer:
         except (ValueError, TypeError) as exc:
             self._log_or_propagate(exc, log_context)
             return None
-        except Exception as exc:
+        except (OSError, RuntimeError, ConnectionError, TimeoutError) as exc:
+            self._log_or_propagate(exc, log_context)
+            return None
+        except Exception as exc:  # noqa: BLE001  # pragma: no cover - defensive catch-all
             self._log_or_propagate(exc, log_context)
             return None
 
@@ -641,10 +644,18 @@ class HNSWOptimizer:
                 search_time_ms = (time.time() - start_time) * 1000
                 search_times.append(search_time_ms)
 
-            except (ValueError, ConnectionError, TimeoutError, RuntimeError) as exc:
+            except (ValueError, TypeError) as exc:
                 self._log_or_propagate(exc, "Performance test query")
                 continue
-            except Exception as exc:
+            except (
+                OSError,
+                RuntimeError,
+                ConnectionError,
+                TimeoutError,
+            ) as exc:
+                self._log_or_propagate(exc, "Performance test query")
+                continue
+            except Exception as exc:  # noqa: BLE001  # pragma: no cover - defensive guard
                 self._log_or_propagate(exc, "Performance test query")
                 continue
 

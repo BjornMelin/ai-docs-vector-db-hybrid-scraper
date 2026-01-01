@@ -1,19 +1,24 @@
 """Unit tests for MCP response models."""
 
-from datetime import UTC, datetime
+import json
+from typing import Any
 
 import pytest
 from pydantic import ValidationError
 
 from src.contracts.retrieval import SearchRecord
-from src.mcp_tools.models.responses import CrawlResult
+from src.mcp_tools.models.responses import (
+    EmbeddingGenerationResponse,
+    GenericDictResponse,
+    OperationStatus,
+)
 
 
 class TestSearchRecord:
-    """Test SearchRecord model."""
+    """Search record contract coverage."""
 
-    def test_minimal_valid_result(self):
-        """Test minimal valid search result."""
+    def test_minimal_valid_result(self) -> None:
+        """SearchRecord should accept minimal payloads."""
         result = SearchRecord(
             id="doc_123",
             content="This is the document content",
@@ -26,8 +31,8 @@ class TestSearchRecord:
         assert result.title is None
         assert result.metadata is None
 
-    def test_all_fields(self):
-        """Test search result with all fields."""
+    def test_all_fields(self) -> None:
+        """SearchRecord should preserve optional metadata."""
         metadata = {
             "author": "John Doe",
             "created_at": "2024-01-01",
@@ -49,256 +54,120 @@ class TestSearchRecord:
         assert metadata_result == metadata
         assert metadata_result["tags"] == ["python", "tutorial"]
 
-    def test_missing_required_fields(self):
-        """Test that required fields must be present."""
-        # Missing id
-        with pytest.raises(ValidationError) as exc_info:
-            SearchRecord.model_validate({"content": "test", "score": 0.5})
-        errors = exc_info.value.errors()
-        assert any(error["loc"] == ("id",) for error in errors)
-
-        # Missing content
-        with pytest.raises(ValidationError) as exc_info:
-            SearchRecord.model_validate({"id": "123", "score": 0.5})
-        errors = exc_info.value.errors()
-        assert any(error["loc"] == ("content",) for error in errors)
-
-        # Missing score
-        with pytest.raises(ValidationError) as exc_info:
-            SearchRecord.model_validate({"id": "123", "content": "test"})
-        errors = exc_info.value.errors()
-        assert any(error["loc"] == ("score",) for error in errors)
-
-    def test_score_validation(self):
-        """Test score field accepts various numeric values."""
-        # Valid scores
-        SearchRecord(id="1", content="test", score=0.0)
-        SearchRecord(id="2", content="test", score=1.0)
-        SearchRecord(id="3", content="test", score=0.5)
-        SearchRecord(id="5", content="test", score=1.5)  # Scores > 1 allowed
-
-        # Negative scores should raise validation errors
+    def test_missing_required_fields(self) -> None:
+        """SearchRecord should enforce required fields."""
         with pytest.raises(ValidationError):
-            SearchRecord(id="4", content="test", score=-0.1)
+            SearchRecord.model_validate({"content": "test", "score": 0.5})
+        with pytest.raises(ValidationError):
+            SearchRecord.model_validate({"id": "123", "score": 0.5})
+        with pytest.raises(ValidationError):
+            SearchRecord.model_validate({"id": "123", "content": "test"})
 
-    def test_empty_content(self):
-        """Test that empty content is allowed."""
-        result = SearchRecord(id="empty", content="", score=0.1)
-        assert result.content == ""
+    def test_score_validation(self) -> None:
+        """Score should accept floats >= 0."""
+        SearchRecord(id="1", content="test", score=0.0)
+        SearchRecord(id="2", content="test", score=1.5)
+        with pytest.raises(ValidationError):
+            SearchRecord(id="3", content="test", score=-0.1)
 
-    def test_metadata_flexibility(self):
-        """Test that metadata can contain any structure."""
-        # Simple metadata
-        result1 = SearchRecord(
-            id="1",
-            content="test",
-            score=0.5,
-            metadata={"key": "value"},
-        )
-        metadata_result1 = result1.metadata
-        assert metadata_result1 is not None
-        assert metadata_result1["key"] == "value"
-
-        # Complex nested metadata
-        complex_metadata = {
-            "nested": {
-                "level": 2,
-                "items": [1, 2, 3],
-            },
+    def test_metadata_flexibility(self) -> None:
+        """Metadata should allow arbitrary structures."""
+        complex_metadata: dict[str, Any] = {
+            "nested": {"level": 2, "items": [1, 2, 3]},
             "array": ["a", "b", "c"],
-            "number": 42,
-            "boolean": True,
-            "null": None,
+            "metrics": {"score": 42},
         }
-        result2 = SearchRecord(
-            id="2",
+        result = SearchRecord(
+            id="meta",
             content="test",
             score=0.5,
             metadata=complex_metadata,
         )
-        metadata_result2 = result2.metadata
-        assert metadata_result2 is not None
-        assert metadata_result2["nested"]["level"] == 2
-        assert metadata_result2["array"] == ["a", "b", "c"]
-        assert metadata_result2["boolean"] is True
-        assert metadata_result2["null"] is None
-
-    def test_model_dump_excludes_none(self):
-        """Test that serialization omits optional None fields when requested."""
-        result = SearchRecord(id="serialize", content="data", score=0.3)
-        dumped = result.model_dump(exclude_none=True)
-        assert "url" not in dumped
-        assert "title" not in dumped
-        assert dumped["id"] == "serialize"
-
-
-class TestCrawlResult:
-    """Test CrawlResult model."""
-
-    def test_minimal_valid_result(self):
-        """Test minimal valid crawl result."""
-        result = CrawlResult(url="https://example.com")
-        assert result.url == "https://example.com"
-        assert result.title == ""
-        assert result.content == ""
-        assert result.word_count == 0
-        assert result.success is False
-        assert result.site_name == ""
-        assert result.depth == 0
-        assert isinstance(result.crawl_timestamp, str)
-        assert result.links == []
-        assert result.metadata == {}
-        assert result.error is None
-
-    def test_all_fields(self):
-        """Test crawl result with all fields."""
-        result = CrawlResult(
-            url="https://docs.example.com/api/reference",
-            title="API Reference Documentation",
-            content="This is the API reference content with detailed examples...",
-            word_count=150,
-            success=True,
-            site_name="Example Docs",
-            depth=2,
-            crawl_timestamp="2024-01-15T10:30:00",
-            links=[
-                "https://docs.example.com/api/getting-started",
-                "https://docs.example.com/api/authentication",
-            ],
-            metadata={
-                "language": "en",
-                "last_modified": "2024-01-10",
-                "author": "API Team",
-            },
-            error=None,
-        )
-        assert result.url == "https://docs.example.com/api/reference"
-        assert result.title == "API Reference Documentation"
-        assert result.word_count == 150
-        assert result.success is True
-        assert result.site_name == "Example Docs"
-        assert result.depth == 2
-        assert len(result.links) == 2
         metadata_result = result.metadata
         assert metadata_result is not None
-        assert metadata_result["language"] == "en"
-        assert result.error is None
+        assert metadata_result == complex_metadata
 
-    def test_failed_crawl(self):
-        """Test crawl result for a failed crawl."""
-        result = CrawlResult(
-            url="https://example.com/404",
-            success=False,
-            error="404 Not Found",
-        )
-        assert result.url == "https://example.com/404"
-        assert result.success is False
-        assert result.error == "404 Not Found"
-        assert result.content == ""
-        assert result.word_count == 0
-
-    def test_default_crawl_timestamp(self):
-        """Test that crawl_timestamp is automatically set to current time."""
-        before = datetime.now(tz=UTC).isoformat()
-        result = CrawlResult(url="https://example.com")
-        after = datetime.now(tz=UTC).isoformat()
-
-        # crawl_timestamp should be between before and after
-        assert before <= result.crawl_timestamp <= after
-
-    def test_custom_crawl_timestamp(self):
-        """Test setting custom crawl_timestamp value."""
-        custom_time = "2024-01-01T00:00:00"
-        result = CrawlResult(
-            url="https://example.com",
-            crawl_timestamp=custom_time,
-        )
-        assert result.crawl_timestamp == custom_time
-
-    def test_empty_lists_and_dicts(self):
-        """Test that empty lists and dicts are properly initialized."""
-        result = CrawlResult(url="https://example.com")
-        assert result.links == []
-        assert isinstance(result.links, list)
-        assert result.metadata == {}
-        assert isinstance(result.metadata, dict)
-
-    def test_complex_metadata(self):
-        """Test complex metadata structures."""
+    def test_serialization(self) -> None:
+        """SearchRecord should serialize to dict/JSON."""
         metadata = {
-            "headers": {
-                "content-type": "text/html",
-                "last-modified": "2024-01-01",
-            },
-            "extraction": {
-                "method": "beautifulsoup",
-                "duration_ms": 250,
-                "selectors_used": [".content", "#main"],
-            },
-            "metrics": {
-                "images": 5,
-                "links": 20,
-                "scripts": 3,
-            },
+            "author": "Jane",
+            "tags": ["docs"],
         }
-        result = CrawlResult(
-            url="https://example.com",
+        result = SearchRecord(
+            id="doc_789",
+            content="Content",
+            score=0.42,
             metadata=metadata,
         )
-        metadata_result = result.metadata
-        assert metadata_result is not None
-        assert metadata_result["headers"]["content-type"] == "text/html"
-        assert metadata_result["extraction"]["duration_ms"] == 250
-        selectors_used = metadata_result["extraction"]["selectors_used"]
-        assert len(selectors_used) == 2
-
-    def test_missing_required_field(self):
-        """Test that URL is required."""
-        with pytest.raises(ValidationError) as exc_info:
-            CrawlResult.model_validate({})
-        errors = exc_info.value.errors()
-        assert len(errors) == 1
-        assert errors[0]["loc"] == ("url",)
-        assert errors[0]["type"] == "missing"
-
-    def test_field_types(self):
-        """Test field type validation."""
-        # Valid types
-        CrawlResult(
-            url="https://example.com",
-            word_count=0,
-            depth=0,
-            success=True,
-        )
-
-        # Test that boolean fields accept bool values
-        result = CrawlResult(url="test", success=True)
-        assert result.success is True
-        result = CrawlResult(url="test", success=False)
-        assert result.success is False
-
-    def test_serialization(self):
-        """Test model serialization."""
-        result = CrawlResult(
-            url="https://example.com",
-            title="Test Page",
-            content="Test content",
-            word_count=2,
-            success=True,
-            links=["https://example.com/other"],
-            metadata={"key": "value"},
-        )
-
-        # Test dict serialization
         data = result.model_dump()
-        assert data["url"] == "https://example.com"
-        assert data["title"] == "Test Page"
-        assert data["word_count"] == 2
-        assert data["success"] is True
-        assert data["links"] == ["https://example.com/other"]
-        assert data["metadata"] == {"key": "value"}
+        assert data["metadata"] == metadata
+        json_data = json.loads(result.model_dump_json())
+        assert json_data["metadata"]["tags"] == ["docs"]
 
-        # Test JSON serialization
-        json_str = result.model_dump_json()
-        assert "https://example.com" in json_str
-        assert "Test Page" in json_str
+
+class TestOperationStatus:
+    """OperationStatus and dictionary response helpers."""
+
+    def test_status_defaults(self) -> None:
+        """OperationStatus should accept minimal payloads."""
+        status = OperationStatus(status="success")
+        assert status.status == "success"
+        assert status.message is None
+        assert status.details is None
+
+    def test_status_with_details(self) -> None:
+        """OperationStatus should preserve details."""
+        status = OperationStatus(
+            status="error",
+            message="failed",
+            details={"attempts": 2},
+        )
+        dumped = status.model_dump()
+        assert dumped["message"] == "failed"
+        assert dumped["details"] == {"attempts": 2}
+
+    def test_generic_dict_response(self) -> None:
+        """GenericDictResponse should allow arbitrary keys."""
+        payload = GenericDictResponse.model_validate(
+            {"value": "ok", "diagnostics": {"span": "abc"}}
+        )
+        dumped = payload.model_dump()
+        assert dumped["value"] == "ok"
+        assert dumped["diagnostics"]["span"] == "abc"
+
+
+class TestEmbeddingGenerationResponse:
+    """EmbeddingGenerationResponse coverage."""
+
+    def test_dense_only_payload(self) -> None:
+        """Dense embeddings should serialize as lists."""
+        response = EmbeddingGenerationResponse(
+            embeddings=[[1.0, 0.5]],
+            model="local-model",
+            provider="fastembed",
+            total_tokens=42,
+        )
+        data = response.model_dump()
+        assert data["embeddings"] == [[1.0, 0.5]]
+        assert data["model"] == "local-model"
+        assert data["provider"] == "fastembed"
+        assert data["total_tokens"] == 42
+
+    def test_hybrid_payload(self) -> None:
+        """Sparse embeddings should remain optional."""
+        response = EmbeddingGenerationResponse(
+            embeddings=[[0.1, 0.2]],
+            sparse_embeddings=[[0.3, 0.4]],
+        )
+        assert response.sparse_embeddings == [[0.3, 0.4]]
+
+    def test_extra_fields(self) -> None:
+        """Extra keys should be preserved due to allow extra config."""
+        response = EmbeddingGenerationResponse(
+            embeddings=[[0.0]],
+            cost_estimate=1.23,
+            model="model",
+            provider="provider",
+        )
+        dumped = response.model_dump()
+        assert dumped["cost_estimate"] == 1.23

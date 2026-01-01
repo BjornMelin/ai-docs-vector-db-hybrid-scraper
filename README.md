@@ -429,7 +429,7 @@ python scripts/dev.py test --profile ci
 python scripts/dev.py quality
 ```
 
-Performance and benchmark suites are available via `python scripts/dev.py benchmark`, and chaos-focused stress suites live under `tests/` with dedicated markers.
+Performance and benchmark suites are available via `python scripts/dev.py benchmark`, load tests run through `python scripts/dev.py load --host http://localhost:8000`, and chaos-focused stress suites live under `tests/` with dedicated markers.
 
 ## Documentation & Resources
 

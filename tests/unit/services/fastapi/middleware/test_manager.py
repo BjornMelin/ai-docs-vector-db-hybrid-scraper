@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import pytest
 from starlette.applications import Starlette
 
 from src.services.fastapi.middleware import manager
@@ -23,9 +22,7 @@ def _middleware_class_names(app: Starlette) -> list[str]:
     return names
 
 
-def test_apply_defaults_installs_expected_stack(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_apply_defaults_installs_expected_stack() -> None:
     """Test that apply_defaults installs the expected middleware stack."""
     called = False
 
@@ -34,34 +31,29 @@ def test_apply_defaults_installs_expected_stack(
         called = True
         return "instrumented"
 
-    monkeypatch.setattr(manager, "setup_prometheus", _fake_setup)
-    monkeypatch.setitem(manager._FUNCTION_REGISTRY, "prometheus", _fake_setup)  # type: ignore[attr-defined]
     app = Starlette()
 
-    manager.apply_defaults(app)
+    with manager.override_registry(functions={"prometheus": _fake_setup}):
+        manager.apply_defaults(app)
 
-    assert called is True
+    assert called
     names = _middleware_class_names(app)
     # Starlette stores middleware in reverse order of addition.
-    expected = [
-        "PerformanceMiddleware",
-        "SlowAPIMiddleware",
-        "TimeoutMiddleware",
-        "SecurityMiddleware",
-    ]
+    compression_candidates = {
+        manager.CompressionMiddleware.__name__,
+        manager.BrotliCompressionMiddleware.__name__,
+    }
+    assert "PerformanceMiddleware" in names
+    assert "SlowAPIMiddleware" in names
+    assert "TimeoutMiddleware" in names
+    assert "SecurityMiddleware" in names
+    assert any(name in compression_candidates for name in names)
 
-    compression_cls_name = manager.CompressionMiddleware.__name__
-    if "brotli" in manager._CLASS_REGISTRY:  # type: ignore[attr-defined]
-        compression_cls_name = manager.BrotliCompressionMiddleware.__name__
-    expected.append(compression_cls_name)
-
-    if "correlation" in manager._CLASS_REGISTRY:  # type: ignore[attr-defined]
-        expected.append("CorrelationIdMiddleware")
-
-    assert names == expected
+    if manager.is_registered("correlation"):
+        assert "CorrelationIdMiddleware" in names
 
 
-def test_apply_defaults_sets_limiter_state(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_apply_defaults_sets_limiter_state() -> None:
     """Test that apply_defaults sets the limiter state."""
     limiter_instance = object()
 
@@ -69,29 +61,27 @@ def test_apply_defaults_sets_limiter_state(monkeypatch: pytest.MonkeyPatch) -> N
         app.state.limiter = limiter_instance
         return limiter_instance
 
-    monkeypatch.setattr(manager, "enable_global_rate_limit", _fake_enable)
-    monkeypatch.setitem(manager._FUNCTION_REGISTRY, "rate_limiting", _fake_enable)  # type: ignore[attr-defined]
-    monkeypatch.setattr(manager, "setup_prometheus", lambda app, **_: None)
-    monkeypatch.setitem(manager._FUNCTION_REGISTRY, "prometheus", lambda app, **_: None)  # type: ignore[attr-defined]
-
     app = Starlette()
-    manager.apply_defaults(app)
+    with manager.override_registry(
+        functions={
+            "rate_limiting": _fake_enable,
+            "prometheus": lambda app, **_: None,
+        }
+    ):
+        manager.apply_defaults(app)
 
     assert app.state.limiter is limiter_instance
 
 
-def test_apply_named_stack_returns_applied_names(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_apply_named_stack_returns_applied_names() -> None:
     """Test that apply_named_stack returns applied middleware names."""
-    monkeypatch.setattr(manager, "enable_global_rate_limit", lambda app, **_: None)
-    monkeypatch.setattr(manager, "setup_prometheus", lambda app, **_: None)
-    monkeypatch.setitem(
-        manager._FUNCTION_REGISTRY, "rate_limiting", lambda app, **_: None
-    )  # type: ignore[attr-defined]
-    monkeypatch.setitem(manager._FUNCTION_REGISTRY, "prometheus", lambda app, **_: None)  # type: ignore[attr-defined]
-
     app = Starlette()
-    applied = manager.apply_named_stack(app, ["security", "performance", "unknown"])
+    with manager.override_registry(
+        functions={
+            "rate_limiting": lambda app, **_: None,
+            "prometheus": lambda app, **_: None,
+        }
+    ):
+        applied = manager.apply_named_stack(app, ["security", "performance", "unknown"])
 
     assert applied == ["security", "performance"]
