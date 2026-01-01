@@ -97,7 +97,7 @@ jobs:
           cat <<'YAML' > "${valid_root}/values.yml"
           cache: {}
           YAML
-          cat <<'JSON' > "${valid_templates}/development.json"
+          cat <<'JSON' > "${valid_templates}/base.json"
           {
             "environment": "development",
             "cache": {},
@@ -105,16 +105,31 @@ jobs:
             "performance": {}
           }
           JSON
+          cat <<'JSON' > "${valid_templates}/profiles.json"
+          {
+            "development": {
+              "overrides": {}
+            }
+          }
+          JSON
 
           invalid_root="${RUNNER_TEMP}/config-invalid"
           invalid_templates="${invalid_root}/templates"
           mkdir -p "${invalid_templates}"
           cp "${valid_root}/settings.json" "${invalid_root}/settings.json"
-          cat <<'JSON' > "${invalid_templates}/development.json"
+          cat <<'JSON' > "${invalid_templates}/base.json"
           {
             "environment": "production",
             "cache": {},
-            "qdrant": {}
+            "qdrant": {},
+            "performance": {}
+          }
+          JSON
+          cat <<'JSON' > "${invalid_templates}/profiles.json"
+          {
+            "development": {
+              "overrides": {}
+            }
           }
           JSON
 
