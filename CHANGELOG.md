@@ -263,7 +263,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   maintained `VectorDBManager` surface.
 - Replaced the batch CLI help-text smoke tests with deterministic coverage of completion helpers, dry-run previews, and
   destructive-operation confirmations using asyncio-backed stubs.
-- Simplified `pytest.ini` to enforce warnings-as-errors, strict markers, and a seeded pytest-randomly configuration that aligns
+- Consolidated pytest configuration into `pyproject.toml` to enforce warnings-as-errors, strict markers, and a seeded pytest-randomly configuration that aligns
   with the new deterministic fixtures.
 - Rebuilt `tests/unit/mcp_tools` around async-aware stubs, shared MCP decorators,
   and focused validation coverage while deleting the legacy duplicated suites.

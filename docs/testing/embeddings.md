@@ -29,7 +29,7 @@ Scopes: Default to function scope. Use module scope for expensive, immutable res
 
 ## Async & Time
 
-- `pytest.ini`: `asyncio_mode = auto` reduces boilerplate; mark explicit `@pytest.mark.asyncio` where helpful.
+- Pytest config now lives under `[tool.pytest.ini_options]` in `pyproject.toml`; `asyncio_mode = auto` reduces boilerplate—add explicit `@pytest.mark.asyncio` where helpful.
 - Time freeze: prefer `time-machine` for async compatibility and performance; keep function-scoped to avoid bleed between tests.
 
 ## Coverage & Profiles
