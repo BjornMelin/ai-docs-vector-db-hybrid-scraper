@@ -430,33 +430,16 @@ uv run pytest --html=report.html --self-contained-html
 
 ## Test Configuration
 
-### pytest.ini
-```ini
-[tool:pytest]
-minversion = 6.0
-addopts = -ra -q --strict-markers
-testpaths = tests
-markers =
-    unit: Unit tests
-    service: Service integration tests
-    e2e: End-to-end tests
-    benchmark: Performance benchmarks
-    memory: Memory tests
-    serial: Tests that must run serially
-```
+### Pytest (pyproject.toml)
+- Centralized under `[tool.pytest.ini_options]` in `pyproject.toml` to keep the root clean.
+- Defaults: strict config/markers, deterministic `pytest-randomly` seed + preserved seed, doctests enabled, 10 slowest durations reported, and quiet output.
+- Discovery: `testpaths = ["tests"]` with `python_files = ["test_*.py", "*_test.py"]` and class/function patterns matching both `Test*` and `*Tests`.
+- Async: `asyncio_mode = "auto"` and a function-scoped default loop.
+- Markers: see the consolidated list in `pyproject.toml` for unit, service, e2e, performance, resiliency, and browser/RAG-specialized suites.
 
 ### Coverage Configuration
-```ini
-[run]
-source = src
-omit = 
-    */tests/*
-    */conftest.py
-    
-[report]
-exclude_lines =
-    pragma: no cover
-    def __repr__
-    raise AssertionError
-    raise NotImplementedError
-```
+- Defined in `[tool.coverage.run]` and `[tool.coverage.report]` within `pyproject.toml` to keep configuration centralized.
+- Key defaults:
+  - `source = ["src"]`, branch coverage enabled, and targeted omit rules for CLI entrypoints and optional/development modules.
+  - `fail_under = 80.0` with `show_missing = true` to keep gaps visible.
+  - Common exclusions (`pragma: no cover`, `__repr__`, and `NotImplementedError` guards) handled via `exclude_lines`.

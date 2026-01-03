@@ -355,6 +355,8 @@ lines-after-imports = 2
 pythonVersion = "3.12"
 typeCheckingMode = "standard"
 include = ["src", "tests", "scripts", "examples"]
+venvPath = "."
+venv = ".venv"
 exclude = [
     "build",
     "dist",
@@ -389,87 +391,111 @@ root = "examples"
 typeCheckingMode = "basic"
 
 [tool.pytest.ini_options]
-# Modern asyncio configuration - essential for async testing
+minversion = "8.4"
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
-
-# Test discovery and execution
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
 python_functions = ["test_*"]
 python_classes = ["Test*", "*Tests", "*Test"]
-minversion = "8.4"
-
-# Performance and reliability optimizations
-considerfailures = true # Re-run failed tests first
-tb_native = true        # Use Python's native traceback
-
-# Essential pytest flags for development workflow
+considerfailures = true
+tb_native = true
 addopts = [
-    "--strict-markers",              # Treat unknown markers as errors
-    "--strict-config",               # Error on unknown config keys
-    "--tb=short",                    # Shorter traceback format
-    "--durations=10",                # Show 10 slowest tests
-    "--maxfail=5",                   # Stop after 5 failures
-    "--import-mode=prepend",         # Prepend mode for src imports
-    "--showlocals",                  # Show local variables in tracebacks
-    "--doctest-modules",             # Run doctests in modules
-    "--doctest-continue-on-failure", # Continue after doctest failures
-    "--disable-warnings",            # Clean output
-    "--randomly-seed=42",            # Deterministic pytest-randomly seed
-    "-q",                            # Quiet baseline output
+    "--strict-markers",
+    "--strict-config",
+    "--tb=short",
+    "--durations=10",
+    "--maxfail=5",
+    "--import-mode=prepend",
+    "--showlocals",
+    "--doctest-modules",
+    "--doctest-continue-on-failure",
+    "--randomly-seed=42",
+    "--randomly-dont-reset-seed",
+    "-q",
 ]
-
-# Warning filters for clean test output
 filterwarnings = [
+    "error",
     "ignore::DeprecationWarning",
     "ignore::PendingDeprecationWarning",
     "ignore::UserWarning:.*playwright.*",
+    "ignore:pkg_resources is deprecated as an API\\.:DeprecationWarning",
+    "ignore::pydantic.warnings.PydanticDeprecatedSince20",
+    "ignore:jsonschema\\.exceptions\\.RefResolutionError is deprecated:DeprecationWarning",
+    "ignore:read_text is deprecated:DeprecationWarning",
+    "ignore:open_text is deprecated:DeprecationWarning",
+    "ignore:unclosed event loop:ResourceWarning",
+    "ignore:unclosed <socket\\.socket:ResourceWarning",
 ]
-
-# Custom test markers for AI/vector DB/web scraping project
 markers = [
     "accessibility: mark test as accessibility test",
     "ai: mark test as AI/ML specific",
+    "api_latency: mark test as API latency monitoring coverage",
     "authentication: mark test as authentication test",
     "authorization: mark test as authorization test",
+    "baseline: baseline comparisons for regression tracking",
     "benchmark: mark test as benchmark test",
     "browser: mark test as browser automation test",
+    "chaos: chaos and failure injection tests",
     "cli: mark test as CLI-specific",
+    "comparison: comparison harness coverage for legacy migrations",
+    "compatibility: cross-version compatibility scenarios",
+    "component: component-level integration coverage",
+    "config: configuration model tests",
+    "cpu: CPU performance validation",
     "database: mark test as requiring database",
+    "data_protection: data protection compliance checks",
+    "data_sanitization: sanitization and scrubbing behaviours",
+    "dependency_injection: dependency injection container tests",
     "e2e: End-to-end tests (full pipeline)",
     "embedding: Embedding-related tests",
     "endurance: mark test as endurance test",
     "fast: Fast unit tests (<100ms each)",
-    "service: Service integration tests (<5s each)",
-    "interactive: mark test as requiring interactive features",
-    "input_validation: mark test as input validation test",
-    "load: mark test as load test",
+    "framework_resolution: framework resolution logic tests",
     "hypothesis: mark test as property-based using Hypothesis",
+    "input_validation: mark test as input validation test",
+    "interactive: mark test as requiring interactive features",
+    "latency_validation: latency threshold enforcement",
+    "load: mark test as load test",
+    "memory: memory footprint validation",
+    "models: model schema coverage",
+    "modern: modern platform focused tests",
+    "monitoring: observability pipeline validation",
+    "network: network-dependent scenarios",
+    "observability: observability configuration coverage",
     "performance: Performance and benchmark tests",
+    "pii_detection: personally identifiable information detection",
     "property: mark test as property-based test",
+    "property_based: property-based regression checks",
+    "query_processing: query processing pipelines",
     "questionary: mark test as requiring questionary interactions",
     "rag: RAG system tests",
     "rate_limit: mark test as rate limit test",
+    "rbac: role-based access control flows",
+    "recorded: recorded HTTP interactions",
+    "responsive: responsiveness validation",
     "respx: mark test as using respx HTTP mocking",
+    "respx_compatibility: respx compatibility surface checks",
     "rich: mark test as requiring Rich console features",
+    "security: security-focused scenarios",
+    "service: Service integration tests (<5s each)",
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "spike: mark test as spike test",
     "stress: mark test as stress test",
+    "throughput: throughput testing workloads",
+    "throughput_validation: throughput threshold enforcement",
     "unit: marks tests as unit tests",
     "vector_db: Vector database tests",
+    "visual: visual regression scenarios",
     "volume: mark test as volume test",
     "vulnerability: mark test as vulnerability test",
     "asyncio: marks tests as async tests",
+    "optional_deps: depends on optional libraries",
 ]
-
-# Logging configuration for tests
 log_cli = false
 log_cli_level = "WARNING"
 log_cli_format = "%(asctime)s [%(levelname)8s] %(name)s: %(message)s"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
-
-# Parallel execution settings for CI/CD
 addopts_parallel = ["--dist=worksteal", "--tx=auto", "-q"]
 
 [tool.coverage.run]
@@ -510,6 +536,14 @@ preview = true
 
 [tool.uv.extra-build-dependencies]
 flash-attn = [{ requirement = "torch", match-runtime = true }]
+
+[tool.mutmut]
+paths_to_mutate = ["src/config/"]
+runner = "uv run pytest -x tests/unit/core/test_constants.py tests/unit/config/ -m \"unit and fast\" -q"
+exclude_patterns = ["__pycache__", "*.pyc", "migrations/"]
+cache_dir = ".mutmut-cache"
+backup = true
+only_covered_lines = true
 
 # ===== Dependency Groups =====
 [tool.pylint]
