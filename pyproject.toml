@@ -107,7 +107,7 @@ docs = [
 # Require ragas ≥0.3.5 to ensure llm_factory and modern SingleTurnSample schema
 eval = ["ragas>=0.3.5,<1.0.0"]
 dev = [
-    "pytest>=8.4.2,<9.0.0",
+    "pytest>=8.4.2,<10.0.0",
     "pytest-asyncio>=1.2.0,<2.0.0",
     "asgi-lifespan>=2.1.0,<3.0.0",
     "pytest-cov>=7.0.0,<8.0.0",
