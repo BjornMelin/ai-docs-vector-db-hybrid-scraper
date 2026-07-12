@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
       - name: qdrant
-        image: qdrant/qdrant:latest
+        image: qdrant/qdrant:v1.16.2
         ports:
         - containerPort: 6333
           name: http-api
@@ -66,14 +66,14 @@ spec:
             cpu: "2"
         livenessProbe:
           httpGet:
-            path: /health
+            path: /livez
             port: 6333
           initialDelaySeconds: 60
           periodSeconds: 30
           timeoutSeconds: 10
         readinessProbe:
           httpGet:
-            path: /health
+            path: /readyz
             port: 6333
           initialDelaySeconds: 30
           periodSeconds: 10

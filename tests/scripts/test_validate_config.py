@@ -71,13 +71,55 @@ def test_validate_templates_handles_environment_mismatch(tmp_path: Path) -> None
 
     summary = validate_config.validate_templates(
         templates_dir,
-        validate_config.DEFAULT_REQUIRED_TEMPLATE_KEYS,
         environment="development",
     )
 
     assert summary.checked == 1
     assert summary.errors
     assert "development" in summary.errors[0]
+
+
+def test_validate_templates_inherits_settings_defaults(tmp_path: Path) -> None:
+    """Partial templates should inherit omitted sections from Settings."""
+    templates_dir = tmp_path / "config" / "templates"
+    templates_dir.mkdir(parents=True)
+    (templates_dir / "base.json").write_text(
+        json.dumps({"environment": "development"}), encoding="utf-8"
+    )
+    (templates_dir / "profiles.json").write_text(
+        json.dumps({"minimal": {"overrides": {}}}), encoding="utf-8"
+    )
+
+    summary = validate_config.validate_templates(templates_dir, environment=None)
+
+    assert summary.checked == 1
+    assert not summary.errors
+
+
+def test_validate_templates_uses_packaged_assets_by_default() -> None:
+    """The CI validator should inspect the same assets consumed by the wizard."""
+    summary = validate_config.validate_templates(None, environment="development")
+
+    assert summary.checked == 1
+    assert not summary.errors
+
+
+def test_validate_templates_rejects_unknown_settings(tmp_path: Path) -> None:
+    """Template validation should reject removed fields instead of ignoring them."""
+    templates_dir = tmp_path / "config" / "templates"
+    templates_dir.mkdir(parents=True)
+    (templates_dir / "base.json").write_text("{}\n", encoding="utf-8")
+    (templates_dir / "profiles.json").write_text(
+        json.dumps(
+            {"legacy": {"overrides": {"fastembed": {"retrieval_mode": "hybrid"}}}}
+        ),
+        encoding="utf-8",
+    )
+
+    summary = validate_config.validate_templates(templates_dir, environment=None)
+
+    assert summary.checked == 1
+    assert any("fastembed.retrieval_mode" in error for error in summary.errors)
 
 
 def test_main_handles_missing_config_root(

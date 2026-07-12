@@ -10,7 +10,8 @@
         "langchain-community",
         "langchain-openai",
         "fastembed",
-        "qdrant-client"
+        "qdrant-client",
+        "qdrant/qdrant"
       ],
       "groupName": "retrieval-stack",
       "schedule": ["before 07:00 on monday"],

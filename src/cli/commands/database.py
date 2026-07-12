@@ -408,10 +408,9 @@ def search_collection(
     score_threshold: float | None,
 ):
     """Search a vector database collection."""
-    rich_cli = ctx.obj["rich_cli"]
-    rich_cli.console.print(
-        "[yellow]Vector search via CLI is not yet implemented. "
-        "Use the API or management UI for query execution.[/yellow]"
+    raise click.ClickException(
+        "Vector search is not implemented in the ai-docs CLI. "
+        "Use the FastAPI or MCP search interface."
     )
 
 
@@ -470,7 +469,7 @@ def database_stats(ctx: click.Context):
 
     stats_table.add_row("Total Collections", str(total_collections))
     stats_table.add_row("Total Vectors", f"{total_vectors:,}")
-    stats_table.add_row("Database Host", f"{config.qdrant.host}:{config.qdrant.port}")
+    stats_table.add_row("Database URL", config.qdrant.url)
 
     rich_cli.console.print(stats_table)
 

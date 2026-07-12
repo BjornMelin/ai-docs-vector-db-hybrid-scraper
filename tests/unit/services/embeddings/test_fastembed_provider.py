@@ -22,6 +22,8 @@ class _StubDenseEmbeddings:
     model_name: str
     doc_embed_type: str
     max_length: int = 256
+    cache_dir: str | None = None
+    batch_size: int = 32
 
     def embed_query(self, text: str) -> list[float]:
         """Embed the query."""
@@ -35,9 +37,16 @@ class _StubDenseEmbeddings:
 class _StubSparseEmbeddings:
     """Stub sparse embedding generator mimicking langchain-qdrant output."""
 
-    def __init__(self, model_name: str) -> None:
+    def __init__(
+        self,
+        model_name: str,
+        cache_dir: str | None = None,
+        batch_size: int = 32,
+    ) -> None:
         """Initialize the stub sparse embeddings."""
         self.model_name = model_name
+        self.cache_dir = cache_dir
+        self.batch_size = batch_size
 
     def embed_documents(self, texts: list[str]) -> list[SimpleNamespace]:
         """Embed the documents."""
@@ -150,6 +159,16 @@ async def test_generate_sparse_embeddings_happy_path() -> None:
         {"indices": [0, 1], "values": [5, 1.0]},
         {"indices": [1, 2], "values": [4, 1.0]},
     ]
+
+
+@pytest.mark.asyncio
+async def test_generate_sparse_embeddings_respects_disabled_model() -> None:
+    """An explicit null sparse model should disable sparse generation."""
+    provider = FastEmbedProvider(sparse_model=None)
+    await provider.initialize()
+
+    with pytest.raises(EmbeddingServiceError, match="disabled by configuration"):
+        await provider.generate_sparse_embeddings(["alpha"])
 
 
 @pytest.mark.asyncio

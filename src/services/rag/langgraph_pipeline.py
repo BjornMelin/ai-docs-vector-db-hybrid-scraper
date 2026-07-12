@@ -325,9 +325,13 @@ class LangGraphRAGPipeline:
             )
             return DocumentCompressorPipeline(transformers=[])
 
-        fastembed_config = getattr(self._vector_service.config, "fastembed", None)
-        model_name = getattr(fastembed_config, "dense_model", "BAAI/bge-small-en-v1.5")
-        embeddings = FastEmbedEmbeddings(model_name=model_name)
+        fastembed = self._vector_service.config.fastembed
+        embeddings = FastEmbedEmbeddings(
+            model_name=fastembed.dense_model,
+            cache_dir=fastembed.cache_dir,
+            max_length=fastembed.max_length,
+            batch_size=fastembed.batch_size,
+        )
         transformer = EmbeddingsFilter(
             embeddings=embeddings,
             similarity_threshold=config.compression_similarity_threshold,

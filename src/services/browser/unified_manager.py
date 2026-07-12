@@ -42,7 +42,9 @@ class UnifiedBrowserManager:
                 ProviderContext(ProviderKind.PLAYWRIGHT), browser_cfg.playwright
             ),
             browser_use=BrowserUseProvider(
-                ProviderContext(ProviderKind.BROWSER_USE), browser_cfg.browser_use
+                ProviderContext(ProviderKind.BROWSER_USE),
+                browser_cfg.browser_use,
+                openai_api_key=settings.openai.api_key,
             ),
             firecrawl=FirecrawlProvider(
                 ProviderContext(ProviderKind.FIRECRAWL), browser_cfg.firecrawl

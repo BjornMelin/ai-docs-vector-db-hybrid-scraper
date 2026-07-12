@@ -43,7 +43,12 @@ class VectorServiceFake:
         self._matches = matches
         self._initialized = False
         self.config = SimpleNamespace(
-            fastembed=SimpleNamespace(dense_model="BAAI/bge-small-en-v1.5")
+            fastembed=SimpleNamespace(
+                dense_model="BAAI/bge-small-en-v1.5",
+                cache_dir=None,
+                max_length=512,
+                batch_size=32,
+            )
         )
 
     async def initialize(self) -> None:  # pragma: no cover - simple stub

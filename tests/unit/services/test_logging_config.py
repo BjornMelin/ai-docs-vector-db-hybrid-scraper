@@ -79,6 +79,7 @@ def test_configure_logging_installs_managed_handlers(tmp_path: Path) -> None:
 
     file_handler = next(h for h in handlers if isinstance(h, logging.FileHandler))
     assert file_handler.baseFilename == str(log_path)
+    assert file_handler.stream is not None
     assert file_handler.stream.encoding == "utf-8"
 
 

@@ -2,15 +2,16 @@
 
 from unittest.mock import patch
 
+from src.config import Settings, get_settings, refresh_settings
+from src.config.models import (
+    Environment,
+    ObservabilityConfig as SettingsObservabilityConfig,
+)
 from src.services.observability import dependencies
 
 
 class TestObservabilityService:
     """Tests for the observability service dependencies."""
-
-    def setup_method(self) -> None:
-        """Set up test fixtures before each test method."""
-        dependencies.get_observability_service.cache_clear()
 
     def test_service_initialises_observability(self) -> None:
         """Test that the observability service initializes correctly."""
@@ -35,6 +36,36 @@ class TestObservabilityService:
         assert service["ai_tracker"] == "tracker"
         mock_init.assert_called_once()
         mock_tracer.assert_called_once()
+
+    def test_service_follows_refreshed_settings(self) -> None:
+        """Service metadata should follow the canonical settings owner."""
+        original = get_settings()
+        first = Settings(
+            environment=Environment.TESTING,
+            observability=SettingsObservabilityConfig(
+                enabled=False,
+                service_name="first",
+            ),
+        )
+        second = Settings(
+            environment=Environment.TESTING,
+            observability=SettingsObservabilityConfig(
+                enabled=False,
+                service_name="second",
+            ),
+        )
+        try:
+            refresh_settings(settings=first)
+            assert dependencies.get_observability_service()["config"].service_name == (
+                "first"
+            )
+
+            refresh_settings(settings=second)
+            assert dependencies.get_observability_service()["config"].service_name == (
+                "second"
+            )
+        finally:
+            refresh_settings(settings=original)
 
     async def test_record_ai_operation_metrics(self) -> None:
         """Test recording AI operation metrics."""

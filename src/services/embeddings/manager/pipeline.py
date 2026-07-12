@@ -248,8 +248,36 @@ class EmbeddingPipeline:
             max_cost=options.max_cost,
             speed_priority=options.speed_priority,
         )
+        providers = self._providers.providers
+        if not self._selection.can_rank(providers):
+            configured_name = str(
+                getattr(
+                    self._config.embedding_provider,
+                    "value",
+                    self._config.embedding_provider,
+                )
+            )
+            provider = self._providers.resolve(
+                configured_name,
+                tier_for_recommendation,
+            )
+            estimated_cost = text_analysis.estimated_tokens * provider.cost_per_token
+            if options.max_cost is not None and estimated_cost > options.max_cost:
+                msg = (
+                    "No models available for constraints: "
+                    f"max_cost={options.max_cost}, "
+                    f"tokens={text_analysis.estimated_tokens}"
+                )
+                raise ValueError(msg)
+            return ProviderSelection(
+                provider=provider,
+                model=provider.model_name,
+                estimated_cost=estimated_cost,
+                reasoning="Configured provider fallback",
+            )
+
         recommendation = self._selection.recommend(
-            providers=self._providers.providers,
+            providers=providers,
             text_analysis=text_analysis,
             params=recommendation_params,
         )

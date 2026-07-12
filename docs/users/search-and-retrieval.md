@@ -25,7 +25,7 @@ Our system uses multiple AI techniques working together to understand what you'r
 
 - **Semantic Search**: Understands meaning, not just keyword matching
 - **HyDE Compatibility Mode**: Provides the historic HyDE entry point while delegating to the unified hybrid search pipeline
-- **Smart Reranking**: Uses AI to reorder results by relevance
+- **Optional Smart Reranking**: Uses AI to reorder results by relevance when enabled
 - **Multi-Stage Retrieval**: Searches broadly first, then refines for precision
 
 ### 🔍 What This Means For You
@@ -102,9 +102,14 @@ contract or want a named tool for hybrid search. For new workflows, the default
 **User experience**: Expect faster responses with the same query semantics—the
 result list mirrors the unified hybrid search pipeline.
 
-### Semantic Reranking (Automatic)
+### Semantic Reranking (Optional)
 
 **What it does**: After finding potential matches, AI re-examines each result to determine true relevance to your query.
+
+**How to enable it**: Install the optional model stack with
+`uv sync --frozen --extra reranking`, set
+`AI_DOCS_RERANKING__ENABLED=true`, and restart the application. Reranking is
+disabled by default.
 
 **When it helps most**:
 
@@ -133,12 +138,11 @@ traditional keyword-based searches.
 
 - `dense` – Uses FastEmbed dense vectors for semantic similarity.
 - `sparse` – Uses FastEmbedSparse BM25-style signals for lexical precision.
-- `hybrid` (default) – Combines both and lets Qdrant fuse scores during ranking.
+- `hybrid` – Combines both and lets Qdrant fuse scores during ranking.
 
 **How to use it**:
 
-- REST/MCP payloads: set `search_strategy` (REST) or `retrieval_mode` (config/CLI) to `dense`, `sparse`, or `hybrid`.
-- CLI: pass `--retrieval-mode` to `mcp search`, `mcp add-documents`, or `mcp add-documents-batch`.
+- Set `AI_DOCS_EMBEDDING__RETRIEVAL_MODE` to `dense`, `sparse`, or `hybrid` before starting the application. The default is `dense`.
 
 **User experience**: Hybrid usually provides the strongest relevance, while `dense` can reduce latency for short-term experiments and `sparse` helps when chasing exact keyword matches.
 

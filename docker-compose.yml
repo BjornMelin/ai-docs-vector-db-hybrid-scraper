@@ -1,9 +1,7 @@
-version: "3.8"
-
 services:
   # Qdrant Vector Database (shared across modes)
   qdrant:
-    image: qdrant/qdrant:latest
+    image: qdrant/qdrant:v1.16.2
     container_name: qdrant-vector-db
     restart: unless-stopped
     ports:
@@ -19,7 +17,7 @@ services:
       - QDRANT__STORAGE__QUANTIZATION__ALWAYS_RAM=true # Enterprise optimization
       - QDRANT__STORAGE__PERFORMANCE__MAX_SEARCH_THREADS=8 # Enterprise: higher threads
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      test: ["CMD", "bash", "-c", ": > /dev/tcp/127.0.0.1/6333"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -38,20 +36,16 @@ services:
           memory: 1G
           cpus: "0.5"
 
-  # Redis/Dragonfly Cache (enterprise only)
-  redis:
-    image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+  # Dragonfly Cache (enterprise only)
+  dragonfly:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly:v1.39.0
     container_name: dragonfly-cache
     restart: unless-stopped
     ports:
       - "6379:6379"
     volumes:
-      - redis_data:/data
-    environment:
-      - DRAGONFLY_THREADS=8 # Enterprise scaling
-      - DRAGONFLY_MEMORY_LIMIT=4gb
-      - DRAGONFLY_SNAPSHOT_INTERVAL=3600
-    command: ["--logtostderr", "--cache_mode", "--maxmemory_policy=allkeys-lru"]
+      - dragonfly_data:/data
+    command: ["--logtostderr", "--cache_mode"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 30s
@@ -98,18 +92,18 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    init: true
+    env_file:
+      - path: .env
+        required: false
     container_name: ai-docs-app
     restart: unless-stopped
     ports:
       - "8000:8000"
     environment:
-      - AI_DOCS__QDRANT__URL=http://qdrant:6333
-      - AI_DOCS__CACHE__REDIS_URL=redis://redis:6379 # Only if redis profile active
-      - AI_DOCS__LOG_LEVEL=INFO
-      - AI_DOCS__ENABLE_ADVANCED_MONITORING=${AI_DOCS__ENABLE_ADVANCED_MONITORING:-true}
-      - AI_DOCS__ENABLE_DEPLOYMENT_FEATURES=${AI_DOCS__ENABLE_DEPLOYMENT_FEATURES:-true}
-      - AI_DOCS__ENABLE_AB_TESTING=${AI_DOCS__ENABLE_AB_TESTING:-false}
-      - PYTHONPATH=/app/src
+      - AI_DOCS_QDRANT__URL=http://qdrant:6333
+      - AI_DOCS_CACHE__DRAGONFLY_URL=redis://dragonfly:6379
+      - AI_DOCS_FASTEMBED__CACHE_DIR=/app/cache/fastembed
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
@@ -117,7 +111,7 @@ services:
     depends_on:
       qdrant:
         condition: service_healthy
-      redis:
+      dragonfly:
         condition: service_healthy
         required: false # Only if enterprise
       postgres:
@@ -145,7 +139,7 @@ services:
 
   # Monitoring Stack (enterprise only)
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v3.12.0
     container_name: ai-docs-prometheus
     restart: unless-stopped
     ports:
@@ -166,7 +160,7 @@ services:
       - ai-docs-network
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:13.0.2
     container_name: ai-docs-grafana
     restart: unless-stopped
     ports:
@@ -186,7 +180,7 @@ services:
 
 volumes:
   qdrant_data:
-  redis_data:
+  dragonfly_data:
   postgres_data:
   prometheus_data:
   grafana_data:

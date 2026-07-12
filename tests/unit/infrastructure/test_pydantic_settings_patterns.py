@@ -160,10 +160,9 @@ def test_config_feature_flags_and_helpers(tmp_path: Path) -> None:
     config = Settings.model_validate(
         {
             "environment": Environment.TESTING,
-            "enable_advanced_monitoring": False,
             "observability": {"enabled": True},
             "chunking": {"strategy": ChunkingStrategy.ENHANCED},
-            "embedding": {"search_strategy": SearchStrategy.HYBRID},
+            "embedding": {"retrieval_mode": SearchStrategy.HYBRID},
             "data_dir": overrides["data_dir"],
             "cache_dir": overrides["cache_dir"],
             "logs_dir": overrides["logs_dir"],
@@ -173,11 +172,28 @@ def test_config_feature_flags_and_helpers(tmp_path: Path) -> None:
     feature_flags = config.get_feature_flags()
 
     assert feature_flags == {
-        "advanced_monitoring": False,
         "comprehensive_observability": True,
     }
     assert config.get_effective_chunking_strategy() is ChunkingStrategy.ENHANCED
     assert config.get_effective_search_strategy() is SearchStrategy.HYBRID
+
+
+@pytest.mark.parametrize(
+    "retrieval_mode",
+    [SearchStrategy.SPARSE, SearchStrategy.HYBRID],
+)
+def test_sparse_retrieval_requires_sparse_model(
+    retrieval_mode: SearchStrategy,
+) -> None:
+    """Invalid sparse retrieval settings should fail before service startup."""
+    with pytest.raises(ValidationError, match=r"fastembed\.sparse_model"):
+        Settings.model_validate(
+            {
+                "environment": Environment.TESTING,
+                "embedding": {"retrieval_mode": retrieval_mode},
+                "fastembed": {"sparse_model": None},
+            }
+        )
 
 
 def test_global_config_cache_and_reset(tmp_path: Path) -> None:

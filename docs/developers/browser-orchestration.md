@@ -87,7 +87,7 @@ Configuration models live exclusively in `src/config/browser.py`; service
 modules consume them but never define alternatives.
 
 Environment overrides follow the nested naming convention, e.g.
-`AI_DOCS__BROWSER__FIRECRAWL__API_KEY` sets the Firecrawl credential used by
+`AI_DOCS_BROWSER__FIRECRAWL__API_KEY` sets the Firecrawl credential used by
 `FirecrawlProvider` when `settings.browser.firecrawl.api_key` is empty.
 
 ## Testing Strategy

@@ -17,14 +17,13 @@ managed services from `src/services/service_resolver.py`.
 {
   "query": "vector databases",
   "collection": "documents",
-  "limit": 10,
-  "search_strategy": "hybrid"
+  "limit": 10
 }
 ```
 
-`search_strategy` accepts `dense`, `sparse`, or `hybrid`. Hybrid combines
-FastEmbed dense vectors with optional sparse payloads when the embedding config
-exposes a sparse model.
+Retrieval mode is an application startup setting. Set
+`AI_DOCS_EMBEDDING__RETRIEVAL_MODE` to `dense`, `sparse`, or `hybrid`; hybrid
+combines FastEmbed dense vectors with configured sparse vectors.
 
 Response (`SearchResponse`):
 
@@ -91,8 +90,8 @@ one-to-one to those fields.
 
 `VectorStoreService` persists the resulting payloads through LangChain's
 `QdrantVectorStore`. FastEmbed dense and sparse embeddings are initialised once
-and reused across ingestion surfaces so hybrid scoring is available when
-`retrieval_mode` (or request `search_strategy`) is set to `hybrid`.
+and reused across ingestion surfaces so hybrid scoring is available when the
+application starts with `EmbeddingConfig.retrieval_mode` set to `hybrid`.
 
 ### Health
 

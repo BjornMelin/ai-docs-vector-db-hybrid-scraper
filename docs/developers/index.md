@@ -23,7 +23,7 @@ cd ai-docs-vector-db-hybrid-scraper
 uv sync --dev
 
 # Launch the local services stack
-python scripts/dev.py services start
+uv run python scripts/dev.py services start --stack simple
 
 # Validate the environment before coding
 uv run pytest -q
@@ -31,7 +31,7 @@ uv run pytest -q
 
 | Tool            | Notes                                                        |
 | --------------- | ------------------------------------------------------------ |
-| Python          | 3.11 or 3.12 (pin with `uv python pin 3.12` if unsure)       |
+| Python          | 3.11 (pin with `uv python pin 3.11`)                         |
 | Package manager | [uv](https://github.com/astral-sh/uv) for virtualenv + deps  |
 | Docker          | Desktop/Engine 24+ for Qdrant, Dragonfly, and API containers |
 | Optional        | `docker compose`, `just`, VS Code devcontainer configuration |
@@ -46,7 +46,7 @@ Keep these guides bookmarked—together they answer most day-to-day questions:
 - **[Agentic Orchestration](./agentic-orchestration.md)** – LangGraph runner, tool discovery, testing guidance.
 - **[Cache & Performance](./cache-and-performance.md)** – Persistent cache internals and performance checklist.
 - **[GPU Acceleration](./gpu-acceleration.md)** – Optional CUDA/MPS setup and helper utilities.
-- **[Platform Operations](./platform-operations.md)** – Deployment workflow, CI/CD, compatibility matrix.
+- **[Platform Operations](./platform-operations.md)** – Deployment workflow, CI/CD, and dependency authority.
 - **[API & Contracts](./api-and-contracts.md)** – REST endpoints, canonical response DTOs.
 - **[Contributing & Testing](./contributing-and-testing.md)** – Coding standards, quality gates, test strategy.
 
@@ -64,7 +64,7 @@ Supporting docs when you need more detail:
 | Add a dependency | Edit `pyproject.toml`, run `uv sync`, document config changes. |
 | Touch the API | Update models + OpenAPI schema, extend API tests, update docs. |
 | Tune performance | Adjust config knobs, capture metrics via `/metrics`, note operator impact. |
-| Operate locally | `python scripts/dev.py services start/stop/logs`, use `docker compose`. |
+| Operate locally | Use `uv run python scripts/dev.py services <start|stop|status> --stack simple`. |
 | Ship to production | Follow platform operations checklist, update release notes, notify operators. |
 
 ## 4. Development Patterns

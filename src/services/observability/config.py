@@ -2,23 +2,33 @@
 
 from __future__ import annotations
 
-import os
-from collections.abc import Iterable, Mapping, MutableMapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
-from functools import lru_cache
-from typing import Any
+from typing import Any, Protocol, runtime_checkable
+
+from src import __version__
 
 
 DEFAULT_INSTRUMENTATIONS = ("fastapi", "httpx")
+
+
+@runtime_checkable
+class SettingsLike(Protocol):
+    """Application settings required to derive the runtime telemetry config."""
+
+    app_name: str
+    version: str
+    environment: Any
+    observability: Any
 
 
 @dataclass(slots=True)
 class ObservabilityConfig:  # pylint: disable=too-many-instance-attributes
     """Runtime configuration used to bootstrap OpenTelemetry."""
 
-    enabled: bool = True
+    enabled: bool = False
     service_name: str = "ai-docs-vector-db"
-    service_version: str = "1.0.0"
+    service_version: str = __version__
     environment: str = "development"
     otlp_endpoint: str = "http://localhost:4317"
     otlp_headers: Mapping[str, str] = field(default_factory=dict)
@@ -40,91 +50,38 @@ class ObservabilityConfig:  # pylint: disable=too-many-instance-attributes
         }
 
     @classmethod
-    def from_env(
-        cls, overrides: Mapping[str, Any] | None = None
-    ) -> ObservabilityConfig:
-        """Construct configuration from environment variables.
+    def from_settings(cls, settings: SettingsLike) -> ObservabilityConfig:
+        """Derive runtime telemetry configuration from canonical settings."""
+        observed = settings.observability
+        instrumentations: list[str] = []
+        if observed.instrument_fastapi:
+            instrumentations.append("fastapi")
+        if observed.instrument_httpx:
+            instrumentations.append("httpx")
+        if observed.track_ai_operations or observed.track_costs:
+            instrumentations.append("logging")
 
-        Args:
-            overrides: Optional mapping of override values.
-
-        Returns:
-            Observability configuration derived from environment state.
-        """
-        overrides = dict(overrides or {})
-
-        endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
-        if endpoint:
-            overrides.setdefault("otlp_endpoint", endpoint)
-
-        service_name = os.getenv("OTEL_SERVICE_NAME")
-        if service_name:
-            overrides.setdefault("service_name", service_name)
-
-        service_version = os.getenv("OTEL_SERVICE_VERSION")
-        if service_version:
-            overrides.setdefault("service_version", service_version)
-
-        environment = os.getenv("OTEL_ENVIRONMENT", os.getenv("ENV", "development"))
-        overrides.setdefault("environment", environment)
-
-        enabled_env = os.getenv("AI_DOCS_OBSERVABILITY_ENABLED")
-        if enabled_env is not None:
-            overrides.setdefault("enabled", _coerce_bool(enabled_env))
-
-        console_env = os.getenv("AI_DOCS_OBSERVABILITY_CONSOLE_EXPORTER")
-        if console_env is not None:
-            overrides.setdefault("console_exporter", _coerce_bool(console_env))
-
-        metrics_env = os.getenv("AI_DOCS_OBSERVABILITY_METRICS_ENABLED")
-        if metrics_env is not None:
-            overrides.setdefault("metrics_enabled", _coerce_bool(metrics_env))
-
-        headers_env = os.getenv("OTEL_EXPORTER_OTLP_HEADERS")
-        if headers_env:
-            overrides.setdefault("otlp_headers", _parse_headers(headers_env))
-
-        insecure_env = os.getenv("OTEL_EXPORTER_OTLP_INSECURE")
-        if insecure_env is not None:
-            overrides.setdefault("insecure_transport", _coerce_bool(insecure_env))
-
-        instrumentations_env = os.getenv("AI_DOCS_OBSERVABILITY_INSTRUMENTATIONS")
-        if instrumentations_env:
-            overrides.setdefault(
-                "instrumentations",
-                tuple(
-                    item.strip()
-                    for item in instrumentations_env.split(",")
-                    if item.strip()
-                ),
-            )
-
-        return cls(**overrides)
+        environment = getattr(settings.environment, "value", settings.environment)
+        return cls(
+            enabled=observed.enabled,
+            service_name=observed.service_name or settings.app_name,
+            service_version=observed.service_version or settings.version,
+            environment=str(environment),
+            otlp_endpoint=observed.otlp_endpoint,
+            otlp_headers=dict(observed.otlp_headers),
+            insecure_transport=observed.otlp_insecure,
+            instrumentations=tuple(dict.fromkeys(instrumentations)),
+            metrics_enabled=observed.track_ai_operations,
+            console_exporter=observed.console_exporter,
+            log_correlation=observed.track_ai_operations or observed.track_costs,
+        )
 
 
-@lru_cache(maxsize=1)
-def _load_config() -> ObservabilityConfig:
-    """Load observability configuration with caching."""
-    return ObservabilityConfig.from_env()
+def get_observability_config() -> ObservabilityConfig:
+    """Derive observability configuration from the canonical Settings owner."""
+    from src.config.loader import get_settings
 
-
-def clear_observability_cache() -> None:
-    """Reset the cached observability configuration."""
-    _load_config.cache_clear()
-
-
-def get_observability_config(*, force_refresh: bool = False) -> ObservabilityConfig:
-    """Return cached observability configuration, optionally refreshing.
-
-    Args:
-        force_refresh: When ``True`` reload configuration from environment.
-
-    Returns:
-        Observability configuration instance.
-    """
-    if force_refresh:
-        _load_config.cache_clear()
-    return _load_config()
+    return ObservabilityConfig.from_settings(get_settings())
 
 
 def get_resource_attributes(
@@ -140,21 +97,3 @@ def get_resource_attributes(
     """
     config = config or get_observability_config()
     return config.resource_attributes()
-
-
-def _coerce_bool(value: str | bool) -> bool:
-    """Coerce environment variable string to boolean."""
-    if isinstance(value, bool):
-        return value
-    return value.strip().lower() in {"1", "true", "yes", "on"}
-
-
-def _parse_headers(raw: str) -> MutableMapping[str, str]:
-    """Parse comma-separated key=value pairs into header mapping."""
-    headers: dict[str, str] = {}
-    for pair in raw.split(","):
-        if "=" not in pair:
-            continue
-        key, val = pair.split("=", 1)
-        headers[key.strip()] = val.strip()
-    return headers

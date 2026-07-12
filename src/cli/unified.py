@@ -61,6 +61,13 @@ def _dev_script_command(*args: str) -> list[str | os.PathLike[str]]:
     return [sys.executable, DEV_SCRIPT, *args]
 
 
+def _run_command_or_exit(command: Sequence[str | os.PathLike[str]]) -> None:
+    """Run a command and preserve its non-zero exit status for callers."""
+    result = _run_command(command)
+    if result.returncode != 0:
+        raise SystemExit(result.returncode)
+
+
 @click.group()
 def cli():
     """AI Docs Vector DB - Unified Development CLI."""
@@ -113,7 +120,7 @@ def test(
         cmd.extend(extra_args)
 
     click.echo(f"Running {profile} test profile")
-    _run_command(cmd)
+    _run_command_or_exit(cmd)
 
 
 @cli.command()
@@ -121,36 +128,22 @@ def setup():
     """Complete development environment setup."""
     click.echo("Setting up development environment...")
 
-    # Create .env.local if it doesn't exist
-    env_local = Path(".env.local")
-    if not env_local.exists():
-        click.echo("Creating .env.local from template...")
-        env_example = Path(".env.example")
+    env_path = REPO_ROOT / ".env"
+    if not env_path.exists():
+        click.echo("Creating .env from template...")
+        env_example = REPO_ROOT / ".env.example"
         if env_example.exists():
-            env_local.write_text(
+            env_path.write_text(
                 env_example.read_text(encoding="utf-8"),
                 encoding="utf-8",
             )
         else:
-            env_local.write_text(
-                (
-                    "AI_DOCS__ENABLE_ADVANCED_MONITORING=true\n"
-                    "AI_DOCS__ENABLE_DEPLOYMENT_FEATURES=true\n"
-                    "AI_DOCS__ENABLE_AB_TESTING=false\n"
-                    "AI_DOCS__DEBUG=true\n"
-                ),
-                encoding="utf-8",
-            )
+            raise click.ClickException(".env.example is missing")
 
-    # Install pre-commit hooks
-    click.echo("Installing pre-commit hooks...")
-    _run_command(["uv", "run", "pre-commit", "install"], capture_output=True)
-
-    # Validate configuration
     click.echo("Validating configuration...")
-    _run_command(_dev_script_command("validate"), capture_output=True)
+    _run_command_or_exit(_dev_script_command("validate"))
 
-    click.echo("Setup complete. Run 'task dev' to start development.")
+    click.echo("Setup complete. Run 'uv run python -m src.cli.unified dev'.")
 
 
 @cli.command()
@@ -180,7 +173,7 @@ def quality(skip_format: bool, fix_lint: bool):
 def docs(host: str, port: int):
     """Serve documentation locally."""
     click.echo(f"Starting documentation server at http://{host}:{port}")
-    _run_command(["mkdocs", "serve", "--host", host, "--port", str(port)])
+    _run_command_or_exit(["mkdocs", "serve", "--host", host, "--port", str(port)])
 
 
 @cli.command()
@@ -189,7 +182,7 @@ def docs(host: str, port: int):
     type=click.Choice(["start", "stop", "status"]),
     default="start",
 )
-@click.option("--stack", type=click.Choice(["vector", "monitoring"]), default="vector")
+@click.option("--stack", type=click.Choice(["simple", "enterprise"]), default="simple")
 @click.option("--skip-health-check/--no-skip-health-check", default=False)
 def services(action: str, stack: str, skip_health_check: bool):
     """Manage local services (Qdrant, monitoring stack)."""
@@ -203,7 +196,7 @@ def services(action: str, stack: str, skip_health_check: bool):
         cmd.append("--skip-health-check")
 
     click.echo(f"Running services command: {action} ({stack})")
-    _run_command(cmd)
+    _run_command_or_exit(cmd)
 
 
 @cli.command()
@@ -214,7 +207,7 @@ def benchmark(profile: str):
     """Run performance benchmarks."""
     click.echo(f"Running {profile} benchmark profile...")
     suite = BENCHMARK_SUITES.get(profile, "performance")
-    _run_command(_dev_script_command("benchmark", "--suite", suite))
+    _run_command_or_exit(_dev_script_command("benchmark", "--suite", suite))
 
 
 @cli.command(name="eval")
@@ -277,7 +270,7 @@ def run_eval(  # pylint: disable=too-many-arguments,too-many-positional-argument
         cmd.append("--metrics-allowlist")
         cmd.extend(metrics_allowlist)
 
-    _run_command(cmd)
+    _run_command_or_exit(cmd)
 
 
 @cli.command()

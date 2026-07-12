@@ -12,7 +12,9 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
+from src import __version__
 from src.config.loader import Settings, get_settings, load_settings_from_file
+from src.infrastructure.container import ApplicationContainer
 from src.services.observability.health_manager import build_health_manager
 
 # Import command groups
@@ -38,7 +40,7 @@ class RichCLI:
         """Display welcome message with project information."""
         welcome_text = Text()
         welcome_text.append("AI Documentation Scraper\n", style="bold cyan")
-        welcome_text.append("CLI Interface v1.0.0\n", style="dim")
+        welcome_text.append(f"CLI Interface v{__version__}\n", style="dim")
         welcome_text.append(
             (
                 "\nHybrid AI documentation scraping system with vector database "
@@ -87,7 +89,7 @@ rich_cli = RichCLI()
     help="Path to configuration file",
 )
 @click.option("--quiet", "-q", is_flag=True, help="Suppress welcome message")
-@click.version_option(version="1.0.0", prog_name="AI Documentation Scraper CLI")
+@click.version_option(version=__version__, prog_name="AI Documentation Scraper CLI")
 @click.pass_context
 def main(ctx: click.Context, config: Path | None, quiet: bool):
     """AI Documentation Scraper command-line interface.
@@ -105,7 +107,7 @@ def main(ctx: click.Context, config: Path | None, quiet: bool):
             ctx.obj["config"] = load_settings_from_file(config)
         else:
             ctx.obj["config"] = get_settings()
-    except (OSError, ValueError, RuntimeError) as e:
+    except (OSError, TypeError, ValueError, RuntimeError) as e:
         rich_cli.show_error("Failed to load configuration", details=str(e))
         sys.exit(1)
 
@@ -142,7 +144,7 @@ def version(ctx: click.Context):
 
     version_text = Text()
     version_text.append("AI Documentation Scraper CLI\n", style="bold cyan")
-    version_text.append("Version: 1.0.0\n", style="green")
+    version_text.append(f"Version: {__version__}\n", style="green")
     version_text.append("Python: ", style="dim")
     version_text.append(f"{sys.version.split()[0]}\n", style="yellow")
 
@@ -215,7 +217,7 @@ def status(ctx: click.Context):
             summary = asyncio.run(_collect_health_summary(config))
     except (RuntimeError, ValueError, OSError) as exc:
         rich_cli.show_error("Health checks failed", str(exc))
-        return
+        ctx.exit(1)
 
     table = Table(title="System Status", show_header=True, header_style="bold cyan")
     table.add_column("Component", style="dim", width=20)
@@ -236,16 +238,26 @@ def status(ctx: click.Context):
 
     rich_cli.console.print(table)
 
-    overall = summary.get("overall_status", "unknown").title()
-    rich_cli.console.print(f"Overall status: {overall}")
-
-
-if __name__ == "__main__":
-    main()  # pylint: disable=no-value-for-parameter
+    overall_status = summary.get("overall_status", "unknown")
+    rich_cli.console.print(f"Overall status: {overall_status.title()}")
+    if overall_status == "unhealthy":
+        ctx.exit(1)
 
 
 async def _collect_health_summary(config: Settings) -> dict[str, Any]:
     """Run configured health checks and return the aggregated summary."""
-    manager = build_health_manager(config)
-    await manager.check_all()
-    return manager.get_health_summary()
+    container = ApplicationContainer(config=config)
+    qdrant_client = container.qdrant_client()
+    try:
+        manager = build_health_manager(
+            config,
+            qdrant_client=qdrant_client,
+        )
+        await manager.check_all()
+        return manager.get_health_summary()
+    finally:
+        await qdrant_client.close()
+
+
+if __name__ == "__main__":
+    main()  # pylint: disable=no-value-for-parameter

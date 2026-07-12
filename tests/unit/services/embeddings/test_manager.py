@@ -7,9 +7,12 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from src.config import Settings
+from src.config.models import EmbeddingProvider as EmbeddingProviderChoice, Environment
 from src.services.embeddings.base import EmbeddingProvider
 from src.services.embeddings.manager import EmbeddingManager, QualityTier, TextAnalysis
 from src.services.errors import EmbeddingServiceError
@@ -81,6 +84,10 @@ class _FastEmbedConfig:
     """FastEmbed configuration stub."""
 
     dense_model: str = "local-model"
+    sparse_model: str | None = "qdrant/bm25"
+    cache_dir: str | None = None
+    max_length: int = 512
+    batch_size: int = 32
     generate_sparse: bool = False
 
 
@@ -158,9 +165,15 @@ class _StubOpenAIProvider(_StubProvider):
 class _StubFastEmbedProvider(_StubProvider):
     """Stub FastEmbed provider."""
 
-    def __init__(self, model_name: str) -> None:
+    def __init__(
+        self,
+        model_name: str,
+        sparse_model: str | None = None,
+        **_kwargs: Any,
+    ) -> None:
         """Initialize the stub FastEmbed provider."""
         super().__init__(model_name, cost_per_token=0.0)
+        self.sparse_model = sparse_model
 
 
 @pytest.fixture
@@ -202,6 +215,47 @@ async def test_initialize_registers_providers(manager_config: _SettingsStub) -> 
     fastembed_provider = cast(_StubFastEmbedProvider, providers["fastembed"])
     assert fastembed_provider.initialized is True
     assert manager._initialized is True
+
+
+@pytest.mark.asyncio
+async def test_canonical_settings_select_configured_provider_without_benchmarks() -> (
+    None
+):
+    """Canonical settings should generate without optional benchmark metadata."""
+    settings = Settings(
+        environment=Environment.TESTING,
+        embedding_provider=EmbeddingProviderChoice.FASTEMBED,
+    )
+    manager = EmbeddingManager(settings)
+    await manager.initialize()
+
+    result = await manager.generate_embeddings(["canonical settings"])
+
+    provider = cast(
+        _StubFastEmbedProvider,
+        manager._provider_registry.providers["fastembed"],
+    )
+    assert provider.generate_calls == [["canonical settings"]]
+    assert result["model"] == settings.fastembed.dense_model
+    assert result["reasoning"] == "Configured provider fallback"
+
+
+@pytest.mark.asyncio
+async def test_cleanup_does_not_close_borrowed_cache(
+    manager_config: _SettingsStub,
+) -> None:
+    """Embedding cleanup should leave the container-owned cache open."""
+    borrowed_cache = MagicMock()
+    borrowed_cache.close = AsyncMock()
+    manager = EmbeddingManager(
+        config=cast(Any, manager_config),
+        cache_manager=cast(Any, borrowed_cache),
+    )
+    manager._provider_registry.cleanup = AsyncMock()
+
+    await manager.cleanup()
+
+    borrowed_cache.close.assert_not_awaited()
 
 
 @pytest.mark.asyncio

@@ -38,13 +38,14 @@ logger = logging.getLogger(__name__)
 class FastEmbedProvider(EmbeddingProvider):
     """Thin asynchronous wrapper around LangChain's FastEmbed embeddings."""
 
-    _DEFAULT_SPARSE_MODEL = "qdrant/bm25"
-
     def __init__(
         self,
         model_name: str = "BAAI/bge-small-en-v1.5",
         *,
-        sparse_model: str | None = None,
+        sparse_model: str | None = "qdrant/bm25",
+        cache_dir: str | None = None,
+        max_length: int = 512,
+        batch_size: int = 32,
         doc_embed_type: str = "default",
     ) -> None:
         """Configure the FastEmbed provider.
@@ -52,14 +53,20 @@ class FastEmbedProvider(EmbeddingProvider):
         Args:
             model_name: Dense embedding model identifier supported by FastEmbed.
             sparse_model: Optional sparse model identifier for hybrid retrieval.
+            cache_dir: Shared model cache directory.
+            max_length: Maximum dense-model input length.
+            batch_size: Dense and sparse inference batch size.
             doc_embed_type: Embedding mode passed to LangChain (``default`` or
                 ``passage``).
         """
         super().__init__(model_name)
         self._doc_embed_type = doc_embed_type
+        self._cache_dir = cache_dir
+        self._max_length = max_length
+        self._batch_size = batch_size
         self._dense: _FastEmbedEmbeddings | None = None
         self._sparse: _FastEmbedSparse | None = None
-        self._sparse_model_name = sparse_model or self._DEFAULT_SPARSE_MODEL
+        self._sparse_model_name = sparse_model
         self._initialized = False
 
     @trace_function()
@@ -71,6 +78,9 @@ class FastEmbedProvider(EmbeddingProvider):
         dense_cls = _load_fastembed_embeddings()
         self._dense = dense_cls(
             model_name=self.model_name,
+            cache_dir=self._cache_dir,
+            max_length=self._max_length,
+            batch_size=self._batch_size,
             doc_embed_type=self._doc_embed_type,  # type: ignore[arg-type]
         )
         # Probe the dimension lazily on a background thread to avoid blocking the loop.
@@ -141,13 +151,20 @@ class FastEmbedProvider(EmbeddingProvider):
         if not self._initialized:
             msg = "FastEmbedProvider has not been initialized"
             raise EmbeddingServiceError(msg)
+        if self._sparse_model_name is None:
+            msg = "Sparse embeddings are disabled by configuration"
+            raise EmbeddingServiceError(msg)
 
         sparse_runtime = _load_fastembed_sparse_runtime()
         if sparse_runtime is None:
             msg = "langchain-qdrant is required for sparse embeddings"
             raise EmbeddingServiceError(msg)
         if self._sparse is None:
-            self._sparse = sparse_runtime(self._sparse_model_name)
+            self._sparse = sparse_runtime(
+                model_name=self._sparse_model_name,
+                cache_dir=self._cache_dir,
+                batch_size=self._batch_size,
+            )
 
         start = time.perf_counter()
         success = True

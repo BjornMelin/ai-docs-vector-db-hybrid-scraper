@@ -726,14 +726,17 @@ class HealthCheckManager:
             return HealthStatus.UNKNOWN
 
         statuses = [result.status for result in self._last_results.values()]
-        if any(status == HealthStatus.UNHEALTHY for status in statuses):
-            return HealthStatus.UNHEALTHY
-        if any(status == HealthStatus.DEGRADED for status in statuses):
-            return HealthStatus.DEGRADED
-        if all(status == HealthStatus.HEALTHY for status in statuses):
-            return HealthStatus.HEALTHY
-        if all(status == HealthStatus.SKIPPED for status in statuses):
+        active_statuses = [
+            status for status in statuses if status != HealthStatus.SKIPPED
+        ]
+        if not active_statuses:
             return HealthStatus.SKIPPED
+        if any(status == HealthStatus.UNHEALTHY for status in active_statuses):
+            return HealthStatus.UNHEALTHY
+        if any(status == HealthStatus.DEGRADED for status in active_statuses):
+            return HealthStatus.DEGRADED
+        if all(status == HealthStatus.HEALTHY for status in active_statuses):
+            return HealthStatus.HEALTHY
         return HealthStatus.UNKNOWN
 
     def get_health_summary(self) -> dict[str, Any]:
@@ -823,17 +826,17 @@ def build_health_manager(
                 )
             )
 
-    if config.qdrant_url:
-        client = qdrant_client or AsyncQdrantClient(
-            url=config.qdrant_url,
-            api_key=getattr(settings.qdrant, "api_key", None),
-            timeout=int(settings.qdrant.timeout),
-        )
+    if config.qdrant_url and qdrant_client is not None:
         manager.add_health_check(
             QdrantHealthCheck(
-                client,
+                qdrant_client,
                 timeout_seconds=settings.monitoring.health_check_timeout,
             )
+        )
+    elif config.qdrant_url:
+        logger.warning(
+            "Skipping Qdrant health check; no shared client was supplied",
+            extra=_log_extra("health.qdrant", skipped=True),
         )
     dragonfly_source = dragonfly_url or config.dragonfly_url
     if dragonfly_source:
@@ -868,7 +871,7 @@ def build_health_manager(
     firecrawl_base_url = firecrawl_settings.api_url
     if firecrawl_base_url:
         firecrawl_api_key = firecrawl_settings.api_key or os.getenv(
-            "AI_DOCS__BROWSER__FIRECRAWL__API_KEY"
+            "AI_DOCS_BROWSER__FIRECRAWL__API_KEY"
         )
         manager.add_health_check(
             FirecrawlHealthCheck(

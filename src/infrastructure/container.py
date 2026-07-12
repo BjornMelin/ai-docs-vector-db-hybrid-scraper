@@ -8,6 +8,7 @@ import asyncio
 import importlib
 import logging
 from collections.abc import AsyncGenerator
+from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
@@ -20,6 +21,7 @@ from langchain_mcp_adapters.client import MultiServerMCPClient  # type: ignore
 from langchain_mcp_adapters.sessions import Connection  # type: ignore
 from qdrant_client import AsyncQdrantClient
 
+from src.config.loader import Settings
 from src.config.models import CacheType, MCPClientConfig, MCPServerConfig, MCPTransport
 from src.infrastructure.project_storage import ProjectStorage
 from src.services.cache.embedding_cache import EmbeddingCache
@@ -45,7 +47,7 @@ else:  # pragma: no cover - optional dependency
     UnifiedBrowserManager = Any  # type: ignore[assignment]
 
 
-Configuration = providers.Configuration  # pylint: disable=c-extension-no-member
+Dependency = providers.Dependency  # pylint: disable=c-extension-no-member
 Singleton = providers.Singleton  # pylint: disable=c-extension-no-member
 Factory = providers.Factory  # pylint: disable=c-extension-no-member
 List = providers.List  # pylint: disable=c-extension-no-member
@@ -148,7 +150,7 @@ def _create_cache_manager(config: Any) -> CacheManager:
     if cache_config is not None:
         dragonfly_url = getattr(cache_config, "dragonfly_url", dragonfly_url)
         enable_caching = bool(getattr(cache_config, "enable_caching", True))
-        enable_dragonfly = bool(getattr(cache_config, "enable_dragonfly_cache", True))
+        enable_dragonfly = bool(getattr(cache_config, "enable_dragonfly_cache", False))
         enable_distributed_cache = enable_caching and enable_dragonfly
 
         ttl_overrides = {
@@ -175,17 +177,6 @@ def _create_cache_manager(config: Any) -> CacheManager:
         dragonfly_url=dragonfly_url,
         enable_distributed_cache=enable_distributed_cache,
         distributed_ttl_seconds=ttl_overrides,
-    )
-
-
-def _create_embedding_manager(
-    config: Any,
-    cache_manager: CacheManager | None,
-) -> EmbeddingManager:
-    """Instantiate the EmbeddingManager with DI-provided dependencies."""
-    return EmbeddingManager(
-        config=config,
-        cache_manager=cache_manager,
     )
 
 
@@ -234,6 +225,11 @@ def _create_hyde_query_engine(
 def _create_circuit_breaker_manager(config: Any) -> CircuitBreakerManager | None:
     """Instantiate the CircuitBreakerManager if purgatory is available."""
     cache_config = getattr(config, "cache", None)
+    distributed_state = bool(
+        cache_config is not None
+        and getattr(cache_config, "enable_caching", False)
+        and getattr(cache_config, "enable_dragonfly_cache", False)
+    )
     redis_url = "redis://localhost:6379"
     if cache_config is not None:
         candidate = getattr(cache_config, "dragonfly_url", None)
@@ -241,6 +237,8 @@ def _create_circuit_breaker_manager(config: Any) -> CircuitBreakerManager | None
             redis_url = candidate
 
     try:
+        if not distributed_state:
+            return CircuitBreakerManager.in_memory(config=config)
         return CircuitBreakerManager(
             redis_url=redis_url,
             config=config,
@@ -302,6 +300,10 @@ def _create_rag_generator(
     vector_service: VectorStoreService,
 ) -> Any | None:
     """Instantiate the RAG generator if the optional module is installed."""
+    rag_config_model = getattr(config, "rag", None)
+    if not getattr(rag_config_model, "enable_rag", False):
+        return None
+
     try:
         rag_module = importlib.import_module("src.services.rag.generator")
         rag_models = importlib.import_module("src.services.rag.models")
@@ -310,7 +312,6 @@ def _create_rag_generator(
         logger.debug("RAG generator dependencies unavailable; skipping initialization")
         return None
 
-    rag_config_model = getattr(config, "rag", None)
     rag_config_cls = getattr(rag_models, "RAGConfig", None)
     if rag_config_cls is None:
         logger.warning("RAG models module missing RAGConfig; generator disabled")
@@ -444,72 +445,66 @@ async def _maybe_cleanup(service: Any, name: str) -> None:
         result = cleaner()
         if asyncio.iscoroutine(result):
             await result
-    except (RuntimeError, AttributeError, TypeError):  # pragma: no cover - defensive
+    except Exception:  # noqa: BLE001  # pragma: no cover - isolate service cleanup
         logger.debug("Error during cleanup for service '%s'", name, exc_info=True)
 
 
-async def _initialize_service_graph(container: ApplicationContainer) -> None:
-    """Initialize core and optional services managed by the container."""
-    await _maybe_initialize(
-        container.cache_manager(),
-        "cache_manager",
-        required=False,
-    )
-    await _maybe_initialize(container.embedding_manager(), "embedding_manager")
-    await _maybe_initialize(container.vector_store_service(), "vector_store_service")
-    await _maybe_initialize(container.project_storage(), "project_storage")
-    await _maybe_initialize(
-        container.circuit_breaker_manager(),
-        "circuit_breaker_manager",
-        required=False,
-    )
-    await _maybe_initialize(
-        container.content_intelligence_service(),
-        "content_intelligence_service",
-        required=True,
-    )
-    await _maybe_initialize(
-        container.browser_manager(),
-        "browser_manager",
-        required=True,
-    )
-    await _maybe_initialize(
-        container.rag_generator(),
-        "rag_generator",
-        required=False,
-    )
+@dataclass(frozen=True, slots=True)
+class _ResolvedService:
+    """A service instance resolved during this container generation."""
+
+    name: str
+    instance: Any
 
 
-async def _cleanup_service_graph(container: ApplicationContainer) -> None:
-    """Cleanup services managed by the container in reverse order."""
-    await _maybe_cleanup(container.rag_generator(), "rag_generator")
-    await _maybe_cleanup(container.browser_manager(), "browser_manager")
-    await _maybe_cleanup(
-        container.content_intelligence_service(),
-        "content_intelligence_service",
+async def _initialize_service_graph(
+    container: ApplicationContainer,
+    resolved_services: list[_ResolvedService],
+) -> None:
+    """Resolve and initialize services while recording rollback ownership."""
+    service_specs = (
+        (container.cache_manager, "cache_manager", False),
+        (container.embedding_manager, "embedding_manager", True),
+        (container.vector_store_service, "vector_store_service", True),
+        (container.project_storage, "project_storage", True),
+        (container.circuit_breaker_manager, "circuit_breaker_manager", False),
+        (
+            container.content_intelligence_service,
+            "content_intelligence_service",
+            True,
+        ),
+        (container.browser_manager, "browser_manager", True),
+        (container.rag_generator, "rag_generator", False),
     )
-    await _maybe_cleanup(container.vector_store_service(), "vector_store_service")
-    await _maybe_cleanup(container.embedding_manager(), "embedding_manager")
-    await _maybe_cleanup(container.cache_manager(), "cache_manager")
-    await _maybe_cleanup(container.project_storage(), "project_storage")
-    await _maybe_cleanup(
-        container.circuit_breaker_manager(),
-        "circuit_breaker_manager",
-    )
+    for provider, name, required in service_specs:
+        service = provider()
+        if service is not None:
+            resolved_services.append(_ResolvedService(name, service))
+        await _maybe_initialize(service, name, required=required)
 
 
-async def _run_task_factories(factories: list[Any]) -> None:
+async def _cleanup_service_graph(
+    resolved_services: list[_ResolvedService],
+) -> None:
+    """Cleanup only resolved services, in exact reverse resolution order."""
+    for service in reversed(resolved_services):
+        await _maybe_cleanup(service.instance, service.name)
+
+
+async def _run_task_factories(
+    factories: list[Any],
+    *,
+    suppress_errors: bool = False,
+) -> None:
     """Execute callables returned by container task registries."""
     for factory in factories:
         try:
             result = factory()
             if asyncio.iscoroutine(result):
                 await result
-        except (
-            RuntimeError,
-            AttributeError,
-            TypeError,
-        ):  # pragma: no cover - defensive
+        except Exception:
+            if not suppress_errors:
+                raise
             logger.debug("Container task execution failed", exc_info=True)
 
 
@@ -517,7 +512,7 @@ class ApplicationContainer(DeclarativeContainer):
     """Application dependency injection container."""
 
     # Configuration
-    config = Configuration()
+    config = Dependency(instance_of=Settings)
 
     qdrant_client = Singleton(
         _create_qdrant_client,
@@ -545,7 +540,7 @@ class ApplicationContainer(DeclarativeContainer):
     )
 
     embedding_manager = Singleton(
-        _create_embedding_manager,
+        EmbeddingManager,
         config=config,
         cache_manager=cache_manager,
     )
@@ -616,80 +611,154 @@ class ContainerManager:
         """Initialize container manager."""
         self.container: ApplicationContainer | None = None
         self._initialized = False
+        self._lock = asyncio.Lock()
+        self._generation = 0
+        self._next_lease_id = 0
+        self._active_lease_ids: set[int] = set()
+        self._lease_managed_generation: int | None = None
+        self._resolved_services: list[_ResolvedService] = []
+        self._qdrant_client: AsyncQdrantClient | None = None
 
-    async def initialize(self, config: Any) -> ApplicationContainer:
+    async def initialize(self, config: Settings) -> ApplicationContainer:
         """Initialize the container with configuration."""
-        if self._initialized:
-            if self.container is None:
-                raise RuntimeError("Container manager in inconsistent state")
-            return self.container
+        async with self._lock:
+            if self._initialized:
+                if self.container is None:
+                    raise RuntimeError("Container manager in inconsistent state")
+                return self.container
+            return await self._initialize_locked(config)
 
-        self.container = ApplicationContainer()
-        self.container.config.from_dict(self._config_to_dict(config))
+    async def acquire(
+        self,
+        config: Settings,
+        *,
+        force_reload: bool = False,
+    ) -> ContainerLease:
+        """Acquire a generation-scoped lease on the active container."""
+        async with self._lock:
+            if force_reload and self.container is not None:
+                if self._active_lease_ids:
+                    msg = "Cannot force-reload the container while sessions are active"
+                    raise RuntimeError(msg)
+                await self._shutdown_locked()
 
-        # Initialize resource providers
-        await self.container.init_resources()  # pyright: ignore[reportGeneralTypeIssues]
+            created = self.container is None
+            if created:
+                container = await self._initialize_locked(config)
+                self._lease_managed_generation = self._generation
+            else:
+                container = self.container
+                if container is None:  # pragma: no cover - narrowed above
+                    raise RuntimeError("Container manager in inconsistent state")
 
-        await _initialize_service_graph(self.container)
-        await _run_task_factories(list(self.container.startup_tasks()))
+            self._next_lease_id += 1
+            lease_id = self._next_lease_id
+            self._active_lease_ids.add(lease_id)
+            return ContainerLease(
+                container=container,
+                generation=self._generation,
+                lease_id=lease_id,
+            )
 
-        self._initialized = True
-        logger.info("Dependency injection container initialized")
-        return self.container
+    async def release(self, lease: ContainerLease) -> None:
+        """Release a lease and stop lease-owned containers after the last holder."""
+        async with self._lock:
+            if (
+                lease.generation != self._generation
+                or lease.container is not self.container
+                or lease.lease_id not in self._active_lease_ids
+            ):
+                raise RuntimeError("Container lease is no longer active")
+
+            self._active_lease_ids.remove(lease.lease_id)
+            if (
+                not self._active_lease_ids
+                and self._lease_managed_generation == lease.generation
+            ):
+                await self._shutdown_locked()
 
     async def shutdown(self) -> None:
         """Shutdown the container and cleanup resources."""
-        if self._initialized and self.container is not None:
-            await _run_task_factories(list(self.container.shutdown_tasks()))
-            await _cleanup_service_graph(self.container)
-            await self.container.shutdown_resources()  # pyright: ignore[reportGeneralTypeIssues]
-            self.container = None
-            self._initialized = False
-            logger.info("Dependency injection container shutdown")
+        async with self._lock:
+            if self._active_lease_ids:
+                msg = "Cannot shut down the container while sessions are active"
+                raise RuntimeError(msg)
+            await self._shutdown_locked()
 
-    def _config_to_dict(self, config: Any) -> dict:
-        """Convert config object to dictionary for dependency-injector.
-
-        Args:
-            config: Configuration object to convert.
-
-        Returns:
-            Dictionary representation of config.
-        """
+    async def _initialize_locked(self, config: Settings) -> ApplicationContainer:
+        """Initialize and publish one container while ``_lock`` is held."""
+        candidate = ApplicationContainer(config=config)
+        resolved_services: list[_ResolvedService] = []
+        qdrant_client: AsyncQdrantClient | None = None
         try:
-            # Try to convert using model_dump if it's a Pydantic model
-            if hasattr(config, "model_dump"):
-                return config.model_dump()
-            # Try to convert using dict() if it's a dataclass or similar
-            if hasattr(config, "__dict__"):
-                return self._serialize_config_dict(config.__dict__)
-            # Fallback to basic attributes
-            return {
-                key: getattr(config, key)
-                for key in dir(config)
-                if not key.startswith("_") and not callable(getattr(config, key))
-            }
-        except (AttributeError, TypeError, ValueError) as e:
-            logger.warning("Failed to convert config to dict: %s", e)
-            return {}
+            await candidate.init_resources()  # pyright: ignore[reportGeneralTypeIssues]
+            qdrant_client = candidate.qdrant_client()
+            await _initialize_service_graph(candidate, resolved_services)
+            await _run_task_factories(list(candidate.startup_tasks()))
+        except BaseException:
+            try:
+                await _cleanup_service_graph(resolved_services)
+            except Exception:  # pragma: no cover - best-effort rollback
+                logger.exception("Failed to roll back partially initialized services")
+            if qdrant_client is not None:
+                try:
+                    await qdrant_client.close()
+                except Exception:  # pragma: no cover - best-effort rollback
+                    logger.exception("Failed to release shared Qdrant client")
+            try:
+                await candidate.shutdown_resources()  # pyright: ignore[reportGeneralTypeIssues]
+            except Exception:  # pragma: no cover - best-effort rollback
+                logger.exception("Failed to release partially initialized resources")
+            raise
 
-    def _serialize_config_dict(self, data: Any) -> Any:
-        """Recursively serialize configuration data."""
-        if hasattr(data, "model_dump"):
-            return data.model_dump()
-        if hasattr(data, "__dict__"):
-            return {
-                key: self._serialize_config_dict(value)
-                for key, value in data.__dict__.items()
-                if not key.startswith("_")
-            }
-        if isinstance(data, dict):
-            return {
-                key: self._serialize_config_dict(value) for key, value in data.items()
-            }
-        if isinstance(data, list | tuple):
-            return [self._serialize_config_dict(item) for item in data]
-        return data
+        self.container = candidate
+        self._initialized = True
+        self._resolved_services = resolved_services
+        self._qdrant_client = qdrant_client
+        self._generation += 1
+        logger.info("Dependency injection container initialized")
+        return candidate
+
+    async def _shutdown_locked(self) -> None:
+        """Shutdown the active container while ``_lock`` is held."""
+        container = self.container
+        if container is None:
+            self._initialized = False
+            self._resolved_services = []
+            self._lease_managed_generation = None
+            self._qdrant_client = None
+            return
+        try:
+            if self._initialized:
+                await _run_task_factories(
+                    list(container.shutdown_tasks()),
+                    suppress_errors=True,
+                )
+                await _cleanup_service_graph(self._resolved_services)
+        finally:
+            try:
+                qdrant_client = self._qdrant_client
+                self._qdrant_client = None
+                if qdrant_client is not None:
+                    await qdrant_client.close()
+            finally:
+                try:
+                    await container.shutdown_resources()  # pyright: ignore[reportGeneralTypeIssues]
+                finally:
+                    self.container = None
+                    self._initialized = False
+                    self._resolved_services = []
+                    self._lease_managed_generation = None
+        logger.info("Dependency injection container shutdown")
+
+
+@dataclass(frozen=True, slots=True)
+class ContainerLease:
+    """Ownership token for one container generation."""
+
+    container: ApplicationContainer
+    generation: int
+    lease_id: int
 
 
 # Global container manager instance
@@ -702,7 +771,7 @@ def get_container() -> ApplicationContainer | None:
     return _container_manager.container
 
 
-async def initialize_container(config: Any) -> ApplicationContainer:
+async def initialize_container(config: Settings) -> ApplicationContainer:
     """Initialize the global container."""
     container = await _container_manager.initialize(config)
     get_container.cache_clear()
@@ -711,8 +780,29 @@ async def initialize_container(config: Any) -> ApplicationContainer:
 
 async def shutdown_container() -> None:
     """Shutdown the global container."""
-    await _container_manager.shutdown()
+    try:
+        await _container_manager.shutdown()
+    finally:
+        get_container.cache_clear()
+
+
+async def acquire_container(
+    config: Settings,
+    *,
+    force_reload: bool = False,
+) -> ContainerLease:
+    """Acquire a lease on the global container."""
+    lease = await _container_manager.acquire(config, force_reload=force_reload)
     get_container.cache_clear()
+    return lease
+
+
+async def release_container(lease: ContainerLease) -> None:
+    """Release a lease on the global container."""
+    try:
+        await _container_manager.release(lease)
+    finally:
+        get_container.cache_clear()
 
 
 # Dependency injection decorators and functions for easy access
@@ -790,7 +880,7 @@ def inject_http() -> Provider[Any]:
 class DependencyContext:
     """Context manager for dependency injection setup."""
 
-    def __init__(self, config: Any):
+    def __init__(self, config: Settings):
         """Store configuration for deferred container initialization.
 
         Args:

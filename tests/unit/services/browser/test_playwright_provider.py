@@ -97,6 +97,33 @@ async def test_playwright_scrape_returns_success_when_no_challenge(
 
 
 @pytest.mark.asyncio
+async def test_playwright_scrape_applies_configured_stealth(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Apply the async stealth API before navigating when stealth is enabled."""
+    page = _StubPage("<html><body>ok</body></html>")
+    stealth_pages: list[_StubPage] = []
+
+    async def apply_stealth(target: _StubPage) -> None:
+        stealth_pages.append(target)
+
+    monkeypatch.setattr(
+        playwright_module, "execute_with_retry", _passthrough_retry, raising=True
+    )
+    monkeypatch.setattr(playwright_module, "APPLY_STEALTH", apply_stealth, raising=True)
+
+    settings = PlaywrightSettings(stealth=StealthMode.PLAYWRIGHT_STEALTH)
+    provider = PlaywrightProvider(ProviderContext(ProviderKind.PLAYWRIGHT), settings)
+    provider._browser = _StubBrowser(page)  # type: ignore[attr-defined]
+
+    result = await provider.scrape(ScrapeRequest(url="https://example.com"))
+
+    assert result.success is True
+    assert stealth_pages == [page]
+    assert page.goto_calls
+
+
+@pytest.mark.asyncio
 async def test_playwright_scrape_raises_on_challenge(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

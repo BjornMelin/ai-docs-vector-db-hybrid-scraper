@@ -6,18 +6,12 @@
 import json
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
-
-
-try:
-    from src.services.cache import CacheManager
-except ImportError:
-    CacheManager = None  # type: ignore[assignment]
+from typing import TYPE_CHECKING, Any
 
 from pydantic import ValidationError
 
 from src.config.loader import Settings
-from src.config.models import CacheType, EmbeddingConfig as SettingsEmbeddingConfig
+from src.config.models import EmbeddingConfig as SettingsEmbeddingConfig
 from src.services.embeddings.base import EmbeddingProvider
 from src.services.embeddings.fastembed_provider import FastEmbedProvider
 from src.services.embeddings.openai_provider import OpenAIEmbeddingProvider
@@ -32,10 +26,8 @@ from .usage import UsageRecord, UsageStats, UsageTracker
 
 if TYPE_CHECKING:
     from src.services.cache import CacheManager as CacheManagerType
-    from src.services.cache.embedding_cache import EmbeddingCache
 else:  # pragma: no cover - runtime fallback for optional cache dependency
     CacheManagerType = Any
-    EmbeddingCache = Any
 
 logger = logging.getLogger(__name__)
 
@@ -87,44 +79,7 @@ class EmbeddingManager:
         self._usage: UsageTracker | None = None
         self._budget_limit = budget_limit
 
-        # Initialize cache manager if caching is enabled
         self.cache_manager: CacheManagerType | None = cache_manager
-        if (
-            self.cache_manager is None
-            and config.cache.enable_caching
-            and CacheManager is not None
-        ):
-            dragonfly_url_config = getattr(config.cache, "dragonfly_url", None)
-            dragonfly_url = (
-                str(dragonfly_url_config)
-                if dragonfly_url_config
-                else "redis://localhost:6379"
-            )
-            enable_dragonfly = getattr(config.cache, "enable_dragonfly_cache", True)
-            ttl_overrides = {
-                CacheType.EMBEDDINGS: getattr(config.cache, "ttl_embeddings", 86400),
-                CacheType.SEARCH: getattr(config.cache, "ttl_search_results", 3600),
-                CacheType.CRAWL: getattr(config.cache, "ttl_crawl", 3600),
-                CacheType.QUERIES: getattr(config.cache, "ttl_queries", 7200),
-            }
-            extra_overrides = getattr(config.cache, "cache_ttl_seconds", {})
-            mapping = {
-                "embeddings": CacheType.EMBEDDINGS,
-                "search_results": CacheType.SEARCH,
-                "collections": CacheType.CRAWL,
-                "queries": CacheType.QUERIES,
-            }
-            for key, ttl in extra_overrides.items():
-                cache_type = mapping.get(key)
-                if cache_type is not None:
-                    ttl_overrides[cache_type] = int(ttl)
-
-            generated_cache_manager = CacheManager(
-                dragonfly_url=dragonfly_url,
-                enable_distributed_cache=enable_dragonfly,
-                distributed_ttl_seconds=ttl_overrides,
-            )
-            self.cache_manager = cast(CacheManagerType, generated_cache_manager)
 
         # Load model benchmarks and selection configuration from config
         self._benchmarks: dict[str, dict[str, Any]] = _normalize_benchmarks(
@@ -188,19 +143,9 @@ class EmbeddingManager:
         logger.info("Embedding manager initialized with %d providers", len(providers))
 
     async def cleanup(self) -> None:
-        """Clean up all providers and cache.
-
-        Shuts down all initialized providers and closes cache manager
-        if initialized. Errors during cleanup are logged but not raised.
-        """
+        """Clean up embedding providers owned by this manager."""
         await self._provider_registry.cleanup()
         self._initialized = False
-
-        # Close cache manager if initialized
-        if self.cache_manager is not None:
-            if hasattr(self.cache_manager, "close"):
-                await self.cache_manager.close()  # type: ignore
-            logger.info("Closed cache manager")
 
     def _select_provider_and_model(
         self,

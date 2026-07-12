@@ -178,6 +178,12 @@ class SelectionEngine:
             "alternatives": candidates[1:3],
         }
 
+    def can_rank(self, providers: dict[str, EmbeddingProvider]) -> bool:
+        """Return whether any initialized provider has benchmark data."""
+        return any(
+            provider.model_name in self._benchmarks for provider in providers.values()
+        )
+
     def _build_candidate(
         self,
         provider_name: str,
@@ -209,10 +215,8 @@ class SelectionEngine:
         }
 
     def _models_for_provider(
-        self, provider_name: str, provider: EmbeddingProvider
+        self, _provider_name: str, provider: EmbeddingProvider
     ) -> list[str]:
-        if provider_name == "openai":
-            return ["text-embedding-3-small", "text-embedding-3-large"]
         return [provider.model_name]
 
     def _calculate_model_score(

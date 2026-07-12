@@ -4,14 +4,24 @@ This module tests the main CLI entry point, RichCLI class, and core commands
 including version, completion, and status functionality.
 """
 
+import importlib
+import os
+import subprocess
+import sys
+from pathlib import Path
+from types import SimpleNamespace
 from typing import cast
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import click
+import pytest
 from click.core import Group
 from rich.console import Console
 
-from src.cli.main import RichCLI, main
+from src import __version__
+from src.cli.main import RichCLI, _collect_health_summary, main
+from src.config import Settings
+from src.config.models import Environment, MonitoringConfig
 
 
 class TestRichCLI:
@@ -32,7 +42,7 @@ class TestRichCLI:
 
         # Verify welcome content
         rich_output_capturer.assert_contains("AI Documentation Scraper")
-        rich_output_capturer.assert_contains("CLI Interface v1.0.0")
+        rich_output_capturer.assert_contains(f"CLI Interface v{__version__}")
         rich_output_capturer.assert_contains("Hybrid AI documentation scraping system")
         rich_output_capturer.assert_contains("Welcome")
 
@@ -157,7 +167,7 @@ class TestVersionCommand:
 
         assert result.exit_code == 0
         assert "AI Documentation Scraper CLI" in result.output
-        assert "Version: 1.0.0" in result.output
+        assert f"Version: {__version__}" in result.output
         assert "Python:" in result.output
         assert "Version Information" in result.output
 
@@ -169,7 +179,7 @@ class TestVersionCommand:
         result = cli_runner.invoke(main, ["--version"])
 
         assert result.exit_code == 0
-        assert "1.0.0" in result.output
+        assert __version__ in result.output
 
 
 class TestCompletionCommand:
@@ -259,6 +269,66 @@ class TestCompletionCommand:
 class TestStatusCommand:
     """Test system status and health check functionality."""
 
+    @pytest.mark.asyncio
+    async def test_collect_health_summary_uses_owned_qdrant_and_reports_outage(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """The standalone status path must include its container-owned Qdrant."""
+        settings = Settings(
+            environment=Environment.TESTING,
+            monitoring=MonitoringConfig(include_system_metrics=False),
+        )
+        client = AsyncMock()
+        client.get_collections.side_effect = ConnectionError("qdrant unavailable")
+        observed_settings: list[Settings] = []
+
+        def fake_container(*, config: Settings) -> SimpleNamespace:
+            observed_settings.append(config)
+            return SimpleNamespace(qdrant_client=lambda: client)
+
+        cli_main_module = importlib.import_module("src.cli.main")
+        monkeypatch.setattr(
+            cli_main_module,
+            "ApplicationContainer",
+            fake_container,
+        )
+
+        summary = await _collect_health_summary(settings)
+
+        assert observed_settings == [settings]
+        assert summary["checks"]["qdrant"]["status"] == "unhealthy"
+        assert summary["overall_status"] == "unhealthy"
+        client.close.assert_awaited_once_with()
+
+    @pytest.mark.asyncio
+    async def test_collect_health_summary_closes_qdrant_after_failure(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """The status path should release its scoped client when checks fail."""
+        settings = Settings(environment=Environment.TESTING)
+        client = AsyncMock()
+        container = SimpleNamespace(qdrant_client=lambda: client)
+        manager = MagicMock()
+        manager.check_all = AsyncMock(side_effect=RuntimeError("probe failed"))
+        cli_main_module = importlib.import_module("src.cli.main")
+        monkeypatch.setattr(
+            cli_main_module,
+            "ApplicationContainer",
+            lambda **_: container,
+        )
+        monkeypatch.setattr(
+            cli_main_module,
+            "build_health_manager",
+            lambda *_args, **_kwargs: manager,
+        )
+
+        with pytest.raises(RuntimeError, match="probe failed"):
+            await _collect_health_summary(settings)
+
+        client.close.assert_awaited_once_with()
+
     @patch("src.cli.main.get_settings")
     @patch("src.cli.main._collect_health_summary")
     def test_status_command_all_healthy(
@@ -312,7 +382,7 @@ class TestStatusCommand:
 
         result = cli_runner.invoke(main, ["status"])
 
-        assert result.exit_code == 0
+        assert result.exit_code == 1
         assert "System Status" in result.output
         assert "Connection refused" in result.output
 
@@ -327,8 +397,48 @@ class TestStatusCommand:
 
         result = cli_runner.invoke(main, ["status"])
 
-        assert result.exit_code == 0
+        assert result.exit_code == 1
         assert "Health checks failed" in result.output
+
+    def test_module_entrypoint_runs_status_without_reimport_or_name_error(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """The documented module entrypoint should execute the complete module."""
+        environment = {
+            key: value
+            for key, value in os.environ.items()
+            if not key.startswith("AI_DOCS_")
+        }
+        environment.update(
+            {
+                "AI_DOCS_ENVIRONMENT": "testing",
+                "AI_DOCS_EMBEDDING_PROVIDER": "fastembed",
+                "AI_DOCS_CRAWL_PROVIDER": "crawl4ai",
+                "AI_DOCS_QDRANT__URL": "http://127.0.0.1:1",
+                "AI_DOCS_MONITORING__HEALTH_CHECK_TIMEOUT": "0.1",
+                "AI_DOCS_MONITORING__INCLUDE_SYSTEM_METRICS": "false",
+                "AI_DOCS_DATA_DIR": str(tmp_path / "data"),
+                "AI_DOCS_CACHE_DIR": str(tmp_path / "cache"),
+                "AI_DOCS_LOGS_DIR": str(tmp_path / "logs"),
+            }
+        )
+
+        result = subprocess.run(
+            [sys.executable, "-m", "src.cli.main", "status"],
+            cwd=Path(__file__).parents[3],
+            env=environment,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=10,
+        )
+
+        output = f"{result.stdout}\n{result.stderr}"
+        assert result.returncode == 1
+        assert "Overall status: Unhealthy" in output
+        assert "NameError" not in output
+        assert "found in sys.modules" not in output
 
 
 class TestMainIntegration:

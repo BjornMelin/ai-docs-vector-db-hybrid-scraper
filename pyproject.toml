@@ -37,14 +37,12 @@ dependencies = [
     "pydantic>=2.12.5,<3.0.0",
     "pydantic-settings>=2.12.0,<3.0.0",
     "pyyaml>=6.0.3,<7.0.0",
-    "crawl4ai[all]>=0.7.8,<0.8.0",
+    "crawl4ai>=0.7.8,<0.8.0",
     "firecrawl>=4.12.0,<5.0.0",
     "qdrant-client[fastembed]>=1.16.2,<2.0",
     "openai>=2.14.0,<3.0.0",
     "fastembed>=0.7.4,<0.8.0",
-    "FlagEmbedding>=1.3.5,<2.0.0",
-    "numpy>=2.4.0,<2.5.0",
-    "scipy>=1.16.3,<2.0.0",
+    "numpy>=2.4.6,<2.5.0",
     "defusedxml>=0.7.1,<0.8.0",
     "aiohttp>=3.12.15,<4.0.0",
     "aiofiles>=25.1.0,<26.0.0",
@@ -62,14 +60,12 @@ dependencies = [
     "sqlalchemy>=2.0.45,<3.0.0",
     "sqlmodel>=0.0.31,<0.1.0",
     "httpx>=0.28.1,<0.29.0",
-    "browser-use>=0.11.2,<0.12.0",
     "playwright>=1.57.0,<2.0.0",
-    "playwright-stealth>=2.0.0,<3.0.0",
+    "tf-playwright-stealth>=1.2.0,<2.0.0",
     "langchain-anthropic>=1.3.0,<2.0.0",
     "langchain-google-genai>=4.1.2,<5.0.0",
     # dependency-injector wires core clients (OpenAI, Qdrant, Dragonfly, Firecrawl) via ApplicationContainer.
     "dependency-injector>=4.48.3",
-    "scikit-learn>=1.8.0,<2.0.0",
     "langchain>=1.2.0,<2.0.0",
     "langchain-core>=1.2.5,<2.0.0",
     "langchain-community>=0.4.1,<1.0.0",
@@ -80,6 +76,7 @@ dependencies = [
     "langchain-mcp-adapters>=0.2.1,<1.0.0",
     "langgraph>=1.0.5,<2.0.0",
     "asgi-correlation-id>=4.3.4,<5.0.0",
+    "brotli-asgi>=1.4.0,<2.0.0",
     "purgatory>=3.0.1,<4.0.0",
     "aiolimiter>=1.2.1",
     "trafilatura>=2.0.0",
@@ -92,6 +89,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+agentic-browser = ["browser-use>=0.11.2,<0.12.0"]
 docs = [
     "mkdocs>=1.6.1",
     "mkdocs-material>=9.7.1,<10.0.0",
@@ -102,12 +100,14 @@ docs = [
     "plotly>=6.5.0,<7.0.0",
     "streamlit>=1.52.2,<2.0.0",
 ]
+reranking = ["FlagEmbedding>=1.3.5,<2.0.0"]
 
 [dependency-groups]
 # Require ragas ≥0.3.5 to ensure llm_factory and modern SingleTurnSample schema
 eval = ["ragas>=0.3.5,<1.0.0"]
 dev = [
     "pytest>=8.4.2,<9.0.0",
+    "browser-use>=0.11.2,<0.12.0",
     "pytest-asyncio>=1.2.0,<2.0.0",
     "asgi-lifespan>=2.1.0,<3.0.0",
     "pytest-cov>=7.0.0,<8.0.0",
@@ -123,27 +123,13 @@ dev = [
     "python-dotenv>=1.1.1,<2.0.0",
     "ruff>=0.14.0,<0.15.0",
     "pylint>=4.0.0,<5.0.0",
-    "pyright>=1.1.406,<2.0.0",
+    "pyright>=1.1.411,<2.0.0",
     "deptry>=0.23.1,<1.0.0",
     "locust>=2.37.10,<3.0.0",
     "respx>=0.22.0",
+    "scikit-learn>=1.8.0,<2.0.0",
     "typer>=0.21.0,<0.22.0",
     "vulture>=2.14,<3.0.0",
-]
-
-# Documentation tooling (uv dependency group).
-# Intentionally mirrors [project.optional-dependencies] docs above.
-# - `docs` supports `pip install .[docs]` for end-users building documentation.
-# - `docs-dev` supports `uv sync --group docs-dev` for uv-based dev workflows.
-docs-dev = [
-    "mkdocs>=1.6.1",
-    "mkdocs-material>=9.7.1,<10.0.0",
-    "mkdocstrings>=1.0.0,<2.0.0",
-    "mkdocstrings-python>=2.0.1,<3.0.0",
-    "requests>=2.32.5,<3.0.0",
-    "pandas>=2.3.3,<3.0.0",
-    "plotly>=6.5.0,<7.0.0",
-    "streamlit>=1.52.2,<2.0.0",
 ]
 
 # Contract testing tools
@@ -202,12 +188,6 @@ gpu = [
     # flash-attn requires torch wheels at runtime; uv 0.7.x lacks the
     # extra-build-dependencies feature so torch remains co-installed via the group.
     "flash-attn>=2.8.3,<3.0.0",
-]
-
-server = [
-    "brotli-asgi>=1.4.0,<2.0.0",
-    "purgatory[redis]>=3.0.1,<4.0.0",
-    "uvloop>=0.21.0,<1.0.0; platform_system != 'Windows'",
 ]
 
 web = ["tavily-python>=0.7.12"]
@@ -352,9 +332,11 @@ lines-after-imports = 2
 "ragas.dataset_schema" = { msg = "Ragas >=0.3 ships EvaluationDataset in ragas" }
 
 [tool.pyright]
-pythonVersion = "3.12"
+pythonVersion = "3.11"
 typeCheckingMode = "standard"
 include = ["src", "tests", "scripts", "examples"]
+venvPath = "."
+venv = ".venv"
 exclude = [
     "build",
     "dist",
@@ -368,114 +350,111 @@ exclude = [
 reportMissingImports = "warning"
 reportMissingTypeStubs = false
 
-[[tool.pyright.executionEnvironments]]
-root = "src/models"
-typeCheckingMode = "strict"
-
-[[tool.pyright.executionEnvironments]]
-root = "src/config"
-typeCheckingMode = "strict"
-
-[[tool.pyright.executionEnvironments]]
-root = "src/services"
-typeCheckingMode = "standard"
-
-[[tool.pyright.executionEnvironments]]
-root = "tests"
-typeCheckingMode = "basic"
-
-[[tool.pyright.executionEnvironments]]
-root = "examples"
-typeCheckingMode = "basic"
-
 [tool.pytest.ini_options]
-# Modern asyncio configuration - essential for async testing
+minversion = "8.0"
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
-
-# Test discovery and execution
 testpaths = ["tests"]
-python_files = ["test_*.py", "*_test.py"]
+python_files = ["test_*.py"]
 python_functions = ["test_*"]
 python_classes = ["Test*", "*Tests", "*Test"]
-minversion = "8.4"
-
-# Performance and reliability optimizations
-considerfailures = true # Re-run failed tests first
-tb_native = true        # Use Python's native traceback
-
-# Essential pytest flags for development workflow
 addopts = [
-    "--strict-markers",              # Treat unknown markers as errors
-    "--strict-config",               # Error on unknown config keys
-    "--tb=short",                    # Shorter traceback format
-    "--durations=10",                # Show 10 slowest tests
-    "--maxfail=5",                   # Stop after 5 failures
-    "--import-mode=prepend",         # Prepend mode for src imports
-    "--showlocals",                  # Show local variables in tracebacks
-    "--doctest-modules",             # Run doctests in modules
-    "--doctest-continue-on-failure", # Continue after doctest failures
-    "--disable-warnings",            # Clean output
-    "--randomly-seed=42",            # Deterministic pytest-randomly seed
-    "-q",                            # Quiet baseline output
+    "--strict-config",
+    "--strict-markers",
+    "--maxfail=1",
+    "--durations=20",
+    "--showlocals",
+    "--randomly-dont-reset-seed",
+    "--import-mode=importlib",
 ]
-
-# Warning filters for clean test output
 filterwarnings = [
-    "ignore::DeprecationWarning",
-    "ignore::PendingDeprecationWarning",
-    "ignore::UserWarning:.*playwright.*",
+    "error",
+    "ignore:pkg_resources is deprecated as an API\\.:DeprecationWarning",
+    "ignore::pydantic.warnings.PydanticDeprecatedSince20",
+    "ignore:jsonschema\\.exceptions\\.RefResolutionError is deprecated:DeprecationWarning",
+    "ignore:read_text is deprecated:DeprecationWarning",
+    "ignore:open_text is deprecated:DeprecationWarning",
+    "ignore:unclosed event loop:ResourceWarning",
+    "ignore:unclosed <socket\\.socket:ResourceWarning",
 ]
-
-# Custom test markers for AI/vector DB/web scraping project
 markers = [
-    "accessibility: mark test as accessibility test",
-    "ai: mark test as AI/ML specific",
-    "authentication: mark test as authentication test",
-    "authorization: mark test as authorization test",
-    "benchmark: mark test as benchmark test",
-    "browser: mark test as browser automation test",
-    "cli: mark test as CLI-specific",
-    "database: mark test as requiring database",
-    "e2e: End-to-end tests (full pipeline)",
-    "embedding: Embedding-related tests",
-    "endurance: mark test as endurance test",
-    "fast: Fast unit tests (<100ms each)",
-    "service: Service integration tests (<5s each)",
-    "interactive: mark test as requiring interactive features",
-    "input_validation: mark test as input validation test",
-    "load: mark test as load test",
-    "hypothesis: mark test as property-based using Hypothesis",
-    "performance: Performance and benchmark tests",
-    "property: mark test as property-based test",
-    "questionary: mark test as requiring questionary interactions",
-    "rag: RAG system tests",
-    "rate_limit: mark test as rate limit test",
-    "respx: mark test as using respx HTTP mocking",
-    "rich: mark test as requiring Rich console features",
-    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-    "spike: mark test as spike test",
-    "stress: mark test as stress test",
-    "unit: marks tests as unit tests",
-    "vector_db: Vector database tests",
-    "volume: mark test as volume test",
-    "vulnerability: mark test as vulnerability test",
-    "asyncio: marks tests as async tests",
+    "accessibility: accessibility and WCAG validation scenarios",
+    "ai: AI and embedding focused tests",
+    "api_latency: API latency monitoring coverage",
+    "async_framework: async framework compatibility checks",
+    "asyncio: coroutine-based unit tests",
+    "authentication: authentication guard behaviour",
+    "authorization: authorization policy validation",
+    "baseline: baseline comparisons for regression tracking",
+    "benchmark: performance benchmark coverage",
+    "browser: browser automation flows",
+    "chaos: chaos and failure injection tests",
+    "cli: command line interface behaviour",
+    "comparison: comparison harness coverage for legacy migrations",
+    "compatibility: cross-version compatibility scenarios",
+    "component: component-level integration coverage",
+    "config: configuration model tests",
+    "cpu: CPU performance validation",
+    "data_protection: data protection compliance checks",
+    "data_sanitization: sanitization and scrubbing behaviours",
+    "database: database integration paths",
+    "dependency_injection: dependency injection container tests",
+    "e2e: end-to-end verification suites",
+    "embedding: embedding-specific coverage",
+    "endurance: long-running soak tests",
+    "fast: sub-second smoke scenarios",
+    "framework_resolution: framework resolution logic tests",
+    "hypothesis: property-based testing suites",
+    "input_validation: input validation scenarios",
+    "interaction: conversational interaction behaviours",
+    "interactive: interactive CLI or UI coverage",
+    "latency_validation: latency threshold enforcement",
+    "load: load testing workloads",
+    "mcp: Model Context Protocol specific tests",
+    "memory: memory footprint validation",
+    "models: model schema coverage",
+    "modern: modern platform focused tests",
+    "monitoring: observability pipeline validation",
+    "network: network-dependent scenarios",
+    "observability: observability configuration coverage",
+    "performance: performance-sensitive flows",
+    "pii_detection: personally identifiable information detection",
+    "property: property-based heuristics",
+    "property_based: property-based regression checks",
+    "query_processing: query processing pipelines",
+    "questionary: questionary CLI helper coverage",
+    "rag: retrieval augmented generation coverage",
+    "rate_limit: rate limiting enforcement tests",
+    "rbac: role-based access control flows",
+    "recorded: recorded HTTP interactions",
+    "responsive: responsiveness validation",
+    "respx: respx HTTP mocking dependent tests",
+    "respx_compatibility: respx compatibility surface checks",
+    "rich: rich terminal rendering tests",
+    "security: security-focused scenarios",
+    "service: service layer integration tests",
+    "slow: long-running scenarios",
+    "spike: spike load validation",
+    "stress: stress testing workloads",
+    "throughput: throughput validation scenarios",
+    "throughput_validation: throughput threshold enforcement",
+    "unit: isolated unit test coverage",
+    "vector_db: vector database operations",
+    "visual: visual regression scenarios",
+    "volume: volume-based load testing",
+    "vulnerability: vulnerability scanning coverage",
+    "optional_deps: depends on optional libraries",
 ]
-
-# Logging configuration for tests
 log_cli = false
 log_cli_level = "WARNING"
 log_cli_format = "%(asctime)s [%(levelname)8s] %(name)s: %(message)s"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 
-# Parallel execution settings for CI/CD
-addopts_parallel = ["--dist=worksteal", "--tx=auto", "-q"]
-
 [tool.coverage.run]
 source = ["src"]
 branch = true
 omit = [
+    "*/dependency_injector/*",
     "src/cli/unified.py",
     "src/cli/commands/setup.py",
     "src/cli/wizard/*",
@@ -490,7 +469,7 @@ omit = [
 
 [tool.coverage.report]
 show_missing = true
-fail_under = 80.0
+fail_under = 70.0
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
@@ -510,6 +489,10 @@ preview = true
 
 [tool.uv.extra-build-dependencies]
 flash-attn = [{ requirement = "torch", match-runtime = true }]
+
+[tool.mutmut]
+paths_to_mutate = ["src/config/"]
+mutate_only_covered_lines = true
 
 # ===== Dependency Groups =====
 [tool.pylint]

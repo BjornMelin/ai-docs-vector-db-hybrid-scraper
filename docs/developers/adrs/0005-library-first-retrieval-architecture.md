@@ -33,9 +33,9 @@ result.
 
 - Significant reduction in bespoke code, freeing teams to focus on product
   features and evaluation pipelines.
-- Dependency management becomes critical. Versions are pinned in
-  `pyproject.toml` and documented in the compatibility matrix. Renovate
-  handles grouped upgrade proposals.
+- Dependency management becomes critical. Supported ranges live in
+  `pyproject.toml`, exact installations live in `uv.lock`, and Renovate handles
+  grouped upgrade proposals.
 - Performance regressions must be monitored via regression harnesses (see ADR 0006) and canary deployments. Hot paths may still call the Qdrant SDK
   directly if required.
 
@@ -52,5 +52,5 @@ result.
 ## References
 
 - Phase roadmap in `agent-logs/2025-10-02/refactor-strategy.md`
-- Compatibility matrix in `docs/developers/compatibility-matrix.md`
+- Dependency authority in `pyproject.toml` and `uv.lock`
 - Consensus summary (Option A vs Option B) stored in plan log

@@ -64,20 +64,23 @@ def export(ctx: click.Context, output: str, export_format: str):
     try:
         if export_format == "json":
             with output_path.open("w", encoding="utf-8") as f:
-                json.dump(config_obj.model_dump(), f, indent=2)
+                json.dump(config_obj.model_dump(mode="json"), f, indent=2)
         elif export_format == "yaml":
             if yaml is None:
-                console.print(
-                    "YAML support not available. Install PyYAML to enable export.",
-                    style="red",
+                raise click.ClickException(
+                    "YAML support not available. Install PyYAML to enable export."
                 )
-                return
             with output_path.open("w", encoding="utf-8") as f:
-                yaml.dump(config_obj.model_dump(), f, default_flow_style=False)
+                yaml.safe_dump(
+                    config_obj.model_dump(mode="json"),
+                    f,
+                    default_flow_style=False,
+                    sort_keys=False,
+                )
 
         console.print(f"Configuration exported to {output_path}", style="green")
-    except (OSError, ValueError) as e:
-        console.print(f"Export failed: {e}", style="red")
+    except (OSError, ValueError) as exc:
+        raise click.ClickException(f"Export failed: {exc}") from exc
 
 
 @config.command()
@@ -96,8 +99,8 @@ def load(ctx: click.Context, config_file: Path, validate_only: bool):
             console.print(f"Configuration loaded from {config_file}", style="green")
             _show_config_table(config_obj)
 
-    except (OSError, ValueError, ImportError) as exc:
-        console.print(f"Failed to load configuration: {exc}", style="red")
+    except (OSError, TypeError, ValueError, ImportError) as exc:
+        raise click.ClickException(f"Failed to load configuration: {exc}") from exc
 
 
 @config.command()
@@ -107,9 +110,6 @@ def validate(ctx: click.Context):
     config_obj = ctx.obj["config"]
 
     try:
-        # Basic validation - config is already validated on creation
-        console.print("Configuration is valid", style="green")
-
         # Show environment and provider info
         table = Table(title="Configuration Summary", show_header=True)
         table.add_column("Setting", style="cyan")
@@ -121,10 +121,11 @@ def validate(ctx: click.Context):
         table.add_row("Embedding Provider", str(config_obj.embedding_provider))
         table.add_row("Crawl Provider", str(config_obj.crawl_provider))
 
+        console.print("Configuration is valid", style="green")
         console.print(table)
 
-    except (ValueError, AttributeError) as e:
-        console.print(f"Configuration validation failed: {e}", style="red")
+    except (ValueError, AttributeError) as exc:
+        raise click.ClickException(f"Configuration validation failed: {exc}") from exc
 
 
 def _show_config_table(config_obj: Settings):
@@ -175,7 +176,7 @@ def _show_config_table(config_obj: Settings):
 
 def _show_config_json(config_obj: Settings):
     """Display configuration as JSON."""
-    config_json = json.dumps(config_obj.model_dump(), indent=2)
+    config_json = json.dumps(config_obj.model_dump(mode="json"), indent=2)
     syntax = Syntax(config_json, "json", theme="monokai", line_numbers=True)
 
     panel = Panel(
@@ -189,13 +190,15 @@ def _show_config_json(config_obj: Settings):
 def _show_config_yaml(config_obj: Settings):
     """Display configuration as YAML."""
     if yaml is None:
-        console.print(
-            "YAML support not available. Install PyYAML to enable export.",
-            style="red",
+        raise click.ClickException(
+            "YAML support not available. Install PyYAML to enable export."
         )
-        return
 
-    config_yaml = yaml.dump(config_obj.model_dump(), default_flow_style=False)
+    config_yaml = yaml.safe_dump(
+        config_obj.model_dump(mode="json"),
+        default_flow_style=False,
+        sort_keys=False,
+    )
     syntax = Syntax(config_yaml, "yaml", theme="monokai", line_numbers=True)
 
     panel = Panel(

@@ -104,6 +104,10 @@ class _FakeSelectionEngine:
         )
         return self._recommendation
 
+    def can_rank(self, _providers: dict[str, EmbeddingProvider]) -> bool:
+        """Exercise the benchmark-ranking branch in pipeline unit tests."""
+        return True
+
     def set_recommendation(self, recommendation: dict[str, Any]) -> None:
         """Set the recommendation."""
         self._recommendation = recommendation

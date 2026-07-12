@@ -157,19 +157,41 @@ def test_cors_retains_credentials_for_explicit_origins(
         refresh_settings(settings=load_settings())
 
 
-def test_cache_initialization_enabled_recognizes_flags() -> None:
-    """The cache toggle helper should respect enablement flags."""
+def test_dragonfly_initialization_enabled_requires_both_flags() -> None:
+    """Dragonfly should initialize only when caching and its backend are enabled."""
     enabled = cast(
-        Settings, SimpleNamespace(cache=SimpleNamespace(enable_caching=True))
+        Settings,
+        SimpleNamespace(
+            cache=SimpleNamespace(
+                enable_caching=True,
+                enable_dragonfly_cache=True,
+            )
+        ),
+    )
+    local_only = cast(
+        Settings,
+        SimpleNamespace(
+            cache=SimpleNamespace(
+                enable_caching=True,
+                enable_dragonfly_cache=False,
+            )
+        ),
     )
     disabled = cast(
-        Settings, SimpleNamespace(cache=SimpleNamespace(enable_caching=False))
+        Settings,
+        SimpleNamespace(
+            cache=SimpleNamespace(
+                enable_caching=False,
+                enable_dragonfly_cache=True,
+            )
+        ),
     )
     missing = cast(Settings, SimpleNamespace())
 
-    assert app_factory._cache_initialization_enabled(enabled) is True
-    assert app_factory._cache_initialization_enabled(disabled) is False
-    assert app_factory._cache_initialization_enabled(missing) is False
+    assert app_factory._dragonfly_initialization_enabled(enabled) is True
+    assert app_factory._dragonfly_initialization_enabled(local_only) is False
+    assert app_factory._dragonfly_initialization_enabled(disabled) is False
+    assert app_factory._dragonfly_initialization_enabled(missing) is False
 
 
 @pytest.mark.asyncio()
@@ -178,7 +200,13 @@ async def test_ensure_database_ready_handles_cache_disabled(
 ) -> None:
     """Database readiness should not touch cache when disabled."""
     settings = cast(
-        Settings, SimpleNamespace(cache=SimpleNamespace(enable_caching=False))
+        Settings,
+        SimpleNamespace(
+            cache=SimpleNamespace(
+                enable_caching=True,
+                enable_dragonfly_cache=False,
+            )
+        ),
     )
     vector_service = AsyncMock()
     cache_manager = AsyncMock()
@@ -201,7 +229,13 @@ async def test_ensure_database_ready_warms_cache(
 ) -> None:
     """Cache warm-up should invoke cache manager and dragonfly ping."""
     settings = cast(
-        Settings, SimpleNamespace(cache=SimpleNamespace(enable_caching=True))
+        Settings,
+        SimpleNamespace(
+            cache=SimpleNamespace(
+                enable_caching=True,
+                enable_dragonfly_cache=True,
+            )
+        ),
     )
     vector_service = AsyncMock()
     cache_manager = AsyncMock()
@@ -244,7 +278,13 @@ async def test_initialize_services_invokes_all_components(
     )
 
     settings = cast(
-        Settings, SimpleNamespace(cache=SimpleNamespace(enable_caching=True))
+        Settings,
+        SimpleNamespace(
+            cache=SimpleNamespace(
+                enable_caching=True,
+                enable_dragonfly_cache=True,
+            )
+        ),
     )
     await _ORIGINAL_INITIALIZE_SERVICES(settings)
 
@@ -285,7 +325,13 @@ async def test_initialize_services_skips_cache_when_disabled(
     )
 
     settings = cast(
-        Settings, SimpleNamespace(cache=SimpleNamespace(enable_caching=False))
+        Settings,
+        SimpleNamespace(
+            cache=SimpleNamespace(
+                enable_caching=True,
+                enable_dragonfly_cache=False,
+            )
+        ),
     )
     await _ORIGINAL_INITIALIZE_SERVICES(settings)
 
@@ -388,15 +434,12 @@ async def test_build_app_lifespan_invokes_initializers(
     assert events == ["enter", "init:ok", "inside", "exit"]
 
 
-def test_get_app_container_returns_instance(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_get_app_container_returns_instance() -> None:
     """`get_app_container` should return validated container instances."""
-
-    class DummyContainer:
-        pass
+    from dependency_injector import containers
 
     app = FastAPI()
-    container = DummyContainer()
-    monkeypatch.setattr(app_factory, "ApplicationContainer", DummyContainer)
+    container = containers.DynamicContainer()
     app.state.container = container
 
     assert app_factory.get_app_container(app) is container
@@ -409,14 +452,9 @@ def test_get_app_container_missing_state() -> None:
         app_factory.get_app_container(app)
 
 
-def test_get_app_container_rejects_wrong_type(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_get_app_container_rejects_wrong_type() -> None:
     """Non-container state should raise a TypeError."""
-
-    class DummyContainer:
-        pass
-
     app = FastAPI()
-    monkeypatch.setattr(app_factory, "ApplicationContainer", DummyContainer)
     app.state.container = object()
 
     with pytest.raises(TypeError):

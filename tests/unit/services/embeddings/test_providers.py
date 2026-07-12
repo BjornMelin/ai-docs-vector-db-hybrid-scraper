@@ -64,6 +64,10 @@ class _Settings:
         """FastEmbed settings stub."""
 
         dense_model: str = "BAAI/bge-small-en-v1.5"
+        sparse_model: str | None = "configured-sparse"
+        cache_dir: str | None = "cache/models"
+        max_length: int = 384
+        batch_size: int = 16
 
     openai = OpenAI()
     fastembed = FastEmbed()
@@ -85,6 +89,36 @@ async def test_initialize_with_openai_and_fastembed() -> None:
     providers = await reg.initialize()
     # Some environments may skip OpenAI; ensure at least FastEmbed exists
     assert "fastembed" in providers
+
+
+@pytest.mark.asyncio
+async def test_initialize_forwards_configured_fastembed_models() -> None:
+    """Registry should pass both canonical FastEmbed model settings."""
+    captured: dict[str, Any] = {}
+
+    def create_fastembed(**kwargs: Any) -> _StubProvider:
+        captured.update(kwargs)
+        return _StubProvider("fastembed")
+
+    settings = _Settings()
+    settings.openai.api_key = None
+    registry = ProviderRegistry(settings)
+    registry.set_factories(
+        ProviderFactories(
+            openai_cls=lambda **_k: _StubProvider("openai"),  # type: ignore[arg-type]
+            fastembed_cls=create_fastembed,  # type: ignore[arg-type]
+        )
+    )
+
+    await registry.initialize()
+
+    assert captured == {
+        "model_name": "BAAI/bge-small-en-v1.5",
+        "sparse_model": "configured-sparse",
+        "cache_dir": "cache/models",
+        "max_length": 384,
+        "batch_size": 16,
+    }
 
 
 @pytest.mark.asyncio

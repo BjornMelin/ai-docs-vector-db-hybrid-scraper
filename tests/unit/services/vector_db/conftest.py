@@ -162,10 +162,11 @@ def config_stub() -> Any:
     class _FastEmbedConfig:
         dense_model = "stub-model"
         sparse_model = "stub-sparse"
+        cache_dir = None
+        max_length = 512
+        batch_size = 32
 
     class _EmbeddingConfig:
-        dense_model = "stub-model"
-        sparse_model = "stub-sparse"
         retrieval_mode = SearchStrategy.DENSE
 
     class _QueryProcessingConfig:
@@ -178,6 +179,9 @@ def config_stub() -> Any:
         embedding = _EmbeddingConfig()
         qdrant = QdrantConfig(enable_grouping=False)
         query_processing = _QueryProcessingConfig()
+
+        def get_effective_search_strategy(self) -> SearchStrategy:
+            return self.embedding.retrieval_mode
 
     return _Config()
 

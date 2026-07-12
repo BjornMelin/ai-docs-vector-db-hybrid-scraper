@@ -8,17 +8,19 @@ Provides distributed state management and reliability.
 import asyncio
 import logging
 from collections.abc import Awaitable, Callable
-from typing import Any, TypeVar
+from typing import Any, Self, TypeVar
 
 
 try:
     from purgatory import (
         AsyncCircuitBreakerFactory,
+        AsyncInMemoryUnitOfWork,
         AsyncRedisUnitOfWork,
     )
     from purgatory.domain.model import ClosedState
 except ModuleNotFoundError:
     AsyncCircuitBreakerFactory = None  # type: ignore[assignment]
+    AsyncInMemoryUnitOfWork = None  # type: ignore[assignment]
     AsyncRedisUnitOfWork = None  # type: ignore[assignment]
     ClosedState = type(
         "ClosedState",
@@ -67,16 +69,13 @@ class CircuitBreakerManager:
         self.redis_storage = unit_of_work or AsyncRedisUnitOfWork(redis_url)
 
         # Get circuit breaker settings from config or use defaults
-        if config and hasattr(config, "performance"):
-            default_threshold = getattr(
-                config.performance, "circuit_breaker_failure_threshold", 5
-            )
-            default_ttl = getattr(
-                config.performance, "circuit_breaker_recovery_timeout", 60
-            )
-        else:
-            default_threshold = 5
-            default_ttl = 60
+        breaker_config = config.circuit_breaker if config is not None else None
+        default_threshold = (
+            breaker_config.failure_threshold if breaker_config is not None else 5
+        )
+        default_ttl = (
+            breaker_config.recovery_timeout if breaker_config is not None else 60.0
+        )
 
         # Create circuit breaker factory with distributed storage
         if AsyncCircuitBreakerFactory is None:
@@ -94,11 +93,25 @@ class CircuitBreakerManager:
         self._lock = asyncio.Lock()
 
         logger.info(
-            "CircuitBreakerManager initialized with Redis: %s, "
+            "CircuitBreakerManager initialized with state backend: %s, "
             "threshold=%s, recovery_timeout=%ss",
             redis_url,
             default_threshold,
             default_ttl,
+        )
+
+    @classmethod
+    def in_memory(cls, config: Settings | None = None) -> Self:
+        """Create a manager without an external state service."""
+        if AsyncInMemoryUnitOfWork is None:
+            raise RuntimeError(
+                "purgatory AsyncInMemoryUnitOfWork is unavailable; cannot "
+                "construct an in-memory circuit breaker manager"
+            )
+        return cls(
+            redis_url="memory://local",
+            config=config,
+            unit_of_work=AsyncInMemoryUnitOfWork(),
         )
 
     async def get_breaker(self, service_name: str, **kwargs: Any):

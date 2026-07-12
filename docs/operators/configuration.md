@@ -1,206 +1,98 @@
-# Configuration Guide
+---
+title: Configure AI Docs
+audience: operators
+status: active
+owner: platform-engineering
+last_reviewed: 2026-07-11
+meta:
+  contentType: Reference
+  category: Operations
+---
 
-## Environment Variables
+# Configure AI Docs
 
-### Required Configuration
-```bash
-# Core API Keys
-export AI_DOCS__OPENAI__API_KEY=${OPENAI_API_KEY}
-export AI_DOCS__FIRECRAWL__API_KEY=${FIRECRAWL_API_KEY}
+Use the Pydantic `Settings` model for application configuration. `.env.example` is the executable environment template, and `src/config/loader.py` plus `src/config/models.py` define the complete schema.
 
-# Database URLs
-export AI_DOCS__CACHE__DRAGONFLY_URL="redis://dragonfly:6379"
-export AI_DOCS__QDRANT__URL="http://qdrant:6333"
-export AI_DOCS__QDRANT__COLLECTION_NAME="documents"
+## Environment variable format
 
-# Environment
-export AI_DOCS__ENVIRONMENT=production
-# Optional: point CLI helpers at a baseline file
-uv run python -m src.cli.main config load config/production.json --validate-only
-```
+Application variables follow two forms:
 
-### Production Settings
-```bash
-export AI_DOCS__DEBUG=false
-export AI_DOCS__LOG_LEVEL=INFO
-export AI_DOCS__PERFORMANCE__MAX_CONCURRENT_REQUESTS=20
-export AI_DOCS__PERFORMANCE__REQUEST_TIMEOUT=30
-export AI_DOCS__PERFORMANCE__BATCH_SIZE=100
-```
+- Top-level fields: `AI_DOCS_<FIELD>`
+- Nested fields: `AI_DOCS_<SECTION>__<FIELD>`
 
-### Development Settings
-```bash
-export AI_DOCS__ENVIRONMENT=development
-export AI_DOCS__DEBUG=true
-export AI_DOCS__LOG_LEVEL=DEBUG
-export AI_DOCS__PERFORMANCE__MAX_CONCURRENT_REQUESTS=5
-```
+For example, `AI_DOCS_QDRANT__URL` maps to `Settings.qdrant.url`. Don't insert a double underscore after `AI_DOCS`.
 
-## Docker Compose Configuration
+## Core runtime settings
 
-### Production docker-compose.yml
-```yaml
-services:
-  qdrant:
-    deploy:
-      resources:
-        limits:
-          memory: 4G
-          cpus: "2.0"
-        reservations:
-          memory: 2G
-          cpus: "1.0"
-    environment:
-      QDRANT__SERVICE__HTTP_PORT: 6333
-      QDRANT__LOG_LEVEL: INFO
+These settings select the environment and providers:
 
-  dragonfly:
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-          cpus: "1.0"
-        reservations:
-          memory: 1G
-          cpus: "0.5"
-    command: ["dragonfly", "--maxmemory=1gb", "--save_schedule=*/10"]
-```
+| Variable | Model default | Purpose |
+| --- | --- | --- |
+| `AI_DOCS_MODE` | `production` | Deployment mode label |
+| `AI_DOCS_ENVIRONMENT` | `development` | Runtime environment |
+| `AI_DOCS_LOG_LEVEL` | `INFO` | Application log level |
+| `AI_DOCS_EMBEDDING_PROVIDER` | `fastembed` | Embedding provider |
+| `AI_DOCS_CRAWL_PROVIDER` | `crawl4ai` | Crawl provider |
 
-## Configuration Files
+The local `.env.example` overrides `AI_DOCS_MODE` to `simple`.
 
-### config/production.json
-```json
-{
-  "environment": "production",
-  "debug": false,
-  "log_level": "INFO",
-  "performance": {
-    "max_concurrent_requests": 20,
-    "request_timeout": 30,
-    "batch_size": 100,
-    "cache_ttl": 3600
-  },
-  "qdrant": {
-    "collection_name": "documents",
-    "collection_config": {
-      "vector_size": 1536,
-      "distance": "Cosine",
-      "hnsw_config": {
-        "m": 16,
-        "ef_construct": 100
-      }
-    }
-  }
-}
-```
+## Provider credentials
 
-### config/development.json
-```json
-{
-  "environment": "development",
-  "debug": true,
-  "log_level": "DEBUG",
-  "performance": {
-    "max_concurrent_requests": 5,
-    "request_timeout": 60,
-    "batch_size": 50
-  }
-}
-```
+Configure credentials only for providers you enable:
 
-### CLI helpers
+| Variable | Required when |
+| --- | --- |
+| `AI_DOCS_OPENAI__API_KEY` | `AI_DOCS_EMBEDDING_PROVIDER=openai` |
+| `AI_DOCS_BROWSER__FIRECRAWL__API_KEY` | `AI_DOCS_CRAWL_PROVIDER=firecrawl` |
+| `AI_DOCS_QDRANT__API_KEY` | The Qdrant deployment requires authentication |
 
-Use the bundled CLI to inspect or export settings without editing JSON by hand:
+Keep credentials in a local `.env` file or your deployment platform's secret store. Don't commit populated credentials.
+
+## Storage and cache settings
+
+Configure Qdrant and Dragonfly through their nested models:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `AI_DOCS_QDRANT__URL` | `http://localhost:6333` | Qdrant HTTP endpoint |
+| `AI_DOCS_QDRANT__COLLECTION_NAME` | `documents` | Primary collection |
+| `AI_DOCS_QDRANT__USE_GRPC` | `false` | Enable the Qdrant gRPC client |
+| `AI_DOCS_CACHE__ENABLE_DRAGONFLY_CACHE` | `false` in `.env.example` | Enable distributed caching |
+| `AI_DOCS_CACHE__DRAGONFLY_URL` | `redis://localhost:6379` | Dragonfly endpoint |
+| `AI_DOCS_FASTEMBED__CACHE_DIR` | `./cache/fastembed` | Persist downloaded embedding models |
+
+The enterprise Compose profile exposes Dragonfly at `redis://dragonfly:6379`. Set `AI_DOCS_CACHE__ENABLE_DRAGONFLY_CACHE=true` before starting that profile when the application should use it.
+
+## Retrieval settings
+
+Tune retrieval through the canonical nested sections:
+
+| Variable | Default in `.env.example` |
+| --- | --- |
+| `AI_DOCS_EMBEDDING__RETRIEVAL_MODE` | `dense` |
+| `AI_DOCS_CHUNKING__STRATEGY` | `enhanced` |
+| `AI_DOCS_CHUNKING__CHUNK_SIZE` | `1600` |
+| `AI_DOCS_CHUNKING__CHUNK_OVERLAP` | `200` |
+| `AI_DOCS_HYDE__ENABLE_HYDE` | `false` |
+| `AI_DOCS_RAG__ENABLE_RAG` | `false` |
+| `AI_DOCS_RERANKING__ENABLED` | `false` |
+
+## Validate configuration
+
+Load the current environment without printing credentials:
 
 ```bash
-# Show the active configuration in a table
-uv run python -m src.cli.main config show --format table
-
-# Export the current in-memory settings to YAML (requires PyYAML)
-uv run python -m src.cli.main config export --format yaml -o exports/production.yaml
-
-# Validate a file without loading it
-uv run python -m src.cli.main config load config/production.json --validate-only
+uv run python -c 'from src.config.loader import Settings; print(Settings().environment.value)'
 ```
 
-## Security Configuration
+Run the repository validation harness after changing configuration assets:
 
-### API Authentication
 ```bash
-# Generate secure API keys
-API_KEY=$(openssl rand -hex 32)
-export AI_DOCS__API__SECRET_KEY="${API_KEY}"
-
-# Rate limiting
-export AI_DOCS__RATE_LIMIT__REQUESTS_PER_MINUTE=60
-export AI_DOCS__RATE_LIMIT__BURST_SIZE=10
+uv run python scripts/dev.py validate --check-docs --strict
 ```
 
-### TLS Configuration
+Run the focused contract tests after changing `Settings` or `.env.example`:
+
 ```bash
-# Enable TLS
-export AI_DOCS__TLS__ENABLED=true
-export AI_DOCS__TLS__CERT_PATH="/etc/ssl/certs/ai-docs.crt"
-export AI_DOCS__TLS__KEY_PATH="/etc/ssl/private/ai-docs.key"
-```
-
-## Performance Tuning
-
-### Vector Database Optimization
-```bash
-# Qdrant configuration
-export QDRANT__SERVICE__MAX_REQUEST_SIZE_MB=32
-export QDRANT__SERVICE__MAX_WORKERS=4
-export QDRANT__STORAGE__PERFORMANCE__MAX_SEARCH_THREADS=2
-```
-
-### Cache Optimization
-```bash
-# DragonflyDB configuration
-export DRAGONFLY__MAXMEMORY=2gb
-export DRAGONFLY__MAXMEMORY_POLICY=allkeys-lru
-export DRAGONFLY__SAVE_SCHEDULE="*/10"
-```
-
-## Monitoring Configuration
-
-### Metrics Collection
-```bash
-export AI_DOCS__METRICS__ENABLED=true
-export AI_DOCS__METRICS__PORT=9090
-export AI_DOCS__METRICS__PATH="/metrics"
-```
-
-### Logging Configuration
-```bash
-export AI_DOCS__LOGGING__FORMAT=json
-export AI_DOCS__LOGGING__LEVEL=INFO
-export AI_DOCS__LOGGING__FILE_PATH="/var/log/ai-docs/app.log"
-export AI_DOCS__LOGGING__MAX_SIZE=100MB
-export AI_DOCS__LOGGING__BACKUP_COUNT=5
-```
-
-## Configuration Validation
-
-### Verify Configuration
-```bash
-# Check environment variables
-env | grep AI_DOCS__
-
-# Validate configuration file
-python -c "import json; json.load(open('config/production.json'))"
-
-# Test database connections
-curl -s http://localhost:6333/health
-redis-cli ping
-```
-
-### Configuration Refresh
-```bash
-# Refresh settings (applies environment overrides)
-curl -X POST http://localhost:9000/config/refresh -H 'Content-Type: application/json' -d '{}'
-
-# Restart the stack after editing .env or config files
-docker-compose down
-docker-compose up -d
+uv run pytest -q tests/unit/config/test_settings_defaults.py
 ```

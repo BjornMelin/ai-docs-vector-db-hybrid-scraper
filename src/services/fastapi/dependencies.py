@@ -270,6 +270,7 @@ def get_request_context(request: Request) -> dict[str, Any]:
 
 
 _health_manager: HealthCheckManager | None = None
+_health_manager_qdrant_client: Any | None = None
 _health_manager_lock = asyncio.Lock()
 
 
@@ -280,15 +281,27 @@ async def get_health_checker() -> HealthCheckManager:
         HealthCheckManager: The shared health manager used by the API.
     """
     global _health_manager  # pylint: disable=global-statement
-    if _health_manager is not None:
+    global _health_manager_qdrant_client  # pylint: disable=global-statement
+    container = get_container()
+    qdrant_client = container.qdrant_client() if container is not None else None
+    if _health_manager is not None and _health_manager_qdrant_client is qdrant_client:
         return _health_manager
 
     async with _health_manager_lock:
-        if _health_manager is not None:
+        container = get_container()
+        qdrant_client = container.qdrant_client() if container is not None else None
+        if (
+            _health_manager is not None
+            and _health_manager_qdrant_client is qdrant_client
+        ):
             return _health_manager
 
         settings = get_settings()
-        _health_manager = build_health_manager(settings)
+        _health_manager = build_health_manager(
+            settings,
+            qdrant_client=qdrant_client,
+        )
+        _health_manager_qdrant_client = qdrant_client
         return _health_manager
 
 

@@ -103,7 +103,6 @@ def _coverage_arguments(enable: bool) -> list[str]:
         "--cov=src",
         "--cov-report=term-missing:skip-covered",
         "--cov-report=xml",
-        "--cov-fail-under=70",
     ]
 
 
@@ -384,7 +383,7 @@ def cmd_validate(args: argparse.Namespace) -> int:  # pylint: disable=too-many-b
             warnings.append(f"Optional dependency missing: {module}")
 
     if args.check_services:
-        if _check_service_health("http://localhost:6333/health"):
+        if _check_service_health("http://localhost:6333/readyz"):
             print("✅ Qdrant service reachable at http://localhost:6333")
         else:
             warnings.append("Qdrant service is not reachable on http://localhost:6333")
@@ -437,51 +436,32 @@ def _compose_base_command() -> list[str]:
     raise RuntimeError(message)
 
 
-def _compose_command(
-    base: Sequence[str], *, file: str, action: str, services: Sequence[str]
-) -> list[str]:
-    """Build a docker compose command for the requested action."""
-    command = [*base, "-f", file]
-    if action == "start":
-        command.extend(["up", "-d"])
-    elif action == "stop":
-        command.append("stop" if services else "down")
-    else:
-        command.append("ps")
-
-    if services:
-        command.extend(services)
-    return command
-
-
 def cmd_services(args: argparse.Namespace) -> int:
     """Manage supporting docker-compose services."""
     compose_cmd = _compose_base_command()
 
-    if args.stack == "vector":
-        command = _compose_command(
-            compose_cmd,
-            file="docker-compose.yml",
-            action=args.action,
-            services=("qdrant", "dragonfly"),
-        )
+    command = [
+        *compose_cmd,
+        "-f",
+        "docker-compose.yml",
+        "--profile",
+        args.stack,
+    ]
+    if args.action == "start":
+        command.extend(["up", "-d"])
+    elif args.action == "stop":
+        command.append("stop")
     else:
-        command = [*compose_cmd, "--profile", "monitoring", "-f", "docker-compose.yml"]
-        if args.action == "start":
-            command.extend(["up", "-d"])
-        elif args.action == "stop":
-            command.append("down")
-        else:
-            command.append("ps")
+        command.append("ps")
 
     exit_code = run_command(command)
     if (
         exit_code == 0
         and args.action == "start"
-        and args.stack == "vector"
+        and args.stack == "simple"
         and not args.skip_health_check
     ):
-        if _check_service_health("http://localhost:6333/health"):
+        if _check_service_health("http://localhost:6333/readyz"):
             print("✅ Qdrant is healthy")
         else:
             print("⚠️  Qdrant health endpoint not reachable; check docker logs")
@@ -574,7 +554,7 @@ def cmd_quality(args: argparse.Namespace) -> int:
     commands.extend(
         (
             lint_cmd,
-            ["uv", "run", "pylint", "src", "tests"],
+            ["uv", "run", "pylint", "--fail-under=9.5", "src", "scripts"],
             ["uv", "run", "pyright"],
         )
     )
@@ -763,9 +743,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     services_parser.add_argument(
         "--stack",
-        choices=["vector", "monitoring"],
-        default="vector",
-        help="Service stack to manage.",
+        choices=["simple", "enterprise"],
+        default="simple",
+        help="Compose profile to manage.",
     )
     services_parser.add_argument(
         "--skip-health-check",
@@ -809,7 +789,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     typecheck_parser.set_defaults(func=cmd_typecheck)
 
-    quality_parser = subparsers.add_parser("quality", help="Run the full quality gate")
+    quality_parser = subparsers.add_parser("quality", help="Run static quality gates")
     quality_parser.add_argument(
         "--skip-format",
         action="store_true",

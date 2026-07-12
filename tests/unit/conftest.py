@@ -33,7 +33,7 @@ def fixture_build_unified_mcp_config() -> Callable[..., SimpleNamespace]:
         return SimpleNamespace(
             get_active_providers=lambda: providers,
             openai=SimpleNamespace(api_key=openai_key),
-            embedding=SimpleNamespace(provider=embedding_provider),
+            embedding_provider=embedding_provider,
             crawling=SimpleNamespace(providers=crawling_providers),
             browser=SimpleNamespace(firecrawl=SimpleNamespace(api_key=firecrawl_key)),
             qdrant=SimpleNamespace(url=qdrant_url),

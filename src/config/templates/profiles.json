@@ -22,10 +22,12 @@
         "collection_name": "dev_documents",
         "batch_size": 64
       },
+      "embedding": {
+        "retrieval_mode": "hybrid"
+      },
       "fastembed": {
         "dense_model": "BAAI/bge-small-en-v1.5",
         "sparse_model": "qdrant/bm25",
-        "retrieval_mode": "hybrid",
         "batch_size": 16
       },
       "openai": {
@@ -93,17 +95,15 @@
     }
   },
   "production": {
-    "description": "Hardened deployment with OpenAI embeddings and Firecrawl crawling.",
-    "use_case": "Production workloads with external providers and stricter limits.",
-    "features": "OpenAI embeddings, Firecrawl routing, Dragonfly cache, OTLP tracing.",
+    "description": "Production deployment with runtime provider selection.",
+    "use_case": "Production workloads with stricter limits and optional external providers.",
+    "features": "Dragonfly cache, OTLP tracing, and production concurrency limits.",
     "overrides": {
       "environment": "production",
-      "embedding_provider": "openai",
-      "crawl_provider": "firecrawl",
       "cache": {
         "enable_caching": true,
         "enable_dragonfly_cache": true,
-        "dragonfly_url": "redis://redis:6379",
+        "dragonfly_url": "redis://dragonfly:6379",
         "dragonfly_database": 0
       },
       "qdrant": {
@@ -113,13 +113,14 @@
         "prefer_grpc": true,
         "group_size": 2
       },
+      "embedding": {
+        "retrieval_mode": "hybrid"
+      },
       "fastembed": {
-        "retrieval_mode": "hybrid",
         "batch_size": 64
       },
       "openai": {
-        "model": "text-embedding-3-large",
-        "api_key": "sk-REPLACE"
+        "model": "text-embedding-3-large"
       },
       "browser": {
         "router": {
@@ -155,7 +156,6 @@
           "min_budget_ms": 800
         },
         "firecrawl": {
-          "api_key": "fc-REPLACE",
           "timeout_seconds": 180
         }
       },
@@ -174,7 +174,7 @@
         "service_name": "ai-docs-prod",
         "trace_sample_rate": 0.25,
         "track_costs": true,
-        "otlp_endpoint": "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4317}"
+        "otlp_endpoint": "http://otel-collector:4317"
       },
       "security": {
         "enabled": true,
@@ -204,9 +204,11 @@
         "url": "http://localhost:6333",
         "collection_name": "personal_docs"
       },
+      "embedding": {
+        "retrieval_mode": "hybrid"
+      },
       "fastembed": {
         "dense_model": "BAAI/bge-small-en-v1.5",
-        "retrieval_mode": "hybrid",
         "batch_size": 8
       },
       "browser": {
@@ -275,9 +277,11 @@
         "url": "http://localhost:6333",
         "collection_name": "local_docs"
       },
+      "embedding": {
+        "retrieval_mode": "dense"
+      },
       "fastembed": {
         "dense_model": "BAAI/bge-small-en-v1.5",
-        "retrieval_mode": "dense",
         "cache_dir": "./cache/models"
       },
       "browser": {
@@ -352,9 +356,11 @@
         "collection_name": "test_documents",
         "batch_size": 16
       },
+      "embedding": {
+        "retrieval_mode": "dense"
+      },
       "fastembed": {
         "dense_model": "BAAI/bge-small-en-v1.5",
-        "retrieval_mode": "dense",
         "batch_size": 4
       },
       "browser": {

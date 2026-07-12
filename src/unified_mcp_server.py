@@ -201,9 +201,8 @@ mcp = FastMCP(
     - Cost estimation and optimization
     - Analytics and monitoring
 
-    Streaming Support:
-    - Uses streamable-http transport by default for optimal performance
-    - Supports large search results with configurable response buffers
+    Transport Support:
+    - Uses streamable-http transport by default
     - Environment variables: FASTMCP_TRANSPORT, FASTMCP_HOST, FASTMCP_PORT
     - Automatic fallback to stdio for Claude Desktop compatibility
     """,
@@ -245,7 +244,7 @@ def _get_int_env(var_name: str, default: int) -> int:
         return default
 
 
-def _validate_streaming_config(errors: list, warnings: list) -> None:
+def _validate_streaming_config(errors: list[str]) -> None:
     """Validate streaming configuration parameters."""
     transport = os.getenv("FASTMCP_TRANSPORT", DEFAULT_TRANSPORT)
     if transport != DEFAULT_TRANSPORT:
@@ -259,19 +258,6 @@ def _validate_streaming_config(errors: list, warnings: list) -> None:
     except ValueError:
         errors.append(
             f"Invalid port value: {os.getenv('FASTMCP_PORT')}. Must be a valid integer"
-        )
-
-    # Validate buffer size
-    try:
-        buffer_size = int(os.getenv("FASTMCP_BUFFER_SIZE", "8192"))
-        if buffer_size <= 0:
-            warnings.append(
-                f"Buffer size {buffer_size} is very small and may impact performance"
-            )
-    except ValueError:
-        errors.append(
-            f"Invalid buffer size: {os.getenv('FASTMCP_BUFFER_SIZE')}. "
-            "Must be a valid integer"
         )
 
     # Validate max response size
@@ -292,8 +278,10 @@ def validate_configuration() -> None:
     warnings: list[str] = []
     errors: list[str] = []
 
-    embedding_provider = getattr(config.embedding, "provider", None)
-    if embedding_provider == EmbeddingProvider.OPENAI and not config.openai.api_key:
+    if (
+        config.embedding_provider == EmbeddingProvider.OPENAI
+        and not config.openai.api_key
+    ):
         errors.append(
             "OpenAI API key is required when the OpenAI embedding provider is enabled"
         )
@@ -308,7 +296,7 @@ def validate_configuration() -> None:
     if not config.qdrant.url:
         errors.append("Qdrant URL is required")
 
-    _validate_streaming_config(errors, warnings)
+    _validate_streaming_config(errors)
 
     for warning in warnings:
         logger.warning("Configuration warning: %s", warning)

@@ -61,7 +61,7 @@ class FirecrawlProvider(BrowserProvider):
             )
 
         api_key = self._settings.api_key or os.getenv(
-            "AI_DOCS__BROWSER__FIRECRAWL__API_KEY"
+            "AI_DOCS_BROWSER__FIRECRAWL__API_KEY"
         )
         if not api_key:
             raise BrowserProviderError(

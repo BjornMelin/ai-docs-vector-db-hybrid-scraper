@@ -5,7 +5,6 @@ on:
     paths:
       - 'src/services/embeddings/**'
       - 'tests/unit/services/embeddings/**'
-      - 'pytest.ini'
       - 'pyproject.toml'
       - 'uv.lock'
 
@@ -18,9 +17,9 @@ jobs:
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
       - name: Setup
-        uses: ./.github/actions/checkout-and-setup
+        uses: ./.github/actions/setup-environment
         with:
-          python-version: '3.12'
+          python-version: '3.11'
           cache-suffix: '-embeddings'
       - name: Run embeddings unit tests
         run: |

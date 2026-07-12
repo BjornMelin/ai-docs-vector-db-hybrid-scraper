@@ -12,6 +12,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any, cast
 from uuid import uuid4
 
+import grpc
 from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
 from langchain_core.documents import Document
 from langchain_qdrant import QdrantVectorStore, RetrievalMode
@@ -59,6 +60,8 @@ _RETRIEVAL_MODE_MAP: dict[SearchStrategy, RetrievalMode] = {
     SearchStrategy.SPARSE: RetrievalMode.SPARSE,
     SearchStrategy.HYBRID: RetrievalMode.HYBRID,
 }
+_DENSE_VECTOR_NAME = QdrantVectorStore.VECTOR_NAME
+_SPARSE_VECTOR_NAME = QdrantVectorStore.SPARSE_VECTOR_NAME
 
 
 class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-instance-attributes
@@ -76,12 +79,13 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
         self._async_client: AsyncQdrantClient | None = async_qdrant_client
         self._sync_client: QdrantClient | None = None
         self._vector_store: QdrantVectorStore | None = None
+        self._vector_stores: dict[str, QdrantVectorStore] = {}
         self._dense_embeddings: FastEmbedEmbeddings | None = None
         self._sparse_embeddings: FastEmbedSparseType | None = None
         self._embedding_dimension: int | None = None
-        self._dense_model_name = self._resolve_dense_model()
-        self._sparse_model_name = self._resolve_sparse_model()
-        self._retrieval_mode: SearchStrategy = self._resolve_retrieval_mode()
+        self._dense_model_name = config.fastembed.dense_model
+        self._sparse_model_name = config.fastembed.sparse_model
+        self._retrieval_mode = config.get_effective_search_strategy()
 
     def is_initialized(self) -> bool:
         """Return True when a vector store has been constructed."""
@@ -93,7 +97,12 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
             return
 
         cfg = self._require_qdrant_config()
-        dense_embedding = FastEmbedEmbeddings(model_name=self._dense_model_name)
+        dense_embedding = FastEmbedEmbeddings(
+            model_name=self._dense_model_name,
+            cache_dir=self.config.fastembed.cache_dir,
+            max_length=self.config.fastembed.max_length,
+            batch_size=self.config.fastembed.batch_size,
+        )
         probe_vector = await asyncio.to_thread(dense_embedding.embed_query, "__probe__")
         self._embedding_dimension = len(probe_vector)
         sparse_embedding: FastEmbedSparseType | None = None
@@ -108,7 +117,9 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
                 )
                 raise EmbeddingServiceError(msg)
             sparse_embedding = FastEmbedSparseRuntime(
-                model_name=self._sparse_model_name
+                model_name=self._sparse_model_name,
+                cache_dir=self.config.fastembed.cache_dir,
+                batch_size=self.config.fastembed.batch_size,
             )
         self._dense_embeddings = dense_embedding
         self._sparse_embeddings = sparse_embedding
@@ -117,6 +128,16 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
         )
         self._sync_client = self._build_sync_client(cfg)
         self.collection_name = getattr(cfg, "collection_name", None)
+        await self.ensure_collection(
+            CollectionSchema(
+                name=cfg.collection_name,
+                vector_size=self.embedding_dimension,
+                requires_sparse=(
+                    self._retrieval_mode
+                    in {SearchStrategy.SPARSE, SearchStrategy.HYBRID}
+                ),
+            )
+        )
         self._vector_store = QdrantVectorStore(
             client=self._sync_client,
             collection_name=cfg.collection_name,
@@ -124,16 +145,21 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
             retrieval_mode=retrieval_mode,
             sparse_embedding=sparse_embedding,
         )
+        self._vector_stores[cfg.collection_name] = self._vector_store
         logger.info("VectorStoreService initialized via LangChain QdrantVectorStore")
 
     async def cleanup(self) -> None:
         """Release Qdrant clients and embeddings."""
+        sync_client = self._sync_client
         self._vector_store = None
+        self._vector_stores.clear()
         self._sync_client = None
         self._async_client = None
         self._dense_embeddings = None
         self._sparse_embeddings = None
         self._embedding_dimension = None
+        if sync_client is not None:
+            await asyncio.to_thread(sync_client.close)
 
     @property
     def embedding_dimension(self) -> int:
@@ -148,7 +174,7 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
         client = self._require_async_client()
         if await client.collection_exists(schema.name):
             return
-        dense_name = getattr(self._vector_store, "vector_name", "") or ""
+        dense_name = _DENSE_VECTOR_NAME
         dense_params = models.VectorParams(
             size=self.embedding_dimension,
             distance=_distance_from_string(schema.distance),
@@ -161,19 +187,54 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
             vectors_config = dense_params
         sparse_config = None
         if schema.requires_sparse:
-            sparse_name = (
-                getattr(self._vector_store, "sparse_vector_name", "langchain-sparse")
-                or "langchain-sparse"
-            )
+            sparse_name = _SPARSE_VECTOR_NAME
             sparse_config = {
                 sparse_name: models.SparseVectorParams(
                     index=models.SparseIndexParams(),
                 )
             }
-        await client.create_collection(
-            collection_name=schema.name,
-            vectors_config=vectors_config,
-            sparse_vectors_config=sparse_config,
+        try:
+            await client.create_collection(
+                collection_name=schema.name,
+                vectors_config=vectors_config,
+                sparse_vectors_config=sparse_config,
+            )
+        except grpc.aio.AioRpcError as create_error:
+            if create_error.code() is not grpc.StatusCode.ALREADY_EXISTS:
+                raise
+            await self._verify_concurrent_collection_creation(
+                client,
+                schema.name,
+                create_error,
+            )
+        except (
+            ApiException,
+            ResponseHandlingException,
+            UnexpectedResponse,
+            ValueError,
+        ) as create_error:
+            await self._verify_concurrent_collection_creation(
+                client,
+                schema.name,
+                create_error,
+            )
+
+    @staticmethod
+    async def _verify_concurrent_collection_creation(
+        client: AsyncQdrantClient,
+        collection_name: str,
+        create_error: Exception,
+    ) -> None:
+        """Accept a create conflict only after proving the collection exists."""
+        try:
+            created_by_peer = await client.collection_exists(collection_name)
+        except Exception as verification_error:
+            raise create_error from verification_error
+        if not created_by_peer:
+            raise create_error
+        logger.debug(
+            "Collection '%s' was created by a concurrent initializer",
+            collection_name,
         )
 
     async def drop_collection(self, name: str) -> None:
@@ -404,8 +465,8 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
             vector_payload: Any = dense_vector
             if record.sparse_vector:
                 vector_payload = {
-                    "default": dense_vector,
-                    "sparse": models.SparseVector(
+                    _DENSE_VECTOR_NAME: dense_vector,
+                    _SPARSE_VECTOR_NAME: models.SparseVector(
                         indices=list(record.sparse_vector.keys()),
                         values=list(record.sparse_vector.values()),
                     ),
@@ -594,7 +655,7 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
         client = self._require_async_client()
         store = self._require_vector_store(collection)
         query_filter = _filter_from_mapping(filters)
-        sparse_name = getattr(store, "sparse_vector_name", "langchain-sparse")
+        sparse_name = getattr(store, "sparse_vector_name", _SPARSE_VECTOR_NAME)
 
         if mode is SearchStrategy.SPARSE:
             if not sparse_payload_mapping:
@@ -607,7 +668,7 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
             result = await client.query_points(
                 collection_name=collection,
                 query=sparse_query,
-                using=sparse_name or "langchain-sparse",
+                using=sparse_name or _SPARSE_VECTOR_NAME,
                 query_filter=query_filter,
                 limit=limit,
                 with_payload=True,
@@ -633,7 +694,7 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
             indices=list(sparse_payload_mapping.keys()),
             values=list(sparse_payload_mapping.values()),
         )
-        dense_name = getattr(store, "vector_name", "") or None
+        dense_name = getattr(store, "vector_name", _DENSE_VECTOR_NAME) or None
         prefetch = [
             models.Prefetch(
                 query=list(dense_payload),
@@ -643,7 +704,7 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
             ),
             models.Prefetch(
                 query=sparse_query,
-                using=sparse_name or "langchain-sparse",
+                using=sparse_name or _SPARSE_VECTOR_NAME,
                 filter=query_filter,
                 limit=limit,
             ),
@@ -712,12 +773,25 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
 
     def _require_vector_store(self, collection: str) -> QdrantVectorStore:
         """Return the vector store for the collection."""
-        if self._vector_store is None:
+        if (
+            self._vector_store is None
+            or self._sync_client is None
+            or self._dense_embeddings is None
+        ):
             msg = "VectorStoreService not initialized"
             raise RuntimeError(msg)
-        # LangChain's vector store keeps the collection name; override if needed.
-        self._vector_store.collection_name = collection
-        return self._vector_store
+        store = self._vector_stores.get(collection)
+        if store is None:
+            store = QdrantVectorStore(
+                client=self._sync_client,
+                collection_name=collection,
+                embedding=self._dense_embeddings,
+                retrieval_mode=_RETRIEVAL_MODE_MAP[self._retrieval_mode],
+                sparse_embedding=self._sparse_embeddings,
+                validate_collection_config=False,
+            )
+            self._vector_stores[collection] = store
+        return store
 
     def _require_qdrant_config(self) -> Any:
         """Return the Qdrant configuration."""
@@ -726,35 +800,6 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
             msg = "Qdrant configuration missing"
             raise EmbeddingServiceError(msg)
         return cfg
-
-    def _resolve_retrieval_mode(self) -> SearchStrategy:
-        """Determine the retrieval mode based on settings and provider."""
-        embedding_cfg = getattr(self.config, "embedding", None)
-        mode = getattr(embedding_cfg, "retrieval_mode", None)
-        if isinstance(mode, SearchStrategy):
-            return mode
-        if self.config and hasattr(self.config, "get_effective_search_strategy"):
-            return cast(SearchStrategy, self.config.get_effective_search_strategy())
-        return SearchStrategy.DENSE
-
-    def _resolve_dense_model(self) -> str:
-        """Return the configured dense embedding model identifier."""
-        embedding_cfg = getattr(self.config, "embedding", None)
-        candidate = getattr(embedding_cfg, "dense_model", None)
-        if isinstance(candidate, str) and candidate:
-            return candidate
-        fastembed_cfg = getattr(self.config, "fastembed", None)
-        return str(getattr(fastembed_cfg, "dense_model", "BAAI/bge-small-en-v1.5"))
-
-    def _resolve_sparse_model(self) -> str | None:
-        """Return the configured sparse embedding model identifier, if any."""
-        embedding_cfg = getattr(self.config, "embedding", None)
-        candidate = getattr(embedding_cfg, "sparse_model", None)
-        if isinstance(candidate, str) and candidate:
-            return candidate
-        fastembed_cfg = getattr(self.config, "fastembed", None)
-        fallback = getattr(fastembed_cfg, "sparse_model", None)
-        return str(fallback) if isinstance(fallback, str) and fallback else None
 
     async def _query_with_optional_grouping(
         self,

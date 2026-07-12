@@ -25,8 +25,7 @@ from .base import BrowserProvider, ProviderContext
 
 ApplyStealthFn = Callable[[Page], Awaitable[None]]
 
-maybe_apply = getattr(playwright_stealth, "stealth_async", None)
-APPLY_STEALTH: ApplyStealthFn = cast(ApplyStealthFn, maybe_apply)
+APPLY_STEALTH: ApplyStealthFn = cast(ApplyStealthFn, playwright_stealth.stealth_async)
 
 
 class PlaywrightProvider(BrowserProvider):

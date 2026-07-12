@@ -16,6 +16,7 @@ from rich.panel import Panel
 from rich.text import Text
 
 from src.cli.wizard import ProfileManager, TemplateManager, WizardValidator
+from src.config.loader import load_settings_from_file
 
 
 # Optional import for config validation
@@ -63,7 +64,7 @@ class ConfigurationWizard:
         """
         self.console = Console()
         self.template_manager = TemplateManager()
-        self.profile_manager = ProfileManager(config_dir)
+        self.profile_manager = ProfileManager(config_dir, self.template_manager)
         self.validator = WizardValidator()
 
         self.selected_template: str | None = None
@@ -212,7 +213,10 @@ class ConfigurationWizard:
                         "firecrawl", api_key
                     )
                     if is_valid:
-                        customizations.setdefault("firecrawl", {})["api_key"] = api_key
+                        firecrawl = customizations.setdefault("browser", {}).setdefault(
+                            "firecrawl", {}
+                        )
+                        firecrawl["api_key"] = api_key
                         break
                     self.console.print(f"[red]Invalid API key: {error}[/red]")
                     if not questionary.confirm("Try again?", default=True).ask():
@@ -257,7 +261,7 @@ class ConfigurationWizard:
 
             is_valid, error = self.validator.validate_url(f"http://{host}:{port}")
             if is_valid:
-                customizations["qdrant"] = {"host": host, "port": int(port)}
+                customizations["qdrant"] = {"url": f"http://{host}:{port}"}
             else:
                 self.console.print(f"[red]Invalid connection: {error}[/red]")
 
@@ -288,8 +292,8 @@ class ConfigurationWizard:
             try:
                 chunk_size_int = int(chunk_size)
                 if chunk_size_int > 0:
-                    text_processing = customizations.setdefault("text_processing", {})
-                    text_processing["chunk_size"] = chunk_size_int
+                    chunking = customizations.setdefault("chunking", {})
+                    chunking["chunk_size"] = chunk_size_int
                     chunk_overlap = questionary.text(
                         "Chunk overlap (characters):", default="200"
                     ).ask()
@@ -305,25 +309,23 @@ class ConfigurationWizard:
                     json_max_chars = questionary.text(
                         "JSON max chars before re-chunking:", default="20000"
                     ).ask()
-                    text_processing["chunk_overlap"] = int(chunk_overlap or 200)
-                    text_processing["token_chunk_size"] = int(token_chunk_size or 600)
-                    text_processing["token_chunk_overlap"] = int(
-                        token_chunk_overlap or 120
-                    )
-                    text_processing["token_model"] = token_model or "cl100k_base"
-                    text_processing["json_max_chars"] = int(json_max_chars or 20000)
+                    chunking["chunk_overlap"] = int(chunk_overlap or 200)
+                    chunking["token_chunk_size"] = int(token_chunk_size or 600)
+                    chunking["token_chunk_overlap"] = int(token_chunk_overlap or 120)
+                    chunking["token_model"] = token_model or "cl100k_base"
+                    chunking["json_max_chars"] = int(json_max_chars or 20000)
                     if questionary.confirm(
                         "Enable semantic HTML segmentation?", default=True
                     ).ask():
-                        text_processing["enable_semantic_html_segmentation"] = True
+                        chunking["enable_semantic_html_segmentation"] = True
                     else:
-                        text_processing["enable_semantic_html_segmentation"] = False
+                        chunking["enable_semantic_html_segmentation"] = False
                     if questionary.confirm(
                         "Normalize HTML text before chunking?", default=True
                     ).ask():
-                        text_processing["normalize_html_text"] = True
+                        chunking["normalize_html_text"] = True
                     else:
-                        text_processing["normalize_html_text"] = False
+                        chunking["normalize_html_text"] = False
             except ValueError:
                 self.console.print("[red]Invalid chunking configuration[/red]")
 
@@ -474,7 +476,9 @@ class ConfigurationWizard:
             style="cyan",
         )
         success_text.append(
-            "2. Start services: python scripts/dev.py services start\n", style="cyan"
+            "2. Start services: uv run python scripts/dev.py services start "
+            "--stack simple\n",
+            style="cyan",
         )
         success_text.append(
             "3. Check system status: uv run python -m src.cli.main status\n",
@@ -510,7 +514,7 @@ class ConfigurationWizard:
 )
 @click.option(
     "--config-dir",
-    type=click.Path(path_type=Path, exists=True),
+    type=click.Path(path_type=Path, file_okay=False),
     default=Path("config"),
     help="Configuration directory (default: config/)",
 )
@@ -558,7 +562,9 @@ def setup(ctx: click.Context, profile: str | None, config_dir: Path):
 
         if validate_choice:
             if validate_config is not None:
-                ctx.invoke(validate_config, config_file=config_path)
+                ctx.ensure_object(dict)
+                ctx.obj["config"] = load_settings_from_file(config_path)
+                ctx.invoke(validate_config)
             else:
                 # Fallback validation using our wizard validator
                 console.print(

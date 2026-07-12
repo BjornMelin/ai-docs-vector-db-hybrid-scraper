@@ -132,6 +132,34 @@ def test_recommend_prefers_cost_effective_models() -> None:
     assert recommendation["score"] > 0
 
 
+def test_recommend_only_reports_initialized_provider_model() -> None:
+    """Selection metadata should match the model the provider can generate."""
+    model = "organization-openai-model"
+    benchmarks = {
+        model: {
+            "model_name": model,
+            "provider": "openai",
+            "avg_latency_ms": 80,
+            "quality_score": 90,
+            "cost_per_million_tokens": 40.0,
+        }
+    }
+    engine = SelectionEngine(_SmartConfig(), benchmarks=benchmarks)
+    provider = _StubProvider(model, cost_per_token=0.00004)
+
+    recommendation = engine.recommend(
+        providers={"openai": provider},
+        text_analysis=engine.analyze(["short text"]),
+        params=RecommendationParams(
+            quality_tier=None,
+            max_cost=None,
+            speed_priority=False,
+        ),
+    )
+
+    assert recommendation["model"] == model
+
+
 def test_recommend_raises_when_no_models_satisfy_constraints() -> None:
     """Engine should raise ValueError when no candidates meet constraints."""
     benchmarks = {

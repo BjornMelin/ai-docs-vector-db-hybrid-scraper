@@ -12,32 +12,6 @@ permissions:
   contents: read
 
 jobs:
-  checkout-and-setup:
-    name: Checkout and setup composite
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-
-      - name: Execute composite
-        id: prep
-        uses: ./.github/actions/checkout-and-setup
-        with:
-          python-version: '3.12'
-
-      - name: Validate workspace
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ ! -f pyproject.toml ]; then
-            echo "Repository checkout failed" >&2
-            exit 1
-          fi
-
-          echo "Cache hit: ${{ steps.prep.outputs.cache-hit }}"
-          uv run python -c "import sys; print(sys.version)"
-
   setup-environment:
     name: Setup environment action
     runs-on: ubuntu-latest
@@ -50,7 +24,7 @@ jobs:
         id: setup
         uses: ./.github/actions/setup-environment
         with:
-          python-version: '3.12'
+          python-version: '3.11'
 
       - name: Assert environment
         shell: bash
@@ -78,9 +52,9 @@ jobs:
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
       - name: Prepare workspace
-        uses: ./.github/actions/checkout-and-setup
+        uses: ./.github/actions/setup-environment
         with:
-          python-version: '3.12'
+          python-version: '3.11'
 
       - name: Create validation fixtures
         id: fixtures

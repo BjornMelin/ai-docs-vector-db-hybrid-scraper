@@ -29,11 +29,9 @@ def test_deploy_command_outputs_plan(capsys: pytest.CaptureFixture[str]) -> None
 
 
 def test_deploy_command_accepts_override(
-    capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """The deploy subcommand should honour --strategy overrides."""
-    monkeypatch.delenv("AI_DOCS_DEPLOYMENT_STRATEGY", raising=False)
-
     exit_code = dev.main(["deploy", "--strategy", "docker_compose"])
 
     assert exit_code == 0
@@ -82,3 +80,33 @@ def test_deploy_command_apply_executes_plan(
     output = capsys.readouterr().out
     assert "Deployment commands executed successfully." in output
     assert calls == ["validate", "execute"]
+
+
+@pytest.mark.parametrize("profile", ("simple", "enterprise"))
+def test_services_command_uses_compose_profiles(
+    profile: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Service orchestration should use only profiles defined by Compose."""
+    commands: list[list[str]] = []
+    monkeypatch.setattr(dev, "_compose_base_command", lambda: ["docker", "compose"])
+
+    def capture(command: list[str]) -> int:
+        commands.append(command)
+        return 0
+
+    monkeypatch.setattr(dev, "run_command", capture)
+
+    exit_code = dev.main(["services", "status", "--stack", profile])
+
+    assert exit_code == 0
+    assert commands == [
+        [
+            "docker",
+            "compose",
+            "-f",
+            "docker-compose.yml",
+            "--profile",
+            profile,
+            "ps",
+        ]
+    ]

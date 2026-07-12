@@ -1,6 +1,6 @@
 #!/bin/bash
 # AI Documentation Vector Database Hybrid Scraper Setup Script
-# Optimized for Python 3.13 and uv package manager with profile support
+# Optimized for Python 3.11 and uv package manager with profile support
 
 set -e
 
@@ -93,13 +93,13 @@ else
     echo -e "${GREEN}✅ UV already installed${NC}"
 fi
 
-# Install Python 3.13 with UV
-echo -e "${BLUE}🐍 Installing Python 3.13 with UV...${NC}"
-uv python install 3.13
+# Install Python 3.11 with UV
+echo -e "${BLUE}🐍 Installing Python 3.11 with UV...${NC}"
+uv python install 3.11
 
-# Pin Python 3.13 for this project
-echo -e "${BLUE}📌 Pinning Python 3.13 for project...${NC}"
-uv python pin 3.13
+# Pin Python 3.11 for this project
+echo -e "${BLUE}📌 Pinning Python 3.11 for project...${NC}"
+uv python pin 3.11
 
 # Create data directory
 echo -e "${BLUE}📁 Creating data directory...${NC}"
@@ -109,7 +109,7 @@ echo -e "${GREEN}✅ Data directory created at $(realpath ~/.qdrant_data)${NC}"
 # Initialize UV project
 echo -e "${BLUE}🔧 Initializing UV project...${NC}"
 if [ ! -f "pyproject.toml" ]; then
-    uv init --no-readme --python 3.13
+    uv init --no-readme --python 3.11
 fi
 
 # Install project dependencies with UV
@@ -130,11 +130,18 @@ chmod +x scripts/*.sh
 
 # Start Docker services
 echo -e "${BLUE}🐳 Starting Qdrant service...${NC}"
-docker-compose up -d
+docker compose --profile simple up -d qdrant
 
-# Wait for Qdrant to be ready
+# Wait up to one minute for Qdrant to be ready
 echo -e "${BLUE}⏳ Waiting for Qdrant to be ready...${NC}"
-until curl -s http://localhost:6333/health >/dev/null; do
+for attempt in {1..30}; do
+    if curl --fail --silent http://localhost:6333/readyz >/dev/null; then
+        break
+    fi
+    if [ "$attempt" -eq 30 ]; then
+        echo -e "${RED}Qdrant did not become ready within 60 seconds.${NC}"
+        exit 1
+    fi
     sleep 2
 done
 
@@ -161,22 +168,29 @@ if [ -n "$PROFILE" ]; then
     echo -e "${BLUE}🎯 Profile '$PROFILE' configured successfully${NC}"
 fi
 
-echo -e "${YELLOW}🔑 API Keys Setup:${NC}"
+EMBEDDING_PROVIDER="${AI_DOCS_EMBEDDING_PROVIDER:-fastembed}"
+CRAWL_PROVIDER="${AI_DOCS_CRAWL_PROVIDER:-crawl4ai}"
+
+echo -e "${YELLOW}🔑 Provider credentials:${NC}"
 if [ -f ".env.$PROFILE" ]; then
     echo -e "   📄 Environment variables template created: .env.$PROFILE"
-    echo -e "   💡 Edit .env.$PROFILE with your API keys, then:"
+    echo -e "   💡 Edit .env.$PROFILE if you select a hosted provider, then:"
     echo -e "      source .env.$PROFILE"
-else
-    echo -e "   💡 Set these environment variables:"
 fi
-echo -e "   export AI_DOCS__OPENAI__API_KEY='your_openai_api_key'"
-echo -e "${YELLOW}🔑 Optional API keys:${NC}"
-echo -e "   export AI_DOCS__FIRECRAWL__API_KEY='your_firecrawl_api_key'  # For premium scraping"
-echo -e "   export AI_DOCS__ANTHROPIC__API_KEY='your_anthropic_api_key'  # For browser-use with Claude"
+if [ "$EMBEDDING_PROVIDER" = "openai" ]; then
+    echo -e "   export AI_DOCS_OPENAI__API_KEY='your_openai_api_key'"
+else
+    echo -e "   ✅ $EMBEDDING_PROVIDER embeddings don't require provider credentials."
+fi
+if [ "$CRAWL_PROVIDER" = "firecrawl" ]; then
+    echo -e "   export AI_DOCS_BROWSER__FIRECRAWL__API_KEY='your_firecrawl_api_key'"
+else
+    echo -e "   ✅ $CRAWL_PROVIDER crawling doesn't require provider credentials."
+fi
 
 echo ""
 echo -e "${BLUE}🚀 Next Steps:${NC}"
-echo -e "   1. Configure your API keys (see above)"
+echo -e "   1. Add provider credentials only if required above"
 echo -e "   2. Test configuration: uv run python -m src.cli.main config validate"
 echo -e "   3. Check system status: uv run python -m src.cli.main status"
 echo -e "   4. Create your first collection: uv run python -m src.cli.main database create my-docs"

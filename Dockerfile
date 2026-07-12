@@ -1,10 +1,9 @@
 # syntax=docker/dockerfile:1
-# Multi-stage Dockerfile for AI Docs Vector DB Hybrid Scraper - 2025 UV Edition
 
 # =========================================
 # Stage 1: Build Environment
 # =========================================
-FROM python:3.12 AS builder
+FROM python:3.11 AS builder
 
 # Prevent Python from writing pyc files and buffer stdout/stderr
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -12,6 +11,7 @@ ENV PYTHONUNBUFFERED=1
 ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy
 ENV UV_PYTHON_INSTALL_DIR=/opt/uv/python
+ENV UV_PROJECT_ENVIRONMENT=/opt/venv
 
 # Set working directory
 WORKDIR /app
@@ -41,28 +41,39 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install UV - the modern Python package manager
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+COPY --from=ghcr.io/astral-sh/uv:0.8.19 /uv /uvx /usr/local/bin/
 
 # Copy dependency files first for better layer caching
 COPY pyproject.toml uv.lock ./
 
 # Create virtual environment and install dependencies with UV
-RUN uv python install 3.12
-RUN uv venv /opt/venv --python 3.12
+RUN uv python install 3.11
+RUN uv venv /opt/venv --python 3.11
 ENV VIRTUAL_ENV=/opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Install dependencies with UV (much faster than pip)
-RUN uv sync --frozen --no-dev
+# Install locked dependencies into the environment copied into the runtime image.
+# Application source is copied later and imported through PYTHONPATH.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-install-project
+
+# Install the project after dependencies so distribution metadata and runtime
+# version reporting come from pyproject.toml.
+COPY README.md ./
+COPY src/ ./src/
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev
 
 # =========================================
 # Stage 2: Runtime Environment
 # =========================================
-FROM python:3.12-slim AS runtime
+FROM mcr.microsoft.com/playwright/python:v1.57.0-noble AS runtime
 
 # Prevent Python from writing pyc files and buffer stdout/stderr
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+ENV TOKENIZERS_PARALLELISM=false
 
 # Set working directory
 WORKDIR /app
@@ -72,12 +83,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     netcat-traditional \
     curl \
     ca-certificates \
-    libssl3 \
-    libffi8 \
-    libbz2-1.0 \
-    liblzma5 \
-    libreadline8 \
-    libsqlite3-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the virtual environment from builder stage
@@ -92,30 +97,53 @@ ENV UV_PYTHON_INSTALL_DIR=/opt/uv/python
 COPY src/ ./src/
 COPY config/ ./config/
 
-# Set Python path
-ENV PYTHONPATH=/app/src
-
-# Create non-root user for security
-ARG UID=1000
-RUN useradd --system --no-create-home --uid ${UID} --shell /bin/false appuser \
-    && chown -R appuser:appuser /app \
-    && chown -R appuser:appuser /opt/venv \
-    && mkdir -p /home/appuser/.local/share/uv \
-    && chown -R appuser:appuser /home/appuser/.local
+# Use the image's non-root UID 1000 user so bind-mounted workspace data remains writable.
+RUN chown -R ubuntu:ubuntu /app
 
 # Switch to non-root user
-USER appuser
+USER ubuntu
 
 # Expose the FastAPI port
 EXPOSE 8000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:8000/api/v1/config/status || exit 1
+  CMD curl -f http://localhost:8000/health || exit 1
 
-# Debug environment setup before starting the app
-RUN python -c "import sys; print(f'Python version: {sys.version}'); print(f'Python path: {sys.path}')"
-RUN python -c "import src.api.main; print('FastAPI app import successful')"
+# Verify dependency construction and FastAPI lifespan as the runtime user
+RUN python - <<'PY'
+import asyncio
+
+from src.api import app_factory
+from src.infrastructure import container as container_module
+from playwright.async_api import async_playwright
+
+
+async def skip_service_hook(*_args, **_kwargs):
+    return None
+
+
+container_module._initialize_service_graph = skip_service_hook
+container_module._cleanup_service_graph = skip_service_hook
+app_factory._initialize_services = skip_service_hook
+
+
+async def smoke():
+    async with async_playwright() as playwright:
+        browser = await playwright.chromium.launch(headless=True)
+        await browser.close()
+
+    app = app_factory.create_app()
+    async with asyncio.timeout(10):
+        async with app.router.lifespan_context(app):
+            container = app_factory.get_app_container(app)
+            embedding_manager = container.embedding_manager()
+            assert embedding_manager.config is container.config()
+        assert app.state.container is None
+
+
+asyncio.run(smoke())
+PY
 
 # Run the FastAPI application
 CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

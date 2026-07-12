@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added executable environment and Compose contract tests that reject unknown `AI_DOCS_` keys, invalid profile names, and unavailable Qdrant health commands.
+- Added an isolated release-wheel install check that proves package metadata and runtime version reporting match the release tag.
 - Added curated router presets in `config/browser-routing-rules.json` so crawling tiers reuse the canonical RouterSettings model.
 - Added Locust-powered load testing scenarios (`tests/load/locustfile.py`) and a
   `python scripts/dev.py load` helper for consistent execution.
@@ -43,11 +45,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- Removed the duplicate nested embedding-provider field, flat observability environment aliases, unsupported deployment and experimentation flags, and the redundant checkout composite action.
+- Removed the duplicated `docs-dev` dependency group; `.[docs]` is the only documentation dependency surface.
 - Removed the legacy benchmark orchestrator package (`src/benchmarks`) and Sphinx pages that referenced retired performance flows.
 - Deleted integration, load, performance, and MCP request unit suites that targeted deprecated search and middleware signatures.
 
 ### Refactor
 
+- Made provider-specific embedding models single-owner configuration, restored profile retrieval modes, and pinned Qdrant server 1.16.2 with valid Kubernetes health probes.
+- Installed the locked Playwright Chromium runtime and its operating-system dependencies in the production image, with a build-time launch smoke.
+- Aligned Browser-use with its current `BrowserSession` API, skipped disabled RAG construction, and kept circuit breakers in memory when Dragonfly is disabled.
+- Routed every FastEmbed adapter through the configured native cache, batch, and input-length options so container restarts reuse downloaded models.
+- Hard-cut application configuration to the Pydantic `Settings` namespace, aligned local orchestration on the `simple` and `enterprise` Compose profiles, and replaced stale setup and operator instructions with verified commands.
+- Updated the locked toolchain to Pyright 1.1.411 and replaced the yanked NumPy 2.4.0 release with NumPy 2.4.6.
+- Centralized pytest, Pyright, and mutmut configuration in `pyproject.toml`, restored the ordinary CI/actionlint gates, aligned active builds on Python 3.11, repaired the production Docker/release path, and made self-hosted GPU validation explicitly opt-in.
 - **[Infrastructure]:** Relocated project storage to `src/infrastructure/project_storage.py`, removed the legacy `services/core` package with its alias manager, and updated MCP tooling plus DI wiring to use the new implementation.
 - Hardened FastAPI middleware wiring (`src/services/fastapi/middleware/compression.py`, `security.py`) and realigned the developer benchmark command to the evaluation harness (`scripts/dev.py`, `scripts/README.md`).
 - Simplified configuration surfaces by removing deployment tier toggles,
@@ -263,7 +274,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   maintained `VectorDBManager` surface.
 - Replaced the batch CLI help-text smoke tests with deterministic coverage of completion helpers, dry-run previews, and
   destructive-operation confirmations using asyncio-backed stubs.
-- Simplified `pytest.ini` to enforce warnings-as-errors, strict markers, and a seeded pytest-randomly configuration that aligns
+- Consolidated test-tool configuration in `pyproject.toml` while preserving warnings-as-errors, strict markers, and pytest-randomly behavior that aligns
   with the new deterministic fixtures.
 - Rebuilt `tests/unit/mcp_tools` around async-aware stubs, shared MCP decorators,
   and focused validation coverage while deleting the legacy duplicated suites.

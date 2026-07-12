@@ -33,7 +33,7 @@ Most problems have simple fixes that don't require technical expertise.
 
 1. **Verify the server is running**: Look for startup messages
 2. **Check port availability**: Default port is usually 6333 for Qdrant
-3. **Try restarting services**: Use `python scripts/dev.py services start`
+3. **Try restarting services**: Use `uv run python scripts/dev.py services start --stack simple`
 4. **Verify configuration**: Check that your `.env` file has correct settings
 
 ## 🔍 Search Problems
@@ -52,16 +52,12 @@ Most problems have simple fixes that don't require technical expertise.
 
 ```bash
 # Check if you have any collections
-mcp list-collections
+uv run ai-docs database list --format table
 
-# If empty, add some documents first
-mcp add-documents \
-  --path "/path/to/documents" \
-  --chunk-size 1200 \
-  --chunk-overlap 200 \
-  --retrieval-mode "hybrid"
-# This replays the LangChain `chunk_to_documents` pipeline with smaller chunk
-# sizes so Qdrant hybrid scoring has denser coverage without hitting memory caps.
+# If empty, ingest URLs from a text file
+uv run python -m src.crawl4ai_bulk_embedder \
+  --file urls.txt \
+  --collection documents
 ```
 
 #### **2. Query too specific**
@@ -78,11 +74,14 @@ mcp add-documents \
 #### **4. Collection issues**
 
 ```bash
-# Check specific collection
-mcp search --query "your terms" --collection "collection-name"
+# Search a specific collection through FastAPI
+curl --get http://localhost:8000/api/v1/search \
+  --data-urlencode 'q=your terms' \
+  --data 'collection=collection-name' \
+  --data 'limit=5'
 
-# Try searching all collections
-mcp search --query "your terms" --collections "all"
+# List available collection names before retrying
+uv run ai-docs database list --format table
 ```
 
 ### Poor Quality Results
@@ -132,8 +131,11 @@ mcp search --query "your terms" --collections "all"
 #### **2. Reduce result count**
 
 ```bash
-# Limit results to speed up search
-mcp search --query "your terms" --limit 5
+# Limit API results to speed up search
+curl --get http://localhost:8000/api/v1/search \
+  --data-urlencode 'q=your terms' \
+  --data 'collection=documents' \
+  --data 'limit=5'
 ```
 
 #### **3. Check system resources**
@@ -184,13 +186,16 @@ If searches are still slow despite these improvements, the issue may be with con
 
 #### **4. Check for common issues**
 
-```bash
-# Test with a simple site first
-mcp scrape --url "https://example.com"
+Invoke `enhanced_5_tier_crawl` through your connected MCP client with a known public page first:
 
-# If that works, try your target site
-mcp scrape --url "https://your-target-site.com"
+```json
+{
+  "url": "https://example.com",
+  "timeout_ms": 30000
+}
 ```
+
+If that succeeds, invoke the same tool with your target URL.
 
 ### Scraping Gets Blocked
 
@@ -297,7 +302,7 @@ mcp scrape --url "https://your-target-site.com"
 #### **1. Check prerequisites**
 
 - Docker is running (for Qdrant)
-- Python version is 3.13+
+- Python version is 3.11
 - All dependencies installed with `uv sync`
 
 #### **2. Check for conflicts**
@@ -309,11 +314,11 @@ mcp scrape --url "https://your-target-site.com"
 #### **3. Clean restart**
 
 ```bash
-# Stop everything
-docker stop $(docker ps -q)
+# Stop this project's containers
+docker compose --profile simple stop
 
 # Restart services
-python scripts/dev.py services start
+uv run python scripts/dev.py services start --stack simple
 ```
 
 ## 🔧 Performance Issues
@@ -445,7 +450,7 @@ The system now includes sophisticated database connection pool optimization that
 
    ```bash
    # Stop services and restart
-   python scripts/dev.py services start
+   uv run python scripts/dev.py services start --stack simple
    ```
 
 #### **Slow Query Performance**

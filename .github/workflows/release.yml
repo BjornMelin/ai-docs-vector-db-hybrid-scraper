@@ -11,9 +11,7 @@ on:
         required: true
 
 permissions:
-  contents: write
-  packages: write
-  id-token: write
+  contents: read
 
 env:
   PYTHONUNBUFFERED: "1"
@@ -28,7 +26,6 @@ jobs:
     outputs:
       version: ${{ steps.tag.outputs.version }}
       is-prerelease: ${{ steps.tag.outputs.is_prerelease }}
-      has-docker: ${{ steps.detect.outputs.has_docker }}
     steps:
       - name: Resolve version
         id: tag
@@ -39,12 +36,12 @@ jobs:
             VERSION="${GITHUB_REF_NAME}"
           fi
 
-          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$ ]]; then
-            echo "Tag must look like v1.2.3"
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-(a|alpha|b|beta|rc)[.-]?[0-9]+)?$ ]]; then
+            echo "Tag must look like v1.2.3 or v1.2.3-rc.1"
             exit 1
           fi
 
-          if [[ "$VERSION" =~ (alpha|beta|rc) ]]; then
+          if [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+- ]]; then
             echo "is_prerelease=true" >> "$GITHUB_OUTPUT"
           else
             echo "is_prerelease=false" >> "$GITHUB_OUTPUT"
@@ -56,15 +53,6 @@ jobs:
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           ref: ${{ steps.tag.outputs.version }}
-
-      - name: Detect Docker targets
-        id: detect
-        run: |
-          if [ -f docker/Dockerfile.worker ]; then
-            echo "has_docker=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_docker=false" >> "$GITHUB_OUTPUT"
-          fi
 
   quality:
     name: Validate release
@@ -79,10 +67,9 @@ jobs:
           ref: ${{ needs.prepare.outputs.version }}
 
       - name: Prepare workspace
-        uses: ./.github/actions/checkout-and-setup
+        uses: ./.github/actions/setup-environment
         with:
-          ref: ${{ needs.prepare.outputs.version }}
-          python-version: "3.12"
+          python-version: "3.11"
           cache-suffix: "-release-quality"
 
       - name: Ruff format (check)
@@ -117,10 +104,9 @@ jobs:
           ref: ${{ env.VERSION }}
 
       - name: Prepare workspace
-        uses: ./.github/actions/checkout-and-setup
+        uses: ./.github/actions/setup-environment
         with:
-          ref: ${{ env.VERSION }}
-          python-version: "3.12"
+          python-version: "3.11"
           cache-suffix: "-release-build"
 
       - name: Align pyproject version
@@ -137,76 +123,36 @@ jobs:
           uv tool install twine
           uv tool run twine check dist/*
 
+      - name: Verify installed version
+        run: |
+          set -euo pipefail
+          expected="$(
+            uv run python -c 'import os; from packaging.version import Version; print(Version(os.environ["VERSION"].removeprefix("v")))'
+          )"
+          smoke_venv="${RUNNER_TEMP}/release-smoke"
+          wheel="$(find dist -maxdepth 1 -type f -name '*.whl' -print -quit)"
+          test -n "$wheel"
+
+          uv venv --python 3.11 "$smoke_venv"
+          uv pip install --python "$smoke_venv/bin/python" --no-deps "$wheel"
+          "$smoke_venv/bin/python" -I - "$expected" <<'PY'
+          from importlib.metadata import version
+          import sys
+
+          import src
+
+          expected = sys.argv[1]
+          installed = version("ai-docs-vector-db-hybrid-scraper")
+          assert installed == expected, f"{installed=} != {expected=}"
+          assert src.__version__ == expected, f"{src.__version__=} != {expected=}"
+          print(f"Verified installed version {installed}")
+          PY
+
       - name: Upload release artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: release-dist
           path: dist/
-          retention-days: 30
-
-  publish-docker:
-    name: Publish Docker image
-    runs-on: ubuntu-latest
-    needs:
-      - prepare
-      - build-artifacts
-    if: needs.prepare.outputs.has-docker == 'true'
-    permissions:
-      contents: read
-      packages: write
-    env:
-      VERSION: ${{ needs.prepare.outputs.version }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-        with:
-          ref: ${{ env.VERSION }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract Docker metadata
-        id: meta
-        uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5.8.0
-        with:
-          images: ghcr.io/${{ github.repository }}
-          tags: |
-            type=ref,event=tag
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-
-      - name: Build and push image
-        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
-        with:
-          context: .
-          file: docker/Dockerfile.worker
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Generate SBOM
-        uses: anchore/sbom-action@f8bdd1d8ac5e901a77a92f111440fdb1b593736b # v0.20.6
-        with:
-          image: ghcr.io/${{ github.repository }}:${{ needs.prepare.outputs.version }}
-          format: spdx-json
-          output-file: sbom.spdx.json
-
-      - name: Upload SBOM artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: docker-sbom
-          path: sbom.spdx.json
           retention-days: 30
 
   security-report:
@@ -224,9 +170,9 @@ jobs:
           ref: ${{ needs.prepare.outputs.version }}
 
       - name: Prepare workspace
-        uses: ./.github/actions/checkout-and-setup
+        uses: ./.github/actions/setup-environment
         with:
-          python-version: "3.12"
+          python-version: "3.11"
           cache-suffix: "-release-security"
 
       - name: Download release artifacts
@@ -294,14 +240,12 @@ jobs:
       - prepare
       - build-artifacts
       - security-report
-      - publish-docker
     permissions:
       contents: write
     if: >-
       needs.prepare.result == 'success' &&
       needs.build-artifacts.result == 'success' &&
-      needs.security-report.result == 'success' &&
-      (needs.publish-docker.result == 'success' || needs.publish-docker.result == 'skipped')
+      needs.security-report.result == 'success'
     steps:
       - name: Download distributions
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
@@ -314,13 +258,6 @@ jobs:
         with:
           name: security-report
           path: release/security
-          if-no-files-found: ignore
-
-      - name: Download SBOM (if available)
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
-        with:
-          name: docker-sbom
-          path: release/sbom
           if-no-files-found: ignore
 
       - name: Collect release assets
@@ -342,12 +279,6 @@ jobs:
             echo "::warning::security-report.md not found; security report will be omitted." >&2
           fi
 
-          if [ -f release/sbom/sbom.spdx.json ]; then
-            cp release/sbom/sbom.spdx.json assets/sbom.spdx.json
-          else
-            echo "::notice::SBOM artifact not present; skipping attachment." >&2
-          fi
-
       - name: Create release
         uses: softprops/action-gh-release@62c96d0c4e8a889135c1f3a25910db8dbe0e85f7 # v2.3.4
         with:
@@ -363,8 +294,12 @@ jobs:
       - prepare
       - build-artifacts
       - github-release
-    if: needs.prepare.outputs.is-prerelease == 'false' && secrets.PYPI_API_TOKEN != ''
+    if: >-
+      needs.prepare.outputs.is-prerelease == 'false' &&
+      vars.PYPI_PUBLISH_ENABLED == 'true'
     environment: pypi
+    env:
+      PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
     permissions:
       contents: read
     steps:
@@ -375,7 +310,12 @@ jobs:
           path: dist
 
       - name: Publish package
+        if: env.PYPI_API_TOKEN != ''
         uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # release/v1
         with:
           packages-dir: dist
-          password: ${{ secrets.PYPI_API_TOKEN }}
+          password: ${{ env.PYPI_API_TOKEN }}
+
+      - name: Report deferred PyPI publication
+        if: env.PYPI_API_TOKEN == ''
+        run: echo "::notice::PYPI_API_TOKEN is not configured; GitHub release completed without PyPI publication."

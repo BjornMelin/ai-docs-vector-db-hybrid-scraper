@@ -1,7 +1,6 @@
 """Continuous integration helper scripts."""
 
 from .validate_config import (
-    DEFAULT_REQUIRED_TEMPLATE_KEYS,
     ValidationSummary,
     main,
     parse_args,
@@ -12,7 +11,6 @@ from .validate_config import (
 
 
 __all__ = [
-    "DEFAULT_REQUIRED_TEMPLATE_KEYS",
     "ValidationSummary",
     "main",
     "parse_args",

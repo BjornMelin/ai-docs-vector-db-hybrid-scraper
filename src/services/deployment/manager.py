@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -32,9 +31,6 @@ def find_project_root(start: Path, marker: str = "pyproject.toml") -> Path:
 
 logger = logging.getLogger(__name__)
 _PROJECT_ROOT = find_project_root(Path(__file__))
-_ENV_OVERRIDE = "AI_DOCS_DEPLOYMENT_STRATEGY"
-
-
 Command = tuple[str, ...]
 CommandRunner = Callable[[Command], int]
 
@@ -189,13 +185,7 @@ class DeploymentManager:
         self, override: DeploymentStrategy | str | None
     ) -> DeploymentStrategy:
         """Resolve the deployment strategy accounting for overrides."""
-        candidate: DeploymentStrategy | None
-        if override is None:
-            env_override = os.getenv(_ENV_OVERRIDE)
-            candidate = self._parse_strategy(env_override) if env_override else None
-        else:
-            candidate = self._parse_strategy(override)
-
+        candidate = self._parse_strategy(override)
         strategy = candidate or self._settings.deployment.default_strategy
         if not self._settings.deployment.is_enabled(strategy):
             msg = f"Deployment strategy '{strategy.value}' is disabled"
@@ -261,7 +251,7 @@ class DeploymentManager:
                     "-f",
                     str(entrypoint),
                     "--profile",
-                    "monitoring",
+                    "enterprise",
                     "up",
                     "-d",
                 ),
@@ -269,7 +259,7 @@ class DeploymentManager:
             )
             notes = (
                 "Install Docker Engine and Compose on the deployment host.",
-                "Set AI_DOCS__ENVIRONMENT variables for staging or production targets.",
+                "Set AI_DOCS_ENVIRONMENT variables for staging or production targets.",
                 f"Compose manifest located at {entrypoint}.",
             )
             return commands, notes

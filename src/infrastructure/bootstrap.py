@@ -4,20 +4,21 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Any
 
-from src.config.loader import get_settings
+from src.config.loader import Settings, get_settings
 from src.infrastructure.container import (
     ApplicationContainer,
+    acquire_container,
     get_container,
     initialize_container,
+    release_container,
     shutdown_container,
 )
 
 
 async def ensure_container(
     *,
-    settings: Any | None = None,
+    settings: Settings | None = None,
     force_reload: bool = False,
 ) -> ApplicationContainer:
     """Ensure a container instance is available and return it.
@@ -43,7 +44,7 @@ async def ensure_container(
 @asynccontextmanager
 async def container_session(
     *,
-    settings: Any | None = None,
+    settings: Settings | None = None,
     force_reload: bool = False,
 ) -> AsyncIterator[ApplicationContainer]:
     """Context manager that yields a container and handles lifecycle cleanup.
@@ -55,17 +56,11 @@ async def container_session(
     Yields:
         The active :class:`ApplicationContainer` instance.
     """
-    existing = get_container()
-    created = force_reload or existing is None
-    container: ApplicationContainer
-
-    if created:
-        container = await ensure_container(settings=settings, force_reload=force_reload)
-    else:
-        container = existing if existing is not None else await ensure_container()
-
+    lease = await acquire_container(
+        settings or get_settings(),
+        force_reload=force_reload,
+    )
     try:
-        yield container
+        yield lease.container
     finally:
-        if created:
-            await shutdown_container()
+        await release_container(lease)

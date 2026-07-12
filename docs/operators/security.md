@@ -6,7 +6,8 @@
 ```bash
 # Generate secure API keys
 API_KEY=$(openssl rand -hex 32)
-export AI_DOCS__API__SECRET_KEY="${API_KEY}"
+export AI_DOCS_SECURITY__API_KEY_REQUIRED=true
+export AI_DOCS_SECURITY__API_KEYS="[\"${API_KEY}\"]"
 
 # Create user with API key
 USERNAME="production-user"
@@ -27,8 +28,9 @@ redis-cli hset "user:${USERNAME}" "api_key" "${NEW_KEY}"
 ### Rate Limiting
 ```bash
 # Configure rate limits
-export AI_DOCS__RATE_LIMIT__REQUESTS_PER_MINUTE=60
-export AI_DOCS__RATE_LIMIT__BURST_SIZE=10
+export AI_DOCS_SECURITY__ENABLE_RATE_LIMITING=true
+export AI_DOCS_SECURITY__DEFAULT_RATE_LIMIT=60
+export AI_DOCS_SECURITY__RATE_LIMIT_WINDOW=60
 
 # Monitor rate limit violations
 curl -H "X-API-Key: $API_KEY" \
@@ -62,11 +64,6 @@ ufw --force enable
 ```bash
 # Generate SSL certificates
 sudo certbot certonly --standalone -d your-domain.com
-
-# Configure TLS
-export AI_DOCS__TLS__ENABLED=true
-export AI_DOCS__TLS__CERT_PATH="/etc/letsencrypt/live/your-domain.com/fullchain.pem"
-export AI_DOCS__TLS__KEY_PATH="/etc/letsencrypt/live/your-domain.com/privkey.pem"
 
 # Test TLS configuration
 curl -I https://your-domain.com/health
@@ -161,16 +158,12 @@ services:
       - DB_PASSWORD_FILE=/run/secrets/db_password
 
 # Map secret files to the loader-prefixed variables during container startup, for example:
-# export AI_DOCS__OPENAI__API_KEY="$(cat /run/secrets/openai_api_key)"
+# export AI_DOCS_OPENAI__API_KEY="$(cat /run/secrets/openai_api_key)"
 ```
 
 ### Data Encryption
 ```bash
-# Encrypt sensitive data at rest
-export AI_DOCS__ENCRYPTION__ENABLED=true
-export AI_DOCS__ENCRYPTION__KEY=$(openssl rand -hex 32)
-
-# Database encryption
+# Configure encryption in the storage services themselves
 export QDRANT__STORAGE__ENCRYPTION__ENABLED=true
 export REDIS__ENCRYPTION__ENABLED=true
 ```
@@ -235,10 +228,6 @@ disable_user() {
 
 ### Audit Logging
 ```bash
-# Enable audit logging
-export AI_DOCS__AUDIT__ENABLED=true
-export AI_DOCS__AUDIT__LOG_PATH="/var/log/ai-docs/audit.log"
-
 # Monitor suspicious activity
 tail -f /var/log/ai-docs/audit.log | grep -E "(FAILED_AUTH|RATE_LIMIT|SUSPICIOUS)"
 
@@ -303,9 +292,9 @@ docker-compose up -d
 ```bash
 # Secure recovery process
 recovery_mode() {
-  # Enable maintenance mode
-  export AI_DOCS__MAINTENANCE_MODE=true
-  
+  # Stop application writers during recovery
+  docker compose stop app
+
   # Restore from clean backup
   RECOVERY_DATE="20250322"  # Last known good
   ./scripts/secure-restore.sh "$RECOVERY_DATE"
@@ -314,7 +303,7 @@ recovery_mode() {
   ./scripts/security-audit.sh
   
   # Resume normal operations
-  export AI_DOCS__MAINTENANCE_MODE=false
+  docker compose start app
 }
 ```
 

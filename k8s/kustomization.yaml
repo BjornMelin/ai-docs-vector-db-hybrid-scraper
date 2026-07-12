@@ -8,58 +8,31 @@ resources:
   - qdrant-statefulset.yaml
   - dragonfly-deployment.yaml
   - app-deployment.yaml
-  - worker-deployment.yaml
 
 configurations:
   - kustomizeconfig/envfrom-references.yaml
 
-# Common labels applied to all resources
-commonLabels:
-  app.kubernetes.io/name: ai-docs-vector-db
-  app.kubernetes.io/part-of: ai-docs-system
-  app.kubernetes.io/version: "1.0.0"
-  app.kubernetes.io/managed-by: kustomize
+# Common ownership labels applied without replacing workload-specific selectors
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: ai-docs-system
+      app.kubernetes.io/version: "0.1.0"
+      app.kubernetes.io/managed-by: kustomize
+    includeTemplates: true
 
 # Common annotations
 commonAnnotations:
-  documentation: "https://github.com/your-org/ai-docs-vector-db-hybrid-scraper"
-  support-contact: "your-team@company.com"
+  documentation: "https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper"
 
 # Image transformations (replace with your registry)
 images:
   - name: ai-docs-app
     newName: your-registry.com/ai-docs-app
-    newTag: "v1.0.0"
-  - name: ai-docs-worker
-    newName: your-registry.com/ai-docs-worker
-    newTag: "v1.0.0"
+    newTag: "0.1.0"
 
 # Resource patches for different environments
 patches:
   - path: patches/production-resources.yaml
-    target:
-      group: apps
-      version: v1
-      kind: Deployment
-      name: ai-docs-app
-  - path: patches/production-resources.yaml
-    target:
-      group: apps
-      version: v1
-      kind: Deployment
-      name: ai-docs-worker
-  - path: patches/production-resources.yaml
-    target:
-      group: apps
-      version: v1
-      kind: StatefulSet
-      name: qdrant
-  - path: patches/production-resources.yaml
-    target:
-      group: apps
-      version: v1
-      kind: Deployment
-      name: dragonfly
 
 # Config map generator for application configuration
 configMapGenerator:
@@ -69,7 +42,8 @@ configMapGenerator:
       - AI_DOCS_DEBUG=false
       - AI_DOCS_LOG_LEVEL=INFO
       - AI_DOCS_MODE=simple
-      - AI_DOCS_CACHE__REDIS_URL=redis://dragonfly:6379
+      - AI_DOCS_CACHE__ENABLE_DRAGONFLY_CACHE=true
+      - AI_DOCS_CACHE__DRAGONFLY_URL=redis://dragonfly:6379
       - AI_DOCS_QDRANT__URL=http://qdrant:6333
       - AI_DOCS_QDRANT__COLLECTION_NAME=ai_docs
 
@@ -77,4 +51,3 @@ secretGenerator:
   - name: ai-docs-secrets
     files:
       - secrets/AI_DOCS_OPENAI__API_KEY
-

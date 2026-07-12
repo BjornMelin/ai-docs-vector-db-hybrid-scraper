@@ -9,11 +9,13 @@ from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from importlib import import_module
-from typing import Any
+from typing import Any, cast
 
+from dependency_injector import containers
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from redis.exceptions import RedisError
 from starlette import status
 
 from src.api.lifespan import container_lifespan
@@ -362,6 +364,7 @@ async def _ping_dragonfly() -> None:
         RuntimeError,
         AttributeError,
         OSError,
+        RedisError,
         TypeError,
     ):  # pragma: no cover - optional dependency not available
         logger.debug("Dragonfly ping failed during startup", exc_info=True)
@@ -388,19 +391,22 @@ async def _init_qdrant_client() -> None:
         logger.debug("Qdrant readiness check failed during startup", exc_info=True)
 
 
-def _cache_initialization_enabled(settings: Settings) -> bool:
-    """Return ``True`` when cache-related services should initialize.
+def _dragonfly_initialization_enabled(settings: Settings) -> bool:
+    """Return ``True`` when the external cache should initialize.
 
     Args:
         settings: Application settings containing cache configuration.
 
     Returns:
-        bool: ``True`` when cache initialisation should be performed.
+        bool: ``True`` when Dragonfly initialisation should be performed.
     """
     cache_config = getattr(settings, "cache", None)
     if cache_config is None:
         return False
-    return bool(getattr(cache_config, "enable_caching", False))
+    return bool(
+        getattr(cache_config, "enable_caching", False)
+        and getattr(cache_config, "enable_dragonfly_cache", False)
+    )
 
 
 async def _ensure_database_ready(settings: Settings) -> None:
@@ -411,7 +417,7 @@ async def _ensure_database_ready(settings: Settings) -> None:
     """
     await resolve_vector_store_service()
 
-    if not _cache_initialization_enabled(settings):
+    if not _dragonfly_initialization_enabled(settings):
         return
 
     await resolve_cache_manager()
@@ -431,7 +437,7 @@ async def _initialize_services(settings: Settings) -> None:
         "database_ready": lambda: _ensure_database_ready(settings),
     }
 
-    if _cache_initialization_enabled(settings):
+    if _dragonfly_initialization_enabled(settings):
         service_initializers["cache_manager"] = resolve_cache_manager
         service_initializers["dragonfly_client"] = _ping_dragonfly
     else:
@@ -453,10 +459,10 @@ def get_app_container(app: FastAPI) -> ApplicationContainer:
     if container is None:
         msg = "DI container is not attached to application state"
         raise RuntimeError(msg)
-    if not isinstance(container, ApplicationContainer):
+    if not isinstance(container, containers.DynamicContainer):
         msg = "Application state container is not an ApplicationContainer instance"
         raise TypeError(msg)
-    return container
+    return cast(ApplicationContainer, container)
 
 
 __all__ = [

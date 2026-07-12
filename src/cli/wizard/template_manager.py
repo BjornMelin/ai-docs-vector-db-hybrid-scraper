@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from rich.console import Console
@@ -11,7 +9,8 @@ from rich.table import Table
 from rich.text import Text
 
 from src.config import validate_settings_payload
-from src.config.template_utils import calculate_diff, merge_overrides
+from src.config.template_assets import load_builtin_template_assets
+from src.config.template_utils import merge_overrides
 
 
 if TYPE_CHECKING:  # pragma: no cover - import for typing only
@@ -20,88 +19,35 @@ if TYPE_CHECKING:  # pragma: no cover - import for typing only
 
 console = Console()
 
-_BASE_TEMPLATE_FILENAME = "base.json"
-_PROFILE_INDEX_FILENAME = "profiles.json"
-
 
 class TemplateManager:
     """Manages configuration templates for the wizard."""
 
-    def __init__(self, templates_dir: Path | None = None):
-        """Initialize the template manager.
-
-        Args:
-            templates_dir: Directory containing template assets. Defaults to
-                ``config/templates``.
-        """
-        self.templates_dir = templates_dir or Path("config/templates")
+    def __init__(self) -> None:
+        """Load the templates distributed with the installed package."""
         self._templates: dict[str, dict[str, Any]] = {}
         self._metadata: dict[str, dict[str, str]] = {}
         self._base_template: dict[str, Any] = {}
-        self._profile_index: dict[str, Any] = {}
         self._load_templates()
 
     def _load_templates(self) -> None:
-        """Load base template and profile overrides from disk."""
-        if not self.templates_dir.exists():
-            console.print(
-                "[yellow]Warning: Templates directory not found: "
-                f"{self.templates_dir}[/yellow]"
-            )
-            return
-
-        base_path = self.templates_dir / _BASE_TEMPLATE_FILENAME
-        profiles_path = self.templates_dir / _PROFILE_INDEX_FILENAME
-
-        try:
-            self._base_template = self._load_json(base_path)
-        except FileNotFoundError:
-            console.print(
-                f"[yellow]Warning: Base template missing at {base_path}[/yellow]"
-            )
-            self._base_template = {}
-        except json.JSONDecodeError as exc:
-            console.print(
-                f"[red]Invalid JSON in base template {base_path}: {exc}[/red]"
-            )
-            self._base_template = {}
-
-        try:
-            self._profile_index = self._load_json(profiles_path)
-        except FileNotFoundError:
-            console.print(
-                f"[yellow]Warning: Profile index missing at {profiles_path}[/yellow]"
-            )
-            self._profile_index = {}
-        except json.JSONDecodeError as exc:
-            console.print(
-                f"[red]Invalid JSON in profile index {profiles_path}: {exc}[/red]"
-            )
-            self._profile_index = {}
+        """Load base template and profile overrides from package resources."""
+        self._base_template, profile_index = load_builtin_template_assets()
 
         self._templates.clear()
         self._metadata.clear()
 
-        for name, record in self._profile_index.items():
+        for name, record in profile_index.items():
+            if not isinstance(record, dict):
+                msg = f"Packaged profile '{name}' must contain a JSON object."
+                raise TypeError(msg)
             overrides = record.get("overrides", {})
             if not isinstance(overrides, dict):
-                console.print(
-                    f"[yellow]Profile '{name}' overrides must be a mapping; "
-                    "ignoring invalid overrides[/yellow]"
-                )
-                overrides = {}
+                msg = f"Packaged profile '{name}' overrides must be a JSON object."
+                raise TypeError(msg)
             template = self._merge_template(overrides)
             self._templates[name] = template
             self._metadata[name] = self._extract_metadata(name, record)
-
-    def _load_json(self, path: Path) -> dict[str, Any]:
-        """Return JSON content from ``path`` as a dictionary."""
-        text = path.read_text(encoding="utf-8")
-        data = json.loads(text)
-        if not isinstance(data, dict):
-            msg = f"Template asset {path} must contain a JSON object."
-            raise TypeError(msg)
-        return data
 
     def _merge_template(self, overrides: dict[str, Any]) -> dict[str, Any]:
         """Merge overrides onto the base template and return a new mapping."""
@@ -274,41 +220,6 @@ class TemplateManager:
             raise ValueError(msg)
 
         return settings
-
-    def save_template(self, name: str, config: Settings, description: str = "") -> Path:
-        """Persist a Settings object as a profile override.
-
-        Args:
-            name: Name for the new template.
-            config: Settings object to persist.
-            description: Optional human readable description.
-
-        Returns:
-            Path to the updated profile index file.
-        """
-        config_data = config.model_dump()
-        overrides = calculate_diff(self._base_template, config_data)
-        metadata = {
-            "description": description or f"Custom template: {name}",
-            "use_case": "Custom profile configuration",
-            "features": "User-defined settings",
-            "overrides": overrides,
-        }
-
-        self._profile_index[name] = metadata
-        self._metadata[name] = {
-            "description": metadata["description"],
-            "use_case": metadata["use_case"],
-            "features": metadata["features"],
-        }
-        self._templates[name] = self._merge_template(overrides)
-
-        profiles_path = self.templates_dir / _PROFILE_INDEX_FILENAME
-        profiles_path.write_text(
-            json.dumps(self._profile_index, indent=2), encoding="utf-8"
-        )
-
-        return profiles_path
 
 
 __all__ = [

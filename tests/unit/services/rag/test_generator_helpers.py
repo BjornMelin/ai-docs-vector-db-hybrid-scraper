@@ -48,7 +48,9 @@ def test_build_metrics_extracts_token_usage() -> None:
 def test_render_context_includes_url_when_requested() -> None:
     """Include URL lines only when sources are requested."""
     documents = [
-        Document(page_content="content", metadata={"title": "T", "url": "https://e.com"})
+        Document(
+            page_content="content", metadata={"title": "T", "url": "https://e.com"}
+        )
     ]
     rendered = RAGGenerator._render_context(documents, include_sources=True)
     assert "URL: https://e.com" in rendered

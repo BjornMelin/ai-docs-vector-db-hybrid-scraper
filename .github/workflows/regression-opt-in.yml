@@ -37,7 +37,7 @@ jobs:
       - name: Setup environment
         uses: ./.github/actions/setup-environment
         with:
-          python-version: '3.12'
+          python-version: '3.11'
           cache-suffix: '-full-tests'
 
       - name: Prepare directories
@@ -71,7 +71,7 @@ jobs:
       - name: Setup environment
         uses: ./.github/actions/setup-environment
         with:
-          python-version: '3.12'
+          python-version: '3.11'
           cache-suffix: '-benchmarks'
 
       - name: Install benchmark extras

@@ -15,6 +15,8 @@ from rich.table import Table
 from rich.text import Text
 
 from src.cli.commands import database as database_module
+from src.config import Settings
+from src.config.models import QdrantConfig
 from src.manage_vector_db import CollectionCreationError, CollectionDeletionError
 
 
@@ -119,15 +121,13 @@ def rich_cli_stub() -> SimpleNamespace:
 
 
 @pytest.fixture
-def config_stub() -> SimpleNamespace:
+def config_stub() -> Settings:
     """Provide the configuration object required by the CLI context."""
-    return SimpleNamespace(qdrant=SimpleNamespace(host="localhost", port=6333))
+    return Settings(qdrant=QdrantConfig(url="http://qdrant.test:6333"))
 
 
 @pytest.fixture
-def cli_obj(
-    rich_cli_stub: SimpleNamespace, config_stub: SimpleNamespace
-) -> dict[str, Any]:
+def cli_obj(rich_cli_stub: SimpleNamespace, config_stub: Settings) -> dict[str, Any]:
     """Build the Click context object consumed by database commands."""
     return {"rich_cli": rich_cli_stub, "config": config_stub}
 
@@ -615,16 +615,17 @@ def test_collection_info_runtime_error_aborts(
     ]
 
 
-def test_search_collection_warns_about_unimplemented_path(
+def test_search_collection_fails_for_unimplemented_path(
     cli_runner: CliRunner,
     rich_cli_stub: SimpleNamespace,
     cli_obj: dict[str, Any],
 ) -> None:
-    """The search command should communicate its unimplemented state."""
+    """The reserved search command should fail instead of reporting success."""
     result = _invoke(cli_runner, ["search", "alpha", "query"], obj=cli_obj)
 
-    assert result.exit_code == 0
-    assert "Vector search via CLI is not yet implemented" in rich_cli_stub.printed[0]
+    assert result.exit_code == 1
+    assert "Vector search is not implemented" in result.output
+    assert not rich_cli_stub.printed
 
 
 def test_database_stats_reports_totals(
@@ -649,6 +650,7 @@ def test_database_stats_reports_totals(
     assert len(tables) == 2  # Summary table and breakdown table
     summary = tables[0]
     assert summary.row_count == 3
+    assert "http://qdrant.test:6333" in str(summary.columns[1]._cells)
     assert stub.counters["cleanup"] == 1
 
 

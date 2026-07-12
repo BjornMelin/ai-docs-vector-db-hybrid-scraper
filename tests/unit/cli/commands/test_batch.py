@@ -142,10 +142,10 @@ def test_show_indexing_preview_emits_panel(rich_cli_stub: SimpleNamespace) -> No
 
 def test_index_documents_dry_run_invokes_preview(
     monkeypatch: pytest.MonkeyPatch,
-    cli_context: click.Context,
+    cli_runner: Any,
     rich_cli_stub: SimpleNamespace,
 ) -> None:
-    """Dry-run invocations must call the preview helper instead of performing work."""
+    """The Click command should route dry runs to the preview helper."""
     captured: dict[str, Any] = {}
 
     def _capture(
@@ -165,18 +165,23 @@ def test_index_documents_dry_run_invokes_preview(
 
     monkeypatch.setattr(batch_module, "_show_indexing_preview", _capture)
 
-    index_callback = batch_module.index_documents.callback
-    assert index_callback is not None
-
-    with cli_context:
-        index_callback(
+    result = cli_runner.invoke(
+        batch_module.batch,
+        [
+            "index-documents",
             "target",
-            ("doc1", "doc2"),
-            batch_size=5,
-            _parallel=1,
-            dry_run=True,
-        )
+            "doc1",
+            "doc2",
+            "--batch-size",
+            "5",
+            "--parallel",
+            "1",
+            "--dry-run",
+        ],
+        obj={"rich_cli": rich_cli_stub},
+    )
 
+    assert result.exit_code == 0
     assert captured == {
         "documents": ["doc1", "doc2"],
         "collection": "target",
@@ -185,10 +190,27 @@ def test_index_documents_dry_run_invokes_preview(
     }
 
 
-def test_create_collections_aborts_without_confirmation(
-    monkeypatch: pytest.MonkeyPatch, cli_context: click.Context
+def test_index_documents_without_dry_run_fails_explicitly(
+    cli_runner: Any,
+    rich_cli_stub: SimpleNamespace,
 ) -> None:
-    """If the operator declines, no queue should be instantiated."""
+    """The Click command should fail explicitly instead of reporting persistence."""
+    result = cli_runner.invoke(
+        batch_module.batch,
+        ["index-documents", "target", "doc1", "--parallel", "1"],
+        obj={"rich_cli": rich_cli_stub},
+    )
+
+    assert result.exit_code == 1
+    assert "Document indexing is not implemented" in result.output
+
+
+def test_create_collections_aborts_without_confirmation(
+    monkeypatch: pytest.MonkeyPatch,
+    cli_runner: Any,
+    rich_cli_stub: SimpleNamespace,
+) -> None:
+    """The Click command should accept ``--force`` and honor cancellation."""
     monkeypatch.setattr(batch_module, "Confirm", SimpleNamespace(ask=_always_false))
 
     def _queue_factory() -> None:
@@ -196,16 +218,22 @@ def test_create_collections_aborts_without_confirmation(
 
     monkeypatch.setattr(batch_module, "OperationQueue", _queue_factory)
 
-    create_callback = batch_module.create_collections.callback
-    assert create_callback is not None
+    result = cli_runner.invoke(
+        batch_module.batch,
+        [
+            "create-collections",
+            "alpha",
+            "--dimension",
+            "256",
+            "--distance",
+            "cosine",
+            "--force",
+        ],
+        obj={"rich_cli": rich_cli_stub},
+    )
 
-    with cli_context:
-        create_callback(
-            ("alpha",),
-            dimension=256,
-            distance="cosine",
-            _force=False,
-        )
+    assert result.exit_code == 0
+    assert any("Creation cancelled" in str(item) for item in rich_cli_stub.printed)
 
 
 def test_create_collections_enqueues_operations(

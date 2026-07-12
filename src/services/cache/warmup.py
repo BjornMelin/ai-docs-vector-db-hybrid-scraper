@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable, Sequence
 from typing import TYPE_CHECKING, Any, cast
 
+from src.config.models import EmbeddingProvider
 from src.services.cache.manager import CacheManager
 
 
@@ -55,22 +56,56 @@ async def warm_caches(
         if embedding_cache is None:
             summary["embeddings"]["skipped"] = len(embedding_queries)
         else:
-            config = embedding_manager.config.embedding
+            settings = embedding_manager.config
+            provider = settings.embedding_provider
+            provider_name = provider.value
+            model = (
+                settings.openai.model
+                if provider is EmbeddingProvider.OPENAI
+                else settings.fastembed.dense_model
+            )
+            provider_info = embedding_manager.get_provider_info().get(provider_name, {})
+            configured_model = provider_info.get("model")
+            if isinstance(configured_model, str) and configured_model:
+                model = configured_model
+            configured_dimensions = provider_info.get("dimensions")
+            dimensions = (
+                configured_dimensions
+                if type(configured_dimensions) is int and configured_dimensions > 0
+                else None
+            )
             missing = await embedding_cache.warm_cache(
                 list(embedding_queries),
-                model=config.dense_model,
-                provider=config.provider,
+                model=model,
+                provider=provider_name,
+                dimensions=dimensions,
             )
             summary["embeddings"]["already_cached"] = len(embedding_queries) - len(
                 missing
             )
             if missing:
-                result = await embedding_manager.generate_embeddings(list(missing))
+                result = await embedding_manager.generate_embeddings(
+                    list(missing),
+                    provider_name=provider_name,
+                    auto_select=False,
+                )
                 embeddings = cast(
                     Sequence[Sequence[float]], result.get("embeddings", [])
                 )
                 generated = len(embeddings)
                 summary["embeddings"]["generated"] = generated
+                if generated:
+                    await embedding_cache.set_batch_embeddings(
+                        {
+                            text: list(embedding)
+                            for text, embedding in zip(
+                                missing, embeddings, strict=False
+                            )
+                        },
+                        model=model,
+                        provider=provider_name,
+                        dimensions=dimensions,
+                    )
                 if generated < len(missing):
                     summary["embeddings"]["skipped"] = len(missing) - generated
     elif embedding_queries:

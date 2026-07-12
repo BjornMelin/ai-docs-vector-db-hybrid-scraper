@@ -160,6 +160,7 @@ async def test_generate_rag_answer_success() -> None:
 @pytest.mark.asyncio
 async def test_generate_rag_answer_wraps_unexpected_errors() -> None:
     """Wrap unknown exceptions into `ExternalServiceError`."""
+
     class BoomGenerator:
         async def generate_answer(self, _request: Any) -> Any:
             raise RuntimeError("boom")
@@ -174,6 +175,7 @@ async def test_generate_rag_answer_wraps_unexpected_errors() -> None:
 @pytest.mark.asyncio
 async def test_generate_rag_answer_propagates_network_errors() -> None:
     """Propagate well-known network errors without wrapping."""
+
     class NetworkBoomGenerator:
         async def generate_answer(self, _request: Any) -> Any:
             raise NetworkError("nope")

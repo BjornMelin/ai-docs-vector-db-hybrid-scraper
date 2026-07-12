@@ -16,6 +16,8 @@ from pydantic import (  # pyright: ignore[reportMissingImports]
     model_validator,
 )
 
+from src import __version__
+
 
 #### Enumerations ####
 
@@ -52,16 +54,6 @@ class EmbeddingProvider(str, Enum):
 
     OPENAI = "openai"
     FASTEMBED = "fastembed"
-
-
-class EmbeddingModel(str, Enum):
-    """Embedding model catalogue."""
-
-    TEXT_EMBEDDING_3_SMALL = "text-embedding-3-small"
-    TEXT_EMBEDDING_3_LARGE = "text-embedding-3-large"
-    BGE_SMALL_EN_V1_5 = "BAAI/bge-small-en-v1.5"
-    BGE_LARGE_EN_V1_5 = "BAAI/bge-large-en-v1.5"
-    NV_EMBED_V2 = "nvidia/nv-embed-v2"
 
 
 class CrawlProvider(str, Enum):
@@ -303,7 +295,7 @@ class CacheConfig(BaseModel):
 
     enable_caching: bool = Field(default=True, description="Enable caching globally")
     enable_dragonfly_cache: bool = Field(
-        default=True,
+        default=False,
         description="Enable the Dragonfly (Redis-compatible) distributed cache",
     )
     dragonfly_url: str = Field(
@@ -412,9 +404,6 @@ class OpenAIConfig(BaseModel):
     model: str = Field(
         default="text-embedding-3-small", description="Default embedding model"
     )
-    embedding_model: str = Field(
-        default="text-embedding-3-small", description="Explicit embedding model"
-    )
     dimensions: int = Field(
         default=1536, gt=0, le=3072, description="Embedding dimensionality"
     )
@@ -450,10 +439,6 @@ class FastEmbedConfig(BaseModel):
     sparse_model: str | None = Field(
         default="qdrant/bm25",
         description="Optional sparse model identifier for hybrid retrieval",
-    )
-    retrieval_mode: SearchStrategy = Field(
-        default=SearchStrategy.DENSE,
-        description="Retrieval mode when using FastEmbed locally",
     )
     cache_dir: str | None = Field(default=None, description="Model cache directory")
     max_length: int = Field(default=512, gt=0, description="Max token length")
@@ -521,49 +506,11 @@ class ChunkingConfig(BaseModel):
 
 
 class EmbeddingConfig(BaseModel):
-    """Embedding configuration including retrieval mode."""
+    """Provider-agnostic embedding behavior."""
 
-    @model_validator(mode="before")
-    @classmethod
-    def alias_search_strategy(cls, values: Any) -> Any:
-        """Alias search_strategy to retrieval_mode for backward compatibility."""
-        if (
-            isinstance(values, dict)
-            and "search_strategy" in values
-            and "retrieval_mode" not in values
-        ):
-            values["retrieval_mode"] = values["search_strategy"]
-        return values
-
-    provider: EmbeddingProvider = Field(
-        default=EmbeddingProvider.FASTEMBED, description="Embedding provider"
-    )
-    dense_model: str = Field(
-        default=EmbeddingModel.TEXT_EMBEDDING_3_SMALL.value,
-        min_length=3,
-        description="Dense embedding model identifier",
-    )
-    sparse_model: str | None = Field(
-        default="qdrant/bm25",
-        description="Sparse embedding model identifier for hybrid retrieval",
-    )
     retrieval_mode: SearchStrategy = Field(
         default=SearchStrategy.DENSE, description="Retrieval mode"
     )
-    enable_quantization: bool = Field(
-        default=True, description="Enable embedding quantization"
-    )
-
-    @model_validator(mode="after")
-    def validate_sparse_requirements(self) -> Self:
-        """Ensure sparse retrieval modes provide a sparse model identifier."""
-        if (
-            self.retrieval_mode in (SearchStrategy.SPARSE, SearchStrategy.HYBRID)
-            and not self.sparse_model
-        ):
-            msg = "Sparse or hybrid retrieval requires a sparse_model to be configured"
-            raise ValueError(msg)
-        return self
 
 
 class HyDEConfig(BaseModel):
@@ -702,7 +649,7 @@ class ObservabilityConfig(BaseModel):
 
     enabled: bool = Field(default=False, description="Enable OpenTelemetry")
     service_name: str = Field(default="ai-docs-vector-db", description="Service name")
-    service_version: str = Field(default="1.0.0", description="Service version")
+    service_version: str = Field(default=__version__, description="Service version")
     service_namespace: str = Field(default="ai-docs", description="Service namespace")
     otlp_endpoint: str = Field(
         default="http://localhost:4317", description="OTLP endpoint"
@@ -843,7 +790,6 @@ __all__ = [
     "DocumentStatus",
     "DocumentationSite",
     "EmbeddingConfig",
-    "EmbeddingModel",
     "EmbeddingProvider",
     "Environment",
     "FastEmbedConfig",

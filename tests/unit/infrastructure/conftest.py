@@ -27,14 +27,9 @@ def minimal_qdrant_config() -> SimpleNamespace:
 def minimal_cache_config() -> SimpleNamespace:
     """Minimal cache configuration for container testing."""
     return SimpleNamespace(
-        enable_dragonfly_cache=True,
-        host="localhost",
-        port=6379,
-        db=0,
-        password=None,
-        ssl=False,
-        connection_pool_size=10,
-        default_ttl=3600,
+        enable_caching=True,
+        enable_dragonfly_cache=False,
+        dragonfly_url="redis://localhost:6379",
     )
 
 

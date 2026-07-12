@@ -9,29 +9,29 @@ processing (batch pipelines), query_processing (intent models + orchestrator), r
 
 ## Build, Test, and Development Commands
 
-Install deps via `uv sync --dev`. Drive daily flows with `uv run python -m src.cli.unified …` (`dev --mode simple`, `docs`, `services --action start --stack vector|monitoring`). Use `python scripts/dev.py` for profiles: `test --profile quick`, `eval --dataset tests/data/rag/golden_set.jsonl`,
-`benchmark --suite performance`, `validate --check-docs --check-services`, `quality --fix-lint`. Targeted gates: `uv run ruff format/check <paths>`, `uv run pyright <paths>`, `uv run pylint <modules>` (score ≥9.5). Start local services
+Install deps via `uv sync --dev`. Drive daily flows with `uv run python -m src.cli.unified …` (`dev`, `docs`, `services --action start --stack simple|enterprise`). Use `uv run python scripts/dev.py` for profiles: `test --profile quick`, `eval --dataset tests/data/rag/golden_set.jsonl`,
+`benchmark --suite performance`, `validate --check-docs --check-services`, `quality --fix-lint`. Targeted gates: `uv run ruff format <paths>`, `uv run ruff check <paths>`, `uv run pyright <paths>`, and `uv run pylint <modules>` (score ≥9.5). Start local services
 with `docker compose --profile simple up -d`; `make quality-unit` yields a lint/type/test gate.
 
 ## Coding Style & Naming Conventions
 
 Use 4-space indentation, full type hints, and Google-style docstrings on public APIs. Keep modules lowercase_with_underscores, classes PascalCase, and functions/tests snake_case. Favor maintained components (LangGraph nodes, Prometheus helpers, FastEmbed) over bespoke utilities,
-and run `uv run ruff format .`, `uv run ruff check . --fix`, `uv run pylint --fail-under=9.5 src tests`, and `uv run pyright src tests` before pushing.
+and run `uv run ruff format .`, `uv run ruff check . --fix`, `uv run pylint --fail-under=9.5 src scripts`, and `uv run pyright` before pushing.
 
 ## Testing Guidelines
 
-Pytest modules follow `test_*.py`; fixtures and corpora live in `tests/fixtures/` and `tests/data_quality/`. Run `python scripts/dev.py test --profile unit` (or other profiles) or `python scripts/dev.py benchmark --suite performance` when iterating.
-Tag flows with `pytest.ini` markers such as `@pytest.mark.service`, `@pytest.mark.performance`, `@pytest.mark.rag`, and keep runs deterministic via stubs and cached embeddings.
+Pytest modules follow `test_*.py`; fixtures and corpora live in `tests/fixtures/` and `tests/data_quality/`. Run `uv run python scripts/dev.py test --profile unit` (or other profiles) or `uv run python scripts/dev.py benchmark --suite performance` when iterating.
+Tag flows with the markers registered in `pyproject.toml`, such as `@pytest.mark.service`, `@pytest.mark.performance`, and `@pytest.mark.rag`, and keep runs deterministic via stubs and cached embeddings.
 When exercising optional integrations, prefer `pytest.importorskip`, focused mocks (e.g., `MockerFixture`), and shared fixtures over ad-hoc `sys.modules` shims. Required dependencies (those under `[project]`) must be imported directly so tests validate real APIs.
 
 ## Commit & Pull Request Guidelines
 
-Use Conventional Commit prefixes (`feat:`, `fix:`, `docs:`), explain motivation, link issues, list validation commands, and confirm `python scripts/dev.py quality`, relevant pytest profiles, and required Docker checks pass before review—update `CHANGELOG.md` or docs for behaviour shifts.
+Use Conventional Commit prefixes (`feat:`, `fix:`, `docs:`), explain motivation, link issues, list validation commands, and confirm `uv run python scripts/dev.py quality`, relevant pytest profiles, and required Docker checks pass before review. Update `CHANGELOG.md` or docs for behaviour shifts.
 
 ## Security & Configuration Tips
 
-Store secrets in `.env`, `.env.local`, or a vault—never commit `OPENAI_API_KEY` or `AI_DOCS__FIRECRAWL__API_KEY`. Align FastAPI and MCP via feature flags like `AI_DOCS__ENABLE_ADVANCED_MONITORING`, service URLs such as `AI_DOCS__QDRANT__URL`, and `FASTMCP_TRANSPORT/FASTMCP_HOST/FASTMCP_PORT`.
-Prefer precise exceptions, justify any `# pylint: disable` or `# pyright: ignore`, trim `cache/`, `logs/`, `tmp/`, and run `python scripts/dev.py validate --strict` regularly.
+Store secrets in `.env` or a vault. Never commit `AI_DOCS_OPENAI__API_KEY` or `AI_DOCS_BROWSER__FIRECRAWL__API_KEY`. Align FastAPI and MCP with service URLs such as `AI_DOCS_QDRANT__URL` and `FASTMCP_TRANSPORT/FASTMCP_HOST/FASTMCP_PORT`.
+Prefer precise exceptions, justify any `# pylint: disable` or `# pyright: ignore`, trim `cache/`, `logs/`, `tmp/`, and run `uv run python scripts/dev.py validate --strict` regularly.
 
 ## Error Handling & Observability
 

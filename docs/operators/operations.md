@@ -1,212 +1,104 @@
+---
+title: Operate AI Docs
+audience: operators
+status: active
+owner: operations-engineering
+last_reviewed: 2026-07-11
+meta:
+  contentType: How-to
+  category: Operations
+---
 
-# Operations Guide
+# Operate AI Docs
 
-## Agentic Workflow Runbooks
+Use Docker Compose for service lifecycle commands and the public FastAPI endpoint for application health. Run commands from the repository root so Compose uses the checked-in manifest and `.env` file.
 
-### Browser Automation Tiers
-- The unified manager (`src/services/browser/unified_manager.py`) orders tiers as: HTTP fetcher → lightweight headless Chromium → Crawl4AI → Browser-use → Playwright with supervised escalation.
-- Configure limits under `config/browser.yml` (`max_parallel_sessions`, `retry_budget`).
-- Use `python scripts/dev.py services --action status --stack browser` before releases to confirm tier readiness.
-- When a tier flaps, disable it via `BROWSER__DISABLE_<TIER>` environment flags and watch the `*_browser_tier_health_status` gauge until stable.
+## Check service health
 
-### Crawling Strategy
-- Tier routing settings live in `config/crawling.yml`; adjust thresholds instead of editing code.
-- Each tier emits `crawler_tier_health` and `crawler_request_latency_seconds` metrics. Alert when health <0.9 for 10 minutes.
-- Preload frontier queues with `python scripts/dev.py crawling prime --profile standard` after cache flushes.
+Inspect the enterprise profile and application endpoint:
 
-### Retrieval and RAG Self-Healing
-- Retry budgets derive from `agentic.max_retries` in `config/agentic.yml`; they apply separately per LangGraph stage (`discover`, `retrieve`, `execute`).
-- Persist checkpoints by selecting a durable saver in the dependency wiring; checkpoints land under `storage/langgraph-checkpoints/`.
-- Run `python scripts/dev.py benchmark --suite performance` before changing retrieval configuration.
-
-### Vector Database Stewardship
-- Nightly optimisation: `python scripts/dev.py vector optimize` merges Qdrant segments using thresholds in `config/vector_db.yml`.
-- Monitor `qdrant_collection_optimizer_in_progress` during compaction; expect temporary retrieval latency increases.
-- Adjust `vector_db.max_write_qps` ahead of bulk loads to keep `*_rag_stage_latency_seconds{stage="retrieve"}` under SLO limits.
-
-## Daily Operations
-
-### Daily Health Check
 ```bash
-docker-compose ps
-curl -s http://localhost:6333/health | jq '.'
-redis-cli ping
-df -h | grep -E "(/$|/var|/tmp)"
-docker logs --since 24h qdrant | grep -i error
-docker logs --since 24h dragonfly | grep -i error
-redis-cli -n 1 info | grep -E "(connected_clients|used_memory_human)"
-free -h && top -bn1 | head -5
+docker compose --profile enterprise ps
+curl --fail http://localhost:8000/health
 ```
 
-### Log Management
+Inspect container resource usage when a service slows down:
+
 ```bash
-find /var/log/ai-docs -name "*.log" -mtime +30 -delete
-docker system prune -f --volumes --filter "until=24h"
-tar -czf /backup/logs/daily-logs-$(date +%Y%m%d).tar.gz /var/log/ai-docs/
-```
-
-## Service Management
-
-### Core Service Commands
-```bash
-# Start services
-python scripts/dev.py services start
-docker-compose up -d
-
-# Stop services
-docker-compose down --timeout 30
-
-# Restart specific services
-docker-compose restart qdrant
-docker-compose restart dragonfly
-
-# View logs
-docker-compose logs -f --tail=100 qdrant
-docker-compose logs -f --tail=100 dragonfly
-
-# Resource monitoring
 docker stats --no-stream
 ```
 
-## Backup & Recovery
+## Read service logs
 
-### Daily Backup
+Read recent application and storage logs before restarting a container:
+
 ```bash
-BACKUP_DATE=$(date +%Y%m%d)
-BACKUP_DIR="/backup/daily/${BACKUP_DATE}"
-mkdir -p ${BACKUP_DIR}
-
-# Vector database backup
-curl -X POST "http://localhost:6333/snapshots" \
-  -H "Content-Type: application/json" \
-  -d '{"collection_name": "documents"}'
-
-# Configuration backup
-cp -r /app/config ${BACKUP_DIR}/
-cp docker-compose.yml ${BACKUP_DIR}/
-cp .env ${BACKUP_DIR}/env.backup
-
-# Cache backup
-redis-cli save
-cp /var/lib/redis/dump.rdb ${BACKUP_DIR}/redis-backup.rdb
+docker compose logs --tail=100 app qdrant dragonfly
 ```
 
-### Recovery
+Follow one service during an incident:
+
 ```bash
-RECOVERY_DATE=$1
-BACKUP_DIR="/backup/daily/${RECOVERY_DATE}"
-
-# Stop services
-docker-compose down
-
-# Restore vector database
-docker run --rm -v ai-docs_qdrant_data:/data -v ${BACKUP_DIR}:/backup \
-  alpine sh -c "rm -rf /data/* && tar xzf /backup/qdrant-data.tar.gz -C /data"
-
-# Restore cache
-cp ${BACKUP_DIR}/redis-backup.rdb /var/lib/redis/dump.rdb
-
-# Restart services
-docker-compose up -d
+docker compose logs --follow --tail=100 app
 ```
 
-## User Management
+## Restart services
 
-### User Operations
+Restart one service when its logs identify a local failure:
+
 ```bash
-# Create user
-USERNAME="newuser"
-API_KEY=$(openssl rand -hex 32)
-ROLE="viewer"
-redis-cli hset "user:${USERNAME}" \
-  "api_key" "${API_KEY}" \
-  "role" "${ROLE}"
-
-# List users
-redis-cli keys "user:*" | sed 's/user://' | sort
-
-# Disable user
-redis-cli hset "user:username" "status" "disabled"
-
-# Rotate API keys
-NEW_KEY=$(openssl rand -hex 32)
-redis-cli hset "user:username" "api_key" "${NEW_KEY}"
+docker compose restart app
 ```
 
-## Incident Response
+Restart the full enterprise profile without deleting volumes:
 
-### Common Incidents
 ```bash
-# Database down
-docker-compose restart qdrant
-
-# Memory exhausted
-docker-compose restart dragonfly
-redis-cli flushall
-
-# High load
-docker-compose scale worker=3
-
-# Service unresponsive
-timeout 60 docker-compose down
-docker kill $(docker ps -q)
-docker system prune -f
-docker-compose up -d
+docker compose --profile enterprise down
+docker compose --profile enterprise up -d
 ```
 
-## Performance Management
+## Apply an image update
 
-### Resource Monitoring
+Update the pinned image tag in `docker-compose.yml`, then pull upstream service images, rebuild the application, and wait for health checks:
+
 ```bash
-# System metrics
-docker stats --no-stream --format "table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}"
-
-# Vector database metrics
-curl -s "http://localhost:6333/metrics" | grep -E "(qdrant_collections_total|qdrant_points_total)"
-
-# Cache metrics
-redis-cli info memory | grep -E "(used_memory_human|used_memory_peak_human)"
+docker compose --profile enterprise pull
+docker compose --profile enterprise build app
+docker compose --profile enterprise up -d
+docker compose --profile enterprise ps
 ```
 
-### Performance Optimization
+Upgrade persistent Qdrant data one minor version at a time. Snapshot the volume before each step and confirm `/readyz` before continuing to the next version.
+
+Run the release test profile before you deploy an application commit:
+
 ```bash
-# Scale workers
-docker-compose scale worker=3
-
-# Optimize cache
-redis-cli config set maxmemory-policy allkeys-lru
-
-# Optimize vector database
-curl -X POST "http://localhost:6333/collections/documents/optimize"
+uv run python scripts/dev.py test --profile ci
 ```
 
-## Troubleshooting
+## Preserve local data
 
-### Health Verification
+Compose stores persistent state in named volumes. List the resolved volume names before a host migration:
+
 ```bash
-# Service connectivity
-docker exec api ping qdrant
-docker exec api ping dragonfly
-
-# API endpoints
-curl -v http://localhost:8000/health
-curl -v http://localhost:6333/health
-
-# Port checks
-netstat -tlnp | grep -E "(8000|6333|6379)"
+docker compose --profile enterprise config --volumes
+docker volume ls
 ```
 
-### Common Fixes
+Stop writers before you snapshot or copy a volume. Follow the storage provider's recovery procedure and test the restored data before you remove the original volume.
+
+Don't run `docker compose down --volumes` during a routine restart. That option deletes local Qdrant, Dragonfly, PostgreSQL, Prometheus, and Grafana state.
+
+## Collect failure evidence
+
+Capture these outputs when a deployment remains unhealthy:
+
 ```bash
-# Clear cache
-redis-cli flushall
-
-# Restart services
-docker-compose restart
-
-# Clean resources
-docker system prune -af
-
-# Check logs
-docker-compose logs --tail=50
+docker compose --profile enterprise ps
+docker compose --profile enterprise config
+docker compose logs --tail=200 app qdrant dragonfly postgres
+docker version
+docker compose version
 ```
+
+Redact credentials before attaching output to an issue.

@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
+import grpc
 import pytest
+from httpx import Headers
 from langchain_core.documents import Document
 from qdrant_client import models
 
@@ -92,6 +96,108 @@ async def test_initialize_sets_vector_store(
     assert service.embedding_dimension == 3
 
 
+def test_collection_adapters_are_cached_without_mutating_other_collections(
+    initialized_service: VectorStoreService,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Each collection should own a stable LangChain adapter."""
+    created: list[StubVectorStore] = []
+
+    def create_store(**kwargs: Any) -> StubVectorStore:
+        store = StubVectorStore(collection_name=kwargs["collection_name"])
+        created.append(store)
+        return store
+
+    monkeypatch.setattr(
+        "src.services.vector_db.service.QdrantVectorStore",
+        create_store,
+    )
+
+    first = initialized_service._require_vector_store(  # pylint: disable=protected-access
+        "first"
+    )
+    second = initialized_service._require_vector_store(  # pylint: disable=protected-access
+        "second"
+    )
+
+    assert initialized_service._require_vector_store("first") is first  # pylint: disable=protected-access
+    assert first is not second
+    assert first.collection_name == "first"
+    assert second.collection_name == "second"
+    assert [store.collection_name for store in created] == ["first", "second"]
+
+
+@pytest.mark.asyncio
+async def test_sparse_upsert_uses_langchain_qdrant_vector_names() -> None:
+    """Sparse points should target the names created by QdrantVectorStore."""
+    from qdrant_client import AsyncQdrantClient
+
+    from src.config import Settings
+    from src.config.models import Environment
+
+    client = AsyncQdrantClient(location=":memory:")
+    service = VectorStoreService(
+        config=Settings(environment=Environment.TESTING),
+        async_qdrant_client=client,
+    )
+    service._embedding_dimension = 3  # pylint: disable=protected-access
+    try:
+        await service.upsert_vectors(
+            "hybrid",
+            [
+                VectorRecord(
+                    id="00000000-0000-0000-0000-000000000001",
+                    vector=[1.0, 0.0, 0.0],
+                    sparse_vector={1: 0.5, 4: 0.25},
+                    payload={"content": "example"},
+                )
+            ],
+        )
+
+        points, _ = await client.scroll(
+            collection_name="hybrid",
+            with_vectors=True,
+        )
+        assert len(points) == 1
+        assert isinstance(points[0].vector, dict)
+        assert set(points[0].vector) == {"", "langchain-sparse"}
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_initialize_creates_configured_collection_before_adapter_validation(
+    config_stub: Any,
+    qdrant_client_mock: AsyncMock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Fresh deployments should create the collection before LangChain validates it."""
+    qdrant_client_mock.collection_exists.return_value = False
+    monkeypatch.setattr(
+        "src.services.vector_db.service.VectorStoreService._build_sync_client",
+        lambda self, cfg: MagicMock(),
+    )
+
+    def create_store(**kwargs: Any) -> StubVectorStore:
+        qdrant_client_mock.create_collection.assert_awaited_once()
+        return StubVectorStore(collection_name=kwargs["collection_name"])
+
+    monkeypatch.setattr(
+        "src.services.vector_db.service.QdrantVectorStore",
+        create_store,
+    )
+    service = VectorStoreService(
+        config=config_stub,
+        async_qdrant_client=qdrant_client_mock,
+    )
+
+    await service.initialize()
+
+    create_call = qdrant_client_mock.create_collection.call_args.kwargs
+    assert create_call["collection_name"] == config_stub.qdrant.collection_name
+    assert service.is_initialized()
+
+
 @pytest.mark.asyncio
 async def test_ensure_collection_creates_when_missing(
     initialized_service: VectorStoreService,
@@ -106,6 +212,140 @@ async def test_ensure_collection_creates_when_missing(
     await initialized_service.ensure_collection(schema)
 
     client.create_collection.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_ensure_collection_accepts_concurrent_creator(
+    config_stub: Any,
+) -> None:
+    """Two initializers racing on one collection should both succeed."""
+
+    class RacingClient:
+        def __init__(self) -> None:
+            self.created = False
+            self.create_barrier = asyncio.Barrier(2)
+
+        async def collection_exists(self, _name: str) -> bool:
+            return self.created
+
+        async def create_collection(self, **_kwargs: object) -> None:
+            await self.create_barrier.wait()
+            if self.created:
+                raise ValueError("Collection docs already exists")
+            self.created = True
+
+    client = RacingClient()
+    services = [
+        VectorStoreService(
+            config=config_stub,
+            async_qdrant_client=client,  # type: ignore[arg-type]
+        )
+        for _ in range(2)
+    ]
+    for service in services:
+        service._embedding_dimension = 3  # pylint: disable=protected-access
+
+    await asyncio.gather(
+        *(
+            service.ensure_collection(CollectionSchema(name="docs", vector_size=3))
+            for service in services
+        )
+    )
+
+    assert client.created
+
+
+@pytest.mark.asyncio
+async def test_ensure_collection_reraises_unproven_create_conflict(
+    config_stub: Any,
+    qdrant_client_mock: AsyncMock,
+) -> None:
+    """A create failure is not idempotent unless existence is proven afterward."""
+    qdrant_client_mock.collection_exists.side_effect = [False, False]
+    qdrant_client_mock.create_collection.side_effect = ValueError("create failed")
+    service = VectorStoreService(
+        config=config_stub,
+        async_qdrant_client=qdrant_client_mock,
+    )
+    service._embedding_dimension = 3  # pylint: disable=protected-access
+
+    with pytest.raises(ValueError, match="create failed"):
+        await service.ensure_collection(CollectionSchema(name="docs", vector_size=3))
+
+    assert qdrant_client_mock.collection_exists.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_ensure_collection_accepts_grpc_already_exists_after_peer_creation(
+    config_stub: Any,
+    qdrant_client_mock: AsyncMock,
+) -> None:
+    """GRPC ALREADY_EXISTS should use the same positive existence proof."""
+    metadata = grpc.aio.Metadata()
+    qdrant_client_mock.collection_exists.side_effect = [False, True]
+    qdrant_client_mock.create_collection.side_effect = grpc.aio.AioRpcError(
+        grpc.StatusCode.ALREADY_EXISTS,
+        metadata,
+        metadata,
+        "already exists",
+    )
+    service = VectorStoreService(
+        config=config_stub,
+        async_qdrant_client=qdrant_client_mock,
+    )
+    service._embedding_dimension = 3  # pylint: disable=protected-access
+
+    await service.ensure_collection(CollectionSchema(name="docs", vector_size=3))
+
+    assert qdrant_client_mock.collection_exists.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_ensure_collection_preserves_unrelated_grpc_failure(
+    config_stub: Any,
+    qdrant_client_mock: AsyncMock,
+) -> None:
+    """Only gRPC's collection-conflict status may enter idempotent handling."""
+    metadata = grpc.aio.Metadata()
+    create_error = grpc.aio.AioRpcError(
+        grpc.StatusCode.UNAVAILABLE,
+        metadata,
+        metadata,
+        "unavailable",
+    )
+    qdrant_client_mock.collection_exists.side_effect = [False, True]
+    qdrant_client_mock.create_collection.side_effect = create_error
+    service = VectorStoreService(
+        config=config_stub,
+        async_qdrant_client=qdrant_client_mock,
+    )
+    service._embedding_dimension = 3  # pylint: disable=protected-access
+
+    with pytest.raises(grpc.aio.AioRpcError) as exc_info:
+        await service.ensure_collection(CollectionSchema(name="docs", vector_size=3))
+
+    assert exc_info.value is create_error
+    qdrant_client_mock.collection_exists.assert_awaited_once_with("docs")
+
+
+@pytest.mark.asyncio
+async def test_cleanup_closes_only_owned_sync_client_once(
+    config_stub: Any,
+    qdrant_client_mock: AsyncMock,
+) -> None:
+    """Cleanup closes the owned sync adapter but never the borrowed async client."""
+    service = VectorStoreService(
+        config=config_stub,
+        async_qdrant_client=qdrant_client_mock,
+    )
+    sync_client = MagicMock()
+    service._sync_client = sync_client  # pylint: disable=protected-access
+
+    await service.cleanup()
+    await service.cleanup()
+
+    sync_client.close.assert_called_once_with()
+    qdrant_client_mock.close.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -303,7 +543,7 @@ class TestSparseInitialization:
     @pytest.mark.asyncio
     async def test_initialize_raises_without_sparse_model_for_hybrid(
         self,
-        config_stub: object,
+        config_stub: Any,
         qdrant_client_mock: AsyncMock,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -318,7 +558,6 @@ class TestSparseInitialization:
         )
 
         config_stub.embedding.retrieval_mode = SearchStrategy.HYBRID
-        config_stub.embedding.sparse_model = None
         config_stub.fastembed.sparse_model = None
 
         service = VectorStoreService(
@@ -331,7 +570,7 @@ class TestSparseInitialization:
     @pytest.mark.asyncio
     async def test_initialize_raises_without_sparse_model_for_sparse_mode(
         self,
-        config_stub: object,
+        config_stub: Any,
         qdrant_client_mock: AsyncMock,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -346,8 +585,7 @@ class TestSparseInitialization:
         )
 
         config_stub.embedding.retrieval_mode = SearchStrategy.SPARSE
-        config_stub.embedding.sparse_model = None
-        config_stub.fastembed.sparse_model = None  # Use None instead of empty string
+        config_stub.fastembed.sparse_model = None
 
         service = VectorStoreService(
             config=config_stub, async_qdrant_client=qdrant_client_mock
@@ -359,7 +597,7 @@ class TestSparseInitialization:
     @pytest.mark.asyncio
     async def test_initialize_raises_without_fastembed_sparse_runtime(
         self,
-        config_stub: object,
+        config_stub: Any,
         qdrant_client_mock: AsyncMock,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -385,6 +623,25 @@ class TestSparseInitialization:
 
         with pytest.raises(EmbeddingServiceError, match="langchain-qdrant extras"):
             await service.initialize()
+
+
+def test_embedding_runtime_uses_canonical_model_owners(
+    config_stub: Any,
+    qdrant_client_mock: AsyncMock,
+) -> None:
+    """Vector setup should read models and retrieval mode from their owners."""
+    config_stub.fastembed.dense_model = "configured-dense"
+    config_stub.fastembed.sparse_model = "configured-sparse"
+    config_stub.embedding.retrieval_mode = SearchStrategy.HYBRID
+
+    service = VectorStoreService(
+        config=config_stub,
+        async_qdrant_client=qdrant_client_mock,
+    )
+
+    assert service._dense_model_name == "configured-dense"  # pylint: disable=protected-access
+    assert service._sparse_model_name == "configured-sparse"  # pylint: disable=protected-access
+    assert service._retrieval_mode is SearchStrategy.HYBRID  # pylint: disable=protected-access
 
 
 class TestEnsureCollectionSparseConfig:
@@ -487,7 +744,7 @@ class TestQueryWithServerGrouping:
                 status_code=500,
                 reason_phrase="Internal Server Error",
                 content=b"error",
-                headers={},
+                headers=Headers(),
             )
         )
 
@@ -530,7 +787,7 @@ class TestNormalizeScores:
 
     def test_normalize_scores_returns_empty_for_empty_input(
         self,
-        config_stub: object,
+        config_stub: Any,
         qdrant_client_mock: AsyncMock,
     ) -> None:
         """Empty record list should return empty list unchanged."""
@@ -544,7 +801,7 @@ class TestNormalizeScores:
 
     def test_normalize_scores_disabled_returns_unchanged(
         self,
-        config_stub: object,
+        config_stub: Any,
         qdrant_client_mock: AsyncMock,
     ) -> None:
         """When disabled, scores should remain unchanged."""
@@ -570,7 +827,7 @@ class TestNormalizeScores:
 
     def test_normalize_scores_min_max_strategy(
         self,
-        config_stub: object,
+        config_stub: Any,
         qdrant_client_mock: AsyncMock,
     ) -> None:
         """MIN_MAX strategy should scale scores to 0-1 range."""
@@ -609,7 +866,7 @@ class TestNormalizeScores:
 
     def test_normalize_scores_min_max_all_same(
         self,
-        config_stub: object,
+        config_stub: Any,
         qdrant_client_mock: AsyncMock,
     ) -> None:
         """When all scores are identical, MIN_MAX should return 1.0."""
@@ -640,7 +897,7 @@ class TestNormalizeScores:
 
     def test_normalize_scores_z_score_strategy(
         self,
-        config_stub: object,
+        config_stub: Any,
         qdrant_client_mock: AsyncMock,
     ) -> None:
         """Z_SCORE strategy should standardize scores around mean."""
@@ -676,7 +933,7 @@ class TestNormalizeScores:
 
     def test_normalize_scores_z_score_all_same(
         self,
-        config_stub: object,
+        config_stub: Any,
         qdrant_client_mock: AsyncMock,
     ) -> None:
         """When all scores are identical, Z_SCORE should return 0.0."""
@@ -707,7 +964,7 @@ class TestNormalizeScores:
 
     def test_normalize_scores_none_strategy_returns_unchanged(
         self,
-        config_stub: object,
+        config_stub: Any,
         qdrant_client_mock: AsyncMock,
     ) -> None:
         """NONE strategy should leave scores unchanged."""
