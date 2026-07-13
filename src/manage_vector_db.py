@@ -119,7 +119,10 @@ class VectorDBManager:
             return []
 
     async def create_collection(
-        self, collection_name: str, vector_size: int = 1536
+        self,
+        collection_name: str,
+        vector_size: int = 1536,
+        distance: str = "cosine",
     ) -> bool:
         """Create a new collection."""
         try:
@@ -128,7 +131,7 @@ class VectorDBManager:
             schema = CollectionSchema(
                 name=collection_name,
                 vector_size=vector_size,
-                distance="cosine",
+                distance=distance,
             )
             await vector_service.ensure_collection(schema)
             return True

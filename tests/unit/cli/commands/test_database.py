@@ -60,10 +60,10 @@ class VectorManagerStub:
         return None if payload is None else SimpleNamespace(**payload)
 
     async def create_collection(
-        self, collection_name: str, *, vector_size: int
+        self, collection_name: str, *, vector_size: int, distance: str
     ) -> bool:
         """Record create attempts and control the return value."""
-        self.records["create"].append((collection_name, vector_size))
+        self.records["create"].append((collection_name, vector_size, distance))
         if "create_raise" in self._fail:
             msg = "creation raised"
             raise ValueError(msg)
@@ -360,12 +360,12 @@ def test_create_collection_succeeds(
 
     result = _invoke(
         cli_runner,
-        ["create", "alpha", "--dimension", "1024"],
+        ["create", "alpha", "--dimension", "1024", "--distance", "dot"],
         obj=cli_obj,
     )
 
     assert result.exit_code == 0
-    assert stub.records["create"] == [("alpha", 1024)]
+    assert stub.records["create"] == [("alpha", 1024, "dot")]
     panel = rich_cli_stub.printed[-1]
     assert isinstance(panel, Panel)
     assert isinstance(panel.renderable, Text)
@@ -436,7 +436,7 @@ def test_create_collection_force_deletes_existing(
 
     assert result.exit_code == 0
     assert stub.records["delete"] == ["alpha"]
-    assert stub.records["create"] == [("alpha", 1536)]
+    assert stub.records["create"] == [("alpha", 1536, "cosine")]
 
 
 def test_create_collection_force_cancelled_by_user(

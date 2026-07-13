@@ -260,7 +260,9 @@ def create_collection(
             )
             success = asyncio.run(
                 db_manager.create_collection(
-                    collection_name=collection_name, vector_size=dimension
+                    collection_name=collection_name,
+                    vector_size=dimension,
+                    distance=distance,
                 )
             )
 

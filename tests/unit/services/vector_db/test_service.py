@@ -13,10 +13,15 @@ import pytest
 from httpx import Headers
 from langchain_core.documents import Document
 from qdrant_client import models
+from qdrant_client.http.exceptions import UnexpectedResponse
 
 from src.config.models import SearchStrategy
 from src.infrastructure.container import ApplicationContainer
-from src.services.vector_db.service import VectorStoreService, _filter_from_mapping
+from src.services.vector_db.service import (
+    VectorStoreService,
+    _distance_from_string,
+    _filter_from_mapping,
+)
 from src.services.vector_db.types import CollectionSchema, TextDocument, VectorRecord
 
 
@@ -214,6 +219,11 @@ async def test_ensure_collection_creates_when_missing(
     client.create_collection.assert_awaited_once()
 
 
+def test_distance_mapper_accepts_cli_euclidean_spelling() -> None:
+    """The CLI's euclidean value should select Qdrant's Euclid distance."""
+    assert _distance_from_string("euclidean") is models.Distance.EUCLID
+
+
 @pytest.mark.asyncio
 async def test_ensure_collection_accepts_concurrent_creator(
     config_stub: Any,
@@ -262,17 +272,92 @@ async def test_ensure_collection_reraises_unproven_create_conflict(
 ) -> None:
     """A create failure is not idempotent unless existence is proven afterward."""
     qdrant_client_mock.collection_exists.side_effect = [False, False]
-    qdrant_client_mock.create_collection.side_effect = ValueError("create failed")
+    create_error = ValueError("Collection docs already exists")
+    qdrant_client_mock.create_collection.side_effect = create_error
     service = VectorStoreService(
         config=config_stub,
         async_qdrant_client=qdrant_client_mock,
     )
     service._embedding_dimension = 3  # pylint: disable=protected-access
 
-    with pytest.raises(ValueError, match="create failed"):
+    with pytest.raises(ValueError, match="already exists") as exc_info:
         await service.ensure_collection(CollectionSchema(name="docs", vector_size=3))
 
+    assert exc_info.value is create_error
     assert qdrant_client_mock.collection_exists.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_ensure_collection_reraises_unrelated_value_error(
+    config_stub: Any,
+    qdrant_client_mock: AsyncMock,
+) -> None:
+    """A non-conflict validation failure must not be masked by later existence."""
+    create_error = ValueError("invalid vector size")
+    qdrant_client_mock.collection_exists.side_effect = [False, True]
+    qdrant_client_mock.create_collection.side_effect = create_error
+    service = VectorStoreService(
+        config=config_stub,
+        async_qdrant_client=qdrant_client_mock,
+    )
+    service._embedding_dimension = 3  # pylint: disable=protected-access
+
+    with pytest.raises(ValueError, match="invalid vector size") as exc_info:
+        await service.ensure_collection(CollectionSchema(name="docs", vector_size=3))
+
+    assert exc_info.value is create_error
+    qdrant_client_mock.collection_exists.assert_awaited_once_with("docs")
+
+
+@pytest.mark.asyncio
+async def test_ensure_collection_accepts_http_conflict_after_peer_creation(
+    config_stub: Any,
+    qdrant_client_mock: AsyncMock,
+) -> None:
+    """HTTP 409 should be accepted only after proving a peer created the collection."""
+    qdrant_client_mock.collection_exists.side_effect = [False, True]
+    qdrant_client_mock.create_collection.side_effect = UnexpectedResponse(
+        status_code=409,
+        reason_phrase="Conflict",
+        content=b"collection already exists",
+        headers=Headers(),
+    )
+    service = VectorStoreService(
+        config=config_stub,
+        async_qdrant_client=qdrant_client_mock,
+    )
+    service._embedding_dimension = 3  # pylint: disable=protected-access
+
+    await service.ensure_collection(CollectionSchema(name="docs", vector_size=3))
+
+    assert qdrant_client_mock.collection_exists.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_ensure_collection_reraises_http_non_conflict(
+    config_stub: Any,
+    qdrant_client_mock: AsyncMock,
+) -> None:
+    """An unrelated HTTP failure must propagate even if the collection now exists."""
+    create_error = UnexpectedResponse(
+        status_code=500,
+        reason_phrase="Internal Server Error",
+        content=b"failed",
+        headers=Headers(),
+    )
+    qdrant_client_mock.collection_exists.side_effect = [False, True]
+    qdrant_client_mock.create_collection.side_effect = create_error
+    service = VectorStoreService(
+        config=config_stub,
+        async_qdrant_client=qdrant_client_mock,
+    )
+    service._embedding_dimension = 3  # pylint: disable=protected-access
+
+    with pytest.raises(UnexpectedResponse) as exc_info:
+        await service.ensure_collection(CollectionSchema(name="docs", vector_size=3))
+
+    assert exc_info.value is create_error
+    qdrant_client_mock.collection_exists.assert_awaited_once_with("docs")
 
 
 @pytest.mark.asyncio
@@ -314,7 +399,7 @@ async def test_ensure_collection_preserves_create_error_when_verification_fails(
     qdrant_client_mock: AsyncMock,
 ) -> None:
     """A verifier failure should remain the cause of the original create error."""
-    create_error = ValueError("create failed")
+    create_error = ValueError("Collection docs already exists")
     verification_error = RuntimeError("verification failed")
     qdrant_client_mock.collection_exists.side_effect = [False, verification_error]
     qdrant_client_mock.create_collection.side_effect = create_error
@@ -324,7 +409,7 @@ async def test_ensure_collection_preserves_create_error_when_verification_fails(
     )
     service._embedding_dimension = 3  # pylint: disable=protected-access
 
-    with pytest.raises(ValueError, match="create failed") as exc_info:
+    with pytest.raises(ValueError, match="already exists") as exc_info:
         await service.ensure_collection(CollectionSchema(name="docs", vector_size=3))
 
     assert exc_info.value is create_error
@@ -357,6 +442,51 @@ async def test_ensure_collection_preserves_unrelated_grpc_failure(
 
     assert exc_info.value is create_error
     qdrant_client_mock.collection_exists.assert_awaited_once_with("docs")
+
+
+@pytest.mark.asyncio
+async def test_drop_collection_evicts_cached_adapter_after_success(
+    config_stub: Any,
+    qdrant_client_mock: AsyncMock,
+) -> None:
+    """A deleted collection must not retain its per-collection cached adapter."""
+    service = VectorStoreService(
+        config=config_stub,
+        async_qdrant_client=qdrant_client_mock,
+    )
+    adapter: Any = MagicMock()
+    service._vector_store = adapter  # pylint: disable=protected-access
+    service._vector_stores["docs"] = adapter  # pylint: disable=protected-access
+
+    await service.drop_collection("docs")
+
+    qdrant_client_mock.delete_collection.assert_awaited_once_with("docs")
+    assert "docs" not in service._vector_stores  # pylint: disable=protected-access
+    assert service._vector_store is adapter  # pylint: disable=protected-access
+
+
+@pytest.mark.asyncio
+async def test_drop_collection_preserves_cache_when_delete_fails(
+    config_stub: Any,
+    qdrant_client_mock: AsyncMock,
+) -> None:
+    """A failed remote deletion must leave the usable cached adapter intact."""
+    delete_error = RuntimeError("delete failed")
+    qdrant_client_mock.delete_collection.side_effect = delete_error
+    service = VectorStoreService(
+        config=config_stub,
+        async_qdrant_client=qdrant_client_mock,
+    )
+    adapter: Any = MagicMock()
+    service._vector_store = adapter  # pylint: disable=protected-access
+    service._vector_stores["docs"] = adapter  # pylint: disable=protected-access
+
+    with pytest.raises(RuntimeError, match="delete failed") as exc_info:
+        await service.drop_collection("docs")
+
+    assert exc_info.value is delete_error
+    assert service._vector_stores["docs"] is adapter  # pylint: disable=protected-access
+    assert service._vector_store is adapter  # pylint: disable=protected-access
 
 
 @pytest.mark.asyncio

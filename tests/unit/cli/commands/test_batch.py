@@ -9,6 +9,7 @@ from typing import Any, Self, cast
 
 import click
 import pytest
+from click.testing import CliRunner
 from rich.panel import Panel
 
 from src.cli.commands import batch as batch_module
@@ -142,7 +143,7 @@ def test_show_indexing_preview_emits_panel(rich_cli_stub: SimpleNamespace) -> No
 
 def test_index_documents_dry_run_invokes_preview(
     monkeypatch: pytest.MonkeyPatch,
-    cli_runner: Any,
+    cli_runner: CliRunner,
     rich_cli_stub: SimpleNamespace,
 ) -> None:
     """The Click command should route dry runs to the preview helper."""
@@ -191,7 +192,7 @@ def test_index_documents_dry_run_invokes_preview(
 
 
 def test_index_documents_without_dry_run_fails_explicitly(
-    cli_runner: Any,
+    cli_runner: CliRunner,
     rich_cli_stub: SimpleNamespace,
 ) -> None:
     """The Click command should fail explicitly instead of reporting persistence."""
@@ -207,7 +208,7 @@ def test_index_documents_without_dry_run_fails_explicitly(
 
 def test_create_collections_aborts_without_confirmation(
     monkeypatch: pytest.MonkeyPatch,
-    cli_runner: Any,
+    cli_runner: CliRunner,
     rich_cli_stub: SimpleNamespace,
 ) -> None:
     """The Click command should accept ``--force`` and honor cancellation."""
@@ -251,8 +252,10 @@ def test_create_collections_enqueues_operations(
             db_manager.calls.append(("delete", name))
             return True
 
-        async def create_collection(self, name: str, dimension: int) -> bool:
-            db_manager.calls.append((name, dimension))
+        async def create_collection(
+            self, name: str, dimension: int, *, distance: str
+        ) -> bool:
+            db_manager.calls.append((name, dimension, distance))
             return True
 
         async def cleanup(self) -> None:
@@ -300,7 +303,7 @@ def test_create_collections_enqueues_operations(
         create_callback(
             ("alpha", "beta"),
             dimension=128,
-            distance="cosine",
+            distance="dot",
             _force=False,
         )
 
@@ -310,7 +313,7 @@ def test_create_collections_enqueues_operations(
         "Create beta",
     ]
     assert queue.confirm_flag is False
-    assert db_manager.calls == [("alpha", 128), ("beta", 128)]
+    assert db_manager.calls == [("alpha", 128, "dot"), ("beta", 128, "dot")]
 
 
 def test_create_collections_force_recreates_existing_collection(
@@ -328,8 +331,10 @@ def test_create_collections_force_recreates_existing_collection(
             calls.append(("delete", name))
             return True
 
-        async def create_collection(self, name: str, dimension: int) -> bool:
-            calls.append(("create", name, dimension))
+        async def create_collection(
+            self, name: str, dimension: int, *, distance: str
+        ) -> bool:
+            calls.append(("create", name, dimension, distance))
             return True
 
         async def cleanup(self) -> None:
@@ -362,12 +367,15 @@ def test_create_collections_force_recreates_existing_collection(
             _force=True,
         )
 
-    assert calls == [("delete", "alpha"), ("create", "alpha", 128)]
+    assert calls == [
+        ("delete", "alpha"),
+        ("create", "alpha", 128, "cosine"),
+    ]
 
 
 def test_create_collections_force_delete_failure_exits_nonzero(
     monkeypatch: pytest.MonkeyPatch,
-    cli_runner: Any,
+    cli_runner: CliRunner,
     rich_cli_stub: SimpleNamespace,
 ) -> None:
     """A failed forced deletion should fail the command after cleanup."""
@@ -382,8 +390,10 @@ def test_create_collections_force_delete_failure_exits_nonzero(
             calls.append(("delete", name))
             return False
 
-        async def create_collection(self, name: str, dimension: int) -> bool:
-            calls.append(("create", name, dimension))
+        async def create_collection(
+            self, name: str, dimension: int, *, distance: str
+        ) -> bool:
+            calls.append(("create", name, dimension, distance))
             return True
 
         async def cleanup(self) -> None:

@@ -237,6 +237,7 @@ async def _create_collection(
     db_manager: Any,
     collection_name: str,
     dimension: int,
+    distance: str,
     *,
     force: bool,
 ) -> None:
@@ -247,7 +248,11 @@ async def _create_collection(
         and not await db_manager.delete_collection(collection_name)
     ):
         raise RuntimeError(f"Failed to delete collection {collection_name}")
-    if not await db_manager.create_collection(collection_name, dimension):
+    if not await db_manager.create_collection(
+        collection_name,
+        dimension,
+        distance=distance,
+    ):
         raise RuntimeError(f"Failed to create collection {collection_name}")
 
 
@@ -306,11 +311,14 @@ def create_collections(  # pylint: disable=too-many-locals
             operation = BatchOperation(
                 name=f"Create {collection_name}",
                 description=f"Create collection with {dimension}D vectors",
-                function=lambda name=collection_name, size=dimension: asyncio.run(
+                function=lambda name=collection_name,
+                size=dimension,
+                metric=distance: asyncio.run(
                     _create_collection(
                         db_manager,
                         name,
                         size,
+                        metric,
                         force=_force,
                     )
                 ),

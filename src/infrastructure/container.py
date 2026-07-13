@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import asyncio
 import importlib
+import inspect
 import logging
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
@@ -423,7 +424,7 @@ async def _maybe_initialize(service: Any, name: str, *, required: bool = True) -
 
     try:
         result = initializer()
-        if asyncio.iscoroutine(result):
+        if inspect.isawaitable(result):
             await result
     except Exception as exc:  # pragma: no cover - defensive
         if required:
@@ -445,7 +446,7 @@ async def _maybe_cleanup(service: Any, name: str) -> None:
 
     try:
         result = cleaner()
-        if asyncio.iscoroutine(result):
+        if inspect.isawaitable(result):
             await result
     except Exception:  # noqa: BLE001  # pragma: no cover - isolate service cleanup
         logger.debug("Error during cleanup for service '%s'", name, exc_info=True)

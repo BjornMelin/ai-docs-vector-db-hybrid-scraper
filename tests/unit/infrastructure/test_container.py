@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Generator
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
@@ -320,6 +321,33 @@ class TestContainerManager:
         )
 
         close.assert_awaited_once_with()
+
+    @pytest.mark.asyncio
+    async def test_cleanup_graph_awaits_custom_awaitable(self) -> None:
+        """Cleanup should await every awaitable, not only coroutine objects."""
+
+        class CleanupAwaitable:
+            def __init__(self) -> None:
+                self.awaited = False
+
+            def __await__(self) -> Generator[None, None, None]:
+                self.awaited = True
+                yield from ()
+                return None
+
+        result = CleanupAwaitable()
+        cleanup = MagicMock(return_value=result)
+
+        await container_module._cleanup_service_graph(
+            [
+                container_module._ResolvedService(
+                    "custom_awaitable", SimpleNamespace(cleanup=cleanup)
+                )
+            ]
+        )
+
+        cleanup.assert_called_once_with()
+        assert result.awaited
 
     @pytest.mark.asyncio
     async def test_dependency_context_releases_its_own_lease(

@@ -207,12 +207,17 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
                 schema.name,
                 create_error,
             )
-        except (
-            ApiException,
-            ResponseHandlingException,
-            UnexpectedResponse,
-            ValueError,
-        ) as create_error:
+        except UnexpectedResponse as create_error:
+            if create_error.status_code != 409:
+                raise
+            await self._verify_concurrent_collection_creation(
+                client,
+                schema.name,
+                create_error,
+            )
+        except ValueError as create_error:
+            if str(create_error) != f"Collection {schema.name} already exists":
+                raise
             await self._verify_concurrent_collection_creation(
                 client,
                 schema.name,
@@ -244,6 +249,7 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
         """Drop a collection if it exists."""
         client = self._require_async_client()
         await client.delete_collection(name)
+        self._vector_stores.pop(name, None)
 
     async def list_collections(self) -> list[str]:
         """Return the identifiers for all collections."""
@@ -1180,6 +1186,7 @@ def _distance_from_string(name: str) -> models.Distance:
         "cosine": models.Distance.COSINE,
         "dot": models.Distance.DOT,
         "euclid": models.Distance.EUCLID,
+        "euclidean": models.Distance.EUCLID,
         "manhattan": models.Distance.MANHATTAN,
     }
     return mapping.get(name.lower(), models.Distance.COSINE)
