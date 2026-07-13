@@ -376,7 +376,11 @@ def cmd_validate(args: argparse.Namespace) -> int:  # pylint: disable=too-many-b
             f"{path.relative_to(PROJECT_ROOT)}"
         )
 
-    for module in ("fastapi", "qdrant_client", "pytest"):
+    modules = ("fastapi", "qdrant_client")
+    if not args.check_docs:
+        modules = (*modules, "pytest")
+
+    for module in modules:
         if _import_check(module):
             print(f"✅ Dependency available: {module}")
         else:

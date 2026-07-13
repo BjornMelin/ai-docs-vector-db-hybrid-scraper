@@ -36,7 +36,7 @@ class ObservabilityConfig:  # pylint: disable=too-many-instance-attributes
     instrumentations: Iterable[str] = field(
         default_factory=lambda: DEFAULT_INSTRUMENTATIONS
     )
-    metrics_enabled: bool = True
+    ai_operation_metrics_enabled: bool = True
     console_exporter: bool = False
     log_correlation: bool = False
 
@@ -71,7 +71,9 @@ class ObservabilityConfig:  # pylint: disable=too-many-instance-attributes
             otlp_headers=dict(observed.otlp_headers),
             insecure_transport=observed.otlp_insecure,
             instrumentations=tuple(dict.fromkeys(instrumentations)),
-            metrics_enabled=observed.track_ai_operations,
+            ai_operation_metrics_enabled=(
+                observed.track_ai_operations or observed.track_costs
+            ),
             console_exporter=observed.console_exporter,
             log_correlation=observed.track_ai_operations or observed.track_costs,
         )

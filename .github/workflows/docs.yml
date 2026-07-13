@@ -48,5 +48,8 @@ jobs:
       - name: Install documentation dependencies
         run: uv sync --frozen --no-dev --extra docs
 
+      - name: Validate documentation content
+        run: uv run --no-sync python scripts/dev.py validate --check-docs --strict
+
       - name: Build MkDocs site
-        run: uv run mkdocs build --strict
+        run: uv run --no-sync mkdocs build --strict

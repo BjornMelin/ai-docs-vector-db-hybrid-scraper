@@ -204,7 +204,7 @@ class FastEmbedProvider(EmbeddingProvider):
     def max_tokens_per_request(self) -> int:
         """Expose the FastEmbed max sequence length."""
         if self._dense is None:
-            return 512
+            return self._max_length
         return getattr(self._dense, "max_length", 512)
 
 

@@ -67,5 +67,5 @@ runs:
           exit 1
         fi
 
-        uv run python --version
-        uv run python -c "import sys; print(f'Python {sys.version}')"
+        uv run --no-sync python --version
+        uv run --no-sync python -c "import sys; print(f'Python {sys.version}')"

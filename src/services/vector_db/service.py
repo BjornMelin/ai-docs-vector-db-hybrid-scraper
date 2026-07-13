@@ -228,10 +228,13 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
         """Accept a create conflict only after proving the collection exists."""
         try:
             created_by_peer = await client.collection_exists(collection_name)
-        except Exception as verification_error:
+        # Verification is best-effort across local, HTTP, and gRPC clients; any
+        # failure must preserve the original create error for callers.
+        except Exception as verification_error:  # pylint: disable=broad-exception-caught
             raise create_error from verification_error
         if not created_by_peer:
             raise create_error
+        set_span_attributes({"qdrant.collection.concurrent_creation": True})
         logger.debug(
             "Collection '%s' was created by a concurrent initializer",
             collection_name,

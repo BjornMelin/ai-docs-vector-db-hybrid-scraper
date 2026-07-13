@@ -27,6 +27,7 @@ spec:
         args:
         - "--logtostderr"
         - "--cache_mode"
+        - "--maxmemory=3gb"
         volumeMounts:
         - name: dragonfly-data
           mountPath: /data

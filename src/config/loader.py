@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import json
+from contextvars import ContextVar
 from pathlib import Path
 from typing import Any
 
@@ -56,6 +57,9 @@ from .template_utils import merge_overrides
 
 
 _ACTIVE_CONFIG_PATH = Path("config.json")
+_ACTIVATED_CONFIG_ENABLED: ContextVar[bool] = ContextVar(
+    "activated_config_enabled", default=True
+)
 
 
 class ActivatedConfigSettingsSource(JsonConfigSettingsSource):
@@ -63,6 +67,8 @@ class ActivatedConfigSettingsSource(JsonConfigSettingsSource):
 
     def _read_file(self, file_path: Path) -> dict[str, Any]:
         """Return the activated configuration after canonical field validation."""
+        if not _ACTIVATED_CONFIG_ENABLED.get():
+            return {}
         try:
             payload = super()._read_file(file_path)
         except json.JSONDecodeError as exc:
@@ -467,7 +473,11 @@ def load_settings_from_file(path: Path) -> Settings:
         paths = ", ".join(unknown_paths)
         raise ValueError(f"Unsupported configuration field(s): {paths}")
 
-    return load_settings(**payload)
+    token = _ACTIVATED_CONFIG_ENABLED.set(False)
+    try:
+        return load_settings(**payload)
+    finally:
+        _ACTIVATED_CONFIG_ENABLED.reset(token)
 
 
 __all__ = [

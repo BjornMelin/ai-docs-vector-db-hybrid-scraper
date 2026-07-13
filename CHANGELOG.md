@@ -159,6 +159,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Dragonfly caching now defaults to disabled. Set
+  `AI_DOCS_CACHE__ENABLE_DRAGONFLY_CACHE=true` to retain the previous always-on
+  behavior.
 - Ragas evaluator modernized: switched to `ragas.llms.base.llm_factory` for the
   evaluator LLM and to `ragas.embeddings.OpenAIEmbeddings(client=openai.OpenAI(),
   model=...)` for embeddings; updated `EvaluationDataset` construction to the

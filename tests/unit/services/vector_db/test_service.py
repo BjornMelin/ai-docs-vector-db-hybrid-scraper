@@ -279,8 +279,13 @@ async def test_ensure_collection_reraises_unproven_create_conflict(
 async def test_ensure_collection_accepts_grpc_already_exists_after_peer_creation(
     config_stub: Any,
     qdrant_client_mock: AsyncMock,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """GRPC ALREADY_EXISTS should use the same positive existence proof."""
+    span_attributes = MagicMock()
+    monkeypatch.setattr(
+        "src.services.vector_db.service.set_span_attributes", span_attributes
+    )
     metadata = grpc.aio.Metadata()
     qdrant_client_mock.collection_exists.side_effect = [False, True]
     qdrant_client_mock.create_collection.side_effect = grpc.aio.AioRpcError(
@@ -298,6 +303,32 @@ async def test_ensure_collection_accepts_grpc_already_exists_after_peer_creation
     await service.ensure_collection(CollectionSchema(name="docs", vector_size=3))
 
     assert qdrant_client_mock.collection_exists.await_count == 2
+    span_attributes.assert_called_once_with(
+        {"qdrant.collection.concurrent_creation": True}
+    )
+
+
+@pytest.mark.asyncio
+async def test_ensure_collection_preserves_create_error_when_verification_fails(
+    config_stub: Any,
+    qdrant_client_mock: AsyncMock,
+) -> None:
+    """A verifier failure should remain the cause of the original create error."""
+    create_error = ValueError("create failed")
+    verification_error = RuntimeError("verification failed")
+    qdrant_client_mock.collection_exists.side_effect = [False, verification_error]
+    qdrant_client_mock.create_collection.side_effect = create_error
+    service = VectorStoreService(
+        config=config_stub,
+        async_qdrant_client=qdrant_client_mock,
+    )
+    service._embedding_dimension = 3  # pylint: disable=protected-access
+
+    with pytest.raises(ValueError, match="create failed") as exc_info:
+        await service.ensure_collection(CollectionSchema(name="docs", vector_size=3))
+
+    assert exc_info.value is create_error
+    assert exc_info.value.__cause__ is verification_error
 
 
 @pytest.mark.asyncio

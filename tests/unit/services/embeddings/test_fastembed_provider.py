@@ -296,6 +296,13 @@ def test_max_tokens_per_request_defaults_to_512_when_uninitialized() -> None:
     assert provider.max_tokens_per_request == 512
 
 
+def test_max_tokens_per_request_honors_config_before_initialization() -> None:
+    """Configured limits should be visible before the model is loaded."""
+    provider = FastEmbedProvider(max_length=1024)
+
+    assert provider.max_tokens_per_request == 1024
+
+
 def test_internal_loader_raises_when_dense_dependency_missing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

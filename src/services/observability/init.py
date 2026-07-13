@@ -171,7 +171,7 @@ def initialize_observability(
         trace.set_tracer_provider(tracer_provider)
         _STATE.tracer_provider = tracer_provider
 
-        if runtime_config.metrics_enabled:
+        if runtime_config.ai_operation_metrics_enabled:
             metric_reader = PeriodicExportingMetricReader(
                 OTLPMetricExporter(
                     endpoint=runtime_config.otlp_endpoint,

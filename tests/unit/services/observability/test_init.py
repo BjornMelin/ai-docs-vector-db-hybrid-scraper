@@ -412,6 +412,7 @@ class TestConfigurationCoercion:
 
         coerced = init_module._coerce_config(settings)
         assert coerced.instrumentations == ()
+        assert coerced.ai_operation_metrics_enabled is False
 
     def test_coerce_settings_enables_logging_when_tracking(self) -> None:
         """Tracking flags ensure logging instrumentation is configured."""
@@ -457,7 +458,7 @@ class TestInitializeObservability:
             otlp_endpoint="http://collector:4317",
             otlp_headers={"authorization": "token"},
             insecure_transport=False,
-            metrics_enabled=True,
+            ai_operation_metrics_enabled=True,
             console_exporter=True,
             instrumentations=("fastapi", "logging"),
         )
@@ -509,7 +510,7 @@ class TestInitializeObservability:
         """Metrics disabled configuration avoids meter provider setup."""
         config = ObservabilityConfig(
             enabled=True,
-            metrics_enabled=False,
+            ai_operation_metrics_enabled=False,
             instrumentations=(),
         )
 
@@ -522,7 +523,7 @@ class TestInitializeObservability:
         config = ObservabilityConfig(
             enabled=True,
             instrumentations=("fastapi",),
-            metrics_enabled=True,
+            ai_operation_metrics_enabled=True,
         )
 
         assert init_module.initialize_observability(config) is True
@@ -550,7 +551,7 @@ class TestInitializeObservability:
         config = ObservabilityConfig(
             enabled=True,
             instrumentations=(),
-            metrics_enabled=True,
+            ai_operation_metrics_enabled=True,
         )
 
         try:

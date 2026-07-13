@@ -433,13 +433,15 @@ async def _maybe_initialize(service: Any, name: str, *, required: bool = True) -
 
 
 async def _maybe_cleanup(service: Any, name: str) -> None:
-    """Execute service.cleanup() if available."""
+    """Execute the service's canonical cleanup hook if available."""
     if service is None:
         return
 
     cleaner = getattr(service, "cleanup", None)
     if cleaner is None:
-        return
+        cleaner = getattr(service, "close", None)
+        if cleaner is None:
+            return
 
     try:
         result = cleaner()
@@ -888,15 +890,24 @@ class DependencyContext:
         """
         self.config = config
         self.container: ApplicationContainer | None = None
+        self.lease: ContainerLease | None = None
 
     async def __aenter__(self) -> ApplicationContainer:
         """Initialize dependencies."""
-        self.container = await initialize_container(self.config)
+        self.lease = await acquire_container(self.config)
+        self.container = self.lease.container
         return self.container
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         """Cleanup dependencies."""
-        await shutdown_container()
+        lease = self.lease
+        if lease is None:
+            return
+        try:
+            await release_container(lease)
+        finally:
+            self.lease = None
+            self.container = None
 
 
 # Wire modules for automatic dependency injection

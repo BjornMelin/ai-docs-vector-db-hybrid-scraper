@@ -233,6 +233,24 @@ def _show_indexing_preview(
     rich_cli.console.print(panel)
 
 
+async def _create_collection(
+    db_manager: Any,
+    collection_name: str,
+    dimension: int,
+    *,
+    force: bool,
+) -> None:
+    """Create one collection, deleting an existing collection when forced."""
+    if (
+        force
+        and collection_name in await db_manager.list_collections()
+        and not await db_manager.delete_collection(collection_name)
+    ):
+        raise RuntimeError(f"Failed to delete collection {collection_name}")
+    if not await db_manager.create_collection(collection_name, dimension):
+        raise RuntimeError(f"Failed to create collection {collection_name}")
+
+
 # Document batch processing will be implemented in future update
 
 
@@ -289,7 +307,12 @@ def create_collections(  # pylint: disable=too-many-locals
                 name=f"Create {collection_name}",
                 description=f"Create collection with {dimension}D vectors",
                 function=lambda name=collection_name, size=dimension: asyncio.run(
-                    db_manager.create_collection(name, size)
+                    _create_collection(
+                        db_manager,
+                        name,
+                        size,
+                        force=_force,
+                    )
                 ),
             )
             queue.add(operation)
@@ -299,22 +322,20 @@ def create_collections(  # pylint: disable=too-many-locals
     finally:
         asyncio.run(db_manager.cleanup())
 
-    if success:
-        success_text = Text()
-        success_text.append(
-            "Batch collection creation completed.\n", style="bold green"
-        )
-        success_text.append(
-            f"Collections created: {len(collection_list)}", style="cyan"
-        )
+    if not success:
+        raise click.ClickException("One or more collections could not be created")
 
-        panel = Panel(
-            success_text,
-            title="Creation Complete",
-            title_align="left",
-            border_style="green",
-        )
-        rich_cli.console.print(panel)
+    success_text = Text()
+    success_text.append("Batch collection creation completed.\n", style="bold green")
+    success_text.append(f"Collections created: {len(collection_list)}", style="cyan")
+
+    panel = Panel(
+        success_text,
+        title="Creation Complete",
+        title_align="left",
+        border_style="green",
+    )
+    rich_cli.console.print(panel)
 
 
 @batch.command("delete-collections")

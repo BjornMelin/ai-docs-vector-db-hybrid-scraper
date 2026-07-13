@@ -1,4 +1,4 @@
-"""Tests for the `dev deploy` CLI command."""
+"""Tests for development CLI commands."""
 
 from __future__ import annotations
 
@@ -26,6 +26,23 @@ def test_deploy_command_outputs_plan(capsys: pytest.CaptureFixture[str]) -> None
     output = capsys.readouterr().out
     assert "Strategy: github_actions" in output
     assert "release.yml" in output
+
+
+def test_strict_docs_validation_does_not_require_pytest(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Docs-only validation should not require the development test group."""
+    checked_modules: list[str] = []
+
+    def import_check(module: str) -> bool:
+        checked_modules.append(module)
+        return module != "pytest"
+
+    monkeypatch.setattr(dev, "_import_check", import_check)
+    monkeypatch.setattr(dev, "_validate_docs_links", list)
+
+    assert dev.main(["validate", "--check-docs", "--strict"]) == 0
+    assert checked_modules == ["fastapi", "qdrant_client"]
 
 
 def test_deploy_command_accepts_override(

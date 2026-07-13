@@ -64,7 +64,7 @@ Supporting docs when you need more detail:
 | Add a dependency | Edit `pyproject.toml`, run `uv sync`, document config changes. |
 | Touch the API | Update models + OpenAPI schema, extend API tests, update docs. |
 | Tune performance | Adjust config knobs, capture metrics via `/metrics`, note operator impact. |
-| Operate locally | Use `uv run python scripts/dev.py services <start|stop|status> --stack simple`. |
+| Operate locally | Use `uv run python scripts/dev.py services <start\|stop\|status> --stack simple`. |
 | Ship to production | Follow platform operations checklist, update release notes, notify operators. |
 
 ## 4. Development Patterns
@@ -91,15 +91,15 @@ Supporting docs when you need more detail:
 Optional caches or search engines should be wired via the patterns documented in [Architecture & Orchestration](./architecture-and-orchestration.md).
 ## 6. Where to Go Next
 
-| If you need…         | Read…                                 |
-| -------------------- | ------------------------------------- |
-| Environment details  | [Setup & Configuration](./setup-and-configuration.md) |
+| If you need…         | Read…                                                               |
+| -------------------- | ------------------------------------------------------------------- |
+| Environment details  | [Setup & Configuration](./setup-and-configuration.md)               |
 | System overview      | [Architecture & Orchestration](./architecture-and-orchestration.md) |
-| API contracts        | [API & Contracts](./api-and-contracts.md) |
-| Automation basics    | [Platform Operations](./platform-operations.md)         |
-| Contribution process | [Contributing & Testing](./contributing-and-testing.md) |
-| Deployment guidance  | [Platform Operations](./platform-operations.md) |
-| Operator procedures  | [Operator Hub](../operators/index.md) |
+| API contracts        | [API & Contracts](./api-and-contracts.md)                           |
+| Automation basics    | [Platform Operations](./platform-operations.md)                     |
+| Contribution process | [Contributing & Testing](./contributing-and-testing.md)             |
+| Deployment guidance  | [Platform Operations](./platform-operations.md)                     |
+| Operator procedures  | [Operator Hub](../operators/index.md)                               |
 
 See something missing? Open an issue or submit a PR—keeping this hub concise and accurate helps
 every engineer move faster.

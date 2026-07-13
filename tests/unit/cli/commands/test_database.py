@@ -650,7 +650,9 @@ def test_database_stats_reports_totals(
     assert len(tables) == 2  # Summary table and breakdown table
     summary = tables[0]
     assert summary.row_count == 3
-    assert "http://qdrant.test:6333" in str(summary.columns[1]._cells)
+    assert any(
+        "http://qdrant.test:6333" in str(cell) for cell in summary.columns[1].cells
+    )
     assert stub.counters["cleanup"] == 1
 
 

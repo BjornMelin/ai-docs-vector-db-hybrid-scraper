@@ -24,7 +24,7 @@ class TestObservabilityConfig:
         assert config.service_version == __version__
         assert config.otlp_endpoint == "http://localhost:4317"
         assert tuple(config.instrumentations) == ("fastapi", "httpx")
-        assert config.metrics_enabled is True
+        assert config.ai_operation_metrics_enabled is True
 
     def test_resource_attributes(self) -> None:
         """Verify resource attributes are populated correctly."""
@@ -66,7 +66,7 @@ class TestObservabilityConfigFromSettings:
         assert config.service_name == "configured-service"
         assert config.service_version == "3.5.1"
         assert config.environment == "production"
-        assert config.metrics_enabled is False
+        assert config.ai_operation_metrics_enabled is True
         assert tuple(config.instrumentations) == ("fastapi", "logging")
         assert config.insecure_transport is False
         assert config.otlp_headers == {"authorization": "Bearer token"}

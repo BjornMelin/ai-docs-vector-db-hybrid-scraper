@@ -6,14 +6,20 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
-from browser_use.agent.views import ActionResult, AgentHistory, AgentHistoryList
-from browser_use.browser.views import BrowserStateHistory
 
 from src.config.browser import BrowserUseSettings
 from src.services.browser.errors import BrowserProviderError
 from src.services.browser.models import ProviderKind, ScrapeRequest
 from src.services.browser.providers.base import ProviderContext
 from src.services.browser.providers.browser_use import BrowserUseProvider
+
+
+agent_views = pytest.importorskip("browser_use.agent.views")
+browser_views = pytest.importorskip("browser_use.browser.views")
+ActionResult = agent_views.ActionResult
+AgentHistory = agent_views.AgentHistory
+AgentHistoryList = agent_views.AgentHistoryList
+BrowserStateHistory = browser_views.BrowserStateHistory
 
 
 @pytest.mark.asyncio
@@ -35,7 +41,7 @@ async def test_browser_use_uses_current_browser_session_api(
         def __init__(self, **_kwargs: Any) -> None:
             return None
 
-        async def run(self) -> AgentHistoryList:
+        async def run(self) -> Any:
             state = BrowserStateHistory(
                 url="https://example.com",
                 title="Example",

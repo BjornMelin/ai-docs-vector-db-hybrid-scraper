@@ -283,6 +283,34 @@ def test_file_loader_rejects_unknown_nested_fields(tmp_path: Path) -> None:
         load_settings_from_file(config_path)
 
 
+@pytest.mark.parametrize(
+    "activated_payload",
+    (
+        {"qdrant": {"url": "http://activated-qdrant:6333"}},
+        {"removed_setting": True},
+    ),
+    ids=("valid", "invalid"),
+)
+def test_file_loader_ignores_activated_config(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    activated_payload: dict[str, Any],
+) -> None:
+    """An explicit config file should not read ambient activated values."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "config.json").write_text(
+        json.dumps(activated_payload),
+        encoding="utf-8",
+    )
+    config_path = tmp_path / "requested.json"
+    config_path.write_text(json.dumps({"debug": True}), encoding="utf-8")
+
+    settings = load_settings_from_file(config_path)
+
+    assert settings.debug is True
+    assert settings.qdrant.url == "http://localhost:6333"
+
+
 def test_env_example_contains_only_supported_settings() -> None:
     """Every application variable in `.env.example` should map to Settings."""
     env_example = Path(__file__).parents[3] / ".env.example"

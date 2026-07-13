@@ -234,7 +234,7 @@ Key environment variables for performance:
 
 ### DragonflyDB Optimization
 
-Dragonfly sizes its worker threads and memory automatically. Keep the pod resource limits aligned with the workload and add only documented `dragonfly --help` flags when measurements justify an override.
+Dragonfly sizes its worker threads automatically. The base deployment caps cache memory at 3 GB within the 4 GiB pod limit. Keep the explicit `--maxmemory` value below the pod limit when tuning production resources.
 
 ## Cleanup
 

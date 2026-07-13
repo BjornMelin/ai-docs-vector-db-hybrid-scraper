@@ -8,10 +8,13 @@ import sys
 import textwrap
 from pathlib import Path
 
+import pytest
+
 
 PROJECT_ROOT = Path(__file__).parents[3]
 
 
+@pytest.mark.slow
 def test_wheel_runs_setup_from_an_unrelated_directory(tmp_path: Path) -> None:
     """The installed wheel should own every asset needed to activate a profile."""
     dist_dir = tmp_path / "dist"
@@ -23,6 +26,7 @@ def test_wheel_runs_setup_from_an_unrelated_directory(tmp_path: Path) -> None:
         ["uv", "build", "--wheel", "--out-dir", str(dist_dir)],
         cwd=PROJECT_ROOT,
         check=True,
+        timeout=300,
     )
     wheel = next(dist_dir.glob("*.whl"))
     subprocess.run(
@@ -36,6 +40,7 @@ def test_wheel_runs_setup_from_an_unrelated_directory(tmp_path: Path) -> None:
             str(wheel),
         ],
         check=True,
+        timeout=300,
     )
 
     script = textwrap.dedent(
@@ -77,4 +82,5 @@ def test_wheel_runs_setup_from_an_unrelated_directory(tmp_path: Path) -> None:
         cwd=working_dir,
         env=environment,
         check=True,
+        timeout=300,
     )

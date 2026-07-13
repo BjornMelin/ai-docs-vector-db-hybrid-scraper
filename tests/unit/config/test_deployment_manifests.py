@@ -46,8 +46,9 @@ def test_kustomize_applies_the_multi_document_patch_bundle_once() -> None:
 
 
 def test_dragonfly_manifests_use_only_supported_command_flags() -> None:
-    """Dragonfly should auto-size resources without inert environment aliases."""
-    expected = ["--logtostderr", "--cache_mode"]
+    """Dragonfly should use documented flags without inert environment aliases."""
+    compose_args = ["--logtostderr", "--cache_mode"]
+    kubernetes_args = [*compose_args, "--maxmemory=3gb"]
 
     compose = safe_load(
         (PROJECT_ROOT / "docker-compose.yml").read_text(encoding="utf-8")
@@ -78,10 +79,10 @@ def test_dragonfly_manifests_use_only_supported_command_flags() -> None:
         dragonfly_patch["spec"]["template"]["spec"]["containers"][0],
     )
 
-    assert compose_service["command"] == expected
+    assert compose_service["command"] == compose_args
     assert compose_service["image"] == DRAGONFLY_IMAGE
     assert "environment" not in compose_service
-    assert container["args"] == expected
+    assert container["args"] == kubernetes_args
     assert container["image"] == DRAGONFLY_IMAGE
     assert "env" not in container
     assert "env" not in patched_container

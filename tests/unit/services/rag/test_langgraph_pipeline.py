@@ -8,7 +8,6 @@ from types import SimpleNamespace
 from typing import Any, cast
 
 import pytest
-from langchain_classic.retrievers.document_compressors import DocumentCompressorPipeline
 from langchain_core.callbacks.base import BaseCallbackHandler
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
@@ -328,11 +327,6 @@ async def test_pipeline_returns_generation_payload(monkeypatch) -> None:
 @pytest.mark.asyncio
 async def test_pipeline_populates_retriever_compression_stats(monkeypatch) -> None:
     """Verify pipeline captures document compression statistics."""
-    monkeypatch.setattr(
-        "src.services.rag.langgraph_pipeline.LangGraphRAGPipeline._build_compressor",
-        lambda self, config: DocumentCompressorPipeline(transformers=[]),
-    )
-
     captured: dict[str, SimpleNamespace] = {}
 
     async def fake_maybe_compress(

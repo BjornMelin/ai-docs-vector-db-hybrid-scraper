@@ -3,17 +3,9 @@
 from __future__ import annotations
 
 import logging
-import warnings
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import Any, NotRequired, Required, TypedDict
 
-from langchain_classic.retrievers.contextual_compression import (
-    ContextualCompressionRetriever,
-)
-from langchain_classic.retrievers.document_compressors import (
-    DocumentCompressorPipeline,
-    EmbeddingsFilter,
-)
 from langchain_core.callbacks.base import BaseCallbackHandler
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
@@ -26,12 +18,6 @@ from src.services.vector_db.service import VectorStoreService
 from .generator import RAGGenerator
 from .models import RAGConfig, RAGRequest, RAGResult
 from .retriever import VectorServiceRetriever
-
-
-try:  # pragma: no cover - optional dependency guard
-    from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
-except ModuleNotFoundError:  # pragma: no cover
-    FastEmbedEmbeddings = None  # type: ignore[assignment]
 
 
 try:  # pragma: no cover - optional dependency guard
@@ -160,22 +146,12 @@ class LangGraphRAGPipeline:
                     "max_tokens": request.rag_max_tokens or rag_config.max_tokens,
                 }
             )
-            base_config = effective_config.model_copy(
-                update={"compression_enabled": False}
-            )
-
             retriever = VectorServiceRetriever(
                 vector_service=self._vector_service,
                 collection=collection,
                 k=effective_config.retriever_top_k,
                 filters=request.filters,
-                rag_config=base_config,
-            )
-
-            compressor = self._build_compressor(effective_config)
-            contextual_retriever = ContextualCompressionRetriever(
-                base_compressor=compressor,
-                base_retriever=retriever,
+                rag_config=effective_config,
             )
             pipeline_span.set_attribute(
                 "rag.retriever_tool", "vector_context_retriever"
@@ -186,7 +162,7 @@ class LangGraphRAGPipeline:
 
             async def retrieve_node(state: _RAGGraphState) -> dict[str, Any]:
                 with tracer.start_as_current_span("rag.retrieve") as span:
-                    documents = await contextual_retriever.ainvoke(state["query"])
+                    documents = await retriever.ainvoke(state["query"])
                     used_prefetched = False
                     if not documents:
                         documents = list(state.get("prefetched_documents") or [])
@@ -311,32 +287,6 @@ class LangGraphRAGPipeline:
                 "confidence": final_state.get("confidence"),
                 "sources": final_state.get("answer_sources") or [],
             }
-
-    def _build_compressor(self, config: RAGConfig) -> DocumentCompressorPipeline:
-        """Create a document compressor pipeline based on configuration."""
-        if not config.compression_enabled:
-            return DocumentCompressorPipeline(transformers=[])
-
-        if FastEmbedEmbeddings is None:  # pragma: no cover - optional dependency guard
-            warnings.warn(
-                "FastEmbedEmbeddings not available; disabling compression.",
-                category=RuntimeWarning,
-                stacklevel=2,
-            )
-            return DocumentCompressorPipeline(transformers=[])
-
-        fastembed = self._vector_service.config.fastembed
-        embeddings = FastEmbedEmbeddings(
-            model_name=fastembed.dense_model,
-            cache_dir=fastembed.cache_dir,
-            max_length=fastembed.max_length,
-            batch_size=fastembed.batch_size,
-        )
-        transformer = EmbeddingsFilter(
-            embeddings=embeddings,
-            similarity_threshold=config.compression_similarity_threshold,
-        )
-        return DocumentCompressorPipeline(transformers=[transformer])
 
     @staticmethod
     def _iter_items(obj: Any) -> Iterable[tuple[str, Any]]:

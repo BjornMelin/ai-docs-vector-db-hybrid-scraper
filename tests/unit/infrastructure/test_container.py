@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
 
@@ -154,6 +154,7 @@ class TestCreateCacheManager:
             assert result is not None
 
 
+@pytest.mark.service
 class TestCreateCircuitBreakerManager:
     """Tests for _create_circuit_breaker_manager factory function."""
 
@@ -209,6 +210,7 @@ class TestCreateProjectStorage:
             assert result is not None
 
 
+@pytest.mark.rag
 def test_create_rag_generator_skips_disabled_feature() -> None:
     """Disabled RAG should not import or construct provider dependencies."""
     config = SimpleNamespace(rag=SimpleNamespace(enable_rag=False))
@@ -252,6 +254,7 @@ class TestCreateBrowserManager:
             assert result is None
 
 
+@pytest.mark.service
 class TestApplicationContainer:
     """Tests for ApplicationContainer class."""
 
@@ -271,6 +274,7 @@ class TestApplicationContainer:
         assert container.cache_manager().distributed_cache is None
 
 
+@pytest.mark.service
 class TestContainerManager:
     """Tests for ContainerManager singleton."""
 
@@ -301,6 +305,49 @@ class TestContainerManager:
 
         for service in services.values():
             service.cleanup.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_cleanup_graph_closes_services_without_cleanup(self) -> None:
+        """Close-only services should participate in reverse graph teardown."""
+        close = AsyncMock()
+
+        await container_module._cleanup_service_graph(
+            [
+                container_module._ResolvedService(
+                    "close_only", SimpleNamespace(close=close)
+                )
+            ]
+        )
+
+        close.assert_awaited_once_with()
+
+    @pytest.mark.asyncio
+    async def test_dependency_context_releases_its_own_lease(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Overlapping contexts should release only their own ownership token."""
+        container = MagicMock()
+        leases = [
+            container_module.ContainerLease(container, generation=1, lease_id=1),
+            container_module.ContainerLease(container, generation=1, lease_id=2),
+        ]
+        acquire = AsyncMock(side_effect=leases)
+        release = AsyncMock()
+        monkeypatch.setattr(container_module, "acquire_container", acquire)
+        monkeypatch.setattr(container_module, "release_container", release)
+        first = container_module.DependencyContext(Settings())
+        second = container_module.DependencyContext(Settings())
+
+        assert await first.__aenter__() is container
+        assert await second.__aenter__() is container
+        await first.__aexit__(None, None, None)
+
+        release.assert_awaited_once_with(leases[0])
+        assert second.container is container
+
+        await second.__aexit__(None, None, None)
+        assert release.await_args_list == [call(leases[0]), call(leases[1])]
 
     def test_get_container_is_callable(self) -> None:
         """get_container should be a callable function."""
