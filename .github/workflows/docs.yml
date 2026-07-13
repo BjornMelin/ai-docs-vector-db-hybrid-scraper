@@ -9,6 +9,8 @@ on:
       - 'docs/**'
       - '*.md'
       - 'mkdocs.yml'
+      - 'pyproject.toml'
+      - 'uv.lock'
   push:
     branches:
       - main
@@ -17,6 +19,8 @@ on:
       - 'docs/**'
       - '*.md'
       - 'mkdocs.yml'
+      - 'pyproject.toml'
+      - 'uv.lock'
   workflow_dispatch:
 
 permissions:
@@ -35,20 +39,17 @@ jobs:
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
       - name: Prepare workspace
-        uses: ./.github/actions/checkout-and-setup
+        uses: ./.github/actions/setup-environment
         with:
-          python-version: "3.12"
+          python-version: "3.11"
           cache-suffix: "-docs"
           install-dev: 'false'
 
       - name: Install documentation dependencies
-        run: uv sync --frozen --extra docs
+        run: uv sync --frozen --no-dev --extra docs
 
-      - name: Install pytest dependency
-        run: uv pip install 'pytest>=8.4.2,<9.0.0'
-
-      - name: Run documentation checks
-        run: uv run python scripts/dev.py validate --check-docs --strict
+      - name: Validate documentation content
+        run: uv run --no-sync python scripts/dev.py validate --check-docs --strict
 
       - name: Build MkDocs site
-        run: uv run mkdocs build --strict
+        run: uv run --no-sync mkdocs build --strict

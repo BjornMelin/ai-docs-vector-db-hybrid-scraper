@@ -21,7 +21,6 @@ class _BrowserUseDeps:
 
     agent_cls: Any
     browser_cls: Any
-    config_cls: Any
     llm: Any
 
 
@@ -30,10 +29,17 @@ class BrowserUseProvider(BrowserProvider):
 
     kind = ProviderKind.BROWSER_USE
 
-    def __init__(self, context: ProviderContext, settings: BrowserUseSettings) -> None:
+    def __init__(
+        self,
+        context: ProviderContext,
+        settings: BrowserUseSettings,
+        *,
+        openai_api_key: str | None = None,
+    ) -> None:
         """Initialize browser-use provider with settings and lazy dependency loading."""
         super().__init__(context)
         self._settings = settings
+        self._openai_api_key = openai_api_key
         self._deps: _BrowserUseDeps | None = None
 
     def _load_dependencies(self) -> _BrowserUseDeps:
@@ -42,36 +48,43 @@ class BrowserUseProvider(BrowserProvider):
             browser_use = import_module("browser_use")
             agent_cls = browser_use.Agent
             browser_cls = browser_use.Browser
-            config_cls = browser_use.BrowserConfig
         except (ModuleNotFoundError, AttributeError) as exc:
             raise BrowserProviderError(
                 "browser-use package is not available",
                 provider=self.kind.value,
             ) from exc
 
-        llm_provider = self._settings.llm_provider
-        if llm_provider == "openai":
-            module = import_module("langchain_openai")
-            llm_cls = module.ChatOpenAI
-            llm = llm_cls(model=self._settings.model, temperature=0.0)
-        elif llm_provider == "anthropic":
-            module = import_module("langchain_anthropic")
-            llm_cls = module.ChatAnthropic
-            llm = llm_cls(model=self._settings.model, temperature=0.0)
-        elif llm_provider == "gemini":
-            module = import_module("langchain_google_genai")
-            llm_cls = module.ChatGoogleGenerativeAI
-            llm = llm_cls(model=self._settings.model, temperature=0.0)
-        else:
+        try:
+            llm_provider = self._settings.llm_provider
+            if llm_provider == "openai":
+                llm_kwargs: dict[str, Any] = {
+                    "model": self._settings.model,
+                    "temperature": 0.0,
+                }
+                if self._openai_api_key:
+                    llm_kwargs["api_key"] = self._openai_api_key
+                llm = browser_use.ChatOpenAI(**llm_kwargs)
+            elif llm_provider == "anthropic":
+                llm = browser_use.ChatAnthropic(
+                    model=self._settings.model,
+                    temperature=0.0,
+                )
+            elif llm_provider == "gemini":
+                llm = browser_use.ChatGoogle(
+                    model=self._settings.model,
+                    temperature=0.0,
+                )
+            else:  # pragma: no cover - validated configuration
+                raise ValueError(f"Unsupported LLM provider: {llm_provider}")
+        except Exception as exc:  # pylint: disable=broad-exception-caught
             raise BrowserProviderError(
-                f"Unsupported LLM provider: {llm_provider}",
+                f"Browser-use {self._settings.llm_provider} LLM is not configured",
                 provider=self.kind.value,
-            )
+            ) from exc
 
         return _BrowserUseDeps(
             agent_cls=agent_cls,
             browser_cls=browser_cls,
-            config_cls=config_cls,
             llm=llm,
         )
 
@@ -104,19 +117,17 @@ class BrowserUseProvider(BrowserProvider):
             raise RuntimeError("Provider not initialized")
 
         deps = self._deps
-        browser = deps.browser_cls(
-            config=deps.config_cls(headless=self._settings.headless)
-        )
+        browser = deps.browser_cls(headless=self._settings.headless)
         task = self._task_from_request(request)
-        agent = deps.agent_cls(
-            task=task,
-            llm=deps.llm,
-            browser=browser,
-        )
         try:
+            agent = deps.agent_cls(
+                task=task,
+                llm=deps.llm,
+                browser=browser,
+            )
             timeout_seconds = (request.timeout_ms or self._settings.timeout_ms) / 1000
 
-            async def _call() -> dict | str:
+            async def _call() -> Any:
                 return await asyncio.wait_for(agent.run(), timeout=timeout_seconds)
 
             result = await execute_with_retry(
@@ -125,15 +136,17 @@ class BrowserUseProvider(BrowserProvider):
                 func=_call,
             )
         finally:
-            await browser.close()
+            await browser.kill()
 
-        log = result if isinstance(result, dict) else {"result": result}
+        success, log = _normalize_agent_history(result)
         content = log.get("extracted_content") or log.get("result") or ""
+        history = log.get("history") or []
+        state = history[-1].get("state", {}) if history else {}
         return BrowserResult(
-            success=True,
+            success=success,
             url=request.url,
-            title=log.get("title", ""),
-            content=content,
+            title=log.get("title") or state.get("title", ""),
+            content=str(content),
             html=log.get("html", ""),
             metadata=log,
             provider=self.kind,
@@ -141,3 +154,18 @@ class BrowserUseProvider(BrowserProvider):
             assets=None,
             elapsed_ms=None,
         )
+
+
+def _normalize_agent_history(result: Any) -> tuple[bool, dict[str, Any]]:
+    """Normalize browser-use's ``AgentHistoryList`` into the provider contract."""
+    if isinstance(result, dict):
+        return bool(result.get("success", True)), dict(result)
+    if isinstance(result, str):
+        return True, {"result": result}
+
+    final_result = result.final_result()
+    successful = result.is_successful()
+    payload = result.model_dump(mode="json")
+    payload["result"] = final_result or ""
+    payload["success"] = successful is True
+    return successful is True, payload

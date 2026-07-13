@@ -15,6 +15,8 @@ from rich.table import Table
 from rich.text import Text
 
 from src.cli.commands import database as database_module
+from src.config import Settings
+from src.config.models import QdrantConfig
 from src.manage_vector_db import CollectionCreationError, CollectionDeletionError
 
 
@@ -58,10 +60,10 @@ class VectorManagerStub:
         return None if payload is None else SimpleNamespace(**payload)
 
     async def create_collection(
-        self, collection_name: str, *, vector_size: int
+        self, collection_name: str, *, vector_size: int, distance: str
     ) -> bool:
         """Record create attempts and control the return value."""
-        self.records["create"].append((collection_name, vector_size))
+        self.records["create"].append((collection_name, vector_size, distance))
         if "create_raise" in self._fail:
             msg = "creation raised"
             raise ValueError(msg)
@@ -119,15 +121,13 @@ def rich_cli_stub() -> SimpleNamespace:
 
 
 @pytest.fixture
-def config_stub() -> SimpleNamespace:
+def config_stub() -> Settings:
     """Provide the configuration object required by the CLI context."""
-    return SimpleNamespace(qdrant=SimpleNamespace(host="localhost", port=6333))
+    return Settings(qdrant=QdrantConfig(url="http://qdrant.test:6333"))
 
 
 @pytest.fixture
-def cli_obj(
-    rich_cli_stub: SimpleNamespace, config_stub: SimpleNamespace
-) -> dict[str, Any]:
+def cli_obj(rich_cli_stub: SimpleNamespace, config_stub: Settings) -> dict[str, Any]:
     """Build the Click context object consumed by database commands."""
     return {"rich_cli": rich_cli_stub, "config": config_stub}
 
@@ -360,12 +360,12 @@ def test_create_collection_succeeds(
 
     result = _invoke(
         cli_runner,
-        ["create", "alpha", "--dimension", "1024"],
+        ["create", "alpha", "--dimension", "1024", "--distance", "dot"],
         obj=cli_obj,
     )
 
     assert result.exit_code == 0
-    assert stub.records["create"] == [("alpha", 1024)]
+    assert stub.records["create"] == [("alpha", 1024, "dot")]
     panel = rich_cli_stub.printed[-1]
     assert isinstance(panel, Panel)
     assert isinstance(panel.renderable, Text)
@@ -436,7 +436,7 @@ def test_create_collection_force_deletes_existing(
 
     assert result.exit_code == 0
     assert stub.records["delete"] == ["alpha"]
-    assert stub.records["create"] == [("alpha", 1536)]
+    assert stub.records["create"] == [("alpha", 1536, "cosine")]
 
 
 def test_create_collection_force_cancelled_by_user(
@@ -615,16 +615,17 @@ def test_collection_info_runtime_error_aborts(
     ]
 
 
-def test_search_collection_warns_about_unimplemented_path(
+def test_search_collection_fails_for_unimplemented_path(
     cli_runner: CliRunner,
     rich_cli_stub: SimpleNamespace,
     cli_obj: dict[str, Any],
 ) -> None:
-    """The search command should communicate its unimplemented state."""
+    """The reserved search command should fail instead of reporting success."""
     result = _invoke(cli_runner, ["search", "alpha", "query"], obj=cli_obj)
 
-    assert result.exit_code == 0
-    assert "Vector search via CLI is not yet implemented" in rich_cli_stub.printed[0]
+    assert result.exit_code == 1
+    assert "Vector search is not implemented" in result.output
+    assert not rich_cli_stub.printed
 
 
 def test_database_stats_reports_totals(
@@ -649,6 +650,9 @@ def test_database_stats_reports_totals(
     assert len(tables) == 2  # Summary table and breakdown table
     summary = tables[0]
     assert summary.row_count == 3
+    assert any(
+        "http://qdrant.test:6333" in str(cell) for cell in summary.columns[1].cells
+    )
     assert stub.counters["cleanup"] == 1
 
 

@@ -8,7 +8,7 @@ This module provides a comprehensive CLI interface with:
 - Enhanced user experience
 """
 
-__version__ = "1.0.0"
-__all__ = ["main"]
+from src import __version__
 
-from .main import main
+
+__all__ = ["__version__"]

@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import asyncio
+from collections.abc import Generator
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
 
+from src.config import Settings
+from src.config.models import CacheConfig, Environment
 from src.infrastructure import container as container_module
 
 
@@ -151,13 +155,32 @@ class TestCreateCacheManager:
             assert result is not None
 
 
+@pytest.mark.service
 class TestCreateCircuitBreakerManager:
     """Tests for _create_circuit_breaker_manager factory function."""
 
     def test_creates_manager_with_config(
         self, minimal_config_namespace: SimpleNamespace
     ) -> None:
-        """Should create CircuitBreakerManager with configuration."""
+        """Should use in-memory state when Dragonfly is disabled."""
+        with patch.object(
+            container_module.CircuitBreakerManager,
+            "in_memory",
+            return_value=MagicMock(),
+        ) as mock_cls:
+            result = container_module._create_circuit_breaker_manager(
+                minimal_config_namespace
+            )
+
+            mock_cls.assert_called_once_with(config=minimal_config_namespace)
+            assert result is not None
+
+    def test_creates_distributed_manager_when_dragonfly_enabled(
+        self, minimal_config_namespace: SimpleNamespace
+    ) -> None:
+        """Dragonfly-enabled settings should retain distributed breaker state."""
+        minimal_config_namespace.cache.enable_caching = True
+        minimal_config_namespace.cache.enable_dragonfly_cache = True
         with patch.object(
             container_module, "CircuitBreakerManager", return_value=MagicMock()
         ) as mock_cls:
@@ -165,7 +188,10 @@ class TestCreateCircuitBreakerManager:
                 minimal_config_namespace
             )
 
-            mock_cls.assert_called_once()
+            mock_cls.assert_called_once_with(
+                redis_url=minimal_config_namespace.cache.dragonfly_url,
+                config=minimal_config_namespace,
+            )
             assert result is not None
 
 
@@ -183,6 +209,18 @@ class TestCreateProjectStorage:
 
             mock_cls.assert_called_once()
             assert result is not None
+
+
+@pytest.mark.rag
+def test_create_rag_generator_skips_disabled_feature() -> None:
+    """Disabled RAG should not import or construct provider dependencies."""
+    config = SimpleNamespace(rag=SimpleNamespace(enable_rag=False))
+
+    with patch.object(container_module.importlib, "import_module") as importer:
+        result = container_module._create_rag_generator(config, MagicMock())
+
+    assert result is None
+    importer.assert_not_called()
 
 
 class TestCreateBrowserManager:
@@ -217,44 +255,127 @@ class TestCreateBrowserManager:
             assert result is None
 
 
+@pytest.mark.service
 class TestApplicationContainer:
     """Tests for ApplicationContainer class."""
 
-    def test_container_provides_qdrant_client(self) -> None:
-        """Container should provide qdrant_client provider."""
-        from src.infrastructure.container import ApplicationContainer
+    def test_container_preserves_settings_identity(self) -> None:
+        """Container services should receive the canonical Settings instance."""
+        settings = Settings(
+            environment=Environment.TESTING,
+            cache=CacheConfig(enable_caching=False, enable_dragonfly_cache=False),
+        )
+        container = container_module.ApplicationContainer(config=settings)
 
-        container = ApplicationContainer()
+        embedding_manager = container.embedding_manager()
 
-        assert hasattr(container, "qdrant_client")
-
-    def test_container_provides_vector_store_service(self) -> None:
-        """Container should provide vector_store_service provider."""
-        from src.infrastructure.container import ApplicationContainer
-
-        container = ApplicationContainer()
-
-        assert hasattr(container, "vector_store_service")
-
-    def test_container_provides_cache_manager(self) -> None:
-        """Container should provide cache_manager provider."""
-        from src.infrastructure.container import ApplicationContainer
-
-        container = ApplicationContainer()
-
-        assert hasattr(container, "cache_manager")
-
-    def test_container_provides_embedding_manager(self) -> None:
-        """Container should provide embedding_manager provider."""
-        from src.infrastructure.container import ApplicationContainer
-
-        container = ApplicationContainer()
-
-        assert hasattr(container, "embedding_manager")
+        assert container.config() is settings
+        assert embedding_manager.config is settings
+        assert embedding_manager.cache_manager is container.cache_manager()
+        assert container.cache_manager().distributed_cache is None
 
 
+@pytest.mark.service
 class TestContainerManager:
     """Tests for ContainerManager singleton."""
+
+    @pytest.mark.asyncio
+    async def test_cleanup_graph_continues_after_os_error(self) -> None:
+        """One cleanup failure should not skip later services."""
+        service_names = (
+            "rag_generator",
+            "browser_manager",
+            "content_intelligence_service",
+            "vector_store_service",
+            "embedding_manager",
+            "cache_manager",
+            "project_storage",
+            "circuit_breaker_manager",
+        )
+        services = {name: MagicMock() for name in service_names}
+        for service in services.values():
+            service.cleanup = AsyncMock()
+        services["rag_generator"].cleanup.side_effect = OSError("cleanup failed")
+
+        resolved = [
+            container_module._ResolvedService(name, services[name])
+            for name in service_names
+        ]
+
+        await container_module._cleanup_service_graph(resolved)
+
+        for service in services.values():
+            service.cleanup.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_cleanup_graph_closes_services_without_cleanup(self) -> None:
+        """Close-only services should participate in reverse graph teardown."""
+        close = AsyncMock()
+
+        await container_module._cleanup_service_graph(
+            [
+                container_module._ResolvedService(
+                    "close_only", SimpleNamespace(close=close)
+                )
+            ]
+        )
+
+        close.assert_awaited_once_with()
+
+    @pytest.mark.asyncio
+    async def test_cleanup_graph_awaits_custom_awaitable(self) -> None:
+        """Cleanup should await every awaitable, not only coroutine objects."""
+
+        class CleanupAwaitable:
+            def __init__(self) -> None:
+                self.awaited = False
+
+            def __await__(self) -> Generator[None, None, None]:
+                self.awaited = True
+                yield from ()
+                return None
+
+        result = CleanupAwaitable()
+        cleanup = MagicMock(return_value=result)
+
+        await container_module._cleanup_service_graph(
+            [
+                container_module._ResolvedService(
+                    "custom_awaitable", SimpleNamespace(cleanup=cleanup)
+                )
+            ]
+        )
+
+        cleanup.assert_called_once_with()
+        assert result.awaited
+
+    @pytest.mark.asyncio
+    async def test_dependency_context_releases_its_own_lease(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Overlapping contexts should release only their own ownership token."""
+        container = MagicMock()
+        leases = [
+            container_module.ContainerLease(container, generation=1, lease_id=1),
+            container_module.ContainerLease(container, generation=1, lease_id=2),
+        ]
+        acquire = AsyncMock(side_effect=leases)
+        release = AsyncMock()
+        monkeypatch.setattr(container_module, "acquire_container", acquire)
+        monkeypatch.setattr(container_module, "release_container", release)
+        first = container_module.DependencyContext(Settings())
+        second = container_module.DependencyContext(Settings())
+
+        assert await first.__aenter__() is container
+        assert await second.__aenter__() is container
+        await first.__aexit__(None, None, None)
+
+        release.assert_awaited_once_with(leases[0])
+        assert second.container is container
+
+        await second.__aexit__(None, None, None)
+        assert release.await_args_list == [call(leases[0]), call(leases[1])]
 
     def test_get_container_is_callable(self) -> None:
         """get_container should be a callable function."""
@@ -269,32 +390,225 @@ class TestContainerManager:
 
     @pytest.mark.asyncio
     async def test_initialize_container_sets_up_services(
-        self, minimal_config_namespace: SimpleNamespace
+        self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """initialize_container should set up the container."""
-        from src.infrastructure.container import (
-            _container_manager,
-            initialize_container,
+        """ContainerManager should preserve Settings through initialization."""
+        settings = Settings(
+            environment=Environment.TESTING,
+            cache=CacheConfig(enable_caching=False, enable_dragonfly_cache=False),
+        )
+        manager = container_module.ContainerManager()
+        graph_probe = AsyncMock()
+        cleanup_probe = AsyncMock()
+        monkeypatch.setattr(container_module, "_initialize_service_graph", graph_probe)
+        monkeypatch.setattr(container_module, "_cleanup_service_graph", cleanup_probe)
+        try:
+            container = await manager.initialize(settings)
+
+            assert container.config() is settings
+            assert container.embedding_manager().config is settings
+            assert container.cache_manager().distributed_cache is None
+            graph_probe.assert_awaited_once()
+            assert graph_probe.await_args is not None
+            assert graph_probe.await_args.args[0] is container
+            assert graph_probe.await_args.args[1] == []
+        finally:
+            await manager.shutdown()
+
+        cleanup_probe.assert_awaited_once_with([])
+
+    @pytest.mark.asyncio
+    async def test_initialize_serializes_concurrent_callers(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Concurrent startup requests should publish exactly one container."""
+        settings = Settings(environment=Environment.TESTING)
+        candidate = MagicMock()
+        candidate.init_resources = AsyncMock()
+        candidate.qdrant_client.return_value = AsyncMock()
+        candidate.startup_tasks.return_value = []
+        factory = MagicMock(return_value=candidate)
+
+        async def yield_during_initialization(
+            _container: object,
+            _resolved_services: list[object],
+        ) -> None:
+            await asyncio.sleep(0)
+
+        graph_probe = AsyncMock(side_effect=yield_during_initialization)
+        monkeypatch.setattr(container_module, "ApplicationContainer", factory)
+        monkeypatch.setattr(container_module, "_initialize_service_graph", graph_probe)
+        manager = container_module.ContainerManager()
+
+        first, second = await asyncio.gather(
+            manager.initialize(settings),
+            manager.initialize(settings),
         )
 
-        # Save original state
-        original_container = _container_manager.container
+        assert first is candidate
+        assert second is candidate
+        factory.assert_called_once_with(config=settings)
+        candidate.init_resources.assert_awaited_once()
+        graph_probe.assert_awaited_once()
+        assert graph_probe.await_args is not None
+        assert graph_probe.await_args.args == (candidate, [])
 
-        try:
-            with patch.object(
-                container_module, "ApplicationContainer"
-            ) as mock_container_cls:
-                mock_container = MagicMock()
-                mock_container.init_resources = AsyncMock()
-                mock_container_cls.return_value = mock_container
+    @pytest.mark.asyncio
+    async def test_initialize_rolls_back_failed_candidate(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Failed startup should release resources without publishing the candidate."""
+        settings = Settings(environment=Environment.TESTING)
+        candidate = MagicMock()
+        candidate.init_resources = AsyncMock()
+        candidate.shutdown_resources = AsyncMock()
+        qdrant_client = AsyncMock()
+        candidate.qdrant_client.return_value = qdrant_client
 
-                await initialize_container(minimal_config_namespace)
+        async def fail_startup() -> None:
+            raise RuntimeError("startup failed")
 
-                # Should have created container
-                mock_container_cls.assert_called_once()
-        finally:
-            # Restore original state to avoid affecting other tests
-            _container_manager.container = original_container
+        candidate.startup_tasks.return_value = [fail_startup]
+        resolved_service = container_module._ResolvedService("stub", MagicMock())
+
+        async def record_service(
+            _container: object,
+            resolved_services: list[object],
+        ) -> None:
+            resolved_services.append(resolved_service)
+
+        graph_probe = AsyncMock(side_effect=record_service)
+        cleanup_probe = AsyncMock()
+        monkeypatch.setattr(
+            container_module,
+            "ApplicationContainer",
+            MagicMock(return_value=candidate),
+        )
+        monkeypatch.setattr(container_module, "_initialize_service_graph", graph_probe)
+        monkeypatch.setattr(container_module, "_cleanup_service_graph", cleanup_probe)
+        manager = container_module.ContainerManager()
+
+        with pytest.raises(RuntimeError, match="startup failed"):
+            await manager.initialize(settings)
+
+        assert manager.container is None
+        assert manager._initialized is False  # pylint: disable=protected-access
+        cleanup_probe.assert_awaited_once_with([resolved_service])
+        qdrant_client.close.assert_awaited_once_with()
+        candidate.shutdown_resources.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_failed_graph_cleans_only_resolved_services_in_reverse(self) -> None:
+        """Rollback must not resolve new providers after a partial startup failure."""
+        cleanup_order: list[str] = []
+
+        def service(name: str, *, fail: bool = False) -> MagicMock:
+            instance = MagicMock()
+            instance.initialize = AsyncMock(
+                side_effect=RuntimeError("failed") if fail else None
+            )
+
+            async def cleanup() -> None:
+                cleanup_order.append(name)
+
+            instance.cleanup = AsyncMock(side_effect=cleanup)
+            return instance
+
+        cache = service("cache")
+        embedding = service("embedding", fail=True)
+        container = MagicMock()
+        container.cache_manager.return_value = cache
+        container.embedding_manager.return_value = embedding
+        resolved: list[container_module._ResolvedService] = []
+
+        with pytest.raises(RuntimeError, match="embedding_manager"):
+            await container_module._initialize_service_graph(container, resolved)
+        await container_module._cleanup_service_graph(resolved)
+
+        assert [item.instance for item in resolved] == [cache, embedding]
+        container.vector_store_service.assert_not_called()
+        assert cleanup_order == ["embedding", "cache"]
+
+    @pytest.mark.asyncio
+    async def test_overlapping_leases_share_until_last_release(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """One session ending must not destroy a container another session holds."""
+        settings = Settings(environment=Environment.TESTING)
+        candidate = MagicMock()
+        candidate.init_resources = AsyncMock()
+        candidate.shutdown_resources = AsyncMock()
+        qdrant_client = AsyncMock()
+        candidate.qdrant_client.return_value = qdrant_client
+        candidate.startup_tasks.return_value = []
+        candidate.shutdown_tasks.return_value = []
+        monkeypatch.setattr(
+            container_module,
+            "ApplicationContainer",
+            MagicMock(return_value=candidate),
+        )
+        monkeypatch.setattr(
+            container_module,
+            "_initialize_service_graph",
+            AsyncMock(),
+        )
+        manager = container_module.ContainerManager()
+
+        first = await manager.acquire(settings)
+        second = await manager.acquire(settings)
+        await manager.release(first)
+
+        assert first.container is second.container is candidate
+        assert manager.container is candidate
+        candidate.shutdown_resources.assert_not_awaited()
+
+        await manager.release(second)
+
+        assert manager.container is None
+        qdrant_client.close.assert_awaited_once_with()
+        candidate.shutdown_resources.assert_awaited_once_with()
+
+    @pytest.mark.asyncio
+    async def test_force_reload_and_shutdown_are_rejected_while_leased(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Destructive replacement cannot cross an active generation lease."""
+        settings = Settings(environment=Environment.TESTING)
+        candidate = MagicMock()
+        candidate.init_resources = AsyncMock()
+        candidate.shutdown_resources = AsyncMock()
+        candidate.qdrant_client.return_value = AsyncMock()
+        candidate.startup_tasks.return_value = []
+        candidate.shutdown_tasks.return_value = []
+        monkeypatch.setattr(
+            container_module,
+            "ApplicationContainer",
+            MagicMock(return_value=candidate),
+        )
+        monkeypatch.setattr(
+            container_module,
+            "_initialize_service_graph",
+            AsyncMock(),
+        )
+        manager = container_module.ContainerManager()
+        lease = await manager.acquire(settings)
+
+        with pytest.raises(RuntimeError, match="force-reload"):
+            await manager.acquire(settings, force_reload=True)
+        with pytest.raises(RuntimeError, match="sessions are active"):
+            await manager.shutdown()
+
+        assert manager.container is candidate
+        candidate.shutdown_resources.assert_not_awaited()
+
+        await manager.release(lease)
+        with pytest.raises(RuntimeError, match="no longer active"):
+            await manager.release(lease)
+
+        assert manager.container is None
+        candidate.shutdown_resources.assert_awaited_once_with()
 
     @pytest.mark.asyncio
     async def test_shutdown_container_cleans_up(self) -> None:

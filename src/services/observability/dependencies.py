@@ -4,7 +4,6 @@ from __future__ import annotations
 
 # pylint: disable=duplicate-code
 from contextlib import nullcontext
-from functools import lru_cache
 from typing import Annotated, Any
 
 from fastapi import Depends  # type: ignore[import]
@@ -20,9 +19,8 @@ ObservabilityConfigDep = Annotated[
 ]
 
 
-@lru_cache
 def get_observability_service() -> dict[str, Any]:
-    """Initialize observability once and expose tracers/meters to routes."""
+    """Expose observability using the active application settings."""
     config = get_observability_config()
     enabled = initialize_observability(config)
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Self, cast
+from typing import Any, Self
 
 from langchain_classic.retrievers.document_compressors import (
     DocumentCompressorPipeline,
@@ -179,10 +179,12 @@ class VectorServiceRetriever(BaseRetriever):
             self._rag_config_value = None
             return None
 
-        fastembed_config = getattr(self._vector_service.config, "fastembed", None)
-        model_name = getattr(fastembed_config, "dense_model", None)
+        fastembed = self._vector_service.config.fastembed
         embeddings = FastEmbedEmbeddings(
-            model_name=cast(str, model_name or "BAAI/bge-small-en-v1.5")
+            model_name=fastembed.dense_model,
+            cache_dir=fastembed.cache_dir,
+            max_length=fastembed.max_length,
+            batch_size=fastembed.batch_size,
         )
 
         if tiktoken is not None:

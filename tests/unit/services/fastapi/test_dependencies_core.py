@@ -247,20 +247,39 @@ async def test_get_health_checker_returns_singleton(
     monkeypatch.setattr(
         fastapi_dependencies, "build_health_manager", build_mock, raising=True
     )
+    settings = SimpleNamespace()
     monkeypatch.setattr(
         fastapi_dependencies,
         "get_settings",
-        MagicMock(return_value=SimpleNamespace()),
+        MagicMock(return_value=settings),
         raising=True,
     )
     monkeypatch.setattr(fastapi_dependencies, "_health_manager", None, raising=False)
+    monkeypatch.setattr(
+        fastapi_dependencies,
+        "_health_manager_qdrant_client",
+        None,
+        raising=False,
+    )
+    qdrant_client = MagicMock()
+    container = MagicMock()
+    container.qdrant_client.return_value = qdrant_client
+    monkeypatch.setattr(
+        fastapi_dependencies,
+        "get_container",
+        MagicMock(return_value=container),
+        raising=True,
+    )
 
     first = await fastapi_dependencies.get_health_checker()
     second = await fastapi_dependencies.get_health_checker()
 
     assert first is manager
     assert second is manager
-    build_mock.assert_called_once()
+    build_mock.assert_called_once_with(
+        settings,
+        qdrant_client=qdrant_client,
+    )
 
 
 @pytest.mark.asyncio()
@@ -286,10 +305,62 @@ async def test_get_health_checker_handles_reinitialization(
         raising=True,
     )
     monkeypatch.setattr(fastapi_dependencies, "_health_manager", None, raising=False)
+    monkeypatch.setattr(
+        fastapi_dependencies,
+        "_health_manager_qdrant_client",
+        None,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        fastapi_dependencies,
+        "get_container",
+        MagicMock(return_value=None),
+        raising=True,
+    )
 
     result = await fastapi_dependencies.get_health_checker()
 
     assert result is manager
+
+
+@pytest.mark.asyncio()
+async def test_get_health_checker_rebuilds_for_new_qdrant_owner(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A new container generation must not reuse a manager with a closed client."""
+    managers = [MagicMock(spec=HealthCheckManager), MagicMock(spec=HealthCheckManager)]
+    build_mock = MagicMock(side_effect=managers)
+    first_client = MagicMock()
+    second_client = MagicMock()
+    first_container = MagicMock()
+    second_container = MagicMock()
+    first_container.qdrant_client.return_value = first_client
+    second_container.qdrant_client.return_value = second_client
+    current = {"container": first_container}
+    monkeypatch.setattr(fastapi_dependencies, "build_health_manager", build_mock)
+    monkeypatch.setattr(
+        fastapi_dependencies,
+        "get_settings",
+        MagicMock(return_value=SimpleNamespace()),
+    )
+    monkeypatch.setattr(
+        fastapi_dependencies,
+        "get_container",
+        lambda: current["container"],
+    )
+    monkeypatch.setattr(fastapi_dependencies, "_health_manager", None)
+    monkeypatch.setattr(
+        fastapi_dependencies,
+        "_health_manager_qdrant_client",
+        None,
+    )
+
+    assert await fastapi_dependencies.get_health_checker() is managers[0]
+    current["container"] = second_container
+    assert await fastapi_dependencies.get_health_checker() is managers[1]
+
+    assert build_mock.call_args_list[0].kwargs["qdrant_client"] is first_client
+    assert build_mock.call_args_list[1].kwargs["qdrant_client"] is second_client
 
 
 def test_get_correlation_id_dependency(monkeypatch: pytest.MonkeyPatch) -> None:

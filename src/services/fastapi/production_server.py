@@ -16,9 +16,11 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 from src.config.loader import get_settings
+from src.infrastructure.bootstrap import container_session
 from src.services.fastapi.middleware.manager import apply_defaults, apply_named_stack
 from src.services.logging_config import configure_logging
 from src.services.observability.health_manager import (
+    HealthCheckManager,
     HealthStatus,
     build_health_manager,
 )
@@ -56,7 +58,7 @@ class ProductionMCPServer:
         self._mcp_server: FastMCP | None = None
         self._app: Starlette | None = None
         self._shutdown_event = asyncio.Event()
-        self._health_manager = build_health_manager(self.config)
+        self._health_manager: HealthCheckManager | None = None
 
         # Setup signal handlers for graceful shutdown
         signal.signal(signal.SIGINT, self._signal_handler)
@@ -86,19 +88,25 @@ class ProductionMCPServer:
             None. Control resumes once the application is ready to serve.
         """
         try:
-            # Startup
-            logger.info("Starting production MCP server...")
-            await self.startup()
-            yield
+            async with container_session(settings=self.config) as container:
+                self._health_manager = build_health_manager(
+                    self.config,
+                    qdrant_client=container.qdrant_client(),
+                )
+                try:
+                    logger.info("Starting production MCP server...")
+                    await self.startup()
+                    yield
+                finally:
+                    logger.info("Shutting down production MCP server...")
+                    try:
+                        await self.shutdown()
+                    finally:
+                        self._health_manager = None
 
         except (TimeoutError, OSError, PermissionError):
             logger.exception("Startup failed")
             raise
-
-        finally:
-            # Shutdown
-            logger.info("Shutting down production MCP server...")
-            await self.shutdown()
 
     async def startup(self) -> None:
         """Initialize server components."""
@@ -144,8 +152,18 @@ class ProductionMCPServer:
             Returns:
                 JSONResponse describing aggregated system health.
             """
-            await self._health_manager.check_all()
-            summary = self._health_manager.get_health_summary()
+            manager = self._health_manager
+            if manager is None:
+                return JSONResponse(
+                    {
+                        "status": HealthStatus.UNHEALTHY.value,
+                        "message": "Health dependencies are not initialized",
+                    },
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
+
+            await manager.check_all()
+            summary = manager.get_health_summary()
             overall_status = summary.get("overall_status", HealthStatus.UNKNOWN.value)
             status_code = status.HTTP_200_OK
             if overall_status == HealthStatus.UNHEALTHY.value:

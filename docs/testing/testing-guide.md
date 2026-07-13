@@ -430,33 +430,14 @@ uv run pytest --html=report.html --self-contained-html
 
 ## Test Configuration
 
-### pytest.ini
-```ini
-[tool:pytest]
-minversion = 6.0
-addopts = -ra -q --strict-markers
-testpaths = tests
-markers =
-    unit: Unit tests
-    service: Service integration tests
-    e2e: End-to-end tests
-    benchmark: Performance benchmarks
-    memory: Memory tests
-    serial: Tests that must run serially
-```
+### Pytest
+
+`pyproject.toml` is the only pytest configuration source. It owns discovery,
+registered markers, warnings-as-errors exceptions, asyncio behavior, and the
+default fail-fast and import-mode flags. Run `uv run pytest --markers` for the
+current marker catalog.
 
 ### Coverage Configuration
-```ini
-[run]
-source = src
-omit = 
-    */tests/*
-    */conftest.py
-    
-[report]
-exclude_lines =
-    pragma: no cover
-    def __repr__
-    raise AssertionError
-    raise NotImplementedError
-```
+Coverage settings also live in `pyproject.toml` under `[tool.coverage.run]` and
+`[tool.coverage.report]`. The canonical gate measures `src`, enables branch
+coverage, reports missing lines, and enforces the configured threshold.

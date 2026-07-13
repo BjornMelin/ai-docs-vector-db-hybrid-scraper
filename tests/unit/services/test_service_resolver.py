@@ -14,9 +14,11 @@ class TestRequireContainer:
 
     def test_raises_when_container_is_none(self) -> None:
         """Should raise RuntimeError when container is None."""
-        with patch.object(service_resolver, "get_container", return_value=None):
-            with pytest.raises(RuntimeError, match="container is not initialized"):
-                service_resolver._require_container()
+        with (
+            patch.object(service_resolver, "get_container", return_value=None),
+            pytest.raises(RuntimeError, match="container is not initialized"),
+        ):
+            service_resolver._require_container()
 
     def test_returns_container_when_valid(self) -> None:
         """Should return the container when it's valid."""

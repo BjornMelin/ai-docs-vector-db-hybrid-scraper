@@ -24,9 +24,8 @@ lacked automated regression checks and had loosely specified dependency ranges.
      LangChain pipeline is in place.
 
 2. **Dependency Governance**
-   - Pin retrieval stack dependencies using narrow ranges in
-     `pyproject.toml` and document them in
-     `docs/developers/compatibility-matrix.md`.
+   - Declare retrieval stack dependency ranges in `pyproject.toml` and resolve
+     exact installations in `uv.lock`.
    - Introduce Renovate configuration (`.github/renovate.json`) to batch and
      schedule upgrades of the retrieval stack packages with appropriate review
      windows.
@@ -39,12 +38,13 @@ lacked automated regression checks and had loosely specified dependency ranges.
   in CI.
 - Dependency changes are auditable and deliberate, minimising disruption from
   upstream API changes.
-- Additional maintenance overhead: the compatibility matrix must be kept up to
-  date and the evaluation script requires periodic enhancement.
+- Additional maintenance overhead: the lockfile and evaluation script require
+  deliberate updates when supported dependency ranges change.
 
 ## References
 
 - `tests/data/rag/golden_set.jsonl`
 - `scripts/eval/rag_golden_eval.py`
-- `docs/developers/compatibility-matrix.md`
+- `pyproject.toml`
+- `uv.lock`
 - `.github/renovate.json`

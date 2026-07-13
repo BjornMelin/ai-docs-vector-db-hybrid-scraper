@@ -82,11 +82,10 @@
 'area/monitoring':
 - changed-files:
   - any-glob-to-any-file:
-    - 'src/services/monitoring/**/*'
-    - 'config/prometheus/**/*'
+    - 'src/services/observability/**/*'
+    - 'config/prometheus.yml'
     - 'config/grafana/**/*'
-    - 'config/alertmanager/**/*'
-    - 'docker-compose.monitoring.yml'
+    - 'docker-compose.yml'
 
 # Security
 'area/security':
@@ -103,7 +102,7 @@
     - 'tests/**/*'
     - 'scripts/test*.py'
     - '.pre-commit-config.yaml'
-    - 'pytest.ini'
+    - 'pyproject.toml'
     - 'conftest.py'
 
 # Documentation

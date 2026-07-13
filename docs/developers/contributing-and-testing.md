@@ -51,7 +51,7 @@ uv build
 ### Documentation Verification
 
 ```bash
-uv sync --frozen --group docs-dev
+uv sync --frozen --extra docs
 uv run python scripts/dev.py validate --check-docs --strict
 uv run mkdocs build --strict
 ```

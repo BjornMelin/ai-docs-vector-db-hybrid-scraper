@@ -10,7 +10,6 @@ The deployment consists of:
 - **Qdrant StatefulSet**: Vector database with persistent storage
 - **DragonflyDB Deployment**: Redis-compatible cache
 - **Application Deployment**: FastAPI web service (2 replicas)
-- **Worker Deployment**: Background worker deployment template (2 replicas with HPA)
 - **ConfigMap & Secrets**: Configuration and sensitive data management
 
 ## Prerequisites
@@ -25,7 +24,7 @@ The deployment consists of:
 
 ### 1. Prepare Local Secrets (Required)
 
-This project uses Kustomize to generate secrets from local files, which **must not** be committed to version control.
+This project uses Kustomize to generate secrets from local files, which **must not** be committed to version control. Run these commands from the repository root.
 
 1.  Create a `secrets` directory inside the `k8s` directory:
     ```bash
@@ -39,14 +38,14 @@ This project uses Kustomize to generate secrets from local files, which **must n
     ```
     The `k8s/secrets/` directory is already listed in `.gitignore` to prevent accidental commits.
 
-    > **Tip:** Add any optional keys (for example, `AI_DOCS_FIRECRAWL__API_KEY`) as additional files in the same directory if you enable those integrations.
+    > **Tip:** Add optional keys such as `AI_DOCS_BROWSER__FIRECRAWL__API_KEY` as additional files in the same directory when you enable those integrations.
 
 ### 2. Apply the Full Stack with Kustomize
 
 Run the Kustomize build so the generated ConfigMap (`ai-docs-config`) and Secret (`ai-docs-secrets`) are created before the deployments start. This command also applies the namespace, storage, and deployment manifests referenced by `kustomization.yaml`.
 
 ```bash
-kubectl apply -k .
+kubectl apply -k k8s
 ```
 
 > **Note:** This command is required because Kustomize adds a unique hash suffix to the generated ConfigMap and Secret. Applying the full stack ensures the deployments reference the correct generated resource names before any component starts and keeps the `envFrom` references in the deployments aligned with the hashed resource names.
@@ -57,24 +56,24 @@ If you need to debug a single manifest, render it with Kustomize so the hashed r
 
 ```bash
 # Render just the application deployment for inspection
-kustomize build . | yq 'select(.metadata.name == "ai-docs-app")'
+kustomize build k8s | yq 'select(.metadata.name == "ai-docs-app")'
 ```
 
-> **Important:** Apply changes through Kustomize (`kubectl apply -k .` or `kustomize build . | kubectl apply -f -`). Applying the raw manifests with `kubectl apply -f …` will overwrite the hashed ConfigMap and Secret references, leaving the deployments pointing at non-existent resources.
+> **Important:** Apply changes through Kustomize (`kubectl apply -k k8s` or `kustomize build k8s | kubectl apply -f -`). Applying the raw manifests with `kubectl apply -f …` will overwrite the hashed ConfigMap and Secret references, leaving the deployments pointing at non-existent resources.
 
 ## Using Kustomize (Recommended)
 
 ### Development Deployment
 
 ```bash
-kubectl apply -k .
+kubectl apply -k k8s
 ```
 
 ### Production Deployment
 
 ```bash
-# Update kustomization.yaml with your registry URLs
-kubectl apply -k . --dry-run=client -o yaml | kubectl apply -f -
+# Update k8s/kustomization.yaml with your registry URLs
+kubectl apply -k k8s --dry-run=client -o yaml | kubectl apply -f -
 ```
 
 ## Accessing the Application
@@ -89,7 +88,7 @@ Access at: http://localhost:8000
 
 ### Ingress (Production)
 
-Update `app-deployment.yaml` ingress section with your domain:
+Update `k8s/app-deployment.yaml` ingress section with your domain:
 
 ```yaml
 spec:
@@ -120,17 +119,15 @@ kubectl get pods -n ai-docs-system
 # Application logs
 kubectl logs -n ai-docs-system -l app.kubernetes.io/name=ai-docs-app -f
 
-# Worker logs
-kubectl logs -n ai-docs-system -l app.kubernetes.io/name=ai-docs-worker -f
-
 # Database logs
 kubectl logs -n ai-docs-system -l app.kubernetes.io/name=qdrant -f
 ```
 
 ### Health Check Endpoints
 
-- Application: `http://ai-docs-app:8000/api/v1/config/status`
-- Qdrant: `http://qdrant:6333/health`
+- Application liveness: `http://ai-docs-app:8000/`
+- Application readiness: `http://ai-docs-app:8000/health`
+- Qdrant: `http://qdrant:6333/readyz`
 - DragonflyDB: Redis PING command
 
 ## Scaling
@@ -140,14 +137,11 @@ kubectl logs -n ai-docs-system -l app.kubernetes.io/name=qdrant -f
 ```bash
 # Scale application pods
 kubectl scale deployment -n ai-docs-system ai-docs-app --replicas=5
-
-# Scale worker pods
-kubectl scale deployment -n ai-docs-system ai-docs-worker --replicas=3
 ```
 
 ### Auto-scaling
 
-Workers have HPA configured for CPU/memory-based scaling:
+Add a HorizontalPodAutoscaler for the application when production load requires it:
 
 ```bash
 kubectl get hpa -n ai-docs-system
@@ -162,8 +156,8 @@ kubectl get hpa -n ai-docs-system
 
 ### Backup Considerations
 
-- Qdrant data: `/qdrant/storage` (automatically backed up via snapshots)
-- DragonflyDB: Redis persistence enabled with hourly snapshots
+- Qdrant data: `/qdrant/storage` on its PVC; configure external snapshots separately.
+- DragonflyDB: The cache has no automatic snapshot schedule. The PVC is available for manually triggered snapshots; add the documented `--snapshot_cron` flag only when persistence is required.
 
 ## Configuration
 
@@ -190,7 +184,7 @@ kubectl describe pod -n ai-docs-system <pod-name>
 kubectl get events -n ai-docs-system --sort-by='.lastTimestamp'
 
 # Test connectivity
-kubectl exec -n ai-docs-system -it <pod-name> -- curl http://qdrant:6333/health
+kubectl exec -n ai-docs-system -it <pod-name> -- curl http://qdrant:6333/readyz
 ```
 
 ## Security
@@ -215,9 +209,6 @@ spec:
     - podSelector:
         matchLabels:
           app.kubernetes.io/component: api
-    - podSelector:
-        matchLabels:
-          app.kubernetes.io/component: worker
 ```
 
 ### Security Context
@@ -231,7 +222,7 @@ All containers run as non-root users (UID 1000) with restricted capabilities.
 Adjust based on your workload:
 
 - **Development**: Lower limits for cost efficiency
-- **Production**: Higher limits for performance (see `patches/production-resources.yaml`)
+- **Production**: Higher limits for performance (see `k8s/patches/production-resources.yaml`)
 
 ### Qdrant Optimization
 
@@ -243,9 +234,7 @@ Key environment variables for performance:
 
 ### DragonflyDB Optimization
 
-- `DRAGONFLY_THREADS`: Match CPU cores
-- `DRAGONFLY_MEMORY_LIMIT`: 70-80% of pod memory limit
-- `--compression=zstd`: Reduce memory usage
+Dragonfly sizes its worker threads automatically. The base deployment caps cache memory at 3 GB within the 4 GiB pod limit. Keep the explicit `--maxmemory` value below the pod limit when tuning production resources.
 
 ## Cleanup
 
@@ -254,5 +243,5 @@ Key environment variables for performance:
 kubectl delete namespace ai-docs-system
 
 # Or selectively
-kubectl delete -k .
+kubectl delete -k k8s
 ```

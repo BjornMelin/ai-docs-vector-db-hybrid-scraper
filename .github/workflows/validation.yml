@@ -10,6 +10,12 @@ on:
       - main
       - develop
   workflow_dispatch:
+    inputs:
+      run_gpu:
+        description: Run the self-hosted GPU validation lane
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -27,9 +33,9 @@ jobs:
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
       - name: Prepare workspace
-        uses: ./.github/actions/checkout-and-setup
+        uses: ./.github/actions/setup-environment
         with:
-          python-version: "3.12"
+          python-version: "3.11"
           cache-suffix: "-cpu-validation"
 
       - name: Run CPU validation harness
@@ -46,15 +52,18 @@ jobs:
   gpu-validation:
     name: GPU stack validation
     needs: cpu-validation
+    if: github.event_name == 'workflow_dispatch' && inputs.run_gpu
     runs-on: [self-hosted, gpu]
     steps:
       - name: Checkout repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
 
       - name: Prepare workspace
-        uses: ./.github/actions/checkout-and-setup
+        uses: ./.github/actions/setup-environment
         with:
-          python-version: "3.12"
+          python-version: "3.11"
           cache-suffix: "-gpu-validation"
 
       - name: Run GPU validation harness

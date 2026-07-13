@@ -125,7 +125,12 @@ async def test_compression_pipeline_filters_documents(monkeypatch) -> None:
 
     vector_store = _make_vector_store_mock()
     vector_store.config = SimpleNamespace(
-        fastembed=SimpleNamespace(dense_model="stub-model")
+        fastembed=SimpleNamespace(
+            dense_model="stub-model",
+            cache_dir=None,
+            max_length=512,
+            batch_size=32,
+        )
     )
     vector_store.search_documents.return_value = [match_keep, match_drop]
 

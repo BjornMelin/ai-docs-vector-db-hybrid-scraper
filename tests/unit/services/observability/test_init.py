@@ -8,11 +8,16 @@ import logging
 import sys
 from collections.abc import Generator
 from dataclasses import dataclass
-from types import ModuleType, SimpleNamespace
+from types import ModuleType
 from typing import Any, ClassVar, cast
 
 import pytest
 
+from src.config import Settings
+from src.config.models import (
+    Environment,
+    ObservabilityConfig as SettingsObservabilityConfig,
+)
 from src.services.observability import init as init_module
 from src.services.observability.config import (
     DEFAULT_INSTRUMENTATIONS,
@@ -372,61 +377,53 @@ class TestConfigurationCoercion:
             init_module._coerce_config(object())  # type: ignore[arg-type]
 
     def test_coerce_settings_with_defaults(self) -> None:
-        """Settings lacking explicit toggles fall back to defaults."""
-        settings = cast(
-            init_module.SettingsLike,
-            SimpleNamespace(
-                app_name="docs",
-                version="1.2.3",
-                environment=SimpleNamespace(value="prod"),
-                observability=SimpleNamespace(enabled=True),
+        """Canonical settings should map defaults and parent fallbacks."""
+        settings = Settings(
+            app_name="docs",
+            version="1.2.3",
+            environment=Environment.PRODUCTION,
+            observability=SettingsObservabilityConfig(
+                enabled=True,
+                service_name="",
+                service_version="",
+                track_ai_operations=False,
+                track_costs=False,
             ),
         )
 
         coerced = init_module._coerce_config(settings)
         assert coerced.instrumentations == DEFAULT_INSTRUMENTATIONS
-        assert coerced.environment == "prod"
+        assert coerced.environment == "production"
         assert coerced.service_name == "docs"
         assert coerced.service_version == "1.2.3"
 
     def test_coerce_settings_respects_explicit_disables(self) -> None:
         """Explicit instrumentation opt-outs prevent defaults from reapplying."""
-        observed = SimpleNamespace(
-            enabled=True,
-            instrument_fastapi=False,
-            instrument_httpx=False,
-            track_ai_operations=False,
-            track_costs=False,
-        )
-        settings = cast(
-            init_module.SettingsLike,
-            SimpleNamespace(
-                app_name="docs",
-                version="1.2.3",
-                environment="staging",
-                observability=observed,
+        settings = Settings(
+            environment=Environment.STAGING,
+            observability=SettingsObservabilityConfig(
+                enabled=True,
+                instrument_fastapi=False,
+                instrument_httpx=False,
+                track_ai_operations=False,
+                track_costs=False,
             ),
         )
 
         coerced = init_module._coerce_config(settings)
         assert coerced.instrumentations == ()
+        assert coerced.ai_operation_metrics_enabled is False
 
     def test_coerce_settings_enables_logging_when_tracking(self) -> None:
         """Tracking flags ensure logging instrumentation is configured."""
-        observed = SimpleNamespace(
-            enabled=True,
-            instrument_fastapi=True,
-            instrument_httpx=True,
-            track_ai_operations=True,
-            track_costs=False,
-        )
-        settings = cast(
-            init_module.SettingsLike,
-            SimpleNamespace(
-                app_name="docs",
-                version="1.2.3",
-                environment="staging",
-                observability=observed,
+        settings = Settings(
+            environment=Environment.STAGING,
+            observability=SettingsObservabilityConfig(
+                enabled=True,
+                instrument_fastapi=True,
+                instrument_httpx=True,
+                track_ai_operations=True,
+                track_costs=False,
             ),
         )
 
@@ -461,7 +458,7 @@ class TestInitializeObservability:
             otlp_endpoint="http://collector:4317",
             otlp_headers={"authorization": "token"},
             insecure_transport=False,
-            metrics_enabled=True,
+            ai_operation_metrics_enabled=True,
             console_exporter=True,
             instrumentations=("fastapi", "logging"),
         )
@@ -513,7 +510,7 @@ class TestInitializeObservability:
         """Metrics disabled configuration avoids meter provider setup."""
         config = ObservabilityConfig(
             enabled=True,
-            metrics_enabled=False,
+            ai_operation_metrics_enabled=False,
             instrumentations=(),
         )
 
@@ -526,7 +523,7 @@ class TestInitializeObservability:
         config = ObservabilityConfig(
             enabled=True,
             instrumentations=("fastapi",),
-            metrics_enabled=True,
+            ai_operation_metrics_enabled=True,
         )
 
         assert init_module.initialize_observability(config) is True
@@ -554,7 +551,7 @@ class TestInitializeObservability:
         config = ObservabilityConfig(
             enabled=True,
             instrumentations=(),
-            metrics_enabled=True,
+            ai_operation_metrics_enabled=True,
         )
 
         try:

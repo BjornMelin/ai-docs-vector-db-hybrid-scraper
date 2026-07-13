@@ -6,6 +6,7 @@ from typing import cast
 
 import pytest
 
+from src import __version__
 from src.config import Settings
 from src.config.models import Environment, ObservabilityConfig
 
@@ -29,7 +30,7 @@ class TestObservabilityConfig:
         expected_pairs = {
             "enabled": False,
             "service_name": "ai-docs-vector-db",
-            "service_version": "1.0.0",
+            "service_version": __version__,
             "service_namespace": "ai-docs",
             "otlp_endpoint": "http://localhost:4317",
             "trace_sample_rate": 1.0,

@@ -201,7 +201,13 @@ class ProviderRegistry:
             raise EmbeddingServiceError("FastEmbed configuration missing") from exc
 
         try:
-            provider = self._factories.fastembed_cls(model_name=model)
+            provider = self._factories.fastembed_cls(
+                model_name=model,
+                sparse_model=self._config.fastembed.sparse_model,
+                cache_dir=self._config.fastembed.cache_dir,
+                max_length=self._config.fastembed.max_length,
+                batch_size=self._config.fastembed.batch_size,
+            )
             await provider.initialize()
         except (
             ImportError,
@@ -225,7 +231,7 @@ def _load_flag_reranker() -> Any | None:
         return FlagReranker
 
     try:
-        from FlagEmbedding import (
+        from FlagEmbedding import (  # pyright: ignore[reportMissingImports]
             FlagReranker as _FlagReranker,  # type: ignore[import-not-found]
         )
     except ImportError:

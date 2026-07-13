@@ -5,27 +5,17 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable
 from contextlib import suppress
 from dataclasses import dataclass
 from importlib import import_module
-from typing import TYPE_CHECKING, Any, Protocol, cast, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, cast
 
 from .config import (
-    DEFAULT_INSTRUMENTATIONS,
     ObservabilityConfig,
+    SettingsLike,
     get_observability_config,
 )
-
-
-@runtime_checkable
-class SettingsLike(Protocol):
-    """Structural protocol for application settings with observability data."""
-
-    app_name: str | None
-    version: str | None
-    environment: Any
-    observability: Any
 
 
 logger = logging.getLogger(__name__)
@@ -85,77 +75,6 @@ class _TelemetryState:
 _STATE = _TelemetryState()
 
 
-def _has_explicit_instrumentation_preferences(observed: Any) -> bool:
-    """Detect whether instrumentation toggles were explicitly provided."""
-    preference_fields = {"instrument_fastapi", "instrument_httpx"}
-
-    fields_set = getattr(observed, "model_fields_set", None)
-    if fields_set is not None and preference_fields.intersection(fields_set):
-        return True
-
-    model_dump = getattr(observed, "model_dump", None)
-    if callable(model_dump):
-        result = model_dump(exclude_defaults=True, exclude_unset=True)
-        if isinstance(result, Mapping):
-            explicit_values = cast(Mapping[str, Any], result)
-            if any(field in explicit_values for field in preference_fields):
-                return True
-
-    if isinstance(observed, Mapping) and any(
-        field in observed for field in preference_fields
-    ):
-        return True
-
-    sentinel = object()
-    for field in preference_fields:
-        if getattr(observed, field, sentinel) is not sentinel:
-            return True
-
-    return False
-
-
-def _from_settings(settings: SettingsLike) -> ObservabilityConfig:
-    """Create an :class:`ObservabilityConfig` from application settings."""
-    observed = settings.observability
-    instrumentations: list[str] = []
-    if getattr(observed, "instrument_fastapi", False):
-        instrumentations.append("fastapi")
-    if getattr(observed, "instrument_httpx", False):
-        instrumentations.append("httpx")
-    if getattr(observed, "track_ai_operations", False) or getattr(
-        observed, "track_costs", False
-    ):
-        instrumentations.append("logging")
-
-    instrumentation_tuple = tuple(dict.fromkeys(instrumentations))
-    if not instrumentation_tuple and not _has_explicit_instrumentation_preferences(
-        observed
-    ):
-        instrumentation_tuple = DEFAULT_INSTRUMENTATIONS
-
-    environment = getattr(settings, "environment", "development")
-    environment_value = getattr(environment, "value", environment)
-
-    return ObservabilityConfig(
-        enabled=bool(observed.enabled),
-        service_name=getattr(observed, "service_name", "")
-        or getattr(settings, "app_name", "ai-docs-vector-db"),
-        service_version=getattr(observed, "service_version", "")
-        or getattr(settings, "version", "1.0.0"),
-        environment=str(environment_value),
-        otlp_endpoint=getattr(observed, "otlp_endpoint", "http://localhost:4317"),
-        otlp_headers=dict(getattr(observed, "otlp_headers", {})),
-        insecure_transport=bool(getattr(observed, "otlp_insecure", True)),
-        instrumentations=instrumentation_tuple,
-        metrics_enabled=bool(getattr(observed, "track_ai_operations", False)),
-        console_exporter=bool(getattr(observed, "console_exporter", False)),
-        log_correlation=bool(
-            getattr(observed, "track_ai_operations", False)
-            or getattr(observed, "track_costs", False)
-        ),
-    )
-
-
 def _coerce_config(
     config: ObservabilityConfig | SettingsLike | None,
 ) -> ObservabilityConfig:
@@ -165,7 +84,7 @@ def _coerce_config(
     if isinstance(config, ObservabilityConfig):
         return config
     if isinstance(config, SettingsLike):
-        return _from_settings(config)
+        return ObservabilityConfig.from_settings(config)
     msg = f"Unsupported observability configuration type: {type(config)!r}"
     raise TypeError(msg)
 
@@ -252,7 +171,7 @@ def initialize_observability(
         trace.set_tracer_provider(tracer_provider)
         _STATE.tracer_provider = tracer_provider
 
-        if runtime_config.metrics_enabled:
+        if runtime_config.ai_operation_metrics_enabled:
             metric_reader = PeriodicExportingMetricReader(
                 OTLPMetricExporter(
                     endpoint=runtime_config.otlp_endpoint,

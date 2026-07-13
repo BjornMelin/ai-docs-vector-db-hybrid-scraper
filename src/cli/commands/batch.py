@@ -169,7 +169,13 @@ def batch():
     default=100,
     help="Number of documents to process in each batch",
 )
-@click.option("--parallel", type=int, default=3, help="Number of parallel workers")
+@click.option(
+    "--parallel",
+    "_parallel",
+    type=int,
+    default=3,
+    help="Number of parallel workers",
+)
 @click.option(
     "--dry-run",
     is_flag=True,
@@ -184,11 +190,7 @@ def index_documents(
     _parallel: int,
     dry_run: bool,
 ):
-    """Batch index documents into a collection.
-
-    Documents can be file paths, URLs, or directory paths.
-    Supports parallel processing for improved performance.
-    """
+    """Preview documents for a future batch indexing operation."""
     rich_cli = ctx.obj["rich_cli"]
 
     # Convert documents to list and validate
@@ -198,59 +200,10 @@ def index_documents(
         _show_indexing_preview(doc_list, collection_name, batch_size, rich_cli)
         return
 
-    # Confirm operation
-    if not Confirm.ask(f"Index {len(doc_list)} documents into '{collection_name}'?"):
-        rich_cli.console.print("[yellow]Indexing cancelled.[/yellow]")
-        return
-
-    try:
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            BarColumn(),
-            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-            TextColumn("({task.completed}/{task.total})"),
-            TimeRemainingColumn(),
-            console=console,
-        ) as progress:
-            main_task = progress.add_task("Indexing documents...", total=len(doc_list))
-
-            # Process documents in batches
-            for i in range(0, len(doc_list), batch_size):
-                batch = doc_list[i : i + batch_size]
-
-                progress.update(
-                    main_task, description=f"Processing batch {i // batch_size + 1}..."
-                )
-
-                # Process batch with parallel workers
-                # Note: Document indexing not implemented yet
-                rich_cli.console.print(
-                    "[yellow]Document indexing functionality will be "
-                    "implemented in a future update.[/yellow]"
-                )
-
-                # Update progress for all items in batch
-                for _ in batch:
-                    progress.advance(main_task)
-
-        success_text = Text()
-        success_text.append("Batch indexing completed.\n", style="bold green")
-        success_text.append(f"Documents indexed: {len(doc_list)}\n", style="cyan")
-        success_text.append(f"Collection: {collection_name}\n", style="blue")
-        success_text.append(f"Batch size: {batch_size}", style="dim")
-
-        panel = Panel(
-            success_text,
-            title="Indexing Complete",
-            title_align="left",
-            border_style="green",
-        )
-        rich_cli.console.print(panel)
-
-    except Exception as e:
-        rich_cli.show_error("Batch indexing failed", str(e))
-        raise click.Abort from e
+    raise click.ClickException(
+        "Document indexing is not implemented in the ai-docs CLI. "
+        "Use src.crawl4ai_bulk_embedder or the MCP ingestion tools."
+    )
 
 
 def _show_indexing_preview(
@@ -280,6 +233,29 @@ def _show_indexing_preview(
     rich_cli.console.print(panel)
 
 
+async def _create_collection(
+    db_manager: Any,
+    collection_name: str,
+    dimension: int,
+    distance: str,
+    *,
+    force: bool,
+) -> None:
+    """Create one collection, deleting an existing collection when forced."""
+    if (
+        force
+        and collection_name in await db_manager.list_collections()
+        and not await db_manager.delete_collection(collection_name)
+    ):
+        raise RuntimeError(f"Failed to delete collection {collection_name}")
+    if not await db_manager.create_collection(
+        collection_name,
+        dimension,
+        distance=distance,
+    ):
+        raise RuntimeError(f"Failed to create collection {collection_name}")
+
+
 # Document batch processing will be implemented in future update
 
 
@@ -294,7 +270,12 @@ def _show_indexing_preview(
     default="cosine",
     help="Distance metric for all collections",
 )
-@click.option("--force", is_flag=True, help="Recreate collections if they exist")
+@click.option(
+    "--force",
+    "_force",
+    is_flag=True,
+    help="Recreate collections if they exist",
+)
 @click.pass_context
 def create_collections(  # pylint: disable=too-many-locals
     ctx: click.Context, collections: tuple, dimension: int, distance: str, _force: bool
@@ -330,8 +311,16 @@ def create_collections(  # pylint: disable=too-many-locals
             operation = BatchOperation(
                 name=f"Create {collection_name}",
                 description=f"Create collection with {dimension}D vectors",
-                function=lambda name=collection_name, size=dimension: asyncio.run(
-                    db_manager.create_collection(name, size)
+                function=lambda name=collection_name,
+                size=dimension,
+                metric=distance: asyncio.run(
+                    _create_collection(
+                        db_manager,
+                        name,
+                        size,
+                        metric,
+                        force=_force,
+                    )
                 ),
             )
             queue.add(operation)
@@ -341,22 +330,20 @@ def create_collections(  # pylint: disable=too-many-locals
     finally:
         asyncio.run(db_manager.cleanup())
 
-    if success:
-        success_text = Text()
-        success_text.append(
-            "Batch collection creation completed.\n", style="bold green"
-        )
-        success_text.append(
-            f"Collections created: {len(collection_list)}", style="cyan"
-        )
+    if not success:
+        raise click.ClickException("One or more collections could not be created")
 
-        panel = Panel(
-            success_text,
-            title="Creation Complete",
-            title_align="left",
-            border_style="green",
-        )
-        rich_cli.console.print(panel)
+    success_text = Text()
+    success_text.append("Batch collection creation completed.\n", style="bold green")
+    success_text.append(f"Collections created: {len(collection_list)}", style="cyan")
+
+    panel = Panel(
+        success_text,
+        title="Creation Complete",
+        title_align="left",
+        border_style="green",
+    )
+    rich_cli.console.print(panel)
 
 
 @batch.command("delete-collections")

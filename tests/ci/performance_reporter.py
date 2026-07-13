@@ -96,9 +96,10 @@ class PerformanceReporter:
         )
         self.session_start_time: float | None = None
         self.session_end_time: float | None = None
-        self.report_path = Path(
-            config.getoption("--performance-report", default="test-performance.json")
+        report_path = config.getoption(
+            "--performance-report", default="test-performance.json"
         )
+        self.report_path = Path(str(report_path or "test-performance.json"))
         self._last_metrics_by_nodeid: dict[str, TestMetrics] = {}
 
         # Try to import psutil for memory monitoring

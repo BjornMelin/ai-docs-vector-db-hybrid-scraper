@@ -4,12 +4,6 @@ from __future__ import annotations
 
 import logging
 
-
-try:
-    from purgatory import AsyncInMemoryUnitOfWork
-except ModuleNotFoundError:  # pragma: no cover - optional dependency
-    AsyncInMemoryUnitOfWork = None  # type: ignore[assignment]
-
 from src.infrastructure.container import get_container
 from src.services.circuit_breaker import CircuitBreakerManager
 
@@ -22,16 +16,7 @@ _fallback_manager: CircuitBreakerManager | None = None
 def _build_fallback_manager() -> CircuitBreakerManager:
     global _fallback_manager  # pylint: disable=global-statement
     if _fallback_manager is None:
-        if AsyncInMemoryUnitOfWork is None:
-            raise RuntimeError(
-                "purgatory AsyncInMemoryUnitOfWork is unavailable; cannot "
-                "construct fallback circuit breaker manager."
-            )
-        _fallback_manager = CircuitBreakerManager(
-            redis_url="memory://local",
-            config=None,
-            unit_of_work=AsyncInMemoryUnitOfWork(),
-        )
+        _fallback_manager = CircuitBreakerManager.in_memory()
         logger.warning(
             "Using in-memory fallback circuit breaker manager until registry is "
             "available."

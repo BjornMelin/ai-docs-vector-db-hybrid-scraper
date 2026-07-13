@@ -4,7 +4,13 @@ A hybrid AI documentation scraping system combining Crawl4AI (bulk) + Firecrawl 
 (on-demand) with Qdrant vector database for Claude Desktop/Code integration.
 """
 
-__version__ = "0.1.0"
+from importlib.metadata import PackageNotFoundError, version
+
+
+try:
+    __version__ = version("ai-docs-vector-db-hybrid-scraper")
+except PackageNotFoundError:  # pragma: no cover - uninstalled source tree
+    __version__ = "0+unknown"
 __author__ = "BjornMelin"
 
 __all__ = [

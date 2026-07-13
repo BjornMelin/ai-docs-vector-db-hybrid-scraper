@@ -38,6 +38,7 @@ ENV/
 # Documentation and development files
 README.md
 *.md
+!README.md
 docs/
 documentation/
 CHANGELOG.md
@@ -49,14 +50,13 @@ ROADMAP.md
 tests/
 test_*
 *_test.py
-pytest.ini
 tox.ini
 .pytest_cache/
 
 # Docker files (excluding needed Dockerfiles)
 docker-compose*.yml
 Dockerfile*
-!Dockerfile.worker
+!Dockerfile
 
 # Logs and temporary files
 logs/

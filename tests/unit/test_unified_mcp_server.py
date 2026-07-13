@@ -6,6 +6,7 @@ import asyncio
 import os
 from collections.abc import Callable
 from types import SimpleNamespace
+from typing import Any, cast
 from unittest.mock import patch
 
 import pytest
@@ -84,7 +85,7 @@ def test_validate_configuration_passes_for_valid_config(
 
 
 @pytest.mark.parametrize(
-    "env_vars,expected_error_substrings,expected_warning_substrings",
+    "env_vars,expected_error_substrings",
     [
         pytest.param(
             {
@@ -92,26 +93,7 @@ def test_validate_configuration_passes_for_valid_config(
                 "FASTMCP_PORT": "not-a-number",
             },
             ["Invalid port value"],
-            [],
             id="invalid-port",
-        ),
-        pytest.param(
-            {
-                "FASTMCP_TRANSPORT": "streamable-http",
-                "FASTMCP_BUFFER_SIZE": "-1024",
-            },
-            [],
-            ["Buffer size"],
-            id="negative-buffer",
-        ),
-        pytest.param(
-            {
-                "FASTMCP_TRANSPORT": "streamable-http",
-                "FASTMCP_BUFFER_SIZE": "not-an-int",
-            },
-            ["Invalid buffer size"],
-            [],
-            id="non-integer-buffer",
         ),
         pytest.param(
             {
@@ -119,7 +101,6 @@ def test_validate_configuration_passes_for_valid_config(
                 "FASTMCP_MAX_RESPONSE_SIZE": "-2048",
             },
             ["Max response size must be positive"],
-            [],
             id="invalid-max-response",
         ),
     ],
@@ -127,36 +108,25 @@ def test_validate_configuration_passes_for_valid_config(
 def test_validate_streaming_config_records_issues(
     env_vars: dict[str, str],
     expected_error_substrings: list[str],
-    expected_warning_substrings: list[str],
 ) -> None:
-    """Streaming configuration issues should be recorded as errors or warnings."""
+    """Invalid streaming configuration should be recorded as errors."""
     errors: list[str] = []
-    warnings: list[str] = []
 
     with patch.dict(os.environ, env_vars, clear=True):
-        unified_mcp_server._validate_streaming_config(errors, warnings)
+        unified_mcp_server._validate_streaming_config(errors)
 
     for substring in expected_error_substrings:
         assert any(substring in error for error in errors)
-    for substring in expected_warning_substrings:
-        assert any(substring in warning for warning in warnings)
-
-    if not expected_error_substrings:
-        assert not errors
-    if not expected_warning_substrings:
-        assert not warnings
 
 
 def test_validate_streaming_config_skips_non_streamable_transport() -> None:
     """Alternate transports should bypass streaming validation entirely."""
     errors: list[str] = []
-    warnings: list[str] = []
 
     with patch.dict(os.environ, {"FASTMCP_TRANSPORT": "stdio"}, clear=True):
-        unified_mcp_server._validate_streaming_config(errors, warnings)
+        unified_mcp_server._validate_streaming_config(errors)
 
     assert not errors
-    assert not warnings
 
 
 class TestInitializeMonitoringSystem:
@@ -295,11 +265,11 @@ class TestSetupFastmcpMonitoring:
 
     def test_skips_when_system_metrics_disabled(self) -> None:
         """Should not register manager when include_system_metrics is False."""
-        server = object()
+        server = cast(Any, object())
         config = SimpleNamespace(
             monitoring=SimpleNamespace(include_system_metrics=False)
         )
-        health_manager = object()
+        health_manager = cast(Any, object())
 
         unified_mcp_server.setup_fastmcp_monitoring(server, config, health_manager)
 
@@ -307,11 +277,11 @@ class TestSetupFastmcpMonitoring:
 
     def test_registers_manager_when_system_metrics_enabled(self) -> None:
         """Should register health manager when include_system_metrics is True."""
-        server = object()
+        server = cast(Any, object())
         config = SimpleNamespace(
             monitoring=SimpleNamespace(include_system_metrics=True)
         )
-        health_manager = object()
+        health_manager = cast(Any, object())
 
         try:
             unified_mcp_server.setup_fastmcp_monitoring(server, config, health_manager)

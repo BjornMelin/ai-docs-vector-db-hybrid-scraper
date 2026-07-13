@@ -7,7 +7,7 @@ contributing to our research-backed advanced documentation scraping system.
 
 ### Prerequisites
 
-- **Python 3.13+** with `uv` package manager
+- **Python 3.11** with the `uv` package manager
 - **Docker Desktop** for local development
 - **Git** for version control
 - **Node.js 18+** for MCP server testing
@@ -17,7 +17,7 @@ contributing to our research-backed advanced documentation scraping system.
 1. **Fork and Clone**
 
    ```bash
-   git clone https://github.com/YOUR_USERNAME/ai-docs-vector-db-hybrid-scraper.git
+   git clone https://github.com/your_github_username/ai-docs-vector-db-hybrid-scraper.git
    cd ai-docs-vector-db-hybrid-scraper
    ```
 
@@ -27,11 +27,11 @@ contributing to our research-backed advanced documentation scraping system.
    # Install uv if not already available
    curl -LsSf https://astral.sh/uv/install.sh | sh
 
-   # Run setup script
-   chmod +x setup.sh
-   ./setup.sh
+   # Install the supported Python and locked development environment
+   uv python install 3.11
+   uv sync --dev --frozen
 
-   # Create development environment
+   # Create local configuration
    cp .env.example .env
    # Edit .env with your API keys
    ```
@@ -40,10 +40,10 @@ contributing to our research-backed advanced documentation scraping system.
 
    ```bash
    # Start Qdrant database
-   docker-compose up -d
+   docker compose --profile simple up -d qdrant
 
    # Verify setup
-   curl http://localhost:6333/health
+   docker compose ps qdrant
    ```
 
 ## 🛠️ Development Guidelines
@@ -56,11 +56,11 @@ We follow **modern best practices** for clean, maintainable code:
 
 ```bash
 # Format and lint all code before committing
-ruff check . --fix
-ruff format .
+uv run ruff check . --fix
+uv run ruff format .
 
 # Type checking
-uv run mypy src/
+uv run pyright
 
 # Run tests with coverage (CI profile)
 uv run python scripts/dev.py test --profile ci
@@ -70,7 +70,7 @@ uv run python scripts/dev.py test --profile ci
 
 - **Type Hints**: All functions must have complete type annotations
 - **Docstrings**: Follow Google-style docstrings for all public functions
-- **Testing**: Maintain >=90% test coverage (threshold enforced in CI; run `uv run python scripts/dev.py test --profile ci` locally when needed)
+- **Testing**: Maintain at least 70% coverage (enforced in `pyproject.toml`; run `uv run python scripts/dev.py test --profile ci` locally)
 - **Performance**: Follow advanced performance patterns
 
 #### Example Code Structure
@@ -141,7 +141,7 @@ change: code
 1. **Create Feature Branch**
 
    ```bash
-   git checkout -b feat/your-feature-name
+   git switch -c feat/your-feature-name
    git push -u origin feat/your-feature-name
    ```
 
@@ -159,11 +159,11 @@ change: code
    uv run python scripts/dev.py test --profile ci
 
    # Code quality checks
-   ruff check . --fix
-   ruff format .
+   uv run ruff check . --fix
+   uv run ruff format .
 
    # Type checking
-   uv run mypy src/
+   uv run pyright
 
    # Documentation build test
    uv run mkdocs build -f docs/build_config/mkdocs.yml
@@ -175,25 +175,13 @@ change: code
    - Include testing information
    - Add screenshots for UI changes
 
-### GitHub Actions Workflows
+### GitHub Actions workflows
 
-- The **Core CI** workflow (`core-ci.yml`) runs automatically on every pull
-  request and must pass before a merge.
-- The **Documentation Checks** workflow triggers when Markdown or docs assets
-  change.
-
-Two additional workflows are available on demand when you need deeper
-validation:
-
-| Workflow                                                  | How to run                                                                                                                                                                                                                                        | Inputs                                                                  |
-| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| **Security Scan (On-Demand)**<br>`security-opt-in.yml`    | 1. Open the **Actions** tab → **Security Scan (On-Demand)**.<br>2. Click **Run workflow** and pick your branch.<br>3. Toggle the optional inputs as needed.<br>4. Review the uploaded artifacts (`dependency-security-reports`, `bandit-report`). | `include_bandit` (default `true`)<br>`include_safety` (default `true`)  |
-| **Extended Tests (On-Demand)**<br>`regression-opt-in.yml` | 1. Navigate to **Actions** → **Extended Tests (On-Demand)**.<br>2. Choose your branch and press **Run workflow**.<br>3. Enable benchmark execution if required.<br>4. Inspect artifacts (`regression-coverage`, `benchmark-results`).             | `run_full_tests` (default `true`)<br>`run_benchmarks` (default `false`) |
-
-Both workflows also trigger automatically on pull requests when their path
-filters match (e.g., dependency manifest or test suite changes). Use them before
-merging riskier updates to keep the default CI experience fast while still
-gaining full security and regression coverage when it matters.
+`ci.yml` runs the ordinary lint, type, test, and package gates for every pull
+request. `docs.yml` validates documentation changes, while
+`regression-opt-in.yml` exposes the longer regression and benchmark profiles on
+manual dispatch. See `docs/developers/platform-operations.md` for the current
+workflow inventory and release behavior.
 
 ## 🧪 Testing Guidelines
 
@@ -387,7 +375,7 @@ Clear and concise description of the bug.
 ## Environment
 
 - OS: [e.g., Ubuntu 22.04, Windows 11, macOS 14]
-- Python Version: [e.g., 3.13.1]
+- Python Version: [e.g., 3.11.13]
 - Package Versions: [output of `uv pip list`]
 - Docker Version: [if applicable]
 

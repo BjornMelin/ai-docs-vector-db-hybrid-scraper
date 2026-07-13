@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import json
+from contextvars import ContextVar
 from pathlib import Path
 from typing import Any
 
@@ -15,9 +16,13 @@ from pydantic import (  # pyright: ignore[reportMissingImports]
 )
 from pydantic_settings import (  # pyright: ignore[reportMissingImports]
     BaseSettings,
+    JsonConfigSettingsSource,
+    PydanticBaseSettingsSource,
     SettingsConfigDict,
+    SettingsError,
 )
 
+from src import __version__
 from src.config.browser import BrowserAutomationConfig
 
 from .models import (
@@ -48,6 +53,38 @@ from .models import (
     SearchStrategy,
 )
 from .security.config import SecurityConfig
+from .template_utils import merge_overrides
+
+
+_ACTIVE_CONFIG_PATH = Path("config.json")
+_ACTIVATED_CONFIG_ENABLED: ContextVar[bool] = ContextVar(
+    "activated_config_enabled", default=True
+)
+
+
+class ActivatedConfigSettingsSource(JsonConfigSettingsSource):
+    """Load and strictly validate the profile activated in ``config.json``."""
+
+    def _read_file(self, file_path: Path) -> dict[str, Any]:
+        """Return the activated configuration after canonical field validation."""
+        if not _ACTIVATED_CONFIG_ENABLED.get():
+            return {}
+        try:
+            payload = super()._read_file(file_path)
+        except json.JSONDecodeError as exc:
+            msg = f"Invalid activated configuration {file_path}: {exc}"
+            raise SettingsError(msg) from exc
+
+        if not isinstance(payload, dict):
+            msg = f"Activated configuration {file_path} must contain a JSON object."
+            raise SettingsError(msg)
+
+        unknown_paths = _unknown_setting_paths(payload)
+        if unknown_paths:
+            paths = ", ".join(unknown_paths)
+            msg = f"Unsupported activated configuration field(s): {paths}"
+            raise SettingsError(msg)
+        return payload
 
 
 class Settings(BaseSettings):
@@ -69,16 +106,13 @@ class Settings(BaseSettings):
     app_name: str = Field(
         default="AI Documentation Vector DB", description="Application name"
     )
-    version: str = Field(default="1.0.0", description="Application version")
+    version: str = Field(default=__version__, description="Application version")
     mode: str = Field(default="production", description="Deployment mode label")
     environment: Environment = Field(
         default=Environment.DEVELOPMENT, description="Deployment environment"
     )
     debug: bool = Field(default=False, description="Enable debug features")
     log_level: LogLevel = Field(default=LogLevel.INFO, description="Log level")
-    enable_advanced_monitoring: bool = Field(
-        default=True, description="Enable advanced monitoring features"
-    )
 
     # Paths
     data_dir: Path = Field(default=Path("data"), description="Data directory")
@@ -161,9 +195,38 @@ class Settings(BaseSettings):
         default_factory=list, description="Documentation sites to crawl"
     )
 
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        """Define precedence: init, environment, .env, activated file, defaults."""
+        return (
+            init_settings,
+            env_settings,
+            dotenv_settings,
+            ActivatedConfigSettingsSource(
+                settings_cls,
+                json_file=_ACTIVE_CONFIG_PATH,
+                json_file_encoding="utf-8",
+            ),
+            file_secret_settings,
+        )
+
     @model_validator(mode="after")
     def validate_provider_keys(self) -> Settings:
         """Validate that provider API keys are configured when required."""
+        if (
+            self.embedding.retrieval_mode
+            in {SearchStrategy.SPARSE, SearchStrategy.HYBRID}
+            and not self.fastembed.sparse_model
+        ):
+            msg = "Sparse or hybrid retrieval requires fastembed.sparse_model"
+            raise ValueError(msg)
         if self.environment == Environment.TESTING:
             return self
         openai_api_key = getattr(self.openai, "api_key", None)
@@ -192,18 +255,100 @@ class Settings(BaseSettings):
 
     def get_effective_search_strategy(self) -> SearchStrategy:
         """Return the configured search strategy."""
-        if hasattr(self.embedding, "retrieval_mode"):
-            return self.embedding.retrieval_mode
-        return SearchStrategy.DENSE
+        return self.embedding.retrieval_mode
 
     def get_feature_flags(self) -> dict[str, bool]:
         """Return the active feature flags for the unified application."""
         return {
-            "advanced_monitoring": self.enable_advanced_monitoring,
             "comprehensive_observability": bool(
                 getattr(self.observability, "enabled", False)
             ),
         }
+
+
+def _resolve_schema(
+    schema: dict[str, Any], definitions: dict[str, Any]
+) -> dict[str, Any]:
+    """Resolve a local JSON Schema reference."""
+    reference = schema.get("$ref")
+    if not isinstance(reference, str):
+        return schema
+    resolved = definitions.get(reference.rsplit("/", maxsplit=1)[-1], {})
+    return {
+        **resolved,
+        **{key: value for key, value in schema.items() if key != "$ref"},
+    }
+
+
+def _find_unknown_setting_paths(
+    value: Any,
+    schema: dict[str, Any],
+    definitions: dict[str, Any],
+    path: tuple[str, ...] = (),
+) -> list[str]:
+    """Return configuration paths that are absent from the Settings schema."""
+    schema = _resolve_schema(schema, definitions)
+
+    alternatives = schema.get("anyOf") or schema.get("oneOf")
+    if isinstance(alternatives, list):
+        for alternative in alternatives:
+            resolved = _resolve_schema(alternative, definitions)
+            if isinstance(value, dict) and (
+                resolved.get("type") == "object" or "properties" in resolved
+            ):
+                return _find_unknown_setting_paths(value, resolved, definitions, path)
+            if isinstance(value, list) and resolved.get("type") == "array":
+                return _find_unknown_setting_paths(value, resolved, definitions, path)
+        return []
+
+    if isinstance(value, dict):
+        properties = schema.get("properties")
+        additional = schema.get("additionalProperties")
+        if isinstance(properties, dict):
+            unknown: list[str] = []
+            for key, item in value.items():
+                child_path = (*path, str(key))
+                child_schema = properties.get(key)
+                if isinstance(child_schema, dict):
+                    unknown.extend(
+                        _find_unknown_setting_paths(
+                            item, child_schema, definitions, child_path
+                        )
+                    )
+                elif isinstance(additional, dict):
+                    unknown.extend(
+                        _find_unknown_setting_paths(
+                            item, additional, definitions, child_path
+                        )
+                    )
+                else:
+                    unknown.append(".".join(child_path))
+            return unknown
+        if isinstance(additional, dict):
+            return [
+                unknown
+                for key, item in value.items()
+                for unknown in _find_unknown_setting_paths(
+                    item, additional, definitions, (*path, str(key))
+                )
+            ]
+
+    if isinstance(value, list) and isinstance(schema.get("items"), dict):
+        return [
+            unknown
+            for index, item in enumerate(value)
+            for unknown in _find_unknown_setting_paths(
+                item, schema["items"], definitions, (*path, str(index))
+            )
+        ]
+
+    return []
+
+
+def _unknown_setting_paths(payload: dict[str, Any]) -> list[str]:
+    """Validate payload keys without tightening mixed runtime environments."""
+    schema = Settings.model_json_schema()
+    return _find_unknown_setting_paths(payload, schema, schema.get("$defs", {}))
 
 
 def ensure_runtime_directories(settings: Settings) -> None:
@@ -262,17 +407,21 @@ def validate_settings_payload(
     payload: dict[str, Any], *, base: dict[str, Any] | None = None
 ) -> tuple[bool, list[str], Settings | None]:
     """Validate configuration data using the Settings model."""
-    merged: dict[str, Any] = {
-        "environment": Environment.DEVELOPMENT,
-        "debug": False,
-        "log_level": LogLevel.INFO,
-    }
+    merged = Settings.model_construct().model_dump(mode="python")
     if base:
-        merged.update(base)
-    merged.update(payload)
+        merged = merge_overrides(merged, base)
+    merged = merge_overrides(merged, payload)
+
+    unknown_paths = _unknown_setting_paths(merged)
+    if unknown_paths:
+        return (
+            False,
+            [f"{path}: Extra inputs are not permitted" for path in unknown_paths],
+            None,
+        )
 
     try:
-        settings = load_settings(**merged)
+        settings = Settings(**merged)
     except ValidationError as exc:
         errors = []
         for error in exc.errors():
@@ -305,7 +454,10 @@ def load_settings_from_file(path: Path) -> Settings:
                     "Loading YAML configurations requires PyYAML. "
                     "Install with `pip install pyyaml`."
                 ) from exc
-            payload = yaml.safe_load(text)
+            try:
+                payload = yaml.safe_load(text)
+            except yaml.YAMLError as exc:
+                raise ValueError(f"Invalid YAML: {exc}") from exc
         else:
             msg = f"Unsupported configuration file format: {path.suffix}"
             raise ValueError(msg)
@@ -316,7 +468,16 @@ def load_settings_from_file(path: Path) -> Settings:
         msg = "Configuration file must define a JSON/YAML object"
         raise TypeError(msg)
 
-    return load_settings(**payload)
+    unknown_paths = _unknown_setting_paths(payload)
+    if unknown_paths:
+        paths = ", ".join(unknown_paths)
+        raise ValueError(f"Unsupported configuration field(s): {paths}")
+
+    token = _ACTIVATED_CONFIG_ENABLED.set(False)
+    try:
+        return load_settings(**payload)
+    finally:
+        _ACTIVATED_CONFIG_ENABLED.reset(token)
 
 
 __all__ = [

@@ -36,18 +36,17 @@ def test_build_plan_defaults_to_release_workflow() -> None:
     assert any(command.startswith("git tag") for command in plan.formatted_commands())
 
 
-def test_build_plan_honours_environment_override(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Environment overrides should select the requested strategy."""
-    manager, _ = _settings_for(DeploymentConfig())
-
-    monkeypatch.setenv("AI_DOCS_DEPLOYMENT_STRATEGY", "docker_compose")
+def test_build_plan_honours_configured_default() -> None:
+    """Configured defaults should select the requested strategy."""
+    manager, _ = _settings_for(
+        DeploymentConfig(default_strategy=DeploymentStrategy.DOCKER_COMPOSE)
+    )
 
     plan = manager.build_plan()
 
     assert plan.strategy is DeploymentStrategy.DOCKER_COMPOSE
     assert "docker compose" in plan.formatted_commands()[0]
+    assert "--profile enterprise" in plan.formatted_commands()[0]
 
 
 def test_disabled_strategy_raises() -> None:

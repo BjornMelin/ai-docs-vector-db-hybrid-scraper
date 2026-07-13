@@ -1,6 +1,6 @@
 # AI Documentation Vector Database Hybrid Scraper
 
-![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)
+![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)
 ![Vector DB: Qdrant](https://img.shields.io/badge/vector%20db-Qdrant-f24e1e.svg)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)
 
@@ -106,7 +106,7 @@ flowchart LR
     crawl --> crawl4ai["Crawl4AI"]
     crawl --> browseruse["browser-use / Playwright"]
     embed --> openai["OpenAI"]
-    embed --> fastembed["FastEmbed / FlagEmbedding"]
+    embed --> fastembed["FastEmbed / optional FlagEmbedding"]
     search --> qdrant
     processing --> redis
     api --> metrics
@@ -204,10 +204,9 @@ store = QdrantVectorStore.from_documents(
 )
 ```
 
-Toggle dense-only, sparse-only, or hybrid retrieval by setting
-`EmbeddingConfig.retrieval_mode` (and the equivalent CLI/MCP options). Hybrid mode
-persists both vector modalities and enables Qdrant's sparse+dense scoring during
-search.[^qdrant-hybrid]
+Toggle dense-only, sparse-only, or hybrid retrieval before startup with
+`AI_DOCS_EMBEDDING__RETRIEVAL_MODE`. Hybrid mode persists both vector modalities
+and enables Qdrant's sparse+dense scoring during search.[^qdrant-hybrid]
 
 ### Vector Search & Retrieval
 
@@ -244,7 +243,7 @@ search.[^qdrant-hybrid]
   `docs/operators/monitoring.md` for configuration details.
 - Health probes for system resources, Qdrant, Redis, RAG configuration, and application metadata are centrally coordinated by the `HealthCheckManager` (`src/services/observability/health_manager.py`), ensuring MCP tools and FastAPI dependencies share the same health state.
 - A single `GET /health` endpoint on the FastAPI and FastMCP servers reports the aggregated system status; per-service health endpoints have been removed.
-- Optional Dragonfly cache, PostgreSQL, ARQ workers, and Grafana dashboards are provisioned via `docker-compose.yml` profiles.
+- Optional Dragonfly cache, PostgreSQL, Prometheus, and Grafana services are provisioned via `docker-compose.yml` profiles.
 - Structured logging and SlowAPI-based rate limiting are configured through the middleware manager (`src/services/fastapi/middleware/manager.py`) and security helpers (`src/services/fastapi/middleware/security.py`).
 
 #### AI Telemetry Quickstart
@@ -301,50 +300,56 @@ search.[^qdrant-hybrid]
 - FastAPI and MCP flows use the shared validator via dependency helpers, ensuring a single source of truth for sanitization and auditing logic.
 - Rate limiting defaults (`default_rate_limit`, `rate_limit_window`, optional Redis storage) are controlled through `SecurityConfig` and applied via the global SlowAPI limiter.
 
-## Quick Start
+## Run locally
 
 ### Prerequisites
 
-- Python 3.11 (or 3.12) and [uv](https://github.com/astral-sh/uv) for dependency management.
+- Python 3.11 and [uv](https://github.com/astral-sh/uv) for dependency management.
 - A running Qdrant instance (local Docker welcome: `docker compose --profile simple up -d qdrant`).
-- API keys for the providers you plan to use (e.g., `OPENAI_API_KEY`, `AI_DOCS__FIRECRAWL__API_KEY`).
+- API keys only for providers you enable.
 
 ### Environment variables
 
 | Variable | Purpose | Example |
 | --- | --- | --- |
-| `AI_DOCS__QDRANT__URL` | Points services at your Qdrant instance. | `http://localhost:6333` |
-| `OPENAI_API_KEY` | Enables OpenAI embeddings and HyDE prompts. | `sk-...` |
-| `AI_DOCS__FIRECRAWL__API_KEY` | Authenticates Firecrawl API usage. | `fc-...` |
-| `AI_DOCS__CACHE__REDIS_URL` | Enables Dragonfly/Redis caching layers. | `redis://localhost:6379` |
-| `AI_DOCS__ENABLE_ADVANCED_MONITORING` | Toggles advanced monitoring dashboards. | `true` |
-| `AI_DOCS__ENABLE_DEPLOYMENT_FEATURES` | Enables deployment automation endpoints. | `true` |
-| `AI_DOCS__ENABLE_AB_TESTING` | Enables experimentation helpers. | `false` |
+| `AI_DOCS_QDRANT__URL` | Points services at your Qdrant instance. | `http://localhost:6333` |
+| `AI_DOCS_OPENAI__API_KEY` | Enables OpenAI embeddings and HyDE prompts. | `your_openai_api_key_here` |
+| `AI_DOCS_BROWSER__FIRECRAWL__API_KEY` | Authenticates Firecrawl API usage. | `your_firecrawl_api_key_here` |
+| `AI_DOCS_CACHE__DRAGONFLY_URL` | Points distributed caching at Dragonfly. | `redis://localhost:6379` |
 | `FASTMCP_TRANSPORT` | Chooses MCP transport (`streamable-http` or `stdio`). | `streamable-http` |
-| `FASTMCP_HOST` / `FASTMCP_PORT` | Hostname and port for MCP HTTP transport. | `0.0.0.0` / `8001` |
-| `FASTMCP_BUFFER_SIZE` | Tunes MCP stream buffer size (bytes). | `8192` |
+| `FASTMCP_HOST` / `FASTMCP_PORT` | Hostname and port for MCP HTTP transport. | `127.0.0.1` / `8000` |
 
 Store secrets in a `.env` file or your secrets manager and export them before
 running the services.
 
-### Clone & Install
+### Clone and install
 
 ```bash
 git clone https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper
 cd ai-docs-vector-db-hybrid-scraper
-uv sync --dev
+uv sync --dev --frozen
 ```
+
+The runtime image excludes Crawl4AI's transformer stack, BGE reranking, and the
+agent-driven browser stack. The development group already includes `browser-use`
+for adapter contract tests. Install the optional BGE reranker only when enabled:
+
+```bash
+uv sync --dev --frozen --extra reranking
+```
+
+Set `AI_DOCS_RERANKING__ENABLED=true` after installing the reranking extra.
+For a non-development installation that enables the `browser_use` provider, use
+`uv sync --frozen --no-dev --extra agentic-browser`.
 
 ### Run the FastAPI application
 
 ```bash
-# Ensure Qdrant is reachable at http://localhost:6333
-export OPENAI_API_KEY="sk-..."                 # optional if using OpenAI
-export AI_DOCS__FIRECRAWL__API_KEY="fc-..."    # optional but recommended
-uv run python -m src.api.main
+docker compose --profile simple up -d qdrant
+uv run uvicorn src.api.main:app --host 127.0.0.1 --port 8000
 ```
 
-Visit `http://localhost:8000/docs` for interactive OpenAPI docs. Feature flags such as `AI_DOCS__ENABLE_ADVANCED_MONITORING=true` adjust optional services without switching application modes.
+Visit `http://localhost:8000/docs` for interactive OpenAPI docs.
 
 ### Search API payloads
 
@@ -384,21 +389,22 @@ Responses are emitted as [`SearchResponse`](src/contracts/retrieval.py) payloads
 ### Run the MCP server
 
 ```bash
-uv run python src/unified_mcp_server.py
+FASTMCP_TRANSPORT=streamable-http FASTMCP_PORT=8001 \
+  uv run python src/unified_mcp_server.py
 ```
 
-The server validates configuration on startup and registers the available MCP tools. Configure Claude Desktop / Code with the generated transport details (see `config/claude-mcp-config.example.json`).
+The server validates configuration on startup and registers the available MCP tools at `http://127.0.0.1:8001/mcp`. The checked-in Claude Desktop configuration uses stdio instead:
+
 1. Copy `config/claude-mcp-config.example.json` to your Claude settings directory
    and update the `command` field if you use a virtual environment wrapper.
-2. If you prefer HTTP transport, export `FASTMCP_TRANSPORT=streamable-http` and
-   set `FASTMCP_HOST`/`FASTMCP_PORT` to match the values referenced in the
-   Claude config.
-3. Restart Claude Desktop / Code so it reloads the MCP manifest and tool list.
+2. Replace its `cwd` value with the absolute repository path.
+3. Add canonical `AI_DOCS_*` provider settings only when you enable those providers.
+4. Restart Claude Desktop / Code so it reloads the MCP manifest and tool list.
 
 ### Bulk ingestion CLI
 
 ```bash
-uv run python src/crawl4ai_bulk_embedder.py --help
+uv run python -m src.crawl4ai_bulk_embedder --help
 ```
 
 Use CSV/JSON/TXT URL lists to scrape, chunk, embed, and upsert into Qdrant with resumable checkpoints.
@@ -406,30 +412,30 @@ Use CSV/JSON/TXT URL lists to scrape, chunk, embed, and upsert into Qdrant with 
 ### Docker Compose
 
 - Simple profile (API + Qdrant): `docker compose --profile simple up -d`
-- Enterprise profile (adds Dragonfly, PostgreSQL, worker, Prometheus, Grafana): `docker compose --profile enterprise up -d`
+- Enterprise profile (adds Dragonfly, PostgreSQL, Prometheus, and Grafana): `docker compose --profile enterprise up -d`
 
 Stop with `docker compose down` when finished.
 
 ## Configuration
 
-- Configuration is defined with Pydantic models in `src/config/models.py` and can be overridden via environment variables (`AI_DOCS__*`) or YAML files in `config/templates/`.
-- Mode-aware settings enable or disable services such as advanced caching, A/B testing, and observability.
+- Configuration is defined with Pydantic models in `src/config/models.py`; explicit constructor values and environment variables override `.env`, activated `config.json`, and model defaults in that order.
+- Typed settings control providers, retrieval, caching, and observability.
 - Detailed configuration guidance lives in `docs/developers/setup-and-configuration.md` and operator runbooks under `docs/operators/`.
 
 ## Testing & Quality
 
 ```bash
-# Quick unit + fast integration tests
-python scripts/dev.py test --profile quick
+# Unit and focused integration tests
+uv run python scripts/dev.py test --profile quick
 
 # Full suite with coverage (mirrors CI)
-python scripts/dev.py test --profile ci
+uv run python scripts/dev.py test --profile ci
 
-# Lint, format, type-check, and tests in one pass
-python scripts/dev.py quality
+# Format, lint, and type-check
+uv run python scripts/dev.py quality
 ```
 
-Performance and benchmark suites are available via `python scripts/dev.py benchmark`, load tests run through `python scripts/dev.py load --host http://localhost:8000`, and chaos-focused stress suites live under `tests/` with dedicated markers.
+Performance and benchmark suites are available via `uv run python scripts/dev.py benchmark`, load tests run through `uv run python scripts/dev.py load --host http://localhost:8000`, and chaos-focused stress suites live under `tests/` with dedicated markers.
 
 ## Documentation & Resources
 

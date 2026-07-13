@@ -115,7 +115,9 @@ async def test_create_collection_builds_schema(
     """create_collection should construct the schema and invoke ensure_collection."""
     manager = manager_setup.manager
 
-    result = await manager.create_collection("analytics", vector_size=256)
+    result = await manager.create_collection(
+        "analytics", vector_size=256, distance="dot"
+    )
 
     assert result is True
     manager_setup.vector_service.ensure_collection.assert_awaited_once()
@@ -124,6 +126,7 @@ async def test_create_collection_builds_schema(
     )
     assert schema.name == "analytics"
     assert schema.vector_size == 256
+    assert schema.distance == "dot"
 
 
 @pytest.mark.asyncio

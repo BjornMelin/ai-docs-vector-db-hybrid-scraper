@@ -106,9 +106,8 @@ overlap, token-aware limits, and HTML normalisation. The resulting LangChain
 relies on LangChain's `QdrantVectorStore` to persist them. FastEmbed dense and
 sparse embeddings (`FastEmbedEmbeddings` + `FastEmbedSparse`) are initialised
 once and reused across API, CLI, and MCP entry points, enabling hybrid search
-when `EmbeddingConfig.retrieval_mode` (or CLI/MCP overrides) is set to
-`hybrid`. Qdrant's sparse + dense scoring is then applied transparently during
-retrieval.
+when `EmbeddingConfig.retrieval_mode` is set to `hybrid` before startup.
+Qdrant's sparse + dense scoring is then applied transparently during retrieval.
 
 ## 2. LangChain / LangGraph Orchestration
 
@@ -193,10 +192,10 @@ single helper (like Redis) is required.
 
 ### Compatibility Tracking
 
-Key library pins (FastEmbed, Qdrant client, LangChain packages) are summarised in
-`docs/developers/compatibility-matrix.md`. Validate updates with the contract
-suite, RAG regression harness, and performance benchmarks before widening
-version ranges.
+Supported library ranges (FastEmbed, Qdrant client, and LangChain packages) are
+declared in `pyproject.toml`; exact installations are resolved in `uv.lock`.
+Validate updates with the contract suite, RAG regression harness, and
+performance benchmarks before widening version ranges.
 
 ## 5. Related Docs
 

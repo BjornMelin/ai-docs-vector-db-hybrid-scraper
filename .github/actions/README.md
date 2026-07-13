@@ -9,7 +9,7 @@ Sets up Python and [`uv`](https://github.com/astral-sh/uv) with caching so
 workflows can immediately run quality gates or tests.
 
 ### Inputs
-- `python-version` (optional): Python version to install. Defaults to `3.12`.
+- `python-version` (optional): Python version to install. Defaults to `3.11`.
 - `cache-suffix` (optional): Extra entropy for the dependency cache key. Use it
   to bust the cache after dependency changes.
 - `install-dev` (optional): When `true` (default) installs development
@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - uses: ./.github/actions/setup-environment
         with:
-          python-version: '3.12'
+          python-version: '3.11'
       - run: |
           set -euo pipefail
           uv run ruff check .
@@ -40,8 +40,8 @@ consistent wiring so workflows do not have to duplicate argument handling.
 ### Inputs
 - `config-root` (optional): Directory containing configuration assets. Defaults
   to `config`.
-- `templates-dir` (optional): Directory containing environment templates.
-  Defaults to `config/templates`.
+- `templates-dir` (optional): Directory containing template fixtures. When
+  omitted, validation uses the templates distributed with the package.
 - `environment` (optional): Preferred environment template. Leave blank to
   validate every template.
 

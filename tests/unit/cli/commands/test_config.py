@@ -4,6 +4,7 @@ This module tests configuration management commands including validation,
 display, export, and load functionality with Rich console output.
 """
 
+import json
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -15,6 +16,7 @@ from src.cli.commands.config import (
     _show_config_yaml,
     config,
 )
+from src.config.loader import Settings, load_settings_from_file
 
 
 # Fixture paths
@@ -106,6 +108,13 @@ class TestValidateCommand:
         assert result.exit_code == 0
         assert "Configuration is valid" in result.output
 
+    def test_validate_command_returns_nonzero_for_invalid_context(self, cli_runner):
+        """Validation failures should be visible to shell automation."""
+        result = cli_runner.invoke(config, ["validate"], obj={"config": object()})
+
+        assert result.exit_code == 1
+        assert "Configuration validation failed" in result.output
+
 
 class TestExportCommand:
     """Test the export configuration command."""
@@ -116,6 +125,44 @@ class TestExportCommand:
 
         assert result.exit_code == 0
         assert "Export configuration to file" in result.output
+
+    def test_json_export_round_trips_settings(self, cli_runner, tmp_path: Path):
+        """JSON exports should contain only reloadable JSON values."""
+        output_path = tmp_path / "config.json"
+        result = cli_runner.invoke(
+            config,
+            ["export", "--format", "json", "--output", str(output_path)],
+            obj={"config": Settings.model_construct()},
+        )
+
+        assert result.exit_code == 0
+        assert json.loads(output_path.read_text(encoding="utf-8"))["data_dir"] == "data"
+        assert load_settings_from_file(output_path).data_dir == Path("data")
+
+    def test_yaml_export_round_trips_settings(self, cli_runner, tmp_path: Path):
+        """YAML exports should avoid Python tags and reload as settings."""
+        pytest.importorskip("yaml")
+        output_path = tmp_path / "config.yaml"
+        result = cli_runner.invoke(
+            config,
+            ["export", "--format", "yaml", "--output", str(output_path)],
+            obj={"config": Settings.model_construct()},
+        )
+
+        assert result.exit_code == 0
+        assert "!!python" not in output_path.read_text(encoding="utf-8")
+        assert load_settings_from_file(output_path).data_dir == Path("data")
+
+    def test_export_failure_returns_nonzero(self, cli_runner, tmp_path: Path):
+        """Filesystem export errors should fail the command."""
+        result = cli_runner.invoke(
+            config,
+            ["export", "--output", str(tmp_path)],
+            obj={"config": Settings.model_construct()},
+        )
+
+        assert result.exit_code == 1
+        assert "Export failed" in result.output
 
 
 class TestLoadCommand:
@@ -171,6 +218,41 @@ class TestLoadCommand:
         )
         assert result.exit_code == 0
 
+    def test_load_invalid_file_returns_nonzero(self, cli_runner, tmp_path: Path):
+        """Invalid files should not appear valid to shell automation."""
+        config_path = tmp_path / "invalid.json"
+        config_path.write_text("{", encoding="utf-8")
+
+        result = cli_runner.invoke(
+            config,
+            ["load", str(config_path), "--validate-only"],
+            obj={"config": None},
+        )
+
+        assert result.exit_code == 1
+        assert "Failed to load configuration" in result.output
+
+    def test_load_invalid_yaml_returns_click_error(
+        self, cli_runner, tmp_path: Path
+    ) -> None:
+        """Malformed YAML should fail cleanly without leaking a parser traceback."""
+        pytest.importorskip("yaml")
+        config_path = tmp_path / "invalid.yaml"
+        config_path.write_text("qdrant: [\n", encoding="utf-8")
+
+        result = cli_runner.invoke(
+            config,
+            ["load", str(config_path), "--validate-only"],
+            obj={"config": None},
+        )
+
+        assert result.exit_code == 1
+        assert (
+            "Failed to load configuration: Invalid configuration file" in result.output
+        )
+        assert "Invalid YAML" in result.output
+        assert "Traceback" not in result.output
+
 
 class TestConfigDisplayHelpers:
     """Test configuration display helper functions."""
@@ -196,6 +278,7 @@ class TestConfigDisplayHelpers:
 
         # This should not raise an exception
         _show_config_json(mock_config)
+        mock_config.model_dump.assert_called_once_with(mode="json")
 
     def test_show_config_yaml_function(self):
         """Test _show_config_yaml function."""
@@ -204,3 +287,4 @@ class TestConfigDisplayHelpers:
 
         # This should not raise an exception
         _show_config_yaml(mock_config)
+        mock_config.model_dump.assert_called_once_with(mode="json")

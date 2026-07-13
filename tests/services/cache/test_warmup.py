@@ -7,45 +7,70 @@ from typing import Any, cast
 
 import pytest
 
-from src.config.models import EmbeddingModel, EmbeddingProvider
+from src.config.models import EmbeddingProvider
 from src.services.cache.manager import CacheManager
 from src.services.cache.warmup import warm_caches
 from src.services.embeddings.manager import EmbeddingManager
 
 
-class _StubEmbeddingConfig:
-    """Minimal embedding config exposed to warmup logic."""
+class _StubOpenAIConfig:
+    """Minimal OpenAI config exposed to warmup logic."""
 
-    provider: EmbeddingProvider = EmbeddingProvider.OPENAI
-    dense_model: EmbeddingModel = EmbeddingModel.TEXT_EMBEDDING_3_SMALL
+    model = "configured-openai-model"
+
+
+class _StubFastEmbedConfig:
+    """Minimal FastEmbed config exposed to warmup logic."""
+
+    dense_model = "configured-fastembed-model"
 
 
 class _StubSettings:
     """Container exposing embedding metadata for the stub manager."""
 
-    embedding = _StubEmbeddingConfig()
+    def __init__(self, provider: EmbeddingProvider) -> None:
+        self.embedding_provider = provider
+        self.openai = _StubOpenAIConfig()
+        self.fastembed = _StubFastEmbedConfig()
 
 
 class _StubEmbeddingManager:
     """Embedding manager stub returning deterministic vectors."""
 
-    def __init__(self, *, generate_limit: int | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        provider: EmbeddingProvider = EmbeddingProvider.OPENAI,
+        generate_limit: int | None = None,
+    ) -> None:
         """Initialize the stub embedding manager."""
-        self.config = _StubSettings()
+        self.config = _StubSettings(provider)
         self.generate_limit = generate_limit
         self.generated_vectors: list[list[float]] = []
         self.requested_texts: Sequence[str] | None = None
+        self.request_kwargs: dict[str, Any] = {}
         self.initialize_calls = 0
 
     async def initialize(self) -> None:
         """Simulate initialization logic."""
         self.initialize_calls += 1
 
+    def get_provider_info(self) -> dict[str, dict[str, object]]:
+        """Expose the same public provider metadata as EmbeddingManager."""
+        provider = self.config.embedding_provider
+        model = (
+            self.config.openai.model
+            if provider is EmbeddingProvider.OPENAI
+            else self.config.fastembed.dense_model
+        )
+        return {provider.value: {"model": model, "dimensions": 1}}
+
     async def generate_embeddings(
         self, texts: list[str], *args: Any, **kwargs: Any
     ) -> dict[str, object]:
         """Generate embeddings for the given texts."""
         self.requested_texts = list(texts)
+        self.request_kwargs = kwargs
         limit = len(texts) if self.generate_limit is None else self.generate_limit
         vectors = [[float(index + 1)] for index, _ in enumerate(texts[:limit])]
         self.generated_vectors = vectors
@@ -53,21 +78,30 @@ class _StubEmbeddingManager:
 
 
 @pytest.mark.asyncio()
+@pytest.mark.parametrize(
+    ("provider", "model"),
+    [
+        (EmbeddingProvider.OPENAI, "configured-openai-model"),
+        (EmbeddingProvider.FASTEMBED, "configured-fastembed-model"),
+    ],
+)
 async def test_warm_caches_generates_embeddings_for_missing_queries(
     fakeredis_cache,
+    provider: EmbeddingProvider,
+    model: str,
 ) -> None:
     """Verify that warm_caches generates embeddings for uncached queries."""
     manager = CacheManager(distributed_cache=fakeredis_cache)
-    stub_manager = _StubEmbeddingManager()
+    stub_manager = _StubEmbeddingManager(provider=provider)
     embedding_cache = manager.embedding_cache
     assert embedding_cache is not None
 
-    config = stub_manager.config.embedding
     await embedding_cache.set_embedding(
         text="alpha",
-        model=config.dense_model,
+        model=model,
         embedding=[0.1],
-        provider=config.provider,
+        provider=provider.value,
+        dimensions=1,
     )
 
     summary = await warm_caches(
@@ -83,6 +117,16 @@ async def test_warm_caches_generates_embeddings_for_missing_queries(
     assert embeddings_report["skipped"] == 0
     assert stub_manager.initialize_calls == 1
     assert stub_manager.generated_vectors == [[1.0]]
+    assert stub_manager.request_kwargs == {
+        "provider_name": provider.value,
+        "auto_select": False,
+    }
+    assert await embedding_cache.get_embedding(
+        text="beta",
+        model=model,
+        provider=provider.value,
+        dimensions=1,
+    ) == [1.0]
 
     await manager.close()
 

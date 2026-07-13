@@ -85,6 +85,7 @@ class BrowserRouter:
                 self._mark_unavailable(
                     provider.kind,
                     reason=f"initialization failed: {exc}",
+                    log_level=logging.INFO,
                 )
         self._initialized = True
 
@@ -189,19 +190,25 @@ class BrowserRouter:
         )
 
     def _mark_unavailable(
-        self, provider_kind: ProviderKind, *, reason: str | None = None
+        self,
+        provider_kind: ProviderKind,
+        *,
+        reason: str | None = None,
+        log_level: int = logging.WARNING,
     ) -> None:
         next_retry = time.monotonic() + self._retry_backoff
         self._unavailable[provider_kind] = next_retry
         if reason:
-            self._logger.warning(
+            self._logger.log(
+                log_level,
                 "Provider %s marked unavailable for %.1fs (%s)",
                 provider_kind.value,
                 self._retry_backoff,
                 reason,
             )
         else:
-            self._logger.warning(
+            self._logger.log(
+                log_level,
                 "Provider %s marked unavailable for %.1fs",
                 provider_kind.value,
                 self._retry_backoff,

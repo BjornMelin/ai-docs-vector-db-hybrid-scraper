@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 from fakeredis import aioredis as fakeredis_aioredis
@@ -99,6 +100,52 @@ async def test_health_manager_aggregates_status() -> None:
     assert summary["total_count"] == 2
 
 
+@pytest.mark.asyncio()
+async def test_health_manager_treats_skipped_checks_as_neutral() -> None:
+    """Disabled optional checks should not obscure healthy active dependencies."""
+    manager = HealthCheckManager(HealthCheckConfig())
+    for name, status in (
+        ("active", HealthStatus.HEALTHY),
+        ("disabled", HealthStatus.SKIPPED),
+    ):
+        manager.add_health_check(
+            _StubHealthCheck(
+                name,
+                HealthCheckResult(
+                    name=name,
+                    status=status,
+                    message=status.value,
+                    duration_ms=1.0,
+                ),
+            )
+        )
+
+    await manager.check_all()
+
+    assert manager.get_overall_status() is HealthStatus.HEALTHY
+
+
+@pytest.mark.asyncio()
+async def test_health_manager_reports_skipped_when_no_checks_are_active() -> None:
+    """An all-skipped check set should retain its explicit aggregate state."""
+    manager = HealthCheckManager(HealthCheckConfig())
+    manager.add_health_check(
+        _StubHealthCheck(
+            "disabled",
+            HealthCheckResult(
+                name="disabled",
+                status=HealthStatus.SKIPPED,
+                message="disabled",
+                duration_ms=1.0,
+            ),
+        )
+    )
+
+    await manager.check_all()
+
+    assert manager.get_overall_status() is HealthStatus.SKIPPED
+
+
 def test_build_health_manager_includes_expected_checks(
     configured_settings, mocker: MockerFixture
 ) -> None:
@@ -124,7 +171,11 @@ def test_build_health_manager_includes_expected_checks(
     )
     mocker.patch("src.services.observability.health_manager.AsyncOpenAI", autospec=True)
 
-    manager = build_health_manager(configured_settings)
+    qdrant_client = AsyncMock()
+    manager = build_health_manager(
+        configured_settings,
+        qdrant_client=qdrant_client,
+    )
     check_names = set(manager.list_checks())
 
     expected_checks = {
@@ -137,6 +188,22 @@ def test_build_health_manager_includes_expected_checks(
     }
 
     assert expected_checks.issubset(check_names)
+
+
+def test_build_health_manager_does_not_create_ownerless_qdrant_client(
+    configured_settings,
+    mocker: MockerFixture,
+) -> None:
+    """Qdrant probes are omitted unless the shared container client is supplied."""
+    client_type = mocker.patch(
+        "src.services.observability.health_manager.AsyncQdrantClient",
+        autospec=True,
+    )
+
+    manager = build_health_manager(configured_settings)
+
+    assert "qdrant" not in manager.list_checks()
+    client_type.assert_not_called()
 
 
 def test_build_health_manager_skips_openai_when_disabled(config_factory) -> None:

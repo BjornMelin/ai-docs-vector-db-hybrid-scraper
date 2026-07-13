@@ -9,6 +9,7 @@ from typing import Any, Self, cast
 
 import click
 import pytest
+from click.testing import CliRunner
 from rich.panel import Panel
 
 from src.cli.commands import batch as batch_module
@@ -142,10 +143,10 @@ def test_show_indexing_preview_emits_panel(rich_cli_stub: SimpleNamespace) -> No
 
 def test_index_documents_dry_run_invokes_preview(
     monkeypatch: pytest.MonkeyPatch,
-    cli_context: click.Context,
+    cli_runner: CliRunner,
     rich_cli_stub: SimpleNamespace,
 ) -> None:
-    """Dry-run invocations must call the preview helper instead of performing work."""
+    """The Click command should route dry runs to the preview helper."""
     captured: dict[str, Any] = {}
 
     def _capture(
@@ -165,18 +166,23 @@ def test_index_documents_dry_run_invokes_preview(
 
     monkeypatch.setattr(batch_module, "_show_indexing_preview", _capture)
 
-    index_callback = batch_module.index_documents.callback
-    assert index_callback is not None
-
-    with cli_context:
-        index_callback(
+    result = cli_runner.invoke(
+        batch_module.batch,
+        [
+            "index-documents",
             "target",
-            ("doc1", "doc2"),
-            batch_size=5,
-            _parallel=1,
-            dry_run=True,
-        )
+            "doc1",
+            "doc2",
+            "--batch-size",
+            "5",
+            "--parallel",
+            "1",
+            "--dry-run",
+        ],
+        obj={"rich_cli": rich_cli_stub},
+    )
 
+    assert result.exit_code == 0
     assert captured == {
         "documents": ["doc1", "doc2"],
         "collection": "target",
@@ -185,10 +191,27 @@ def test_index_documents_dry_run_invokes_preview(
     }
 
 
-def test_create_collections_aborts_without_confirmation(
-    monkeypatch: pytest.MonkeyPatch, cli_context: click.Context
+def test_index_documents_without_dry_run_fails_explicitly(
+    cli_runner: CliRunner,
+    rich_cli_stub: SimpleNamespace,
 ) -> None:
-    """If the operator declines, no queue should be instantiated."""
+    """The Click command should fail explicitly instead of reporting persistence."""
+    result = cli_runner.invoke(
+        batch_module.batch,
+        ["index-documents", "target", "doc1", "--parallel", "1"],
+        obj={"rich_cli": rich_cli_stub},
+    )
+
+    assert result.exit_code == 1
+    assert "Document indexing is not implemented" in result.output
+
+
+def test_create_collections_aborts_without_confirmation(
+    monkeypatch: pytest.MonkeyPatch,
+    cli_runner: CliRunner,
+    rich_cli_stub: SimpleNamespace,
+) -> None:
+    """The Click command should accept ``--force`` and honor cancellation."""
     monkeypatch.setattr(batch_module, "Confirm", SimpleNamespace(ask=_always_false))
 
     def _queue_factory() -> None:
@@ -196,16 +219,22 @@ def test_create_collections_aborts_without_confirmation(
 
     monkeypatch.setattr(batch_module, "OperationQueue", _queue_factory)
 
-    create_callback = batch_module.create_collections.callback
-    assert create_callback is not None
+    result = cli_runner.invoke(
+        batch_module.batch,
+        [
+            "create-collections",
+            "alpha",
+            "--dimension",
+            "256",
+            "--distance",
+            "cosine",
+            "--force",
+        ],
+        obj={"rich_cli": rich_cli_stub},
+    )
 
-    with cli_context:
-        create_callback(
-            ("alpha",),
-            dimension=256,
-            distance="cosine",
-            _force=False,
-        )
+    assert result.exit_code == 0
+    assert any("Creation cancelled" in str(item) for item in rich_cli_stub.printed)
 
 
 def test_create_collections_enqueues_operations(
@@ -216,8 +245,17 @@ def test_create_collections_enqueues_operations(
     db_manager = SimpleNamespace(calls=[])
 
     class _VectorDBStub:
-        async def create_collection(self, name: str, dimension: int) -> bool:
-            db_manager.calls.append((name, dimension))
+        async def list_collections(self) -> list[str]:
+            return []
+
+        async def delete_collection(self, name: str) -> bool:
+            db_manager.calls.append(("delete", name))
+            return True
+
+        async def create_collection(
+            self, name: str, dimension: int, *, distance: str
+        ) -> bool:
+            db_manager.calls.append((name, dimension, distance))
             return True
 
         async def cleanup(self) -> None:
@@ -265,7 +303,7 @@ def test_create_collections_enqueues_operations(
         create_callback(
             ("alpha", "beta"),
             dimension=128,
-            distance="cosine",
+            distance="dot",
             _force=False,
         )
 
@@ -275,7 +313,103 @@ def test_create_collections_enqueues_operations(
         "Create beta",
     ]
     assert queue.confirm_flag is False
-    assert db_manager.calls == [("alpha", 128), ("beta", 128)]
+    assert db_manager.calls == [("alpha", 128, "dot"), ("beta", 128, "dot")]
+
+
+def test_create_collections_force_recreates_existing_collection(
+    monkeypatch: pytest.MonkeyPatch, cli_context: click.Context
+) -> None:
+    """Force mode should delete an existing collection before creation."""
+    monkeypatch.setattr(batch_module, "Confirm", SimpleNamespace(ask=_always_true))
+    calls: list[tuple[Any, ...]] = []
+
+    class _VectorDBStub:
+        async def list_collections(self) -> list[str]:
+            return ["alpha"]
+
+        async def delete_collection(self, name: str) -> bool:
+            calls.append(("delete", name))
+            return True
+
+        async def create_collection(
+            self, name: str, dimension: int, *, distance: str
+        ) -> bool:
+            calls.append(("create", name, dimension, distance))
+            return True
+
+        async def cleanup(self) -> None:
+            return None
+
+    monkeypatch.setattr(batch_module, "_init_vector_manager", _VectorDBStub)
+
+    class _QueueStub:
+        def __init__(self) -> None:
+            self.operations: list[batch_module.BatchOperation] = []
+
+        def add(self, operation: batch_module.BatchOperation) -> None:
+            self.operations.append(operation)
+
+        def execute(self, confirm: bool = True) -> bool:
+            assert confirm is False
+            for operation in self.operations:
+                operation.function()
+            return True
+
+    monkeypatch.setattr(batch_module, "OperationQueue", _QueueStub)
+
+    create_callback = batch_module.create_collections.callback
+    assert create_callback is not None
+    with cli_context:
+        create_callback(
+            ("alpha",),
+            dimension=128,
+            distance="cosine",
+            _force=True,
+        )
+
+    assert calls == [
+        ("delete", "alpha"),
+        ("create", "alpha", 128, "cosine"),
+    ]
+
+
+def test_create_collections_force_delete_failure_exits_nonzero(
+    monkeypatch: pytest.MonkeyPatch,
+    cli_runner: CliRunner,
+    rich_cli_stub: SimpleNamespace,
+) -> None:
+    """A failed forced deletion should fail the command after cleanup."""
+    monkeypatch.setattr(batch_module, "Confirm", SimpleNamespace(ask=_always_true))
+    calls: list[tuple[Any, ...]] = []
+
+    class _VectorDBStub:
+        async def list_collections(self) -> list[str]:
+            return ["alpha"]
+
+        async def delete_collection(self, name: str) -> bool:
+            calls.append(("delete", name))
+            return False
+
+        async def create_collection(
+            self, name: str, dimension: int, *, distance: str
+        ) -> bool:
+            calls.append(("create", name, dimension, distance))
+            return True
+
+        async def cleanup(self) -> None:
+            calls.append(("cleanup",))
+
+    monkeypatch.setattr(batch_module, "_init_vector_manager", _VectorDBStub)
+
+    result = cli_runner.invoke(
+        batch_module.batch,
+        ["create-collections", "alpha", "--force"],
+        obj={"rich_cli": rich_cli_stub},
+    )
+
+    assert result.exit_code == 1
+    assert "One or more collections could not be created" in result.output
+    assert calls == [("delete", "alpha"), ("cleanup",)]
 
 
 def test_delete_collections_aborts_without_double_confirmation(

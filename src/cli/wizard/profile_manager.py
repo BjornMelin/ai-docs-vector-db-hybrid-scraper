@@ -22,18 +22,23 @@ console = Console()
 class ProfileManager:
     """Manages configuration profiles for different environments."""
 
-    def __init__(self, config_dir: Path | None = None):
+    def __init__(
+        self,
+        config_dir: Path | None = None,
+        template_manager: TemplateManager | None = None,
+    ) -> None:
         """Initialize profile manager.
 
         Args:
-            config_dir: Directory for storing profile configurations
+            config_dir: Directory for storing profile configurations.
+            template_manager: Canonical built-in template provider.
 
         """
         self.config_dir = config_dir or Path("config")
         self.profiles_dir = self.config_dir / "profiles"
         self.profiles_dir.mkdir(parents=True, exist_ok=True)
 
-        self.template_manager = TemplateManager()
+        self.template_manager = template_manager or TemplateManager()
 
         # Profile to template mapping
         self.profile_templates = {
@@ -42,7 +47,7 @@ class ProfileManager:
             "testing": "testing",
             "local-dev": "development",
             "personal": "personal-use",
-            "privacy": "local-only",
+            "local-only": "local-only",
             "minimal": "minimal",
         }
 
@@ -75,7 +80,7 @@ class ProfileManager:
             "testing": "CI/CD pipeline and automated testing",
             "local-dev": "Local development (alias for development)",
             "personal": "Personal projects and learning (recommended for individuals)",
-            "privacy": "Privacy-focused deployment without cloud services",
+            "local-only": "Privacy-focused deployment without cloud services",
             "minimal": "Quick start with minimal configuration",
         }
 
@@ -183,8 +188,8 @@ class ProfileManager:
         # Save configuration
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with output_path.open("w") as f:
-            json.dump(config.model_dump(), f, indent=2)
+        serialized = json.dumps(config.model_dump(mode="json"), indent=2)
+        output_path.write_text(f"{serialized}\n", encoding="utf-8")
 
         return output_path
 
@@ -228,33 +233,37 @@ class ProfileManager:
         # Profile-specific environment recommendations
         env_overrides = {
             "development": {
-                "AI_DOCS__ENVIRONMENT": "development",
-                "AI_DOCS__DEBUG": "true",
-                "AI_DOCS__LOG_LEVEL": "DEBUG",
+                "AI_DOCS_ENVIRONMENT": "development",
+                "AI_DOCS_DEBUG": "true",
+                "AI_DOCS_LOG_LEVEL": "DEBUG",
             },
             "production": {
-                "AI_DOCS__ENVIRONMENT": "production",
-                "AI_DOCS__DEBUG": "false",
-                "AI_DOCS__LOG_LEVEL": "INFO",
-                "AI_DOCS__SECURITY__REQUIRE_API_KEYS": "true",
+                "AI_DOCS_ENVIRONMENT": "production",
+                "AI_DOCS_DEBUG": "false",
+                "AI_DOCS_LOG_LEVEL": "INFO",
+                "AI_DOCS_SECURITY__API_KEY_REQUIRED": "true",
             },
             "testing": {
-                "AI_DOCS__ENVIRONMENT": "testing",
-                "AI_DOCS__DEBUG": "false",
-                "AI_DOCS__LOG_LEVEL": "WARNING",
-                "AI_DOCS__CACHE__ENABLE_CACHING": "false",
+                "AI_DOCS_ENVIRONMENT": "testing",
+                "AI_DOCS_DEBUG": "false",
+                "AI_DOCS_LOG_LEVEL": "WARNING",
+                "AI_DOCS_CACHE__ENABLE_CACHING": "false",
             },
             "personal": {
-                "AI_DOCS__ENVIRONMENT": "development",
-                "AI_DOCS__DEBUG": "false",
-                "AI_DOCS__LOG_LEVEL": "INFO",
+                "AI_DOCS_ENVIRONMENT": "development",
+                "AI_DOCS_DEBUG": "false",
+                "AI_DOCS_LOG_LEVEL": "INFO",
+            },
+            "local-only": {
+                "AI_DOCS_ENVIRONMENT": "development",
+                "AI_DOCS_DEBUG": "false",
+                "AI_DOCS_LOG_LEVEL": "INFO",
             },
         }
 
         # Map aliases to their primary profiles
         profile_aliases = {
             "local-dev": "development",
-            "privacy": "personal",
             "minimal": "development",
         }
 
@@ -297,9 +306,8 @@ class ProfileManager:
             [
                 "",
                 "# API Keys (replace with your actual keys)",
-                "# AI_DOCS__OPENAI__API_KEY=sk-your_openai_key_here",
-                "# AI_DOCS__FIRECRAWL__API_KEY=fc-your_firecrawl_key_here",
-                "# AI_DOCS__ANTHROPIC__API_KEY=sk-ant-your_anthropic_key_here",
+                "# AI_DOCS_OPENAI__API_KEY=sk-your_openai_key_here",
+                "# AI_DOCS_BROWSER__FIRECRAWL__API_KEY=fc-your_firecrawl_key_here",
             ]
         )
 
@@ -333,22 +341,44 @@ class ProfileManager:
             f"   ./setup.sh --profile {profile_name}\n\n", style="cyan"
         )
 
-        instructions_text.append("2. Set required API keys in environment:\n", style="")
+        instructions_text.append(
+            "2. Set profile variables and required provider credentials:\n",
+            style="",
+        )
         env_vars = self.get_environment_overrides(profile_name)
         if env_vars:
             for key, value in env_vars.items():
                 instructions_text.append(f"   export {key}={value}\n", style="green")
-        instructions_text.append(
-            "   export AI_DOCS__OPENAI__API_KEY=sk-your_key_here\n", style="green"
-        )
+
+        template = self.template_manager.get_template(info["template"]) or {}
+        provider_credentials: list[str] = []
+        if template.get("embedding_provider") == "openai":
+            provider_credentials.append(
+                "   export AI_DOCS_OPENAI__API_KEY=sk-your_key_here\n"
+            )
+        if template.get("crawl_provider") == "firecrawl":
+            provider_credentials.append(
+                "   export AI_DOCS_BROWSER__FIRECRAWL__API_KEY=fc-your_key_here\n"
+            )
+
+        if provider_credentials:
+            for credential in provider_credentials:
+                instructions_text.append(credential, style="green")
+        else:
+            instructions_text.append(
+                "   No provider credentials are required by this profile.\n",
+                style="dim",
+            )
         instructions_text.append("\n")
 
         instructions_text.append("3. Start services:\n", style="")
         if profile_name == "production":
-            instructions_text.append("   docker-compose up -d\n\n", style="cyan")
+            instructions_text.append(
+                "   docker compose --profile enterprise up -d\n\n", style="cyan"
+            )
         else:
             instructions_text.append(
-                "   docker-compose -f docker-compose.yml up -d\n\n", style="cyan"
+                "   docker compose --profile simple up -d\n\n", style="cyan"
             )
 
         instructions_text.append("4. Verify setup:\n", style="")

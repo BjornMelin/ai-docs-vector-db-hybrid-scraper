@@ -7,9 +7,9 @@ inputs:
     required: false
     default: 'config'
   templates-dir:
-    description: 'Directory containing environment templates'
+    description: 'Optional directory containing template fixtures instead of package assets'
     required: false
-    default: 'config/templates'
+    default: ''
   environment:
     description: 'Optional environment template to prioritise'
     required: false
@@ -31,7 +31,10 @@ runs:
           exit 1
         fi
 
-        args=("--config-root" "${CONFIG_ROOT}" "--templates-dir" "${TEMPLATES_DIR}")
+        args=("--config-root" "${CONFIG_ROOT}")
+        if [ -n "${TEMPLATES_DIR}" ]; then
+          args+=("--templates-dir" "${TEMPLATES_DIR}")
+        fi
         if [ -n "${REQUESTED_ENVIRONMENT}" ]; then
           args+=("--environment" "${REQUESTED_ENVIRONMENT}")
         fi

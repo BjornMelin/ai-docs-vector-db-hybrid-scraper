@@ -2,7 +2,6 @@
 
 from .config import (
     ObservabilityConfig,
-    clear_observability_cache,
     get_observability_config,
     get_resource_attributes,
 )
@@ -53,7 +52,6 @@ __all__ = [
     "ObservabilityServiceDep",
     "PerformanceTracker",
     "TraceCorrelationManager",
-    "clear_observability_cache",
     "current_trace_context",
     "get_ai_tracker",
     "get_correlation_manager",

@@ -20,24 +20,14 @@ spec:
     spec:
       containers:
       - name: dragonfly
-        image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+        image: docker.dragonflydb.io/dragonflydb/dragonfly:v1.39.0
         ports:
         - containerPort: 6379
           name: redis-port
-        env:
-        - name: DRAGONFLY_THREADS
-          value: "8"
-        - name: DRAGONFLY_MEMORY_LIMIT
-          value: "4gb"
-        - name: DRAGONFLY_SNAPSHOT_INTERVAL
-          value: "3600"
-        - name: DRAGONFLY_SAVE_SCHEDULE
-          value: "0 */1 * * *"
         args:
         - "--logtostderr"
         - "--cache_mode"
-        - "--maxmemory_policy=allkeys-lru"
-        - "--compression=zstd"
+        - "--maxmemory=3gb"
         volumeMounts:
         - name: dragonfly-data
           mountPath: /data

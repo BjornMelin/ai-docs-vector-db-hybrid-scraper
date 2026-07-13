@@ -5,7 +5,7 @@ inputs:
   python-version:
     description: 'Python version to set up'
     required: false
-    default: '3.12'
+    default: '3.11'
   cache-suffix:
     description: 'Additional suffix for cache key differentiation'
     required: false
@@ -52,7 +52,7 @@ runs:
         if [ "${{ inputs.install-dev }}" == "true" ]; then
           uv sync --dev --frozen
         else
-          uv sync --frozen
+          uv sync --frozen --no-dev
         fi
       env:
         UV_COMPILE_BYTECODE: "0"
@@ -67,5 +67,5 @@ runs:
           exit 1
         fi
 
-        uv run python --version
-        uv run python -c "import sys; print(f'Python {sys.version}')"
+        uv run --no-sync python --version
+        uv run --no-sync python -c "import sys; print(f'Python {sys.version}')"

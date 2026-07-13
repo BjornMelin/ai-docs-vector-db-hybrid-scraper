@@ -1,13 +1,13 @@
 """Tests for the simplified observability configuration."""
 
-# pylint: disable=duplicate-code
-
-import os
-from unittest.mock import patch
-
+from src import __version__
+from src.config import Settings, get_settings, refresh_settings
+from src.config.models import (
+    Environment,
+    ObservabilityConfig as SettingsObservabilityConfig,
+)
 from src.services.observability.config import (
     ObservabilityConfig,
-    clear_observability_cache,
     get_observability_config,
     get_resource_attributes,
 )
@@ -19,11 +19,12 @@ class TestObservabilityConfig:
     def test_defaults(self) -> None:
         """Verify default configuration values."""
         config = ObservabilityConfig()
-        assert config.enabled is True
+        assert config.enabled is False
         assert config.service_name == "ai-docs-vector-db"
+        assert config.service_version == __version__
         assert config.otlp_endpoint == "http://localhost:4317"
         assert tuple(config.instrumentations) == ("fastapi", "httpx")
-        assert config.metrics_enabled is True
+        assert config.ai_operation_metrics_enabled is True
 
     def test_resource_attributes(self) -> None:
         """Verify resource attributes are populated correctly."""
@@ -38,43 +39,57 @@ class TestObservabilityConfig:
         assert attrs["deployment.environment"] == "staging"
 
 
-class TestObservabilityConfigFromEnv:
-    """Ensure environment overrides are respected."""
+class TestObservabilityConfigFromSettings:
+    """Ensure canonical application settings drive runtime telemetry."""
 
-    def setup_method(self) -> None:
-        """Clear cache before each test."""
-        clear_observability_cache()
+    def test_settings_conversion(self) -> None:
+        """Verify runtime values are derived from one Settings instance."""
+        settings = Settings(
+            environment=Environment.PRODUCTION,
+            observability=SettingsObservabilityConfig(
+                enabled=True,
+                service_name="configured-service",
+                service_version="3.5.1",
+                otlp_endpoint="http://collector:4317",
+                otlp_headers={"authorization": "Bearer token"},
+                otlp_insecure=False,
+                track_ai_operations=False,
+                track_costs=True,
+                instrument_fastapi=True,
+                instrument_httpx=False,
+            ),
+        )
 
-    def teardown_method(self) -> None:
-        """Clear cache after each test."""
-        clear_observability_cache()
-
-    def test_env_overrides(self) -> None:
-        """Verify environment variables override defaults."""
-        with patch.dict(
-            os.environ,
-            {
-                "OTEL_EXPORTER_OTLP_ENDPOINT": "http://collector:4317",
-                "OTEL_SERVICE_NAME": "env-service",
-                "OTEL_SERVICE_VERSION": "3.5.1",
-                "OTEL_ENVIRONMENT": "production",
-                "OTEL_EXPORTER_OTLP_HEADERS": "authorization=Bearer token",
-                "OTEL_EXPORTER_OTLP_INSECURE": "false",
-                "AI_DOCS_OBSERVABILITY_METRICS_ENABLED": "false",
-                "AI_DOCS_OBSERVABILITY_INSTRUMENTATIONS": "fastapi,logging",
-            },
-            clear=True,
-        ):
-            config = get_observability_config(force_refresh=True)
+        config = ObservabilityConfig.from_settings(settings)
 
         assert config.otlp_endpoint == "http://collector:4317"
-        assert config.service_name == "env-service"
+        assert config.service_name == "configured-service"
         assert config.service_version == "3.5.1"
         assert config.environment == "production"
-        assert config.metrics_enabled is False
+        assert config.ai_operation_metrics_enabled is True
         assert tuple(config.instrumentations) == ("fastapi", "logging")
         assert config.insecure_transport is False
         assert config.otlp_headers == {"authorization": "Bearer token"}
+
+    def test_settings_refresh_is_visible_without_a_second_cache(self) -> None:
+        """Telemetry config should follow the canonical Settings replacement."""
+        original = get_settings()
+        first = Settings(
+            environment=Environment.TESTING,
+            observability=SettingsObservabilityConfig(service_name="first"),
+        )
+        second = Settings(
+            environment=Environment.TESTING,
+            observability=SettingsObservabilityConfig(service_name="second"),
+        )
+        try:
+            refresh_settings(settings=first)
+            assert get_observability_config().service_name == "first"
+
+            refresh_settings(settings=second)
+            assert get_observability_config().service_name == "second"
+        finally:
+            refresh_settings(settings=original)
 
     def test_resource_attributes_helper(self) -> None:
         """Verify resource attributes helper function."""

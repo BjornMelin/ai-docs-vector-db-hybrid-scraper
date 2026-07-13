@@ -1,12 +1,15 @@
 ---
-title: Operator Documentation
+title: Operate AI Docs
 audience: operators
 status: active
 owner: operations-engineering
-last_reviewed: 2025-09-22
+last_reviewed: 2026-07-11
+meta:
+  contentType: Landing
+  category: Operations
 ---
 
-## Operator Documentation
+# Operate AI Docs
 
 Essential operational guides for running the AI Docs Vector DB platform in production.
 
@@ -32,22 +35,19 @@ Health checks, metrics collection, alerting, and performance monitoring.
 
 Authentication, network security, container hardening, and incident response.
 
-## Quick Reference
+## Command reference
 
 ### Essential Commands
 
 ```bash
-# Daily health check
-docker-compose ps && curl http://localhost:6333/health && redis-cli ping
+# Check the enterprise profile and API
+docker compose --profile enterprise ps
+curl --fail http://localhost:8000/health
 
 # Service management
-docker-compose up -d      # Start services
-docker-compose restart    # Restart all services
-docker-compose logs -f    # View logs
-
-# Emergency procedures
-docker-compose down --timeout 30  # Graceful shutdown
-docker kill $(docker ps -q)       # Force stop all containers
+docker compose --profile enterprise up -d
+docker compose restart app
+docker compose logs --follow app
 ```
 
 ### Key Ports
@@ -71,8 +71,6 @@ docker kill $(docker ps -q)       # Force stop all containers
 - **Service Health**: Use health check commands in operations guide
 - **Performance Problems**: See monitoring and configuration guides
 - **Security Incidents**: Follow security incident response procedures
-
----
 
 For comprehensive system information, see [Developer Architecture](../developers/architecture-and-orchestration.md).
 For user-facing documentation, see [User Documentation](../users/index.md).

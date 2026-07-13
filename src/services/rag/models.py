@@ -108,13 +108,14 @@ class AnswerMetrics(BaseModel):
     """Lightweight telemetry returned with each generation."""
 
     total_tokens: int | None = Field(
-        None, description="Total tokens reported by the model, if available."
+        default=None, description="Total tokens reported by the model, if available."
     )
     prompt_tokens: int | None = Field(
-        None, description="Prompt tokens reported by the model, if available."
+        default=None, description="Prompt tokens reported by the model, if available."
     )
     completion_tokens: int | None = Field(
-        None, description="Completion tokens reported by the model, if available."
+        default=None,
+        description="Completion tokens reported by the model, if available.",
     )
     generation_time_ms: float = Field(
         ..., ge=0.0, description="Wall clock generation latency in milliseconds."
@@ -126,29 +127,29 @@ class RAGRequest(BaseModel):
 
     query: str = Field(..., min_length=1, description="Natural language question.")
     top_k: int | None = Field(
-        None,
+        default=None,
         gt=0,
         le=50,
         description="Optional override for the number of documents to retrieve.",
     )
     filters: dict[str, Any] | None = Field(
-        None,
+        default=None,
         description="Optional metadata filters passed to the retriever.",
     )
     max_tokens: int | None = Field(
-        None,
+        default=None,
         gt=0,
         le=4000,
         description="Optional override for maximum completion tokens.",
     )
     temperature: float | None = Field(
-        None,
+        default=None,
         ge=0.0,
         le=2.0,
         description="Optional override for model sampling temperature.",
     )
     include_sources: bool | None = Field(
-        None,
+        default=None,
         description="Override default source attribution behaviour.",
     )
 
@@ -158,7 +159,7 @@ class RAGResult(BaseModel):
 
     answer: str = Field(..., description="Model generated answer text.")
     confidence_score: float | None = Field(
-        None,
+        default=None,
         ge=0.0,
         le=1.0,
         description="Heuristic confidence derived from retrieval scores.",
@@ -171,7 +172,8 @@ class RAGResult(BaseModel):
         ..., ge=0.0, description="Total generation latency in milliseconds."
     )
     metrics: AnswerMetrics | None = Field(
-        None, description="Optional token usage information from the chat model."
+        default=None,
+        description="Optional token usage information from the chat model.",
     )
 
 

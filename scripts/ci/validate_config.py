@@ -11,15 +11,9 @@ from pathlib import Path
 
 import yaml
 
+from src.config.loader import validate_settings_payload
+from src.config.template_assets import load_builtin_template_assets
 from src.config.template_utils import merge_overrides
-
-
-DEFAULT_REQUIRED_TEMPLATE_KEYS = (
-    "environment",
-    "cache",
-    "qdrant",
-    "performance",
-)
 
 
 @dataclass
@@ -92,46 +86,57 @@ def validate_yaml_files(root: Path) -> ValidationSummary:
 
 
 def validate_templates(
-    templates_dir: Path,
-    required_keys: Sequence[str],
+    templates_dir: Path | None,
     environment: str | None,
 ) -> ValidationSummary:
-    """Validate configuration templates for required keys."""
+    """Validate merged templates against the canonical settings model."""
     errors: list[str] = []
     checked = 0
 
-    if not templates_dir.exists():
+    if templates_dir is None:
+        base_label = "packaged base.json"
+        profiles_label = "packaged profiles.json"
+        try:
+            base_template, profiles_index = load_builtin_template_assets()
+        except (FileNotFoundError, json.JSONDecodeError, TypeError) as exc:
+            return ValidationSummary(
+                checked=checked,
+                errors=[f"Invalid packaged template assets: {exc}"],
+            )
+    elif not templates_dir.exists():
         return ValidationSummary(
             checked=checked,
             errors=[f"Templates directory not found: {templates_dir}"],
         )
+    else:
+        base_path = templates_dir / "base.json"
+        profiles_path = templates_dir / "profiles.json"
+        base_label = str(base_path)
+        profiles_label = str(profiles_path)
 
-    base_path = templates_dir / "base.json"
-    profiles_path = templates_dir / "profiles.json"
+        try:
+            base_template = json.loads(base_path.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            errors.append(f"Base template missing: {base_path}")
+            return ValidationSummary(checked=checked, errors=errors)
+        except json.JSONDecodeError as exc:
+            errors.append(f"Invalid JSON in base template {base_path}: {exc}")
+            return ValidationSummary(checked=checked, errors=errors)
 
-    try:
-        base_template = json.loads(base_path.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        errors.append(f"Base template missing: {base_path}")
-        return ValidationSummary(checked=checked, errors=errors)
-    except json.JSONDecodeError as exc:
-        errors.append(f"Invalid JSON in base template {base_path}: {exc}")
-        return ValidationSummary(checked=checked, errors=errors)
-
-    try:
-        profiles_index = json.loads(profiles_path.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        errors.append(f"Profile index missing: {profiles_path}")
-        return ValidationSummary(checked=checked, errors=errors)
-    except json.JSONDecodeError as exc:
-        errors.append(f"Invalid JSON in profile index {profiles_path}: {exc}")
-        return ValidationSummary(checked=checked, errors=errors)
+        try:
+            profiles_index = json.loads(profiles_path.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            errors.append(f"Profile index missing: {profiles_path}")
+            return ValidationSummary(checked=checked, errors=errors)
+        except json.JSONDecodeError as exc:
+            errors.append(f"Invalid JSON in profile index {profiles_path}: {exc}")
+            return ValidationSummary(checked=checked, errors=errors)
 
     if not isinstance(base_template, dict):
-        errors.append(f"Base template {base_path} must contain a JSON object")
+        errors.append(f"Base template {base_label} must contain a JSON object")
         return ValidationSummary(checked=checked, errors=errors)
     if not isinstance(profiles_index, dict):
-        errors.append(f"Profile index {profiles_path} must contain a JSON object")
+        errors.append(f"Profile index {profiles_label} must contain a JSON object")
         return ValidationSummary(checked=checked, errors=errors)
 
     names = sorted(profiles_index)
@@ -146,7 +151,7 @@ def validate_templates(
     for name in names:
         record = profiles_index[name]
         if not isinstance(record, dict):
-            errors.append(f"Profile '{name}' in {profiles_path} must be a JSON object")
+            errors.append(f"Profile '{name}' in {profiles_label} must be a JSON object")
             continue
 
         overrides = record.get("overrides", {})
@@ -157,9 +162,12 @@ def validate_templates(
         template_data = merge_overrides(base_template, overrides)
         checked += 1
 
-        missing_keys = [key for key in required_keys if key not in template_data]
-        if missing_keys:
-            errors.append(f"Template '{name}' is missing required keys: {missing_keys}")
+        is_valid, validation_errors, _ = validate_settings_payload(template_data)
+        errors.extend(
+            f"Template '{name}' is invalid: {error}" for error in validation_errors
+        )
+        if not is_valid:
+            continue
 
         if environment == name:
             actual_env = template_data.get("environment")
@@ -183,8 +191,10 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--templates-dir",
         type=Path,
-        default=Path("config/templates"),
-        help="Directory containing environment templates.",
+        default=None,
+        help=(
+            "Optional directory containing template fixtures instead of package assets."
+        ),
     )
     parser.add_argument(
         "--environment",
@@ -207,9 +217,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     summaries = [
         validate_json_files(config_root),
         validate_yaml_files(config_root),
-        validate_templates(
-            args.templates_dir, DEFAULT_REQUIRED_TEMPLATE_KEYS, args.environment
-        ),
+        validate_templates(args.templates_dir, args.environment),
     ]
 
     total_checked = sum(summary.checked for summary in summaries)
