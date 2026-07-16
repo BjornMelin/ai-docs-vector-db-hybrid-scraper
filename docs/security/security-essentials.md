@@ -57,6 +57,17 @@ uv run safety check
 uv sync --upgrade
 ```
 
+CI and release scans compare all Bandit severities against
+`.bandit-baseline.json`. The baseline records existing findings without marking
+them resolved; any unmatched finding fails the audit. Refresh it only after an
+approved security review:
+
+```bash
+uv tool run bandit -q -r src -f json -o /tmp/bandit.json || [ "$?" -eq 1 ]
+jq -S '{results: (.results | sort_by(.filename, .line_number, .test_id))}' \
+  /tmp/bandit.json > .bandit-baseline.json
+```
+
 ### Vulnerability Scanning
 
 ```bash
