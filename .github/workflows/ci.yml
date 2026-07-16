@@ -291,7 +291,8 @@ jobs:
 
       - name: Install security tooling
         run: |
-          uv tool install pip-audit bandit
+          uv tool install pip-audit
+          uv tool install bandit
 
       - name: Run pip-audit
         run: uv tool run pip-audit --progress-spinner=off --format=json --output=pip-audit.json
