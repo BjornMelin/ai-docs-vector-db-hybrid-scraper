@@ -36,6 +36,11 @@ class _StubVectorService:
         self.documents: dict[str, dict[str, Any]] = {}
         self._failures: dict[str, Exception] = {}
 
+    @property
+    def default_collection_name(self) -> str:
+        """Mirror the collection selected by server configuration."""
+        return "configured-documents"
+
     def set_failure(self, operation: str, exc: Exception) -> None:
         """Inject a failure for the specified operation."""
         self._failures[operation] = exc
@@ -171,6 +176,25 @@ def test_post_search_uses_canonical_contract(app_with_overrides: FastAPI) -> Non
     assert payload["query"] == "install"
     assert payload["records"][0]["id"] == "doc-1"
     assert payload["records"][0]["content"] == "install-documentation"
+
+
+def test_post_search_uses_server_collection_when_omitted(
+    app_with_overrides: FastAPI,
+) -> None:
+    """Request models must not own a collection default separate from settings."""
+    with TestClient(app_with_overrides) as client:
+        response = client.post("/api/v1/search", json={"query": "install"})
+
+    assert response.status_code == 200
+    assert response.json()["records"][0]["content"] == ("install-configured-documents")
+
+
+def test_get_search_rejects_empty_collection(app_with_overrides: FastAPI) -> None:
+    """GET validation should reject an empty collection before route execution."""
+    with TestClient(app_with_overrides) as client:
+        response = client.get("/api/v1/search?q=install&collection=")
+
+    assert response.status_code == 422
 
 
 def test_post_search_supports_query_vector(app_with_overrides: FastAPI) -> None:

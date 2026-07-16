@@ -47,7 +47,6 @@ from .services.vector_db.document_builder import (
     build_text_documents,
 )
 from .services.vector_db.service import VectorStoreService
-from .services.vector_db.types import CollectionSchema, TextDocument
 
 
 class ScrapingError(ServiceError):
@@ -180,21 +179,6 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
         ):
             await self.vector_service.initialize()
 
-        # Create collection if it doesn't exist
-        collections = await self.vector_service.list_collections()
-        if self.collection_name not in collections:
-            generate_sparse_flag = bool(
-                getattr(self.config.fastembed, "generate_sparse", False)
-            )
-            schema = CollectionSchema(
-                name=self.collection_name,
-                vector_size=self.vector_service.embedding_dimension,
-                distance="cosine",
-                requires_sparse=generate_sparse_flag,
-            )
-            await self.vector_service.ensure_collection(schema)
-            logger.info("Created vector collection '%s'", self.collection_name)
-
     async def load_urls_from_file(self, file_path: Path) -> list[str]:
         """Load URLs from various file formats."""
         urls = []
@@ -303,7 +287,7 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
 
         chunks = await self._chunk_content(crawl_result, url)
 
-        documents = await self._generate_embeddings(url, chunks, crawl_result)
+        documents = self._build_documents(url, chunks, crawl_result)
 
         await self._store_points(documents)
 
@@ -380,18 +364,14 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
 
         return chunks
 
-    async def _generate_embeddings(
+    def _build_documents(
         self,
         url: str,
         chunks: list[Document],
         crawl_result: dict[str, Any],
-    ) -> list[TextDocument]:
-        """Translate chunked content into TextDocument payloads."""
-        metadata_block = crawl_result.get("metadata", {})
-        if not isinstance(metadata_block, Mapping):
-            metadata_block = {}
-
-        doc_id = str(metadata_block.get("doc_id") or crawl_result.get("url") or url)
+    ) -> list[Document]:
+        """Translate chunked content into canonical documents."""
+        doc_id = str(crawl_result.get("url") or url)
 
         params = build_params_from_crawl(
             crawl_result,
@@ -402,7 +382,7 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
 
         return build_text_documents(chunks, params)
 
-    async def _store_points(self, documents: list[TextDocument]) -> None:
+    async def _store_points(self, documents: list[Document]) -> None:
         """Persist prepared documents using the vector service."""
         if not documents:
             return
@@ -411,7 +391,7 @@ class BulkEmbedder:  # pylint: disable=too-many-instance-attributes
             raise RuntimeError("Vector store service not initialized")
 
         try:
-            await self.vector_service.upsert_documents(
+            await self.vector_service.replace_document_chunks(
                 self.collection_name,
                 documents,
             )

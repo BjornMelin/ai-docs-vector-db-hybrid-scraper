@@ -137,7 +137,8 @@ async def test_register_all_tools_invokes_registrars_once(
     assert (
         calls["retrieval"].kwargs["vector_service"] is stub_services["vector_service"]
     )
-    assert calls["documents"].kwargs["cache_manager"] is stub_services["cache_manager"]
+    assert "cache_manager" not in calls["documents"].kwargs
+    assert calls["documents"].kwargs["crawl_manager"] is stub_services["crawl_manager"]
     assert (
         calls["system_health"].kwargs["health_manager"]
         is stub_services["health_manager"]

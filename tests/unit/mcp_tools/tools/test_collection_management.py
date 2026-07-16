@@ -7,6 +7,7 @@ import pytest
 
 from src.mcp_tools.models.responses import CollectionInfo, CollectionOperationResponse
 from src.mcp_tools.tools.collection_management import register_tools
+from src.services.vector_db.service import VectorStoreService
 
 
 class TestCollectionsTools:
@@ -18,7 +19,7 @@ class TestCollectionsTools:
         mock_manager = MagicMock()
 
         # Mock vector store service
-        mock_vector = AsyncMock()
+        mock_vector = AsyncMock(spec=VectorStoreService)
         mock_vector.list_collections.return_value = [
             "docs",
             "api",
@@ -29,11 +30,15 @@ class TestCollectionsTools:
             return {
                 "points_count": 1000,
                 "indexed_vectors": 950,
-                "vectors": {"size": 384, "distance": "cosine"},
+                "config": {
+                    "params": {
+                        "vectors": {"dense": {"size": 384, "distance": "Cosine"}},
+                    }
+                },
             }
 
         mock_vector.collection_stats.side_effect = mock_stats
-        mock_vector.delete_collection = AsyncMock()
+        mock_vector.drop_collection = AsyncMock()
 
         # Mock cache manager
         mock_cache = AsyncMock()
@@ -84,34 +89,9 @@ class TestCollectionsTools:
         assert "docs" in collection_names
         assert "api" in collection_names
         assert "knowledge" in collection_names
-
-        # Verify context logging
-        mock_context.info.assert_called()
-
-    @pytest.mark.asyncio
-    async def test_optimize_collection(self, mock_client_manager, mock_context):
-        """Test optimizing a collection."""
-        mock_mcp = MagicMock()
-        registered_tools = {}
-
-        def capture_tool(func):
-            registered_tools[func.__name__] = func
-            return func
-
-        mock_mcp.tool.return_value = capture_tool
-        register_tools(
-            mock_mcp,
-            vector_service=mock_client_manager.vector_service,
-            cache_manager=mock_client_manager.cache_manager,
-        )
-
-        optimize_collection = registered_tools["optimize_collection"]
-
-        result = await optimize_collection(collection_name="docs", ctx=mock_context)
-
-        assert isinstance(result, CollectionOperationResponse)
-        assert result.status == "optimized"
-        assert result.collection == "docs"
+        assert result[0].vectors_count == 1000
+        assert result[0].vector_dimension == 384
+        assert result[0].vector_config == {"size": 384, "distance": "Cosine"}
 
         # Verify context logging
         mock_context.info.assert_called()
@@ -145,18 +125,18 @@ class TestCollectionsTools:
         assert result.collection == "old_collection"
 
         mock_context.info.assert_called()
-        mock_vector.delete_collection.assert_awaited_once_with("old_collection")
+        mock_vector.drop_collection.assert_awaited_once_with("old_collection")
         mock_client_manager.cache_mock.clear_pattern.assert_awaited_once_with(
             "*:old_collection:*"
         )
 
     @pytest.mark.asyncio
-    async def test_delete_collection_missing_methods(
+    async def test_delete_collection_reports_service_failure(
         self, mock_client_manager, mock_context
     ):
-        """Ensure an explicit error surfaces when delete/drop are unavailable."""
+        """Surface a collection deletion failure without clearing the cache."""
         mock_vector = await mock_client_manager.get_vector_store_service()
-        mock_vector.delete_collection = None
+        mock_vector.drop_collection.side_effect = RuntimeError("Qdrant unavailable")
 
         mock_mcp = MagicMock()
         registered_tools = {}
@@ -175,12 +155,13 @@ class TestCollectionsTools:
         delete_collection = registered_tools["delete_collection"]
 
         result = await delete_collection(
-            collection_name="missing_methods", ctx=mock_context
+            collection_name="failed_collection", ctx=mock_context
         )
 
         assert result.status == "error"
         assert result.message
-        assert "Vector service does not expose" in result.message
+        assert result.message == "Qdrant unavailable"
+        mock_client_manager.cache_mock.clear_pattern.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_collections_error_handling(self, mock_client_manager, mock_context):
@@ -257,7 +238,6 @@ class TestCollectionsTools:
         tools_to_test = [
             ("list_collections", []),
             ("delete_collection", ["old"]),
-            ("optimize_collection", ["test"]),
         ]
 
         for tool_name, args in tools_to_test:
@@ -280,5 +260,5 @@ class TestCollectionsTools:
             cache_manager=mock_client_manager.cache_manager,
         )
 
-        # Should have registered 3 tools
-        assert mock_mcp.tool.call_count == 3
+        # List and delete are the two supported collection operations.
+        assert mock_mcp.tool.call_count == 2

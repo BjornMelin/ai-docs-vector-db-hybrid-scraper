@@ -10,13 +10,14 @@ from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
+import qdrant_client.models as models
 from dependency_injector import providers
+from langchain_core.documents import Document
 from qdrant_client import AsyncQdrantClient
 
 from src.config.models import QdrantConfig, ScoreNormalizationStrategy, SearchStrategy
 from src.infrastructure.container import ApplicationContainer
 from src.services.vector_db.service import VectorStoreService
-from src.services.vector_db.types import CollectionSchema, TextDocument
 
 
 class _DenseEmbeddingStub:
@@ -50,11 +51,7 @@ def fastembed_stubs(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
         _DenseEmbeddingStub,
     )
     monkeypatch.setattr(
-        "src.services.vector_db.service.FastEmbedSparseRuntime",
-        _SparseEmbeddingStub,
-    )
-    monkeypatch.setattr(
-        "src.services.vector_db.service.FastEmbedSparseType",
+        "src.services.vector_db.service.FastEmbedSparse",
         _SparseEmbeddingStub,
     )
     yield
@@ -85,7 +82,16 @@ def qdrant_client_mock() -> AsyncMock:
     client.get_collection.return_value = SimpleNamespace(
         points_count=0,
         indexed_vectors_count=0,
-        config=SimpleNamespace(payload_schema={}),
+        payload_schema={},
+        config=SimpleNamespace(
+            params=SimpleNamespace(
+                vectors=models.VectorParams(
+                    size=3,
+                    distance=models.Distance.COSINE,
+                ),
+                sparse_vectors=None,
+            )
+        ),
     )
     client.scroll.return_value = ([], None)
     client.query_points = AsyncMock(return_value=SimpleNamespace(points=[]))
@@ -115,21 +121,17 @@ def vector_container(
 
 
 @pytest.fixture
-def collection_schema() -> CollectionSchema:
-    """Provide a reusable collection schema for adapter tests."""
-    return CollectionSchema(name="docs", vector_size=3, distance="cosine")
+def sample_documents() -> list[Document]:
+    """Provide deterministic text documents for upsert tests.
 
-
-@pytest.fixture
-def sample_documents() -> list[TextDocument]:
-    """Provide deterministic text documents for upsert tests."""
+    Returns:
+        Canonical document inputs with stable test metadata.
+    """
     return [
-        TextDocument(
-            id="doc-1",
-            content="alpha",
+        Document(
+            page_content="alpha",
             metadata={
                 "doc_id": "doc-1",
-                "chunk_id": 0,
                 "chunk_index": 0,
                 "total_chunks": 2,
                 "tenant": "default",
@@ -138,12 +140,10 @@ def sample_documents() -> list[TextDocument]:
                 "content_hash": "hash-alpha",
             },
         ),
-        TextDocument(
-            id="doc-2",
-            content="beta",
+        Document(
+            page_content="beta",
             metadata={
                 "doc_id": "doc-2",
-                "chunk_id": 1,
                 "chunk_index": 1,
                 "total_chunks": 2,
                 "tenant": "default",
@@ -202,7 +202,6 @@ async def initialized_vector_store_service(
 
 __all__ = [
     "build_vector_store_service",
-    "collection_schema",
     "config_stub",
     "initialize_vector_store_service",
     "initialized_vector_store_service",

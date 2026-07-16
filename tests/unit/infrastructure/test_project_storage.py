@@ -1,5 +1,6 @@
 """Tests for infrastructure.project_storage."""
 
+import json
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -23,6 +24,25 @@ async def test_load_projects_creates_empty_cache(storage: ProjectStorage) -> Non
     assert projects == {}
 
 
+async def test_load_projects_backfills_legacy_collection(
+    storage: ProjectStorage, tmp_path: Path
+) -> None:
+    """Legacy records receive their canonical project collection on load."""
+    path = tmp_path / "data" / "projects.json"
+    path.write_text(
+        json.dumps({"legacy": {"id": "legacy", "name": "Legacy"}}),
+        encoding="utf-8",
+    )
+
+    projects = await storage.load_projects()
+    await storage.update_project("legacy", {"name": "Updated"})
+    project = await storage.get_project("legacy")
+
+    assert projects["legacy"]["collection"] == "project_legacy"
+    assert project is not None
+    assert project["collection"] == "project_legacy"
+
+
 async def test_save_and_load_roundtrip(storage: ProjectStorage) -> None:
     """Saved projects persist and can be reloaded."""
     payload: dict[str, Any] = {"id": "proj-1", "name": "Test"}
@@ -33,6 +53,7 @@ async def test_save_and_load_roundtrip(storage: ProjectStorage) -> None:
     assert cached["proj-1"]["name"] == "Test"
     assert "created_at" in cached["proj-1"]
     assert "updated_at" in cached["proj-1"]
+    assert cached["proj-1"]["collection"] == "project_proj-1"
     assert payload == {"id": "proj-1", "name": "Test"}
 
 

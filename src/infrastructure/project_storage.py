@@ -48,7 +48,11 @@ class ProjectStorage:
     async def load_projects(self) -> dict[str, dict[str, Any]]:
         """Load all projects from disk into the in-memory cache."""
         async with self._lock:
-            self._cache = await self._read_projects()
+            projects = await self._read_projects()
+            self._cache = {
+                project_id: self._prepare_project(project_id, project)
+                for project_id, project in projects.items()
+            }
             return {key: dict(value) for key, value in self._cache.items()}
 
     async def save_project(self, project_id: str, project_data: dict[str, Any]) -> None:
@@ -56,7 +60,7 @@ class ProjectStorage:
         async with self._lock:
             now = datetime.now(UTC).isoformat()
             previous = self._cache.get(project_id, {})
-            payload = dict(project_data)
+            payload = self._prepare_project(project_id, project_data)
             if "created_at" not in payload:
                 payload["created_at"] = previous.get("created_at", now)
             payload["updated_at"] = now
@@ -91,6 +95,17 @@ class ProjectStorage:
             updated_cache[project_id] = updated_project
             await self._write_projects(updated_cache)
             self._cache = updated_cache
+
+    @staticmethod
+    def _prepare_project(
+        project_id: str, project_data: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Normalize persisted project identity and collection fields."""
+        payload = dict(project_data)
+        payload.setdefault("id", project_id)
+        if not payload.get("collection"):
+            payload["collection"] = f"project_{project_id}"
+        return payload
 
     async def delete_project(self, project_id: str) -> None:
         """Remove a project from storage.

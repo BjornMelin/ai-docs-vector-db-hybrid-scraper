@@ -3,28 +3,15 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Awaitable, Callable
-from typing import cast
 
 from fastmcp import Context
 
 from src.mcp_tools.models.responses import CollectionInfo, CollectionOperationResponse
 from src.services.cache.manager import CacheManager
-from src.services.vector_db.service import VectorStoreService
+from src.services.vector_db.service import VectorStoreService, dense_vector_config
 
 
 logger = logging.getLogger(__name__)
-
-
-def _resolve_delete_callable(
-    vector_service: object,
-) -> Callable[[str], Awaitable[None]]:
-    """Return the deletion callable exposed by the vector service."""
-    delete_method = getattr(vector_service, "delete_collection", None)
-    if not callable(delete_method):
-        msg = "Vector service does not expose a collection deletion method"
-        raise TypeError(msg)
-    return cast(Callable[[str], Awaitable[None]], delete_method)
 
 
 def register_tools(  # pylint: disable=too-many-statements
@@ -55,21 +42,15 @@ def register_tools(  # pylint: disable=too-many-statements
             for collection_name in collections:
                 try:
                     stats = await service.collection_stats(collection_name)
-                    vectors_meta = (
-                        stats.get("vectors", {}) if isinstance(stats, dict) else {}
-                    )
+                    vectors_meta = dense_vector_config(stats)
                     collection_info.append(
                         CollectionInfo.model_validate(
                             {
                                 "name": collection_name,
-                                "vectors_count": vectors_meta.get("size"),
-                                "points_count": stats.get("points_count")
-                                if isinstance(stats, dict)
-                                else None,
+                                "vectors_count": stats.get("points_count"),
+                                "points_count": stats.get("points_count"),
                                 "status": "active",
-                                "indexed_vectors_count": stats.get("indexed_vectors")
-                                if isinstance(stats, dict)
-                                else None,
+                                "vector_dimension": vectors_meta.get("size"),
                                 "vector_config": vectors_meta,
                             }
                         )
@@ -78,7 +59,7 @@ def register_tools(  # pylint: disable=too-many-statements
                         await ctx.debug(
                             "Retrieved info for collection %s: %s vectors",
                             collection_name,
-                            vectors_meta.get("size"),
+                            stats.get("points_count"),
                         )
                 except Exception as exc:  # pragma: no cover - defensive branch
                     logger.exception(
@@ -128,8 +109,7 @@ def register_tools(  # pylint: disable=too-many-statements
             service = vector_service
             cache = cache_manager
 
-            delete_callable = _resolve_delete_callable(service)
-            await delete_callable(collection_name)
+            await service.drop_collection(collection_name)
             if ctx:
                 await ctx.debug(
                     "Collection %s deleted from vector store", collection_name
@@ -152,50 +132,4 @@ def register_tools(  # pylint: disable=too-many-statements
             if ctx:
                 await ctx.error(f"Failed to delete collection {collection_name}: {e}")
             logger.exception("Failed to delete collection %s", collection_name)
-            return CollectionOperationResponse(status="error", message=str(e))
-
-    @mcp.tool()
-    async def optimize_collection(
-        collection_name: str, ctx: Context | None = None
-    ) -> CollectionOperationResponse:
-        """Optimize a collection for better performance.
-
-        Rebuilds indexes and optimizes storage.
-        """
-        if ctx:
-            await ctx.info(f"Starting optimization of collection: {collection_name}")
-
-        try:
-            service = vector_service
-            # Get current collection info
-            stats = await service.collection_stats(collection_name)
-            vectors_meta = stats.get("vectors", {}) if isinstance(stats, dict) else {}
-            if ctx:
-                await ctx.debug(
-                    "Collection %s has %s vectors",
-                    collection_name,
-                    vectors_meta.get("size"),
-                )
-
-            # Trigger optimization
-            # Note: Qdrant automatically optimizes, but we can force index rebuild
-            # This is a placeholder for future optimization strategies
-
-            if ctx:
-                await ctx.info(f"Successfully optimized collection: {collection_name}")
-
-            return CollectionOperationResponse(
-                status="optimized",
-                collection=collection_name,
-                details={
-                    "vectors_count": vectors_meta.get("size"),
-                    "indexed_vectors_count": stats.get("indexed_vectors")
-                    if isinstance(stats, dict)
-                    else None,
-                },
-            )
-        except Exception as e:
-            if ctx:
-                await ctx.error(f"Failed to optimize collection {collection_name}: {e}")
-            logger.exception("Failed to optimize collection %s", collection_name)
             return CollectionOperationResponse(status="error", message=str(e))

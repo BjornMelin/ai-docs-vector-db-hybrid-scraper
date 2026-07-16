@@ -14,7 +14,6 @@ from src.manage_vector_db import (
     CollectionCreationError,
     CollectionDeletionError,
     CollectionInfo,
-    CollectionSchema,
     DatabaseStats,
     VectorDBManager,
     cli,
@@ -32,7 +31,7 @@ def vector_service_mock() -> AsyncMock:
     service.collection_stats = AsyncMock(
         return_value={
             "points_count": 7,
-            "vectors": {"default": {"size": 3}},
+            "config": {"params": {"vectors": {"size": 3}}},
         }
     )
     service.search_documents = AsyncMock(
@@ -109,24 +108,19 @@ async def test_list_collections_uses_vector_service(
 
 
 @pytest.mark.asyncio
-async def test_create_collection_builds_schema(
+async def test_create_collection_delegates_canonical_contract(
     manager_setup: SimpleNamespace,
 ) -> None:
-    """create_collection should construct the schema and invoke ensure_collection."""
+    """create_collection should delegate to the service-owned collection contract."""
     manager = manager_setup.manager
 
-    result = await manager.create_collection(
-        "analytics", vector_size=256, distance="dot"
-    )
+    result = await manager.create_collection("analytics")
 
     assert result is True
     manager_setup.vector_service.ensure_collection.assert_awaited_once()
-    schema: CollectionSchema = (
-        manager_setup.vector_service.ensure_collection.call_args.args[0]
+    assert manager_setup.vector_service.ensure_collection.call_args.args == (
+        "analytics",
     )
-    assert schema.name == "analytics"
-    assert schema.vector_size == 256
-    assert schema.distance == "dot"
 
 
 @pytest.mark.asyncio
@@ -154,6 +148,24 @@ async def test_get_collection_info_maps_stats(
     assert isinstance(info, CollectionInfo)
     assert info.vector_count == 7
     assert info.vector_size == 3
+
+
+@pytest.mark.asyncio
+async def test_get_collection_info_reads_single_named_dense_vector(
+    manager_setup: SimpleNamespace,
+) -> None:
+    """Manager output should expose the dimension of a named dense vector."""
+    manager_setup.vector_service.collection_stats.return_value = {
+        "points_count": 7,
+        "config": {
+            "params": {"vectors": {"dense": {"size": 384, "distance": "Cosine"}}}
+        },
+    }
+
+    info = await manager_setup.manager.get_collection_info("docs")
+
+    assert info is not None
+    assert info.vector_size == 384
 
 
 @pytest.mark.asyncio
@@ -236,7 +248,7 @@ def test_cli_create_collection_reports_success() -> None:
 
     assert result.exit_code == 0, result.output
     assert "Successfully created collection" in result.output
-    manager_stub.create_collection.assert_awaited_once_with("docs", vector_size=1536)
+    manager_stub.create_collection.assert_awaited_once_with("docs")
     manager_stub.cleanup.assert_awaited_once()
 
 

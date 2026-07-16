@@ -93,14 +93,20 @@ async def test_registers_project_tools(register: dict[str, Callable]) -> None:
 
 @pytest.mark.asyncio
 async def test_create_project(
-    register: dict[str, Callable], project_storage: Mock, mock_context: Mock
+    register: dict[str, Callable],
+    project_storage: Mock,
+    mock_vector_service: Mock,
+    mock_context: Mock,
 ) -> None:
     """Verify creating a project persists metadata and responds with info."""
-    request = ProjectRequest(name="Docs", description="Demo", quality_tier="balanced")
+    request = ProjectRequest(name="Docs", description="Demo")
     result = await register["create_project"](request, mock_context)
 
     assert isinstance(result, ProjectInfo)
     project_storage.save_project.assert_awaited_once()
+    saved_project = project_storage.save_project.await_args.args[1]
+    assert saved_project["collection"] == result.collection
+    mock_vector_service.ensure_collection.assert_awaited_once_with(result.collection)
 
 
 @pytest.mark.asyncio
@@ -134,6 +140,7 @@ async def test_update_project_applies_mutations(
         "id": "proj",
         "name": "Old",
         "description": None,
+        "collection": "project_proj",
     }
 
     updated = await register["update_project"]("proj", name="New", ctx=mock_context)

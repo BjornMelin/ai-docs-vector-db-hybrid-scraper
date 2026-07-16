@@ -51,8 +51,10 @@ async def search_documents_get(
     limit: int = Query(
         default=10, ge=1, le=1000, description="Maximum number of records to return."
     ),
-    collection: str = Query(
-        default="documentation", description="Collection to search against."
+    collection: str | None = Query(
+        default=None,
+        min_length=1,
+        description="Collection to search; defaults to server configuration.",
     ),
     offset: int = Query(
         default=0, ge=0, description="Number of records to skip for pagination."
@@ -80,7 +82,7 @@ async def _perform_search(
 ) -> SearchResponse:
     """Dispatch search execution based on the request contents."""
     started = perf_counter()
-    collection = request.collection or "documentation"
+    collection = request.collection or vector_service.default_collection_name
 
     if request.query_vector:
         records = await _search_by_vector(

@@ -182,7 +182,9 @@ jobs:
           path: dist
 
       - name: Install security tooling
-        run: uv tool install pip-audit bandit
+        run: |
+          uv tool install pip-audit
+          uv tool install bandit
 
       - name: Run dependency and code scans
         run: |
@@ -209,11 +211,13 @@ jobs:
           {
             echo
             echo "## Code security issues"
+            echo
+            echo "_Known findings remain recorded in \`.bandit-baseline.json\`; unmatched findings fail this job._"
           } >> security-report.md
 
-          if uv tool run bandit -r src -f txt >> security-report.md; then
+          if uv tool run bandit -r src -b .bandit-baseline.json -f txt >> security-report.md; then
             echo >> security-report.md
-            echo "_No code security issues detected._" >> security-report.md
+            echo "_No new code security issues detected against the repository baseline._" >> security-report.md
           else
             bandit_status=$?
             echo >> security-report.md

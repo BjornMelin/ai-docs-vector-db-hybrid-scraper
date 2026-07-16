@@ -291,13 +291,17 @@ jobs:
 
       - name: Install security tooling
         run: |
-          uv tool install pip-audit bandit
+          uv tool install pip-audit
+          uv tool install bandit
 
       - name: Run pip-audit
         run: uv tool run pip-audit --progress-spinner=off --format=json --output=pip-audit.json
 
       - name: Run Bandit
-        run: uv tool run bandit -q -r src -f json -o bandit-report.json
+        run: >-
+          uv tool run bandit -q -r src
+          -b .bandit-baseline.json
+          -f json -o bandit-report.json
 
       - name: Upload reports
         if: always()

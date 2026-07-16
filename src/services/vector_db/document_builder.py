@@ -9,8 +9,6 @@ from typing import Any
 
 from langchain_core.documents import Document
 
-from .types import TextDocument
-
 
 # pylint: disable=too-many-instance-attributes  # aggregation of canonical fields
 @dataclass(slots=True)
@@ -29,13 +27,6 @@ class DocumentBuildParams:
     enriched_content: Any | None = None
 
 
-def _extract_chunk_hash(metadata: dict[str, Any]) -> str | None:
-    chunk_hash = metadata.pop("chunk_id", None)
-    if isinstance(chunk_hash, str) and chunk_hash.strip():
-        return chunk_hash
-    return None
-
-
 def _normalize_language(metadata: dict[str, Any], fallback: str | None) -> None:
     explicit = metadata.pop("language", None) or metadata.get("lang")
     language = explicit or fallback
@@ -48,8 +39,16 @@ def _normalize_language(metadata: dict[str, Any], fallback: str | None) -> None:
 def build_text_documents(
     chunks: Sequence[Document],
     params: DocumentBuildParams,
-) -> list[TextDocument]:
-    """Return TextDocument payloads derived from chunked documents."""
+) -> list[Document]:
+    """Return canonical LangChain documents derived from content chunks.
+
+    Args:
+        chunks: Content chunks to enrich with canonical ingestion metadata.
+        params: Authoritative identity and metadata for the source document.
+
+    Returns:
+        LangChain documents ready for persistence normalization.
+    """
     total_chunks = len(chunks)
     timestamp = datetime.now(UTC).isoformat()
     base_payload = dict(params.base_metadata or {})
@@ -64,17 +63,14 @@ def build_text_documents(
     if params.language_hint:
         base_payload.setdefault("lang", params.language_hint)
 
-    documents: list[TextDocument] = []
+    documents: list[Document] = []
     for index, chunk in enumerate(chunks):
         chunk_metadata = dict(base_payload)
         chunk_metadata.update(
             {k: v for k, v in (chunk.metadata or {}).items() if v is not None}
         )
-
-        chunk_hash = _extract_chunk_hash(chunk_metadata)
-
-        chunk_metadata["doc_id"] = str(chunk_metadata.get("doc_id") or params.doc_id)
-        chunk_metadata["tenant"] = chunk_metadata.get("tenant") or params.tenant
+        chunk_metadata["doc_id"] = params.doc_id
+        chunk_metadata["tenant"] = params.tenant
         chunk_metadata["source"] = chunk_metadata.get("source") or params.source_url
         chunk_metadata["uri_or_path"] = (
             chunk_metadata.get("uri_or_path") or params.source_url
@@ -94,13 +90,9 @@ def build_text_documents(
             chunk_metadata.setdefault("end_char", start_index + len(chunk.page_content))
 
         chunk_metadata["chunk_index"] = index
-        chunk_metadata["chunk_id"] = index
         chunk_metadata["total_chunks"] = total_chunks
         chunk_metadata.setdefault("created_at", timestamp)
         chunk_metadata.setdefault("updated_at", chunk_metadata["created_at"])
-
-        if chunk_hash:
-            chunk_metadata["chunk_hash"] = chunk_hash
 
         if params.enriched_content:
             enriched = params.enriched_content
@@ -133,9 +125,8 @@ def build_text_documents(
             chunk_metadata["content_intelligence_analyzed"] = False
 
         documents.append(
-            TextDocument(
-                id=f"{chunk_metadata['doc_id']}:{index}",
-                content=chunk.page_content,
+            Document(
+                page_content=chunk.page_content,
                 metadata=chunk_metadata,
             )
         )

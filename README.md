@@ -170,8 +170,9 @@ matrix of LangChain text splitters selected from document metadata:
   budgets.
 - Plain text → `RecursiveCharacterTextSplitter` using newline/space fallbacks.
 
-All variants share canonical chunk metadata (`chunk_id`, `chunk_index`, inferred
-`kind`, provenance fields) so downstream services never rely on bespoke schemas.
+All splitter variants preserve inferred `kind` and provenance fields. The
+ingestion document builder assigns canonical chunk positions before storage, so
+downstream services never rely on bespoke schemas.
 See the LangChain text splitter catalogue for implementation details.[^langchain-splitters]
 
 Dense and sparse embeddings are sourced from the LangChain FastEmbed wrappers—

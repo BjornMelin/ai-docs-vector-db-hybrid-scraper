@@ -17,25 +17,13 @@ from src.infrastructure.project_storage import ProjectStorage
 from src.mcp_tools.models.requests import ProjectRequest
 from src.mcp_tools.models.responses import OperationStatus, ProjectInfo
 from src.services.vector_db.service import VectorStoreService
-from src.services.vector_db.types import CollectionSchema
 
 
 logger = logging.getLogger(__name__)
 
-_TIER_VECTOR_SIZE = {
-    "economy": 384,
-    "balanced": 768,
-    "premium": 1536,
-}
-
 
 def _timestamp() -> str:
     return datetime.now(tz=UTC).isoformat()
-
-
-def _collection_schema(collection: str, tier: str) -> CollectionSchema:
-    vector_size = _TIER_VECTOR_SIZE.get(tier, _TIER_VECTOR_SIZE["balanced"])
-    return CollectionSchema(name=collection, vector_size=vector_size, distance="cosine")
 
 
 def register_tools(
@@ -56,14 +44,12 @@ def register_tools(
 
         project_id = str(uuid4())
         collection_name = f"project_{project_id}"
-        schema = _collection_schema(collection_name, request.quality_tier)
-        await service.ensure_collection(schema)
+        await service.ensure_collection(collection_name)
 
         project_record: dict[str, Any] = {
             "id": project_id,
             "name": request.name,
             "description": request.description,
-            "quality_tier": request.quality_tier,
             "collection": collection_name,
             "urls": request.urls or [],
             "created_at": _timestamp(),

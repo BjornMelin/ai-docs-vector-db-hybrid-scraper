@@ -204,26 +204,21 @@ def _abort_collection_not_found(collection_name: str, rich_cli) -> None:
 @database.command("create")
 @click.argument("collection_name", shell_complete=complete_collection_name)
 @click.option(
-    "--dimension",
-    "-d",
-    type=click.IntRange(min=1),
-    default=1536,
-    help="Vector dimension (default: 1536 for OpenAI)",
-)
-@click.option(
-    "--distance",
-    type=click.Choice(["cosine", "euclidean", "dot"]),
-    default="cosine",
-    help="Distance metric",
-)
-@click.option(
     "--force", is_flag=True, help="Force creation (delete existing collection)"
 )
 @click.pass_context
 def create_collection(
-    ctx: click.Context, collection_name: str, dimension: int, distance: str, force: bool
-):
-    """Create a new vector database collection."""
+    ctx: click.Context,
+    collection_name: str,
+    force: bool,
+) -> None:
+    """Create a new vector database collection.
+
+    Args:
+        ctx: Click context containing the rich CLI facade.
+        collection_name: Collection to create.
+        force: Whether to replace an existing collection.
+    """
     rich_cli = ctx.obj["rich_cli"]
 
     # Confirmation for force creation
@@ -255,15 +250,9 @@ def create_collection(
                 progress.update(task, description="Deleting existing collection...")
                 asyncio.run(db_manager.delete_collection(collection_name))
 
-            progress.update(
-                task, description=f"Creating collection with {dimension}D vectors..."
-            )
+            progress.update(task, description="Creating configured collection...")
             success = asyncio.run(
-                db_manager.create_collection(
-                    collection_name=collection_name,
-                    vector_size=dimension,
-                    distance=distance,
-                )
+                db_manager.create_collection(collection_name=collection_name)
             )
 
             if not success:
@@ -278,9 +267,7 @@ def create_collection(
     # Success message
     success_text = Text()
     success_text.append("Collection created successfully.\n", style="bold green")
-    success_text.append(f"Name: {collection_name}\n", style="cyan")
-    success_text.append(f"Dimension: {dimension}\n", style="blue")
-    success_text.append(f"Distance: {distance}", style="yellow")
+    success_text.append(f"Name: {collection_name}", style="cyan")
 
     panel = Panel(
         success_text,

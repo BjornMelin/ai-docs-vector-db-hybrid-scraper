@@ -10,10 +10,10 @@ from unittest.mock import AsyncMock, MagicMock, Mock
 import pytest
 from langchain_core.documents import Document
 
+from src.config.models import ChunkingStrategy
 from src.mcp_tools.models.requests import BatchRequest, DocumentRequest
 from src.mcp_tools.models.responses import AddDocumentResponse
 from src.mcp_tools.tools import documents
-from src.services.vector_db.types import CollectionSchema, TextDocument
 
 
 class DummyContentType:
@@ -40,8 +40,7 @@ class VectorServiceStub:
     def __init__(self) -> None:
         """Initialize stub with mock methods."""
         self._initialized = False
-        self.ensure_collection = AsyncMock()
-        self.upsert_documents = AsyncMock()
+        self.replace_document_chunks = AsyncMock()
 
     def is_initialized(self) -> bool:
         """Return initialization state."""
@@ -56,6 +55,11 @@ class VectorServiceStub:
         """Return fixed embedding dimension."""
         return 1536
 
+    @property
+    def default_collection_name(self) -> str:
+        """Return the injected service's configured collection."""
+        return "test-documents"
+
 
 class DummyValidator:
     """URL validator stub returning the original URL."""
@@ -69,14 +73,12 @@ def _dummy_splitter(*_: Any, **__: Any) -> list[Document]:
     """Return deterministic LangChain documents with canonical metadata."""
     documents: list[Document] = []
     for index, section in enumerate(("intro", "body")):
-        chunk_hash = f"feedbeefdead{index:02d}"
         documents.append(
             Document(
                 page_content=f"chunk-{index}",
                 metadata={
                     "section": section,
                     "chunk_index": index,
-                    "chunk_id": chunk_hash,
                     "kind": "markdown",
                     "source": "https://example.com/doc",
                     "uri_or_path": "https://example.com/doc",
@@ -120,9 +122,6 @@ def _make_enriched_content() -> SimpleNamespace:
 def documents_env(monkeypatch) -> SimpleNamespace:  # pylint: disable=too-many-locals
     """Provide registered document tools with mocked dependencies."""
     vector_service = VectorServiceStub()
-    cache_manager = Mock()
-    cache_manager.get = AsyncMock(return_value=None)
-    cache_manager.set = AsyncMock()
 
     crawl_payload = {
         "success": True,
@@ -165,7 +164,6 @@ def documents_env(monkeypatch) -> SimpleNamespace:  # pylint: disable=too-many-l
     documents.register_tools(
         mock_mcp,
         vector_service=cast(Any, vector_service),
-        cache_manager=cast(Any, cache_manager),
         crawl_manager=cast(Any, crawl_manager),
         content_intelligence_service=cast(Any, content_intelligence),
     )
@@ -179,7 +177,6 @@ def documents_env(monkeypatch) -> SimpleNamespace:  # pylint: disable=too-many-l
     return SimpleNamespace(
         tools=registered,
         vector_service=vector_service,
-        cache_manager=cache_manager,
         crawl_manager=crawl_manager,
         content_intelligence=content_intelligence,
         context=ctx,
@@ -199,25 +196,22 @@ async def test_add_document_ingests_chunks(documents_env: SimpleNamespace) -> No
         result.embedding_dimensions == documents_env.vector_service.embedding_dimension
     )
 
-    documents_env.vector_service.ensure_collection.assert_awaited_once()
-    schema_arg = documents_env.vector_service.ensure_collection.await_args.args[0]
-    assert isinstance(schema_arg, CollectionSchema)
-    assert schema_arg.requires_sparse is True
-
-    documents_env.vector_service.upsert_documents.assert_awaited_once()
-    upsert_args = documents_env.vector_service.upsert_documents.await_args.args
-    assert upsert_args[0] == request.collection
+    documents_env.vector_service.replace_document_chunks.assert_awaited_once()
+    upsert_args = documents_env.vector_service.replace_document_chunks.await_args.args
+    assert upsert_args[0] == documents_env.vector_service.default_collection_name
     documents_payload = upsert_args[1]
     assert len(documents_payload) == 2
-    assert all(isinstance(doc, TextDocument) for doc in documents_payload)
+    assert all(isinstance(doc, Document) for doc in documents_payload)
     first_document = documents_payload[0]
     first_metadata = dict(first_document.metadata or {})
-    assert first_document.id.endswith(":0")
+    assert first_document.id is None
     assert first_metadata["chunk_index"] == 0
-    assert first_metadata["chunk_id"] == 0
-    assert first_metadata["chunk_hash"] == "feedbeefdead00"
+    assert "chunk_id" not in first_metadata
+    assert "chunk_hash" not in first_metadata
     assert first_metadata["total_chunks"] == 2
-    assert first_metadata["tenant"] == request.collection
+    assert (
+        first_metadata["tenant"] == documents_env.vector_service.default_collection_name
+    )
     assert first_metadata["source"] == request.url
     assert first_metadata["uri_or_path"] == request.url
     assert first_metadata["title"] == "Example Title"
@@ -240,39 +234,7 @@ async def test_add_document_ingests_chunks(documents_env: SimpleNamespace) -> No
     assert first_metadata["section"] == "intro"
     assert "lang" not in first_metadata or first_metadata["lang"] is None
 
-    documents_env.cache_manager.set.assert_awaited_once()
-    cache_args = documents_env.cache_manager.set.await_args.kwargs
-    assert cache_args == {"ttl": 86400}
-    cache_key, cache_payload = documents_env.cache_manager.set.await_args.args
-    assert cache_key == "doc:https://example.com/doc"
-    assert cache_payload["url"] == request.url
     documents_env.context.info.assert_awaited()
-
-
-@pytest.mark.asyncio
-async def test_add_document_returns_cached_result(
-    documents_env: SimpleNamespace,
-) -> None:
-    """Verify add_document skips processing when cached result exists."""
-    cached_response = AddDocumentResponse(
-        url="https://example.com/doc",
-        title="Cached Title",
-        chunks_created=1,
-        collection="documentation",
-        chunking_strategy="enhanced",
-        embedding_dimensions=1536,
-    )
-    documents_env.cache_manager.get.return_value = cached_response.model_dump()
-
-    request = DocumentRequest(url="https://example.com/doc")
-    result = await documents_env.tools["add_document"](request, documents_env.context)
-
-    assert result == cached_response
-    documents_env.vector_service.ensure_collection.assert_not_called()
-    documents_env.vector_service.upsert_documents.assert_not_called()
-    documents_env.cache_manager.get.assert_awaited_once_with(
-        "doc:https://example.com/doc"
-    )
 
 
 @pytest.mark.asyncio
@@ -291,7 +253,7 @@ async def test_add_document_without_content_intelligence(
     result = await documents_env.tools["add_document"](request, documents_env.context)
 
     assert isinstance(result, AddDocumentResponse)
-    upsert_args = documents_env.vector_service.upsert_documents.await_args.args
+    upsert_args = documents_env.vector_service.replace_document_chunks.await_args.args
     text_documents = upsert_args[1]
     metadata_flags = [
         bool(doc.metadata.get("content_intelligence_analyzed"))
@@ -301,13 +263,34 @@ async def test_add_document_without_content_intelligence(
     for index, document in enumerate(text_documents):
         metadata = document.metadata or {}
         assert metadata["doc_id"]
-        assert metadata["chunk_id"] == index
-        assert metadata["tenant"] == request.collection
+        assert metadata["chunk_index"] == index
+        assert "chunk_id" not in metadata
+        assert (
+            metadata["tenant"] == documents_env.vector_service.default_collection_name
+        )
         assert metadata["source"] == request.url
         assert metadata["uri_or_path"] == request.url
         assert metadata["chunk_index"] == index
         assert metadata["total_chunks"] == len(text_documents)
         assert isinstance(metadata["created_at"], str)
+
+
+@pytest.mark.asyncio
+async def test_repeated_url_uses_stable_document_identity(
+    documents_env: SimpleNamespace,
+) -> None:
+    """A URL must map to the same replacement identity on every ingestion."""
+    request = DocumentRequest(url="https://example.com/doc")
+
+    await documents_env.tools["add_document"](request, documents_env.context)
+    await documents_env.tools["add_document"](request, documents_env.context)
+
+    calls = documents_env.vector_service.replace_document_chunks.await_args_list
+    assert len(calls) == 2
+    doc_ids = {
+        document.metadata["doc_id"] for call in calls for document in call.args[1]
+    }
+    assert doc_ids == {"https://example.com/doc"}
 
 
 @pytest.mark.asyncio
@@ -335,4 +318,52 @@ async def test_add_documents_batch_captures_failures(
     assert response.total == 2
 
     # Vector service should only be invoked for the successful document
-    documents_env.vector_service.upsert_documents.assert_awaited_once()
+    documents_env.vector_service.replace_document_chunks.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_add_documents_batch_forwards_chunking_options(
+    documents_env: SimpleNamespace,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Batch requests must preserve their document chunking controls."""
+    captured_requests: list[DocumentRequest] = []
+
+    async def capture_chunk_request(
+        request: DocumentRequest,
+        *_args: Any,
+        **_kwargs: Any,
+    ) -> list[Document]:
+        captured_requests.append(request)
+        return _dummy_splitter()
+
+    monkeypatch.setattr(documents, "_chunk_document", capture_chunk_request)
+    request = BatchRequest(
+        urls=["https://example.com/a"],
+        collection="documentation",
+        chunk_strategy=ChunkingStrategy.BASIC,
+        chunk_size=2048,
+        chunk_overlap=256,
+        token_chunk_size=768,
+        token_chunk_overlap=128,
+        json_max_chars=24000,
+        enable_semantic_html_segmentation=False,
+        normalize_html_text=False,
+    )
+
+    await documents_env.tools["add_documents_batch"](
+        request,
+        documents_env.context,
+    )
+
+    assert len(captured_requests) == 1
+    forwarded = captured_requests[0]
+    assert forwarded.collection == "documentation"
+    assert forwarded.chunk_strategy is ChunkingStrategy.BASIC
+    assert forwarded.chunk_size == 2048
+    assert forwarded.chunk_overlap == 256
+    assert forwarded.token_chunk_size == 768
+    assert forwarded.token_chunk_overlap == 128
+    assert forwarded.json_max_chars == 24000
+    assert forwarded.enable_semantic_html_segmentation is False
+    assert forwarded.normalize_html_text is False

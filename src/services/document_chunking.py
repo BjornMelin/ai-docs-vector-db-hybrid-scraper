@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 from collections.abc import Callable, Mapping
 from pathlib import PurePosixPath
@@ -528,26 +527,11 @@ def _merge_metadata(
     kind: str,
 ) -> list[Document]:
     merged: list[Document] = []
-    base_identifier = (
-        base_metadata.get("uri_or_path")
-        or base_metadata.get("source")
-        or base_metadata.get("title")
-        or "document"
-    )
-    for index, document in enumerate(documents):
+    for document in documents:
         metadata = dict(base_metadata)
         if document.metadata:
             metadata.update(document.metadata)
         metadata["kind"] = kind
-        metadata["chunk_index"] = index
-        content_digest = hashlib.blake2s(
-            document.page_content.encode("utf-8", "ignore"),
-            digest_size=8,
-        ).hexdigest()
-        chunk_key = f"{base_identifier}:{index}:{content_digest}".encode(
-            "utf-8", "ignore"
-        )
-        metadata["chunk_id"] = hashlib.blake2s(chunk_key, digest_size=8).hexdigest()
         merged.append(Document(page_content=document.page_content, metadata=metadata))
     return merged
 

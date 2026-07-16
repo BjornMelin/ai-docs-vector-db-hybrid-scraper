@@ -79,3 +79,8 @@ def test_seed_collection_invokes_client(monkeypatch: pytest.MonkeyPatch) -> None
     collection_name, points = client.upsert_points
     assert collection_name == "golden_eval"
     assert len(points) == 1
+    assert points[0].payload is not None
+    assert points[0].payload["page_content"] == corpus[0]["text"]
+    assert points[0].payload["metadata"]["doc_id"] == "doc-1"
+    assert points[0].payload["metadata"]["tenant"] == "golden_eval"
+    assert points[0].payload["metadata"]["source"] == "docs/langgraph.md"

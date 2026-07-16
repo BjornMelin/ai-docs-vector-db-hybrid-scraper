@@ -2,13 +2,11 @@
 
 from pydantic import BaseModel, Field
 
-from src.config import (
-    ChunkingStrategy,
-)
+from src.config import ChunkingStrategy
 
 
 class EmbeddingRequest(BaseModel):
-    """Embedding generation request"""
+    """Embedding generation request."""
 
     texts: list[str] = Field(..., description="Texts to embed")
     model: str | None = Field(default=None, description="Specific model to use")
@@ -19,11 +17,13 @@ class EmbeddingRequest(BaseModel):
 
 
 class DocumentRequest(BaseModel):
-    """Document processing request"""
+    """Document processing request."""
 
     url: str = Field(..., min_length=1, description="Document URL")
-    collection: str = Field(
-        default="documentation", min_length=1, description="Target collection"
+    collection: str | None = Field(
+        default=None,
+        min_length=1,
+        description="Target collection",
     )
     chunk_strategy: ChunkingStrategy = Field(
         default=ChunkingStrategy.ENHANCED, description="Chunking strategy"
@@ -61,16 +61,17 @@ class DocumentRequest(BaseModel):
         default=True,
         description="Normalize HTML whitespace before chunking",
     )
-    extract_metadata: bool = Field(
-        default=True, description="Extract document metadata"
-    )
 
 
 class BatchRequest(BaseModel):
-    """Batch document processing request"""
+    """Batch document processing request."""
 
     urls: list[str] = Field(..., description="Document URLs")
-    collection: str = Field(default="documentation", description="Target collection")
+    collection: str | None = Field(
+        default=None,
+        min_length=1,
+        description="Target collection",
+    )
     chunk_strategy: ChunkingStrategy = Field(
         default=ChunkingStrategy.ENHANCED, description="Chunking strategy"
     )
@@ -111,20 +112,15 @@ class BatchRequest(BaseModel):
 
 
 class ProjectRequest(BaseModel):
-    """Project creation request"""
+    """Project creation request."""
 
     name: str = Field(..., description="Project name")
     description: str | None = Field(default=None, description="Project description")
-    quality_tier: str = Field(
-        default="balanced",
-        description="Quality tier (economy/balanced/premium)",
-        pattern="^(economy|balanced|premium)$",
-    )
     urls: list[str] | None = Field(default=None, description="Initial URLs to process")
 
 
 class CostEstimateRequest(BaseModel):
-    """Cost estimation request"""
+    """Cost estimation request."""
 
     texts: list[str] = Field(..., description="Texts to estimate")
     provider: str | None = Field(default=None, description="Specific provider")
@@ -132,7 +128,7 @@ class CostEstimateRequest(BaseModel):
 
 
 class AnalyticsRequest(BaseModel):
-    """Analytics request"""
+    """Analytics request."""
 
     collection: str | None = Field(default=None, description="Specific collection")
     include_performance: bool = Field(

@@ -59,11 +59,9 @@ class VectorManagerStub:
         payload = self._collections.get(name)
         return None if payload is None else SimpleNamespace(**payload)
 
-    async def create_collection(
-        self, collection_name: str, *, vector_size: int, distance: str
-    ) -> bool:
+    async def create_collection(self, collection_name: str) -> bool:
         """Record create attempts and control the return value."""
-        self.records["create"].append((collection_name, vector_size, distance))
+        self.records["create"].append(collection_name)
         if "create_raise" in self._fail:
             msg = "creation raised"
             raise ValueError(msg)
@@ -360,44 +358,36 @@ def test_create_collection_succeeds(
 
     result = _invoke(
         cli_runner,
-        ["create", "alpha", "--dimension", "1024", "--distance", "dot"],
+        ["create", "alpha"],
         obj=cli_obj,
     )
 
     assert result.exit_code == 0
-    assert stub.records["create"] == [("alpha", 1024, "dot")]
+    assert stub.records["create"] == ["alpha"]
     panel = rich_cli_stub.printed[-1]
     assert isinstance(panel, Panel)
     assert isinstance(panel.renderable, Text)
-    assert "Dimension: 1024" in panel.renderable.plain
+    assert "Name: alpha" in panel.renderable.plain
 
 
-def test_create_collection_invalid_dimension(
+def test_create_collection_rejects_removed_dimension_override(
     cli_runner: CliRunner,
     monkeypatch: pytest.MonkeyPatch,
     rich_cli_stub: SimpleNamespace,
     cli_obj: dict[str, Any],
 ) -> None:
-    """Invalid dimension values should raise errors and surface diagnostics."""
+    """Collection dimensions are owned by the configured embedding model."""
     stub = VectorManagerStub(collections={})
     _patch_manager(monkeypatch, lambda: stub)
 
-    invalid_dimensions = ["-1", "0", "notanint"]
-    for dim in invalid_dimensions:
-        # Clear stub errors from previous iteration
-        if hasattr(rich_cli_stub, "errors"):
-            rich_cli_stub.errors.clear()
-        result = _invoke(
-            cli_runner,
-            ["create", "alpha", "--dimension", dim],
-            obj=cli_obj,
-        )
-        assert result.exit_code != 0
-        error_found = any(
-            "dimension" in str(err).lower() or "invalid" in str(err).lower()
-            for err, _ in getattr(rich_cli_stub, "errors", [])
-        )
-        assert error_found or "invalid" in result.output.lower()
+    result = _invoke(
+        cli_runner,
+        ["create", "alpha", "--dimension", "1024"],
+        obj=cli_obj,
+    )
+
+    assert result.exit_code != 0
+    assert "No such option: --dimension" in result.output
 
 
 def test_create_collection_aborts_when_exists(
@@ -436,7 +426,7 @@ def test_create_collection_force_deletes_existing(
 
     assert result.exit_code == 0
     assert stub.records["delete"] == ["alpha"]
-    assert stub.records["create"] == [("alpha", 1536, "cosine")]
+    assert stub.records["create"] == ["alpha"]
 
 
 def test_create_collection_force_cancelled_by_user(

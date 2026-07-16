@@ -127,7 +127,7 @@ class TestDocumentContracts:
         """DocumentUpsertRequest applies sensible defaults."""
         payload = DocumentUpsertRequest(content="Doc body")
 
-        assert payload.collection == "documentation"
+        assert payload.collection is None
         assert payload.metadata is None
 
     def test_document_operation_response_defaults(self) -> None:

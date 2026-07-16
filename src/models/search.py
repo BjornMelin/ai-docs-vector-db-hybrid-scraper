@@ -104,7 +104,9 @@ class SearchRequest(BaseModel):
     # Core search parameters
     query: str = Field(..., min_length=1, description="Search query text")
     collection: str | None = Field(
-        default="documentation", min_length=1, description="Target collection"
+        default=None,
+        min_length=1,
+        description="Target collection; defaults to server configuration",
     )
     limit: int = Field(10, ge=1, le=1000, description="Maximum results to return")
     offset: int = Field(

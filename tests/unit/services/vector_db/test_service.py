@@ -16,13 +16,13 @@ from qdrant_client import models
 from qdrant_client.http.exceptions import UnexpectedResponse
 
 from src.config.models import SearchStrategy
+from src.contracts.retrieval import SearchRecord
 from src.infrastructure.container import ApplicationContainer
+from src.services.errors import EmbeddingServiceError
 from src.services.vector_db.service import (
     VectorStoreService,
-    _distance_from_string,
     _filter_from_mapping,
 )
-from src.services.vector_db.types import CollectionSchema, TextDocument, VectorRecord
 
 
 class StubVectorStore:
@@ -32,6 +32,7 @@ class StubVectorStore:
         """Initialize the stub vector store with a collection name."""
         self.collection_name = collection_name
         self.add_calls: list[tuple[list[Document], list[str]]] = []
+        self.add_kwargs: list[dict[str, object]] = []
         self.search_return: list[tuple[Document, float]] = []
         self.vector_name = "dense"
         self.sparse_vector_name = "langchain-sparse"
@@ -40,23 +41,31 @@ class StubVectorStore:
         self,
         documents: list[Document],
         ids: list[str] | None = None,
-        **_: object,
+        **kwargs: object,
     ) -> None:
         """Record call parameters for later inspection."""
         self.add_calls.append((documents, list(ids or [])))
+        self.add_kwargs.append(dict(kwargs))
 
     def similarity_search_with_score_by_vector(
         self,
         *,
-        vector: list[float],
+        embedding: list[float],
         k: int,
-        search_filter: object | None = None,
+        filter: object | None = None,  # noqa: A002
     ) -> list[tuple[Document, float]]:
         """Record call parameters and return preset results."""
-        _ = (vector, k, search_filter)
+        _ = (embedding, k, filter)
         return self.search_return or [
             (
-                Document(page_content="stub", metadata={"doc_id": "doc-1"}),
+                Document(
+                    page_content="stub",
+                    metadata={
+                        "doc_id": "doc-1",
+                        "_id": "point-1",
+                        "_collection_name": self.collection_name,
+                    },
+                ),
                 0.42,
             )
         ]
@@ -133,44 +142,6 @@ def test_collection_adapters_are_cached_without_mutating_other_collections(
 
 
 @pytest.mark.asyncio
-async def test_sparse_upsert_uses_langchain_qdrant_vector_names() -> None:
-    """Sparse points should target the names created by QdrantVectorStore."""
-    from qdrant_client import AsyncQdrantClient
-
-    from src.config import Settings
-    from src.config.models import Environment
-
-    client = AsyncQdrantClient(location=":memory:")
-    service = VectorStoreService(
-        config=Settings(environment=Environment.TESTING),
-        async_qdrant_client=client,
-    )
-    service._embedding_dimension = 3  # pylint: disable=protected-access
-    try:
-        await service.upsert_vectors(
-            "hybrid",
-            [
-                VectorRecord(
-                    id="00000000-0000-0000-0000-000000000001",
-                    vector=[1.0, 0.0, 0.0],
-                    sparse_vector={1: 0.5, 4: 0.25},
-                    payload={"content": "example"},
-                )
-            ],
-        )
-
-        points, _ = await client.scroll(
-            collection_name="hybrid",
-            with_vectors=True,
-        )
-        assert len(points) == 1
-        assert isinstance(points[0].vector, dict)
-        assert set(points[0].vector) == {"", "langchain-sparse"}
-    finally:
-        await client.close()
-
-
-@pytest.mark.asyncio
 async def test_initialize_creates_configured_collection_before_adapter_validation(
     config_stub: Any,
     qdrant_client_mock: AsyncMock,
@@ -213,15 +184,32 @@ async def test_ensure_collection_creates_when_missing(
     assert isinstance(client, AsyncMock)
     client.collection_exists.return_value = False
 
-    schema = CollectionSchema(name="new", vector_size=3)
-    await initialized_service.ensure_collection(schema)
+    await initialized_service.ensure_collection("new")
 
     client.create_collection.assert_awaited_once()
 
 
-def test_distance_mapper_accepts_cli_euclidean_spelling() -> None:
-    """The CLI's euclidean value should select Qdrant's Euclid distance."""
-    assert _distance_from_string("euclidean") is models.Distance.EUCLID
+@pytest.mark.asyncio
+async def test_payload_indexes_use_native_metadata_paths(
+    initialized_service: VectorStoreService,
+) -> None:
+    """Logical metadata fields should map to Qdrant's nested payload schema."""
+    client = initialized_service._async_client  # pylint: disable=protected-access
+    assert isinstance(client, AsyncMock)
+    client.get_collection.return_value = SimpleNamespace(
+        points_count=1,
+        indexed_vectors_count=1,
+        payload_schema={},
+        config=SimpleNamespace(dict=dict),
+    )
+
+    await initialized_service.ensure_payload_indexes(
+        "documents", {"topic": models.PayloadSchemaType.KEYWORD}
+    )
+
+    assert client.create_payload_index.await_args.kwargs["field_name"] == (
+        "metadata.topic"
+    )
 
 
 @pytest.mark.asyncio
@@ -244,6 +232,19 @@ async def test_ensure_collection_accepts_concurrent_creator(
                 raise ValueError("Collection docs already exists")
             self.created = True
 
+        async def get_collection(self, **_kwargs: object) -> SimpleNamespace:
+            return SimpleNamespace(
+                config=SimpleNamespace(
+                    params=SimpleNamespace(
+                        vectors=models.VectorParams(
+                            size=3,
+                            distance=models.Distance.COSINE,
+                        ),
+                        sparse_vectors=None,
+                    )
+                )
+            )
+
     client = RacingClient()
     services = [
         VectorStoreService(
@@ -255,14 +256,56 @@ async def test_ensure_collection_accepts_concurrent_creator(
     for service in services:
         service._embedding_dimension = 3  # pylint: disable=protected-access
 
-    await asyncio.gather(
-        *(
-            service.ensure_collection(CollectionSchema(name="docs", vector_size=3))
-            for service in services
-        )
-    )
+    await asyncio.gather(*(service.ensure_collection("docs") for service in services))
 
     assert client.created
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "vectors",
+    [
+        models.VectorParams(size=4, distance=models.Distance.COSINE),
+        models.VectorParams(size=3, distance=models.Distance.DOT),
+        {"named": models.VectorParams(size=3, distance=models.Distance.COSINE)},
+    ],
+)
+async def test_ensure_collection_rejects_noncanonical_dense_contract(
+    config_stub: Any,
+    qdrant_client_mock: AsyncMock,
+    vectors: models.VectorParams | dict[str, models.VectorParams],
+) -> None:
+    """Existing collections must match the configured canonical dense shape."""
+    qdrant_client_mock.get_collection.return_value = SimpleNamespace(
+        config=SimpleNamespace(
+            params=SimpleNamespace(vectors=vectors, sparse_vectors=None)
+        )
+    )
+    service = VectorStoreService(
+        config=config_stub,
+        async_qdrant_client=qdrant_client_mock,
+    )
+    service._embedding_dimension = 3  # pylint: disable=protected-access
+
+    with pytest.raises(EmbeddingServiceError, match="canonical vector contract"):
+        await service.ensure_collection("docs")
+
+
+@pytest.mark.asyncio
+async def test_ensure_collection_requires_sparse_vector_for_hybrid_mode(
+    config_stub: Any,
+    qdrant_client_mock: AsyncMock,
+) -> None:
+    """Hybrid retrieval must fail early when its sparse vector is absent."""
+    service = VectorStoreService(
+        config=config_stub,
+        async_qdrant_client=qdrant_client_mock,
+    )
+    service._embedding_dimension = 3  # pylint: disable=protected-access
+    service._retrieval_mode = SearchStrategy.HYBRID  # pylint: disable=protected-access
+
+    with pytest.raises(EmbeddingServiceError, match="canonical vector contract"):
+        await service.ensure_collection("docs")
 
 
 @pytest.mark.asyncio
@@ -281,7 +324,7 @@ async def test_ensure_collection_reraises_unproven_create_conflict(
     service._embedding_dimension = 3  # pylint: disable=protected-access
 
     with pytest.raises(ValueError, match="already exists") as exc_info:
-        await service.ensure_collection(CollectionSchema(name="docs", vector_size=3))
+        await service.ensure_collection("docs")
 
     assert exc_info.value is create_error
     assert qdrant_client_mock.collection_exists.await_count == 2
@@ -303,7 +346,7 @@ async def test_ensure_collection_reraises_unrelated_value_error(
     service._embedding_dimension = 3  # pylint: disable=protected-access
 
     with pytest.raises(ValueError, match="invalid vector size") as exc_info:
-        await service.ensure_collection(CollectionSchema(name="docs", vector_size=3))
+        await service.ensure_collection("docs")
 
     assert exc_info.value is create_error
     qdrant_client_mock.collection_exists.assert_awaited_once_with("docs")
@@ -328,7 +371,7 @@ async def test_ensure_collection_accepts_http_conflict_after_peer_creation(
     )
     service._embedding_dimension = 3  # pylint: disable=protected-access
 
-    await service.ensure_collection(CollectionSchema(name="docs", vector_size=3))
+    await service.ensure_collection("docs")
 
     assert qdrant_client_mock.collection_exists.await_count == 2
 
@@ -354,7 +397,7 @@ async def test_ensure_collection_reraises_http_non_conflict(
     service._embedding_dimension = 3  # pylint: disable=protected-access
 
     with pytest.raises(UnexpectedResponse) as exc_info:
-        await service.ensure_collection(CollectionSchema(name="docs", vector_size=3))
+        await service.ensure_collection("docs")
 
     assert exc_info.value is create_error
     qdrant_client_mock.collection_exists.assert_awaited_once_with("docs")
@@ -385,7 +428,7 @@ async def test_ensure_collection_accepts_grpc_already_exists_after_peer_creation
     )
     service._embedding_dimension = 3  # pylint: disable=protected-access
 
-    await service.ensure_collection(CollectionSchema(name="docs", vector_size=3))
+    await service.ensure_collection("docs")
 
     assert qdrant_client_mock.collection_exists.await_count == 2
     span_attributes.assert_called_once_with(
@@ -410,7 +453,7 @@ async def test_ensure_collection_preserves_create_error_when_verification_fails(
     service._embedding_dimension = 3  # pylint: disable=protected-access
 
     with pytest.raises(ValueError, match="already exists") as exc_info:
-        await service.ensure_collection(CollectionSchema(name="docs", vector_size=3))
+        await service.ensure_collection("docs")
 
     assert exc_info.value is create_error
     assert exc_info.value.__cause__ is verification_error
@@ -438,7 +481,7 @@ async def test_ensure_collection_preserves_unrelated_grpc_failure(
     service._embedding_dimension = 3  # pylint: disable=protected-access
 
     with pytest.raises(grpc.aio.AioRpcError) as exc_info:
-        await service.ensure_collection(CollectionSchema(name="docs", vector_size=3))
+        await service.ensure_collection("docs")
 
     assert exc_info.value is create_error
     qdrant_client_mock.collection_exists.assert_awaited_once_with("docs")
@@ -524,59 +567,149 @@ async def test_upsert_documents_invokes_vector_store(
     monkeypatch.setattr("asyncio.to_thread", _immediate)
 
     docs = [
-        TextDocument(id="doc-1", content="alpha", metadata={"tenant": "acme"}),
-        TextDocument(id="doc-2", content="beta", metadata={}),
+        Document(page_content="alpha", metadata={"doc_id": "doc-1", "tenant": "acme"}),
+        Document(page_content="beta", metadata={"doc_id": "doc-2"}),
     ]
 
-    await initialized_service.upsert_documents("documents", docs)
+    point_ids = await initialized_service.upsert_documents("documents", docs)
 
     assert len(store.add_calls) == 1
     documents, ids = store.add_calls[0]
     assert [doc.page_content for doc in documents] == ["alpha", "beta"]
-    assert all(len(identifier) == 32 for identifier in ids)
+    assert ids == point_ids
+    assert all(len(identifier) == 36 for identifier in ids)
     first_metadata = documents[0].metadata or {}
     second_metadata = documents[1].metadata or {}
     assert first_metadata["tenant"] == "acme"
     assert first_metadata["doc_id"] == "doc-1"
-    assert first_metadata["chunk_id"] == 0
-    assert "content_hash_previous" not in first_metadata
+    assert first_metadata["chunk_index"] == 0
     assert len(first_metadata["content_hash"]) == 32
-    assert first_metadata["content"] == "alpha"
+    assert "content" not in first_metadata
     assert "created_at" in first_metadata
     assert second_metadata["tenant"] == "default"
     assert second_metadata["doc_id"] == "doc-2"
-    assert second_metadata["chunk_id"] == 0
-    assert "content_hash_previous" not in second_metadata
+    assert second_metadata["chunk_index"] == 0
     assert "created_at" in second_metadata
 
 
 @pytest.mark.asyncio
-async def test_upsert_vectors_calls_qdrant_async_client(
+async def test_replacement_rejects_empty_chunk_set(
     initialized_service: VectorStoreService,
 ) -> None:
-    """upsert_vectors should prepare PointStruct payloads for Async client."""
-    service = initialized_service
-    async_client = service._async_client
-    assert isinstance(async_client, AsyncMock)
+    """An empty replacement must not silently preserve stale chunks."""
+    with pytest.raises(EmbeddingServiceError, match="at least one chunk"):
+        await initialized_service.replace_document_chunks("documents", [])
 
-    await service.upsert_vectors(
+
+@pytest.mark.asyncio
+async def test_replacements_are_serialized_within_the_service_process(
+    initialized_service: VectorStoreService,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Concurrent replacement calls must not interleave persistence and pruning."""
+    first_started = asyncio.Event()
+    release_first = asyncio.Event()
+    persist_calls: list[str] = []
+    persist_documents = initialized_service._persist_documents
+    store = initialized_service._vector_store
+    client = initialized_service._async_client
+    assert isinstance(store, StubVectorStore)
+    assert isinstance(client, AsyncMock)
+    client.delete.reset_mock()
+
+    def replacement(content: str) -> list[Document]:
+        return [
+            Document(
+                page_content=content,
+                metadata={
+                    "doc_id": "doc",
+                    "chunk_index": 0,
+                    "total_chunks": 1,
+                },
+            )
+        ]
+
+    async def persist(
+        _collection: str,
+        documents: list[Document],
+    ) -> tuple[list[str], list[Document]]:
+        persist_calls.append(documents[0].page_content)
+        if len(persist_calls) == 1:
+            first_started.set()
+            await release_first.wait()
+        return await persist_documents(_collection, documents)
+
+    monkeypatch.setattr(initialized_service, "_persist_documents", persist)
+    first = asyncio.create_task(
+        initialized_service.replace_document_chunks("documents", replacement("first"))
+    )
+    await first_started.wait()
+    second = asyncio.create_task(
+        initialized_service.replace_document_chunks("documents", replacement("second"))
+    )
+    await asyncio.sleep(0)
+
+    assert persist_calls == ["first"]
+
+    release_first.set()
+    await asyncio.gather(first, second)
+    assert persist_calls == ["first", "second"]
+    assert store.add_kwargs == [{"wait": True}, {"wait": True}]
+    assert client.delete.await_count == 2
+    assert all(call.kwargs["wait"] is True for call in client.delete.await_args_list)
+
+
+@pytest.mark.asyncio
+async def test_upsert_documents_never_infers_replacement_from_metadata(
+    initialized_service: VectorStoreService,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Untrusted metadata must not trigger destructive tail pruning."""
+
+    async def _immediate(func, /, *args, **kwargs):
+        return func(*args, **kwargs)
+
+    monkeypatch.setattr("asyncio.to_thread", _immediate)
+    client = initialized_service._async_client
+    assert isinstance(client, AsyncMock)
+    client.delete.reset_mock()
+
+    await initialized_service.upsert_documents(
         "documents",
         [
-            VectorRecord(
-                id="doc-1",
-                vector=[0.1, 0.2, 0.3],
-                payload={"foo": "bar"},
+            Document(
+                page_content="untrusted",
+                metadata={
+                    "tenant": "tenant-a",
+                    "doc_id": "doc-a",
+                    "chunk_index": 0,
+                    "total_chunks": 1,
+                },
             )
         ],
     )
 
-    async_client.upsert.assert_awaited_once()
-    _, kwargs = async_client.upsert.call_args
-    assert kwargs["collection_name"] == "documents"
-    points = list(kwargs["points"])
-    assert len(points) == 1
-    point = points[0]
-    assert point.payload["foo"] == "bar"
+    client.delete.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_upsert_documents_rejects_duplicate_stable_point_keys(
+    initialized_service: VectorStoreService,
+) -> None:
+    """One batch must not silently overwrite duplicate chunk identities."""
+    duplicate_documents = [
+        Document(
+            page_content=content,
+            metadata={"tenant": "tenant-a", "doc_id": "doc-a"},
+        )
+        for content in ("first", "second")
+    ]
+
+    with pytest.raises(EmbeddingServiceError, match="duplicate tenant"):
+        await initialized_service.upsert_documents(
+            "documents",
+            duplicate_documents,
+        )
 
 
 def test_filter_from_mapping_handles_sequences_and_scalars() -> None:
@@ -592,7 +725,7 @@ def test_filter_from_mapping_handles_sequences_and_scalars() -> None:
         must_conditions = [raw_must]
     match_any = None
     for condition in must_conditions:
-        if getattr(condition, "key", None) != "tags":
+        if getattr(condition, "key", None) != "metadata.tags":
             continue
         candidate = getattr(condition, "match", None)
         if isinstance(candidate, models.MatchAny):
@@ -604,7 +737,7 @@ def test_filter_from_mapping_handles_sequences_and_scalars() -> None:
 
     match_value = None
     for condition in must_conditions:
-        if getattr(condition, "key", None) != "lang":
+        if getattr(condition, "key", None) != "metadata.lang":
             continue
         candidate = getattr(condition, "match", None)
         if isinstance(candidate, models.MatchValue):
@@ -621,6 +754,7 @@ def test_filter_from_mapping_treats_strings_as_scalars() -> None:
     raw_must = filters.must
     assert raw_must is not None
     condition = raw_must[0] if isinstance(raw_must, list) else raw_must
+    assert getattr(condition, "key", None) == "metadata.category"
     condition_match = getattr(condition, "match", None)
     assert isinstance(condition_match, models.MatchValue)
     assert condition_match.value == "docs"
@@ -636,7 +770,12 @@ async def test_search_documents_returns_vector_matches(
 
     result_doc = Document(
         page_content="alpha",
-        metadata={"doc_id": "doc-123", "topic": "testing"},
+        metadata={
+            "doc_id": "doc-123",
+            "topic": "testing",
+            "_id": "point-123",
+            "_collection_name": "documents",
+        },
     )
     store.search_return = [(result_doc, 0.87)]
 
@@ -648,7 +787,7 @@ async def test_search_documents_returns_vector_matches(
 
     assert len(matches) == 1
     match = matches[0]
-    assert match.id == "doc-123"
+    assert match.id == "point-123"
     assert match.metadata is not None
     assert match.metadata["topic"] == "testing"
     assert pytest.approx(match.score) == 0.87
@@ -664,13 +803,23 @@ async def test_hybrid_search_uses_dense_path_when_sparse_missing(
     store = service._vector_store
     assert isinstance(store, StubVectorStore)
     store.search_return = [
-        (Document(page_content="dense", metadata={"doc_id": "dense-1"}), 0.51)
+        (
+            Document(
+                page_content="dense",
+                metadata={
+                    "doc_id": "dense-1",
+                    "_id": "dense-point-1",
+                    "_collection_name": "documents",
+                },
+            ),
+            0.51,
+        )
     ]
 
     results = await service.hybrid_search("documents", query="dense query", limit=1)
 
     assert len(results) == 1
-    assert results[0].id == "dense-1"
+    assert results[0].id == "dense-point-1"
     assert pytest.approx(results[0].score) == 0.51
 
 
@@ -687,7 +836,16 @@ async def test_hybrid_search_executes_hybrid_prefetch(
     client = service._async_client
     assert isinstance(client, AsyncMock)
     client.query_points.return_value = SimpleNamespace(
-        points=[SimpleNamespace(id="hybrid", score=0.73, payload={"doc_id": "hybrid"})]
+        points=[
+            SimpleNamespace(
+                id="hybrid",
+                score=0.73,
+                payload={
+                    "page_content": "hybrid result",
+                    "metadata": {"doc_id": "hybrid"},
+                },
+            )
+        ]
     )
 
     results = await service.hybrid_search("documents", query="hybrid query", limit=1)
@@ -755,36 +913,6 @@ class TestSparseInitialization:
         with pytest.raises(EmbeddingServiceError, match="sparse embedding model"):
             await service.initialize()
 
-    @pytest.mark.asyncio
-    async def test_initialize_raises_without_fastembed_sparse_runtime(
-        self,
-        config_stub: Any,
-        qdrant_client_mock: AsyncMock,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        """Missing FastEmbedSparse runtime should produce informative error."""
-        from src.config.models import SearchStrategy
-        from src.services.errors import EmbeddingServiceError
-        from src.services.vector_db.service import VectorStoreService
-
-        monkeypatch.setattr(
-            "src.services.vector_db.service.VectorStoreService._build_sync_client",
-            lambda self, cfg: MagicMock(),
-        )
-
-        monkeypatch.setattr(
-            "src.services.vector_db.service.FastEmbedSparseRuntime", None
-        )
-        config_stub.embedding.retrieval_mode = SearchStrategy.HYBRID
-        config_stub.fastembed.sparse_model = "stub-sparse"
-
-        service = VectorStoreService(
-            config=config_stub, async_qdrant_client=qdrant_client_mock
-        )
-
-        with pytest.raises(EmbeddingServiceError, match="langchain-qdrant extras"):
-            await service.initialize()
-
 
 def test_embedding_runtime_uses_canonical_model_owners(
     config_stub: Any,
@@ -813,15 +941,13 @@ class TestEnsureCollectionSparseConfig:
         self,
         initialized_service: VectorStoreService,
     ) -> None:
-        """When requires_sparse=True, should include sparse_vectors_config."""
+        """Hybrid retrieval should include sparse vector configuration."""
         client = initialized_service._async_client
         assert isinstance(client, AsyncMock)
         client.collection_exists.return_value = False
 
-        schema = CollectionSchema(
-            name="hybrid-collection", vector_size=3, requires_sparse=True
-        )
-        await initialized_service.ensure_collection(schema)
+        initialized_service._retrieval_mode = SearchStrategy.HYBRID
+        await initialized_service.ensure_collection("hybrid-collection")
 
         client.create_collection.assert_awaited_once()
         call_kwargs = client.create_collection.call_args.kwargs
@@ -833,15 +959,12 @@ class TestEnsureCollectionSparseConfig:
         self,
         initialized_service: VectorStoreService,
     ) -> None:
-        """When requires_sparse=False, sparse_vectors_config should be None."""
+        """Dense retrieval should omit sparse vector configuration."""
         client = initialized_service._async_client
         assert isinstance(client, AsyncMock)
         client.collection_exists.return_value = False
 
-        schema = CollectionSchema(
-            name="dense-only", vector_size=3, requires_sparse=False
-        )
-        await initialized_service.ensure_collection(schema)
+        await initialized_service.ensure_collection("dense-only")
 
         client.create_collection.assert_awaited_once()
         call_kwargs = client.create_collection.call_args.kwargs
@@ -866,9 +989,20 @@ class TestQueryWithServerGrouping:
         mock_hit = SimpleNamespace(
             id="doc-grouped",
             score=0.88,
-            payload={"doc_id": "doc-grouped", "content": "grouped result"},
+            payload={
+                "page_content": "grouped result",
+                "metadata": {"doc_id": "doc-grouped"},
+            },
         )
-        mock_group = SimpleNamespace(id="group-1", hits=[mock_hit])
+        second_hit = SimpleNamespace(
+            id="doc-grouped-2",
+            score=0.81,
+            payload={
+                "page_content": "second grouped result",
+                "metadata": {"doc_id": "doc-grouped"},
+            },
+        )
+        mock_group = SimpleNamespace(id="group-1", hits=[mock_hit, second_hit])
         client.query_points_groups = AsyncMock(
             return_value=SimpleNamespace(groups=[mock_group])
         )
@@ -877,15 +1011,155 @@ class TestQueryWithServerGrouping:
             "documents",
             [1.0, 2.0, 3.0],
             group_by="doc_id",
-            group_size=1,
+            group_size=2,
             limit=10,
             filters=None,
         )
 
         assert applied is True
-        assert len(records) == 1
+        assert client.query_points_groups.await_args.kwargs["group_by"] == (
+            "metadata.doc_id"
+        )
+        assert len(records) == 2
         assert records[0].id == "doc-grouped"
         assert pytest.approx(records[0].score) == 0.88
+        assert records[0].metadata is not None
+        assert records[0].metadata["_grouping"]["rank"] == 1
+        assert records[1].id == "doc-grouped-2"
+        assert records[1].metadata is not None
+        assert records[1].metadata["_grouping"]["rank"] == 2
+
+    def test_annotation_preserves_rank_within_each_group(
+        self,
+        initialized_service: VectorStoreService,
+    ) -> None:
+        """Annotation must not replace within-group rank with global position."""
+
+        def grouped_record(identifier: str, group_id: str, rank: int) -> SearchRecord:
+            return SearchRecord.from_payload(
+                {
+                    "id": identifier,
+                    "content": identifier,
+                    "score": 1.0,
+                    "collection": "documents",
+                    "metadata": {
+                        "doc_id": group_id,
+                        "_grouping": {"group_id": group_id, "rank": rank},
+                    },
+                }
+            )
+
+        records = [
+            grouped_record("a-1", "a", 1),
+            grouped_record("a-2", "a", 2),
+            grouped_record("b-1", "b", 1),
+        ]
+
+        annotated = initialized_service._annotate_grouping_metadata(
+            records,
+            group_by="doc_id",
+            grouping_applied=True,
+        )
+
+        assert [record.group_rank for record in annotated] == [1, 2, 1]
+
+    def test_client_grouping_never_exceeds_limit(
+        self,
+        initialized_service: VectorStoreService,
+    ) -> None:
+        """Client fallback must cap the flattened grouped result count."""
+        records = [
+            SearchRecord.from_payload(
+                {
+                    "id": f"{group_id}-{rank}",
+                    "content": "result",
+                    "score": score,
+                    "collection": "documents",
+                    "metadata": {"doc_id": group_id},
+                }
+            )
+            for group_id, rank, score in (
+                ("a", 1, 0.9),
+                ("a", 2, 0.8),
+                ("b", 1, 0.7),
+                ("b", 2, 0.6),
+            )
+        ]
+
+        grouped = initialized_service._group_client_side(
+            records,
+            group_by="doc_id",
+            group_size=2,
+            limit=3,
+        )
+
+        assert len(grouped) == 3
+        assert [record.id for record in grouped] == ["a-1", "a-2", "b-1"]
+
+    def test_grouping_preserves_numeric_zero_identifier(
+        self,
+        initialized_service: VectorStoreService,
+    ) -> None:
+        """Zero is a valid Qdrant group identifier, not a missing value."""
+        records = [
+            SearchRecord.from_payload(
+                {
+                    "id": f"point-{index}",
+                    "content": "result",
+                    "score": 1.0 - index / 10,
+                    "collection": "documents",
+                    "metadata": {"bucket": 0},
+                }
+            )
+            for index in range(2)
+        ]
+
+        grouped = initialized_service._group_client_side(
+            records,
+            group_by="bucket",
+            group_size=2,
+            limit=2,
+        )
+        assert [record.group_id for record in grouped] == ["0", "0"]
+
+        grouped[0].metadata = {
+            "bucket": 0,
+            "_grouping": {"group_id": 0, "rank": 1},
+        }
+        annotated = initialized_service._annotate_grouping_metadata(
+            grouped[:1],
+            group_by="bucket",
+            grouping_applied=True,
+        )
+        assert annotated[0].group_id == "0"
+
+    def test_client_grouping_preserves_document_identity(
+        self,
+        initialized_service: VectorStoreService,
+    ) -> None:
+        """Grouping by another field must not overwrite the canonical doc_id."""
+        records = [
+            SearchRecord.from_payload(
+                {
+                    "id": "point-1",
+                    "content": "result",
+                    "score": 1.0,
+                    "collection": "documents",
+                    "metadata": {"doc_id": "document-1", "bucket": "group-a"},
+                }
+            )
+        ]
+
+        grouped = initialized_service._group_client_side(
+            records,
+            group_by="bucket",
+            group_size=1,
+            limit=1,
+        )
+
+        assert grouped[0].metadata is not None
+        assert grouped[0].metadata["doc_id"] == "document-1"
+        assert grouped[0].group_id == "group-a"
 
     @pytest.mark.asyncio
     async def test_query_with_server_grouping_fallback_on_exception(

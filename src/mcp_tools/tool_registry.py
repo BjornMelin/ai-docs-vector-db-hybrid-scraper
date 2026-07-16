@@ -37,7 +37,6 @@ async def register_all_tools(  # pylint: disable=too-many-arguments
     tools.documents.register_tools(
         mcp,
         vector_service=vector_service,
-        cache_manager=cache_manager,
         crawl_manager=crawl_manager,
         content_intelligence_service=content_intelligence_service,
     )

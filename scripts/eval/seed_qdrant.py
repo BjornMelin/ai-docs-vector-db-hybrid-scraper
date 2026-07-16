@@ -8,8 +8,11 @@ from pathlib import Path
 from typing import Any
 
 from fastembed import TextEmbedding
+from langchain_core.documents import Document
 from qdrant_client import QdrantClient
 from qdrant_client.http import models as http_models
+
+from src.services.vector_db.payload_schema import normalize_document
 
 
 def _load_corpus(path: Path) -> list[dict[str, Any]]:
@@ -48,17 +51,30 @@ def _seed_collection(
     # Build point structures for upsert
     points = []
     for record, vector in zip(corpus, embeddings, strict=True):
-        payload = {
-            "doc_path": record["doc_path"],
-            "category": record["metadata"].get("category"),
-            "text": record["text"],
-        }
+        document = normalize_document(
+            Document(
+                page_content=record["text"],
+                metadata={
+                    "doc_id": str(record["id"]),
+                    "tenant": collection_name,
+                    "chunk_index": 0,
+                    "total_chunks": 1,
+                    "source": record["doc_path"],
+                    "uri_or_path": record["doc_path"],
+                    "category": record["metadata"].get("category"),
+                },
+            ),
+            id_hint=str(record["id"]),
+        )
         vector_list = [float(value) for value in vector]
         points.append(
             http_models.PointStruct(
-                id=record["id"],
+                id=str(document.id),
                 vector=vector_list,
-                payload=payload,
+                payload={
+                    "page_content": document.page_content,
+                    "metadata": document.metadata,
+                },
             )
         )
 

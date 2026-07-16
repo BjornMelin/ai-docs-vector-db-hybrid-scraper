@@ -43,8 +43,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Published the consolidated MCP test strategy doc (`docs/testing/mcp-unit-tests.md`) capturing the coverage map, decision
   record, and technical debt register for the new suites.
 
+### Changed
+
+- **Breaking:** Existing Qdrant collections must be cleared and fully re-ingested
+  during the maintenance window before reopening traffic. The persisted payload
+  and point-ID contracts intentionally changed, and there is no legacy read or
+  migration shim. Stop traffic and writers for a maintenance window, deploy the
+  application, run `uv run manage-db clear <collection>` for each collection,
+  and rerun the authoritative ingestion jobs before reopening traffic.
+
 ### Removed
 
+- Removed the parallel `TextDocument`/`VectorRecord` payload models and overloaded
+  `chunk_id`/`chunk_hash` metadata paths in favor of LangChain `Document`.
+- Removed collection dimension, distance, and project tier controls that could
+  create collections incompatible with the configured embedding adapter, plus
+  the placeholder MCP optimization tool that reported success without mutation.
 - Removed the duplicate nested embedding-provider field, flat observability environment aliases, unsupported deployment and experimentation flags, and the redundant checkout composite action.
 - Removed the duplicated `docs-dev` dependency group; `.[docs]` is the only documentation dependency surface.
 - Removed the legacy benchmark orchestrator package (`src/benchmarks`) and Sphinx pages that referenced retired performance flows.
@@ -52,6 +66,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Refactor
 
+- Made Qdrant point identity, native payload decoding, metadata filters, and the
+  configured HTTP default collection one canonical contract across create,
+  search, list, get, and delete operations.
+- Prune obsolete trailing chunks after a complete replacement is persisted, so
+  shrinking re-ingestion cannot leave stale search results.
+- Seed the deterministic evaluation collection with the same native payload and
+  stable point-ID contract used by runtime ingestion.
 - Made provider-specific embedding models single-owner configuration, restored profile retrieval modes, and pinned Qdrant server 1.16.2 with valid Kubernetes health probes.
 - Installed the locked Playwright Chromium runtime and its operating-system dependencies in the production image, with a build-time launch smoke.
 - Aligned Browser-use with its current `BrowserSession` API, skipped disabled RAG construction, and kept circuit breakers in memory when Dragonfly is disabled.

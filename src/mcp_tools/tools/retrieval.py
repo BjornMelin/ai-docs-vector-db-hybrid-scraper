@@ -35,8 +35,10 @@ class MultiStageSearchPayload(BaseModel):
     """Payload for multi-stage retrieval combining several filter passes."""
 
     query: str = Field(..., min_length=1, description="User query text.")
-    collection: str = Field(
-        default="documentation", min_length=1, description="Target collection name."
+    collection: str | None = Field(
+        default=None,
+        min_length=1,
+        description="Target collection name.",
     )
     stages: list[dict[str, Any]] = Field(
         default_factory=list,
@@ -93,7 +95,7 @@ async def _search_matches(
 ) -> list[SearchRecord]:
     """Run a vector search and return the raw matches."""
     service = vector_service
-    collection_value = request.collection or "documentation"
+    collection_value = request.collection or service.default_collection_name
     if ctx:
         strategy_value = (
             request.search_strategy.value
@@ -165,6 +167,7 @@ def register_tools(
     ) -> list[SearchRecord]:
         """Execute a simplified multi-stage search."""
         service = vector_service
+        collection = payload.collection or service.default_collection_name
         all_matches: list[SearchRecord] = []
 
         for stage in payload.stages:
@@ -172,7 +175,7 @@ def register_tools(
             stage_filters = stage.get("filters") or stage.get("filter")
             try:
                 stage_matches = await service.search_documents(
-                    payload.collection,
+                    collection,
                     payload.query,
                     limit=stage_limit,
                     filters=stage_filters,
@@ -254,7 +257,7 @@ def register_tools(
     ) -> list[SearchRecord]:
         """Search then apply RRF scoring for shallow reranking."""
         service = vector_service
-        collection_value = request.collection or "documentation"
+        collection_value = request.collection or service.default_collection_name
         baseline = await service.search_documents(
             collection_value,
             request.query,
