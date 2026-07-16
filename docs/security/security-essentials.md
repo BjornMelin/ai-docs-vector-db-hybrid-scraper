@@ -63,9 +63,15 @@ them resolved; any unmatched finding fails the audit. Refresh it only after an
 approved security review:
 
 ```bash
-uv tool run bandit -q -r src -f json -o /tmp/bandit.json || [ "$?" -eq 1 ]
+bandit_status=0
+uv tool run bandit -q -r src -f json -o /tmp/bandit.json || bandit_status="$?"
+if [ "$bandit_status" -ne 0 ] && [ "$bandit_status" -ne 1 ]; then
+  exit "$bandit_status"
+fi
+
 jq -S '{results: (.results | sort_by(.filename, .line_number, .test_id))}' \
-  /tmp/bandit.json > .bandit-baseline.json
+  /tmp/bandit.json > .bandit-baseline.json.tmp &&
+  mv .bandit-baseline.json.tmp .bandit-baseline.json
 ```
 
 ### Vulnerability Scanning

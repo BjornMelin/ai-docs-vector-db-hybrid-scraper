@@ -10,9 +10,10 @@ from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
+import qdrant_client.models as models
 from dependency_injector import providers
 from langchain_core.documents import Document
-from qdrant_client import AsyncQdrantClient, models
+from qdrant_client import AsyncQdrantClient
 
 from src.config.models import QdrantConfig, ScoreNormalizationStrategy, SearchStrategy
 from src.infrastructure.container import ApplicationContainer

@@ -32,6 +32,7 @@ class StubVectorStore:
         """Initialize the stub vector store with a collection name."""
         self.collection_name = collection_name
         self.add_calls: list[tuple[list[Document], list[str]]] = []
+        self.add_kwargs: list[dict[str, object]] = []
         self.search_return: list[tuple[Document, float]] = []
         self.vector_name = "dense"
         self.sparse_vector_name = "langchain-sparse"
@@ -40,10 +41,11 @@ class StubVectorStore:
         self,
         documents: list[Document],
         ids: list[str] | None = None,
-        **_: object,
+        **kwargs: object,
     ) -> None:
         """Record call parameters for later inspection."""
         self.add_calls.append((documents, list(ids or [])))
+        self.add_kwargs.append(dict(kwargs))
 
     def similarity_search_with_score_by_vector(
         self,
@@ -608,6 +610,24 @@ async def test_replacements_are_serialized_within_the_service_process(
     first_started = asyncio.Event()
     release_first = asyncio.Event()
     persist_calls: list[str] = []
+    persist_documents = initialized_service._persist_documents
+    store = initialized_service._vector_store
+    client = initialized_service._async_client
+    assert isinstance(store, StubVectorStore)
+    assert isinstance(client, AsyncMock)
+    client.delete.reset_mock()
+
+    def replacement(content: str) -> list[Document]:
+        return [
+            Document(
+                page_content=content,
+                metadata={
+                    "doc_id": "doc",
+                    "chunk_index": 0,
+                    "total_chunks": 1,
+                },
+            )
+        ]
 
     async def persist(
         _collection: str,
@@ -617,27 +637,15 @@ async def test_replacements_are_serialized_within_the_service_process(
         if len(persist_calls) == 1:
             first_started.set()
             await release_first.wait()
-        return [documents[0].page_content], documents
-
-    async def prune(_collection: str, _documents: list[Document]) -> None:
-        return None
+        return await persist_documents(_collection, documents)
 
     monkeypatch.setattr(initialized_service, "_persist_documents", persist)
-    monkeypatch.setattr(
-        initialized_service,
-        "_prune_replaced_document_tails",
-        prune,
-    )
     first = asyncio.create_task(
-        initialized_service.replace_document_chunks(
-            "documents", [Document(page_content="first")]
-        )
+        initialized_service.replace_document_chunks("documents", replacement("first"))
     )
     await first_started.wait()
     second = asyncio.create_task(
-        initialized_service.replace_document_chunks(
-            "documents", [Document(page_content="second")]
-        )
+        initialized_service.replace_document_chunks("documents", replacement("second"))
     )
     await asyncio.sleep(0)
 
@@ -646,6 +654,9 @@ async def test_replacements_are_serialized_within_the_service_process(
     release_first.set()
     await asyncio.gather(first, second)
     assert persist_calls == ["first", "second"]
+    assert store.add_kwargs == [{"wait": True}, {"wait": True}]
+    assert client.delete.await_count == 2
+    assert all(call.kwargs["wait"] is True for call in client.delete.await_args_list)
 
 
 @pytest.mark.asyncio

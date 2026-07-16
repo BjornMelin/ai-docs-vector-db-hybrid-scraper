@@ -423,6 +423,7 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
             store.add_documents,
             documents=langchain_documents,
             ids=ids,
+            wait=True,
         )
         return ids, langchain_documents
 
@@ -476,6 +477,7 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
                         ]
                     )
                 ),
+                wait=True,
             )
 
     async def delete(
