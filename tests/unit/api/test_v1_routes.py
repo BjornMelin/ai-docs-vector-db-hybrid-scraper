@@ -189,6 +189,14 @@ def test_post_search_uses_server_collection_when_omitted(
     assert response.json()["records"][0]["content"] == ("install-configured-documents")
 
 
+def test_get_search_rejects_empty_collection(app_with_overrides: FastAPI) -> None:
+    """GET validation should reject an empty collection before route execution."""
+    with TestClient(app_with_overrides) as client:
+        response = client.get("/api/v1/search?q=install&collection=")
+
+    assert response.status_code == 422
+
+
 def test_post_search_supports_query_vector(app_with_overrides: FastAPI) -> None:
     """POST /search accepts query vectors when the query is omitted."""
     with TestClient(app_with_overrides) as client:

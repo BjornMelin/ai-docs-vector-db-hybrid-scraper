@@ -263,9 +263,15 @@ async def _create_collection(
 )
 @click.pass_context
 def create_collections(  # pylint: disable=too-many-locals
-    ctx: click.Context, collections: tuple, _force: bool
-):
-    """Create multiple collections in batch."""
+    ctx: click.Context, collections: tuple[str, ...], _force: bool
+) -> None:
+    """Create multiple collections in batch.
+
+    Args:
+        ctx: Click context containing the rich CLI facade.
+        collections: Collection names to create.
+        _force: Whether to replace collections that already exist.
+    """
     rich_cli = ctx.obj["rich_cli"]
 
     collection_list = list(collections)

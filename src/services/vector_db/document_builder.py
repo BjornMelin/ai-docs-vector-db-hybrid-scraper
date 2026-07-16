@@ -40,7 +40,15 @@ def build_text_documents(
     chunks: Sequence[Document],
     params: DocumentBuildParams,
 ) -> list[Document]:
-    """Return canonical LangChain documents derived from content chunks."""
+    """Return canonical LangChain documents derived from content chunks.
+
+    Args:
+        chunks: Content chunks to enrich with canonical ingestion metadata.
+        params: Authoritative identity and metadata for the source document.
+
+    Returns:
+        LangChain documents ready for persistence normalization.
+    """
     total_chunks = len(chunks)
     timestamp = datetime.now(UTC).isoformat()
     base_payload = dict(params.base_metadata or {})

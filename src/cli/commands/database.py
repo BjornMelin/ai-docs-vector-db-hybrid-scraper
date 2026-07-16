@@ -207,8 +207,18 @@ def _abort_collection_not_found(collection_name: str, rich_cli) -> None:
     "--force", is_flag=True, help="Force creation (delete existing collection)"
 )
 @click.pass_context
-def create_collection(ctx: click.Context, collection_name: str, force: bool):
-    """Create a new vector database collection."""
+def create_collection(
+    ctx: click.Context,
+    collection_name: str,
+    force: bool,
+) -> None:
+    """Create a new vector database collection.
+
+    Args:
+        ctx: Click context containing the rich CLI facade.
+        collection_name: Collection to create.
+        force: Whether to replace an existing collection.
+    """
     rich_cli = ctx.obj["rich_cli"]
 
     # Confirmation for force creation

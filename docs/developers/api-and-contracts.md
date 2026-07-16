@@ -96,9 +96,12 @@ one-to-one to those fields.
 payload. Point IDs are stable UUID5 values derived from tenant, document, and
 chunk position; the ID returned by create is the ID used by get and delete.
 Complete document re-ingestion removes obsolete trailing chunks only after the
-new chunk set is stored successfully. Collection vector shape, distance, and
-sparse-vector policy come from the configured embedding and retrieval stack;
-the CLI does not expose incompatible per-collection overrides.
+new chunk set is stored successfully. Replacement calls are serialized within
+the service process. Keep one authoritative ingestion writer per deployment;
+add a distributed lock before enabling multi-process replacement ingestion.
+Collection vector shape, distance, and sparse-vector policy come from the
+configured embedding and retrieval stack; the CLI does not expose incompatible
+per-collection overrides.
 HTTP request collection fields default to `settings.qdrant.collection_name`
 when omitted. FastEmbed dense and sparse embeddings are initialised once
 and reused across ingestion surfaces so hybrid scoring is available when the

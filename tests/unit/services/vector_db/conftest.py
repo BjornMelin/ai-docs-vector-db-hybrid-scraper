@@ -12,7 +12,7 @@ from unittest.mock import AsyncMock
 import pytest
 from dependency_injector import providers
 from langchain_core.documents import Document
-from qdrant_client import AsyncQdrantClient
+from qdrant_client import AsyncQdrantClient, models
 
 from src.config.models import QdrantConfig, ScoreNormalizationStrategy, SearchStrategy
 from src.infrastructure.container import ApplicationContainer
@@ -82,7 +82,15 @@ def qdrant_client_mock() -> AsyncMock:
         points_count=0,
         indexed_vectors_count=0,
         payload_schema={},
-        config=SimpleNamespace(payload_schema={}),
+        config=SimpleNamespace(
+            params=SimpleNamespace(
+                vectors=models.VectorParams(
+                    size=3,
+                    distance=models.Distance.COSINE,
+                ),
+                sparse_vectors=None,
+            )
+        ),
     )
     client.scroll.return_value = ([], None)
     client.query_points = AsyncMock(return_value=SimpleNamespace(points=[]))
@@ -113,7 +121,11 @@ def vector_container(
 
 @pytest.fixture
 def sample_documents() -> list[Document]:
-    """Provide deterministic text documents for upsert tests."""
+    """Provide deterministic text documents for upsert tests.
+
+    Returns:
+        Canonical document inputs with stable test metadata.
+    """
     return [
         Document(
             page_content="alpha",

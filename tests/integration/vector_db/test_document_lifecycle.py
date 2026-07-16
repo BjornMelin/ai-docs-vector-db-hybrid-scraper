@@ -15,6 +15,9 @@ from src.config.models import Environment
 from src.services.vector_db.service import VectorStoreService, dense_vector_config
 
 
+pytestmark = pytest.mark.service
+
+
 class _SyncQdrantAdapter:
     """Expose the sync in-memory client through the async methods under test."""
 

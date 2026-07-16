@@ -315,8 +315,13 @@ async def list_collections(ctx):
 @click.argument("collection_name")
 @click.pass_context
 @async_command
-async def create(ctx, collection_name):
-    """Create a new collection."""
+async def create(ctx: click.Context, collection_name: str) -> None:
+    """Create a new collection.
+
+    Args:
+        ctx: Click context containing configuration overrides.
+        collection_name: Collection to create.
+    """
     manager = _create_manager_from_context(ctx)
     try:
         success = await manager.create_collection(collection_name)

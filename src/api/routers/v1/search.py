@@ -53,6 +53,7 @@ async def search_documents_get(
     ),
     collection: str | None = Query(
         default=None,
+        min_length=1,
         description="Collection to search; defaults to server configuration.",
     ),
     offset: int = Query(

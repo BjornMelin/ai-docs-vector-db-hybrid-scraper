@@ -61,12 +61,15 @@ class DocumentRequest(BaseModel):
         default=True,
         description="Normalize HTML whitespace before chunking",
     )
+
+
 class BatchRequest(BaseModel):
     """Batch document processing request."""
 
     urls: list[str] = Field(..., description="Document URLs")
     collection: str | None = Field(
         default=None,
+        min_length=1,
         description="Target collection",
     )
     chunk_strategy: ChunkingStrategy = Field(

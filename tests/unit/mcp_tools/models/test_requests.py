@@ -232,6 +232,11 @@ class TestBatchRequest:
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("max_concurrent",) for error in errors)
 
+    def test_empty_collection_is_rejected(self) -> None:
+        """Reject invalid collection names before spawning per-URL work."""
+        with pytest.raises(ValidationError):
+            BatchRequest(urls=["test"], collection="")
+
 
 class TestProjectRequest:
     """Test ProjectRequest model."""

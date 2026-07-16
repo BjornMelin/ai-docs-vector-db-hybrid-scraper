@@ -32,7 +32,7 @@ class TestCollectionsTools:
                 "indexed_vectors": 950,
                 "config": {
                     "params": {
-                        "vectors": {"size": 384, "distance": "Cosine"},
+                        "vectors": {"dense": {"size": 384, "distance": "Cosine"}},
                     }
                 },
             }

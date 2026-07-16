@@ -151,6 +151,24 @@ async def test_get_collection_info_maps_stats(
 
 
 @pytest.mark.asyncio
+async def test_get_collection_info_reads_single_named_dense_vector(
+    manager_setup: SimpleNamespace,
+) -> None:
+    """Manager output should expose the dimension of a named dense vector."""
+    manager_setup.vector_service.collection_stats.return_value = {
+        "points_count": 7,
+        "config": {
+            "params": {"vectors": {"dense": {"size": 384, "distance": "Cosine"}}}
+        },
+    }
+
+    info = await manager_setup.manager.get_collection_info("docs")
+
+    assert info is not None
+    assert info.vector_size == 384
+
+
+@pytest.mark.asyncio
 async def test_search_documents_returns_models(
     manager_setup: SimpleNamespace,
 ) -> None:

@@ -46,11 +46,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Breaking:** Existing Qdrant collections must be cleared and fully re-ingested
-  before deploying this release. The persisted payload and point-ID contracts
-  intentionally changed, and there is no legacy read or migration shim. Stop
-  traffic and writers for a maintenance window, deploy the application, run
-  `uv run manage-db clear <collection>` for each collection, and rerun the
-  authoritative ingestion jobs before reopening traffic.
+  during the maintenance window before reopening traffic. The persisted payload
+  and point-ID contracts intentionally changed, and there is no legacy read or
+  migration shim. Stop traffic and writers for a maintenance window, deploy the
+  application, run `uv run manage-db clear <collection>` for each collection,
+  and rerun the authoritative ingestion jobs before reopening traffic.
 
 ### Removed
 

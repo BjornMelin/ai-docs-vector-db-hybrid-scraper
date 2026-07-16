@@ -68,6 +68,9 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
         self._dense_model_name = config.fastembed.dense_model
         self._sparse_model_name = config.fastembed.sparse_model
         self._retrieval_mode = config.get_effective_search_strategy()
+        # ponytail: production uses one writer process; add a distributed lock
+        # before supporting replacement ingestion from multiple processes.
+        self._replacement_lock = asyncio.Lock()
 
     def is_initialized(self) -> bool:
         """Return True when a vector store has been constructed."""
@@ -144,6 +147,7 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
         """Ensure a canonical collection with the supplied name exists."""
         client = self._require_async_client()
         if await client.collection_exists(name):
+            await self._validate_collection_contract(client, name)
             return
         dense_name = _DENSE_VECTOR_NAME
         dense_params = models.VectorParams(
@@ -170,6 +174,7 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
                 vectors_config=vectors_config,
                 sparse_vectors_config=sparse_config,
             )
+            return
         except grpc.aio.AioRpcError as create_error:
             if create_error.code() is not grpc.StatusCode.ALREADY_EXISTS:
                 raise
@@ -194,6 +199,56 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
                 name,
                 create_error,
             )
+        await self._validate_collection_contract(client, name)
+
+    async def _validate_collection_contract(
+        self,
+        client: AsyncQdrantClient,
+        collection_name: str,
+    ) -> None:
+        """Reject collections that cannot store the configured retrieval vectors."""
+        info = await client.get_collection(collection_name=collection_name)
+        params = info.config.params
+        vectors = params.vectors
+        if _DENSE_VECTOR_NAME:
+            dense_params = (
+                vectors.get(_DENSE_VECTOR_NAME)
+                if isinstance(vectors, Mapping)
+                else None
+            )
+            dense_names = set(vectors) if isinstance(vectors, Mapping) else set()
+            dense_names_match = dense_names == {_DENSE_VECTOR_NAME}
+        else:
+            dense_params = None if isinstance(vectors, Mapping) else vectors
+            dense_names_match = not isinstance(vectors, Mapping)
+
+        distance = getattr(dense_params, "distance", None)
+        distance_value = getattr(distance, "value", distance)
+        dense_matches = (
+            dense_names_match
+            and getattr(dense_params, "size", None) == self.embedding_dimension
+            and distance_value == models.Distance.COSINE.value
+        )
+
+        sparse_vectors = params.sparse_vectors or {}
+        sparse_names = (
+            set(sparse_vectors) if isinstance(sparse_vectors, Mapping) else set()
+        )
+        expected_sparse_names = (
+            {_SPARSE_VECTOR_NAME}
+            if self._retrieval_mode in {SearchStrategy.SPARSE, SearchStrategy.HYBRID}
+            else set()
+        )
+        if dense_matches and sparse_names == expected_sparse_names:
+            return
+
+        msg = (
+            f"Collection '{collection_name}' does not match the canonical vector "
+            f"contract (dense dimension {self.embedding_dimension}, cosine distance, "
+            f"sparse vectors {sorted(expected_sparse_names)}). Clear the collection "
+            "and fully re-ingest it before serving traffic."
+        )
+        raise EmbeddingServiceError(msg)
 
     @staticmethod
     async def _verify_concurrent_collection_creation(
@@ -323,12 +378,16 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
         documents: Sequence[Document],
     ) -> list[str]:
         """Persist a complete trusted chunk set and prune its obsolete tail."""
-        ids, canonical_documents = await self._persist_documents(
-            collection,
-            documents,
-        )
-        await self._prune_replaced_document_tails(collection, canonical_documents)
-        return ids
+        if not documents:
+            msg = "A complete document replacement requires at least one chunk"
+            raise EmbeddingServiceError(msg)
+        async with self._replacement_lock:
+            ids, canonical_documents = await self._persist_documents(
+                collection,
+                documents,
+            )
+            await self._prune_replaced_document_tails(collection, canonical_documents)
+            return ids
 
     async def _persist_documents(
         self,
@@ -923,7 +982,6 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
             if group_id is None:
                 group_id = record.id
             group_id = str(group_id)
-            metadata["doc_id"] = group_id
             record.metadata = metadata
             groups.setdefault(group_id, []).append(record)
 
@@ -948,7 +1006,6 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
                     "group_id": group_id,
                     "rank": group_rank,
                 }
-                metadata["doc_id"] = group_id
                 record.metadata = metadata
                 record.group_id = group_id
                 record.group_rank = group_rank
@@ -1142,7 +1199,18 @@ def dense_vector_config(stats: Mapping[str, Any]) -> dict[str, Any]:
     if not isinstance(params, Mapping):
         return {}
     vectors = params.get("vectors")
-    return dict(vectors) if isinstance(vectors, Mapping) else {}
+    if not isinstance(vectors, Mapping):
+        return {}
+    if "size" in vectors:
+        return dict(vectors)
+    named_vector = vectors.get(_DENSE_VECTOR_NAME)
+    if isinstance(named_vector, Mapping):
+        return dict(named_vector)
+    if len(vectors) == 1:
+        only_vector = next(iter(vectors.values()))
+        if isinstance(only_vector, Mapping):
+            return dict(only_vector)
+    return {}
 
 
 def _serialize_collection_info(info: Any) -> Mapping[str, Any]:
@@ -1158,7 +1226,9 @@ def _serialize_collection_info(info: Any) -> Mapping[str, Any]:
         for field, details in raw_payload_schema.items()
     }
     config_payload = (
-        config.dict() if (config is not None and hasattr(config, "dict")) else {}
+        config.model_dump(mode="json")
+        if (config is not None and hasattr(config, "model_dump"))
+        else {}
     )
     return {
         "points_count": getattr(info, "points_count", 0),
