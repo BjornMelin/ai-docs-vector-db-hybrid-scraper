@@ -24,7 +24,10 @@ class SearchRecord(BaseModel):
 
     id: str = Field(..., description="Unique identifier for the document")
     content: str = Field(..., description="Document content or snippet")
-    score: float = Field(..., ge=0.0, description="Relevance score")
+    score: float = Field(
+        ...,
+        description="Provider relevance score; range depends on distance strategy",
+    )
     url: str | None = Field(default=None, description="Document URL")
     title: str | None = Field(default=None, description="Document title")
     metadata: dict[str, Any] | None = Field(

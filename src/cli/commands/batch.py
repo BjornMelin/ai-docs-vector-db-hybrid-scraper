@@ -236,8 +236,6 @@ def _show_indexing_preview(
 async def _create_collection(
     db_manager: Any,
     collection_name: str,
-    dimension: int,
-    distance: str,
     *,
     force: bool,
 ) -> None:
@@ -248,11 +246,7 @@ async def _create_collection(
         and not await db_manager.delete_collection(collection_name)
     ):
         raise RuntimeError(f"Failed to delete collection {collection_name}")
-    if not await db_manager.create_collection(
-        collection_name,
-        dimension,
-        distance=distance,
-    ):
+    if not await db_manager.create_collection(collection_name):
         raise RuntimeError(f"Failed to create collection {collection_name}")
 
 
@@ -262,15 +256,6 @@ async def _create_collection(
 @batch.command("create-collections")
 @click.argument("collections", nargs=-1, required=True)
 @click.option(
-    "--dimension", type=int, default=1536, help="Vector dimension for all collections"
-)
-@click.option(
-    "--distance",
-    type=click.Choice(["cosine", "euclidean", "dot"]),
-    default="cosine",
-    help="Distance metric for all collections",
-)
-@click.option(
     "--force",
     "_force",
     is_flag=True,
@@ -278,7 +263,7 @@ async def _create_collection(
 )
 @click.pass_context
 def create_collections(  # pylint: disable=too-many-locals
-    ctx: click.Context, collections: tuple, dimension: int, distance: str, _force: bool
+    ctx: click.Context, collections: tuple, _force: bool
 ):
     """Create multiple collections in batch."""
     rich_cli = ctx.obj["rich_cli"]
@@ -288,11 +273,9 @@ def create_collections(  # pylint: disable=too-many-locals
     # Show preview
     preview_table = Table(title="Collections to Create", show_header=True)
     preview_table.add_column("Name", style="cyan")
-    preview_table.add_column("Dimension", style="blue")
-    preview_table.add_column("Distance", style="green")
 
     for name in collection_list:
-        preview_table.add_row(name, str(dimension), distance)
+        preview_table.add_row(name)
 
     rich_cli.console.print(preview_table)
 
@@ -310,15 +293,11 @@ def create_collections(  # pylint: disable=too-many-locals
         for collection_name in collection_list:
             operation = BatchOperation(
                 name=f"Create {collection_name}",
-                description=f"Create collection with {dimension}D vectors",
-                function=lambda name=collection_name,
-                size=dimension,
-                metric=distance: asyncio.run(
+                description="Create configured collection",
+                function=lambda name=collection_name: asyncio.run(
                     _create_collection(
                         db_manager,
                         name,
-                        size,
-                        metric,
                         force=_force,
                     )
                 ),

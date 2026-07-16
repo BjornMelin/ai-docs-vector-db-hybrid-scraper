@@ -45,15 +45,11 @@ def _install_vector_service_stub(monkeypatch: pytest.MonkeyPatch) -> None:
     """Install stub implementations for vector service dependencies."""
 
     async def _fake_load_vector_service(
-        collection_override: str | None,
         *,
         settings: Any | None = None,
     ) -> _StubVectorService:
         """Fake load vector service function for testing purposes."""
-        service = _StubVectorService()
-        if collection_override:
-            service.collection_name = collection_override
-        return service
+        return _StubVectorService()
 
     monkeypatch.setattr(
         "scripts.eval.rag_compression_eval._load_vector_service",
@@ -87,41 +83,13 @@ async def test_load_vector_service_no_override() -> None:
         mock_ensure_container.return_value = mock_container
 
         mock_service = MagicMock()
-        mock_service.collection_name = None
         mock_service.is_initialized.return_value = True
         mock_container.vector_store_service.return_value = mock_service
 
-        result = await _load_vector_service(None)
+        result = await _load_vector_service()
 
         assert result == mock_service
         mock_ensure_container.assert_awaited_once_with(settings=mock_config)
-        assert result.collection_name is None
-
-
-@pytest.mark.asyncio
-async def test_load_vector_service_with_override() -> None:
-    """Test loading vector service with collection override."""
-    with (
-        patch("scripts.eval.rag_compression_eval.get_settings") as mock_settings,
-        patch(
-            "scripts.eval.rag_compression_eval.ensure_container",
-            new_callable=AsyncMock,
-        ) as mock_ensure_container,
-    ):
-        mock_config = MagicMock()
-        mock_settings.return_value = mock_config
-        mock_container = MagicMock()
-        mock_ensure_container.return_value = mock_container
-
-        mock_service = MagicMock()
-        mock_service.collection_name = None
-        mock_service.is_initialized.return_value = True
-        mock_container.vector_store_service.return_value = mock_service
-
-        result = await _load_vector_service("test_collection")
-
-        assert result == mock_service
-        assert result.collection_name == "test_collection"
 
 
 def test_build_documents() -> None:
@@ -170,7 +138,7 @@ async def test_evaluate_compression_disabled(
 
         # Should not raise and should print message
         with patch("builtins.print") as mock_print:
-            await _evaluate(dataset_path, None)
+            await _evaluate(dataset_path)
 
         mock_print.assert_called_with(
             "Compression is disabled in the active configuration; nothing to evaluate."

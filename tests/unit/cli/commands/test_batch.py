@@ -224,10 +224,6 @@ def test_create_collections_aborts_without_confirmation(
         [
             "create-collections",
             "alpha",
-            "--dimension",
-            "256",
-            "--distance",
-            "cosine",
             "--force",
         ],
         obj={"rich_cli": rich_cli_stub},
@@ -252,10 +248,8 @@ def test_create_collections_enqueues_operations(
             db_manager.calls.append(("delete", name))
             return True
 
-        async def create_collection(
-            self, name: str, dimension: int, *, distance: str
-        ) -> bool:
-            db_manager.calls.append((name, dimension, distance))
+        async def create_collection(self, name: str) -> bool:
+            db_manager.calls.append(name)
             return True
 
         async def cleanup(self) -> None:
@@ -302,8 +296,6 @@ def test_create_collections_enqueues_operations(
     with cli_context:
         create_callback(
             ("alpha", "beta"),
-            dimension=128,
-            distance="dot",
             _force=False,
         )
 
@@ -313,7 +305,7 @@ def test_create_collections_enqueues_operations(
         "Create beta",
     ]
     assert queue.confirm_flag is False
-    assert db_manager.calls == [("alpha", 128, "dot"), ("beta", 128, "dot")]
+    assert db_manager.calls == ["alpha", "beta"]
 
 
 def test_create_collections_force_recreates_existing_collection(
@@ -331,10 +323,8 @@ def test_create_collections_force_recreates_existing_collection(
             calls.append(("delete", name))
             return True
 
-        async def create_collection(
-            self, name: str, dimension: int, *, distance: str
-        ) -> bool:
-            calls.append(("create", name, dimension, distance))
+        async def create_collection(self, name: str) -> bool:
+            calls.append(("create", name))
             return True
 
         async def cleanup(self) -> None:
@@ -362,14 +352,12 @@ def test_create_collections_force_recreates_existing_collection(
     with cli_context:
         create_callback(
             ("alpha",),
-            dimension=128,
-            distance="cosine",
             _force=True,
         )
 
     assert calls == [
         ("delete", "alpha"),
-        ("create", "alpha", 128, "cosine"),
+        ("create", "alpha"),
     ]
 
 
@@ -390,10 +378,8 @@ def test_create_collections_force_delete_failure_exits_nonzero(
             calls.append(("delete", name))
             return False
 
-        async def create_collection(
-            self, name: str, dimension: int, *, distance: str
-        ) -> bool:
-            calls.append(("create", name, dimension, distance))
+        async def create_collection(self, name: str) -> bool:
+            calls.append(("create", name))
             return True
 
         async def cleanup(self) -> None:

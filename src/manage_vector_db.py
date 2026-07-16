@@ -20,8 +20,7 @@ from src.contracts.retrieval import SearchRecord
 from src.infrastructure.bootstrap import ensure_container
 from src.infrastructure.container import get_container, shutdown_container
 from src.services.errors import QdrantServiceError
-from src.services.vector_db import CollectionSchema
-from src.services.vector_db.service import VectorStoreService
+from src.services.vector_db.service import VectorStoreService, dense_vector_config
 from src.utils import async_command
 
 
@@ -50,6 +49,11 @@ class DatabaseStats(BaseModel):
     total_collections: int
     total_vectors: int
     collections: list[CollectionInfo] = Field(default_factory=list)
+
+
+def _vector_size_from_stats(stats: Mapping[str, Any]) -> int:
+    """Read the dense vector size from Qdrant's native config shape."""
+    return int(dense_vector_config(stats).get("size", 0))
 
 
 def setup_logging(level: str = "INFO") -> logging.Logger:
@@ -121,19 +125,12 @@ class VectorDBManager:
     async def create_collection(
         self,
         collection_name: str,
-        vector_size: int = 1536,
-        distance: str = "cosine",
     ) -> bool:
         """Create a new collection."""
         try:
             await self.initialize()
             vector_service = await self.get_vector_store_service()
-            schema = CollectionSchema(
-                name=collection_name,
-                vector_size=vector_size,
-                distance=distance,
-            )
-            await vector_service.ensure_collection(schema)
+            await vector_service.ensure_collection(collection_name)
             return True
         except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             console.print(
@@ -162,16 +159,10 @@ class VectorDBManager:
             stats = await vector_service.collection_stats(collection_name)
             if not stats:
                 return None
-            vectors_config = stats.get("vectors", {})
-            vector_size = 0
-            if isinstance(vectors_config, Mapping):
-                first_config = next(iter(vectors_config.values()), None)
-                if isinstance(first_config, Mapping):
-                    vector_size = int(first_config.get("size", 0))
             return CollectionInfo(
                 name=collection_name,
                 vector_count=int(stats.get("points_count", 0)),
-                vector_size=vector_size,
+                vector_size=_vector_size_from_stats(stats),
             )
         except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             console.print(
@@ -234,17 +225,11 @@ class VectorDBManager:
                 if stats:
                     vector_count = int(stats.get("points_count", 0))
                     total_vectors += vector_count
-                    vectors_config = stats.get("vectors", {})
-                    vector_size = 0
-                    if isinstance(vectors_config, Mapping):
-                        first_config = next(iter(vectors_config.values()), None)
-                        if isinstance(first_config, Mapping):
-                            vector_size = int(first_config.get("size", 0))
                     collections.append(
                         CollectionInfo(
                             name=collection_name,
                             vector_count=vector_count,
-                            vector_size=vector_size,
+                            vector_size=_vector_size_from_stats(stats),
                         )
                     )
 
@@ -262,26 +247,14 @@ class VectorDBManager:
         try:
             await self.initialize()
 
-            # Get vector size before deletion
             vector_service = await self.get_vector_store_service()
             stats = await vector_service.collection_stats(collection_name)
             if not stats:
                 console.print(f"❌ Collection {collection_name} not found", style="red")
                 return False
 
-            vectors_config = stats.get("vectors", {})
-            vector_size = 0
-            if isinstance(vectors_config, Mapping):
-                first_config = next(iter(vectors_config.values()), None)
-                if isinstance(first_config, Mapping):
-                    vector_size = int(first_config.get("size", 0))
-
             await vector_service.drop_collection(collection_name)
-            schema = CollectionSchema(
-                name=collection_name,
-                vector_size=vector_size or 1536,
-            )
-            await vector_service.ensure_collection(schema)
+            await vector_service.ensure_collection(collection_name)
 
             console.print(
                 f"✅ Successfully cleared collection: {collection_name}", style="green"
@@ -340,16 +313,13 @@ async def list_collections(ctx):
 
 @cli.command()
 @click.argument("collection_name")
-@click.option("--vector-size", default=1536, help="Vector size")
 @click.pass_context
 @async_command
-async def create(ctx, collection_name, vector_size):
+async def create(ctx, collection_name):
     """Create a new collection."""
     manager = _create_manager_from_context(ctx)
     try:
-        success = await manager.create_collection(
-            collection_name, vector_size=vector_size
-        )
+        success = await manager.create_collection(collection_name)
         if success:
             console.print(
                 f"✅ Successfully created collection: {collection_name}",

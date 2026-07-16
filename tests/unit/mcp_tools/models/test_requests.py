@@ -27,7 +27,7 @@ class TestSearchRequest:
         """Test minimal valid search request."""
         request = SearchRequest(query="test query", limit=10, offset=0)
         assert request.query == "test query"
-        assert request.collection == "documentation"
+        assert request.collection is None
         assert request.limit == 10
         assert request.search_strategy == SearchStrategy.HYBRID
         assert request.enable_reranking is True
@@ -152,7 +152,7 @@ class TestDocumentRequest:
         """Test minimal valid document request."""
         request = DocumentRequest(url="https://example.com/doc")
         assert request.url == "https://example.com/doc"
-        assert request.collection == "documentation"
+        assert request.collection is None
         assert request.chunk_strategy == ChunkingStrategy.ENHANCED
         assert request.chunk_size == 1600
         assert request.chunk_overlap == 200
@@ -165,12 +165,10 @@ class TestDocumentRequest:
             chunk_strategy=ChunkingStrategy.BASIC,
             chunk_size=2000,
             chunk_overlap=300,
-            extract_metadata=False,
         )
         assert request.collection == "api_docs"
         assert request.chunk_strategy == ChunkingStrategy.BASIC
         assert request.chunk_size == 2000
-        assert request.extract_metadata is False
 
     def test_chunk_size_constraints(self):
         """Test chunk size constraints."""
@@ -214,7 +212,7 @@ class TestBatchRequest:
         """Test minimal valid batch request."""
         request = BatchRequest(urls=["https://example.com/1", "https://example.com/2"])
         assert len(request.urls) == 2
-        assert request.collection == "documentation"
+        assert request.collection is None
         assert request.max_concurrent == 5
 
     def test_max_concurrent_constraints(self):
@@ -243,7 +241,6 @@ class TestProjectRequest:
         request = ProjectRequest(name="My Project")
         assert request.name == "My Project"
         assert request.description is None
-        assert request.quality_tier == "balanced"
         assert request.urls is None
 
     def test_all_fields(self):
@@ -251,26 +248,11 @@ class TestProjectRequest:
         request = ProjectRequest(
             name="API Documentation",
             description="Project for API docs",
-            quality_tier="premium",
             urls=["https://api.example.com/docs"],
         )
         assert request.description == "Project for API docs"
-        assert request.quality_tier == "premium"
         assert request.urls is not None
         assert len(request.urls) == 1
-
-    def test_quality_tier_validation(self):
-        """Test quality tier pattern validation."""
-        # Valid tiers
-        ProjectRequest(name="test", quality_tier="economy")
-        ProjectRequest(name="test", quality_tier="balanced")
-        ProjectRequest(name="test", quality_tier="premium")
-
-        # Invalid tier
-        with pytest.raises(ValidationError) as exc_info:
-            ProjectRequest(name="test", quality_tier="ultra")
-        errors = exc_info.value.errors()
-        assert any(error["loc"] == ("quality_tier",) for error in errors)
 
 
 class TestCostEstimateRequest:

@@ -27,7 +27,7 @@ class TestConstruction:
         """Model defaults should match canonical configuration."""
         request = SearchRequest.model_validate(base_payload)
 
-        assert request.collection == "documentation"
+        assert request.collection is None
         assert request.limit == 10
         assert request.search_strategy == SearchStrategy.HYBRID
         assert request.search_accuracy == SearchAccuracy.BALANCED

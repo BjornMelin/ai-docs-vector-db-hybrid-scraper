@@ -96,7 +96,7 @@ async def test_create_project(
     register: dict[str, Callable], project_storage: Mock, mock_context: Mock
 ) -> None:
     """Verify creating a project persists metadata and responds with info."""
-    request = ProjectRequest(name="Docs", description="Demo", quality_tier="balanced")
+    request = ProjectRequest(name="Docs", description="Demo")
     result = await register["create_project"](request, mock_context)
 
     assert isinstance(result, ProjectInfo)

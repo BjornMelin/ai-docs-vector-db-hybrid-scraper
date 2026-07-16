@@ -101,8 +101,12 @@ class CollectionInfo(BaseModel):
     """Metadata for a single Qdrant collection."""
 
     name: str
-    vectors_count: int | None = None
+    vectors_count: int | None = Field(
+        default=None, description="Number of stored vector points"
+    )
     points_count: int | None = None
+    vector_dimension: int | None = None
+    vector_config: dict[str, Any] = Field(default_factory=dict)
     status: str | None = None
 
     model_config = ConfigDict(extra="allow")
@@ -112,7 +116,7 @@ class CollectionInfo(BaseModel):
 
 
 class CollectionOperationResponse(OperationStatus):
-    """Status response for collection-level operations like delete/optimize."""
+    """Status response for collection deletion."""
 
     collection: str | None = None
 

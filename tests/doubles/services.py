@@ -85,9 +85,8 @@ class FakeVectorStoreService:
         self._initialized = False
         self._documents.clear()
 
-    async def ensure_collection(self, schema: Any) -> None:
+    async def ensure_collection(self, name: str) -> None:
         """Ensure collection exists."""
-        name = getattr(schema, "name", "default")
         if name not in self._documents:
             self._documents[name] = []
 

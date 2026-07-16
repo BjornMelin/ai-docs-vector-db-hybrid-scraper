@@ -1,41 +1,28 @@
-"""Canonical payload validation and normalization utilities for vector storage."""
+"""Canonical LangChain document metadata for Qdrant persistence."""
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-from dataclasses import dataclass
+import json
 from datetime import UTC, datetime
 from hashlib import blake2b
 from typing import Any
+from uuid import NAMESPACE_URL, uuid5
+
+from langchain_core.documents import Document
 
 
 __all__ = [
-    "CanonicalPayload",
     "PayloadValidationError",
     "compute_content_hash",
-    "ensure_canonical_payload",
+    "normalize_document",
+    "stable_point_id",
 ]
-
-
-@dataclass(slots=True)
-class CanonicalPayload:
-    """Normalized payload bundle ready for persistence.
-
-    Attributes:
-        point_id: Deterministic identifier for the vector record.
-        payload: Canonical payload mapping containing required metadata fields.
-    """
-
-    point_id: str
-    payload: dict[str, Any]
 
 
 class PayloadValidationError(ValueError):
     """Raised when payload metadata cannot be coerced into canonical form."""
 
 
-_REQUIRED_STRING_FIELDS = ("doc_id", "tenant", "source")
-_REQUIRED_INT_FIELDS = ("chunk_id",)
 _OPTIONAL_TIMESTAMP_FIELDS = ("created_at", "updated_at")
 _HASH_DIGEST_SIZE = 16
 
@@ -54,80 +41,101 @@ def _coerce_string(value: Any, *, field: str) -> str:
 
 
 def _coerce_int(value: Any, *, field: str) -> int:
-    try:
-        return int(value)
-    except (TypeError, ValueError) as exc:  # pragma: no cover - defensive
-        msg = f"Field '{field}' must be coercible to int"
-        raise PayloadValidationError(msg) from exc
+    if isinstance(value, bool):
+        msg = f"Field '{field}' must be a non-negative integer"
+        raise PayloadValidationError(msg)
+    if isinstance(value, int):
+        result = value
+    elif (
+        isinstance(value, str)
+        and value.isascii()
+        and value.isdigit()
+        and value == str(int(value))
+    ):
+        result = int(value)
+    else:
+        msg = f"Field '{field}' must be a non-negative integer"
+        raise PayloadValidationError(msg)
+    if result < 0:
+        msg = f"Field '{field}' must be a non-negative integer"
+        raise PayloadValidationError(msg)
+    return result
 
 
-def ensure_canonical_payload(
-    raw_metadata: Mapping[str, Any] | None,
-    *,
-    content: str,
-    id_hint: str,
-) -> CanonicalPayload:
-    """Validate and normalize metadata for ingestion.
+def stable_point_id(*, tenant: str, doc_id: str, chunk_index: int) -> str:
+    """Return the stable, Qdrant-safe identifier for one document chunk."""
+    point_key = json.dumps(
+        [tenant, doc_id, chunk_index],
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+    return str(uuid5(NAMESPACE_URL, point_key))
+
+
+def normalize_document(document: Document, *, id_hint: str) -> Document:
+    """Return a document that follows the sole persisted metadata contract.
 
     Args:
-        raw_metadata: Original metadata mapping supplied by callers.
-        content: Document chunk content used to derive hashes.
-        id_hint: Fallback identifier when `doc_id` is missing.
+        document: LangChain document supplied by an ingestion boundary.
+        id_hint: Stable source identifier when ``doc_id`` is absent.
 
     Returns:
-        CanonicalPayload comprised of a deterministic point identifier and
-        the normalized payload mapping.
+        A LangChain document with a deterministic Qdrant point ID and metadata
+        that is stored under QdrantVectorStore's native ``metadata`` key.
     """
-    payload: dict[str, Any] = dict(raw_metadata or {})
-    payload.setdefault("content", content)
+    metadata: dict[str, Any] = dict(document.metadata or {})
+    for dependency_field in (
+        "_collection_name",
+        "_id",
+        "content",
+        "id",
+        "page_content",
+        "chunk_id",
+        "chunk_hash",
+        "content_hash_previous",
+    ):
+        metadata.pop(dependency_field, None)
 
-    doc_id = _coerce_string(payload.get("doc_id") or id_hint, field="doc_id")
-    payload["doc_id"] = doc_id
+    doc_id = _coerce_string(metadata.get("doc_id") or id_hint, field="doc_id")
+    metadata["doc_id"] = doc_id
 
-    chunk_id = _coerce_int(
-        payload.get("chunk_id", payload.get("chunk_index", 0)),
-        field="chunk_id",
+    chunk_index = _coerce_int(
+        metadata.get("chunk_index", 0),
+        field="chunk_index",
     )
-    payload["chunk_id"] = chunk_id
-    payload.pop("chunk_index", None)
+    metadata["chunk_index"] = chunk_index
 
-    payload["tenant"] = _coerce_string(
-        payload.get("tenant") or "default",
+    metadata["tenant"] = _coerce_string(
+        metadata.get("tenant") or "default",
         field="tenant",
     )
-    tenant = payload["tenant"]
+    tenant = metadata["tenant"]
 
-    payload["source"] = _coerce_string(
-        payload.get("source") or payload.get("url") or "unknown",
+    metadata["source"] = _coerce_string(
+        metadata.get("source") or metadata.get("url") or "unknown",
         field="source",
     )
 
-    created_at = payload.get("created_at")
+    created_at = metadata.get("created_at")
     if not created_at:
         created_at = datetime.now(UTC).isoformat()
-    payload["created_at"] = created_at
+    metadata["created_at"] = created_at
 
-    if payload.get("updated_at") is None and "updated_at" in payload:
-        payload.pop("updated_at")
+    if metadata.get("updated_at") is None and "updated_at" in metadata:
+        metadata.pop("updated_at")
 
-    computed_hash = compute_content_hash(content)
-    if payload.get("content_hash") and payload["content_hash"] != computed_hash:
-        payload["content_hash_previous"] = payload["content_hash"]
-    payload["content_hash"] = computed_hash
+    metadata["content_hash"] = compute_content_hash(document.page_content)
 
     for field in _OPTIONAL_TIMESTAMP_FIELDS:
-        if field in payload and not isinstance(payload[field], str):
-            payload[field] = str(payload[field])
+        if field in metadata and not isinstance(metadata[field], str):
+            metadata[field] = str(metadata[field])
 
-    for field in _REQUIRED_STRING_FIELDS:
-        _coerce_string(payload[field], field=field)
-    for field in _REQUIRED_INT_FIELDS:
-        _coerce_int(payload[field], field=field)
-
-    point_key = f"{tenant}|{doc_id}|{chunk_id}|{computed_hash}"
-    point_id = blake2b(
-        point_key.encode("utf-8"),
-        digest_size=_HASH_DIGEST_SIZE,
-    ).hexdigest()
-
-    return CanonicalPayload(point_id=point_id, payload=payload)
+    return Document(
+        id=stable_point_id(
+            tenant=tenant,
+            doc_id=doc_id,
+            chunk_index=chunk_index,
+        ),
+        page_content=document.page_content,
+        metadata=metadata,
+    )

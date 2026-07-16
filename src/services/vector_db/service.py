@@ -7,15 +7,14 @@ import asyncio
 import logging
 import statistics
 from collections.abc import Iterable, Mapping, Sequence
-from datetime import UTC, datetime
 from enum import Enum
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, cast
 from uuid import uuid4
 
 import grpc
 from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
 from langchain_core.documents import Document
-from langchain_qdrant import QdrantVectorStore, RetrievalMode
+from langchain_qdrant import FastEmbedSparse, QdrantVectorStore, RetrievalMode
 from qdrant_client import AsyncQdrantClient, QdrantClient, models
 from qdrant_client.http.exceptions import (
     ApiException,
@@ -33,26 +32,10 @@ from src.contracts.retrieval import SearchRecord
 from src.services.errors import EmbeddingServiceError
 from src.services.observability.tracing import set_span_attributes
 
-from .payload_schema import (
-    CanonicalPayload,
-    PayloadValidationError,
-    ensure_canonical_payload,
-)
-from .types import CollectionSchema, TextDocument, VectorRecord
+from .payload_schema import PayloadValidationError, normalize_document
 
 
 logger = logging.getLogger(__name__)
-
-
-if TYPE_CHECKING:  # pragma: no cover - typing aid
-    from langchain_qdrant import FastEmbedSparse as FastEmbedSparseType
-else:  # pragma: no cover - runtime fallback
-    FastEmbedSparseType = Any
-
-try:  # pragma: no cover - optional sparse dependency
-    from langchain_qdrant import FastEmbedSparse as FastEmbedSparseRuntime
-except ModuleNotFoundError:  # pragma: no cover - defer sparse usage checks
-    FastEmbedSparseRuntime = None  # type: ignore[assignment]
 
 
 _RETRIEVAL_MODE_MAP: dict[SearchStrategy, RetrievalMode] = {
@@ -75,13 +58,12 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
     ) -> None:
         """Initialize the VectorStoreService."""
         self.config = config
-        self.collection_name: str | None = None
         self._async_client: AsyncQdrantClient | None = async_qdrant_client
         self._sync_client: QdrantClient | None = None
         self._vector_store: QdrantVectorStore | None = None
         self._vector_stores: dict[str, QdrantVectorStore] = {}
         self._dense_embeddings: FastEmbedEmbeddings | None = None
-        self._sparse_embeddings: FastEmbedSparseType | None = None
+        self._sparse_embeddings: FastEmbedSparse | None = None
         self._embedding_dimension: int | None = None
         self._dense_model_name = config.fastembed.dense_model
         self._sparse_model_name = config.fastembed.sparse_model
@@ -90,6 +72,11 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
     def is_initialized(self) -> bool:
         """Return True when a vector store has been constructed."""
         return self._vector_store is not None
+
+    @property
+    def default_collection_name(self) -> str:
+        """Return the configured collection used when callers omit one."""
+        return str(self._require_qdrant_config().collection_name)
 
     async def initialize(self) -> None:
         """Initialize Qdrant clients and embeddings."""
@@ -105,18 +92,12 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
         )
         probe_vector = await asyncio.to_thread(dense_embedding.embed_query, "__probe__")
         self._embedding_dimension = len(probe_vector)
-        sparse_embedding: FastEmbedSparseType | None = None
+        sparse_embedding: FastEmbedSparse | None = None
         if self._retrieval_mode in {SearchStrategy.SPARSE, SearchStrategy.HYBRID}:
             if not self._sparse_model_name:
                 msg = "Sparse or hybrid retrieval requires a sparse embedding model"
                 raise EmbeddingServiceError(msg)
-            if FastEmbedSparseRuntime is None:
-                msg = (
-                    "langchain-qdrant extras are required for sparse retrieval; "
-                    "install with `uv add langchain-qdrant[fastembed]`"
-                )
-                raise EmbeddingServiceError(msg)
-            sparse_embedding = FastEmbedSparseRuntime(
+            sparse_embedding = FastEmbedSparse(
                 model_name=self._sparse_model_name,
                 cache_dir=self.config.fastembed.cache_dir,
                 batch_size=self.config.fastembed.batch_size,
@@ -127,17 +108,7 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
             self._retrieval_mode, RetrievalMode.DENSE
         )
         self._sync_client = self._build_sync_client(cfg)
-        self.collection_name = getattr(cfg, "collection_name", None)
-        await self.ensure_collection(
-            CollectionSchema(
-                name=cfg.collection_name,
-                vector_size=self.embedding_dimension,
-                requires_sparse=(
-                    self._retrieval_mode
-                    in {SearchStrategy.SPARSE, SearchStrategy.HYBRID}
-                ),
-            )
-        )
+        await self.ensure_collection(cfg.collection_name)
         self._vector_store = QdrantVectorStore(
             client=self._sync_client,
             collection_name=cfg.collection_name,
@@ -169,15 +140,15 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
             raise EmbeddingServiceError(msg)
         return self._embedding_dimension
 
-    async def ensure_collection(self, schema: CollectionSchema) -> None:
-        """Ensure a collection with the supplied schema exists."""
+    async def ensure_collection(self, name: str) -> None:
+        """Ensure a canonical collection with the supplied name exists."""
         client = self._require_async_client()
-        if await client.collection_exists(schema.name):
+        if await client.collection_exists(name):
             return
         dense_name = _DENSE_VECTOR_NAME
         dense_params = models.VectorParams(
             size=self.embedding_dimension,
-            distance=_distance_from_string(schema.distance),
+            distance=models.Distance.COSINE,
         )
         if dense_name:
             vectors_config: models.VectorParams | dict[str, models.VectorParams] = {
@@ -186,7 +157,7 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
         else:
             vectors_config = dense_params
         sparse_config = None
-        if schema.requires_sparse:
+        if self._retrieval_mode in {SearchStrategy.SPARSE, SearchStrategy.HYBRID}:
             sparse_name = _SPARSE_VECTOR_NAME
             sparse_config = {
                 sparse_name: models.SparseVectorParams(
@@ -195,7 +166,7 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
             }
         try:
             await client.create_collection(
-                collection_name=schema.name,
+                collection_name=name,
                 vectors_config=vectors_config,
                 sparse_vectors_config=sparse_config,
             )
@@ -204,7 +175,7 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
                 raise
             await self._verify_concurrent_collection_creation(
                 client,
-                schema.name,
+                name,
                 create_error,
             )
         except UnexpectedResponse as create_error:
@@ -212,15 +183,15 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
                 raise
             await self._verify_concurrent_collection_creation(
                 client,
-                schema.name,
+                name,
                 create_error,
             )
         except ValueError as create_error:
-            if str(create_error) != f"Collection {schema.name} already exists":
+            if str(create_error) != f"Collection {name} already exists":
                 raise
             await self._verify_concurrent_collection_creation(
                 client,
-                schema.name,
+                name,
                 create_error,
             )
 
@@ -287,10 +258,11 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
             "payload_schema", {}
         )
         for field, schema in definitions.items():
-            if not _schema_matches(existing_schema.get(field), schema):
+            stored_field = _metadata_field(field)
+            if not _schema_matches(existing_schema.get(stored_field), schema):
                 await client.create_payload_index(
                     collection_name=name,
-                    field_name=field,
+                    field_name=stored_field,
                     field_schema=schema,
                     wait=True,
                 )
@@ -302,10 +274,11 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
         summary = await self.get_payload_index_summary(name)
         existing_fields = set(summary.get("indexed_fields", []))
         for field in fields:
-            if field in existing_fields:
+            stored_field = _metadata_field(field)
+            if stored_field in existing_fields:
                 await client.delete_payload_index(
                     collection_name=name,
-                    field_name=field,
+                    field_name=stored_field,
                     wait=True,
                 )
 
@@ -323,107 +296,128 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
     ) -> str:
         """Add a single document and return its identifier."""
         document_id = str(uuid4())
-        normalized_metadata = dict(metadata or {})
-        normalized_metadata.setdefault("doc_id", document_id)
-        normalized_metadata.setdefault(
-            "chunk_id", normalized_metadata.get("chunk_index", 0)
-        )
-        normalized_metadata.setdefault(
-            "tenant", normalized_metadata.get("tenant") or "default"
-        )
-        normalized_metadata.setdefault(
-            "source",
-            normalized_metadata.get("source")
-            or normalized_metadata.get("url")
-            or "inline",
-        )
-        normalized_metadata.setdefault("created_at", datetime.now(UTC).isoformat())
-
-        await self.upsert_documents(
+        point_ids = await self.upsert_documents(
             collection,
             [
-                TextDocument(
-                    id=document_id, content=content, metadata=normalized_metadata
+                Document(
+                    id=document_id,
+                    page_content=content,
+                    metadata=dict(metadata or {}),
                 )
             ],
         )
-        return document_id
+        return point_ids[0]
 
     async def upsert_documents(
         self,
         collection: str,
-        documents: Sequence[TextDocument | Document],
-        *,
-        batch_size: int | None = None,
-    ) -> None:
+        documents: Sequence[Document],
+    ) -> list[str]:
         """Upsert a batch of documents via LangChain vector store."""
-        if not documents:
-            return
+        ids, _ = await self._persist_documents(collection, documents)
+        return ids
 
-        await self.ensure_collection(
-            CollectionSchema(
-                name=collection,
-                vector_size=self.embedding_dimension,
-                requires_sparse=(
-                    self._sparse_embeddings is not None
-                    and self._retrieval_mode
-                    in {SearchStrategy.SPARSE, SearchStrategy.HYBRID}
-                ),
-            )
+    async def replace_document_chunks(
+        self,
+        collection: str,
+        documents: Sequence[Document],
+    ) -> list[str]:
+        """Persist a complete trusted chunk set and prune its obsolete tail."""
+        ids, canonical_documents = await self._persist_documents(
+            collection,
+            documents,
         )
+        await self._prune_replaced_document_tails(collection, canonical_documents)
+        return ids
+
+    async def _persist_documents(
+        self,
+        collection: str,
+        documents: Sequence[Document],
+    ) -> tuple[list[str], list[Document]]:
+        """Normalize and persist documents without inferring replacement intent."""
+        if not documents:
+            return [], []
+
+        await self.ensure_collection(collection)
 
         store = self._require_vector_store(collection)
-        normalized_documents: list[TextDocument] = []
-        for document in documents:
-            if isinstance(document, Document):
-                metadata = dict(document.metadata or {})
-                identifier = str(
-                    metadata.get("doc_id")
-                    or metadata.get("id")
-                    or getattr(document, "id", uuid4().hex)
-                )
-                normalized_documents.append(
-                    TextDocument(
-                        id=identifier,
-                        content=document.page_content,
-                        metadata=metadata,
-                    )
-                )
-            else:
-                normalized_documents.append(
-                    TextDocument(
-                        id=document.id,
-                        content=document.content,
-                        metadata=dict(document.metadata or {}),
-                    )
-                )
-
         langchain_documents: list[Document] = []
-        canonical_payloads: list[CanonicalPayload] = []
-        for document in normalized_documents:
+        for document in documents:
+            metadata = dict(document.metadata or {})
+            id_hint = str(metadata.get("doc_id") or document.id or uuid4())
             try:
-                payload = ensure_canonical_payload(
-                    document.metadata,
-                    content=document.content,
-                    id_hint=document.id,
-                )
+                canonical_document = normalize_document(document, id_hint=id_hint)
             except PayloadValidationError as exc:  # pragma: no cover - defensive
-                msg = f"Invalid payload for document '{document.id}': {exc}"
+                msg = f"Invalid payload for document '{id_hint}': {exc}"
                 raise EmbeddingServiceError(msg) from exc
-            canonical_payloads.append(payload)
-            metadata = dict(payload.payload)
-            content = metadata.get("content", document.content)
-            langchain_documents.append(
-                Document(page_content=content, metadata=metadata)
-            )
+            langchain_documents.append(canonical_document)
 
-        ids = [payload.point_id for payload in canonical_payloads]
+        ids = [str(document.id) for document in langchain_documents]
+        if len(ids) != len(set(ids)):
+            msg = (
+                "Document batch contains duplicate tenant, doc_id, and chunk_index keys"
+            )
+            raise EmbeddingServiceError(msg)
 
         await asyncio.to_thread(
             store.add_documents,
             documents=langchain_documents,
             ids=ids,
         )
+        return ids, langchain_documents
+
+    async def _prune_replaced_document_tails(
+        self,
+        collection: str,
+        documents: Sequence[Document],
+    ) -> None:
+        """Remove obsolete trailing chunks after a complete document replacement."""
+        chunk_sets: dict[tuple[str, str, int], set[int]] = {}
+        for document in documents:
+            metadata = document.metadata
+            total_chunks = metadata.get("total_chunks")
+            chunk_index = metadata.get("chunk_index")
+            if (
+                not isinstance(total_chunks, int)
+                or isinstance(total_chunks, bool)
+                or total_chunks < 1
+                or not isinstance(chunk_index, int)
+                or isinstance(chunk_index, bool)
+            ):
+                continue
+            key = (
+                str(metadata["tenant"]),
+                str(metadata["doc_id"]),
+                total_chunks,
+            )
+            chunk_sets.setdefault(key, set()).add(chunk_index)
+
+        client = self._require_async_client()
+        for (tenant, doc_id, total_chunks), indexes in chunk_sets.items():
+            if indexes != set(range(total_chunks)):
+                continue
+            await client.delete(
+                collection_name=collection,
+                points_selector=models.FilterSelector(
+                    filter=models.Filter(
+                        must=[
+                            models.FieldCondition(
+                                key="metadata.tenant",
+                                match=models.MatchValue(value=tenant),
+                            ),
+                            models.FieldCondition(
+                                key="metadata.doc_id",
+                                match=models.MatchValue(value=doc_id),
+                            ),
+                            models.FieldCondition(
+                                key="metadata.chunk_index",
+                                range=models.Range(gte=total_chunks),
+                            ),
+                        ]
+                    )
+                ),
+            )
 
     async def delete(
         self,
@@ -448,51 +442,6 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
                     points_selector=models.FilterSelector(filter=filter_obj),
                 )
 
-    async def upsert_vectors(
-        self,
-        collection: str,
-        records: Sequence[VectorRecord],
-        *,
-        batch_size: int | None = None,
-    ) -> None:
-        """Insert or update pre-embedded vectors."""
-        if not records:
-            return
-
-        await self.ensure_collection(
-            CollectionSchema(
-                name=collection,
-                vector_size=self.embedding_dimension,
-                requires_sparse=any(record.sparse_vector for record in records),
-            )
-        )
-
-        client = self._require_async_client()
-        points: list[models.PointStruct] = []
-        for record in records:
-            dense_vector = list(record.vector)
-            vector_payload: Any = dense_vector
-            if record.sparse_vector:
-                vector_payload = {
-                    _DENSE_VECTOR_NAME: dense_vector,
-                    _SPARSE_VECTOR_NAME: models.SparseVector(
-                        indices=list(record.sparse_vector.keys()),
-                        values=list(record.sparse_vector.values()),
-                    ),
-                }
-            points.append(
-                models.PointStruct(
-                    id=record.id,
-                    vector=vector_payload,
-                    payload=dict(record.payload or {}),
-                )
-            )
-
-        await client.upsert(
-            collection_name=collection,
-            points=points,
-        )
-
     async def get_document(
         self,
         collection: str,
@@ -508,9 +457,10 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
         )
         if not records:
             return None
-        payload = dict(records[0].payload or {})
-        payload.setdefault("id", document_id)
-        return payload
+        return _point_payload_to_document(
+            dict(records[0].payload or {}),
+            point_id=str(records[0].id),
+        )
 
     async def delete_document(self, collection: str, document_id: str) -> bool:
         """Delete a document by identifier."""
@@ -536,9 +486,13 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
             with_payload=True,
             with_vectors=False,
         )
-        documents = [dict(point.payload or {}) for point in points]
-        for point, payload in zip(points, documents, strict=False):
-            payload.setdefault("id", str(point.id))
+        documents = [
+            _point_payload_to_document(
+                dict(point.payload or {}),
+                point_id=str(point.id),
+            )
+            for point in points
+        ]
         next_token = str(next_offset) if next_offset is not None else None
         return documents, next_token
 
@@ -855,7 +809,7 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
         store = self._require_vector_store(collection)
         vector_filter = _filter_from_mapping(filters)
         to_thread_kwargs: dict[str, Any] = {
-            "vector": list(vector),
+            "embedding": list(vector),
             "k": fetch_limit,
         }
         if vector_filter is not None:
@@ -907,7 +861,7 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
         try:
             response = await client.query_points_groups(
                 collection_name=collection,
-                group_by=group_by,
+                group_by=_metadata_field(group_by),
                 query=list(vector),
                 limit=limit,
                 group_size=group_size,
@@ -924,32 +878,31 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
 
         records: list[SearchRecord] = []
         for group in getattr(response, "groups", []) or []:
-            hits = getattr(group, "hits", [])
-            if not hits:
-                continue
-            hit = hits[0]
-            payload: dict[str, Any] = dict(hit.payload or {})
-            payload["_grouping"] = {
-                "applied": True,
-                "group_id": getattr(group, "id", None),
-            }
-            records.append(
-                SearchRecord.from_payload(
-                    {
-                        "id": str(hit.id),
-                        "content": (
-                            payload.get("content")
-                            or payload.get("page_content")
-                            or payload.get("text")
-                            or ""
-                        ),
-                        "score": float(hit.score),
-                        "raw_score": float(hit.score),
-                        "metadata": payload,
-                        "collection": collection,
-                    }
+            for rank, hit in enumerate(
+                (getattr(group, "hits", []) or [])[:group_size],
+                start=1,
+            ):
+                payload: dict[str, Any] = dict(hit.payload or {})
+                content, metadata = _unpack_native_payload(payload)
+                metadata["_grouping"] = {
+                    "applied": True,
+                    "group_id": getattr(group, "id", None),
+                    "rank": rank,
+                }
+                records.append(
+                    SearchRecord.from_payload(
+                        {
+                            "id": str(hit.id),
+                            "content": content,
+                            "score": float(hit.score),
+                            "raw_score": float(hit.score),
+                            "metadata": metadata,
+                            "collection": collection,
+                        }
+                    )
                 )
-            )
+                if len(records) == limit:
+                    return records, True
         return records, bool(records)
 
     def _group_client_side(
@@ -964,12 +917,15 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
         groups: dict[str, list[SearchRecord]] = {}
         for record in records:
             metadata: dict[str, Any] = dict(record.metadata or {})
-            group_id = metadata.get(group_by) or metadata.get("doc_id")
+            group_id = metadata.get(group_by)
+            if group_id is None:
+                group_id = metadata.get("doc_id")
             if group_id is None:
                 group_id = record.id
+            group_id = str(group_id)
             metadata["doc_id"] = group_id
             record.metadata = metadata
-            groups.setdefault(str(group_id), []).append(record)
+            groups.setdefault(group_id, []).append(record)
 
         ordered_groups = sorted(
             groups.items(),
@@ -981,7 +937,12 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
         for _, group_matches in ordered_groups:
             for group_rank, record in enumerate(group_matches[:group_size], start=1):
                 metadata = dict(record.metadata or {})
-                group_id = metadata.get(group_by) or metadata.get("doc_id") or record.id
+                group_id = metadata.get(group_by)
+                if group_id is None:
+                    group_id = metadata.get("doc_id")
+                if group_id is None:
+                    group_id = record.id
+                group_id = str(group_id)
                 metadata["_grouping"] = {
                     "applied": False,
                     "group_id": group_id,
@@ -993,8 +954,8 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
                 record.group_rank = group_rank
                 record.grouping_applied = False
                 limited_records.append(record)
-            if len(limited_records) >= limit:
-                break
+                if len(limited_records) == limit:
+                    return limited_records
         return limited_records
 
     def _annotate_grouping_metadata(
@@ -1007,18 +968,27 @@ class VectorStoreService:  # pylint: disable=too-many-public-methods,too-many-in
         """Annotate matches with grouping metadata."""
         if not group_by:
             return records
-        for rank, record in enumerate(records, start=1):
+        for fallback_rank, record in enumerate(records, start=1):
             metadata: dict[str, Any] = dict(record.metadata or {})
             group_info: dict[str, Any] = dict(metadata.get("_grouping") or {})
-            group_info["group_id"] = (
-                metadata.get(group_by) or metadata.get("doc_id") or record.id
-            )
-            group_info["rank"] = rank
+            group_id = group_info.get("group_id")
+            if group_id is None:
+                group_id = record.group_id
+            if group_id is None:
+                group_id = metadata.get(group_by)
+            if group_id is None:
+                group_id = metadata.get("doc_id")
+            if group_id is None:
+                group_id = record.id
+            group_id = str(group_id)
+            group_rank = group_info.get("rank") or record.group_rank or fallback_rank
+            group_info["group_id"] = group_id
+            group_info["rank"] = group_rank
             group_info["applied"] = grouping_applied
             metadata["_grouping"] = group_info
             record.metadata = metadata
-            record.group_id = group_info["group_id"]
-            record.group_rank = rank
+            record.group_id = group_id
+            record.group_rank = group_rank
             record.grouping_applied = grouping_applied
         return records
 
@@ -1111,21 +1081,11 @@ def _document_to_record(
 ) -> SearchRecord:
     """Convert a LangChain document into a canonical search record."""
     metadata: dict[str, Any] = dict(document.metadata or {})
-    metadata.setdefault("page_content", document.page_content)
-    identifier = (
-        metadata.get("point_id")
-        or metadata.get("doc_id")
-        or getattr(document, "id", None)
-        or uuid4().hex
-    )
+    identifier = metadata.pop("_id")
+    metadata.pop("_collection_name")
     record_payload = {
         "id": str(identifier),
-        "content": (
-            metadata.get("content")
-            or metadata.get("page_content")
-            or document.page_content
-            or ""
-        ),
+        "content": document.page_content,
         "score": float(score),
         "raw_score": float(score),
         "metadata": metadata,
@@ -1137,29 +1097,66 @@ def _document_to_record(
 def _scored_point_to_record(collection: str, point: Any) -> SearchRecord:
     """Convert a Qdrant scored point into a canonical search record."""
     payload: dict[str, Any] = dict(getattr(point, "payload", {}) or {})
+    content, metadata = _unpack_native_payload(payload)
     score = float(getattr(point, "score", 0.0) or 0.0)
     record_payload = {
-        "id": str(getattr(point, "id", uuid4())),
-        "content": (
-            payload.get("content")
-            or payload.get("page_content")
-            or payload.get("text")
-            or ""
-        ),
+        "id": str(point.id),
+        "content": content,
         "score": score,
         "raw_score": score,
-        "metadata": payload or None,
+        "metadata": metadata,
         "collection": collection,
     }
     return SearchRecord.from_payload(record_payload)
 
 
+def _unpack_native_payload(payload: Mapping[str, Any]) -> tuple[str, dict[str, Any]]:
+    """Decode QdrantVectorStore's dependency-native payload shape."""
+    raw_metadata = payload["metadata"]
+    if not isinstance(raw_metadata, Mapping):
+        msg = "QdrantVectorStore metadata payload must be a mapping"
+        raise TypeError(msg)
+    content = payload["page_content"]
+    if not isinstance(content, str):
+        msg = "QdrantVectorStore page_content payload must be a string"
+        raise TypeError(msg)
+    return content, dict(raw_metadata)
+
+
+def _point_payload_to_document(
+    payload: Mapping[str, Any],
+    *,
+    point_id: str,
+) -> dict[str, Any]:
+    """Flatten one native Qdrant payload for the public document contract."""
+    content, metadata = _unpack_native_payload(payload)
+    return {**metadata, "id": point_id, "content": content}
+
+
+def dense_vector_config(stats: Mapping[str, Any]) -> dict[str, Any]:
+    """Return the dense vector configuration from serialized Qdrant stats."""
+    config = stats.get("config")
+    if not isinstance(config, Mapping):
+        return {}
+    params = config.get("params")
+    if not isinstance(params, Mapping):
+        return {}
+    vectors = params.get("vectors")
+    return dict(vectors) if isinstance(vectors, Mapping) else {}
+
+
 def _serialize_collection_info(info: Any) -> Mapping[str, Any]:
     """Serialize collection info."""
     config = getattr(info, "config", None)
-    payload_schema = (
-        cast(dict[str, Any], getattr(config, "payload_schema", {})) if config else {}
-    )
+    raw_payload_schema = getattr(info, "payload_schema", {}) or {}
+    payload_schema = {
+        str(field): (
+            details.model_dump(mode="json")
+            if hasattr(details, "model_dump")
+            else details
+        )
+        for field, details in raw_payload_schema.items()
+    }
     config_payload = (
         config.dict() if (config is not None and hasattr(config, "dict")) else {}
     )
@@ -1177,19 +1174,9 @@ def _schema_matches(
     """Check if schema matches existing."""
     if not existing:
         return False
-    return existing.get("type") == schema.value if isinstance(schema, Enum) else False
-
-
-def _distance_from_string(name: str) -> models.Distance:
-    """Convert distance name to enum."""
-    mapping = {
-        "cosine": models.Distance.COSINE,
-        "dot": models.Distance.DOT,
-        "euclid": models.Distance.EUCLID,
-        "euclidean": models.Distance.EUCLID,
-        "manhattan": models.Distance.MANHATTAN,
-    }
-    return mapping.get(name.lower(), models.Distance.COSINE)
+    return (
+        existing.get("data_type") == schema.value if isinstance(schema, Enum) else False
+    )
 
 
 def _filter_from_mapping(filters: Mapping[str, Any] | None) -> models.Filter | None:
@@ -1198,27 +1185,33 @@ def _filter_from_mapping(filters: Mapping[str, Any] | None) -> models.Filter | N
         return None
     must_conditions = []
     for key, value in filters.items():
+        stored_key = _metadata_field(key)
         if isinstance(value, Mapping):
             must_conditions.append(
                 models.FieldCondition(
-                    key=key,
+                    key=stored_key,
                     range=models.Range(**value),
                 )
             )
         elif isinstance(value, Sequence) and not isinstance(value, str | bytes):
             must_conditions.append(
                 models.FieldCondition(
-                    key=key,
+                    key=stored_key,
                     match=models.MatchAny(any=list(value)),
                 )
             )
         else:
             must_conditions.append(
                 models.FieldCondition(
-                    key=key,
+                    key=stored_key,
                     match=models.MatchValue(
                         value=cast("models.ValueVariants", value),
                     ),
                 )
             )
     return models.Filter(must=must_conditions)
+
+
+def _metadata_field(field: str) -> str:
+    """Map a logical metadata field to its dependency-native Qdrant path."""
+    return field if field.startswith("metadata.") else f"metadata.{field}"

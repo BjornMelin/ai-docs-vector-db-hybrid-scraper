@@ -21,10 +21,10 @@ class DocumentUpsertRequest(BaseModel):
         default=None,
         description="Optional metadata stored alongside the document.",
     )
-    collection: str = Field(
-        default="documentation",
+    collection: str | None = Field(
+        default=None,
         min_length=1,
-        description="Destination collection name.",
+        description="Destination collection name; defaults to server configuration.",
     )
 
 

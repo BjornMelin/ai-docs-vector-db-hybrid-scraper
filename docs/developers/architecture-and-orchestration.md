@@ -99,14 +99,16 @@ metadata to choose a LangChain splitter:
 
 `ChunkingConfig` (also exposed through MCP request bodies) governs chunk size,
 overlap, token-aware limits, and HTML normalisation. The resulting LangChain
-`Document` list receives canonical metadata (`chunk_id`, `chunk_index`,
+`Document` list receives ingestion metadata (`chunk_index`,
 `kind`, provenance fields) before vectorisation.
 
-`VectorStoreService` converts those documents into `TextDocument` payloads and
-relies on LangChain's `QdrantVectorStore` to persist them. FastEmbed dense and
-sparse embeddings (`FastEmbedEmbeddings` + `FastEmbedSparse`) are initialised
-once and reused across API, CLI, and MCP entry points, enabling hybrid search
-when `EmbeddingConfig.retrieval_mode` is set to `hybrid` before startup.
+`VectorStoreService` relies on LangChain's `QdrantVectorStore` to persist those
+documents as native `page_content` plus nested `metadata` payloads. It is the
+only owner of point IDs, content hashes, collection vector shape, distance, and
+sparse-vector policy. FastEmbed dense and sparse embeddings
+(`FastEmbedEmbeddings` + `FastEmbedSparse`) are initialised once and reused
+across API, CLI, and MCP entry points, enabling hybrid search when
+`EmbeddingConfig.retrieval_mode` is set to `hybrid` before startup.
 Qdrant's sparse + dense scoring is then applied transparently during retrieval.
 
 ## 2. LangChain / LangGraph Orchestration

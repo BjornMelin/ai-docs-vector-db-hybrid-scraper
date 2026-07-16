@@ -1,4 +1,4 @@
-"""Tests for translating LangChain documents into TextDocument payloads."""
+"""Tests for translating chunks into canonical LangChain documents."""
 
 from __future__ import annotations
 
@@ -69,7 +69,12 @@ def test_build_text_documents_merges_metadata() -> None:
     )
     chunks = [
         Document(
-            page_content="alpha", metadata={"section": "intro", "chunk_id": "hash-1"}
+            page_content="alpha",
+            metadata={
+                "section": "intro",
+                "doc_id": "untrusted-doc",
+                "tenant": "untrusted-tenant",
+            },
         ),
         Document(page_content="beta", metadata={"section": "body", "start_index": 5}),
     ]
@@ -79,11 +84,14 @@ def test_build_text_documents_merges_metadata() -> None:
     assert len(documents) == 2
     first = documents[0]
     first_metadata: dict[str, object] = dict(first.metadata or {})
-    assert first.id == "doc-123:0"
+    assert isinstance(first, Document)
+    assert first.id is None
+    assert first.page_content == "alpha"
     assert first_metadata["section"] == "intro"
+    assert first_metadata["doc_id"] == "doc-123"
+    assert first_metadata["tenant"] == "documentation"
     assert first_metadata["chunk_index"] == 0
-    assert first_metadata["chunk_id"] == 0
-    assert first_metadata["chunk_hash"] == "hash-1"
+    assert "content_hash" not in first_metadata
     assert first_metadata["lang"] == "en"
     assert first_metadata["content_type"] == "text/plain"
     assert "start_char" not in first_metadata
@@ -92,8 +100,9 @@ def test_build_text_documents_merges_metadata() -> None:
 
     second = documents[1]
     second_metadata: dict[str, object] = dict(second.metadata or {})
+    assert second.id is None
     assert second_metadata["chunk_index"] == 1
-    assert second_metadata["chunk_id"] == 1
+    assert "content_hash" not in second_metadata
     assert second_metadata["start_char"] == 5
     assert second_metadata["end_char"] == 5 + len("beta")
     assert second_metadata["doc_id"] == "doc-123"

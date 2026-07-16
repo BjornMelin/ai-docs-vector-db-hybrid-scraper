@@ -64,11 +64,10 @@ class TestSearchRecord:
             SearchRecord.model_validate({"id": "123", "content": "test"})
 
     def test_score_validation(self) -> None:
-        """Score should accept floats >= 0."""
+        """Score should preserve provider-specific numeric ranges."""
         SearchRecord(id="1", content="test", score=0.0)
         SearchRecord(id="2", content="test", score=1.5)
-        with pytest.raises(ValidationError):
-            SearchRecord(id="3", content="test", score=-0.1)
+        SearchRecord(id="3", content="test", score=-0.1)
 
     def test_metadata_flexibility(self) -> None:
         """Metadata should allow arbitrary structures."""

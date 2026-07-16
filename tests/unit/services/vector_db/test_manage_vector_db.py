@@ -14,7 +14,6 @@ from src.manage_vector_db import (
     CollectionCreationError,
     CollectionDeletionError,
     CollectionInfo,
-    CollectionSchema,
     DatabaseStats,
     VectorDBManager,
     cli,
@@ -32,7 +31,7 @@ def vector_service_mock() -> AsyncMock:
     service.collection_stats = AsyncMock(
         return_value={
             "points_count": 7,
-            "vectors": {"default": {"size": 3}},
+            "config": {"params": {"vectors": {"size": 3}}},
         }
     )
     service.search_documents = AsyncMock(
@@ -115,18 +114,13 @@ async def test_create_collection_builds_schema(
     """create_collection should construct the schema and invoke ensure_collection."""
     manager = manager_setup.manager
 
-    result = await manager.create_collection(
-        "analytics", vector_size=256, distance="dot"
-    )
+    result = await manager.create_collection("analytics")
 
     assert result is True
     manager_setup.vector_service.ensure_collection.assert_awaited_once()
-    schema: CollectionSchema = (
-        manager_setup.vector_service.ensure_collection.call_args.args[0]
+    assert manager_setup.vector_service.ensure_collection.call_args.args == (
+        "analytics",
     )
-    assert schema.name == "analytics"
-    assert schema.vector_size == 256
-    assert schema.distance == "dot"
 
 
 @pytest.mark.asyncio
@@ -236,7 +230,7 @@ def test_cli_create_collection_reports_success() -> None:
 
     assert result.exit_code == 0, result.output
     assert "Successfully created collection" in result.output
-    manager_stub.create_collection.assert_awaited_once_with("docs", vector_size=1536)
+    manager_stub.create_collection.assert_awaited_once_with("docs")
     manager_stub.cleanup.assert_awaited_once()
 
 

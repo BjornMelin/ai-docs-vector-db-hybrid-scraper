@@ -65,13 +65,16 @@ Accepts the same query parameters as the POST variant (`query`, `collection`,
 #### Canonical ingestion payload
 
 The ingestion surface (MCP tools, CLI pipelines, and bulk embedders) now emits
-`TextDocument` payloads constructed from LangChain `Document` chunks via
-`src.services.vector_db.document_builder`. Each chunk guarantees the same
-metadata keys so downstream services can rely on a predictable schema:
+LangChain `Document` instances via
+`src.services.vector_db.document_builder`. Document building provides the
+ingestion metadata below; the persistence boundary adds storage-owned fields:
 
 - `source`, `uri_or_path`, `doc_id`, and `tenant` – provenance identifiers
 - `title`, `content_type`, `lang` – presentation metadata
-- `chunk_index`, `chunk_id`, `chunk_hash`, `total_chunks` – chunk bookkeeping
+- `chunk_index`, `total_chunks` – chunk bookkeeping assigned during document
+  building
+- `content_hash` – change detection assigned only at the vector persistence
+  boundary
 - `created_at`, `updated_at` – ISO timestamps captured during ingestion
 - Content Intelligence enrichments when available (`content_type`,
   `content_confidence`, `quality_*`, `ci_*` fields)
@@ -89,9 +92,27 @@ limits, JSON window sizes, and HTML normalisation flags; MCP and CLI requests ma
 one-to-one to those fields.
 
 `VectorStoreService` persists the resulting payloads through LangChain's
-`QdrantVectorStore`. FastEmbed dense and sparse embeddings are initialised once
+`QdrantVectorStore` using its native `page_content` plus nested `metadata`
+payload. Point IDs are stable UUID5 values derived from tenant, document, and
+chunk position; the ID returned by create is the ID used by get and delete.
+Complete document re-ingestion removes obsolete trailing chunks only after the
+new chunk set is stored successfully. Collection vector shape, distance, and
+sparse-vector policy come from the configured embedding and retrieval stack;
+the CLI does not expose incompatible per-collection overrides.
+HTTP request collection fields default to `settings.qdrant.collection_name`
+when omitted. FastEmbed dense and sparse embeddings are initialised once
 and reused across ingestion surfaces so hybrid scoring is available when the
 application starts with `EmbeddingConfig.retrieval_mode` set to `hybrid`.
+
+#### Required collection rebuild
+
+This contract is a forward-only hard cut. Collections written by earlier
+versions use a different flat payload and content-derived point IDs; the new
+runtime does not read or migrate them. Before rollout, stop ingestion writers,
+close application traffic for a maintenance window, deploy the new runtime,
+run `uv run manage-db clear <collection>` for every existing collection, and
+rerun the authoritative ingestion jobs before reopening traffic. Skipping the
+clear step leaves legacy points that the new read path cannot decode.
 
 ### Health
 

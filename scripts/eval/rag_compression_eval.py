@@ -40,26 +40,15 @@ def _parse_args() -> argparse.Namespace:
         type=Path,
         help="Path to a JSON file containing evaluation samples.",
     )
-    parser.add_argument(
-        "--collection",
-        default=None,
-        help="Optional override for the collection name used during evaluation.",
-    )
     return parser.parse_args()
 
 
-async def _load_vector_service(
-    collection_override: str | None,
-    *,
-    settings: Any | None = None,
-) -> VectorStoreService:
+async def _load_vector_service(*, settings: Any | None = None) -> VectorStoreService:
     config = settings or get_settings()
     container = await ensure_container(settings=config)
     service = container.vector_store_service()
     if service is None:
         raise RuntimeError("Vector store service unavailable")
-    if collection_override:
-        service.collection_name = collection_override
     if hasattr(service, "is_initialized") and not service.is_initialized():
         await service.initialize()
     return service
@@ -82,14 +71,11 @@ def _estimate_tokens(text: str) -> int:
 # pylint: disable=too-many-locals,too-many-statements
 
 
-async def _evaluate(  # pylint: disable=too-many-locals
-    dataset_path: Path, collection_override: str | None
-) -> None:
+async def _evaluate(dataset_path: Path) -> None:  # pylint: disable=too-many-locals
     """Execute contextual compression evaluation against dataset.
 
     Args:
         dataset_path: Path to evaluation dataset.
-        collection_override: Optional collection name override.
     """
     config = get_settings()
     exit_stack = AsyncExitStack()
@@ -99,12 +85,12 @@ async def _evaluate(  # pylint: disable=too-many-locals
         # Initialize vector service
         load_service = _load_vector_service
         if Mock is not None and isinstance(load_service, Mock):
-            vector_service = await load_service(collection_override)
+            vector_service = await load_service()
         else:
             await exit_stack.enter_async_context(
                 container_session(settings=config, force_reload=True)
             )
-            vector_service = await load_service(collection_override, settings=config)
+            vector_service = await load_service(settings=config)
         if vector_service is None:
             raise RuntimeError("Vector store service unavailable")
 
@@ -215,7 +201,7 @@ async def _evaluate(  # pylint: disable=too-many-locals
 def main() -> None:
     """Run the compression evaluation CLI entry point."""
     args = _parse_args()
-    asyncio.run(_evaluate(args.input, args.collection))
+    asyncio.run(_evaluate(args.input))
 
 
 if __name__ == "__main__":

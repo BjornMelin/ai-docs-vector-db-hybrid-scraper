@@ -5,7 +5,6 @@ import json
 import logging
 from collections.abc import Mapping
 from typing import Any, cast
-from uuid import uuid4
 
 from fastmcp import Context
 from langchain_core.documents import Document
@@ -25,7 +24,6 @@ from src.services.vector_db.document_builder import (
     build_text_documents,
 )
 from src.services.vector_db.service import VectorStoreService
-from src.services.vector_db.types import CollectionSchema, TextDocument
 
 
 logger = logging.getLogger(__name__)
@@ -200,8 +198,9 @@ def _build_text_documents(
     request: DocumentRequest,
     enriched_content: Any | None,
     doc_id: str,
-) -> list[TextDocument]:
-    """Convert chunk data into TextDocument payloads."""
+    collection: str,
+) -> list[Document]:
+    """Convert chunk data into canonical LangChain documents."""
     if not chunks:
         msg = f"No chunks generated for {request.url}"
         raise ValueError(msg)
@@ -209,7 +208,7 @@ def _build_text_documents(
     params = build_params_from_crawl(
         crawl_result,
         fallback_url=request.url,
-        tenant=request.collection or "default",
+        tenant=collection,
         doc_id=doc_id,
         enriched_content=enriched_content,
     )
@@ -219,18 +218,10 @@ def _build_text_documents(
 async def _persist_documents(
     vector_service: VectorStoreService,
     collection: str,
-    strategy: ChunkingStrategy,
-    documents_to_upsert: list[TextDocument],
+    documents_to_upsert: list[Document],
 ) -> None:
-    """Ensure collection existence and persist documents."""
-    schema = CollectionSchema(
-        name=collection,
-        vector_size=vector_service.embedding_dimension,
-        distance="cosine",
-        requires_sparse=(strategy != ChunkingStrategy.BASIC),
-    )
-    await vector_service.ensure_collection(schema)
-    await vector_service.upsert_documents(collection, documents_to_upsert)
+    """Persist documents through the vector service's collection policy."""
+    await vector_service.replace_document_chunks(collection, documents_to_upsert)
 
 
 def _build_ingestion_response(
@@ -239,13 +230,14 @@ def _build_ingestion_response(
     chunk_count: int,
     vector_service: VectorStoreService,
     enriched_content: Any | None,
+    collection: str,
 ) -> AddDocumentResponse:
     """Create the structured response for the ingestion flow."""
     response_kwargs: dict[str, Any] = {
         "url": request.url,
         "title": crawl_result.get("title") or crawl_result["metadata"].get("title", ""),
         "chunks_created": chunk_count,
-        "collection": request.collection,
+        "collection": collection,
         "chunking_strategy": request.chunk_strategy.value,
         "embedding_dimensions": vector_service.embedding_dimension,
     }
@@ -281,18 +273,18 @@ def register_tools(
         Crawls the URL, applies the selected chunking strategy, generates
         embeddings, and stores in the specified collection.
         """
-        doc_id = str(uuid4())
-        await ctx.info(f"Processing document {doc_id}: {request.url}")
-
         try:
             service = vector_service
             resolved_cache = cache_manager
+            collection = request.collection or service.default_collection_name
 
             request.url = MLSecurityValidator.from_unified_config().validate_url(
                 request.url
             )
+            doc_id = request.url
+            await ctx.info(f"Processing document {doc_id}")
 
-            cache_key = f"doc:{request.url}"
+            cache_key = f"doc:{collection}:{request.url}"
             cached_value = await resolved_cache.get(cache_key)
             cached_response = _coerce_add_document_response(cached_value)
             if cached_response is not None:
@@ -316,14 +308,14 @@ def register_tools(
             )
             await _persist_documents(
                 service,
-                request.collection,
-                request.chunk_strategy,
+                collection,
                 _build_text_documents(
                     chunks,
                     crawl_result,
                     request,
                     enriched_content,
                     doc_id,
+                    collection,
                 ),
             )
 
@@ -333,6 +325,7 @@ def register_tools(
                 len(chunks),
                 service,
                 enriched_content,
+                collection,
             )
 
             await resolved_cache.set(
@@ -341,7 +334,7 @@ def register_tools(
 
             message = (
                 f"Document {doc_id} processed successfully: "
-                f"{len(chunks)} chunks created in collection {request.collection}"
+                f"{len(chunks)} chunks created in collection {collection}"
             )
             result_content_type = getattr(result, "content_type", None)
             if result_content_type:
@@ -351,7 +344,7 @@ def register_tools(
                 )
             await ctx.info(message)
         except Exception as exc:
-            await ctx.error(f"Failed to process document {doc_id}: {exc}")
+            await ctx.error(f"Failed to process document {request.url}: {exc}")
             logger.exception("Failed to add document")
             raise
         return result
@@ -370,6 +363,7 @@ def register_tools(
 
         # Process URLs in batches
         semaphore = asyncio.Semaphore(request.max_concurrent)
+        document_options = request.model_dump(exclude={"urls", "max_concurrent"})
 
         async def process_url(url: str):
             async with semaphore:
@@ -380,7 +374,7 @@ def register_tools(
 
                     doc_request = DocumentRequest(
                         url=validated_url,
-                        collection=request.collection,
+                        **document_options,
                     )
                     result = await add_document(doc_request, ctx)
                     successes.append(result)

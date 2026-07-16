@@ -43,14 +43,14 @@ async def add_document(
     Returns:
         Operation response containing the new document identifier.
     """
-    collection = request.collection
+    collection = request.collection or vector_service.default_collection_name
     document_id = await execute_service_call(
         operation="documents.add",
         logger=logger,
         coroutine_factory=lambda: vector_service.add_document(
             collection,
             request.content,
-            metadata=_maybe_to_dict(request.metadata),
+            metadata=request.metadata,
         ),
         error_detail="Failed to add document to the vector store.",
         extra={"collection": collection},
@@ -66,9 +66,11 @@ async def add_document(
 async def get_document(
     document_id: str,
     vector_service: VectorServiceDependency,
-    collection: str = Query(
-        default="documentation",
-        description="Collection that stores the document.",
+    collection: str | None = Query(
+        default=None,
+        description=(
+            "Collection that stores the document; defaults to server configuration."
+        ),
     ),
 ) -> DocumentRecord:
     """Fetch a document payload by identifier.
@@ -81,26 +83,31 @@ async def get_document(
     Returns:
         Canonical document record constructed from the vector payload.
     """
+    resolved_collection = collection or vector_service.default_collection_name
     payload = await execute_service_call(
         operation="documents.get",
         logger=logger,
-        coroutine_factory=lambda: vector_service.get_document(collection, document_id),
+        coroutine_factory=lambda: vector_service.get_document(
+            resolved_collection, document_id
+        ),
         error_detail="Failed to retrieve document from the vector store.",
-        extra={"collection": collection, "document_id": document_id},
+        extra={"collection": resolved_collection, "document_id": document_id},
     )
 
     if payload is None:
         raise HTTPException(status_code=404, detail="Document not found.")
-    return _to_document_record(payload, collection)
+    return _to_document_record(payload, resolved_collection)
 
 
 @router.delete("/documents/{document_id}", response_model=DocumentOperationResponse)
 async def delete_document(
     document_id: str,
     vector_service: VectorServiceDependency,
-    collection: str = Query(
-        default="documentation",
-        description="Collection that stores the document.",
+    collection: str | None = Query(
+        default=None,
+        description=(
+            "Collection that stores the document; defaults to server configuration."
+        ),
     ),
 ) -> DocumentOperationResponse:
     """Delete a document by identifier.
@@ -113,14 +120,15 @@ async def delete_document(
     Returns:
         Operation response describing the deletion outcome.
     """
+    resolved_collection = collection or vector_service.default_collection_name
     deleted = await execute_service_call(
         operation="documents.delete",
         logger=logger,
         coroutine_factory=lambda: vector_service.delete_document(
-            collection, document_id
+            resolved_collection, document_id
         ),
         error_detail="Failed to delete document from the vector store.",
-        extra={"collection": collection, "document_id": document_id},
+        extra={"collection": resolved_collection, "document_id": document_id},
     )
 
     if not deleted:
@@ -134,9 +142,11 @@ async def delete_document(
 @router.get("/documents", response_model=DocumentListResponse)
 async def list_documents(
     vector_service: VectorServiceDependency,
-    collection: str = Query(
-        default="documentation",
-        description="Collection that stores the documents.",
+    collection: str | None = Query(
+        default=None,
+        description=(
+            "Collection that stores the documents; defaults to server configuration."
+        ),
     ),
     limit: int = Query(
         default=25,
@@ -160,19 +170,20 @@ async def list_documents(
     Returns:
         Paginated list of canonical document records.
     """
+    resolved_collection = collection or vector_service.default_collection_name
     documents, next_offset = await execute_service_call(
         operation="documents.list",
         logger=logger,
         coroutine_factory=lambda: vector_service.list_documents(
-            collection,
+            resolved_collection,
             limit=limit,
             offset=offset,
         ),
         error_detail="Failed to list documents from the vector store.",
-        extra={"collection": collection},
+        extra={"collection": resolved_collection},
     )
 
-    records = [_to_document_record(doc, collection) for doc in documents]
+    records = [_to_document_record(doc, resolved_collection) for doc in documents]
     return DocumentListResponse(
         documents=records,
         count=len(records),
@@ -203,13 +214,6 @@ async def list_collections(
     return {"collections": collections, "count": len(collections)}
 
 
-def _maybe_to_dict(metadata: Mapping[str, Any] | None) -> dict[str, Any] | None:
-    """Convert metadata to a concrete dictionary if provided."""
-    if metadata is None:
-        return None
-    return dict(metadata)
-
-
 def _to_document_record(
     payload: Mapping[str, Any],
     collection: str,
@@ -218,7 +222,6 @@ def _to_document_record(
     metadata = dict(payload)
     content = metadata.pop("content", None)
     document_id = metadata.pop("id", None)
-    metadata["collection"] = metadata.get("collection", collection)
     return DocumentRecord(
         id=document_id or "",
         content=content,

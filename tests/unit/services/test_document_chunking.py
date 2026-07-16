@@ -133,8 +133,7 @@ def test_markdown_splitter_preserves_header_hierarchy() -> None:
     assert all(isinstance(doc, Document) for doc in documents)
     first_metadata = documents[0].metadata
     assert first_metadata["kind"] == "markdown"
-    assert isinstance(first_metadata["chunk_id"], str)
-    assert len(first_metadata["chunk_id"]) == 16
+    assert "content_hash" not in first_metadata
     headers = {
         key: value
         for key, value in documents[0].metadata.items()
@@ -162,10 +161,9 @@ def test_html_semantic_splitter_respects_sections() -> None:
     assert len(documents) >= 2
     first_document = documents[0]
     second_document = documents[1]
-    assert first_document.metadata["chunk_index"] == 0
-    assert isinstance(first_document.metadata["chunk_id"], str)
-    assert len(first_document.metadata["chunk_id"]) == 16
-    assert second_document.metadata["chunk_index"] == 1
+    assert "chunk_index" not in first_document.metadata
+    assert "content_hash" not in first_document.metadata
+    assert "chunk_index" not in second_document.metadata
     assert "intro" in first_document.page_content.lower()
     assert "second" in second_document.page_content.lower()
 
@@ -186,8 +184,7 @@ def test_code_language_inferred_from_extension() -> None:
     metadata = documents[0].metadata
     assert metadata["kind"] == "code"
     assert metadata["language"] == "python"
-    assert isinstance(metadata["chunk_id"], str)
-    assert len(metadata["chunk_id"]) == 16
+    assert "content_hash" not in metadata
 
 
 def test_json_splitter_creates_structured_chunks() -> None:
@@ -217,7 +214,7 @@ def test_json_splitter_creates_structured_chunks() -> None:
 
     assert len(documents) >= 2
     assert all(doc.metadata["kind"] == "json" for doc in documents)
-    assert all(len(doc.metadata["chunk_id"]) == 16 for doc in documents)
+    assert all("content_hash" not in doc.metadata for doc in documents)
     assert any("Ada" in doc.page_content for doc in documents)
 
 
@@ -235,8 +232,7 @@ def test_token_splitter_respects_token_configuration() -> None:
 
     assert len(documents) > 1
     assert documents[0].metadata["kind"] == "token"
-    assert documents[0].metadata["chunk_index"] == 0
-    assert documents[1].metadata["chunk_index"] == 1
+    assert all("chunk_index" not in document.metadata for document in documents)
 
 
 def test_metadata_token_hint_triggers_token_splitter() -> None:
@@ -254,9 +250,7 @@ def test_metadata_token_hint_triggers_token_splitter() -> None:
     assert len(documents) >= 2
     kinds = {doc.metadata["kind"] for doc in documents}
     assert kinds == {"token"}
-    assert all(
-        doc.metadata["chunk_index"] == index for index, doc in enumerate(documents)
-    )
+    assert all("chunk_index" not in document.metadata for document in documents)
 
 
 @pytest.mark.parametrize(
