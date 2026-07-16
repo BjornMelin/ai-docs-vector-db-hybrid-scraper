@@ -1,7 +1,6 @@
 """Document management tools for MCP server."""
 
 import asyncio
-import json
 import logging
 from collections.abc import Mapping
 from typing import Any, cast
@@ -13,7 +12,6 @@ from src.config.models import ChunkingConfig, ChunkingStrategy
 from src.mcp_tools.models.requests import BatchRequest, DocumentRequest
 from src.mcp_tools.models.responses import AddDocumentResponse, DocumentBatchResponse
 from src.security.ml_security import MLSecurityValidator
-from src.services.cache.manager import CacheManager
 from src.services.crawling.normalization import (
     normalize_crawler_output,
     resolve_chunk_inputs,
@@ -27,23 +25,6 @@ from src.services.vector_db.service import VectorStoreService
 
 
 logger = logging.getLogger(__name__)
-
-
-def _coerce_add_document_response(value: Any) -> AddDocumentResponse | None:
-    """Convert cached payloads into :class:`AddDocumentResponse` instances."""
-    if isinstance(value, AddDocumentResponse):
-        return value
-
-    if isinstance(value, str):
-        try:
-            value = json.loads(value)
-        except json.JSONDecodeError:
-            return None
-
-    if isinstance(value, Mapping) and all(isinstance(key, str) for key in value):
-        return AddDocumentResponse(**cast(Mapping[str, Any], value))
-
-    return None
 
 
 def _raise_scrape_error(url: str) -> None:
@@ -258,7 +239,6 @@ def register_tools(
     mcp,
     *,
     vector_service: VectorStoreService,
-    cache_manager: CacheManager,
     crawl_manager: Any,
     content_intelligence_service: Any,
 ) -> None:
@@ -275,7 +255,6 @@ def register_tools(
         """
         try:
             service = vector_service
-            resolved_cache = cache_manager
             collection = request.collection or service.default_collection_name
 
             request.url = MLSecurityValidator.from_unified_config().validate_url(
@@ -283,13 +262,6 @@ def register_tools(
             )
             doc_id = request.url
             await ctx.info(f"Processing document {doc_id}")
-
-            cache_key = f"doc:{collection}:{request.url}"
-            cached_value = await resolved_cache.get(cache_key)
-            cached_response = _coerce_add_document_response(cached_value)
-            if cached_response is not None:
-                await ctx.debug(f"Document {doc_id} found in cache")
-                return cached_response
 
             crawl_result, enriched_content = await _scrape_document(
                 request,
@@ -326,10 +298,6 @@ def register_tools(
                 service,
                 enriched_content,
                 collection,
-            )
-
-            await resolved_cache.set(
-                cache_key, result.model_dump(mode="json"), ttl=86400
             )
 
             message = (

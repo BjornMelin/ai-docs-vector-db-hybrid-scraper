@@ -71,6 +71,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   search, list, get, and delete operations.
 - Prune obsolete trailing chunks after a complete replacement is persisted, so
   shrinking re-ingestion cannot leave stale search results.
+- Seed the deterministic evaluation collection with the same native payload and
+  stable point-ID contract used by runtime ingestion.
 - Made provider-specific embedding models single-owner configuration, restored profile retrieval modes, and pinned Qdrant server 1.16.2 with valid Kubernetes health probes.
 - Installed the locked Playwright Chromium runtime and its operating-system dependencies in the production image, with a build-time launch smoke.
 - Aligned Browser-use with its current `BrowserSession` API, skipped disabled RAG construction, and kept circuit breakers in memory when Dragonfly is disabled.

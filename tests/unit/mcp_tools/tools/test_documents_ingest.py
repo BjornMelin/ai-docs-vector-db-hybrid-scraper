@@ -122,9 +122,6 @@ def _make_enriched_content() -> SimpleNamespace:
 def documents_env(monkeypatch) -> SimpleNamespace:  # pylint: disable=too-many-locals
     """Provide registered document tools with mocked dependencies."""
     vector_service = VectorServiceStub()
-    cache_manager = Mock()
-    cache_manager.get = AsyncMock(return_value=None)
-    cache_manager.set = AsyncMock()
 
     crawl_payload = {
         "success": True,
@@ -167,7 +164,6 @@ def documents_env(monkeypatch) -> SimpleNamespace:  # pylint: disable=too-many-l
     documents.register_tools(
         mock_mcp,
         vector_service=cast(Any, vector_service),
-        cache_manager=cast(Any, cache_manager),
         crawl_manager=cast(Any, crawl_manager),
         content_intelligence_service=cast(Any, content_intelligence),
     )
@@ -181,7 +177,6 @@ def documents_env(monkeypatch) -> SimpleNamespace:  # pylint: disable=too-many-l
     return SimpleNamespace(
         tools=registered,
         vector_service=vector_service,
-        cache_manager=cache_manager,
         crawl_manager=crawl_manager,
         content_intelligence=content_intelligence,
         context=ctx,
@@ -211,7 +206,6 @@ async def test_add_document_ingests_chunks(documents_env: SimpleNamespace) -> No
     first_metadata = dict(first_document.metadata or {})
     assert first_document.id is None
     assert first_metadata["chunk_index"] == 0
-    assert first_metadata["chunk_index"] == 0
     assert "chunk_id" not in first_metadata
     assert "chunk_hash" not in first_metadata
     assert first_metadata["total_chunks"] == 2
@@ -240,38 +234,7 @@ async def test_add_document_ingests_chunks(documents_env: SimpleNamespace) -> No
     assert first_metadata["section"] == "intro"
     assert "lang" not in first_metadata or first_metadata["lang"] is None
 
-    documents_env.cache_manager.set.assert_awaited_once()
-    cache_args = documents_env.cache_manager.set.await_args.kwargs
-    assert cache_args == {"ttl": 86400}
-    cache_key, cache_payload = documents_env.cache_manager.set.await_args.args
-    assert cache_key == "doc:test-documents:https://example.com/doc"
-    assert cache_payload["url"] == request.url
     documents_env.context.info.assert_awaited()
-
-
-@pytest.mark.asyncio
-async def test_add_document_returns_cached_result(
-    documents_env: SimpleNamespace,
-) -> None:
-    """Verify add_document skips processing when cached result exists."""
-    cached_response = AddDocumentResponse(
-        url="https://example.com/doc",
-        title="Cached Title",
-        chunks_created=1,
-        collection="documentation",
-        chunking_strategy="enhanced",
-        embedding_dimensions=1536,
-    )
-    documents_env.cache_manager.get.return_value = cached_response.model_dump()
-
-    request = DocumentRequest(url="https://example.com/doc")
-    result = await documents_env.tools["add_document"](request, documents_env.context)
-
-    assert result == cached_response
-    documents_env.vector_service.replace_document_chunks.assert_not_called()
-    documents_env.cache_manager.get.assert_awaited_once_with(
-        "doc:test-documents:https://example.com/doc"
-    )
 
 
 @pytest.mark.asyncio

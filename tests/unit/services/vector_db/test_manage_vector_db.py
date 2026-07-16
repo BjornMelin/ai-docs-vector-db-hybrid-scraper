@@ -108,10 +108,10 @@ async def test_list_collections_uses_vector_service(
 
 
 @pytest.mark.asyncio
-async def test_create_collection_builds_schema(
+async def test_create_collection_delegates_canonical_contract(
     manager_setup: SimpleNamespace,
 ) -> None:
-    """create_collection should construct the schema and invoke ensure_collection."""
+    """create_collection should delegate to the service-owned collection contract."""
     manager = manager_setup.manager
 
     result = await manager.create_collection("analytics")

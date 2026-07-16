@@ -176,8 +176,10 @@ class ProjectInfo(BaseModel):
     id: str
     name: str
     description: str | None = None
+    collection: str
+    urls: list[str] = Field(default_factory=list)
+    stats: dict[str, Any] | None = None
     created_at: str | None = None
-    model_config = ConfigDict(extra="allow")
 
 
 # create_project returns ProjectInfo
