@@ -79,9 +79,9 @@ ingestion metadata below; the persistence boundary adds storage-owned fields:
 - Content Intelligence enrichments when available (`content_type`,
   `content_confidence`, `quality_*`, `ci_*` fields)
 
-Legacy chunk dictionaries and ad-hoc metadata fields are no longer produced nor
-accepted by caches. Cached `AddDocumentResponse` objects are serialised in-place
-and hydrated directly from JSON when read back.
+Legacy chunk dictionaries and ad-hoc metadata fields are no longer produced by
+ingestion surfaces. Document-ingestion responses are not cached so every request
+executes the complete replacement workflow.
 
 Chunk generation is centralised in
 `src/services/document_chunking.chunk_to_documents`, which inspects crawler
